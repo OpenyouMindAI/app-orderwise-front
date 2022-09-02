@@ -1,0 +1,7 @@
+{
+	"appId": "palma.shopping.app",
+	"appName": "Shopping",
+	"bundledWebRuntime": false,
+	"npmClient": "npm",
+	"webDir": "www"
+}
