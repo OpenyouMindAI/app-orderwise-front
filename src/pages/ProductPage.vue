@@ -65,14 +65,14 @@
             <div class="text-h6">Agregar Producto</div>
           </q-card-section>
           <q-card-section class="q-pt-sm q-gutter-sm">
-            <q-input dense outlined v-model="code" autofocus type="number" label="Código">
+            <q-input dense outlined v-model="code" autofocus type="number" label="Código" :rules="[ val => val && val !== null || 'El campo es requerido']">
               <template v-slot:append>
                 <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
               </template>
             </q-input>
-            <q-input dense outlined v-model="category" label="Categoria"/>
-            <q-input dense outlined v-model="sub_category" label="Sub Categoria"/>
-            <q-input dense outlined v-model="description" type="textarea" label="Descripción" autogrow/>
+            <q-input dense outlined v-model="category" label="Categoria" :rules="[ val => val && val !== null || 'El campo es requerido']"/>
+            <q-input dense outlined v-model="subCategory" label="Sub Categoria" :rules="[ val => val && val !== null || 'El campo es requerido']"/>
+            <q-input dense outlined v-model="description" type="textarea" label="Descripción" autogrow :rules="[ val => val && val !== null || 'El campo es requerido']"/>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="negative" label="Cancelar" v-close-popup type="reset"/>
@@ -140,7 +140,7 @@ export default {
       code: null,
       description: null,
       category: null,
-      sub_category: null,
+      subCategory: null,
       products: [],
       prompt: false,
       dialogScanner: false,
@@ -243,7 +243,8 @@ export default {
         await setDoc(doc(db, 'products', String(this.code)), {
           code: this.code,
           description: this.description,
-          price: this.price
+          category: this.category,
+          sub_category: this.subCategory
         })
         this.loadingPage = false
         this.getProducts()

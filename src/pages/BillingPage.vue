@@ -5,9 +5,11 @@
         <q-card class="bg-teal text-white" @click="exchange = !exchange">
           <q-card-section class="text-subtitle2 text-center">
             ${{ totalBill }}
-            <q-tooltip v-model="exchange" class="bg-orange">
-              {{ (totalBill * exchangeRate).toFixed(2) }} Bs
-            </q-tooltip>
+            <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
+              <q-banner>
+                {{ (totalBill * exchangeRate).toFixed(2) }} Bs
+              </q-banner>
+            </q-popup-proxy>
           </q-card-section>
         </q-card>
       </div>

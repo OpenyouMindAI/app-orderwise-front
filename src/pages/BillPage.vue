@@ -2,12 +2,12 @@
   <q-page padding>
     <q-table
       title="Facturas"
+      grid
+      dense
       :rows="bills"
       :columns="columns"
       row-key="name"
       :filter="filter"
-      grid
-      dense
       :loading="loadingPage"
     >
       <template v-slot:top-right>
@@ -52,7 +52,7 @@
 
 <script>
 import { db } from '../dbfire'
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
+import { collection, getDocs, deleteDoc, doc, orderBy, query } from 'firebase/firestore'
 export default {
   // name: 'PageName',
   data () {
@@ -82,7 +82,7 @@ export default {
      * Delete Product
      * @param {Object} data product
      */
-    deleterBill (data) {
+    deleteBill (data) {
       try {
         this.$q.dialog({
           title: 'Alerta',
@@ -91,7 +91,7 @@ export default {
           persistent: true
         }).onOk(async () => {
           await deleteDoc(doc(db, 'bills', String(data.code)))
-          this.getProducts()
+          this.getBills()
           this.$q.notify({
             message: 'Factura eliminado extisamente',
             icon: 'check_circle',
@@ -109,7 +109,8 @@ export default {
       try {
         const billsCol = collection(db, 'bills')
         this.loadingPage = true
-        const billsnapshot = await getDocs(billsCol)
+        const q = query(billsCol, orderBy('date', 'desc'))
+        const billsnapshot = await getDocs(q)
         this.bills = billsnapshot.docs.map(doc => doc.data())
         this.loadingPage = false
       } catch (error) {
