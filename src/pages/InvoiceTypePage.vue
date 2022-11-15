@@ -2,19 +2,19 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
+        <q-btn color="primary" @click="openAddInvoiceType = true" icon="add_circle"/>
       </div>
       <div class="col-12">
         <q-table
-          title="Productos"
+          title="Monedas"
           row-key="name"
           :columns="columns"
-          :rows="products"
+          :rows="invoiceTypes"
           :loading="visible"
           :filter="filter"
           binary-state-sort
           v-model:pagination="paginationConfig"
-          @row-click="editProduct"
+          @row-click="editInvoiceType"
           @request="setPagination"
           no-data-label="Registro no encontrado"
         >
@@ -31,114 +31,67 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditProduct" persistent>
+    <q-dialog v-model="openEditInvoiceType" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar producto</div>
+            <div class="text-h6">Editar moneda</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="product.barcode"
+                v-model="invoiceType.name"
                 autofocus
-                label="Código de barra"
-                hint=""
+                label="Nombre"
               />
             </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="product.name"
+                v-model="invoiceType.acronym_serie"
                 autofocus
-                label="Descripción"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.price"
-                label="Precio"
-                type="number"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                label="Categoria"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category"
-                :options="categories"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                @filter="filterCategories"
+                label="Simbolo"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
+            <q-btn color="negative" label="Eliminar" @click="deleteInvoiceType" :loading="visible" />
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddProduct" persistent>
+    <q-dialog v-model="openAddInvoiceType" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveProduct">
+        <q-form @submit="saveInvoiceType">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Agregar producto</div>
+            <div class="text-h6">Agregar moneda</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="product.barcode"
+                v-model="invoiceType.name"
                 autofocus
-                label="Código de barra"
-                hint=""
+                label="Nombre"
               />
             </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="product.name"
+                v-model="invoiceType.acronym_serie"
                 autofocus
-                label="Descripción"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.price"
-                label="Precio"
-                type="number"
-                step=".01"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                label="Categoria"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category"
-                :options="categories"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                @filter="filterCategories"
+                label="Acronimo de serie"
               />
             </div>
           </q-card-section>
@@ -157,10 +110,8 @@ import { Notify } from 'quasar'
 export default {
   data () {
     return {
-      products: [],
-      product: {},
-      categories: [],
-      category: null,
+      invoiceTypes: [],
+      invoiceType: {},
       filter: '',
       /**
        * Params search
@@ -173,15 +124,12 @@ export default {
         perPage: 1,
         dataSearch: {
           id: '',
-          barcode: '',
-          name: '',
-          'category.name': '',
-          price: ''
+          name: ''
         }
       },
       visible: false,
-      openAddProduct: false,
-      openEditProduct: null,
+      openAddInvoiceType: false,
+      openEditInvoiceType: null,
       userSession: null,
       columns: [
         {
@@ -192,32 +140,17 @@ export default {
           sortable: true
         },
         {
-          name: 'barcode',
-          align: 'left',
-          label: 'Código de barra',
-          field: 'barcode',
-          format: (val) => val ?? '-',
-          sortable: true
-        },
-        {
           name: 'name',
           align: 'left',
-          label: 'Descripción',
+          label: 'Nombre',
           field: 'name',
           sortable: true
         },
         {
-          name: 'category',
+          name: 'acronym_serie',
           align: 'left',
-          label: 'Categoria',
-          field: row => row.category.name,
-          sortable: true
-        },
-        {
-          name: 'price',
-          align: 'right',
-          label: 'Precio',
-          field: 'price',
+          label: 'Acronimo de serie',
+          field: 'acronym_serie',
           sortable: true
         }
       ],
@@ -238,56 +171,22 @@ export default {
   },
   created () {
     this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.product.user_created_id = this.userSession.id
-    this.product.user_updated_id = this.userSession.id
+    this.invoiceType.user_created_id = this.userSession.id
+    this.invoiceType.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {
       this.searchData(data)
-    },
-    category (data) {
-      if (data) {
-        this.product.category_id = data.id
-      }
-    },
-    product (data) {
-      this.category = data.category
     }
   },
   methods: {
     /**
-     * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
-     */
-    filterCategories (value, update) {
-      this.$api.get('categories', {
-        params: {
-          dataSearch: {
-            name: value
-          }
-        }
-      })
-        .then(({ data }) => {
-          update(() => {
-            this.categories = data
-          })
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
-    /**
      * Close all modals
      */
     closeModal () {
-      this.openAddProduct = false
-      this.openEditProduct = false
-      this.product = {}
+      this.openAddInvoiceType = false
+      this.openEditInvoiceType = false
+      this.invoiceType = {}
     },
     /**
      * Search beneficiary
@@ -298,17 +197,16 @@ export default {
         this.params.dataSearch[dataSearch] = data
       }
       this.params.page = 1
-      this.getProducts(this.params)
+      this.getInvoiceTypes(this.params)
     },
     /**
-     * Get all products
+     * Get all invoiceTypes
      */
-    getProducts (params = this.params) {
+    getInvoiceTypes (params = this.params) {
       this.visible = true
-      this.$api.get('products', { params })
+      this.$api.get('invoice-types', { params })
         .then(({ data }) => {
-          console.log(data.data)
-          this.products = data.data
+          this.invoiceTypes = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
         })
@@ -332,21 +230,21 @@ export default {
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
       this.params.perPage = data.pagination.rowsPerPage
       this.paginationConfig = data.pagination
-      this.getProducts(this.params)
+      this.getInvoiceTypes(this.params)
     },
     /**
-     * Save products
+     * Save invoiceTypes
      */
-    saveProduct () {
+    saveInvoiceType () {
       this.visible = true
-      this.$api.post('products', this.product)
+      this.$api.post('invoice-types', this.invoiceType)
         .then(({ data }) => {
-          this.getProducts()
-          this.openAddProduct = false
+          this.getInvoiceTypes()
+          this.openAddInvoiceType = false
           this.visible = false
-          this.product = {}
+          this.invoiceType = {}
           Notify.create({
-            message: 'Producto creado exitosamente',
+            message: 'Moneda creada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -361,25 +259,25 @@ export default {
         })
     },
     /**
-     * View product
+     * View invoiceType
      */
-    editProduct (event, row, index) {
-      this.openEditProduct = true
-      this.product = row
+    editInvoiceType (event, row, index) {
+      this.openEditInvoiceType = true
+      this.invoiceType = row
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`products/${this.product.id}`, this.product)
+      this.$api.put(`invoice-types${this.invoiceType.id}`, this.invoiceType)
         .then(({ data }) => {
-          this.getProducts()
-          this.openEditProduct = false
+          this.getInvoiceTypes()
+          this.openEditInvoiceType = false
           this.visible = false
-          this.product = {}
+          this.invoiceType = {}
           Notify.create({
-            message: 'Producto editado exitosamente',
+            message: 'Moneda editada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -394,18 +292,18 @@ export default {
         })
     },
     /**
-     * Delete product
+     * Delete invoiceType
      */
-    deleteProduct () {
+    deleteInvoiceType () {
       this.visible = true
-      this.$api.delete(`products/${this.product.id}`)
+      this.$api.delete(`invoice-types${this.invoiceType.id}`)
         .then(({ data }) => {
-          this.getProducts()
-          this.openEditProduct = false
+          this.getInvoiceTypes()
+          this.openEditInvoiceType = false
           this.visible = false
-          this.product = {}
+          this.invoiceType = {}
           Notify.create({
-            message: 'Producto eliminado exitosamente',
+            message: 'Moneda eliminada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })

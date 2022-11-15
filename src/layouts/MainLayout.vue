@@ -13,6 +13,7 @@
         <q-toolbar-title>
           {{ title.title }}
         </q-toolbar-title>
+        <q-btn flat @click="logout" round dense icon="logout" />
       </q-toolbar>
     </q-header>
 
@@ -44,6 +45,7 @@
 
 <script>
 import { defineComponent, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import EssentialLink from 'components/EssentialLink.vue'
 
 const linksList = [
@@ -60,7 +62,52 @@ const linksList = [
   {
     title: 'Facturas',
     icon: 'receipt_long',
-    link: 'Bills'
+    link: 'Bill'
+  },
+  {
+    title: 'Categorias',
+    icon: 'receipt_long',
+    link: 'Category'
+  },
+  {
+    title: 'Metodos de pago',
+    icon: 'receipt_long',
+    link: 'PaymentMethod'
+  },
+  {
+    title: 'Tipos de factura',
+    icon: 'book',
+    link: 'InvoiceType'
+  },
+  {
+    title: 'Coins',
+    icon: 'attach_money',
+    link: 'Coin'
+  },
+  {
+    title: 'Usuarios',
+    icon: 'person',
+    link: 'User'
+  },
+  {
+    title: 'Vendedores',
+    icon: 'person',
+    link: 'Seller'
+  },
+  {
+    title: 'Clientes',
+    icon: 'person',
+    link: 'Client'
+  },
+  {
+    title: 'Roles',
+    icon: 'group',
+    link: 'Role'
+  },
+  {
+    title: 'Mesas',
+    icon: 'table_bar',
+    link: 'Table'
   }
 ]
 
@@ -79,12 +126,21 @@ export default defineComponent({
   },
   setup () {
     const leftDrawerOpen = ref(false)
-
+    // const route = useRoute()
+    const router = useRouter()
     return {
       essentialLinks: linksList,
       leftDrawerOpen,
       toggleLeftDrawer () {
         leftDrawerOpen.value = !leftDrawerOpen.value
+      },
+
+      /**
+       * Logout
+       */
+      logout () {
+        localStorage.clear()
+        router.push({ name: 'Login' })
       }
     }
   }

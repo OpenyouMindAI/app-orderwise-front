@@ -2,19 +2,19 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
+        <q-btn color="primary" @click="openAddPaymentMethod = true" icon="add_circle"/>
       </div>
       <div class="col-12">
         <q-table
-          title="Productos"
+          title="Metodo de pagos"
           row-key="name"
           :columns="columns"
-          :rows="products"
+          :rows="paymentMethods"
           :loading="visible"
           :filter="filter"
           binary-state-sort
           v-model:pagination="paginationConfig"
-          @row-click="editProduct"
+          @row-click="editPaymentMethod"
           @request="setPagination"
           no-data-label="Registro no encontrado"
         >
@@ -31,114 +31,49 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditProduct" persistent>
+    <q-dialog v-model="openEditPaymentMethod" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar producto</div>
+            <div class="text-h6">Editar metodo de pago</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
-                v-model="product.barcode"
                 autofocus
-                label="Código de barra"
-                hint=""
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
+                label="Nombre"
                 :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.name"
-                autofocus
-                label="Descripción"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.price"
-                label="Precio"
-                type="number"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                label="Categoria"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category"
-                :options="categories"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                @filter="filterCategories"
+                v-model="paymentMethod.name"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
+            <q-btn color="negative" label="Eliminar" @click="deletePaymentMethod" :loading="visible" />
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddProduct" persistent>
+    <q-dialog v-model="openAddPaymentMethod" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveProduct">
+        <q-form @submit="savePaymentMethod">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Agregar producto</div>
+            <div class="text-h6">Agregar metodo de pago</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="product.barcode"
+                v-model="paymentMethod.name"
                 autofocus
-                label="Código de barra"
-                hint=""
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.name"
-                autofocus
-                label="Descripción"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.price"
-                label="Precio"
-                type="number"
-                step=".01"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                label="Categoria"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category"
-                :options="categories"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                @filter="filterCategories"
+                label="Nombre"
               />
             </div>
           </q-card-section>
@@ -157,10 +92,8 @@ import { Notify } from 'quasar'
 export default {
   data () {
     return {
-      products: [],
-      product: {},
-      categories: [],
-      category: null,
+      paymentMethods: [],
+      paymentMethod: {},
       filter: '',
       /**
        * Params search
@@ -173,15 +106,12 @@ export default {
         perPage: 1,
         dataSearch: {
           id: '',
-          barcode: '',
-          name: '',
-          'category.name': '',
-          price: ''
+          name: ''
         }
       },
       visible: false,
-      openAddProduct: false,
-      openEditProduct: null,
+      openAddPaymentMethod: false,
+      openEditPaymentMethod: null,
       userSession: null,
       columns: [
         {
@@ -192,32 +122,10 @@ export default {
           sortable: true
         },
         {
-          name: 'barcode',
-          align: 'left',
-          label: 'Código de barra',
-          field: 'barcode',
-          format: (val) => val ?? '-',
-          sortable: true
-        },
-        {
           name: 'name',
           align: 'left',
-          label: 'Descripción',
+          label: 'Nombre',
           field: 'name',
-          sortable: true
-        },
-        {
-          name: 'category',
-          align: 'left',
-          label: 'Categoria',
-          field: row => row.category.name,
-          sortable: true
-        },
-        {
-          name: 'price',
-          align: 'right',
-          label: 'Precio',
-          field: 'price',
           sortable: true
         }
       ],
@@ -238,56 +146,22 @@ export default {
   },
   created () {
     this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.product.user_created_id = this.userSession.id
-    this.product.user_updated_id = this.userSession.id
+    this.paymentMethod.user_created_id = this.userSession.id
+    this.paymentMethod.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {
       this.searchData(data)
-    },
-    category (data) {
-      if (data) {
-        this.product.category_id = data.id
-      }
-    },
-    product (data) {
-      this.category = data.category
     }
   },
   methods: {
     /**
-     * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
-     */
-    filterCategories (value, update) {
-      this.$api.get('categories', {
-        params: {
-          dataSearch: {
-            name: value
-          }
-        }
-      })
-        .then(({ data }) => {
-          update(() => {
-            this.categories = data
-          })
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
-    /**
      * Close all modals
      */
     closeModal () {
-      this.openAddProduct = false
-      this.openEditProduct = false
-      this.product = {}
+      this.openAddPaymentMethod = false
+      this.openEditPaymentMethod = false
+      this.paymentMethod = {}
     },
     /**
      * Search beneficiary
@@ -298,17 +172,16 @@ export default {
         this.params.dataSearch[dataSearch] = data
       }
       this.params.page = 1
-      this.getProducts(this.params)
+      this.getPaymentMethods(this.params)
     },
     /**
-     * Get all products
+     * Get all payment-methods
      */
-    getProducts (params = this.params) {
+    getPaymentMethods (params = this.params) {
       this.visible = true
-      this.$api.get('products', { params })
+      this.$api.get('payment-methods', { params })
         .then(({ data }) => {
-          console.log(data.data)
-          this.products = data.data
+          this.paymentMethods = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
         })
@@ -332,21 +205,21 @@ export default {
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
       this.params.perPage = data.pagination.rowsPerPage
       this.paginationConfig = data.pagination
-      this.getProducts(this.params)
+      this.getPaymentMethods(this.params)
     },
     /**
-     * Save products
+     * Save payment-methods
      */
-    saveProduct () {
+    savePaymentMethod () {
       this.visible = true
-      this.$api.post('products', this.product)
+      this.$api.post('payment-methods', this.paymentMethod)
         .then(({ data }) => {
-          this.getProducts()
-          this.openAddProduct = false
+          this.getPaymentMethods()
+          this.openAddPaymentMethod = false
           this.visible = false
-          this.product = {}
+          this.paymentMethod = {}
           Notify.create({
-            message: 'Producto creado exitosamente',
+            message: 'Metodo de pago creado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -361,25 +234,25 @@ export default {
         })
     },
     /**
-     * View product
+     * View paymentMethod
      */
-    editProduct (event, row, index) {
-      this.openEditProduct = true
-      this.product = row
+    editPaymentMethod (event, row, index) {
+      this.openEditPaymentMethod = true
+      this.paymentMethod = row
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`products/${this.product.id}`, this.product)
+      this.$api.put(`payment-methods/${this.paymentMethod.id}`, this.paymentMethod)
         .then(({ data }) => {
-          this.getProducts()
-          this.openEditProduct = false
+          this.getPaymentMethods()
+          this.openEditPaymentMethod = false
           this.visible = false
-          this.product = {}
+          this.paymentMethod = {}
           Notify.create({
-            message: 'Producto editado exitosamente',
+            message: 'Metodo de pago editado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -394,18 +267,18 @@ export default {
         })
     },
     /**
-     * Delete product
+     * Delete paymentMethod
      */
-    deleteProduct () {
+    deletePaymentMethod () {
       this.visible = true
-      this.$api.delete(`products/${this.product.id}`)
+      this.$api.delete(`payment-methods/${this.paymentMethod.id}`)
         .then(({ data }) => {
-          this.getProducts()
-          this.openEditProduct = false
+          this.getPaymentMethods()
+          this.openEditPaymentMethod = false
           this.visible = false
-          this.product = {}
+          this.paymentMethod = {}
           Notify.create({
-            message: 'Producto eliminado exitosamente',
+            message: 'Metodo de pago eliminado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
