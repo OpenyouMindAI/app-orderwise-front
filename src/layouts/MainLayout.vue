@@ -117,6 +117,9 @@ export default defineComponent({
   components: {
     EssentialLink
   },
+  created () {
+    this.$q.dark.set(true)
+  },
   computed: {
     title () {
       return linksList.find((link) => {
@@ -126,6 +129,7 @@ export default defineComponent({
   },
   setup () {
     const leftDrawerOpen = ref(false)
+
     // const route = useRoute()
     const router = useRouter()
     return {
