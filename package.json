@@ -13,6 +13,7 @@
     "@capacitor-community/barcode-scanner": "^2.1.1",
     "@quasar/extras": "^1.0.0",
     "axios": "^0.21.1",
+    "draggable-resizable-vue3": "^1.0.94-beta",
     "firebase": "^9.9.3",
     "pinia": "^2.0.11",
     "quasar": "^2.6.0",
