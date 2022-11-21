@@ -32,52 +32,43 @@
         </q-card>
       </div>
       <div class="col-12">
-        <q-input dense outlined v-model="code" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.code)">
+        <q-input dense outlined v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
           <template v-slot:append>
             <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
           </template>
         </q-input>
       </div>
-      <div class="col-12">
+      <div class="col-4">
         <q-scroll-area
           :thumb-style="thumbStyle"
           :bar-style="barStyle"
-          :style="`height: ${heightWindow - 220}px`"
+          style="height: 60vh"
         >
           <q-table
             row-key="name"
-            title="Items"
+            title="Productos"
             dense
             :rows="products"
             :columns="columns"
             :loading="loadingPage"
-            :filter="filter"
             hide-pagination
             v-model:pagination="pagination"
-            grid
           >
-            <template v-slot:top-right>
-              <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
-                <template v-slot:append>
-                  <q-icon name="search" />
-                </template>
-              </q-input>
-            </template>
             <template v-slot:item="props">
               <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
                 <q-card>
                   <q-card-section class="text-center q-pa-xs">
                     <q-badge round color="negative" floating>
-                      <q-btn icon="close" size="xs" dense @click="deleteProduct(props)"/>
+                      <q-btn flat icon="close" size="xs" dense @click="deleteProduct(props)"/>
                     </q-badge>
-                    <strong>{{ props.row.description }}</strong>
+                    <strong>{{ props.row.name }}</strong>
                   </q-card-section>
                   <q-separator />
                   <q-card-section class="flex flex-center q-pa-xs">
                     <q-list class="full-width" dense>
                       <q-item clickable v-ripple>
                         <q-item-section>Codigo:</q-item-section>
-                        <q-item-section side>{{ props.row.code }}</q-item-section>
+                        <q-item-section side>{{ props.row.barcode }}</q-item-section>
                       </q-item>
                       <q-item clickable v-ripple active-class="text-orange">
                         <q-item-section>Precio:</q-item-section>
@@ -105,24 +96,9 @@
           </q-table>
         </q-scroll-area>
       </div>
-      <div class="col-12">
-        <div class="flex flex-center">
-          <q-pagination
-            v-model="pagination.page"
-            :max="pagesNumber"
-            :max-pages="5"
-            direction-links
-            boundary-links
-            icon-first="skip_previous"
-            icon-last="skip_next"
-            icon-prev="fast_rewind"
-            icon-next="fast_forward"
-          />
-        </div>
-      </div>
     </div>
     <q-dialog v-model="modelScan">
-      <stream-barcode-reader @decode="getOnePorduct"/>
+      <stream-barcode-reader @debarcode="getOnePorduct"/>
     </q-dialog>
     <q-page-sticky position="bottom-right" :offset="[12, 8]">
       <q-btn fab icon="save" color="primary" padding="sm" @click="saveBill"/>
@@ -131,10 +107,8 @@
 </template>
 
 <script>
-import { doc, getDoc, collection, addDoc } from 'firebase/firestore'
-import { db } from '../dbfire'
 import { StreamBarcodeReader } from 'vue-barcode-reader'
-import { date } from 'quasar'
+// import { date } from 'quasar'
 export default {
   // name: 'PageName',
   components: {
@@ -149,7 +123,7 @@ export default {
        * Pagination option
        * @type {Objct}
        */
-      pagination: { page: 1, rowsPerPage: 5 },
+      pagination: { rowsPerPage: 0 },
       thumbStyle: {
         right: '4px',
         borderRadius: '5px',
@@ -166,19 +140,19 @@ export default {
         opacity: 0.2
       },
       filter: '',
-      code: null,
+      barcode: null,
       dialogScanner: false,
       products: [],
       loadingPage: false,
       totalBill: 0,
       columns: [
-        { name: 'code', align: 'left', label: 'Código', field: 'code', sortable: true },
+        { name: 'barcode', align: 'left', label: 'Código', field: 'barcode', sortable: true },
         {
-          name: 'description',
+          name: 'name',
           required: true,
           label: 'Descripcion',
           align: 'left',
-          field: row => row.description,
+          field: row => row.name,
           sortable: true
         },
         { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
@@ -204,27 +178,27 @@ export default {
       localStorage.removeItem('products')
       this.calculateTotal()
     },
-    async saveBill () {
-      try {
-        this.loadingPage = true
-        await addDoc(collection(db, 'bills'), {
-          exchange_rate: this.exchangeRate,
-          total: this.totalBill,
-          totalExchange: (this.totalBill * this.exchangeRate).toFixed(2),
-          products: this.products,
-          date: date.formatDate(Date(), 'DD/MM/YYYY')
-        })
-        this.loadingPage = false
-        this.clean()
-        this.$q.notify({
-          message: 'Factura creada exitosamente',
-          icon: 'check_circle',
-          color: 'positive'
-        })
-      } catch (e) {
-        console.error('Error adding document: ', e)
-      }
-    },
+    // async saveBill () {
+    //   try {
+    //     this.loadingPage = true
+    //     await addDoc(collection(db, 'bills'), {
+    //       exchange_rate: this.exchangeRate,
+    //       total: this.totalBill,
+    //       totalExchange: (this.totalBill * this.exchangeRate).toFixed(2),
+    //       products: this.products,
+    //       date: date.formatDate(Date(), 'DD/MM/YYYY')
+    //     })
+    //     this.loadingPage = false
+    //     this.clean()
+    //     this.$q.notify({
+    //       message: 'Factura creada exitosamente',
+    //       icon: 'check_circle',
+    //       color: 'positive'
+    //     })
+    //   } catch (e) {
+    //     console.error('Error adding document: ', e)
+    //   }
+    // },
     getLocalStorage () {
       this.exchangeRate = localStorage.getItem('exchangeRate') ?? 0
       this.products = JSON.parse(localStorage.getItem('products')) ?? []
@@ -252,7 +226,7 @@ export default {
       this.calculateTotal()
     },
     validateProduct (data) {
-      const findProduct = this.products.find(product => product.code === data.code)
+      const findProduct = this.products.find(product => product.id === data.id)
       if (findProduct) {
         findProduct.amount += 1
       } else {
@@ -260,24 +234,38 @@ export default {
       }
       localStorage.setItem('products', JSON.stringify(this.products))
     },
-    async getOnePorduct (code = this.code) {
-      const docSnap = await getDoc(doc(db, 'products', code))
-      if (docSnap.exists()) {
-        const product = docSnap.data()
-        product.amount = 1
-        product.price = 0
-        product.subtotal = 0
-        this.validateProduct(product)
-        this.code = null
-        this.calculateTotal()
-        this.modelScan = false
-      } else {
-        this.$q.notify({
-          message: 'Producto no encontrado',
-          icon: 'warning',
-          color: 'negative'
+    async getOnePorduct (barcode = this.barcode) {
+      this.$api.get('products', {
+        params: {
+          dataFilter: {
+            barcode: this.barcode
+          }
+        }
+      })
+        .then(({ data }) => {
+          const product = data[0]
+          if (product) {
+            product.amount = 1
+            product.subtotal = 0
+            this.validateProduct(product)
+            this.barcode = null
+            this.calculate(product)
+            this.modelScan = false
+          } else {
+            this.$q.notify({
+              message: 'Producto no encontrado',
+              icon: 'warning',
+              color: 'negative'
+            })
+          }
         })
-      }
+        .catch((error) => {
+          this.$q.notify({
+            message: error.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     }
   }
 }
