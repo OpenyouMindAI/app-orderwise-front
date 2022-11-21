@@ -5,6 +5,27 @@
         <q-btn color="primary" @click="openAddTable = true" icon="add_circle"/>
       </div>
       <div class="col-12">
+        <draggable-resizable-container
+          :grid="[20, 20]"
+          :show-grid="true"
+          class="container"
+        >
+          <draggable-resizable-vue
+            v-for="table in tables"
+            :key="table.id"
+            v-model:x="table.x"
+            v-model:y="table.y"
+            v-model:h="table.height"
+            v-model:w="table.width"
+            class="element-one"
+            :handles-size="10"
+            @deactivated="onDeactivated(table)"
+          >
+            {{ table.name }}
+          </draggable-resizable-vue>
+        </draggable-resizable-container>
+      </div>
+      <!-- <div class="col-12">
         <q-table
           title="Mesas"
           row-key="name"
@@ -29,7 +50,7 @@
             </q-input>
           </template>
         </q-table>
-      </div>
+      </div> -->
     </div>
     <q-dialog v-model="openEditTable" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
@@ -107,72 +128,28 @@
 
 <script>
 import { Notify } from 'quasar'
+import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
+
 export default {
+  components: {
+    DraggableResizableContainer,
+    DraggableResizableVue
+  },
   data () {
     return {
       tables: [],
       table: {},
-      filter: '',
-      /**
-       * Params search
-       * @type {Object}
-       */
-      params: {
-        paginate: true,
-        sortBy: 'id',
-        sortOrder: 'desc',
-        perPage: 1,
-        dataSearch: {
-          id: '',
-          name: ''
-        }
-      },
       visible: false,
       openAddTable: false,
       openEditTable: null,
-      userSession: null,
-      columns: [
-        {
-          name: 'id',
-          align: 'left',
-          label: 'Código',
-          field: 'id',
-          sortable: true
-        },
-        {
-          name: 'name',
-          align: 'left',
-          label: 'Nombre',
-          field: 'name',
-          sortable: true
-        },
-        {
-          name: 'number',
-          align: 'left',
-          label: 'Número',
-          field: 'number',
-          sortable: true
-        }
-      ],
-      paginationConfig: {
-        rowsPerPage: 20,
-        rowsNumber: 20,
-        paginate: true,
-        sortBy: 'id',
-        sortOrder: 'desc'
-      }
+      userSession: null
     }
-  },
-  mounted () {
-    this.setPagination({
-      pagination: this.paginationConfig,
-      filter: undefined
-    })
   },
   created () {
     this.userSession = JSON.parse(localStorage.getItem('user'))
     this.table.user_created_id = this.userSession.id
     this.table.user_updated_id = this.userSession.id
+    this.getTables()
   },
   watch: {
     filter (data) {
@@ -180,6 +157,10 @@ export default {
     }
   },
   methods: {
+    onDeactivated (data) {
+      console.log(data)
+      this.saveEdit(data)
+    },
     /**
      * Close all modals
      */
@@ -189,26 +170,19 @@ export default {
       this.table = {}
     },
     /**
-     * Search beneficiary
-     * @param  {Object}
-     */
-    searchData (data) {
-      for (const dataSearch in this.params.dataSearch) {
-        this.params.dataSearch[dataSearch] = data
-      }
-      this.params.page = 1
-      this.getTables(this.params)
-    },
-    /**
      * Get all tables
      */
-    getTables (params = this.params) {
+    getTables () {
       this.visible = true
-      this.$api.get('tables', { params })
+      this.$api.get('tables', {
+        params: {
+          sortBy: 'id',
+          sortOrder: 'desc'
+        }
+      })
         .then(({ data }) => {
-          this.tables = data.data
+          this.tables = data
           this.visible = false
-          this.paginationConfig.rowsNumber = data.total
         })
         .catch(err => {
           this.visible = false
@@ -218,19 +192,6 @@ export default {
             color: 'negative'
           })
         })
-    },
-    /**
-     * Set data pagination emit event
-     * @param  {Object} data value pagination
-     */
-    setPagination (data) {
-      console.log(data.pagination.descending)
-      this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
-      this.params.page = data.pagination.page
-      this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
-      this.params.perPage = data.pagination.rowsPerPage
-      this.paginationConfig = data.pagination
-      this.getTables(this.params)
     },
     /**
      * Save tables
@@ -268,14 +229,13 @@ export default {
     /**
      * Save edit
      */
-    saveEdit () {
+    saveEdit (data) {
       this.visible = true
-      this.$api.put(`tables/${this.table.id}`, this.table)
+      this.$api.put(`tables/${data.id}`, data)
         .then(({ data }) => {
           this.getTables()
           this.openEditTable = false
           this.visible = false
-          this.table = {}
           Notify.create({
             message: 'Mesa editada exitosamente',
             icon: 'check_circle',
@@ -320,3 +280,15 @@ export default {
   }
 }
 </script>
+<style>
+.container {
+  width: 100%;
+  height: 100vh;
+  border: 1px solid black;
+}
+
+.element-one {
+  background-color: blue;
+  color: white;
+}
+</style>
