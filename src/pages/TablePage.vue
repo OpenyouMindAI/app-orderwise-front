@@ -283,7 +283,7 @@ export default {
 <style>
 .container {
   width: 100%;
-  height: 100vh;
+  height: 79vh;
   border: 1px solid black;
 }
 

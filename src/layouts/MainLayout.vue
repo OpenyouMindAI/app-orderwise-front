@@ -118,7 +118,7 @@ export default defineComponent({
     EssentialLink
   },
   created () {
-    this.$q.dark.set(true)
+    // this.$q.dark.set(true)
   },
   computed: {
     title () {
