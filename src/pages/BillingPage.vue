@@ -4,8 +4,7 @@
       <div class="col-4">
         <q-card class="bg-teal text-white" @click="exchange = !exchange">
           <q-card-section class="text-subtitle2 text-center">
-            <span v-if="coin">{{ coin.symbol }}</span>
-            {{ totalBill }}
+            <span v-if="coin">{{ coin.symbol }}</span>{{ totalBill }}
             <!-- <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
               <q-banner>
                 {{ (totalBill * exchangeRate).toFixed(2) }} Bs
@@ -77,26 +76,38 @@
         />
       </div>
       <div class="col-4">
-        <q-input filled
-        dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
+        <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
           <template v-slot:append>
             <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
           </template>
         </q-input>
       </div>
-      <div class="col-2 q-gutter-sm">
+      <div class="col-4 q-gutter-sm">
         <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true">
           <q-badge floating color="negative">
             {{ tableSelected.length }}
           </q-badge>
         </q-btn>
-        <q-btn color="secondary" icon="attach_money" @click="dialogPayment = true"/>
+        <q-btn
+          color="secondary"
+          icon="attach_money"
+          @click="dialogPayment = true"
+        >
+          <q-badge floating color="negative">
+            {{ payments.length }}
+          </q-badge>
+        </q-btn>
+        <q-btn
+          icon="print"
+          color="primary"
+          @click="saveBill"
+        />
       </div>
-      <div class="col-12">
+      <div class="col-6">
         <q-scroll-area
           :thumb-style="thumbStyle"
           :bar-style="barStyle"
-          style="height: 30vh"
+          style="height: 50vh; background-color: beige;"
         >
           <q-table
             row-key="name"
@@ -131,7 +142,38 @@
                 <q-td key="subtotal" :props="props">
                   {{ props.row.subtotal }}
                 </q-td>
+                <q-td key="actions" :props="props">
+                  <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
+                </q-td>
               </q-tr>
+            </template>
+          </q-table>
+        </q-scroll-area>
+      </div>
+      <div class="col-6">
+        <q-scroll-area
+          :thumb-style="thumbStyle"
+          :bar-style="barStyle"
+          style="height: 50vh; background-color: beige;"
+        >
+          <q-table
+            row-key="name"
+            dense
+            grid
+            hide-pagination
+            :rows="allPorducts"
+            :columns="productColumns"
+            :loading="loadingPage"
+            v-model:pagination="pagination"
+          >
+            <template v-slot:item="props">
+              <q-card class="my-card">
+                <q-img src="https://cdn.quasar.dev/img/parallax2.jpg">
+                  <div class="absolute-bottom text-subtitle2 text-center">
+                    {{ props.row.name }}
+                  </div>
+                </q-img>
+              </q-card>
             </template>
           </q-table>
         </q-scroll-area>
@@ -142,18 +184,97 @@
     </q-dialog>
     <q-dialog v-model="dialogPayment">
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">
-            Restante por pagar S 100
+        <q-card-section class="row q-col-gutter-md">
+          <div class="col-3 q-gutter-xs">
+            <q-btn
+              color="secondary"
+              size="17px"
+              style="width: 100%"
+              :label="paymentMethod.name"
+              v-for="paymentMethod in paymentMethods" :key="paymentMethod.id"
+              @click="addPayment(paymentMethod)"
+            />
+          </div>
+          <div class="col-9">
+            <q-markup-table>
+              <thead>
+                <th colspan="4">Desglose de pago</th>
+              </thead>
+              <thead>
+                <tr>
+                  <th class="text-left">Metodo de pago</th>
+                  <th class="text-left">Referencia</th>
+                  <th class="text-right">Monto</th>
+                  <th class="text-right">Aciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(payment, index) in payments" :key="payment.id">
+                  <td class="text-left">{{ payment.name }}</td>
+                  <td class="text-left">
+                    {{ payment.reference }}
+                    <q-popup-edit
+                      v-model="payment.reference"
+                      auto-save
+                      v-slot="scope"
+                    >
+                      <q-input
+                        v-model="scope.value"
+                        autofocus
+                        @keyup.enter="scope.set"
+                      />
+                    </q-popup-edit>
+                  </td>
+                  <td class="text-right">
+                    {{ payment.amount }}
+                    <q-popup-edit
+                      v-model.number="payment.amount"
+                      auto-save
+                      v-slot="scope"
+                    >
+                      <q-input
+                        v-model="scope.value"
+                        autofocus
+                        @keyup.enter="scope.set"
+                      />
+                    </q-popup-edit>
+                  </td>
+                  <q-td class="text-right">
+                    <q-btn
+                      icon="delete"
+                      size="xs"
+                      color="negative"
+                      @click="deletePayment(index)"
+                    />
+                  </q-td>
+                </tr>
+                <tr>
+                  <th colspan="4">
+                    Restante a pagar:
+                    <span v-if="coin">{{ coin.symbol }}</span>{{ pendingPayment }}
+                  </th>
+                </tr>
+              </tbody>
+            </q-markup-table>
           </div>
         </q-card-section>
-        <q-card-section class="row q-col-gutter-sm">
-          <div class="row col-6 q-gutter-md">
-            <div v-for="paymentMethod in paymentMethods" :key="paymentMethod.id">
-              <q-btn :label="paymentMethod.name" @click="addPayment(paymentMethod)" color="secondary" size="17px" style="min-width: 110px"/>
-            </div>
-          </div>
-        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn
+            label="Guardar y cerrar"
+            v-close-popup
+            color="primary"
+          />
+          <q-btn
+            label="Guardar e imprimir factura"
+            @click="saveBill"
+            color="secondary"
+          />
+          <q-btn
+            label="Cancelar"
+            @click="saveBill"
+            color="negative"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
     <q-dialog v-model="dialogTable" maximized>
@@ -188,9 +309,6 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-    <q-page-sticky position="bottom-right" :offset="[12, 8]">
-      <q-btn fab icon="save" color="primary" padding="sm" @click="saveBill"/>
-    </q-page-sticky>
   </q-page>
 </template>
 
@@ -207,6 +325,7 @@ export default {
   },
   data () {
     return {
+      payments: [],
       paymentMethods: [],
       dialogPayment: false,
       invoiceTypes: [],
@@ -233,7 +352,6 @@ export default {
         width: '5px',
         opacity: 0.75
       },
-
       barStyle: {
         right: '2px',
         borderRadius: '9px',
@@ -247,6 +365,38 @@ export default {
       products: [],
       loadingPage: false,
       totalBill: 0,
+      allPorducts: [],
+      productColumns: [
+        {
+          name: 'barcode',
+          align: 'left',
+          label: 'Código',
+          field: 'barcode',
+          sortable: true
+        },
+        {
+          name: 'name',
+          required: true,
+          label: 'Descripcion',
+          align: 'left',
+          field: row => row.name,
+          sortable: true
+        },
+        {
+          name: 'category',
+          align: 'right',
+          label: 'Categoría',
+          field: row => row.category.name,
+          sortable: true
+        },
+        {
+          name: 'price',
+          align: 'right',
+          label: 'Precio',
+          field: 'price',
+          sortable: true
+        }
+      ],
       columns: [
         { name: 'barcode', align: 'left', label: 'Código', field: 'barcode', sortable: true },
         {
@@ -259,7 +409,8 @@ export default {
         },
         { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
         { name: 'price', align: 'right', label: 'Precio', field: 'price', sortable: true },
-        { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal', sortable: true }
+        { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal', sortable: true },
+        { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
       ]
     }
   },
@@ -269,6 +420,17 @@ export default {
     },
     pagesNumber () {
       return Math.ceil(this.products.length / this.pagination.rowsPerPage)
+    },
+    pendingPayment () {
+      return this.totalBill - this.totalPayment
+    },
+    totalPayment () {
+      let totalPayment = 0
+      this.payments.forEach((payment) => {
+        totalPayment = totalPayment + payment.amount
+      })
+      console.log(totalPayment)
+      return totalPayment
     }
   },
   created () {
@@ -276,10 +438,20 @@ export default {
     this.getTables()
     this.getCoins()
     this.getPaymentMethods()
+    this.getAllPorducts()
   },
   methods: {
+    /**
+     * Add bill payment
+     * @param {Object} data data payments
+     */
     addPayment (data) {
-      console.log(data)
+      this.payments.push({
+        name: data.name,
+        amount: this.pendingPayment,
+        reference: '-',
+        payment_method_id: data.id
+      })
     },
     /**
      * Get all payment-methods
@@ -375,6 +547,9 @@ export default {
           })
         })
     },
+    /**
+     * Clean formulary
+     */
     clean () {
       this.products = []
       localStorage.removeItem('products')
@@ -401,6 +576,30 @@ export default {
           })
         })
     },
+    /**
+     * Get all tables
+     */
+    getAllPorducts () {
+      this.$api.get('products', {
+        params: {
+          sortBy: 'id',
+          sortOrder: 'desc'
+        }
+      })
+        .then(({ data }) => {
+          this.allPorducts = data
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Save bill and payments
+     */
     async saveBill () {
       // try {
       //   this.loadingPage = true
@@ -422,20 +621,40 @@ export default {
       //   console.error('Error adding document: ', e)
       // }
     },
+    /**
+     * Get local storage
+     */
     getLocalStorage () {
       this.exchangeRate = localStorage.getItem('exchangeRate') ?? 0
       this.products = JSON.parse(localStorage.getItem('products')) ?? []
       this.calculateTotal()
     },
+    /**
+     * Save exchange rate
+     */
     saveExchangeRate () {
       localStorage.setItem('exchangeRate', this.exchangeRate)
       this.calculateTotal()
     },
+    /**
+     * Delete product in table
+     * @param {Object} product props table products
+     */
     deleteProduct (product) {
       this.products.splice(product.rowIndex, 1)
       this.calculateTotal()
       localStorage.setItem('products', JSON.stringify(this.products))
     },
+    /**
+     *
+     * @param {Number} index value index payments
+     */
+    deletePayment (index) {
+      this.payments.splice(index, 1)
+    },
+    /**
+     * Calculate the total
+     */
     calculateTotal () {
       let total = 0
       this.products.forEach(product => {
@@ -444,10 +663,18 @@ export default {
       this.totalBill = total
       localStorage.setItem('products', JSON.stringify(this.products))
     },
+    /**
+     * Calculate the total and subtotal
+     * @param {Object} data props products
+     */
     calculate (data) {
       data.subtotal = data.price * data.amount
       this.calculateTotal()
     },
+    /**
+     * Validate products
+     * @param {*} data product selected
+     */
     validateProduct (data) {
       const findProduct = this.products.find(product => product.id === data.id)
       if (findProduct) {
@@ -457,6 +684,10 @@ export default {
       }
       localStorage.setItem('products', JSON.stringify(this.products))
     },
+    /**
+     * Get one product
+     * @param {Number} barcode barcode product
+     */
     async getOnePorduct (barcode = this.barcode) {
       this.$api.get('products', {
         params: {
