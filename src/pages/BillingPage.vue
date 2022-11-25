@@ -1,114 +1,108 @@
 <template>
   <q-page padding>
-    <div class="row q-col-gutter-sm">
-      <div class="col-4">
-        <q-card class="bg-teal text-white" @click="exchange = !exchange">
-          <q-card-section class="text-subtitle2 text-center">
-            <span v-if="coin">{{ coin.symbol }}</span>{{ totalBill }}
-            <!-- <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
-              <q-banner>
-                {{ (totalBill * exchangeRate).toFixed(2) }} Bs
-              </q-banner>
-            </q-popup-proxy> -->
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-4">
-        <q-card class="bg-orange text-white">
-          <q-card-section class="text-subtitle2 text-center">
-            Taza {{ exchangeRate }} Bs
-            <q-popup-edit v-model.number="exchangeRate" auto-save v-slot="scope" @update:model-value="saveExchangeRate">
-              <q-input type="number" v-model.number="scope.value" dense autofocus @keyup.enter="scope.set" />
-            </q-popup-edit>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-4">
-        <q-card class="bg-primary text-white">
-          <q-card-section class="text-subtitle2 text-center">
-            Items:
-            {{ products.length }}
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-4">
-        <q-select
-          use-input
-          filled
-          dense
-          label="Cliente"
-          input-debounce="0"
-          option-label="name"
-          option-value="id"
-          v-model="client"
-          :options="clients"
-          :rules="[val => !!val || 'El campo es requerido.']"
-          @filter="filterClients"
-        />
-      </div>
-      <div class="col-4">
-        <q-select
-          use-input
-          filled
-          dense
-          label="Tipo de factura"
-          input-debounce="0"
-          option-label="name"
-          option-value="id"
-          v-model="invoiceType"
-          :options="invoiceTypes"
-          :rules="[val => !!val || 'El campo es requerido.']"
-          @filter="filterInvoiceTypes"
-        />
-      </div>
-      <div class="col-4">
-        <q-select
-          use-input
-          filled
-          dense
-          label="Moneda"
-          input-debounce="0"
-          option-label="name"
-          option-value="id"
-          v-model="coin"
-          :options="coins"
-          :rules="[val => !!val || 'El campo es requerido.']"
-        />
-      </div>
-      <div class="col-4">
-        <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
-          <template v-slot:append>
-            <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
-          </template>
-        </q-input>
-      </div>
-      <div class="col-4 q-gutter-sm">
-        <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true">
-          <q-badge floating color="negative">
-            {{ tableSelected.length }}
-          </q-badge>
-        </q-btn>
-        <q-btn
-          color="secondary"
-          icon="attach_money"
-          @click="dialogPayment = true"
-        >
-          <q-badge floating color="negative">
-            {{ payments.length }}
-          </q-badge>
-        </q-btn>
-        <q-btn
-          icon="print"
-          color="primary"
-          @click="saveBill"
-        />
-      </div>
-      <div class="col-6">
-        <q-scroll-area
-          :thumb-style="thumbStyle"
-          :bar-style="barStyle"
-          style="height: 50vh; background-color: beige;"
-        >
+    <q-form ref="saveBill" @submit="saveBill">
+      <div class="row q-col-gutter-sm">
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
+          <q-card class="bg-teal text-white" @click="exchange = !exchange">
+            <q-card-section class="text-subtitle2 text-center">
+              <span v-if="coin">{{ coin.symbol }}</span>{{ totalBill }}
+              <!-- <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
+                <q-banner>
+                  {{ (totalBill * exchangeRate).toFixed(2) }} Bs
+                </q-banner>
+              </q-popup-proxy> -->
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
+          <q-card class="bg-orange text-white">
+            <q-card-section class="text-subtitle2 text-center">
+              Cambio S{{ exchangeRate }}
+              <q-popup-edit v-model.number="exchangeRate" auto-save v-slot="scope" @update:model-value="saveExchangeRate">
+                <q-input type="number" v-model.number="scope.value" dense autofocus @keyup.enter="scope.set" />
+              </q-popup-edit>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
+          <q-card class="bg-primary text-white">
+            <q-card-section class="text-subtitle2 text-center">
+              Items:
+              {{ products.length }}
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+          <q-select
+            use-input
+            filled
+            dense
+            label="Cliente"
+            input-debounce="0"
+            option-label="name"
+            option-value="id"
+            v-model="client"
+            :options="clients"
+            :rules="[val => !!val || 'El campo es requerido.']"
+            @filter="filterClients"
+          />
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+          <q-select
+            use-input
+            filled
+            dense
+            label="Tipo de servicio"
+            input-debounce="0"
+            option-label="name"
+            option-value="id"
+            v-model="invoiceType"
+            :options="invoiceTypes"
+            :rules="[val => !!val || 'El campo es requerido.']"
+            @filter="filterInvoiceTypes"
+          />
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+          <q-select
+            filled
+            dense
+            label="Moneda"
+            option-label="name"
+            option-value="id"
+            v-model="coin"
+            :options="coins"
+            :rules="[val => !!val || 'El campo es requerido.']"
+          />
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+          <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
+            <template v-slot:append>
+              <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
+            </template>
+          </q-input>
+        </div>
+        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6 q-gutter-sm">
+          <q-btn color="orange" icon="table_restaurant" @click="getTables">
+            <q-badge floating color="negative">
+              {{ tableSelected.length }}
+            </q-badge>
+          </q-btn>
+          <q-btn
+            color="secondary"
+            icon="attach_money"
+            @click="dialogPayment = true"
+          >
+            <q-badge floating color="negative">
+              {{ payments.length }}
+            </q-badge>
+          </q-btn>
+          <q-btn
+            icon="print"
+            color="primary"
+            @click="submitBill"
+          />
+        </div>
+        <div class="col-xs-12 col-sm-6 col-md-6">
           <q-table
             row-key="name"
             title="Articulos"
@@ -148,14 +142,8 @@
               </q-tr>
             </template>
           </q-table>
-        </q-scroll-area>
-      </div>
-      <div class="col-6">
-        <q-scroll-area
-          :thumb-style="thumbStyle"
-          :bar-style="barStyle"
-          style="height: 50vh; background-color: beige;"
-        >
+        </div>
+        <div class="col-xs-12 col-sm-6 col-md-6">
           <q-table
             row-key="name"
             dense
@@ -164,21 +152,51 @@
             :rows="allPorducts"
             :columns="productColumns"
             :loading="loadingPage"
+            :filter="filter"
             v-model:pagination="pagination"
+            style="height: 56vh;"
           >
+            <template v-slot:top>
+              <div class="row justify-between full-width">
+                <div class="col-5">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    clearable
+                    label="Categorías"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="category"
+                    :options="categories"
+                    @filter="filterCategories"
+                  />
+                </div>
+                <div class="col-5">
+                  <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
+                    <template v-slot:append>
+                      <q-icon name="search" />
+                    </template>
+                  </q-input>
+                </div>
+              </div>
+            </template>
             <template v-slot:item="props">
-              <q-card class="my-card">
-                <q-img src="https://cdn.quasar.dev/img/parallax2.jpg">
-                  <div class="absolute-bottom text-subtitle2 text-center">
-                    {{ props.row.name }}
-                  </div>
-                </q-img>
-              </q-card>
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+                <q-card class="my-card">
+                  <q-img src="https://cdn.quasar.dev/img/parallax2.jpg" @click="validateProduct(props.row)">
+                    <div class="absolute-bottom text-subtitle2 text-center">
+                      {{ props.row.name }}
+                    </div>
+                  </q-img>
+                </q-card>
+              </div>
             </template>
           </q-table>
-        </q-scroll-area>
+        </div>
       </div>
-    </div>
+    </q-form>
     <q-dialog v-model="modelScan">
       <stream-barcode-reader @debarcode="getOnePorduct"/>
     </q-dialog>
@@ -266,12 +284,12 @@
           />
           <q-btn
             label="Guardar e imprimir factura"
-            @click="saveBill"
+            @click="submitBill"
             color="secondary"
           />
           <q-btn
             label="Cancelar"
-            @click="saveBill"
+            @click="cancelPayment"
             color="negative"
           />
         </q-card-actions>
@@ -296,14 +314,16 @@
               v-model:h="table.height"
               v-model:w="table.width"
               class="element-one"
+              :style="table.status ==='unoccupied' ? 'background-color: blue;': 'background-color: orange;'"
               :handles-size="10"
               :draggable="false"
               :resizable="false"
             >
               <span class="absolute-center">
-                {{ table.name }}
+                {{ table.name }} {{ table.status }}
               </span>
-              <q-checkbox v-model="tableSelected" :val="table.id" color="teal" class="fixed-top-right"/>
+              <q-checkbox v-model="tableSelected" :val="table.id" color="teal" class="fixed-top-right" v-if="table.status === 'unoccupied'"/>
+              <q-btn icon="restart_alt" color="negative" size="sm" round class="fixed-top-right" v-else/>
             </draggable-resizable-vue>
           </draggable-resizable-container>
         </q-card-section>
@@ -325,6 +345,7 @@ export default {
   },
   data () {
     return {
+      category: null,
       payments: [],
       paymentMethods: [],
       dialogPayment: false,
@@ -344,7 +365,7 @@ export default {
        * Pagination option
        * @type {Objct}
        */
-      pagination: { rowsPerPage: 0 },
+      pagination: { rowsPerPage: 10 },
       thumbStyle: {
         right: '4px',
         borderRadius: '5px',
@@ -366,6 +387,8 @@ export default {
       loadingPage: false,
       totalBill: 0,
       allPorducts: [],
+      categories: [],
+      userSession: {},
       productColumns: [
         {
           name: 'barcode',
@@ -433,14 +456,50 @@ export default {
       return totalPayment
     }
   },
+  watch: {
+    category () {
+      this.getAllPorducts()
+    },
+    tableSelected (data) {
+      localStorage.setItem('tableSelected', JSON.stringify(data))
+    },
+    exchangeRate (data) {
+      localStorage.setItem('exchangeRate', data)
+    },
+    payments (data) {
+      localStorage.setItem('payments', JSON.stringify(data))
+    },
+    client (data) {
+      localStorage.setItem('client', JSON.stringify(data))
+    },
+    invoiceType (data) {
+      localStorage.setItem('invoiceType', JSON.stringify(data))
+    },
+    products (data) {
+      localStorage.setItem('products', JSON.stringify(data))
+    }
+  },
   created () {
     this.getLocalStorage()
-    this.getTables()
     this.getCoins()
     this.getPaymentMethods()
     this.getAllPorducts()
+    this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
+    /**
+     * Submit bill
+     */
+    submitBill () {
+      this.$refs.saveBill.submit()
+    },
+    /**
+     * Cancelar payment
+     */
+    cancelPayment () {
+      this.dialogPayment = false
+      this.payments = []
+    },
     /**
      * Add bill payment
      * @param {Object} data data payments
@@ -450,8 +509,11 @@ export default {
         name: data.name,
         amount: this.pendingPayment,
         reference: '-',
-        payment_method_id: data.id
+        coin_id: this.coin.id,
+        payment_method_id: data.id,
+        user_created_id: this.userSession.id
       })
+      localStorage.setItem('payments', JSON.stringify(this.payments))
     },
     /**
      * Get all payment-methods
@@ -500,6 +562,32 @@ export default {
      * @param {String} value Value filter
      * @param {Callback} update update options
      */
+    filterCategories (value, update) {
+      this.$api.get('categories', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.categories = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
     getCoins () {
       this.$api.get('coins', {
         params: {
@@ -521,7 +609,7 @@ export default {
     },
     /**
      * Select category
-     * @param {String} value Value filter
+     * @param {String} valueuserSession Value filter
      * @param {Callback} update update options
      */
     filterClients (value, update) {
@@ -548,14 +636,6 @@ export default {
         })
     },
     /**
-     * Clean formulary
-     */
-    clean () {
-      this.products = []
-      localStorage.removeItem('products')
-      this.calculateTotal()
-    },
-    /**
      * Get all tables
      */
     getTables () {
@@ -567,6 +647,7 @@ export default {
       })
         .then(({ data }) => {
           this.tables = data
+          this.dialogTable = true
         })
         .catch(err => {
           Notify.create({
@@ -583,7 +664,10 @@ export default {
       this.$api.get('products', {
         params: {
           sortBy: 'id',
-          sortOrder: 'desc'
+          sortOrder: 'desc',
+          dataFilter: {
+            category_id: this.category ? this.category.id : null
+          }
         }
       })
         .then(({ data }) => {
@@ -598,28 +682,51 @@ export default {
         })
     },
     /**
+     * Clear invoice
+     */
+    clear () {
+      this.payments = []
+      this.products = []
+      this.tableSelected = []
+      this.client = null
+      this.invoiceType = null
+      this.products = []
+      this.dialogPayment = false
+      this.calculateTotal()
+      setTimeout(() => {
+        this.$refs.saveBill.resetValidation()
+      }, 100)
+    },
+    /**
      * Save bill and payments
      */
     async saveBill () {
-      // try {
-      //   this.loadingPage = true
-      //   await addDoc(collection(db, 'bills'), {
-      //     exchange_rate: this.exchangeRate,
-      //     total: this.totalBill,
-      //     totalExchange: (this.totalBill * this.exchangeRate).toFixed(2),
-      //     products: this.products,
-      //     date: date.formatDate(Date(), 'DD/MM/YYYY')
-      //   })
-      //   this.loadingPage = false
-      //   this.clean()
-      //   this.$q.notify({
-      //     message: 'Factura creada exitosamente',
-      //     icon: 'check_circle',
-      //     color: 'positive'
-      //   })
-      // } catch (e) {
-      //   console.error('Error adding document: ', e)
-      // }
+      this.$api.post('invoices', {
+        client_id: this.client.id,
+        seller_id: this.userSession.id,
+        coin_id: this.coin.id,
+        invoice_type_id: this.invoiceType.id,
+        user_created_id: this.userSession.id,
+        exchange_rate: this.exchangeRate,
+        products: this.products,
+        payments: this.payments,
+        tables: this.tableSelected
+      })
+        .then(({ data }) => {
+          this.clear()
+          this.$q.notify({
+            message: 'Factura creada exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.$q.notify({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     },
     /**
      * Get local storage
@@ -627,13 +734,16 @@ export default {
     getLocalStorage () {
       this.exchangeRate = localStorage.getItem('exchangeRate') ?? 0
       this.products = JSON.parse(localStorage.getItem('products')) ?? []
+      this.payments = JSON.parse(localStorage.getItem('payments')) ?? []
+      this.tableSelected = JSON.parse(localStorage.getItem('tableSelected')) ?? []
+      this.client = JSON.parse(localStorage.getItem('client')) ?? null
+      this.invoiceType = JSON.parse(localStorage.getItem('invoiceType')) ?? null
       this.calculateTotal()
     },
     /**
      * Save exchange rate
      */
     saveExchangeRate () {
-      localStorage.setItem('exchangeRate', this.exchangeRate)
       this.calculateTotal()
     },
     /**
@@ -643,10 +753,9 @@ export default {
     deleteProduct (product) {
       this.products.splice(product.rowIndex, 1)
       this.calculateTotal()
-      localStorage.setItem('products', JSON.stringify(this.products))
     },
     /**
-     *
+     * Delete invoice payment
      * @param {Number} index value index payments
      */
     deletePayment (index) {
@@ -661,7 +770,6 @@ export default {
         total += product.subtotal
       })
       this.totalBill = total
-      localStorage.setItem('products', JSON.stringify(this.products))
     },
     /**
      * Calculate the total and subtotal
@@ -679,8 +787,14 @@ export default {
       const findProduct = this.products.find(product => product.id === data.id)
       if (findProduct) {
         findProduct.amount += 1
+        findProduct.product_id = findProduct.id
+        this.calculate(findProduct)
       } else {
+        data.amount = 1
+        data.subtotal = 0
+        data.product_id = data.id
         this.products.push(data)
+        this.calculate(data)
       }
       localStorage.setItem('products', JSON.stringify(this.products))
     },
@@ -699,11 +813,8 @@ export default {
         .then(({ data }) => {
           const product = data[0]
           if (product) {
-            product.amount = 1
-            product.subtotal = 0
             this.validateProduct(product)
             this.barcode = null
-            this.calculate(product)
             this.modelScan = false
           } else {
             this.$q.notify({
@@ -732,7 +843,6 @@ export default {
 }
 
 .element-one {
-  background-color: blue;
   color: white;
 }
 </style>
