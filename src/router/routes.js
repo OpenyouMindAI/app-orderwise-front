@@ -15,7 +15,8 @@ const routes = [
       { path: 'clients', beforeEnter: validationSession, name: 'Client', component: () => import('pages/ClientPage.vue') },
       { path: 'roles', beforeEnter: validationSession, name: 'Role', component: () => import('pages/RolePage.vue') },
       { path: 'tables', beforeEnter: validationSession, name: 'Table', component: () => import('pages/TablePage.vue') },
-      { path: 'coins', beforeEnter: validationSession, name: 'Coin', component: () => import('pages/CoinPage.vue') }
+      { path: 'coins', beforeEnter: validationSession, name: 'Coin', component: () => import('pages/CoinPage.vue') },
+      { path: 'invoices', beforeEnter: validationSession, name: 'Invoice', component: () => import('pages/InvoicePage.vue') }
     ]
   },
   {

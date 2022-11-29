@@ -157,8 +157,8 @@
             style="height: 56vh;"
           >
             <template v-slot:top>
-              <div class="row justify-between full-width">
-                <div class="col-5">
+              <div class="row full-width q-col-gutter-xs">
+                <div class="col-6">
                   <q-select
                     use-input
                     filled
@@ -173,7 +173,7 @@
                     @filter="filterCategories"
                   />
                 </div>
-                <div class="col-5">
+                <div class="col-6">
                   <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
                     <template v-slot:append>
                       <q-icon name="search" />
@@ -320,10 +320,10 @@
               :resizable="false"
             >
               <span class="absolute-center">
-                {{ table.name }} {{ table.status }}
+                {{ table.name }} {{ statusTable[table.status] }}
               </span>
               <q-checkbox v-model="tableSelected" :val="table.id" color="teal" class="fixed-top-right" v-if="table.status === 'unoccupied'"/>
-              <q-btn icon="restart_alt" color="negative" size="sm" round class="fixed-top-right" v-else/>
+              <q-btn icon="restart_alt" color="negative" size="sm" round class="fixed-top-right" @click="freeTable(table)" v-else/>
             </draggable-resizable-vue>
           </draggable-resizable-container>
         </q-card-section>
@@ -345,6 +345,10 @@ export default {
   },
   data () {
     return {
+      statusTable: {
+        unoccupied: 'Libre',
+        busy: 'Acupada'
+      },
       category: null,
       payments: [],
       paymentMethods: [],
@@ -626,6 +630,24 @@ export default {
           update(() => {
             this.clients = data
           })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Free table
+     * @param {Object} table  table data
+     */
+
+    freeTable (table) {
+      this.$api.post('free-tables', table)
+        .then(({ data }) => {
+          this.getTables()
         })
         .catch(err => {
           Notify.create({
