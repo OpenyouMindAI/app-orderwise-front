@@ -65,13 +65,18 @@ const linksList = [
     link: 'Invoice'
   },
   {
+    title: 'Reporte de caja',
+    icon: 'list_alt',
+    link: 'BoxReport'
+  },
+  {
     title: 'Categorias',
-    icon: 'receipt_long',
+    icon: 'category',
     link: 'Category'
   },
   {
     title: 'Metodos de pago',
-    icon: 'receipt_long',
+    icon: 'payments',
     link: 'PaymentMethod'
   },
   {
