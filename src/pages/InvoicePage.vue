@@ -1,9 +1,6 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddInvoice = true" icon="add_circle"/>
-      </div>
       <div class="col-12">
         <q-table
           title="Facturas"
@@ -33,38 +30,157 @@
     </div>
     <q-dialog v-model="openEditInvoice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar moneda</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="coin.name"
-                autofocus
-                label="Nombre"
-              />
+        <q-tabs
+          v-model="editTab"
+          class="text-grey"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
+          narrow-indicator
+        >
+          <q-tab name="details" label="Detalles de la factura" />
+          <q-tab name="payments" label="Detalles de pago" />
+        </q-tabs>
+        <q-separator />
+        <q-tab-panels v-model="editTab" animated>
+          <q-tab-panel name="details">
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <q-input label="Código" filled v-model="invoice.id" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-input label="Tipo de servicio" filled v-model="invoice.invoice_type.name" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-input label="Cliente" filled v-model="invoice.client.name" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-input label="Moneda" filled v-model="invoice.coin.name" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-select
+                  filled
+                  readonly
+                  dense
+                  label="Mesas"
+                  v-model="invoice.tables"
+                  option-label="name"
+                  multiple
+                />
+              </div>
+              <div class="col-6">
+                <q-input label="Fecha" filled v-model="invoice.date" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-input label="Hora" filled v-model="invoice.hour" readonly dense/>
+              </div>
+              <div class="col-12">
+                <q-markup-table dense>
+                  <thead>
+                    <tr>
+                      <th class="text-left">Código</th>
+                      <th class="text-left">Descripción</th>
+                      <th class="text-right">Cantidad</th>
+                      <th class="text-right">Precio</th>
+                      <th class="text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="product in invoice.products" :key="product.id">
+                      <td class="text-left">
+                        {{ product.barcode }}
+                      </td>
+                      <td class="text-left">
+                        {{ product.name }}
+                      </td>
+                      <td class="text-right">
+                        {{ product.pivot.amount }}
+                      </td>
+                      <td class="text-right">
+                        {{ product.pivot.price }}
+                      </td>
+                      <td class="text-right">
+                        {{ product.pivot.amount *  product.pivot.price }}
+                      </td>
+                    </tr>
+                    <q-separator/>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="4" class="text-right">
+                        Sub total:
+                      </td>
+                      <td class="text-right">
+                        {{ invoice.tax_base }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="4" class="text-right">
+                        Igv:
+                      </td>
+                      <td class="text-right">
+                        {{ invoice.total_igv }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="4" class="text-right">
+                        Total:
+                      </td>
+                      <td class="text-right">
+                        {{ invoice.total }}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </q-markup-table>
+              </div>
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="coin.symbol"
-                autofocus
-                label="Simbolo"
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteInvoice" :loading="visible" />
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
-          </q-card-actions>
-        </q-form>
+          </q-tab-panel>
+
+          <q-tab-panel name="payments">
+            <q-markup-table dense>
+              <thead>
+                <tr>
+                  <th class="text-left">Metodo de pago</th>
+                  <th class="text-left">Referencia</th>
+                  <th class="text-right">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(payment) in invoice.invoice_payments" :key="payment.id">
+                  <td class="text-left">
+                    {{ payment.payment_method.name }}
+                  </td>
+                  <td class="text-left">
+                    <span v-if="payment.reference">
+                      {{ payment.reference }}
+                    </span>
+                    <span v-else>
+                      -
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    {{ payment.amount }}
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="text-right">
+                    Total:
+                  </td>
+                  <td class="text-right">
+                    {{ invoice.total_payments }}
+                  </td>
+                </tr>
+              </tbody>
+            </q-markup-table>
+          </q-tab-panel>
+        </q-tab-panels>
+        <q-card-actions align="right">
+          <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
+          <q-btn color="secondary" label="Imprimir"/>
+        </q-card-actions>
       </q-card>
     </q-dialog>
     <q-dialog v-model="openAddInvoice" persistent>
@@ -102,6 +218,7 @@
         </q-form>
       </q-card>
     </q-dialog>
+
   </div>
 </template>
 
@@ -110,6 +227,7 @@ import { Notify, date } from 'quasar'
 export default {
   data () {
     return {
+      editTab: 'details',
       invoices: [],
       coin: {},
       filter: '',
@@ -124,7 +242,12 @@ export default {
         perPage: 1,
         dataSearch: {
           id: '',
-          name: ''
+          created_at: '',
+          'coin.name': '',
+          'invoiceType.name': '',
+          'client.name': '',
+          'seller.name': '',
+          'tables.name': ''
         }
       },
       visible: false,
@@ -186,6 +309,27 @@ export default {
           align: 'left',
           label: 'Hora',
           field: row => date.formatDate(row.created_at, 'H:mm:ss'),
+          sortable: true
+        },
+        {
+          name: 'tax_base',
+          align: 'right',
+          label: 'Subtotal',
+          field: 'tax_base',
+          sortable: true
+        },
+        {
+          name: 'total_igv',
+          align: 'right',
+          label: 'Igv',
+          field: 'total_igv',
+          sortable: true
+        },
+        {
+          name: 'total',
+          align: 'right',
+          label: 'Total',
+          field: 'total',
           sortable: true
         }
       ],
@@ -298,7 +442,7 @@ export default {
      */
     editInvoice (event, row, index) {
       this.openEditInvoice = true
-      this.coin = row
+      this.invoice = row
     },
     /**
      * Save edit
