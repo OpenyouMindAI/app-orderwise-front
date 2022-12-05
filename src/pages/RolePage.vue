@@ -60,6 +60,17 @@
               />
             </div>
           </q-card-section>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
+              <q-toggle
+                size="xs"
+                v-model="moduleSelected"
+                :val="modul.id"
+                :label="modul.title"
+                :disable="visible"
+              />
+            </div>
+          </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deleteRole" :loading="visible" />
@@ -97,6 +108,18 @@
               />
             </div>
           </q-card-section>
+          <q-card-section>
+            <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
+              <q-toggle
+                size="xs"
+                v-model="moduleSelected"
+                :val="modul.id"
+                :label="modul.title"
+                :disable="visible"
+                @input="changePermissions"
+              />
+            </div>
+          </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
@@ -113,8 +136,10 @@ export default {
   data () {
     return {
       roles: [],
+      modules: [],
       role: {},
       filter: '',
+      moduleSelected: [],
       /**
        * Params search
        * @type {Object}
@@ -172,6 +197,7 @@ export default {
     })
   },
   created () {
+    this.getModules()
     this.userSession = JSON.parse(localStorage.getItem('user'))
     this.role.user_created_id = this.userSession.id
     this.role.user_updated_id = this.userSession.id
@@ -239,6 +265,8 @@ export default {
      */
     saveRole () {
       this.visible = true
+      this.role.modules = this.moduleSelected
+      console.log(this.role, this.moduleSelected)
       this.$api.post('roles', this.role)
         .then(({ data }) => {
           this.getRoles()
@@ -246,7 +274,7 @@ export default {
           this.visible = false
           this.role = {}
           Notify.create({
-            message: 'Rol creada exitosamente',
+            message: 'Rol creado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -266,12 +294,21 @@ export default {
     editRole (event, row, index) {
       this.openEditRole = true
       this.role = row
+      this.moduleSelected = row.modules.map(element => element.id)
+    },
+    /**
+     * Get all sections
+     */
+    async getModules () {
+      const { data } = await this.$api.get('modules')
+      this.modules = data
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
+      this.role.modules = this.moduleSelected
       this.$api.put(`roles/${this.role.id}`, this.role)
         .then(({ data }) => {
           this.getRoles()
@@ -279,7 +316,7 @@ export default {
           this.visible = false
           this.role = {}
           Notify.create({
-            message: 'Rol editada exitosamente',
+            message: 'Rol editado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })

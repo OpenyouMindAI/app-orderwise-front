@@ -50,69 +50,77 @@ import EssentialLink from 'components/EssentialLink.vue'
 
 const linksList = [
   {
-    title: 'Facturar',
-    icon: 'shopping_cart',
-    link: 'Billing'
-  },
-  {
-    title: 'Productos',
-    icon: 'format_list_bulleted',
-    link: 'Product'
-  },
-  {
-    title: 'Facturas',
-    icon: 'receipt_long',
-    link: 'Invoice'
-  },
-  {
-    title: 'Reporte de caja',
-    icon: 'list_alt',
-    link: 'BoxReport'
-  },
-  {
-    title: 'Categorias',
-    icon: 'category',
-    link: 'Category'
-  },
-  {
-    title: 'Metodos de pago',
-    icon: 'payments',
-    link: 'PaymentMethod'
-  },
-  {
-    title: 'Tipos de factura',
-    icon: 'book',
-    link: 'InvoiceType'
-  },
-  {
-    title: 'Coins',
-    icon: 'attach_money',
-    link: 'Coin'
-  },
-  {
-    title: 'Usuarios',
-    icon: 'person',
-    link: 'User'
-  },
-  {
-    title: 'Vendedores',
-    icon: 'person',
-    link: 'Seller'
-  },
-  {
-    title: 'Clientes',
-    icon: 'person',
-    link: 'Client'
-  },
-  {
-    title: 'Roles',
-    icon: 'group',
-    link: 'Role'
-  },
-  {
-    title: 'Mesas',
-    icon: 'table_bar',
-    link: 'Table'
+    title: 'Gestión de inventario',
+    icon: 'content_paste_go',
+    visible: true,
+    children: [
+
+      {
+        title: 'Facturar',
+        icon: 'shopping_cart',
+        link: 'Billing'
+      },
+      {
+        title: 'Productos',
+        icon: 'format_list_bulleted',
+        link: 'Product'
+      },
+      {
+        title: 'Facturas',
+        icon: 'receipt_long',
+        link: 'Invoice'
+      },
+      {
+        title: 'Reporte de caja',
+        icon: 'list_alt',
+        link: 'BoxReport'
+      },
+      {
+        title: 'Categorias',
+        icon: 'category',
+        link: 'Category'
+      },
+      {
+        title: 'Metodos de pago',
+        icon: 'payments',
+        link: 'PaymentMethod'
+      },
+      {
+        title: 'Tipos de factura',
+        icon: 'book',
+        link: 'InvoiceType'
+      },
+      {
+        title: 'Moneda',
+        icon: 'attach_money',
+        link: 'Coin'
+      },
+      {
+        title: 'Usuarios',
+        icon: 'person',
+        link: 'User'
+      },
+      {
+        title: 'Vendedores',
+        icon: 'person',
+        link: 'Seller'
+      },
+      {
+        title: 'Clientes',
+        icon: 'person',
+        link: 'Client'
+      },
+      {
+        title: 'Roles',
+        icon: 'group',
+        link: 'Role'
+      },
+      {
+        title: 'Mesas',
+        icon: 'table_bar',
+        link: 'Table'
+      }
+    ]
   }
 ]
 
@@ -127,8 +135,31 @@ export default defineComponent({
   },
   computed: {
     title () {
-      return linksList.find((link) => {
-        return link.link === this.$route.name
+      let titleNotCHildren = linksList.find((link) => {
+        return link.route === this.$route.name
+      })
+      if (!titleNotCHildren) {
+        linksList.forEach(child => {
+          if (child.children) {
+            const titleNotCHildrenEach = child.children.find(ch => {
+              return ch.route === this.$route.name
+            })
+            if (titleNotCHildrenEach) {
+              titleNotCHildren = titleNotCHildrenEach
+            }
+          }
+        })
+      }
+      return titleNotCHildren
+    },
+    dataMenu () {
+      return linksList.filter(link => {
+        if (link.children) {
+          return link.children.filter(child => {
+            return this.validateRole(child.route)
+          }).length > 0
+        }
+        return this.validateRole(link.route)
       })
     }
   },
@@ -143,7 +174,20 @@ export default defineComponent({
       toggleLeftDrawer () {
         leftDrawerOpen.value = !leftDrawerOpen.value
       },
-
+      /**
+       * Validate role
+       * @param {String} route route
+       */
+      validateRole (route) {
+        const roles = JSON.parse(localStorage.getItem('user')).roles
+        const modules = []
+        roles.forEach(role => {
+          role.modules.forEach(module => {
+            modules.push(module)
+          })
+        })
+        return modules.find(module => module.route === route)
+      },
       /**
        * Logout
        */
