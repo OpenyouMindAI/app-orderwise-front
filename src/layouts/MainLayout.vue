@@ -62,7 +62,7 @@ const linksList = [
   {
     title: 'Facturas',
     icon: 'receipt_long',
-    link: 'Bill'
+    link: 'Invoice'
   },
   {
     title: 'Categorias',
