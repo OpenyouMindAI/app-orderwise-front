@@ -112,10 +112,10 @@ const linksList = [
         link: 'Role'
       },
       {
-        title: 'Mesas',
+        title: 'Sala de estar',
         visible: true,
-        icon: 'table_bar',
-        link: 'Table'
+        icon: 'room_preferences',
+        link: 'LivingRoom'
       },
       {
         title: 'Categorias',

@@ -82,7 +82,7 @@
           </q-input>
         </div>
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6 q-gutter-sm">
-          <q-btn color="orange" icon="table_restaurant" @click="getTables">
+          <q-btn color="orange" icon="table_restaurant" @click="getTables(livingRoom)">
             <q-badge floating color="negative">
               {{ tableSelected.length }}
             </q-badge>
@@ -297,7 +297,18 @@
     </q-dialog>
     <q-dialog v-model="dialogTable" maximized>
       <q-card>
-        <q-card-actions align="right" class="q-pb-none">
+        <q-card-actions class="q-pb-none q-px-md">
+          <q-select
+            filled
+            v-model="livingRoom"
+            label="Sala de estar"
+            option-label="name"
+            option-value="id"
+            style="min-width: 300px;"
+            dense
+            :options="livingRooms"
+          />
+          <q-space/>
           <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
           <q-btn color="negative" label="Cancelar" @click="dialogTable = false"/>
         </q-card-actions>
@@ -345,12 +356,14 @@ export default {
   },
   data () {
     return {
+      livingRoom: null,
       statusTable: {
         unoccupied: 'Libre',
         busy: 'Acupada'
       },
       category: null,
       payments: [],
+      livingRooms: [],
       paymentMethods: [],
       dialogPayment: false,
       invoiceTypes: [],
@@ -481,6 +494,9 @@ export default {
     },
     products (data) {
       localStorage.setItem('products', JSON.stringify(data))
+    },
+    livingRoom (data) {
+      this.getTables(data)
     }
   },
   created () {
@@ -488,6 +504,7 @@ export default {
     this.getCoins()
     this.getPaymentMethods()
     this.getAllPorducts()
+    this.getLivingRooms()
     this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
@@ -496,6 +513,24 @@ export default {
      */
     submitBill () {
       this.$refs.saveBill.submit()
+    },
+    /**
+     * Get all livingRooms
+     * @param {Object} params search params
+     */
+    getLivingRooms () {
+      this.$api.get('living-rooms')
+        .then(({ data }) => {
+          this.livingRooms = data
+          this.livingRoom = data[0]
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     },
     /**
      * Cancelar payment
@@ -647,7 +682,7 @@ export default {
     freeTable (table) {
       this.$api.post('free-tables', table)
         .then(({ data }) => {
-          this.getTables()
+          this.getTables(this.livingRoom)
         })
         .catch(err => {
           Notify.create({
@@ -660,9 +695,12 @@ export default {
     /**
      * Get all tables
      */
-    getTables () {
+    getTables (data) {
       this.$api.get('tables', {
         params: {
+          dataFilter: {
+            living_room_id: data.id
+          },
           sortBy: 'id',
           sortOrder: 'desc'
         }

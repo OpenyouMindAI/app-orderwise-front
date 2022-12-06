@@ -21,6 +21,7 @@
       v-if="children && children.length > 0"
       :icon="icon"
       :label="title"
+      default-opened
     >
       <div v-for="child in children" :key="child.id" class="q-px-md">
         <q-item
@@ -80,7 +81,6 @@ export default defineComponent({
   setup () {
     return {
       validateRole (route) {
-        console.log(route)
         if (localStorage.getItem('root') === 'true') {
           return true
         }

@@ -196,16 +196,16 @@ export default {
       filter: undefined
     })
   },
+  watch: {
+    filter (data) {
+      this.searchData(data)
+    }
+  },
   created () {
     this.getModules()
     this.userSession = JSON.parse(localStorage.getItem('user'))
     this.role.user_created_id = this.userSession.id
     this.role.user_updated_id = this.userSession.id
-  },
-  watch: {
-    filter (data) {
-      this.searchData(data)
-    }
   },
   methods: {
     /**
