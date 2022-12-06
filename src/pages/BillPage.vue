@@ -66,7 +66,7 @@ export default {
           name: 'total',
           required: true,
           label: 'Total en $',
-          align: 'left',ter
+          align: 'left',
           field: row => row.total,
           sortable: true
         },
