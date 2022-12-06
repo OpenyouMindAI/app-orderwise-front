@@ -82,7 +82,7 @@
           </q-input>
         </div>
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6 q-gutter-sm">
-          <q-btn color="orange" icon="table_restaurant" @click="getTables(livingRoom)">
+          <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true">
             <q-badge floating color="negative">
               {{ tableSelected.length }}
             </q-badge>
@@ -497,6 +497,9 @@ export default {
     },
     livingRoom (data) {
       this.getTables(data)
+    },
+    dialogTable (data) {
+      this.getTables(this.livingRoom)
     }
   },
   created () {
@@ -707,7 +710,6 @@ export default {
       })
         .then(({ data }) => {
           this.tables = data
-          this.dialogTable = true
         })
         .catch(err => {
           Notify.create({
