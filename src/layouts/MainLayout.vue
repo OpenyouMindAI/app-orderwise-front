@@ -26,13 +26,13 @@
         <q-item-label
           header
         >
-          Shopping
+          Camandas
         </q-item-label>
 
         <EssentialLink
-          v-for="link in essentialLinks"
-          :key="link.title"
-          v-bind="link"
+          v-for="data in dataMenu"
+          :key="data.title"
+          v-bind="data"
         />
       </q-list>
     </q-drawer>
@@ -50,75 +50,102 @@ import EssentialLink from 'components/EssentialLink.vue'
 
 const linksList = [
   {
-    title: 'Gestión de inventario',
+    title: 'Gestión de facturacion',
     icon: 'content_paste_go',
     visible: true,
     children: [
-
       {
         title: 'Facturar',
-        icon: 'shopping_cart',
+        visible: true,
+        icon: 'shopping_bag',
         link: 'Billing'
       },
       {
-        title: 'Productos',
-        icon: 'format_list_bulleted',
-        link: 'Product'
-      },
-      {
         title: 'Facturas',
+        visible: true,
         icon: 'receipt_long',
         link: 'Invoice'
       },
       {
         title: 'Reporte de caja',
+        visible: true,
         icon: 'list_alt',
         link: 'BoxReport'
       },
       {
-        title: 'Categorias',
-        icon: 'category',
-        link: 'Category'
-      },
-      {
-        title: 'Metodos de pago',
-        icon: 'payments',
-        link: 'PaymentMethod'
-      },
-      {
-        title: 'Tipos de factura',
-        icon: 'book',
-        link: 'InvoiceType'
-      },
-      {
-        title: 'Moneda',
-        icon: 'attach_money',
-        link: 'Coin'
-      },
-      {
-        title: 'Usuarios',
-        icon: 'person',
-        link: 'User'
-      },
+        title: 'Productos',
+        visible: true,
+        icon: 'format_list_bulleted',
+        link: 'Product'
+      }
+    ]
+  },
+  {
+
+    title: 'Gestión de personal',
+    icon: 'groups_2',
+    visible: true,
+    children: [
       {
         title: 'Vendedores',
-        icon: 'person',
+        visible: true,
+        icon: 'face_6',
         link: 'Seller'
       },
       {
         title: 'Clientes',
-        icon: 'person',
+        visible: true,
+        icon: 'person_3',
         link: 'Client'
-      },
+      }
+    ]
+  },
+  {
+    title: 'Configuración',
+    icon: 'settings',
+    visible: true,
+    children: [
       {
         title: 'Roles',
+        visible: true,
         icon: 'group',
         link: 'Role'
       },
       {
         title: 'Mesas',
+        visible: true,
         icon: 'table_bar',
         link: 'Table'
+      },
+      {
+        title: 'Categorias',
+        visible: true,
+        icon: 'category',
+        link: 'Category'
+      },
+      {
+        title: 'Metodos de pago',
+        visible: true,
+        icon: 'payments',
+        link: 'PaymentMethod'
+      },
+      {
+        title: 'Tipos de factura',
+        visible: true,
+        icon: 'book',
+        link: 'InvoiceType'
+      },
+      {
+        title: 'Moneda',
+        visible: true,
+        icon: 'attach_money',
+        link: 'Coin'
+      },
+      {
+        title: 'Usuarios',
+        visible: true,
+        icon: 'person',
+        link: 'User'
       }
     ]
   }
@@ -142,7 +169,7 @@ export default defineComponent({
         linksList.forEach(child => {
           if (child.children) {
             const titleNotCHildrenEach = child.children.find(ch => {
-              return ch.route === this.$route.name
+              return ch.link === this.$route.name
             })
             if (titleNotCHildrenEach) {
               titleNotCHildren = titleNotCHildrenEach
@@ -156,10 +183,10 @@ export default defineComponent({
       return linksList.filter(link => {
         if (link.children) {
           return link.children.filter(child => {
-            return this.validateRole(child.route)
+            return this.validateRole(child.link)
           }).length > 0
         }
-        return this.validateRole(link.route)
+        return this.validateRole(link.link)
       })
     }
   },
@@ -179,14 +206,12 @@ export default defineComponent({
        * @param {String} route route
        */
       validateRole (route) {
-        const roles = JSON.parse(localStorage.getItem('user')).roles
+        const role = JSON.parse(localStorage.getItem('user')).role
         const modules = []
-        roles.forEach(role => {
-          role.modules.forEach(module => {
-            modules.push(module)
-          })
+        role.modules.forEach(module => {
+          modules.push(module)
         })
-        return modules.find(module => module.route === route)
+        return modules.find(module => module.link === route)
       },
       /**
        * Logout
