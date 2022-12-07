@@ -311,13 +311,13 @@ export default {
           field: row => date.formatDate(row.created_at, 'H:mm:ss'),
           sortable: true
         },
-        {
-          name: 'tax_base',
-          align: 'right',
-          label: 'Subtotal',
-          field: 'tax_base',
-          sortable: true
-        },
+        // {
+        //   name: 'tax_base',
+        //   align: 'right',
+        //   label: 'Subtotal',
+        //   field: 'tax_base',
+        //   sortable: true
+        // },
         // {
         //   name: 'total_taxe',
         //   align: 'right',
