@@ -17,7 +17,8 @@ const routes = [
       { path: 'living-rooms', beforeEnter: validationSession, name: 'LivingRoom', component: () => import('src/pages/LivingRoomPage.vue') },
       { path: 'coins', beforeEnter: validationSession, name: 'Coin', component: () => import('pages/CoinPage.vue') },
       { path: 'box-reports', beforeEnter: validationSession, name: 'BoxReport', component: () => import('pages/BoxReportPage.vue') },
-      { path: 'invoices', beforeEnter: validationSession, name: 'Invoice', component: () => import('pages/InvoicePage.vue') }
+      { path: 'invoices', beforeEnter: validationSession, name: 'Invoice', component: () => import('pages/InvoicePage.vue') },
+      { path: 'taxes', beforeEnter: validationSession, name: 'Taxe', component: () => import('pages/TaxePage.vue') }
     ]
   },
   {

@@ -130,6 +130,12 @@ const linksList = [
         link: 'PaymentMethod'
       },
       {
+        title: 'Impuestos',
+        visible: true,
+        icon: 'generating_tokens',
+        link: 'Taxe'
+      },
+      {
         title: 'Tipos de factura',
         visible: true,
         icon: 'book',

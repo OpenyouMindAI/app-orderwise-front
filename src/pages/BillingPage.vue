@@ -62,6 +62,18 @@
             @filter="filterInvoiceTypes"
           />
         </div>
+        <!-- <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+          <q-select
+            filled
+            dense
+            label="Impuesto"
+            :option-label="row => `${row.name} ${row.amount}%`"
+            option-value="id"
+            v-model="taxe"
+            :options="taxes"
+            :rules="[val => !!val || 'El campo es requerido.']"
+          />
+        </div> -->
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
           <q-select
             filled
@@ -74,76 +86,80 @@
             :rules="[val => !!val || 'El campo es requerido.']"
           />
         </div>
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
-          <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
-            <template v-slot:append>
-              <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
-            </template>
-          </q-input>
+        <div class="col-6">
+          <div class="row q-col-gutter-sm">
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-6">
+              <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
+                <template v-slot:append>
+                  <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
+                </template>
+              </q-input>
+            </div>
+            <div class=" col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-6 q-gutter-sm">
+              <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true">
+                <q-badge floating color="negative">
+                  {{ tableSelected.length }}
+                </q-badge>
+              </q-btn>
+              <q-btn
+                color="secondary"
+                icon="attach_money"
+                @click="dialogPayment = true"
+              >
+                <q-badge floating color="negative">
+                  {{ payments.length }}
+                </q-badge>
+              </q-btn>
+              <q-btn
+                icon="print"
+                color="primary"
+                @click="submitBill"
+              />
+            </div>
+            <div class="col-xs-12 col-sm-12 col-md-12">
+              <q-table
+                row-key="name"
+                title="Articulos"
+                dense
+                :rows="products"
+                :columns="columns"
+                :loading="loadingPage"
+                hide-pagination
+                v-model:pagination="pagination"
+              >
+                <template v-slot:body="props">
+                  <q-tr :props="props">
+                    <q-td key="barcode" :props="props">
+                      {{ props.row.barcode }}
+                    </q-td>
+                    <q-td key="name" :props="props">
+                      {{ props.row.name }}
+                    </q-td>
+                    <q-td key="amount" :props="props">
+                      {{ props.row.amount }}
+                      <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
+                        <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                      </q-popup-edit>
+                    </q-td>
+                    <q-td key="price" :props="props">
+                      {{ props.row.price }}
+                      <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
+                        <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                      </q-popup-edit>
+                    </q-td>
+                    <q-td key="subtotal" :props="props">
+                      {{ props.row.subtotal }}
+                    </q-td>
+                    <q-td key="actions" :props="props">
+                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
+                    </q-td>
+                  </q-tr>
+                </template>
+              </q-table>
+            </div>
+          </div>
         </div>
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6 q-gutter-sm">
-          <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true">
-            <q-badge floating color="negative">
-              {{ tableSelected.length }}
-            </q-badge>
-          </q-btn>
-          <q-btn
-            color="secondary"
-            icon="attach_money"
-            @click="dialogPayment = true"
-          >
-            <q-badge floating color="negative">
-              {{ payments.length }}
-            </q-badge>
-          </q-btn>
-          <q-btn
-            icon="print"
-            color="primary"
-            @click="submitBill"
-          />
-        </div>
-        <div class="col-xs-12 col-sm-6 col-md-6">
-          <q-table
-            row-key="name"
-            title="Articulos"
-            dense
-            :rows="products"
-            :columns="columns"
-            :loading="loadingPage"
-            hide-pagination
-            v-model:pagination="pagination"
-          >
-            <template v-slot:body="props">
-              <q-tr :props="props">
-                <q-td key="barcode" :props="props">
-                  {{ props.row.barcode }}
-                </q-td>
-                <q-td key="name" :props="props">
-                  {{ props.row.name }}
-                </q-td>
-                <q-td key="amount" :props="props">
-                  {{ props.row.amount }}
-                  <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                    <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
-                  </q-popup-edit>
-                </q-td>
-                <q-td key="price" :props="props">
-                  {{ props.row.price }}
-                  <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                    <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
-                  </q-popup-edit>
-                </q-td>
-                <q-td key="subtotal" :props="props">
-                  {{ props.row.subtotal }}
-                </q-td>
-                <q-td key="actions" :props="props">
-                  <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
-                </q-td>
-              </q-tr>
-            </template>
-          </q-table>
-        </div>
-        <div class="col-xs-12 col-sm-6 col-md-6">
+        <div class="col-6">
           <q-table
             row-key="name"
             dense
@@ -357,6 +373,8 @@ export default {
   data () {
     return {
       livingRoom: null,
+      taxes: [],
+      taxe: null,
       statusTable: {
         unoccupied: 'Libre',
         busy: 'Acupada'
@@ -505,6 +523,7 @@ export default {
   created () {
     this.getLocalStorage()
     this.getCoins()
+    this.getTaxes()
     this.getPaymentMethods()
     this.getAllPorducts()
     this.getLivingRooms()
@@ -651,6 +670,30 @@ export default {
     },
     /**
      * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    getTaxes () {
+      this.$api.get('taxes', {
+        params: {
+          sortBy: 'id',
+          sortOrder: 'desc'
+        }
+      })
+        .then(({ data }) => {
+          this.taxes = data
+          this.taxe = data[0]
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
      * @param {String} valueuserSession Value filter
      * @param {Callback} update update options
      */
@@ -767,6 +810,7 @@ export default {
         client_id: this.client.id,
         seller_id: this.userSession.id,
         coin_id: this.coin.id,
+        taxe: 0, // this.taxe.amount,
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
         exchange_rate: this.exchangeRate,

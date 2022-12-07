@@ -122,7 +122,7 @@
                         Igv:
                       </td>
                       <td class="text-right">
-                        {{ invoice.total_igv }}
+                        {{ invoice.total_taxe }}
                       </td>
                     </tr>
                     <tr>
@@ -318,13 +318,13 @@ export default {
           field: 'tax_base',
           sortable: true
         },
-        {
-          name: 'total_igv',
-          align: 'right',
-          label: 'Igv',
-          field: 'total_igv',
-          sortable: true
-        },
+        // {
+        //   name: 'total_taxe',
+        //   align: 'right',
+        //   label: 'Igv',
+        //   field: 'total_taxe',
+        //   sortable: true
+        // },
         {
           name: 'total',
           align: 'right',
