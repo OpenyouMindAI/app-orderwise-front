@@ -44,6 +44,15 @@
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
+                v-model="client.document_number"
+                autofocus
+                label="Número de documento"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
                 v-model="client.name"
                 autofocus
                 label="Nombre"
@@ -96,6 +105,15 @@
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="client.document_number"
+                autofocus
+                label="Número de documento"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -177,6 +195,13 @@ export default {
           align: 'left',
           label: 'Código',
           field: 'id',
+          sortable: true
+        },
+        {
+          name: 'document_number',
+          align: 'left',
+          label: 'Número de documento',
+          field: 'document_number',
           sortable: true
         },
         {

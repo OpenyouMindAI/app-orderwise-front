@@ -18,9 +18,6 @@
           <q-card class="bg-orange text-white">
             <q-card-section class="text-subtitle2 text-center">
               Cambio S{{ exchangeRate }}
-              <q-popup-edit v-model.number="exchangeRate" auto-save v-slot="scope" @update:model-value="saveExchangeRate">
-                <q-input type="number" v-model.number="scope.value" dense autofocus @keyup.enter="scope.set" />
-              </q-popup-edit>
             </q-card-section>
           </q-card>
         </div>
@@ -39,13 +36,18 @@
             dense
             label="Cliente"
             input-debounce="0"
-            option-label="name"
             option-value="id"
             v-model="client"
+            clearable
+            :option-label="row => `${row.document_number} | ${row.name}`"
             :options="clients"
             :rules="[val => !!val || 'El campo es requerido.']"
             @filter="filterClients"
-          />
+          >
+            <template v-slot:append>
+              <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+            </template>
+          </q-select>
         </div>
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
           <q-select
@@ -356,6 +358,51 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="openAddClient" persistent>
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-form @submit="saveClient">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">Agregar cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
+          </q-card-section>
+          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="clientAdded.document_number"
+                autofocus
+                label="Número de documento"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="clientAdded.name"
+                autofocus
+                label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="clientAdded.email"
+                autofocus
+                type="email"
+                label="Correo"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary">
+            <q-btn color="primary" label="Agregar" type="submit"/>
+            <q-btn color="orange" label="Cancelar" @click="(openAddClient = false)" />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
     <div id="printMe" v-show="false">
       <invoice-print :data="invoice" v-if="invoice"/>
     </div>
@@ -364,7 +411,7 @@
 
 <script>
 import { StreamBarcodeReader } from 'vue-barcode-reader'
-import { Notify } from 'quasar'
+import { Notify, date } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import InvoicePrint from '../components/InvoicePrint.vue'
 export default {
@@ -377,6 +424,11 @@ export default {
   },
   data () {
     return {
+      openAddClient: false,
+      clientAdded: {
+        username: 'client',
+        password: '123456'
+      },
       invoice: null,
       livingRoom: null,
       taxes: [],
@@ -493,7 +545,6 @@ export default {
       this.payments.forEach((payment) => {
         totalPayment = totalPayment + payment.amount
       })
-      console.log(totalPayment)
       return totalPayment
     }
   },
@@ -503,9 +554,6 @@ export default {
     },
     tableSelected (data) {
       localStorage.setItem('tableSelected', JSON.stringify(data))
-    },
-    exchangeRate (data) {
-      localStorage.setItem('exchangeRate', data)
     },
     payments (data) {
       localStorage.setItem('payments', JSON.stringify(data))
@@ -533,9 +581,48 @@ export default {
     this.getPaymentMethods()
     this.getAllPorducts()
     this.getLivingRooms()
+    this.getExchange()
     this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
+    /**
+     * Get Data in exchange
+     */
+    getExchange () {
+      this.$api.get('exchange-rate', {
+        start_date: date.formatDate(new Date(), 'DD/MM/YYYY'),
+        coin: 'PEN'
+      })
+        .then(({ data }) => {
+          this.exchangeRate = data.venta
+        })
+    },
+    /**
+     * Save clients
+     */
+    saveClient () {
+      this.visible = true
+      this.$api.post('clients', this.clientAdded)
+        .then(({ data }) => {
+          this.openAddClient = false
+          this.visible = false
+          this.clientAdded = {}
+          this.client = data
+          Notify.create({
+            message: 'Cliente creado exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.visible = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
     /**
      * Submit bill
      */
@@ -709,7 +796,8 @@ export default {
           sortBy: 'id',
           sortOrder: 'desc',
           dataSearch: {
-            name: value
+            name: value,
+            document_number: value
           }
         }
       })
@@ -851,7 +939,6 @@ export default {
      * Get local storage
      */
     getLocalStorage () {
-      this.exchangeRate = localStorage.getItem('exchangeRate') ?? 0
       this.products = JSON.parse(localStorage.getItem('products')) ?? []
       this.payments = JSON.parse(localStorage.getItem('payments')) ?? []
       this.tableSelected = JSON.parse(localStorage.getItem('tableSelected')) ?? []
