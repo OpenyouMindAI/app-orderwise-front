@@ -179,56 +179,28 @@
         </q-tab-panels>
         <q-card-actions align="right">
           <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
-          <q-btn color="secondary" label="Imprimir"/>
+          <q-btn color="secondary" label="Imprimir" @click="print"/>
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddInvoice" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveInvoice">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Agregar moneda</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="coin.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="coin.symbol"
-                autofocus
-                label="Simbolo"
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
-
+    <div id="printMe" v-show="false">
+      <invoice-print :data="invoice" v-if="invoice"/>
+    </div>
   </div>
 </template>
 
 <script>
 import { Notify, date } from 'quasar'
+import InvoicePrint from '../components/InvoicePrint.vue'
 export default {
+  components: {
+    InvoicePrint
+  },
   data () {
     return {
       editTab: 'details',
       invoices: [],
+      invoice: null,
       coin: {},
       filter: '',
       /**
@@ -256,10 +228,10 @@ export default {
       userSession: null,
       columns: [
         {
-          name: 'id',
+          name: 'code',
           align: 'left',
           label: 'Código',
-          field: 'id',
+          field: 'code',
           sortable: true
         },
         {
@@ -326,6 +298,13 @@ export default {
         //   sortable: true
         // },
         {
+          name: 'exchange_rate',
+          align: 'right',
+          label: 'Tipo de cambio',
+          field: 'exchange_rate',
+          sortable: true
+        },
+        {
           name: 'total',
           align: 'right',
           label: 'Total',
@@ -359,6 +338,9 @@ export default {
     }
   },
   methods: {
+    print () {
+      this.$htmlToPaper('printMe')
+    },
     /**
      * Close all modals
      */

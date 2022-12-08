@@ -356,6 +356,9 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <div id="printMe" v-show="false">
+      <invoice-print :data="invoice" v-if="invoice"/>
+    </div>
   </q-page>
 </template>
 
@@ -363,15 +366,18 @@
 import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
+import InvoicePrint from '../components/InvoicePrint.vue'
 export default {
   // name: 'PageName',
   components: {
     StreamBarcodeReader,
     DraggableResizableVue,
-    DraggableResizableContainer
+    DraggableResizableContainer,
+    InvoicePrint
   },
   data () {
     return {
+      invoice: null,
       livingRoom: null,
       taxes: [],
       taxe: null,
@@ -802,6 +808,12 @@ export default {
         this.$refs.saveBill.resetValidation()
       }, 100)
     },
+    printBill (data) {
+      this.invoice = data
+      setTimeout(() => {
+        this.$htmlToPaper('printMe')
+      })
+    },
     /**
      * Save bill and payments
      */
@@ -820,6 +832,7 @@ export default {
       })
         .then(({ data }) => {
           this.clear()
+          this.printBill(data.data)
           this.$q.notify({
             message: 'Factura creada exitosamente',
             icon: 'check_circle',
