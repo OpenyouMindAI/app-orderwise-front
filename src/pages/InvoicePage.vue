@@ -267,6 +267,7 @@ export default {
           align: 'left',
           label: 'Mesas',
           field: row => row.tables.map(table => table.name).join(','),
+          format: row => row === '' ? 'N/A' : row,
           sortable: true
         },
         {
