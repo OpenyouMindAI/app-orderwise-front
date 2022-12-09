@@ -114,7 +114,7 @@
                   push
                   dense
                   round
-                  @click="deleteImage(index)"
+                  @click="deleteImage(image, index)"
                 >
                   <q-tooltip>
                     Eliminar Imagen
@@ -203,7 +203,7 @@
                 v-for="(image, index) in product.images"
                 :key="image"
                 class="q-ml-xs"
-                :src="image.imageUrl"
+                :src="image.url"
                 style="max-width: 32%; height: 150px;"
               >
                 <q-btn
@@ -215,7 +215,7 @@
                   push
                   dense
                   round
-                  @click="deleteImage(index)"
+                  @click="deleteImage(image, index)"
                 >
                   <q-tooltip>
                     Eliminar Imagen
@@ -353,16 +353,38 @@ export default {
         self.imageUrl = this.result
       }
     },
-    deleteImage (index) {
-      this.product.images.splice(index, 1)
+    /**
+     * Delete image
+     * @param {Object} image data image
+     * @param {Number} index index image
+     */
+    deleteImage (image, index) {
+      if (image.id) {
+        this.$api.delete(`product-images/${image.id}`)
+          .then(({ data }) => {
+            this.product.images.splice(index, 1)
+          })
+          .catch(err => {
+            this.visible = false
+            Notify.create({
+              message: err.message,
+              icon: 'warning',
+              color: 'negative'
+            })
+          })
+      } else {
+        this.product.images.splice(index, 1)
+      }
     },
     /**
      * Model product
      * @param {Object} data product
      */
-    modelProduct (data) {
+    modelProduct (data, put = false) {
       const formData = new FormData()
-      formData.append('_method', 'put')
+      if (put) {
+        formData.append('_method', 'put')
+      }
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
           const element = data[key]
@@ -376,6 +398,9 @@ export default {
       })
       return formData
     },
+    /**
+     * Add image to product
+     */
     addImage () {
       this.product.images.push({
         image: this.productImage,
@@ -415,7 +440,9 @@ export default {
     closeModal () {
       this.openAddProduct = false
       this.openEditProduct = false
-      this.product = {}
+      this.product = {
+        images: []
+      }
     },
     /**
      * Search beneficiary
@@ -466,12 +493,14 @@ export default {
      */
     saveProduct () {
       this.visible = true
-      this.$api.post('products', this.product)
+      this.$api.post('products', this.modelProduct(this.product))
         .then(({ data }) => {
           this.getProducts()
           this.openAddProduct = false
           this.visible = false
-          this.product = {}
+          this.product = {
+            images: []
+          }
           Notify.create({
             message: 'Producto creado exitosamente',
             icon: 'check_circle',
@@ -499,12 +528,14 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.post(`products/${this.product.id}`, this.modelProduct(this.product))
+      this.$api.post(`products/${this.product.id}`, this.modelProduct(this.product, true))
         .then(({ data }) => {
           this.getProducts()
           this.openEditProduct = false
           this.visible = false
-          this.product = {}
+          this.product = {
+            images: []
+          }
           Notify.create({
             message: 'Producto editado exitosamente',
             icon: 'check_circle',
@@ -530,7 +561,9 @@ export default {
           this.getProducts()
           this.openEditProduct = false
           this.visible = false
-          this.product = {}
+          this.product = {
+            images: []
+          }
           Notify.create({
             message: 'Producto eliminado exitosamente',
             icon: 'check_circle',

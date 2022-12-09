@@ -161,7 +161,7 @@
             </div>
           </div>
         </div>
-        <div class="col-6">
+        <div class="col-6" style="max-height: 50px;">
           <q-table
             row-key="name"
             dense
@@ -172,7 +172,6 @@
             :loading="loadingPage"
             :filter="filter"
             v-model:pagination="pagination"
-            style="height: 56vh;"
           >
             <template v-slot:top>
               <div class="row full-width q-col-gutter-xs">
@@ -201,10 +200,10 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
                 <q-card class="my-card">
-                  <q-img src="https://cdn.quasar.dev/img/parallax2.jpg" @click="validateProduct(props.row)">
-                    <div class="absolute-bottom text-subtitle2 text-center">
+                  <q-img style="height: 200px; width: 100%" :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'" @click="validateProduct(props.row)">
+                    <div class="absolute-full text-subtitle2 flex flex-center">
                       {{ props.row.name }}
                     </div>
                   </q-img>
