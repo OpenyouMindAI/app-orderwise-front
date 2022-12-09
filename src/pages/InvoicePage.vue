@@ -111,22 +111,6 @@
                   <tfoot>
                     <tr>
                       <td colspan="4" class="text-right">
-                        Sub total:
-                      </td>
-                      <td class="text-right">
-                        {{ invoice.tax_base }}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colspan="4" class="text-right">
-                        Igv:
-                      </td>
-                      <td class="text-right">
-                        {{ invoice.total_taxe }}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colspan="4" class="text-right">
                         Total:
                       </td>
                       <td class="text-right">

@@ -110,6 +110,12 @@ export default {
           sortable: true
         },
         {
+          name: 'inovice_code',
+          align: 'left',
+          label: 'Factura',
+          field: row => row.invoice.code
+        },
+        {
           name: 'created_at',
           align: 'left',
           label: 'Fecha',
@@ -127,15 +133,13 @@ export default {
           name: 'coin',
           align: 'left',
           label: 'Moneda',
-          field: row => row.coin.name,
-          sortable: true
+          field: row => row.coin.name
         },
         {
           name: 'payment_method',
           align: 'left',
           label: 'Metodo de pago',
-          field: row => row.payment_method.name,
-          sortable: true
+          field: row => row.payment_method.name
         },
         {
           name: 'amount',
