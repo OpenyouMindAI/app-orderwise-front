@@ -82,6 +82,47 @@
               />
             </div>
           </q-card-section>
+          <q-card-section class="row q-py-none">
+            <div class="col-10">
+              <q-file
+                filled
+                dense
+                v-model="productImage"
+                label="Adjunte foto de su documento de identidad"
+                @update:model-value="changeImage"
+              />
+            </div>
+            <div class="col-2 text-right" >
+              <q-btn color="primary" round icon="add" dense @click="addImage"/>
+            </div>
+          </q-card-section>
+          <q-card-section>
+            <div class="row items-start q-mt-sm">
+              <q-img
+                v-for="(image, index) in product.images"
+                :key="image"
+                class="q-ml-xs"
+                :src="image.url"
+                style="max-width: 32%; height: 150px;"
+              >
+                <q-btn
+                  class="absolute all-pointer-events"
+                  size="sm"
+                  icon="close"
+                  color="negative"
+                  style="top: 1px; right: 1px"
+                  push
+                  dense
+                  round
+                  @click="deleteImage(index)"
+                >
+                  <q-tooltip>
+                    Eliminar Imagen
+                  </q-tooltip>
+                </q-btn>
+              </q-img>
+            </div>
+          </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
@@ -142,6 +183,47 @@
               />
             </div>
           </q-card-section>
+          <q-card-section class="row q-py-none">
+            <div class="col-10">
+              <q-file
+                filled
+                dense
+                v-model="productImage"
+                label="Adjunte foto de su documento de identidad"
+                @update:model-value="changeImage"
+              />
+            </div>
+            <div class="col-2 text-right" >
+              <q-btn color="primary" round icon="add" dense @click="addImage"/>
+            </div>
+          </q-card-section>
+          <q-card-section>
+            <div class="row items-start q-mt-sm">
+              <q-img
+                v-for="(image, index) in product.images"
+                :key="image"
+                class="q-ml-xs"
+                :src="image.imageUrl"
+                style="max-width: 32%; height: 150px;"
+              >
+                <q-btn
+                  class="absolute all-pointer-events"
+                  size="sm"
+                  icon="close"
+                  color="negative"
+                  style="top: 1px; right: 1px"
+                  push
+                  dense
+                  round
+                  @click="deleteImage(index)"
+                >
+                  <q-tooltip>
+                    Eliminar Imagen
+                  </q-tooltip>
+                </q-btn>
+              </q-img>
+            </div>
+          </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
@@ -157,9 +239,13 @@ import { Notify } from 'quasar'
 export default {
   data () {
     return {
+      productImage: null,
       products: [],
-      product: {},
+      product: {
+        images: []
+      },
       categories: [],
+      imageUrl: null,
       category: null,
       filter: '',
       /**
@@ -256,6 +342,48 @@ export default {
   },
   methods: {
     /**
+     * Value image
+     * @param {File} e file image
+     */
+    changeImage (e) {
+      const self = this
+      const reader = new FileReader()
+      reader.readAsDataURL(e)
+      reader.onload = function (e) {
+        self.imageUrl = this.result
+      }
+    },
+    deleteImage (index) {
+      this.product.images.splice(index, 1)
+    },
+    /**
+     * Model product
+     * @param {Object} data product
+     */
+    modelProduct (data) {
+      const formData = new FormData()
+      formData.append('_method', 'put')
+      for (const key in data) {
+        if (Object.hasOwnProperty.call(data, key)) {
+          const element = data[key]
+          if (typeof data[key] !== 'object') {
+            formData.append(key, element)
+          }
+        }
+      }
+      data.images.forEach((element, index) => {
+        formData.append(`images[${index}]`, element.image)
+      })
+      return formData
+    },
+    addImage () {
+      this.product.images.push({
+        image: this.productImage,
+        url: this.imageUrl
+      })
+      this.productImage = null
+    },
+    /**
      * Select category
      * @param {String} value Value filter
      * @param {Callback} update update options
@@ -326,7 +454,6 @@ export default {
      * @param  {Object} data value pagination
      */
     setPagination (data) {
-      console.log(data.pagination.descending)
       this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
       this.params.page = data.pagination.page
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
@@ -372,7 +499,7 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`products/${this.product.id}`, this.product)
+      this.$api.post(`products/${this.product.id}`, this.modelProduct(this.product))
         .then(({ data }) => {
           this.getProducts()
           this.openEditProduct = false

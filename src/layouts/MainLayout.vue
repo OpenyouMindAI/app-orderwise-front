@@ -13,6 +13,10 @@
         <q-toolbar-title>
           {{ title.title }}
         </q-toolbar-title>
+        <span class="text-bold q-mr-sm bg-secondary q-pa-sm rounded-borders">
+          {{ userSession.name }}
+          ({{ userSession.role.name}})
+        </span>
         <q-btn flat @click="logout" round dense icon="logout" />
       </q-toolbar>
     </q-header>
@@ -199,11 +203,13 @@ export default defineComponent({
   setup () {
     const leftDrawerOpen = ref(false)
 
+    const userSession = JSON.parse(localStorage.getItem('user'))
     // const route = useRoute()
     const router = useRouter()
     return {
       essentialLinks: linksList,
       leftDrawerOpen,
+      userSession,
       toggleLeftDrawer () {
         leftDrawerOpen.value = !leftDrawerOpen.value
       },
