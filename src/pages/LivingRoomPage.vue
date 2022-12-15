@@ -31,8 +31,8 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditLivingRoom" persistent maximized>
-      <q-card>
+    <q-dialog v-model="openEditLivingRoom" persistent>
+      <q-card style="min-width: 1024px;">
         <q-form @submit="saveEditLivingRoom">
           <q-card-section class="row items-center q-py-sm bg-primary text-white">
             <div class="text-h6">Editar sala de estar</div>
@@ -482,7 +482,7 @@ export default {
 </script>
 <style>
 .container {
-  width: 100%;
+  max-width: 1024px;
   height: 71vh;
   border: 1px solid black;
 }
