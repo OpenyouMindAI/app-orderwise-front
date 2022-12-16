@@ -202,8 +202,8 @@
             <template v-slot:item="props">
               <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
                 <q-card class="my-card">
-                  <q-img style="height: 200px; width: 100%" :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'" @click="validateProduct(props.row)">
-                    <div class="absolute-full text-subtitle2 flex flex-center">
+                  <q-img style="height: 170px; width: 100%" :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'" @click="validateProduct(props.row)">
+                    <div class="absolute-full text-subtitle1 flex flex-center">
                       {{ props.row.name }}
                     </div>
                   </q-img>
