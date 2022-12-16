@@ -146,6 +146,12 @@ const linksList = [
         link: 'InvoiceType'
       },
       {
+        title: 'Tipos de servicios',
+        visible: true,
+        icon: 'room_service',
+        link: 'TypeOfService'
+      },
+      {
         title: 'Moneda',
         visible: true,
         icon: 'attach_money',

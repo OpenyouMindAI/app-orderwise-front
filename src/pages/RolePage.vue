@@ -55,7 +55,7 @@
                 filled
                 v-model="role.acronym"
                 autofocus
-                label="Simbolo"
+                label="Acronimo"
                 disable
               />
             </div>
@@ -103,12 +103,11 @@
                 filled
                 v-model="role.acronym"
                 autofocus
-                label="Simbolo"
-                disable
+                label="Acronimo"
               />
             </div>
           </q-card-section>
-          <q-card-section>
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
               <q-toggle
                 size="xs"
@@ -116,7 +115,6 @@
                 :val="modul.id"
                 :label="modul.title"
                 :disable="visible"
-                @input="changePermissions"
               />
             </div>
           </q-card-section>
@@ -273,6 +271,7 @@ export default {
           this.openAddRole = false
           this.visible = false
           this.role = {}
+          this.moduleSelected = []
           Notify.create({
             message: 'Rol creado exitosamente',
             icon: 'check_circle',
@@ -315,6 +314,7 @@ export default {
           this.openEditRole = false
           this.visible = false
           this.role = {}
+          this.moduleSelected = []
           Notify.create({
             message: 'Rol editado exitosamente',
             icon: 'check_circle',

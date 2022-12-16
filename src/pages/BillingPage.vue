@@ -29,7 +29,7 @@
             </q-card-section>
           </q-card>
         </div>
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-12 col-xs-12">
           <q-select
             use-input
             filled
@@ -49,12 +49,12 @@
             </template>
           </q-select>
         </div>
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-xs-6">
           <q-select
             use-input
             filled
             dense
-            label="Tipo de servicio"
+            label="Tipo de factura"
             input-debounce="0"
             option-label="name"
             option-value="id"
@@ -64,19 +64,22 @@
             @filter="filterInvoiceTypes"
           />
         </div>
-        <!-- <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+        <div class="col-xl-3 col-lg-3 col-md-2 col-sm-6 col-xs-6">
           <q-select
+            use-input
             filled
             dense
-            label="Impuesto"
-            :option-label="row => `${row.name} ${row.amount}%`"
+            label="Tipo de servicio"
+            input-debounce="0"
+            option-label="name"
             option-value="id"
-            v-model="taxe"
-            :options="taxes"
+            v-model="typeOfService"
+            :options="typeOfServices"
             :rules="[val => !!val || 'El campo es requerido.']"
+            @filter="filterTypeOfServices"
           />
-        </div> -->
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+        </div>
+        <div class="col-xl-3 col-lg-3 col-md-2 col-sm-6 col-xs-6">
           <q-select
             filled
             dense
@@ -200,10 +203,10 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
                 <q-card class="my-card">
-                  <q-img style="height: 170px; width: 100%" :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'" @click="validateProduct(props.row)">
-                    <div class="absolute-full text-subtitle1 flex flex-center">
+                  <q-img style="height: 150px; width: 100%" :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'" @click="validateProduct(props.row)">
+                    <div class="absolute-full text-subtitle2 flex flex-center">
                       {{ props.row.name }}
                     </div>
                   </q-img>
@@ -312,8 +315,8 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
-      <q-card>
+    <q-dialog v-model="dialogTable">
+      <q-card style="min-width: 1024px;">
         <q-card-actions class="q-pb-none q-px-md">
           <q-select
             filled
@@ -437,6 +440,8 @@ export default {
         busy: 'Acupada'
       },
       category: null,
+      typeOfService: null,
+      typeOfServices: [],
       payments: [],
       livingRooms: [],
       paymentMethods: [],
@@ -562,6 +567,9 @@ export default {
     },
     invoiceType (data) {
       localStorage.setItem('invoiceType', JSON.stringify(data))
+    },
+    typeOfService (data) {
+      localStorage.setItem('typeOfService', JSON.stringify(data))
     },
     products (data) {
       localStorage.setItem('products', JSON.stringify(data))
@@ -700,6 +708,32 @@ export default {
         .then(({ data }) => {
           update(() => {
             this.invoiceTypes = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterTypeOfServices (value, update) {
+      this.$api.get('type-of-services', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.typeOfServices = data
           })
         })
         .catch(err => {
@@ -887,7 +921,6 @@ export default {
       this.products = []
       this.tableSelected = []
       this.client = null
-      this.invoiceType = null
       this.products = []
       this.dialogPayment = false
       this.calculateTotal()
@@ -895,6 +928,10 @@ export default {
         this.$refs.saveBill.resetValidation()
       }, 100)
     },
+    /**
+     * Print invoice
+     * @param {Object} data invoice saved
+     */
     printBill (data) {
       this.invoice = data
       setTimeout(() => {
