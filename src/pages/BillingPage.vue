@@ -2,6 +2,9 @@
   <q-page padding>
     <q-form ref="saveBill" @submit="saveBill">
       <div class="row q-col-gutter-sm">
+        <div class="col-12">
+          <BillOfSale></BillOfSale>
+        </div>
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
           <q-card class="bg-teal text-white" @click="exchange = !exchange">
             <q-card-section class="text-subtitle2 text-center">
@@ -250,7 +253,8 @@
                 <tr v-for="(payment, index) in payments" :key="payment.id">
                   <td class="text-left">{{ payment.name }}</td>
                   <td class="text-left">
-                    {{ payment.reference }}
+                    <span v-if="payment.reference"> {{ payment.reference }}</span>
+                    <span v-else>-</span>
                     <q-popup-edit
                       v-model="payment.reference"
                       auto-save
@@ -416,13 +420,15 @@ import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify, date } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import InvoicePrint from '../components/InvoicePrint.vue'
+import BillOfSale from '../components/BillOfSale.vue'
 export default {
   // name: 'PageName',
   components: {
     StreamBarcodeReader,
     DraggableResizableVue,
     DraggableResizableContainer,
-    InvoicePrint
+    InvoicePrint,
+    BillOfSale
   },
   data () {
     return {
@@ -669,7 +675,7 @@ export default {
       this.payments.push({
         name: data.name,
         amount: this.pendingPayment,
-        reference: '-',
+        reference: null,
         coin_id: this.coin.id,
         payment_method_id: data.id,
         user_created_id: this.userSession.id
@@ -980,6 +986,7 @@ export default {
       this.tableSelected = JSON.parse(localStorage.getItem('tableSelected')) ?? []
       this.client = JSON.parse(localStorage.getItem('client')) ?? null
       this.invoiceType = JSON.parse(localStorage.getItem('invoiceType')) ?? null
+      this.typeOfService = JSON.parse(localStorage.getItem('typeOfService')) ?? null
       this.calculateTotal()
     },
     /**
