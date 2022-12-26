@@ -2,9 +2,6 @@
   <q-page padding>
     <q-form ref="saveBill" @submit="saveBill">
       <div class="row q-col-gutter-sm">
-        <div class="col-12">
-          <BillOfSale></BillOfSale>
-        </div>
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
           <q-card class="bg-teal text-white" @click="exchange = !exchange">
             <q-card-section class="text-subtitle2 text-center">
@@ -218,6 +215,15 @@
             </template>
           </q-table>
         </div>
+        <div class="col-6">
+          <q-list dense separator>
+            <q-item v-for="taxe in invoiceType.taxes" :key="taxe.id">
+              <q-item-section>
+                {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </div>
       </div>
     </q-form>
     <q-dialog v-model="modelScan">
@@ -420,19 +426,22 @@ import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify, date } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import InvoicePrint from '../components/InvoicePrint.vue'
-import BillOfSale from '../components/BillOfSale.vue'
+// import BillOfSale from '../components/BillOfSale.vue'
 export default {
   // name: 'PageName',
   components: {
     StreamBarcodeReader,
     DraggableResizableVue,
     DraggableResizableContainer,
-    InvoicePrint,
-    BillOfSale
+    InvoicePrint
+    // BillOfSale
   },
   data () {
     return {
       openAddClient: false,
+      taxeTranslate: {
+        percentage: '%'
+      },
       clientAdded: {
         username: 'client',
         password: '123456'
@@ -567,6 +576,9 @@ export default {
     },
     payments (data) {
       localStorage.setItem('payments', JSON.stringify(data))
+    },
+    coin (data) {
+      this.taxeTranslate.amount = data.symbol
     },
     client (data) {
       localStorage.setItem('client', JSON.stringify(data))

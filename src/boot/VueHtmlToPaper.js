@@ -12,9 +12,6 @@ export default boot(async ({ app }) => {
       'titlebar=yes',
       'scrollbars=yes'
     ],
-    styles: [
-      'src/css/styleInvoice.css'
-    ],
     autoClose: true
   }
   app.use(VueHtmlToPaper, options)

@@ -163,12 +163,16 @@
         </q-tab-panels>
         <q-card-actions align="right">
           <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
-          <q-btn color="secondary" label="Imprimir" @click="print"/>
+          <q-btn color="secondary" label="Imprimir Ticket" @click="print"/>
+          <q-btn color="primary" label="Imprimir Boleta" @click="printInvoice"/>
         </q-card-actions>
       </q-card>
     </q-dialog>
     <div id="printMe" v-show="false">
       <invoice-print :data="invoice" v-if="invoice"/>
+    </div>
+    <div id="printMeInvoice" v-show="false">
+      <bill-of-sale :data="invoice" v-if="invoice"/>
     </div>
   </div>
 </template>
@@ -176,9 +180,11 @@
 <script>
 import { Notify, date } from 'quasar'
 import InvoicePrint from '../components/InvoicePrint.vue'
+import BillOfSale from '../components/BillOfSale.vue'
 export default {
   components: {
-    InvoicePrint
+    InvoicePrint,
+    BillOfSale
   },
   data () {
     return {
@@ -324,7 +330,18 @@ export default {
   },
   methods: {
     print () {
-      this.$htmlToPaper('printMe')
+      this.$htmlToPaper('printMe', {
+        styles: [
+          'src/css/styleInvoice.css'
+        ]
+      })
+    },
+    printInvoice () {
+      this.$htmlToPaper('printMeInvoice', {
+        styles: [
+          'src/css/styleBillOfSale.css'
+        ]
+      })
     },
     /**
      * Close all modals

@@ -54,12 +54,12 @@
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Pan</td>
-              <td class="text-right">1.00</td>
-              <td class="text-right">10</td>
+            <tr v-for="product in data.products" :key="product.id">
+              <td>{{ product.name }}</td>
+              <td class="text-right">{{ product.pivot.amount }}</td>
+              <td class="text-right">{{ product.pivot.price }}</td>
               <td class="text-right">0.00</td>
-              <td class="text-right">34.00</td>
+              <td class="text-right">{{ product.pivot.amount * product.pivot.price }}</td>
               <td class="text-right">0.00</td>
             </tr>
           </tbody>
@@ -69,8 +69,19 @@
         (*) Sin impuestos. <br>
         (**) Incluye impuestos, de ser Op. Gravada.
       </div>
-      <div class="col-right"></div>
     </div>
+    <div class="totales">
+      <ul>
+        <li>Total: <span>200</span></li>
+        <li>Total: <span>200</span></li>
+      </ul>
+    </div>
+    <footer class="footer">
+      Esta es una representación impresa de la Boleta de Venta Electrónica,
+      generada en el Sistema de la SUNAT. EI Emisor Electrónico puede verificarla
+      utilizando su clave SOL, el Adquirente o Usuario puede consultar su validez en
+      SUNAT Virtual: www.sunat.gob.pe, en Opciones sin Clave SOL/ Consulta de Validez del CPE.
+    </footer>
   </div>
 </template>
 
@@ -78,6 +89,9 @@
 import { date } from 'quasar'
 export default {
   // name: 'ComponentName',
+  props: {
+    data: Object
+  },
   setup () {
     return {
       formatDate (dateNew, format) {
@@ -87,59 +101,3 @@ export default {
   }
 }
 </script>
-<style>
-.container {
-  width: 80%;
-  margin: auto;
-  padding: 20px 10px;
-  border: solid 3px;
-  position: relative;
-  font-weight: 400;
-}
-.col-left {
-  width: 70%;
-}
-.head-name {
-  font-weight: bold;
-}
-.text-bold {
-  font-weight: bold;
-}
-.col-right {
-  padding: 5px;
-  border: solid 3px;
-  top: 10px;
-  right: 9px;
-  text-align: center;
-  position: absolute;
-}
-.divider {
-  margin-top: 38px;
-}
-.crated_at span {
-  margin-left: 40px;
-}
-.client span {
-  margin-left: 90px;
-}
-
-.client-dni span {
-  margin-left: 127px;
-}
-.observation span {
-  margin-left: 72px;
-}
-
-.coin span {
-  margin-left: 99px;
-}
-.expiry-date span {
-  margin-left: 18px;
-}
-.products table {
-  width: 100%
-}
-.text-right {
-  text-align: right;
-}
-</style>
