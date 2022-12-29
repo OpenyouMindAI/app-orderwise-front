@@ -49,15 +49,6 @@
                 label="Nombre"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="taxe.amount"
-                autofocus
-                label="Monto"
-              />
-            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
@@ -83,15 +74,6 @@
                 v-model="taxe.name"
                 autofocus
                 label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="taxe.amount"
-                autofocus
-                label="Monto"
               />
             </div>
           </q-card-section>
@@ -144,13 +126,6 @@ export default {
           align: 'left',
           label: 'Nombre',
           field: 'name',
-          sortable: true
-        },
-        {
-          name: 'amount',
-          align: 'left',
-          label: 'Monto',
-          field: 'amount',
           sortable: true
         }
       ],
