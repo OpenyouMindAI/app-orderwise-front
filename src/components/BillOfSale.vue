@@ -27,16 +27,20 @@
         Fecha de Vencimiento: <span class="text-bold">-</span>
       </div>
       <div class="crated_at">
-        Fecha de Emisión : <span class="text-bold">08/12/2022</span>
+        Fecha de Emisión : <span class="text-bold">
+          {{
+            formatDate(data.created_at, 'DD/MM/YYYY')
+          }}
+        </span>
       </div>
       <div class="client">
-        Señor(es) : <span class="text-bold">Luis Palma</span>
+        Señor(es) : <span class="text-bold">{{  data.client.name }}</span>
       </div>
       <div class="client-dni">
-        DNI : <span class="text-bold">26720270</span>
+        DNI : <span class="text-bold">{{ data.client.document_number }}</span>
       </div>
       <div class="coin">
-        Moneda : <span class="text-bold">Soles</span>
+        Moneda : <span class="text-bold">{{ data.coin.name }}</span>
       </div>
       <div class="observation">
         Observación : <span class="text-bold">-</span>
@@ -72,8 +76,24 @@
     </div>
     <div class="totales">
       <ul>
-        <li>Total: <span>200</span></li>
-        <li>Total: <span>200</span></li>
+        <li>
+          Op. Gravada:
+          <span>
+            {{ data.coin.symbol }}{{ data.tax_base }}
+          </span>
+        </li>
+        <li v-for="taxe in data.taxes" :key="taxe.id">
+          {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}}):
+          <span>
+            {{ data.coin.symbol }}{{ calculateTaxe(taxe) }}
+          </span>
+        </li>
+        <li>
+          Importe total:
+          <span>
+            {{ data.coin.symbol }} {{ totalBill }}
+          </span>
+        </li>
       </ul>
     </div>
     <footer class="footer">
@@ -92,8 +112,28 @@ export default {
   props: {
     data: Object
   },
+  computed: {
+    totalBill () {
+      const sum = this.data.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
+      return sum + this.data.total
+    }
+  },
+  methods: {
+    calculateTaxe (taxe) {
+      if (taxe.pivot.type_taxe === 'percentage') {
+        taxe.total = (this.data.total * taxe.pivot.amount) / 100
+      } else {
+        taxe.total = this.data.total + taxe.pivot.amount
+      }
+      console.log(this.data.total)
+      return taxe.total
+    }
+  },
   setup () {
     return {
+      taxeTranslate: {
+        percentage: '%'
+      },
       formatDate (dateNew, format) {
         return date.formatDate(dateNew, format)
       }

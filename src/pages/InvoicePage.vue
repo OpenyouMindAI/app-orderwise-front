@@ -106,19 +106,34 @@
                         {{ product.pivot.amount *  product.pivot.price }}
                       </td>
                     </tr>
-                    <q-separator/>
                   </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colspan="4" class="text-right">
-                        Total:
-                      </td>
-                      <td class="text-right">
-                        {{ invoice.total }}
-                      </td>
-                    </tr>
-                  </tfoot>
                 </q-markup-table>
+                <q-list dense separator v-if="invoice" class="q-mt-xs">
+                  <q-item v-if="invoice.invoice_type.name !== 'Ticket'">
+                    <q-item-section>
+                      Op Gravada
+                    </q-item-section>
+                    <q-item-section side v-if="invoice.coin">
+                      {{ invoice.coin.symbol }}{{ invoice.tax_base }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item v-for="taxe in invoice.taxes" :key="taxe.id" v-show="invoice.invoice_type.name !== 'Ticket'">
+                    <q-item-section>
+                      {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
+                    </q-item-section>
+                    <q-item-section side v-if="invoice.coin">
+                      {{ invoice.coin.symbol }}{{ calculateTaxe(taxe) }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section>
+                      Importe total
+                    </q-item-section>
+                    <q-item-section side v-if="coin">
+                      {{ invoice.coin.symbol }}{{ totalBill }}
+                    </q-item-section>
+                  </q-item>
+                </q-list>
               </div>
             </div>
           </q-tab-panel>
@@ -163,8 +178,8 @@
         </q-tab-panels>
         <q-card-actions align="right">
           <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
-          <q-btn color="secondary" label="Imprimir Ticket" @click="print"/>
-          <q-btn color="primary" label="Imprimir Boleta" @click="printInvoice"/>
+          <q-btn color="secondary" label="Imprimir Ticket" @click="print" v-if="invoice.invoice_type.name === 'Ticket'"/>
+          <q-btn color="primary" label="Imprimir Boleta" @click="printInvoice" v-else/>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -188,6 +203,9 @@ export default {
   },
   data () {
     return {
+      taxeTranslate: {
+        percentage: '%'
+      },
       editTab: 'details',
       invoices: [],
       invoice: null,
@@ -312,6 +330,12 @@ export default {
       }
     }
   },
+  computed: {
+    totalBill () {
+      const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
+      return sum + this.invoice.total
+    }
+  },
   mounted () {
     this.setPagination({
       pagination: this.paginationConfig,
@@ -329,6 +353,15 @@ export default {
     }
   },
   methods: {
+    calculateTaxe (taxe) {
+      if (taxe.pivot.type_taxe === 'percentage') {
+        taxe.total = (this.invoice.total * taxe.pivot.amount) / 100
+      } else {
+        taxe.total = this.invoice.total + taxe.pivot.amount
+      }
+      console.log(this.invoice.total)
+      return taxe.total
+    },
     print () {
       this.$htmlToPaper('printMe', {
         styles: [

@@ -5,7 +5,7 @@
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
           <q-card class="bg-teal text-white" @click="exchange = !exchange">
             <q-card-section class="text-subtitle2 text-center">
-              <span v-if="coin">{{ coin.symbol }}</span>{{ totalBill }}
+              <span v-if="coin">{{ coin.symbol }}</span>{{ totalTaxe }}
               <!-- <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
                 <q-banner>
                   {{ (totalBill * exchangeRate).toFixed(2) }} Bs
@@ -216,10 +216,29 @@
           </q-table>
         </div>
         <div class="col-6">
-          <q-list dense separator>
+          <q-list dense separator v-if="invoiceType">
+            <q-item>
+              <q-item-section>
+                Op Gravada
+              </q-item-section>
+              <q-item-section side v-if="coin">
+                {{ coin.symbol }}{{ totalBill }}
+              </q-item-section>
+            </q-item>
             <q-item v-for="taxe in invoiceType.taxes" :key="taxe.id">
               <q-item-section>
                 {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
+              </q-item-section>
+              <q-item-section side v-if="coin">
+                {{ coin.symbol }}{{ calculateTaxe(taxe) }}
+              </q-item-section>
+            </q-item>
+            <q-item>
+              <q-item-section>
+                Importe total
+              </q-item-section>
+              <q-item-section side v-if="coin">
+                {{ coin.symbol }}{{ totalTaxe }}
               </q-item-section>
             </q-item>
           </q-list>
@@ -438,6 +457,7 @@ export default {
   },
   data () {
     return {
+      invoiceTaxes: [],
       openAddClient: false,
       taxeTranslate: {
         percentage: '%'
@@ -559,6 +579,10 @@ export default {
     pendingPayment () {
       return this.totalBill - this.totalPayment
     },
+    totalTaxe () {
+      const sum = this.invoiceType.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
+      return sum + this.totalBill
+    },
     totalPayment () {
       let totalPayment = 0
       this.payments.forEach((payment) => {
@@ -570,6 +594,15 @@ export default {
   watch: {
     category () {
       this.getAllPorducts()
+    },
+    totalBill () {
+      this.invoiceTaxes = this.invoiceType.taxes.map(taxe => {
+        return {
+          taxe_id: taxe.id,
+          amount: taxe.pivot.amount,
+          type_taxe: taxe.pivot.type_taxe
+        }
+      })
     },
     tableSelected (data) {
       localStorage.setItem('tableSelected', JSON.stringify(data))
@@ -621,6 +654,14 @@ export default {
         .then(({ data }) => {
           this.exchangeRate = data.venta
         })
+    },
+    calculateTaxe (taxe) {
+      if (taxe.pivot.type_taxe === 'percentage') {
+        taxe.total = (this.totalBill * taxe.pivot.amount) / 100
+      } else {
+        taxe.total = this.totalBill + taxe.pivot.amount
+      }
+      return taxe.total
     },
     /**
      * Save clients
@@ -953,7 +994,11 @@ export default {
     printBill (data) {
       this.invoice = data
       setTimeout(() => {
-        this.$htmlToPaper('printMe')
+        this.$htmlToPaper('printMe', {
+          styles: [
+            'src/css/styleInvoice.css'
+          ]
+        })
       })
     },
     /**
@@ -964,7 +1009,7 @@ export default {
         client_id: this.client.id,
         seller_id: this.userSession.id,
         coin_id: this.coin.id,
-        taxe: 0, // this.taxe.amount,
+        invoice_taxes: this.invoiceTaxes,
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
         exchange_rate: this.exchangeRate,
