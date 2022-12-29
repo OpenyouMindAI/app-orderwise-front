@@ -2,10 +2,11 @@
   <q-page padding>
     <div class="row q-col-gutter-sm">
       <div class="col-4" v-for="total in totals" :key="total.id">
-        <q-card class="my-card bg-secondary text-white">
+        <q-card class="my-card bg-secondary text-white relative">
           <q-card-section class="q-py-xs">
             <div class="text-h6">{{ total.name }}</div>
             <div class="text-subtitle2">{{ total.coin_symbol }}{{ total.paymentTotal }}</div>
+            <q-checkbox v-model="paymentMethods" :val="total.id" class="absolute-top-right"/>
           </q-card-section>
         </q-card>
         <q-tooltip class="bg-orange text-body2" :offset="[10, 10]">
@@ -74,6 +75,7 @@ export default {
     return {
       from: null,
       to: null,
+      paymentMethods: [],
       dialogFilter: false,
       filter: '',
       /**
@@ -164,6 +166,12 @@ export default {
   watch: {
     filter (data) {
       this.searchData(data)
+    },
+    paymentMethods (val) {
+      this.params.whereIn = {
+        payment_method_id: val
+      }
+      this.getInvoicePayments(this.params)
     }
   },
   mounted () {
@@ -213,7 +221,7 @@ export default {
     /**
      * Get total all
      */
-    getPaymentTotals () {
+    getPaymentTotals (whereIn = []) {
       this.$api.get('reports/payment-totals')
         .then(({ data }) => {
           this.totals = data
