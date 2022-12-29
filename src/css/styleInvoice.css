@@ -5,7 +5,7 @@
   }
 }
 * {
-  font-size: 15px;
+  font-size: 9px;
   font-family: 'Times New Roman';
 }
 .left {
@@ -37,8 +37,8 @@ th.producto {
 
 td.cantidad,
 th.cantidad {
-  width: 40px;
-  max-width: 40px;
+  width: 50px;
+  max-width: 50px;
   word-break: break-all;
   text-align: right;
 }

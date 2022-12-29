@@ -26,7 +26,7 @@
       <thead>
         <tr>
           <th class="producto">PRODUCTO</th>
-          <th class="cantidad">CANTIDAD</th>
+          <th class="cantidad">CANT</th>
           <th class="precio">PRECIO</th>
           <th class="cantidad">SUBTOTAL</th>
         </tr>
@@ -36,7 +36,7 @@
           <td class="producto">{{ product.name }}</td>
           <td class="cantidad">{{ product.pivot.amount }}</td>
           <td class="precio">{{ product.pivot.price }}</td>
-          <td class="precio">{{ product.pivot.amount * product.pivot.price }}</td>
+          <td class="cantidad">{{ product.pivot.amount * product.pivot.price }}</td>
         </tr>
         <tr>
             <td class="producto" colspan="3">TOTAL</td>
