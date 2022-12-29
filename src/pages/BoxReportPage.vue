@@ -69,12 +69,13 @@
 </template>
 
 <script>
+import { date } from 'quasar'
 export default {
   // name: 'PageName',
   data: () => {
     return {
-      from: null,
-      to: null,
+      from: date.formatDate(Date(), 'YYYY-MM-DD'),
+      to: date.formatDate(Date(), 'YYYY-MM-DD'),
       paymentMethods: [],
       dialogFilter: false,
       filter: '',
@@ -87,6 +88,11 @@ export default {
         sortBy: 'id',
         sortOrder: 'desc',
         perPage: 1,
+        dateFilter: {
+          field: 'created_at',
+          from: date.formatDate(Date(), 'YYYY-MM-DD'),
+          to: date.formatDate(Date(), 'YYYY-MM-DD')
+        },
         dataSearch: {
           id: '',
           'coin.name': '',
@@ -205,6 +211,7 @@ export default {
         field: 'created_at'
       }
       this.getInvoicePayments(this.params)
+      this.getPaymentTotals()
     },
     /**
      * Set data pagination emit event
@@ -222,7 +229,12 @@ export default {
      * Get total all
      */
     getPaymentTotals (whereIn = []) {
-      this.$api.get('reports/payment-totals')
+      this.$api.get('reports/payment-totals', {
+        params: {
+          to: this.to,
+          from: this.from
+        }
+      })
         .then(({ data }) => {
           this.totals = data
         })
