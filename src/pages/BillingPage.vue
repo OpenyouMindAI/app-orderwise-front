@@ -580,7 +580,7 @@ export default {
       return this.totalBill - this.totalPayment
     },
     totalTaxe () {
-      const sum = this.invoiceType.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
+      const sum = this.invoiceType ? this.invoiceType.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0) : 0
       return sum + this.totalBill
     },
     totalPayment () {
