@@ -462,7 +462,6 @@ export default {
       this.visible = true
       this.$api.get('products', { params })
         .then(({ data }) => {
-          console.log(data.data)
           this.products = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
