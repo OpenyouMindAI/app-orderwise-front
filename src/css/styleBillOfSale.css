@@ -5,7 +5,7 @@
   }
 }
 * {
-  font-size: 8px;
+  font-size: 12px;
   font-family: 'Times New Roman';
 }
 .totales {
@@ -68,24 +68,24 @@
   margin-top: 38px;
 }
 .crated_at span {
-  margin-left: 40px;
+  margin-left: 20px;
 }
 .client span {
-  margin-left: 90px;
+  margin-left: 60px;
 }
 
 .client-dni span {
-  margin-left: 127px;
+  margin-left: 85px;
 }
 .observation span {
-  margin-left: 72px;
+  margin-left: 30px;
 }
 
 .coin span {
-  margin-left: 99px;
+  margin-left: 69px;
 }
 .expiry-date span {
-  margin-left: 18px;
+  margin-left: 5px;
 }
 .products table {
   width: 100%

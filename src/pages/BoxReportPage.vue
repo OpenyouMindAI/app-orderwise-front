@@ -2,10 +2,11 @@
   <q-page padding>
     <div class="row q-col-gutter-sm">
       <div class="col-4" v-for="total in totals" :key="total.id">
-        <q-card class="my-card bg-secondary text-white">
+        <q-card class="my-card bg-secondary text-white relative">
           <q-card-section class="q-py-xs">
             <div class="text-h6">{{ total.name }}</div>
             <div class="text-subtitle2">{{ total.coin_symbol }}{{ total.paymentTotal }}</div>
+            <q-checkbox v-model="paymentMethods" :val="total.id" class="absolute-top-right"/>
           </q-card-section>
         </q-card>
         <q-tooltip class="bg-orange text-body2" :offset="[10, 10]">
@@ -68,12 +69,14 @@
 </template>
 
 <script>
+import { date } from 'quasar'
 export default {
   // name: 'PageName',
   data: () => {
     return {
-      from: null,
-      to: null,
+      from: date.formatDate(Date(), 'YYYY-MM-DD'),
+      to: date.formatDate(Date(), 'YYYY-MM-DD'),
+      paymentMethods: [],
       dialogFilter: false,
       filter: '',
       /**
@@ -85,6 +88,11 @@ export default {
         sortBy: 'id',
         sortOrder: 'desc',
         perPage: 1,
+        dateFilter: {
+          field: 'created_at',
+          from: date.formatDate(Date(), 'YYYY-MM-DD'),
+          to: date.formatDate(Date(), 'YYYY-MM-DD')
+        },
         dataSearch: {
           id: '',
           'coin.name': '',
@@ -164,6 +172,12 @@ export default {
   watch: {
     filter (data) {
       this.searchData(data)
+    },
+    paymentMethods (val) {
+      this.params.whereIn = {
+        payment_method_id: val
+      }
+      this.getInvoicePayments(this.params)
     }
   },
   mounted () {
@@ -197,6 +211,7 @@ export default {
         field: 'created_at'
       }
       this.getInvoicePayments(this.params)
+      this.getPaymentTotals()
     },
     /**
      * Set data pagination emit event
@@ -213,8 +228,13 @@ export default {
     /**
      * Get total all
      */
-    getPaymentTotals () {
-      this.$api.get('reports/payment-totals')
+    getPaymentTotals (whereIn = []) {
+      this.$api.get('reports/payment-totals', {
+        params: {
+          to: this.to,
+          from: this.from
+        }
+      })
         .then(({ data }) => {
           this.totals = data
         })
