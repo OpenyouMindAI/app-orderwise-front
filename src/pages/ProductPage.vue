@@ -380,7 +380,7 @@ export default {
      * Model product
      * @param {Object} data product
      */
-    modelProduct (data, put = false) {
+    modelData (data, put = false) {
       const formData = new FormData()
       if (put) {
         formData.append('_method', 'put')
@@ -462,7 +462,6 @@ export default {
       this.visible = true
       this.$api.get('products', { params })
         .then(({ data }) => {
-          console.log(data.data)
           this.products = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
@@ -493,7 +492,7 @@ export default {
      */
     saveProduct () {
       this.visible = true
-      this.$api.post('products', this.modelProduct(this.product))
+      this.$api.post('products', this.modelData(this.product))
         .then(({ data }) => {
           this.getProducts()
           this.openAddProduct = false
@@ -528,7 +527,7 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.post(`products/${this.product.id}`, this.modelProduct(this.product, true))
+      this.$api.post(`products/${this.product.id}`, this.modelData(this.product, true))
         .then(({ data }) => {
           this.getProducts()
           this.openEditProduct = false
