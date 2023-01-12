@@ -175,6 +175,7 @@ export default defineComponent({
   },
   created () {
     // this.$q.dark.set(true)
+    this.$api.defaults.headers.common.authorization = `${localStorage.getItem('tokenType')} ${localStorage.getItem('accessToken')}`
   },
   computed: {
     title () {
