@@ -49,10 +49,26 @@
                 <q-input label="Código" filled v-model="invoice.id" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Tipo de servicio" filled v-model="invoice.invoice_type.name" readonly dense/>
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de factura"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="invoice.invoice_type"
+                  :options="invoiceTypes"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterInvoiceTypes"
+                />
               </div>
               <div class="col-6">
-                <q-input label="Cliente" filled v-model="invoice.client.name" readonly dense/>
+                <q-input label="Cliente" filled v-model="invoice.client.name" readonly dense>
+                  <template v-slot:append>
+                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+                  </template>
+                </q-input>
               </div>
               <div class="col-6">
                 <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
@@ -179,8 +195,51 @@
         <q-card-actions align="right">
           <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
           <q-btn color="secondary" label="Imprimir Ticket" @click="print" v-if="invoice.invoice_type.name === 'Ticket'"/>
-          <q-btn color="primary" label="Imprimir Boleta" @click="printInvoice" v-else/>
+          <q-btn color="orange" label="Imprimir Boleta" @click="printInvoice" v-else/>
+          <q-btn color="primary" label="Guardar" @click="saveEdit"/>
         </q-card-actions>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="openAddClient" persistent>
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-form @submit="saveClient">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">Agregar cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
+          </q-card-section>
+          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-option-group
+                type="radio"
+                inline
+                autofocus
+                v-model="documentType"
+                :options="options"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="client.document_number"
+                label="Número de documento"
+                @blur="getDataApi"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="client.name"
+                label="Nombre"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary">
+            <q-btn color="primary" label="Agregar" type="submit"/>
+            <q-btn color="orange" label="Cancelar" @click="(openAddClient = false)" />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
     <div id="printMe" v-show="false">
@@ -193,7 +252,7 @@
 </template>
 
 <script>
-import { Notify, date } from 'quasar'
+import { Notify, date, is } from 'quasar'
 import InvoicePrint from '../components/InvoicePrint.vue'
 import BillOfSale from '../components/BillOfSale.vue'
 export default {
@@ -203,9 +262,16 @@ export default {
   },
   data () {
     return {
+      documentType: 'ruc',
+      options: [
+        { label: 'RUC', value: 'ruc' },
+        { label: 'DNI', value: 'dni', color: 'green' }
+      ],
+      openAddClient: false,
       taxeTranslate: {
         percentage: '%'
       },
+      client: {},
       editTab: 'details',
       invoices: [],
       invoice: null,
@@ -327,7 +393,8 @@ export default {
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
-      }
+      },
+      invoiceTypes: []
     }
   },
   computed: {
@@ -361,6 +428,32 @@ export default {
       }
       console.log(this.invoice.total)
       return taxe.total
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterInvoiceTypes (value, update) {
+      this.$api.get('invoice-types', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.invoiceTypes = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     },
     print () {
       this.$htmlToPaper('printMe', {
@@ -433,12 +526,12 @@ export default {
      */
     saveInvoice () {
       this.visible = true
-      this.$api.post('invoices', this.coin)
+      this.$api.post('invoices', this.invoice)
         .then(({ data }) => {
           this.getInvoices()
           this.openAddInvoice = false
           this.visible = false
-          this.coin = {}
+          this.invoice = {}
           Notify.create({
             message: 'Factura creada exitosamente',
             icon: 'check_circle',
@@ -462,16 +555,74 @@ export default {
       this.invoice = row
     },
     /**
+     * Model product
+     * @param {Object} data product
+     */
+    modelData (data, put = false) {
+      for (const key in data) {
+        if (Object.hasOwnProperty.call(data, key)) {
+          const element = data[key]
+          if (element && is.object(element)) {
+            data[`${key}_id`] = element.id
+          }
+        }
+      }
+      return data
+    },
+    /**
+     * Save clients
+     */
+    saveClient () {
+      this.visible = true
+      this.$api.put(`clients/${this.invoice.client.id}`, this.client)
+        .then(({ data }) => {
+          this.openAddClient = false
+          this.visible = false
+          this.invoice.client = data
+          Notify.create({
+            message: 'Cliente creado exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.visible = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Get document
+     */
+    getDataApi () {
+      this.$api.get(`get-documents/${this.documentType}/${this.client.document_number}`)
+        .then(({ data }) => {
+          if (!data.error) {
+            this.client.name = data.nombre
+          } else {
+            Notify.create({
+              message: data.error,
+              icon: 'warning',
+              color: 'negative'
+            })
+            this.client = {}
+          }
+        })
+    },
+    /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`invoices/${this.coin.id}`, this.coin)
+      this.$api.put(`invoices/${this.invoice.id}`, this.modelData(this.invoice))
         .then(({ data }) => {
           this.getInvoices()
           this.openEditInvoice = false
           this.visible = false
-          this.coin = {}
+          this.invoice = null
           Notify.create({
             message: 'Factura editada exitosamente',
             icon: 'check_circle',
@@ -492,12 +643,12 @@ export default {
      */
     deleteInvoice () {
       this.visible = true
-      this.$api.delete(`invoices/${this.coin.id}`)
+      this.$api.delete(`invoices/${this.invoice.id}`)
         .then(({ data }) => {
           this.getInvoices()
           this.openEditInvoice = false
           this.visible = false
-          this.coin = {}
+          this.invoice = null
           Notify.create({
             message: 'Factura eliminada exitosamente',
             icon: 'check_circle',

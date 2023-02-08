@@ -39,7 +39,7 @@
             option-value="id"
             v-model="client"
             clearable
-            :option-label="row => `${row.document_number} | ${row.name}`"
+            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
             :options="clients"
             :rules="[val => !!val || 'El campo es requerido.']"
             @filter="filterClients"
@@ -399,12 +399,21 @@
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-option-group
+                type="radio"
+                inline
+                autofocus
+                v-model="documentType"
+                :options="options"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="clientAdded.document_number"
                 autofocus
                 label="Número de documento"
+                @blur="getDataApi"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -414,16 +423,6 @@
                 v-model="clientAdded.name"
                 autofocus
                 label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="clientAdded.email"
-                autofocus
-                type="email"
-                label="Correo"
               />
             </div>
           </q-card-section>
@@ -457,15 +456,17 @@ export default {
   },
   data () {
     return {
+      documentType: 'ruc',
+      options: [
+        { label: 'RUC', value: 'ruc' },
+        { label: 'DNI', value: 'dni', color: 'green' }
+      ],
       invoiceTaxes: [],
       openAddClient: false,
       taxeTranslate: {
         percentage: '%'
       },
-      clientAdded: {
-        username: 'client',
-        password: '123456'
-      },
+      clientAdded: {},
       invoice: null,
       livingRoom: null,
       taxes: [],
@@ -655,6 +656,10 @@ export default {
           this.exchangeRate = data.venta
         })
     },
+    /**
+     * Calculate taxe
+     * @param {Object} taxe
+     */
     calculateTaxe (taxe) {
       if (taxe.pivot.type_taxe === 'percentage') {
         taxe.total = (this.totalBill * taxe.pivot.amount) / 100
@@ -662,6 +667,24 @@ export default {
         taxe.total = this.totalBill + taxe.pivot.amount
       }
       return taxe.total
+    },
+    /**
+     * Get document
+     */
+    getDataApi () {
+      this.$api.get(`get-documents/${this.documentType}/${this.clientAdded.document_number}`)
+        .then(({ data }) => {
+          if (!data.error) {
+            this.clientAdded.name = data.nombre
+          } else {
+            Notify.create({
+              message: data.error,
+              icon: 'warning',
+              color: 'negative'
+            })
+            this.clientAdded = {}
+          }
+        })
     },
     /**
      * Save clients
@@ -1111,7 +1134,7 @@ export default {
     async getOnePorduct (barcode = this.barcode) {
       this.$api.get('products', {
         params: {
-          dataFilter: {
+          dataEqualFilter: {
             barcode: this.barcode
           }
         }
