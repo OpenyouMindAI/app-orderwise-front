@@ -58,6 +58,20 @@
                 label="Simbolo"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                filled
+                v-model="invoiceType.taxes"
+                use-input
+                use-chips
+                multiple
+                input-debounce="0"
+                option-label="name"
+                label="Impuestos"
+                :options="taxes"
+                @filter="filterTaxes"
+              />
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
@@ -131,6 +145,7 @@ export default {
       openAddInvoiceType: false,
       openEditInvoiceType: null,
       userSession: null,
+      taxes: [],
       columns: [
         {
           name: 'id',
@@ -180,6 +195,31 @@ export default {
     }
   },
   methods: {
+    /**
+     * Get all taxes
+     */
+    filterTaxes (val, update) {
+      this.$api.get('taxes', {
+        params: {
+          name: val
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.taxes = data
+          })
+        })
+        .catch(err => {
+          update(() => {
+            this.taxes = []
+          })
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
     /**
      * Close all modals
      */
@@ -270,7 +310,7 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`invoice-types${this.invoiceType.id}`, this.invoiceType)
+      this.$api.put(`invoice-types/${this.invoiceType.id}`, this.invoiceType)
         .then(({ data }) => {
           this.getInvoiceTypes()
           this.openEditInvoiceType = false
