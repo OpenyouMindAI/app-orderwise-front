@@ -94,14 +94,14 @@
         <div class="col-6">
           <div class="row q-col-gutter-sm">
             <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-6">
-              <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOnePorduct(this.barcode)">
+              <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
                 <template v-slot:append>
                   <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
                 </template>
               </q-input>
             </div>
             <div class=" col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-6 q-gutter-sm">
-              <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true">
+              <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
                 <q-badge floating color="negative">
                   {{ tableSelected.length }}
                 </q-badge>
@@ -110,6 +110,7 @@
                 color="secondary"
                 icon="attach_money"
                 @click="dialogPayment = true"
+                :loading="loadingPaymentMethods"
               >
                 <q-badge floating color="negative">
                   {{ payments.length }}
@@ -170,7 +171,7 @@
             dense
             grid
             hide-pagination
-            :rows="allPorducts"
+            :rows="allProducts"
             :columns="productColumns"
             :loading="loadingPage"
             :filter="filter"
@@ -230,7 +231,7 @@
                 {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
               </q-item-section>
               <q-item-section side v-if="coin">
-                {{ coin.symbol }}{{ calculateTaxe(taxe) }}
+                {{ coin.symbol }}{{ calculateTax(taxe) }}
               </q-item-section>
             </q-item>
             <q-item>
@@ -246,7 +247,11 @@
       </div>
     </q-form>
     <q-dialog v-model="modelScan">
-      <stream-barcode-reader @debarcode="getOnePorduct"/>
+      <q-card>
+        <q-card-section class="q-pb-none q-pt-xs q-px-xs bg-dark">
+          <stream-barcode-reader @debarcode="getOneProduct"/>
+        </q-card-section>
+      </q-card>
     </q-dialog>
     <q-dialog v-model="dialogPayment">
       <q-card style="width: 700px; max-width: 80vw;">
@@ -344,8 +349,8 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable">
-      <q-card style="min-width: 1024px;">
+    <q-dialog v-model="dialogTable" maximized>
+      <q-card>
         <q-card-actions class="q-pb-none q-px-md">
           <q-select
             filled
@@ -413,7 +418,6 @@
                 v-model="clientAdded.document_number"
                 autofocus
                 label="Número de documento"
-                @blur="getDataApi"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -427,7 +431,7 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit"/>
+            <q-btn color="primary" label="Agregar" type="submit" :loading="loadingClient"/>
             <q-btn color="orange" label="Cancelar" @click="(openAddClient = false)" />
           </q-card-actions>
         </q-form>
@@ -456,10 +460,12 @@ export default {
   },
   data () {
     return {
-      documentType: 'ruc',
+      loadingClient: false,
+      loadingPaymentMethods: false,
+      documentType: 'ci',
       options: [
-        { label: 'RUC', value: 'ruc' },
-        { label: 'DNI', value: 'dni', color: 'green' }
+        { label: 'Rif', value: 'rif' },
+        { label: 'Cedula', value: 'ci', color: 'green' }
       ],
       invoiceTaxes: [],
       openAddClient: false,
@@ -516,10 +522,11 @@ export default {
       filter: '',
       barcode: null,
       dialogScanner: false,
+      loadingLivingRoom: false,
       products: [],
       loadingPage: false,
       totalBill: 0,
-      allPorducts: [],
+      allProducts: [],
       categories: [],
       userSession: {},
       productColumns: [
@@ -594,7 +601,7 @@ export default {
   },
   watch: {
     category () {
-      this.getAllPorducts()
+      this.getAllProducts()
     },
     totalBill () {
       this.invoiceTaxes = this.invoiceType.taxes.map(taxe => {
@@ -638,7 +645,7 @@ export default {
     this.getCoins()
     this.getTaxes()
     this.getPaymentMethods()
-    this.getAllPorducts()
+    this.getAllProducts()
     this.getLivingRooms()
     this.getExchange()
     this.userSession = JSON.parse(localStorage.getItem('user'))
@@ -660,7 +667,7 @@ export default {
      * Calculate taxe
      * @param {Object} taxe
      */
-    calculateTaxe (taxe) {
+    calculateTax (taxe) {
       if (taxe.pivot.type_taxe === 'percentage') {
         taxe.total = (this.totalBill * taxe.pivot.amount) / 100
       } else {
@@ -669,34 +676,16 @@ export default {
       return taxe.total
     },
     /**
-     * Get document
-     */
-    getDataApi () {
-      this.$api.get(`get-documents/${this.documentType}/${this.clientAdded.document_number}`)
-        .then(({ data }) => {
-          if (!data.error) {
-            this.clientAdded.name = data.nombre
-          } else {
-            Notify.create({
-              message: data.error,
-              icon: 'warning',
-              color: 'negative'
-            })
-            this.clientAdded = {}
-          }
-        })
-    },
-    /**
      * Save clients
      */
     saveClient () {
-      this.visible = true
+      this.loadingClient = true
       this.$api.post('clients', this.clientAdded)
         .then(({ data }) => {
           this.openAddClient = false
-          this.visible = false
           this.clientAdded = {}
           this.client = data
+          this.loadingClient = false
           Notify.create({
             message: 'Cliente creado exitosamente',
             icon: 'check_circle',
@@ -704,7 +693,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingClient = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -723,12 +712,15 @@ export default {
      * @param {Object} params search params
      */
     getLivingRooms () {
+      this.loadingLivingRoom = true
       this.$api.get('living-rooms')
         .then(({ data }) => {
           this.livingRooms = data
           this.livingRoom = data[0]
+          this.loadingLivingRoom = false
         })
         .catch(err => {
+          this.loadingLivingRoom = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -762,11 +754,14 @@ export default {
      * Get all payment-methods
      */
     getPaymentMethods () {
+      this.loadingPaymentMethods = true
       this.$api.get('payment-methods')
         .then(({ data }) => {
+          this.loadingPaymentMethods = false
           this.paymentMethods = data
         })
         .catch(err => {
+          this.loadingPaymentMethods = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -974,7 +969,7 @@ export default {
     /**
      * Get all tables
      */
-    getAllPorducts () {
+    getAllProducts () {
       this.$api.get('products', {
         params: {
           sortBy: 'id',
@@ -985,7 +980,7 @@ export default {
         }
       })
         .then(({ data }) => {
-          this.allPorducts = data
+          this.allProducts = data
         })
         .catch(err => {
           Notify.create({
@@ -1131,7 +1126,7 @@ export default {
      * Get one product
      * @param {Number} barcode barcode product
      */
-    async getOnePorduct (barcode = this.barcode) {
+    async getOneProduct (barcode = this.barcode) {
       this.$api.get('products', {
         params: {
           dataEqualFilter: {

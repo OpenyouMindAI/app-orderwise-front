@@ -51,8 +51,8 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteTaxe" :loading="visible" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="loadingSave"/>
+            <q-btn color="negative" label="Eliminar" @click="deleteTaxe" :loading="loadingDelete" />
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
@@ -78,7 +78,7 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
+            <q-btn color="primary" label="Agregar" type="submit" :loading="loadingSave"/>
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
@@ -94,6 +94,8 @@ export default {
     return {
       taxes: [],
       taxe: {},
+      loadingDelete: false,
+      loadingSave: false,
       filter: '',
       /**
        * Params search
@@ -210,12 +212,12 @@ export default {
      * Save taxes
      */
     saveTaxe () {
-      this.visible = true
+      this.loadingSave = true
       this.$api.post('taxes', this.taxe)
         .then(({ data }) => {
           this.getTaxes()
           this.openAddTaxe = false
-          this.visible = false
+          this.loadingSave = false
           this.taxe = {}
           Notify.create({
             message: 'Impuesto creada exitosamente',
@@ -224,7 +226,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingSave = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -243,12 +245,12 @@ export default {
      * Save edit
      */
     saveEdit () {
-      this.visible = true
+      this.loadingSave = true
       this.$api.put(`taxes/${this.taxe.id}`, this.taxe)
         .then(({ data }) => {
           this.getTaxes()
           this.openEditTaxe = false
-          this.visible = false
+          this.loadingSave = false
           this.taxe = {}
           Notify.create({
             message: 'Impuesto editado exitosamente',
@@ -257,7 +259,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingSave = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -269,12 +271,12 @@ export default {
      * Delete taxe
      */
     deleteTaxe () {
-      this.visible = true
+      this.loadingDelete = true
       this.$api.delete(`taxes/${this.taxe.id}`)
         .then(({ data }) => {
           this.getTaxes()
           this.openEditTaxe = false
-          this.visible = false
+          this.loadingDelete = false
           this.taxe = {}
           Notify.create({
             message: 'Impuesto eliminado exitosamente',
@@ -283,7 +285,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingDelete = false
           Notify.create({
             message: err.message,
             icon: 'warning',

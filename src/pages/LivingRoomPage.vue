@@ -31,15 +31,15 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditLivingRoom" persistent>
-      <q-card style="min-width: 1024px;">
+    <q-dialog v-model="openEditLivingRoom" persistent maximized>
+      <q-card>
         <q-form @submit="saveEditLivingRoom">
           <q-card-section class="row items-center q-py-sm bg-primary text-white">
             <div class="text-h6">Editar sala de estar</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-py-xs">
+          <q-card-section class="q-py-sm">
             <q-input
               :rules="[val => !!val || 'El campo es requerido.']"
               filled
@@ -53,22 +53,22 @@
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
-              class="container"
+              class="container full-width"
             >
               <draggable-resizable-vue
-                v-for="(livingRoom, index) in livingRoom.tables"
-                :key="livingRoom.id"
-                v-model:x="livingRoom.x"
-                v-model:y="livingRoom.y"
-                v-model:h="livingRoom.height"
-                v-model:w="livingRoom.width"
-                class="element-one"
+                v-for="(table, index) in livingRoom.tables"
+                :key="table.id"
+                v-model:x="table.x"
+                v-model:y="table.y"
+                v-model:h="table.height"
+                v-model:w="table.width"
+                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
                 :handles-size="10"
-                @deactivated="onDeactivated(livingRoom, index)"
-                @activated="onActivated(livingRoom, index)"
+                @deactivated="onDeactivated(table, index)"
+                @activated="onActivated(table, index)"
               >
               <span class="absolute-center">
-                {{ livingRoom.name }}
+                {{ table.name }}
               </span>
               </draggable-resizable-vue>
             </draggable-resizable-container>
@@ -110,21 +110,21 @@
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
-              class="container"
+              class="container full-width"
             >
               <draggable-resizable-vue
-                v-for="(livingRoom, index) in livingRoom.tables"
-                :key="livingRoom.id"
-                v-model:x="livingRoom.x"
-                v-model:y="livingRoom.y"
-                v-model:h="livingRoom.height"
-                v-model:w="livingRoom.width"
-                class="element-one"
+                v-for="(table, index) in livingRoom.tables"
+                :key="table.id"
+                v-model:x="table.x"
+                v-model:y="table.y"
+                v-model:h="table.height"
+                v-model:w="table.width"
+                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
                 :handles-size="10"
-                @deactivated="onDeactivated(livingRoom, index)"
+                @deactivated="onDeactivated(table, index)"
               >
                 <span class="absolute-center">
-                  {{ livingRoom.name }}
+                  {{ table.name }}
                 </span>
               </draggable-resizable-vue>
             </draggable-resizable-container>
@@ -219,7 +219,7 @@ export default {
       visible: false,
       openAddLivingRoom: false,
       openEditLivingRoom: null,
-      userSession: null,
+      userSession: JSON.parse(localStorage.getItem('user')),
       filter: '',
       /**
        * Params search
@@ -261,9 +261,6 @@ export default {
     }
   },
   created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.livingRoom.user_created_id = this.userSession.id
-    this.livingRoom.user_updated_id = this.userSession.id
     this.getLivingRooms()
   },
   mounted () {
@@ -287,6 +284,17 @@ export default {
     onActivated (data, index) {
       this.tableSelected = data
       this.tableSelected.index = index
+    },
+    /**
+     * Search beneficiary
+     * @param  {Object}
+     */
+    searchData (data) {
+      for (const dataSearch in this.params.dataSearch) {
+        this.params.dataSearch[dataSearch] = data
+      }
+      this.params.page = 1
+      this.getLivingRooms(this.params)
     },
     /**
      * Add table in livi room
@@ -361,7 +369,10 @@ export default {
      */
     saveLivingRoom () {
       this.visible = true
-      this.$api.post('living-rooms', this.livingRoom)
+      this.$api.post('living-rooms', {
+        user_created_id: this.userSession.id,
+        ...this.livingRoom
+      })
         .then(({ data }) => {
           this.getLivingRooms()
           this.openAddLivingRoom = false
@@ -396,7 +407,10 @@ export default {
      */
     saveEditLivingRoom () {
       this.visible = true
-      this.$api.put(`living-rooms/${this.livingRoom.id}`, this.livingRoom)
+      this.$api.put(`living-rooms/${this.livingRoom.id}`, {
+        user_created_id: this.userSession.id,
+        ...this.livingRoom
+      })
         .then(({ data }) => {
           this.getLivingRooms()
           this.openEditLivingRoom = false
@@ -482,13 +496,7 @@ export default {
 </script>
 <style>
 .container {
-  max-width: 1024px;
   height: 71vh;
   border: 1px solid black;
-}
-
-.element-one {
-  background-color: blue;
-  color: white;
 }
 </style>
