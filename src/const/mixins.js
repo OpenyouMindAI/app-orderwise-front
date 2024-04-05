@@ -1,0 +1,86 @@
+import { Loading, Notify, copyToClipboard, date } from 'quasar'
+
+/**
+ * Set date format
+ * @param {String} value date value
+ * @param {Number} format date format
+ * @return {String} date formatted
+ */
+export function formatDate (value, format = 'DD-MM-YYYY') {
+  if (value) {
+    return date.formatDate(value, format)
+  }
+}
+
+/**
+ * Loading statusList
+ * @param {Boolean} val loading statusList
+ */
+export const loading = val => {
+  if (val) {
+    Loading.show()
+  } else {
+    Loading.hide()
+  }
+}
+
+/**
+ * Model product
+ * @param {Object} data product
+ */
+export const modelFormData = (data, put = false) => {
+  const formData = new FormData()
+  if (put) {
+    formData.append('_method', 'put')
+  }
+  for (const key in data) {
+    if (Object.hasOwnProperty.call(data, key)) {
+      const element = data[key]
+      if (typeof element !== 'object') {
+        formData.append(key, element)
+      }
+    }
+  }
+  if (data.files) {
+    data.files.forEach((element, index) => {
+      formData.append(`files[${index}]`, element.file)
+      formData.append(`file_types[${index}]`, element.file_type_id)
+    })
+  }
+  return formData
+}
+
+export const formatNumber = (data) => {
+  const options = {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    minimumIntegerDigits: 1,
+    useGrouping: true,
+    decimalSeparator: '.'
+  }
+  if (data) {
+    return Number(data).toLocaleString('es', options)
+  }
+  return Number(data)
+}
+
+/**
+ * @description converte text to slug
+ * @param {*} Text
+ */
+export const convertToSlug = (Text) => {
+  return Text.toLowerCase()
+    .replace(/[^\w ]+/g, '')
+    .replace(/ +/g, '_')
+}
+
+export const copyClick = (data) => {
+  copyToClipboard(data)
+    .then(() => {
+      Notify.create({
+        color: 'primary',
+        icon: 'content_copy',
+        message: `Copiado: ${data}`
+      })
+    })
+}

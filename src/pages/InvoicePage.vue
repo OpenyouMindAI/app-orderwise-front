@@ -312,28 +312,28 @@ export default {
           name: 'invoice_type',
           align: 'left',
           label: 'Tipo de servicio',
-          field: row => row.invoice_type.name,
+          field: row => row?.invoice_type?.name,
           sortable: true
         },
         {
           name: 'client',
           align: 'left',
           label: 'Cliente',
-          field: row => row.client.name,
+          field: row => row.client?.name,
           sortable: true
         },
         {
           name: 'seller',
           align: 'left',
           label: 'Vendedor',
-          field: row => row.seller.name,
+          field: row => row.seller?.name,
           sortable: true
         },
         {
           name: 'coin',
           align: 'left',
           label: 'Moneda',
-          field: row => row.coin.name,
+          field: row => row.coin?.name,
           sortable: true
         },
         {

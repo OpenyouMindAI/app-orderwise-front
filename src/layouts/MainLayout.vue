@@ -30,7 +30,7 @@
         <q-item-label
           header
         >
-          Camandas
+          Comandas
         </q-item-label>
 
         <EssentialLink
@@ -81,6 +81,19 @@ const linksList = [
         visible: true,
         icon: 'format_list_bulleted',
         link: 'Product'
+      }
+    ]
+  },
+  {
+    title: 'Comanda',
+    icon: 'receipt',
+    visible: true,
+    children: [
+      {
+        title: 'Comanda',
+        visible: true,
+        icon: 'shopping_bag',
+        link: 'Command'
       }
     ]
   },
