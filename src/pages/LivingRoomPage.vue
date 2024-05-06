@@ -31,15 +31,15 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditLivingRoom" persistent>
-      <q-card style="min-width: 1024px;">
+    <q-dialog v-model="openEditLivingRoom" persistent maximized>
+      <q-card class="column">
         <q-form @submit="saveEditLivingRoom">
           <q-card-section class="row items-center q-py-sm bg-primary text-white">
             <div class="text-h6">Editar sala de estar</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-py-xs">
+          <q-card-section class="q-py-sm">
             <q-input
               :rules="[val => !!val || 'El campo es requerido.']"
               filled
@@ -53,22 +53,22 @@
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
-              class="container"
+              class="container full-width"
             >
               <draggable-resizable-vue
-                v-for="(livingRoom, index) in livingRoom.tables"
-                :key="livingRoom.id"
-                v-model:x="livingRoom.x"
-                v-model:y="livingRoom.y"
-                v-model:h="livingRoom.height"
-                v-model:w="livingRoom.width"
-                class="element-one"
+                v-for="(table, index) in livingRoom.tables"
+                :key="table.id"
+                v-model:x="table.x"
+                v-model:y="table.y"
+                v-model:h="table.height"
+                v-model:w="table.width"
+                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
                 :handles-size="10"
-                @deactivated="onDeactivated(livingRoom, index)"
-                @activated="onActivated(livingRoom, index)"
+                @deactivated="onDeactivated(table, index)"
+                @activated="onActivated(table, index)"
               >
               <span class="absolute-center">
-                {{ livingRoom.name }}
+                {{ table.name }}
               </span>
               </draggable-resizable-vue>
             </draggable-resizable-container>
@@ -81,8 +81,9 @@
               {{ tableSelected.name }}
             </q-badge>
             <q-space/>
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom" :loading="visible" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="loadingEdit"/>
+            <q-btn color="secondary" label="Imprimir Qrs" @click="printQr"/>
+            <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom" :loading="loadingEdit" />
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
@@ -110,21 +111,21 @@
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
-              class="container"
+              class="container full-width"
             >
               <draggable-resizable-vue
-                v-for="(livingRoom, index) in livingRoom.tables"
-                :key="livingRoom.id"
-                v-model:x="livingRoom.x"
-                v-model:y="livingRoom.y"
-                v-model:h="livingRoom.height"
-                v-model:w="livingRoom.width"
-                class="element-one"
+                v-for="(table, index) in livingRoom.tables"
+                :key="table.id"
+                v-model:x="table.x"
+                v-model:y="table.y"
+                v-model:h="table.height"
+                v-model:w="table.width"
+                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
                 :handles-size="10"
-                @deactivated="onDeactivated(livingRoom, index)"
+                @deactivated="onDeactivated(table, index)"
               >
                 <span class="absolute-center">
-                  {{ livingRoom.name }}
+                  {{ table.name }}
                 </span>
               </draggable-resizable-vue>
             </draggable-resizable-container>
@@ -134,7 +135,7 @@
             <q-btn color="secondary" label="Editar mesa" @click="(openEditTable = true)" v-if="tableSelected"/>
             <q-btn color="negative" label="Eliminar mesa" @click="confirmDeleteTable" v-if="tableSelected"/>
             <q-space/>
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
+            <q-btn color="primary" label="Guardar" type="submit" :loading="loadingSave"/>
             <q-btn color="orange" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
@@ -168,7 +169,7 @@
       </q-card>
     </q-dialog>
     <q-dialog v-model="openEditTable" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+      <q-card style="width: 500px; max-width: 80vw;">
         <q-form @submit="onDeactivated(tableSelected)">
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">Editar mesa</div>
@@ -176,6 +177,13 @@
             <q-btn icon="close" flat round dense @click="openEditTable = false" />
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
+            <!-- <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-center">
+              <QrcodeVue
+                :value="JSON.stringify({id: tableSelected.id, name: tableSelected.name})"
+                :size="150"
+                level="H"
+              />
+            </div> -->
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -194,13 +202,30 @@
         </q-form>
       </q-card>
     </q-dialog>
+
+    <div id="printMe" v-show="false" class="containerQr">
+      <div style="width: 100%; text-align: center;">
+        <h2>
+          {{ livingRoom.name }}
+        </h2>
+      </div>
+      <div
+        v-for="table in livingRoom.tables"
+        :key="table.id"
+        class="columnQr"
+      >
+        <img :id="table.id" :alt="table.name" width="200" height="200">
+        <span>{{ table.name }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
-
+import QRCode from 'qrcode'
+import { nextTick } from 'vue'
 export default {
   components: {
     DraggableResizableContainer,
@@ -210,6 +235,8 @@ export default {
     return {
       tableName: null,
       openAddTable: false,
+      loadingSave: false,
+      loadingEdit: false,
       tableSelected: null,
       livingRooms: [],
       openEditTable: false,
@@ -219,7 +246,7 @@ export default {
       visible: false,
       openAddLivingRoom: false,
       openEditLivingRoom: null,
-      userSession: null,
+      userSession: JSON.parse(localStorage.getItem('user')),
       filter: '',
       /**
        * Params search
@@ -261,9 +288,6 @@ export default {
     }
   },
   created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.livingRoom.user_created_id = this.userSession.id
-    this.livingRoom.user_updated_id = this.userSession.id
     this.getLivingRooms()
   },
   mounted () {
@@ -281,12 +305,51 @@ export default {
     },
     openEditLivingRoom () {
       this.tableSelected = null
+    },
+    livingRoom (data) {
+      this.handlerQr(data.tables)
     }
   },
   methods: {
+    printQr () {
+      this.$htmlToPaper('printMe', {
+        styles: ['stylesTable.css']
+      })
+    },
+    /**
+     * Print invoice
+     * @param {Object} data invoice saved
+     */
+    handlerQr (data) {
+      const opts = {
+        type: 'image/jpeg',
+        errorCorrectionLevel: 'L',
+        margin: 2
+      }
+      data.forEach(table => {
+        nextTick(() => {
+          QRCode.toDataURL(JSON.stringify({ id: table.id, name: table.name }), opts, function (error, url) {
+            if (error) throw error
+            const img = document.getElementById(table.id)
+            img.src = url
+          })
+        })
+      })
+    },
     onActivated (data, index) {
       this.tableSelected = data
       this.tableSelected.index = index
+    },
+    /**
+     * Search beneficiary
+     * @param  {Object}
+     */
+    searchData (data) {
+      for (const dataSearch in this.params.dataSearch) {
+        this.params.dataSearch[dataSearch] = data
+      }
+      this.params.page = 1
+      this.getLivingRooms(this.params)
     },
     /**
      * Add table in livi room
@@ -360,12 +423,15 @@ export default {
      * Save livingRooms
      */
     saveLivingRoom () {
-      this.visible = true
-      this.$api.post('living-rooms', this.livingRoom)
+      this.loadingSave = true
+      this.$api.post('living-rooms', {
+        user_created_id: this.userSession.id,
+        ...this.livingRoom
+      })
         .then(({ data }) => {
           this.getLivingRooms()
           this.openAddLivingRoom = false
-          this.visible = false
+          this.loadingSave = false
           this.livingRoom = {
             tables: []
           }
@@ -395,12 +461,15 @@ export default {
      * Save edit
      */
     saveEditLivingRoom () {
-      this.visible = true
-      this.$api.put(`living-rooms/${this.livingRoom.id}`, this.livingRoom)
+      this.loadingEdit = true
+      this.$api.put(`living-rooms/${this.livingRoom.id}`, {
+        user_created_id: this.userSession.id,
+        ...this.livingRoom
+      })
         .then(({ data }) => {
           this.getLivingRooms()
           this.openEditLivingRoom = false
-          this.visible = false
+          this.loadingEdit = false
           Notify.create({
             message: 'Sala de estar editada exitosamente',
             icon: 'check_circle',
@@ -408,7 +477,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingEdit = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -420,12 +489,12 @@ export default {
      * Delete livingRoom
      */
     deleteLivingRoom () {
-      this.visible = true
+      this.loadingEdit = true
       this.$api.delete(`living-rooms/${this.livingRoom.id}`)
         .then(({ data }) => {
           this.getLivingRooms()
           this.openEditLivingRoom = false
-          this.visible = false
+          this.loadingEdit = false
           this.livingRoom = {
             tables: []
           }
@@ -436,7 +505,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingEdit = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -482,13 +551,7 @@ export default {
 </script>
 <style>
 .container {
-  max-width: 1024px;
-  height: 71vh;
+  height: 70vh;
   border: 1px solid black;
-}
-
-.element-one {
-  background-color: blue;
-  color: white;
 }
 </style>

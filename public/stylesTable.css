@@ -1,0 +1,22 @@
+
+* {
+  font-size: 20px;
+  font-weight: bold;
+  font-family: 'Times New Roman';
+}
+.containerQr {
+  font-size: 0;
+  margin-right: -4px;
+}
+
+.columnQr {
+  width: calc(33.33% - 4px);
+  display: inline-block;
+  gap: 2;
+  font-size: 16px;
+  margin-right: 4px;
+  margin-bottom: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+  text-align: center;
+}

@@ -55,6 +55,15 @@
                 filled
                 v-model="product.name"
                 autofocus
+                label="Nombre"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="product.description"
+                autofocus
                 label="Descripción"
               />
             </div>
@@ -154,6 +163,15 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="product.name"
+                autofocus
+                label="Nombre"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="product.description"
                 autofocus
                 label="Descripción"
               />
