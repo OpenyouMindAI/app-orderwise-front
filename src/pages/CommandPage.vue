@@ -9,6 +9,9 @@
       </div>
     </div>
     <div class="row q-col-gutter-y-xs" v-else-if="tab === 'menu'">
+      <div class="col-12 text-center text-uppercase text-h5 q-py-md">
+        {{ table?.name || 'Sin mesa' }}
+      </div>
       <div class="col-12">
         <q-tabs
           v-model="category"
@@ -63,50 +66,19 @@
                 <q-img
                   fit="fill"
                   no-native-menu
-                  style="height: 160px;"
-                  spinner-color="primary"
                   :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                />
-                <q-card-section class="q-pa-sm column">
-                  <span class="text-subtitle2">
-                    {{ props.row.name }}
-                  </span>
-                  <div class="col flex justify-between items-center">
-                    <span class="text-bold">
-                      {{ formatNumber(props.row.price) }}$
-                    </span>
-                    <span class="text-secondary">
-                      <q-btn icon="schedule" flat dense round/>
-                      30 min
+                  style="height: 180px;"
+                  spinner-color="primary"
+                >
+                  <div class="absolute-bottom text-right">
+                    <div class="text-bold text-h6 p-a-none">
+                      {{ props.row.name }}
+                    </div>
+                    <span class="text-caption">
+                      {{ formatNumber(props.row.price) }} $
                     </span>
                   </div>
-                </q-card-section>
-                <!-- <q-separator />
-                <q-card-actions align="right" class="q-pa-sm">
-                  <q-btn
-                    rounded
-                    color="negative"
-                    icon="delete"
-                    size="md"
-                    v-if="findProduct(products, props.row)"
-                    @click="deleteProduct(props)"
-                  />
-                  <q-btn
-                    rounded
-                    color="primary"
-                    icon="add"
-                    size="md"
-                    @click="validateProduct(props.row)"
-                  />
-                  <q-badge
-                    color="primary"
-                    rounded
-                    floating
-                    v-if="findProduct(products, props.row)" class="text-bold q-py-xs"
-                  >
-                    {{ findProduct(products, props.row).amount }}
-                  </q-badge>
-                </q-card-actions> -->
+                </q-img>
               </q-card>
             </div>
           </template>
@@ -162,14 +134,42 @@
     </div>
     <q-dialog v-model="detailProduct" maximized>
       <q-card class="column full-height">
-        <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg" />
+        <!-- <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg" /> -->
+        <div>
+          <q-carousel
+            swipeable
+            animated
+            arrows
+            v-model="slide"
+            v-model:fullscreen="fullscreen"
+            infinite
+          >
+            <q-carousel-slide :name="1" img-src="https://cdn.quasar.dev/img/mountains.jpg" />
+            <q-carousel-slide :name="2" img-src="https://cdn.quasar.dev/img/parallax1.jpg" />
+            <q-carousel-slide :name="3" img-src="https://cdn.quasar.dev/img/parallax2.jpg" />
+            <q-carousel-slide :name="4" img-src="https://cdn.quasar.dev/img/quasar.jpg" />
+
+            <template v-slot:control>
+              <q-carousel-control
+                position="bottom-right"
+                :offset="[18, 18]"
+              >
+                <q-btn
+                  push round dense color="white" text-color="primary"
+                  :icon="fullscreen ? 'fullscreen_exit' : 'fullscreen'"
+                  @click="fullscreen = !fullscreen"
+                />
+              </q-carousel-control>
+            </template>
+          </q-carousel>
+        </div>
 
         <q-card-section>
-          <span class="text-subtitle2">
+          <span class="text-h4 text-uppercase text-bold">
             {{ product?.name }}
           </span>
-          <div class="col flex justify-between items-center">
-            <span class="text-bold">
+          <div class="col flex justify-between text-uppercase items-center q-py-sm">
+            <span class="text-bold text-h5">
               {{ formatNumber(product?.price) }}$
             </span>
             <span class="text-secondary">
@@ -182,8 +182,10 @@
         <q-card-section class="q-pt-none">
           <div class="text-caption text-grey">
             {{ product?.description }}
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Magnam cupiditate at nam id quo?
           </div>
         </q-card-section>
+
         <q-card-section class="q-py-none col" v-if="product?.images.length">
           <div class="text-body">
             Mas imagenes
@@ -200,11 +202,16 @@
             </swiper-slide>
           </swiper>
         </q-card-section>
-        <q-separator />
+
         <q-card-actions align="right">
           <q-btn v-close-popup flat color="primary" label="Reserve" />
           <q-btn v-close-popup flat color="primary" round icon="event" />
         </q-card-actions>
+        <q-card-footer class="absolute absolute-bottom q-pa-md" >
+          <div>
+            <q-btn push class="full-width" color="primary" label="Agregar" />
+          </div>
+        </q-card-footer>
       </q-card>
     </q-dialog>
   </q-page>
