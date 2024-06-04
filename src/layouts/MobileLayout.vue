@@ -41,6 +41,7 @@
   </q-layout>
 </template>
 <script>
+import { watch } from 'vue'
 import { useCommandStore } from '../stores/command'
 export default {
   data () {
@@ -67,6 +68,9 @@ export default {
   },
   created () {
     this.setData()
+    watch(() => this.$route.query, (toParams, previousParams) => {
+      this.tab = toParams.tab
+    })
   },
   computed: {
     commands () {
