@@ -1,5 +1,13 @@
 <template>
   <q-page padding>
+    <div class="full-width text-subtitle1 flex justify-center">
+      <q-chip class="bg-teal text-white" v-if="userSession && $q.screen.lt.sm">
+        {{  userSession.role.name }}: {{ userSession.name }}
+      </q-chip>
+      <q-chip class="bg-teal text-white">
+        Mesa: {{ command?.table?.name || 'Sin mesa' }}
+      </q-chip>
+    </div>
     <div class="relative full-width" style="height: 80vh;" v-if="tab === 'scanner'">
       <qrcode-stream @detect="getTable"/>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" class="text-center">
@@ -9,9 +17,6 @@
       </div>
     </div>
     <div class="row q-col-gutter-y-xs" v-else-if="tab === 'menu'">
-      <div class="col-12 text-center text-uppercase text-h5 q-py-md">
-        {{ table?.name || 'Sin mesa' }}
-      </div>
       <div class="col-12">
         <q-tabs
           v-model="category"
@@ -56,8 +61,8 @@
           <template v-slot:item="props">
             <div class="col-xs-6 col-sm-4 col-md-3" style="padding: 2px;">
               <q-card
-                :class="findProduct(products, props.row) && 'shadow-20'"
-                :style="`${findProduct(products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
+                :class="findProduct(command.products, props.row) && 'shadow-20'"
+                :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
                 @click="() => {
                   detailProduct = true
                   product = props.row
@@ -70,8 +75,8 @@
                   style="height: 180px;"
                   spinner-color="primary"
                 >
-                  <div class="absolute-bottom text-right">
-                    <div class="text-bold text-h6 p-a-none">
+                  <div class="absolute-bottom text-center">
+                    <div class="text-bold text-subtitle1 p-a-none">
                       {{ props.row.name }}
                     </div>
                     <span class="text-caption">
@@ -93,9 +98,8 @@
         row-key="name"
         title="Pedido"
         dense
-        :rows="products"
+        :rows="command.products"
         :columns="columns"
-        :loading="loadingPage"
         hide-pagination
         v-model:pagination="pagination"
       >
@@ -133,85 +137,38 @@
       </q-page-sticky>
     </div>
     <q-dialog v-model="detailProduct" maximized>
-      <q-card class="column full-height">
-        <!-- <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg" /> -->
-        <div>
-          <q-carousel
-            swipeable
-            animated
-            arrows
-            v-model="slide"
-            v-model:fullscreen="fullscreen"
-            infinite
-          >
-            <q-carousel-slide :name="1" img-src="https://cdn.quasar.dev/img/mountains.jpg" />
-            <q-carousel-slide :name="2" img-src="https://cdn.quasar.dev/img/parallax1.jpg" />
-            <q-carousel-slide :name="3" img-src="https://cdn.quasar.dev/img/parallax2.jpg" />
-            <q-carousel-slide :name="4" img-src="https://cdn.quasar.dev/img/quasar.jpg" />
-
-            <template v-slot:control>
-              <q-carousel-control
-                position="bottom-right"
-                :offset="[18, 18]"
-              >
-                <q-btn
-                  push round dense color="white" text-color="primary"
-                  :icon="fullscreen ? 'fullscreen_exit' : 'fullscreen'"
-                  @click="fullscreen = !fullscreen"
-                />
-              </q-carousel-control>
-            </template>
-          </q-carousel>
-        </div>
-
-        <q-card-section>
-          <span class="text-h4 text-uppercase text-bold">
-            {{ product?.name }}
-          </span>
-          <div class="col flex justify-between text-uppercase items-center q-py-sm">
-            <span class="text-bold text-h5">
-              {{ formatNumber(product?.price) }}$
+      <q-card class="full-height">
+        <q-card-section :horizontal="$q.screen.gt.xs" class="col q-pa-none">
+          <div class="full-width">
+            <SlideComponent :slides="product.images"/>
+          </div>
+          <q-card-section class="column q-pb-none">
+            <div>
+              <span class="text-subtitle1 text-uppercase text-bold">
+                {{ product?.name }}
+              </span>
+              <div class="flex justify-between text-uppercase items-center col">
+                <span class="text-subtitle2 text-grey">
+                  {{ formatNumber(product?.price) }}$
+                </span>
+                <span class="text-secondary">
+                  <q-btn icon="schedule" flat dense round/>
+                  30 min
+                </span>
+              </div>
+            </div>
+            <span class="text-caption text-grey col">
+              {{ product?.description }}
             </span>
-            <span class="text-secondary">
-              <q-btn icon="schedule" flat dense round/>
-              30 min
-            </span>
-          </div>
+            <q-card-actions align="right" class="q-pr-none">
+              <q-btn  color="negative" label="Cerrar" @click="() => {
+                detailProduct = false
+                product = null
+              }"/>
+              <q-btn  color="primary" label="Agregar" @click="validateProduct(product)"/>
+            </q-card-actions>
+          </q-card-section>
         </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <div class="text-caption text-grey">
-            {{ product?.description }}
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Magnam cupiditate at nam id quo?
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-py-none col" v-if="product?.images.length">
-          <div class="text-body">
-            Mas imagenes
-          </div>
-          <swiper
-            :slidesPerView="2"
-            :centeredSlides="true"
-            :spaceBetween="30"
-            :navigation="true"
-            class="mySwiper"
-          >
-            <swiper-slide v-for="img in product?.images" :key="img.id">
-              <q-img height="200px" width="200px" :src="img.url" />
-            </swiper-slide>
-          </swiper>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn v-close-popup flat color="primary" label="Reserve" />
-          <q-btn v-close-popup flat color="primary" round icon="event" />
-        </q-card-actions>
-        <q-card-footer class="absolute absolute-bottom q-pa-md" >
-          <div>
-            <q-btn push class="full-width" color="primary" label="Agregar" />
-          </div>
-        </q-card-footer>
       </q-card>
     </q-dialog>
   </q-page>
@@ -222,17 +179,14 @@ import { QrcodeStream } from 'vue-qrcode-reader'
 import { formatNumber } from '../const/mixins'
 import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
-import { Swiper, SwiperSlide } from 'swiper/vue'
+import SlideComponent from '../components/SlideComponent.vue'
 
-// Import Swiper styles
-import 'swiper/css'
 export default {
   name: 'CommandPage',
   components: {
     QrcodeStream,
-    Swiper,
-    SwiperSlide,
-    SkeletonCard
+    SkeletonCard,
+    SlideComponent
   },
   data () {
     return {
@@ -308,7 +262,8 @@ export default {
   },
   created () {
     this.getCategories()
-    this.category = this.$route.query.category
+    this.category = this.$route.query.category || 'all'
+    this.products = this.command.products || []
   },
   watch: {
     category (data) {
@@ -316,10 +271,18 @@ export default {
         path: 'command',
         query: {
           tab: this.tab,
-          category: data
+          category: data || 'all'
         }
       })
       this.getAllProducts()
+    },
+    table (table) {
+      const store = useCommandStore()
+      store.setCommands({ table })
+    },
+    products (products) {
+      const store = useCommandStore()
+      store.setCommands({ products })
     }
   },
   computed: {
@@ -328,6 +291,10 @@ export default {
     },
     filter () {
       return this.$route.query.filter
+    },
+    command () {
+      const store = useCommandStore()
+      return store?.command
     }
   },
   methods: {
@@ -337,11 +304,11 @@ export default {
     async saveBill () {
       this.billLoading = true
       this.$api.post('invoices', {
-        seller_id: this.userSession.id,
-        user_created_id: this.userSession.id,
+        seller_id: this.userSession?.id,
+        user_created_id: this.userSession?.id,
         exchange_rate: 0,
-        products: this.products,
-        tables: [this.table.id]
+        products: this.command.products,
+        tables: [this.command.table.id]
       })
         .then(({ data }) => {
           this.table = null
@@ -371,7 +338,6 @@ export default {
       const index = this.products.map(productOne => productOne.id).indexOf(product.row.id)
       this.products.splice(index, 1)
       this.calculateTotal()
-      this.addStoreProducts()
     },
     /**
      * Calculate the total
@@ -392,7 +358,10 @@ export default {
       this.calculateTotal()
     },
     findProduct (products, product) {
-      return products.find(productOne => productOne.id === product.id)
+      if (products) {
+        return products.find(productOne => productOne.id === product.id)
+      }
+      return false
     },
     /**
      * Validate products
@@ -414,11 +383,31 @@ export default {
         ]
         this.calculate(data)
       }
-      this.addStoreProducts()
+      this.notifyProductCar(this.products)
     },
-    addStoreProducts () {
-      const store = useCommandStore()
-      store.commandsAction(this.products)
+    setQueryParams (query) {
+      this.$router.push({
+        path: 'command',
+        query: {
+          ...this.$route.query,
+          ...query
+        }
+      })
+    },
+    notifyProductCar (products) {
+      Notify.create({
+        position: 'top',
+        message: '¡Plato añadido con éxito! ¡Listo para confirmar su orden!',
+        actions: [
+          {
+            label: 'Ver orden',
+            color: 'white',
+            handler: () => this.setQueryParams({ tab: 'command' })
+          }
+        ],
+        icon: 'info',
+        color: 'positive'
+      })
     },
     /**
      * Get all tables
@@ -456,6 +445,7 @@ export default {
         const { data } = await this.$api.get(`tables/${id}`)
         this.table = data
         this.loadingTable = false
+        this.setQueryParams({ tab: 'menu' })
       } catch (error) {
         this.table = null
         this.modelScan = true

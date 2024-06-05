@@ -8,7 +8,20 @@
         <q-toolbar-title>
           Menu
         </q-toolbar-title>
-        <q-input label="Buscar" dense type="search" debounce="500" v-model="filter" v-if="tab === 'menu'">
+        <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
+          {{  userSession.role.name }}: {{ userSession.name }}
+        </q-chip>
+        <q-input
+          outlined
+          rounded
+          class="q-ml-sm"
+          label="Buscar"
+          dense
+          type="search"
+          debounce="500"
+          v-model="filter"
+          v-if="tab === 'menu'"
+        >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
@@ -30,9 +43,9 @@
       >
         <q-tab v-for="tab in tabs" :key="tab.name" v-bind="tab"/>
         <q-tab name="command" icon="shopping_bag">
-          <q-badge floating color="negative" rounded v-if="commands.length">
+          <q-badge floating color="negative" rounded v-if="commands?.products?.length">
             <span class="text-body text-bold">
-              {{ commands.length }}
+              {{ commands?.products?.length }}
             </span>
           </q-badge>
         </q-tab>
@@ -48,6 +61,7 @@ export default {
     return {
       tab: 'scanner',
       filter: null,
+      userSession: JSON.parse(localStorage.getItem('user')),
       tabs: [
         { name: 'scanner', icon: 'qr_code_scanner' },
         { name: 'menu', icon: 'restaurant_menu' }
@@ -75,7 +89,7 @@ export default {
   computed: {
     commands () {
       const store = useCommandStore()
-      return store.commandsState
+      return store?.command
     }
   },
   methods: {
