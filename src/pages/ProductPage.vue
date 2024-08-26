@@ -339,11 +339,7 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
     this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.product.user_created_id = this.userSession.id
-    this.product.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {
@@ -402,6 +398,7 @@ export default {
       const formData = new FormData()
       if (put) {
         formData.append('_method', 'put')
+        formData.append('user_updated_id', this.userSession.id)
       }
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
@@ -414,6 +411,8 @@ export default {
       data.images.forEach((element, index) => {
         formData.append(`images[${index}]`, element.image)
       })
+
+      formData.append('user_created_id', this.userSession.id)
       return formData
     },
     /**

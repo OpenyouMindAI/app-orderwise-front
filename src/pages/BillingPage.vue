@@ -1,7 +1,11 @@
 <template>
-  <q-page padding>
+  <div class="q-pa-sm">
+    <div v-if="$route.query.id">
+      <span class="text-subtitle1">Factura número: </span>
+      <span class="text-subtitle2">{{ invoice?.code }}</span>
+    </div>
     <q-form ref="saveBill" @submit="saveBill">
-      <div class="row q-col-gutter-sm">
+      <div class="row q-col-gutter-xs q-col-gutter-y-md">
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
           <q-card class="bg-teal text-white" @click="exchange = !exchange">
             <q-card-section class="text-subtitle2 text-center">
@@ -91,16 +95,16 @@
             :rules="[val => !!val || 'El campo es requerido.']"
           />
         </div>
-        <div class="col-6">
+        <div class="col-7">
           <div class="row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-6">
+            <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6">
               <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
                 <template v-slot:append>
                   <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
                 </template>
               </q-input>
             </div>
-            <div class=" col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-6 q-gutter-sm">
+            <div class=" col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6 q-gutter-sm">
               <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
                 <q-badge floating color="negative">
                   {{ tableSelected.length }}
@@ -120,6 +124,16 @@
                 icon="print"
                 color="primary"
                 @click="submitBill"
+              />
+              <q-btn
+                icon="search"
+                color="orange"
+                @click="searchInvoice = true"
+              />
+              <q-btn
+                icon="clear"
+                color="negative"
+                @click="clear"
               />
             </div>
             <div class="col-xs-12 col-sm-12 col-md-12">
@@ -165,7 +179,7 @@
             </div>
           </div>
         </div>
-        <div class="col-6" style="max-height: 50px;">
+        <div class="col-5" style="max-height: 50px;">
           <q-table
             row-key="name"
             dense
@@ -204,7 +218,7 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
                 <q-card class="my-card">
                   <q-img style="height: 150px; width: 100%" :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'" @click="validateProduct(props.row)">
                     <div class="absolute-full text-subtitle2 flex flex-center">
@@ -216,7 +230,7 @@
             </template>
           </q-table>
         </div>
-        <div class="col-6">
+        <div class="col-7">
           <q-list dense separator v-if="invoiceType">
             <q-item>
               <q-item-section>
@@ -394,6 +408,33 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="searchInvoice">
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-card-section class="q-pb-none">
+          <span class="text-h6">Buscar numero de factura</span>
+        </q-card-section>
+        <q-card-section>
+          <q-form @submit="() => { this.$router.push({ name: 'Billing', query: { id: search } }) }" class="row full-width items-center justify-between">
+            <div class="col-10">
+              <q-input
+                name="search"
+                autocomplete="search"
+                v-model="search"
+                color="primary"
+                label="Buscar numero de factura"
+                filled
+                clearable
+                type="search"
+                required
+              />
+            </div>
+            <div class="col-auto text-right">
+              <q-btn type="submit" color="primary" icon="search" size="lg"/>
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
@@ -440,7 +481,7 @@
     <div id="printMe" v-show="false">
       <invoice-print :data="invoice" v-if="invoice"/>
     </div>
-  </q-page>
+  </div>
 </template>
 
 <script>
@@ -460,6 +501,8 @@ export default {
   },
   data () {
     return {
+      searchInvoice: false,
+      search: '',
       loadingClient: false,
       loadingPaymentMethods: false,
       documentType: 'ci',
@@ -578,6 +621,9 @@ export default {
     }
   },
   computed: {
+    invoiceRouter () {
+      return this.$route.query.id
+    },
     heightWindow () {
       return screen.height
     },
@@ -588,7 +634,7 @@ export default {
       return this.totalBill - this.totalPayment
     },
     totalTaxe () {
-      const sum = this.invoiceType ? this.invoiceType.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0) : 0
+      const sum = this.invoiceType ? this.invoiceType?.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0) : 0
       return sum + this.totalBill
     },
     totalPayment () {
@@ -604,7 +650,7 @@ export default {
       this.getAllProducts()
     },
     totalBill () {
-      this.invoiceTaxes = this.invoiceType.taxes.map(taxe => {
+      this.invoiceTaxes = this.invoiceType?.taxes?.map(taxe => {
         return {
           taxe_id: taxe.id,
           amount: taxe.pivot.amount,
@@ -638,6 +684,9 @@ export default {
     },
     dialogTable (data) {
       this.getTables(this.livingRoom)
+    },
+    invoiceRouter (data) {
+      if (data) this.getInvoiceOne(data)
     }
   },
   created () {
@@ -647,7 +696,7 @@ export default {
     this.getPaymentMethods()
     this.getAllProducts()
     this.getLivingRooms()
-    this.getExchange()
+    // this.getExchange()
     this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
@@ -729,7 +778,7 @@ export default {
         })
     },
     /**
-     * Cancelar payment
+     * Cancel payment
      */
     cancelPayment () {
       this.dialogPayment = false
@@ -930,17 +979,21 @@ export default {
      */
 
     freeTable (table) {
-      this.$api.post('free-tables', table)
-        .then(({ data }) => {
-          this.getTables(this.livingRoom)
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
+      const invoiceOne = table.invoices[0]
+      this.$router.push({ name: 'Billing', query: { id: invoiceOne.id } })
+      this.dialogTable = false
+      // this.calculateTotal()
+      // this.$api.post('free-tables', table)
+      //   .then(({ data }) => {
+      //     this.getTables(this.livingRoom)
+      //   })
+      //   .catch(err => {
+      //     Notify.create({
+      //       message: err.message,
+      //       icon: 'warning',
+      //       color: 'negative'
+      //     })
+      //   })
     },
     /**
      * Get all tables
@@ -991,6 +1044,36 @@ export default {
         })
     },
     /**
+     * Get all tables
+     */
+    getInvoiceOne (data) {
+      this.$api.get(`invoices/${data}`)
+        .then(({ data }) => {
+          this.invoice = data.data
+          this.products = data.data.products.map(product => {
+            return {
+              ...product,
+              ...product.pivot,
+              subtotal: product.pivot.price * product.pivot.amount
+            }
+          })
+          this.client = data.data.client
+          this.invoiceType = data.data.invoice_type
+          this.typeOfService = data.data.type_of_service
+          this.tableSelected = data.data.tables.map(table => table.id)
+          this.searchInvoice = false
+          this.search = ''
+          this.calculateTotal()
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
      * Clear invoice
      */
     clear () {
@@ -1001,8 +1084,10 @@ export default {
       this.products = []
       this.dialogPayment = false
       this.calculateTotal()
+      this.$router.push({ name: 'Billing' })
       setTimeout(() => {
         this.$refs.saveBill.resetValidation()
+        this.invoice = null
       }, 100)
     },
     /**
@@ -1017,40 +1102,64 @@ export default {
             'src/css/styleInvoice.css'
           ]
         })
+        this.clear()
       })
     },
     /**
      * Save bill and payments
      */
     async saveBill () {
-      this.$api.post('invoices', {
-        client_id: this.client.id,
-        seller_id: this.userSession.id,
-        coin_id: this.coin.id,
-        invoice_taxes: this.invoiceTaxes,
-        invoice_type_id: this.invoiceType.id,
-        user_created_id: this.userSession.id,
-        exchange_rate: this.exchangeRate,
-        products: this.products,
-        payments: this.payments,
-        tables: this.tableSelected
-      })
-        .then(({ data }) => {
-          this.clear()
+      try {
+        const params = {
+          client_id: this.client.id,
+          seller_id: this.userSession.id,
+          coin_id: this.coin.id,
+          invoice_taxes: this.invoiceTaxes,
+          type_of_service_id: this.typeOfService.id,
+          invoice_type_id: this.invoiceType.id,
+          user_created_id: this.userSession.id,
+          exchange_rate: this.exchangeRate,
+          products: this.products,
+          payments: this.payments,
+          tables: this.tableSelected
+        }
+        if (this.$route.query.id) {
+          const { data } = await this.$api.put(`invoices/${this.$route.query.id}`, params)
           this.printBill(data.data)
-          this.$q.notify({
-            message: 'Factura creada exitosamente',
-            icon: 'check_circle',
-            color: 'positive'
-          })
+        } else {
+          const { data } = await this.$api.post('invoices', params)
+          this.printBill(data.data)
+        }
+        this.$q.notify({
+          message: 'Factura guardada exitosamente',
+          icon: 'check_circle',
+          color: 'positive'
         })
-        .catch(err => {
-          this.$q.notify({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+      } catch (error) {
+        this.$q.notify({
+          message: error.message,
+          icon: 'warning',
+          color: 'negative'
         })
+      }
+      // this.$api.post('invoices', {
+      //   client_id: this.client.id,
+      //   seller_id: this.userSession.id,
+      //   coin_id: this.coin.id,
+      //   invoice_taxes: this.invoiceTaxes,
+      //   type_of_service_id: this.typeOfService.id,
+      //   invoice_type_id: this.invoiceType.id,
+      //   user_created_id: this.userSession.id,
+      //   exchange_rate: this.exchangeRate,
+      //   products: this.products,
+      //   payments: this.payments,
+      //   tables: this.tableSelected
+      // })
+      //   .then(({ data }) => {
+
+      //   })
+      //   .catch(err => {
+      //   })
     },
     /**
      * Get local storage

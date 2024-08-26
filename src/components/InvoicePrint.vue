@@ -20,7 +20,7 @@
       <span class="text-right">Tipo: {{ data.invoice_type.name }}</span>
       <br>
       <span class="text-left">T/Cambio: {{ data.exchange_rate }}</span>
-      <span class="text-right">Mesa: {{ data.tables.map(table => `${table.name} ${table.living_room.name}`).join(', ') }}</span>
+      <span class="text-right">Mesa: {{ data.tables.map(table => `${table.name} ${table?.living_room?.name}`).join(', ') }}</span>
     </p>
     <table>
       <thead>
