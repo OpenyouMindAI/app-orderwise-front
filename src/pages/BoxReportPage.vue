@@ -1,7 +1,7 @@
 <template>
   <q-page padding>
     <div class="row q-col-gutter-sm">
-      <div class="col-4" v-for="total in totals" :key="total.id">
+      <!-- <div class="col-4" v-for="total in totals" :key="total.id">
         <q-card class="my-card bg-secondary text-white relative">
           <q-card-section class="q-py-xs">
             <div class="text-h6">{{ total.name }}</div>
@@ -38,6 +38,24 @@
             </q-input>
           </template>
         </q-table>
+      </div> -->
+
+      <div class="q-pa-md" style="max-width: 350px">
+        <q-expansion-item
+          class="shadow-1 overflow-hidden"
+          style="border-radius: 30px"
+          icon="explore"
+          label="Counter"
+          header-class="bg-primary text-white"
+          expand-icon-class="text-white"
+        >
+          <q-card>
+            <q-card-section>
+              Counting: <q-badge color="secondary">sdsd</q-badge>.
+              Will only count when opened, using the show/hide events to control count timer.
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
       </div>
       <q-dialog
         v-model="dialogFilter"
