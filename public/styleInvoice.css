@@ -1,0 +1,69 @@
+@media print {
+  .oculto-impresion,
+  .oculto-impresion * {
+    display: none !important;
+  }
+}
+* {
+  font-size: 9px;
+  font-family: 'Times New Roman';
+}
+.left {
+  width: 100% !important;
+  position: relative;
+}
+.text-right {
+  position: absolute;
+  right: 0;
+}
+td,
+th,
+tr,
+table {
+  width: 100%;
+  border-top: 1px solid black;
+  border-collapse: collapse;
+}
+
+.footer {
+  margin-top: 20px;
+}
+td.producto,
+th.producto {
+  width: 75px;
+  max-width: 75px;
+  text-align: left;
+}
+
+td.cantidad,
+th.cantidad {
+  width: 50px;
+  max-width: 50px;
+  word-break: break-all;
+  text-align: right;
+}
+
+td.precio,
+th.precio {
+  width: 40px;
+  max-width: 40px;
+  word-break: break-all;
+  text-align: right;
+}
+
+.centrado {
+  text-align: center;
+  align-content: center;
+}
+
+.ticket {
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+}
+
+.end {
+  position: fixed;
+  bottom: 0px;
+  left: 80px;
+}

@@ -1099,7 +1099,7 @@ export default {
       setTimeout(() => {
         this.$htmlToPaper('printMe', {
           styles: [
-            'src/css/styleInvoice.css'
+            'styleInvoice.css'
           ]
         })
         this.clear()
