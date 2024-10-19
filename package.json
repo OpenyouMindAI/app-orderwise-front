@@ -1,8 +1,8 @@
 {
-  "name": "shopping",
+  "name": "orderwise",
   "version": "0.0.1",
-  "description": "Shopping",
-  "productName": "Shopping",
+  "description": "Orderwise",
+  "productName": "Orderwise",
   "author": "palma001 <palmaluis1997@gmail.com>",
   "private": true,
   "scripts": {

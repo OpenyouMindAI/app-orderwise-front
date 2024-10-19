@@ -1,6 +1,6 @@
-# Shopping (shopping)
+# Orderwise (orderwise)
 
-Shopping
+Orderwise
 
 ## Install the dependencies
 ```bash

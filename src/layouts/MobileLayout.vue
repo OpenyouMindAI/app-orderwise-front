@@ -42,7 +42,7 @@
         class="text-secondary bg-white shadow-4 text-bold"
       >
         <q-tab v-for="tab in tabs" :key="tab.name" v-bind="tab"/>
-        <q-tab name="command" icon="shopping_bag">
+        <q-tab name="command" icon="orderwise_bag">
           <q-badge floating color="negative" rounded v-if="commands?.products?.length">
             <span class="text-body text-bold">
               {{ commands?.products?.length }}

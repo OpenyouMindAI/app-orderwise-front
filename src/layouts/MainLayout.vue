@@ -61,7 +61,7 @@ const linksList = [
       {
         title: 'Facturar',
         visible: true,
-        icon: 'shopping_bag',
+        icon: 'orderwise_bag',
         link: 'Billing'
       },
       {
@@ -92,7 +92,7 @@ const linksList = [
       {
         title: 'Comanda',
         visible: true,
-        icon: 'shopping_bag',
+        icon: 'orderwise_bag',
         link: 'Command'
       }
     ]

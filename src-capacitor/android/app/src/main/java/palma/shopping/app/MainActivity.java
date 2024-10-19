@@ -1,4 +1,4 @@
-package palma.shopping.app;
+package palma.orderwise.app;
 
 import com.getcapacitor.BridgeActivity;
 

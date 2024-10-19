@@ -9,7 +9,7 @@
             <q-checkbox v-model="paymentMethods" :val="total.id" class="absolute-top-right"/>
           </q-card-section>
         </q-card>
-        <q-tooltip class="bg-orange text-body2" :offset="[10, 10]">
+        <q-tooltip class="bg-secondary text-body2" :offset="[10, 10]">
           {{ total.coin_name }}
         </q-tooltip>
       </div>

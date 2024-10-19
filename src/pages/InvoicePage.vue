@@ -2,9 +2,19 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12">
-        <q-table title="Facturas" row-key="name" :columns="columns" :rows="invoices" :loading="visible" :filter="filter"
-          binary-state-sort v-model:pagination="paginationConfig" @row-click="editInvoice" @request="setPagination"
-          no-data-label="Registro no encontrado">
+        <q-table
+          title="Facturas"
+          row-key="name"
+          :columns="columns"
+          :rows="invoices"
+          :loading="visible"
+          :filter="filter"
+          binary-state-sort
+          v-model:pagination="paginationConfig"
+          @row-click="editInvoice"
+          @request="setPagination"
+          no-data-label="Registro no encontrado"
+        >
           <template v-slot:loading>
             <q-inner-loading showing color="primary" />
           </template>
@@ -20,8 +30,14 @@
     </div>
     <q-dialog v-model="openEditInvoice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-tabs v-model="editTab" class="text-grey" active-color="primary" indicator-color="primary" align="justify"
-          narrow-indicator>
+        <q-tabs
+          v-model="editTab"
+          class="text-grey"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
+          narrow-indicator
+        >
           <q-tab name="details" label="Detalles de la factura" />
           <q-tab name="payments" label="Detalles de pago" />
         </q-tabs>
@@ -30,35 +46,52 @@
           <q-tab-panel name="details">
             <div class="row q-col-gutter-sm">
               <div class="col-6">
-                <q-input label="Código" filled v-model="invoice.id" readonly dense />
+                <q-input label="Código" filled v-model="invoice.id" readonly dense/>
               </div>
               <div class="col-6">
-                <q-select use-input filled dense label="Tipo de factura" input-debounce="0" option-label="name"
-                  option-value="id" v-model="invoice.invoice_type" :options="invoiceTypes"
-                  :rules="[val => !!val || 'El campo es requerido.']" @filter="filterInvoiceTypes" />
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de factura"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="invoice.invoice_type"
+                  :options="invoiceTypes"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterInvoiceTypes"
+                />
               </div>
               <div class="col-6">
                 <q-input label="Cliente" filled v-model="invoice.client.name" readonly dense>
                   <template v-slot:append>
-                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)"
-                      size="sm" />
+                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
                   </template>
                 </q-input>
               </div>
               <div class="col-6">
-                <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense />
+                <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Moneda" filled v-model="invoice.coin.name" readonly dense />
+                <q-input label="Moneda" filled v-model="invoice.coin.name" readonly dense/>
               </div>
               <div class="col-6">
-                <q-select filled readonly dense label="Mesas" v-model="invoice.tables" option-label="name" multiple />
+                <q-select
+                  filled
+                  readonly
+                  dense
+                  label="Mesas"
+                  v-model="invoice.tables"
+                  option-label="name"
+                  multiple
+                />
               </div>
               <div class="col-6">
-                <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
+                <q-input label="Fecha" filled v-model="invoice.date" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Hora" filled v-model="invoice.hour" readonly dense />
+                <q-input label="Hora" filled v-model="invoice.hour" readonly dense/>
               </div>
               <div class="col-12">
                 <q-markup-table dense>
@@ -86,7 +119,7 @@
                         {{ product.pivot.price }}
                       </td>
                       <td class="text-right">
-                        {{ product.pivot.amount * product.pivot.price }}
+                        {{ product.pivot.amount *  product.pivot.price }}
                       </td>
                     </tr>
                   </tbody>
@@ -102,7 +135,7 @@
                   </q-item>
                   <q-item v-for="taxe in invoice.taxes" :key="taxe.id" v-show="invoice.invoice_type.name !== 'Ticket'">
                     <q-item-section>
-                      {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe] }})
+                      {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
                     </q-item-section>
                     <q-item-section side v-if="invoice.coin">
                       {{ invoice.coin.symbol }}{{ calculateTaxe(taxe) }}
@@ -160,11 +193,10 @@
           </q-tab-panel>
         </q-tab-panels>
         <q-card-actions align="right">
-          <q-btn color="negative" label="cancelar" @click="openEditInvoice = false" />
-          <q-btn color="secondary" label="Imprimir Ticket" @click="print"
-            v-if="invoice.invoice_type.name === 'Ticket'" />
-          <q-btn color="orange" label="Imprimir Boleta" @click="printInvoice" v-else />
-          <q-btn color="primary" label="Guardar" @click="saveEdit" />
+          <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
+          <q-btn color="secondary" label="Imprimir Ticket" @click="print" v-if="invoice.invoice_type.name === 'Ticket'"/>
+          <q-btn color="secondary" label="Imprimir Boleta" @click="printInvoice" v-else/>
+          <q-btn color="primary" label="Guardar" @click="saveEdit"/>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -178,28 +210,43 @@
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-option-group type="radio" inline autofocus v-model="documentType" :options="options" />
+              <q-option-group
+                type="radio"
+                inline
+                autofocus
+                v-model="documentType"
+                :options="options"
+              />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input filled v-model="client.document_number" label="Número de documento" @blur="getDataApi" />
+              <q-input
+                filled
+                v-model="client.document_number"
+                label="Número de documento"
+                @blur="getDataApi"
+              />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input :rules="[val => !!val || 'El campo es requerido.']" filled v-model="client.name"
-                label="Nombre" />
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="client.name"
+                label="Nombre"
+              />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" />
-            <q-btn color="orange" label="Cancelar" @click="(openAddClient = false)" />
+            <q-btn color="primary" label="Agregar" type="submit"/>
+            <q-btn color="secondary" label="Cancelar" @click="(openAddClient = false)" />
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
     <div id="printMe" v-show="false">
-      <invoice-print :data="invoice" v-if="invoice" />
+      <invoice-print :data="invoice" v-if="invoice"/>
     </div>
     <div id="printMeInvoice" v-show="false">
-      <bill-of-sale :data="invoice" v-if="invoice" />
+      <bill-of-sale :data="invoice" v-if="invoice"/>
     </div>
   </div>
 </template>
@@ -213,7 +260,7 @@ export default {
     InvoicePrint,
     BillOfSale
   },
-  data() {
+  data () {
     return {
       documentType: 'ruc',
       options: [
@@ -351,29 +398,29 @@ export default {
     }
   },
   computed: {
-    totalBill() {
+    totalBill () {
       const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
       return sum + this.invoice.total
     }
   },
-  mounted() {
+  mounted () {
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
     })
   },
-  created() {
+  created () {
     this.userSession = JSON.parse(localStorage.getItem('user'))
     this.coin.user_created_id = this.userSession.id
     this.coin.user_updated_id = this.userSession.id
   },
   watch: {
-    filter(data) {
+    filter (data) {
       this.searchData(data)
     }
   },
   methods: {
-    calculateTaxe(taxe) {
+    calculateTaxe (taxe) {
       if (taxe.pivot.type_taxe === 'percentage') {
         taxe.total = (this.invoice.total * taxe.pivot.amount) / 100
       } else {
@@ -387,7 +434,7 @@ export default {
      * @param {String} value Value filter
      * @param {Callback} update update options
      */
-    filterInvoiceTypes(value, update) {
+    filterInvoiceTypes (value, update) {
       this.$api.get('invoice-types', {
         params: {
           dataSearch: {
@@ -408,24 +455,24 @@ export default {
           })
         })
     },
-    print() {
+    print () {
       this.$htmlToPaper('printMe', {
         styles: [
           'styleInvoice.css'
         ]
       })
     },
-    printInvoice() {
+    printInvoice () {
       this.$htmlToPaper('printMeInvoice', {
         styles: [
-          'src/css/styleBillOfSale.css'
+          'styleBillOfSale.css'
         ]
       })
     },
     /**
      * Close all modals
      */
-    closeModal() {
+    closeModal () {
       this.openAddInvoice = false
       this.openEditInvoice = false
       this.coin = {}
@@ -434,7 +481,7 @@ export default {
      * Search beneficiary
      * @param  {Object}
      */
-    searchData(data) {
+    searchData (data) {
       for (const dataSearch in this.params.dataSearch) {
         this.params.dataSearch[dataSearch] = data
       }
@@ -444,7 +491,7 @@ export default {
     /**
      * Get all invoices
      */
-    getInvoices(params = this.params) {
+    getInvoices (params = this.params) {
       this.visible = true
       this.$api.get('invoices', { params })
         .then(({ data }) => {
@@ -465,7 +512,7 @@ export default {
      * Set data pagination emit event
      * @param  {Object} data value pagination
      */
-    setPagination(data) {
+    setPagination (data) {
       console.log(data.pagination.descending)
       this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
       this.params.page = data.pagination.page
@@ -477,7 +524,7 @@ export default {
     /**
      * Save invoices
      */
-    saveInvoice() {
+    saveInvoice () {
       this.visible = true
       this.$api.post('invoices', this.invoice)
         .then(({ data }) => {
@@ -503,7 +550,7 @@ export default {
     /**
      * View coin
      */
-    editInvoice(event, row, index) {
+    editInvoice (event, row, index) {
       this.openEditInvoice = true
       this.invoice = row
     },
@@ -511,7 +558,7 @@ export default {
      * Model product
      * @param {Object} data product
      */
-    modelData(data, put = false) {
+    modelData (data, put = false) {
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
           const element = data[key]
@@ -525,7 +572,7 @@ export default {
     /**
      * Save clients
      */
-    saveClient() {
+    saveClient () {
       this.visible = true
       this.$api.put(`clients/${this.invoice.client.id}`, this.client)
         .then(({ data }) => {
@@ -550,7 +597,7 @@ export default {
     /**
      * Get document
      */
-    getDataApi() {
+    getDataApi () {
       this.$api.get(`get-documents/${this.documentType}/${this.client.document_number}`)
         .then(({ data }) => {
           if (!data.error) {
@@ -568,7 +615,7 @@ export default {
     /**
      * Save edit
      */
-    saveEdit() {
+    saveEdit () {
       this.visible = true
       this.$api.put(`invoices/${this.invoice.id}`, this.modelData(this.invoice))
         .then(({ data }) => {
@@ -594,7 +641,7 @@ export default {
     /**
      * Delete coin
      */
-    deleteInvoice() {
+    deleteInvoice () {
       this.visible = true
       this.$api.delete(`invoices/${this.invoice.id}`)
         .then(({ data }) => {

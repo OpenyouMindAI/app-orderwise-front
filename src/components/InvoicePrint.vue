@@ -20,8 +20,7 @@
       <span class="text-right">Tipo: {{ data.invoice_type.name }}</span>
       <br>
       <span class="text-left">T/Cambio: {{ data.exchange_rate }}</span>
-      <span class="text-right">Mesa: {{ data.tables.map(table => `${table.name} ${table?.living_room?.name}`).join(', ')
-        }}</span>
+      <span class="text-right">Mesa: {{ data.tables.map(table => `${table.name} ${table?.living_room?.name}`).join(', ') }}</span>
     </p>
     <table>
       <thead>
@@ -40,8 +39,8 @@
           <td class="cantidad">{{ product.pivot.amount * product.pivot.price }}</td>
         </tr>
         <tr>
-          <td class="producto" colspan="3">TOTAL</td>
-          <td class="precio">{{ data.total }}</td>
+            <td class="producto" colspan="3">TOTAL</td>
+            <td class="precio">{{ data.total }}</td>
         </tr>
       </tbody>
     </table>
@@ -63,9 +62,9 @@ export default {
       type: Object
     }
   },
-  setup() {
+  setup () {
     return {
-      formatDate(dateNew, format) {
+      formatDate (dateNew, format) {
         return date.formatDate(dateNew, format)
       }
     }

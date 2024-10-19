@@ -1,8 +1,8 @@
 <template>
   <q-form @submit="login" class="flex flex-center" style="height: 100vh">
     <q-card flat class="my-card" style="width: 400px; max-width: 80vw;">
-      <q-card-section class="q-pa-xs">
-        <q-img src="logotipo.png"/>
+      <q-card-section>
+        <q-img :src="logo.color"/>
       </q-card-section>
       <q-card-section class="bg-primary text-white" style="border-radius: 5px 5px 0px 0px;">
         <div class="text-h6">Iniciar sesión</div>
@@ -67,13 +67,20 @@
           </span>
         </q-btn>
       </q-card-actions>
-      <q-card-actions align="center" class="q-mt-xs">
-        <q-img style="width:35%;"  src='klogo.png' class="q-mt-xl"/>
+      <q-card-actions align="center" class="flex flex-center q-gutter-sm">
+       <span class="text-subtitle1 text-center text-bold">
+         Powered by
+       </span>
+       <a href="https://site.qbitsinc.com" alt="qbits" target="_blank">
+         <q-img style="width:120px"  :src="qBitsLogo.black"/>
+       </a>
       </q-card-actions>
     </q-card>
   </q-form>
 </template>
 <script>
+import { logo, qBitsLogo } from 'src/const/mixins'
+
 // import { Notify } from 'quasar'
 export default {
   data () {
@@ -84,6 +91,8 @@ export default {
         "Cannot read properties of undefined (reading 'route')": 'El rol no tiene acceso a los modulos del menu',
         'auth/too-many-requests': 'El acceso a esta cuenta se ha inhabilitado temporalmente debido a muchos intentos fallidos de inicio de sesión'
       },
+      logo,
+      qBitsLogo,
       /**
          * Email User
          * @type {String}

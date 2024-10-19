@@ -62,7 +62,7 @@
                 v-model:y="table.y"
                 v-model:h="table.height"
                 v-model:w="table.width"
-                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
+                :class="tableSelected?.id === table.id ? 'bg-secondary text-white' : 'bg-primary text-white'"
                 :handles-size="10"
                 @deactivated="onDeactivated(table, index)"
                 @activated="onActivated(table, index)"
@@ -77,14 +77,14 @@
             <q-btn color="primary" label="Agregar mesa" @click="(openAddTable = true)"/>
             <q-btn color="secondary" label="Editar mesa" @click="(openEditTable = true)" v-if="tableSelected"/>
             <q-btn color="negative" label="Eliminar mesa" @click="confirmDeleteTable" v-if="tableSelected"/>
-            <q-badge class="bg-orange q-ml-md text-subtitle1 q-py-xs q-px-md" v-if="tableSelected">
+            <q-badge class="bg-secondary q-ml-md text-subtitle1 q-py-xs q-px-md" v-if="tableSelected">
               {{ tableSelected.name }}
             </q-badge>
             <q-space/>
             <q-btn color="primary" label="Guardar" type="submit" :loading="loadingEdit"/>
             <q-btn color="secondary" label="Imprimir Qrs" @click="printQr"/>
             <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom" :loading="loadingEdit" />
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -120,7 +120,7 @@
                 v-model:y="table.y"
                 v-model:h="table.height"
                 v-model:w="table.width"
-                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
+                :class="tableSelected?.id === table.id ? 'bg-secondary text-white' : 'bg-primary text-white'"
                 :handles-size="10"
                 @deactivated="onDeactivated(table, index)"
               >
@@ -136,7 +136,7 @@
             <q-btn color="negative" label="Eliminar mesa" @click="confirmDeleteTable" v-if="tableSelected"/>
             <q-space/>
             <q-btn color="primary" label="Guardar" type="submit" :loading="loadingSave"/>
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -163,7 +163,7 @@
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit"/>
             <!-- <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom" :loading="visible" /> -->
-            <q-btn color="orange" label="Cancelar" @click="openAddTable = false" />
+            <q-btn color="secondary" label="Cancelar" @click="openAddTable = false" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -197,7 +197,7 @@
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit"/>
             <!-- <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom"/> -->
-            <q-btn color="orange" label="Cancelar" @click="openEditTable = false" />
+            <q-btn color="secondary" label="Cancelar" @click="openEditTable = false" />
           </q-card-actions>
         </q-form>
       </q-card>

@@ -53,7 +53,7 @@
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="loadingSave"/>
             <q-btn color="negative" label="Eliminar" @click="deleteTaxe" :loading="loadingDelete" />
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -79,7 +79,7 @@
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit" :loading="loadingSave"/>
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>

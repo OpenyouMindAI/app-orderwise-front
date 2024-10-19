@@ -33,7 +33,7 @@
                   <q-item-section>Total en $:</q-item-section>
                   <q-item-section side>{{ props.row.total }}</q-item-section>
                 </q-item>
-                <q-item clickable v-ripple active-class="text-orange">
+                <q-item clickable v-ripple active-class="text-secondary">
                   <q-item-section>Total en Bs:</q-item-section>
                   <q-item-section side>{{ props.row.totalExchange }}</q-item-section>
                 </q-item>

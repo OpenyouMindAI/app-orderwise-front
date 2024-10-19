@@ -19,14 +19,14 @@
           </q-card>
         </div>
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
-          <q-card class="bg-orange text-white">
+          <q-card class="bg-positive text-white">
             <q-card-section class="text-subtitle2 text-center">
-              Cambio S{{ exchangeRate }}
+              Cambio {{ coin?.symbol}} {{ exchangeRate }}
             </q-card-section>
           </q-card>
         </div>
         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
-          <q-card class="bg-primary text-white">
+          <q-card class="bg-negative text-white">
             <q-card-section class="text-subtitle2 text-center">
               Items:
               {{ products.length }}
@@ -105,7 +105,7 @@
               </q-input>
             </div>
             <div class=" col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6 q-gutter-sm">
-              <q-btn color="orange" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
+              <q-btn color="primary" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
                 <q-badge floating color="negative">
                   {{ tableSelected.length }}
                 </q-badge>
@@ -121,13 +121,13 @@
                 </q-badge>
               </q-btn>
               <q-btn
-                icon="print"
-                color="primary"
-                @click="submitBill"
+                icon="save"
+                color="positive"
+                @click="saveWithoutPrint"
               />
               <q-btn
                 icon="search"
-                color="orange"
+                color="primary"
                 @click="searchInvoice = true"
               />
               <q-btn
@@ -356,7 +356,7 @@
             color="secondary"
           />
           <q-btn
-            label="Cancelar"
+            label="Cerrar"
             @click="cancelPayment"
             color="negative"
           />
@@ -378,7 +378,7 @@
           />
           <q-space/>
           <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          <q-btn color="negative" label="Cancelar" @click="dialogTable = false"/>
+          <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
         </q-card-actions>
         <q-card-section>
           <draggable-resizable-container
@@ -473,7 +473,7 @@
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit" :loading="loadingClient"/>
-            <q-btn color="orange" label="Cancelar" @click="(openAddClient = false)" />
+            <q-btn color="secondary" label="Cerrar" @click="(openAddClient = false)" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -545,7 +545,7 @@ export default {
       tables: [],
       /**
        * Pagination option
-       * @type {Objct}
+       * @type {Object}
        */
       pagination: { rowsPerPage: 10 },
       thumbStyle: {
@@ -565,6 +565,7 @@ export default {
       filter: '',
       barcode: null,
       dialogScanner: false,
+      withoutPrint: false,
       loadingLivingRoom: false,
       products: [],
       loadingPage: false,
@@ -749,6 +750,10 @@ export default {
             color: 'negative'
           })
         })
+    },
+    saveWithoutPrint () {
+      this.withoutPrint = true
+      this.$refs.saveBill.submit()
     },
     /**
      * Submit bill
@@ -946,7 +951,7 @@ export default {
     },
     /**
      * Select category
-     * @param {String} valueuserSession Value filter
+     * @param {String} value user Session Value filter
      * @param {Callback} update update options
      */
     filterClients (value, update) {
@@ -1095,6 +1100,11 @@ export default {
      * @param {Object} data invoice saved
      */
     printBill (data) {
+      if (this.withoutPrint) {
+        this.clear()
+        this.withoutPrint = false
+        return
+      }
       this.invoice = data
       setTimeout(() => {
         this.$htmlToPaper('printMe', {
@@ -1103,6 +1113,7 @@ export default {
           ]
         })
         this.clear()
+        this.withoutPrint = false
       })
     },
     /**
