@@ -1,7 +1,7 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
-      <q-toolbar>
+      <q-toolbar class="q-gutter-xs">
         <q-btn
           flat
           dense
@@ -17,6 +17,7 @@
           {{ userSession.name }}
           ({{ userSession.role.name}})
         </span>
+        <q-btn flat @click="$q.dark.toggle()" round dense icon="invert_colors" />
         <q-btn flat @click="logout" round dense icon="logout" />
       </q-toolbar>
     </q-header>

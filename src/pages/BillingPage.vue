@@ -42,7 +42,6 @@
             input-debounce="0"
             option-value="id"
             v-model="client"
-            clearable
             :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
             :options="clients"
             :rules="[val => !!val || 'El campo es requerido.']"
@@ -129,6 +128,11 @@
                 icon="search"
                 color="primary"
                 @click="searchInvoice = true"
+              />
+              <q-btn
+                icon="payments"
+                color="info"
+                @click="entryAndExit = true"
               />
               <q-btn
                 icon="clear"
@@ -435,6 +439,33 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="entryAndExit">
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-card-section class="q-pb-none">
+          <span class="text-h6">Buscar numero de factura</span>
+        </q-card-section>
+        <q-card-section>
+          <q-form @submit="saveEntryOrExit" class="row full-width items-center justify-between">
+            <div class="col-10">
+              <q-input
+                name="search"
+                autocomplete="search"
+                v-model="search"
+                color="primary"
+                label="Buscar numero de factura"
+                filled
+                clearable
+                type="search"
+                required
+              />
+            </div>
+            <div class="col-auto text-right">
+              <q-btn type="submit" color="primary" icon="search" size="lg"/>
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
@@ -501,6 +532,7 @@ export default {
   },
   data () {
     return {
+      entryAndExit: false,
       searchInvoice: false,
       search: '',
       loadingClient: false,
@@ -701,6 +733,18 @@ export default {
     this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
+    async saveEntryOrExit () {
+      try {
+        const { data } = await this.$api.post('entry-exit', this.entryOrExit)
+        this.$q.notify({
+          message: 'Entrada/Salida guardada',
+          icon: 'check_circle',
+          color: 'positive'
+        })
+      } catch (error) {
+        console.log(error)
+      }
+    },
     /**
      * Get Data in exchange
      */

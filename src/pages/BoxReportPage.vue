@@ -40,22 +40,77 @@
         </q-table>
       </div> -->
 
-      <div class="q-pa-md" style="max-width: 350px">
-        <q-expansion-item
-          class="shadow-1 overflow-hidden"
-          style="border-radius: 30px"
-          icon="explore"
-          label="Counter"
-          header-class="bg-primary text-white"
-          expand-icon-class="text-white"
-        >
-          <q-card>
-            <q-card-section>
-              Counting: <q-badge color="secondary">sdsd</q-badge>.
-              Will only count when opened, using the show/hide events to control count timer.
-            </q-card-section>
-          </q-card>
-        </q-expansion-item>
+      <div class="row full-width q-col-gutter-sm">
+        <div class="col-6">
+          <q-expansion-item
+            class="shadow-1 overflow-hidden"
+            style="border-radius: 30px; min-width: 350px;"
+            icon="receipt_long"
+            header-class="bg-secondary text-white"
+            expand-icon-class="text-white"
+            default-opened
+            :label="`Pagos de contado ${formatNumber(paymentMethodTotals.payment_total)}`"
+          >
+            <q-card>
+              <q-card-section>
+                <q-list dense>
+                  <q-item v-for="payment in paymentMethodTotals.payment_method_totals" :key="payment.id">
+                    <q-item-section>
+                      <q-item-label>{{ payment.payment_method_name }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(payment.payment_total) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator spaced inset />
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label>Total</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(paymentMethodTotals.payment_total) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card-section>
+            </q-card>
+          </q-expansion-item>
+        </div>
+        <div class="col-6">
+          <q-expansion-item
+            class="shadow-1 overflow-hidden"
+            style="border-radius: 30px; min-width: 350px;"
+            icon="list_alt"
+            header-class="bg-secondary text-white"
+            expand-icon-class="text-white"
+            default-opened
+            :label="`Ventas por departamento: ${formatNumber(categoryTotalsTotals.category_total)}`"
+          >
+            <q-card>
+              <q-card-section>
+                <q-list dense>
+                  <q-item v-for="payment in categoryTotalsTotals.categories_totals" :key="payment.id">
+                    <q-item-section>
+                      <q-item-label>{{ payment.category_name }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(payment.total_sales) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator spaced inset />
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label>Total</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(categoryTotalsTotals.category_total) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card-section>
+            </q-card>
+          </q-expansion-item>
+        </div>
       </div>
       <q-dialog
         v-model="dialogFilter"
@@ -80,6 +135,15 @@
         </q-card>
       </q-dialog>
     </div>
+    <q-footer class="q-pa-md flex justify-between">
+      <span class="text-h6">
+        {{formatDate(new Date(), 'DD/MM/YYYY')}}
+      </span>
+      <span class="text-h6">
+        VENTAS TOTALES:
+        {{ formatNumber(categoryTotalsTotals.category_total) }}
+      </span>
+    </q-footer>
     <q-page-sticky position="bottom-right" :offset="[18, 18]">
       <q-btn fab icon="filter_alt" color="primary" @click="dialogFilter = true"/>
     </q-page-sticky>
@@ -88,10 +152,13 @@
 
 <script>
 import { date } from 'quasar'
+import { formatDate, formatNumber } from 'src/const/mixins'
 export default {
   // name: 'PageName',
   data: () => {
     return {
+      formatDate,
+      formatNumber,
       from: date.formatDate(Date(), 'YYYY-MM-DD'),
       to: date.formatDate(Date(), 'YYYY-MM-DD'),
       paymentMethods: [],
@@ -184,7 +251,17 @@ export default {
        * Payment all
        * @type {Array}
        */
-      invoicePayments: []
+      invoicePayments: [],
+      /**
+       * Payment all
+       * @type {Array}
+       */
+      paymentMethodTotals: {},
+      /**
+       * Payment all
+       * @type {Array}
+       */
+      categoryTotalsTotals: {}
     }
   },
   watch: {
@@ -205,7 +282,7 @@ export default {
     })
   },
   created () {
-    this.getPaymentTotals()
+    this.filterDate()
   },
   methods: {
     viewPayment (data) {
@@ -229,6 +306,8 @@ export default {
         field: 'created_at'
       }
       this.getInvoicePayments(this.params)
+      this.getCategoryTotals(this.params)
+      this.getPaymentMethodTotals(this.params)
       this.getPaymentTotals()
     },
     /**
@@ -255,6 +334,40 @@ export default {
       })
         .then(({ data }) => {
           this.totals = data
+        })
+        .catch(err => {
+          console.error(err.message)
+        })
+    },
+    /**
+     * Get total all
+     */
+    getPaymentMethodTotals () {
+      this.$api.get('reports/payment-method-totals', {
+        params: {
+          to: this.to,
+          from: this.from
+        }
+      })
+        .then(({ data }) => {
+          this.paymentMethodTotals = data
+        })
+        .catch(err => {
+          console.error(err.message)
+        })
+    },
+    /**
+     * Get total all
+     */
+    getCategoryTotals () {
+      this.$api.get('reports/category-totals', {
+        params: {
+          to: this.to,
+          from: this.from
+        }
+      })
+        .then(({ data }) => {
+          this.categoryTotalsTotals = data
         })
         .catch(err => {
           console.error(err.message)

@@ -426,7 +426,6 @@ export default {
       } else {
         taxe.total = this.invoice.total + taxe.pivot.amount
       }
-      console.log(this.invoice.total)
       return taxe.total
     },
     /**
