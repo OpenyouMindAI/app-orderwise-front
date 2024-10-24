@@ -132,7 +132,7 @@
               <q-btn
                 icon="payments"
                 color="info"
-                @click="entryAndExit = true"
+                @click="cashflow = true"
               />
               <q-btn
                 icon="clear"
@@ -439,28 +439,52 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="entryAndExit">
+    <q-dialog v-model="cashflow">
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-card-section class="q-pb-none">
-          <span class="text-h6">Buscar numero de factura</span>
+        <q-card-section class="q-pb-none flex justify-between items-center">
+          <span class="text-h6">Flujo de dinero</span>
+          <q-btn flat icon="close" round size="md" v-close-popup/>
         </q-card-section>
-        <q-card-section>
-          <q-form @submit="saveEntryOrExit" class="row full-width items-center justify-between">
-            <div class="col-10">
+        <q-card-section class="q-py-sm">
+          <q-option-group
+            v-model="panel"
+            inline
+            :options="[
+              { label: 'Entrada', value: 'debit' },
+              { label: 'Salida', value: 'credit' }
+            ]"
+          />
+          <q-form @submit="saveCashflow" class="row full-width q-gutter-y-sm">
+            <div class="col-12">
               <q-input
-                name="search"
-                autocomplete="search"
-                v-model="search"
+                name="amount"
+                autocomplete="amount"
+                v-model="amount"
                 color="primary"
-                label="Buscar numero de factura"
+                label="Monto"
                 filled
                 clearable
-                type="search"
+                type="amount"
+                required
+                autofocus
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                name="description"
+                autocomplete="description"
+                v-model="description"
+                color="primary"
+                label="Descripción"
+                filled
+                clearable
+                type="textarea"
+                autogrow
                 required
               />
             </div>
-            <div class="col-auto text-right">
-              <q-btn type="submit" color="primary" icon="search" size="lg"/>
+            <div class="col-12 text-right">
+              <q-btn type="submit" color="primary" label="Guardar" size="lg" :loading="loadingCashflow"/>
             </div>
           </q-form>
         </q-card-section>
@@ -532,7 +556,11 @@ export default {
   },
   data () {
     return {
-      entryAndExit: false,
+      panel: 'debit',
+      amount: 0,
+      loadingCashflow: false,
+      description: '',
+      cashflow: false,
       searchInvoice: false,
       search: '',
       loadingClient: false,
@@ -733,16 +761,28 @@ export default {
     this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
-    async saveEntryOrExit () {
+    async saveCashflow () {
       try {
-        const { data } = await this.$api.post('entry-exit', this.entryOrExit)
+        this.loadingCashflow = true
+        await this.$api.post('cashflow', {
+          description: this.description,
+          amount: this.amount,
+          type_cashflow: this.panel
+        })
         this.$q.notify({
           message: 'Entrada/Salida guardada',
           icon: 'check_circle',
           color: 'positive'
         })
+        this.cashflow = false
       } catch (error) {
-        console.log(error)
+        this.$q.notify({
+          message: error.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        this.loadingCashflow = true
       }
     },
     /**
@@ -781,7 +821,7 @@ export default {
           this.client = data
           this.loadingClient = false
           Notify.create({
-            message: 'Cliente creado exitosamente',
+            message: 'Cliente creado creditosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -1186,7 +1226,7 @@ export default {
           this.printBill(data.data)
         }
         this.$q.notify({
-          message: 'Factura guardada exitosamente',
+          message: 'Factura guardada creditosamente',
           icon: 'check_circle',
           color: 'positive'
         })

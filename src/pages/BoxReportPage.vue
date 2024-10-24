@@ -111,6 +111,41 @@
             </q-card>
           </q-expansion-item>
         </div>
+        <div class="col-6">
+          <q-expansion-item
+            class="shadow-1 overflow-hidden"
+            style="border-radius: 30px; min-width: 350px;"
+            icon="list_alt"
+            header-class="bg-secondary text-white"
+            expand-icon-class="text-white"
+            default-opened
+            :label="`Flujo de dinero: ${formatNumber(cashflows.cashflow_totals)}`"
+          >
+            <q-card>
+              <q-card-section>
+                <q-list dense>
+                  <q-item v-for="cashFlow in cashflows.cashflow_total" :key="cashFlow.id">
+                    <q-item-section>
+                      <q-item-label>{{ translate[cashFlow.type_cashflow] }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(cashFlow.totals) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator spaced inset />
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label>Total</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(cashflows.cashflow_totals) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card-section>
+            </q-card>
+          </q-expansion-item>
+        </div>
       </div>
       <q-dialog
         v-model="dialogFilter"
@@ -159,9 +194,14 @@ export default {
     return {
       formatDate,
       formatNumber,
+      translate: {
+        debit: 'Entrada',
+        credit: 'Salida'
+      },
       from: date.formatDate(Date(), 'YYYY-MM-DD'),
       to: date.formatDate(Date(), 'YYYY-MM-DD'),
       paymentMethods: [],
+      cashflows: [],
       dialogFilter: false,
       filter: '',
       /**
@@ -309,6 +349,21 @@ export default {
       this.getCategoryTotals(this.params)
       this.getPaymentMethodTotals(this.params)
       this.getPaymentTotals()
+      this.getCashflowTotals()
+    },
+    getCashflowTotals () {
+      this.$api.get('reports/cashflow-totals', {
+        params: {
+          to: this.to,
+          from: this.from
+        }
+      })
+        .then(({ data }) => {
+          this.cashflows = data
+        })
+        .catch(err => {
+          console.error(err.message)
+        })
     },
     /**
      * Set data pagination emit event

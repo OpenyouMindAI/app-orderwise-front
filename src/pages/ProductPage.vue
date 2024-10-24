@@ -71,6 +71,15 @@
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
+                v-model="product.cost"
+                label="Costo"
+                type="number"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
                 v-model="product.price"
                 label="Precio"
                 type="number"
@@ -174,6 +183,15 @@
                 v-model="product.description"
                 autofocus
                 label="Descripción"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="product.cost"
+                label="Costo"
+                type="number"
               />
             </div>
             <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
