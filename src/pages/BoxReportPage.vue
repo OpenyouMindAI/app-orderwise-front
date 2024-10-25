@@ -80,6 +80,41 @@
           <q-expansion-item
             class="shadow-1 overflow-hidden"
             style="border-radius: 30px; min-width: 350px;"
+            icon="receipt_long"
+            header-class="bg-secondary text-white"
+            expand-icon-class="text-white"
+            default-opened
+            :label="`Tipo de servicio ${formatNumber(typeOfServicesTotals.payment_total)}`"
+          >
+            <q-card>
+              <q-card-section>
+                <q-list dense>
+                  <q-item v-for="payment in typeOfServicesTotals.payment_method_totals" :key="payment.id">
+                    <q-item-section>
+                      <q-item-label>{{ payment.type_of_service_name }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(payment.payment_total) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator spaced inset />
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label>Total</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label>{{ formatNumber(typeOfServicesTotals.payment_total) }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card-section>
+            </q-card>
+          </q-expansion-item>
+        </div>
+        <div class="col-6">
+          <q-expansion-item
+            class="shadow-1 overflow-hidden"
+            style="border-radius: 30px; min-width: 350px;"
             icon="list_alt"
             header-class="bg-secondary text-white"
             expand-icon-class="text-white"
@@ -296,6 +331,11 @@ export default {
        * Payment all
        * @type {Array}
        */
+      typeOfServicesTotals: {},
+      /**
+       * Payment all
+       * @type {Array}
+       */
       paymentMethodTotals: {},
       /**
        * Payment all
@@ -350,6 +390,7 @@ export default {
       this.getPaymentMethodTotals(this.params)
       this.getPaymentTotals()
       this.getCashflowTotals()
+      this.getTypeOfServicesTotals()
     },
     getCashflowTotals () {
       this.$api.get('reports/cashflow-totals', {
@@ -360,6 +401,20 @@ export default {
       })
         .then(({ data }) => {
           this.cashflows = data
+        })
+        .catch(err => {
+          console.error(err.message)
+        })
+    },
+    getTypeOfServicesTotals () {
+      this.$api.get('reports/type-of-services-totals', {
+        params: {
+          to: this.to,
+          from: this.from
+        }
+      })
+        .then(({ data }) => {
+          this.typeOfServicesTotals = data
         })
         .catch(err => {
           console.error(err.message)
