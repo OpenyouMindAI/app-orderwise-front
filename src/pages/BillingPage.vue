@@ -143,7 +143,7 @@
             <div class="col-xs-12 col-sm-12 col-md-12">
               <q-table
                 row-key="name"
-                title="Articulos"
+                title="Artículos"
                 dense
                 :rows="products"
                 :columns="columns"
@@ -291,10 +291,10 @@
               </thead>
               <thead>
                 <tr>
-                  <th class="text-left">Metodo de pago</th>
+                  <th class="text-left">Método de pago</th>
                   <th class="text-left">Referencia</th>
                   <th class="text-right">Monto</th>
-                  <th class="text-right">Aciones</th>
+                  <th class="text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -351,7 +351,7 @@
         <q-card-actions align="right">
           <q-btn
             label="Guardar y cerrar"
-            v-close-popup
+            @click="saveWithoutPrint"
             color="primary"
           />
           <q-btn
@@ -568,7 +568,7 @@ export default {
       documentType: 'ci',
       options: [
         { label: 'Rif', value: 'rif' },
-        { label: 'Cedula', value: 'ci', color: 'green' }
+        { label: 'DNI', value: 'ci', color: 'green' }
       ],
       invoiceTaxes: [],
       openAddClient: false,
@@ -582,7 +582,7 @@ export default {
       taxe: null,
       statusTable: {
         unoccupied: 'Libre',
-        busy: 'Acupada'
+        busy: 'Ocupada'
       },
       category: null,
       typeOfService: null,
@@ -644,7 +644,7 @@ export default {
         {
           name: 'name',
           required: true,
-          label: 'Descripcion',
+          label: 'Descripción',
           align: 'left',
           field: row => row.name,
           sortable: true
@@ -669,7 +669,7 @@ export default {
         {
           name: 'name',
           required: true,
-          label: 'Descripcion',
+          label: 'Descripción',
           align: 'left',
           field: row => row.name,
           sortable: true
@@ -821,7 +821,7 @@ export default {
           this.client = data
           this.loadingClient = false
           Notify.create({
-            message: 'Cliente creado creditosamente',
+            message: 'Cliente creado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -1193,31 +1193,46 @@ export default {
       setTimeout(() => {
         this.$htmlToPaper('printMe', {
           styles: [
-            'styleInvoice.css'
+            'ticketStyle.css'
           ]
         })
         this.clear()
         this.withoutPrint = false
       })
     },
+
+    setParamsBill () {
+      if (this.typeOfService?.code !== 2 && this.payments?.length <= 0) {
+        this.$q.notify({
+          message: 'No a seleccionado un pago',
+          icon: 'warning',
+          color: 'negative'
+        })
+        this.dialogPayment = true
+        return false
+      }
+
+      return {
+        client_id: this.client.id,
+        seller_id: this.userSession.id,
+        coin_id: this.coin.id,
+        invoice_taxes: this.invoiceTaxes,
+        type_of_service_id: this.typeOfService.id,
+        invoice_type_id: this.invoiceType.id,
+        user_created_id: this.userSession.id,
+        exchange_rate: this.exchangeRate,
+        products: this.products,
+        payments: this.payments,
+        tables: this.tableSelected
+      }
+    },
     /**
      * Save bill and payments
      */
     async saveBill () {
       try {
-        const params = {
-          client_id: this.client.id,
-          seller_id: this.userSession.id,
-          coin_id: this.coin.id,
-          invoice_taxes: this.invoiceTaxes,
-          type_of_service_id: this.typeOfService.id,
-          invoice_type_id: this.invoiceType.id,
-          user_created_id: this.userSession.id,
-          exchange_rate: this.exchangeRate,
-          products: this.products,
-          payments: this.payments,
-          tables: this.tableSelected
-        }
+        const params = this.setParamsBill()
+        if (!params) return
         if (this.$route.query.id) {
           const { data } = await this.$api.put(`invoices/${this.$route.query.id}`, params)
           this.printBill(data.data)
@@ -1226,7 +1241,7 @@ export default {
           this.printBill(data.data)
         }
         this.$q.notify({
-          message: 'Factura guardada creditosamente',
+          message: 'Factura guardada exitosamente',
           icon: 'check_circle',
           color: 'positive'
         })

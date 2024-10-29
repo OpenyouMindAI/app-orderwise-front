@@ -158,7 +158,7 @@
             <q-markup-table dense>
               <thead>
                 <tr>
-                  <th class="text-left">Metodo de pago</th>
+                  <th class="text-left">Método de pago</th>
                   <th class="text-left">Referencia</th>
                   <th class="text-right">Monto</th>
                 </tr>
@@ -194,8 +194,7 @@
         </q-tab-panels>
         <q-card-actions align="right">
           <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
-          <q-btn color="secondary" label="Imprimir Ticket" @click="print" v-if="invoice.invoice_type.name === 'Ticket'"/>
-          <q-btn color="secondary" label="Imprimir Boleta" @click="printInvoice" v-else/>
+          <q-btn color="secondary" label="Imprimir Ticket" @click="print"/>
           <q-btn color="primary" label="Guardar" @click="saveEdit"/>
         </q-card-actions>
       </q-card>
@@ -223,7 +222,6 @@
                 filled
                 v-model="client.document_number"
                 label="Número de documento"
-                @blur="getDataApi"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -245,20 +243,15 @@
     <div id="printMe" v-show="false">
       <invoice-print :data="invoice" v-if="invoice"/>
     </div>
-    <div id="printMeInvoice" v-show="false">
-      <bill-of-sale :data="invoice" v-if="invoice"/>
-    </div>
   </div>
 </template>
 
 <script>
 import { Notify, date, is } from 'quasar'
 import InvoicePrint from '../components/InvoicePrint.vue'
-import BillOfSale from '../components/BillOfSale.vue'
 export default {
   components: {
-    InvoicePrint,
-    BillOfSale
+    InvoicePrint
   },
   data () {
     return {
@@ -454,17 +447,13 @@ export default {
           })
         })
     },
+    /**
+     * Print invoice
+     */
     print () {
       this.$htmlToPaper('printMe', {
         styles: [
-          'styleInvoice.css'
-        ]
-      })
-    },
-    printInvoice () {
-      this.$htmlToPaper('printMeInvoice', {
-        styles: [
-          'styleBillOfSale.css'
+          'ticketStyle.css'
         ]
       })
     },
@@ -591,24 +580,6 @@ export default {
             icon: 'warning',
             color: 'negative'
           })
-        })
-    },
-    /**
-     * Get document
-     */
-    getDataApi () {
-      this.$api.get(`get-documents/${this.documentType}/${this.client.document_number}`)
-        .then(({ data }) => {
-          if (!data.error) {
-            this.client.name = data.nombre
-          } else {
-            Notify.create({
-              message: data.error,
-              icon: 'warning',
-              color: 'negative'
-            })
-            this.client = {}
-          }
         })
     },
     /**

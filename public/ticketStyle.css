@@ -1,0 +1,95 @@
+*{
+  font-size: 19px;
+  font-family: 'ticketingregular';
+}
+@font-face {
+  font-family: 'ticketingregular';
+  src: url('TICKETING/ticketing-webfont.woff2') format('woff2'), url('TICKETING/ticketing-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+.separator {
+  border: 1px solid black;
+  width: 100%;
+  border-style: dashed;
+  margin-top: 3px;
+  margin-bottom: 3px;
+}
+
+hr {
+  height: 10px;
+  width: 100%;
+}
+
+.invoice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  align-content: flex-start;
+  width:330px;
+  margin: 0 auto;
+  padding: 15px;
+  text-transform: uppercase;
+}
+
+.center {
+  width: 100%;
+  text-align: center;
+}
+.left {
+  width: 100%;
+  text-align: left;
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 300;
+}
+
+.details{
+  text-align: left;
+  width: 40%;
+  padding: 0px;
+  margin: 0px;
+  position: relative;
+  font-size: 7px;
+}
+
+td,
+th,
+tr,
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.total {
+  border: 0px;
+  border-top: 1px solid black;
+  width: 100%;
+  border-style: dashed;
+  margin-top: 3px;
+  margin-bottom: 3px;
+}
+
+td.producto,
+th.producto {
+  width: 50%;
+  text-align: left;
+}
+
+td.cantidad,
+th.cantidad {
+  width: 25%;
+  word-break: break-all;
+  text-align: right;
+}
+
+td.precio,
+th.precio {
+  width: 25%;
+  max-width: 40px;
+  word-break: break-all;
+  text-align: right;
+}
