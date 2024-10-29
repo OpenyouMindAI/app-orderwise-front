@@ -31,7 +31,7 @@
         <q-item-label
           header
         >
-          Comandas
+          Orderwise
         </q-item-label>
 
         <EssentialLink
@@ -62,7 +62,7 @@ const linksList = [
       {
         title: 'Facturar',
         visible: true,
-        icon: 'orderwise_bag',
+        icon: 'receipt',
         link: 'Billing'
       },
       {

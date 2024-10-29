@@ -1,90 +1,93 @@
 <template>
-  <q-form @submit="login" class="flex flex-center" style="height: 100vh">
-    <q-card flat class="my-card" style="width: 400px; max-width: 80vw;">
-      <q-card-section>
-        <q-img :src="logo.color"/>
-      </q-card-section>
-      <q-card-section class="bg-primary text-white" style="border-radius: 5px 5px 0px 0px;">
-        <div class="text-h6">Iniciar sesión</div>
-      </q-card-section>
-      <q-card-section :class="!$q.dark.isActive ? 'bg-blue-grey-1' : 'bg-dark'">
-        <q-input
-          class="q-mt-sm"
-          color="primary"
-          v-model="username"
-          label="Usuario o correo electronico"
-          ref="username"
-          name="username"
-          outlined
-          dense
-          @keyup.enter="login"
-          :rules="[val => !!val || 'El campo es requerido.']">
-          <template v-slot:prepend>
-            <q-icon name="email" />
-          </template>
-        </q-input>
-        <q-input
-          class="q-mt-md"
-          color="primary"
-          v-model="password"
-          label="Contraseña"
-          ref="password"
-          name="password"
-          type="password"
-          dense
-          outlined
-          @keyup.enter="login"
-          :rules="[val => !!val || 'El campo es requerido.']">
-          <template v-slot:prepend>
-            <q-icon name="lock"/>
-          </template>
-        </q-input>
-      </q-card-section>
-      <q-card-actions :class="!$q.dark.isActive ? 'bg-blue-grey-1' : 'bg-dark'">
-        <q-space/>
-        <q-btn
-          label="app android"
-          color="secondary"
-          icon="cloud_download"
-          type="a"
-          :href="urlDownload"
-          v-if="!this.$q.platform.is.nativeMobile && this.$q.platform.is.platform !== 'win' && this.$q.platform.is.platform !== 'linux'"
-        />
-        <q-btn
-          color="primary"
-          type="submit"
-          :disable="btnDisable">
-          <span v-if="btnDisable">
-            <q-spinner-hourglass
-              color="blue-1"
-              size="20px"
-              :disable="btnDisable"
-            />
-            Cargando...
-          </span>
-          <span v-if="!btnDisable">
-            Iniciar Sesión
-          </span>
-        </q-btn>
-      </q-card-actions>
-      <q-card-actions align="center" class="flex flex-center q-gutter-sm">
-       <span class="text-subtitle1 text-center text-bold">
-         Powered by
-       </span>
-       <a href="https://site.qbitsinc.com" alt="qbits" target="_blank">
-         <q-img style="width:120px"  :src="qBitsLogo.black"/>
-       </a>
-      </q-card-actions>
-    </q-card>
-  </q-form>
+  <div style="height: 100vh;" class="flex flex-center bg-login">
+    <div
+      class="row"
+      :style="`${$q.screen.lt.sm ? 'width: 350px;' : 'width: 90vw; max-width: 1000px;'} min-height: 500px; box-shadow: rgba(0, 0, 0, 0.6) 0px 5px 15px; ${$q.screen.lt.sm ? 'border-radius: 10px;' : 'border-radius: 40px;'} background-color: white;`">
+      <div class="col-6" v-if="!$q.screen.lt.sm">
+        <q-img src="images/bg-login.png" alt="bg-login" style="border-radius: 40px 170px 170px 40px; min-height: 500px;"/>
+      </div>
+      <div :class="`flex flex-center q-pa-lg ${$q.screen.lt.sm ? 'col-12' : 'col-6'}`" style="position: relative;">
+        <div class="text-center full-width" style="position: absolute; top: 20px;">
+          <q-img :src="logo.color" style="width: 240px; max-width: 80vw;"/>
+        </div>
+        <q-form @submit="login" class="flex-column" style="width: 400px; max-width: 70vw;">
+          <div class="text-h5 q-mb-md">Iniciar sesión</div>
+          <q-input
+            class="q-mt-sm"
+            color="primary"
+            v-model="username"
+            label="Usuario o correo electrónico"
+            ref="username"
+            name="username"
+            outlined
+            dense
+            @keyup.enter="login"
+            :rules="[val => !!val || 'El campo es requerido.']">
+            <template v-slot:prepend>
+              <q-icon name="email" />
+            </template>
+          </q-input>
+          <q-input
+            class="q-mt-sm"
+            color="primary"
+            v-model="password"
+            label="Contraseña"
+            ref="password"
+            name="password"
+            type="password"
+            outlined
+            dense
+            @keyup.enter="login"
+            :rules="[val => !!val || 'El campo es requerido.']">
+            <template v-slot:prepend>
+              <q-icon name="lock"/>
+            </template>
+          </q-input>
+          <q-checkbox
+            checked
+            label="Recordarme"
+            color="primary"
+            class="q-mt-sm"
+            v-model="remember"
+          />
+          <q-btn
+            color="primary"
+            type="submit"
+            class="full-width"
+            :disable="btnDisable"
+          >
+            <span v-if="btnDisable">
+              <q-spinner-hourglass
+                color="blue-1"
+                size="20px"
+                :disable="btnDisable"
+              />
+              Cargando...
+            </span>
+            <span v-if="!btnDisable">
+              Iniciar Sesión
+            </span>
+          </q-btn>
+        </q-form>
+        <div align="center" class="flex flex-center q-gutter-sm" style="position: absolute; bottom: 10px;">
+         <span class="text-subtitle1 text-center text-bold">
+           Powered by
+         </span>
+         <a href="https://site.qbitsinc.com" alt="qbits" target="_blank">
+           <q-img style="width:80px"  :src="qBitsLogo.black"/>
+         </a>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 <script>
 import { logo, qBitsLogo } from 'src/const/mixins'
 
-// import { Notify } from 'quasar'
 export default {
   data () {
     return {
+      remember: true,
       messageLogin: {
         'Request failed with status code 401': 'Credenciales incorrectas',
         'Network Error': 'Error de red',
@@ -158,6 +161,11 @@ export default {
 }
 </script>
 <style>
+  .bg-login {
+    background-image: url('images/bg-page-login.png');
+    background-size: cover;
+    background-position: center;
+  }
   .img {
     width: 40%;
   }
