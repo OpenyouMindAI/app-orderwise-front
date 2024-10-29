@@ -99,6 +99,14 @@
                 @filter="filterCategories"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-option-group
+                v-model="unitOfMeasure"
+                :options="unitOfMeasures"
+                color="positive"
+                inline
+              />
+            </div>
           </q-card-section>
           <q-card-section class="row q-py-none">
             <div class="col-10">
@@ -142,9 +150,9 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -208,7 +216,7 @@
               <q-select
                 use-input
                 filled
-                label="Categoria"
+                label="Categoría"
                 input-debounce="0"
                 option-label="name"
                 option-value="id"
@@ -216,6 +224,14 @@
                 :options="categories"
                 :rules="[val => !!val || 'El campo es requerido.']"
                 @filter="filterCategories"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-option-group
+                v-model="unitOfMeasure"
+                :options="unitOfMeasures"
+                color="positive"
+                inline
               />
             </div>
           </q-card-section>
@@ -261,8 +277,8 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -277,6 +293,8 @@ export default {
     return {
       productImage: null,
       products: [],
+      unitOfMeasures: [],
+      unitOfMeasure: null,
       product: {
         images: []
       },
@@ -358,6 +376,7 @@ export default {
       filter: undefined
     })
     this.userSession = JSON.parse(localStorage.getItem('user'))
+    this.getUnitOfMeasures()
   },
   watch: {
     filter (data) {
@@ -370,6 +389,9 @@ export default {
     },
     product (data) {
       this.category = data.category
+    },
+    unitOfMeasure (data) {
+      this.product.unit_of_measure_id = data
     }
   },
   methods: {
@@ -416,7 +438,6 @@ export default {
       const formData = new FormData()
       if (put) {
         formData.append('_method', 'put')
-        formData.append('user_updated_id', this.userSession.id)
       }
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
@@ -511,6 +532,22 @@ export default {
         })
     },
     /**
+     * Get all products
+     */
+    async getUnitOfMeasures () {
+      try {
+        const { data } = await this.$api.get('unit-of-measures')
+        this.unitOfMeasures = data.map(unit => ({ label: unit.name, value: unit.id }))
+        this.unitOfMeasure = this.unitOfMeasures[0]?.value
+      } catch (error) {
+        Notify.create({
+          message: error.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
+    },
+    /**
      * Set data pagination emit event
      * @param  {Object} data value pagination
      */
@@ -556,6 +593,7 @@ export default {
     editProduct (event, row, index) {
       this.openEditProduct = true
       this.product = row
+      this.unitOfMeasure = row.unit_of_measure_id
     },
     /**
      * Save edit

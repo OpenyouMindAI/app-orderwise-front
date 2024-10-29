@@ -93,7 +93,7 @@ export default {
           await deleteDoc(doc(db, 'bills', String(data.code)))
           this.getBills()
           this.$q.notify({
-            message: 'Factura eliminado extisamente',
+            message: 'Factura eliminado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })

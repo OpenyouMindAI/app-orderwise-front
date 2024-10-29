@@ -224,7 +224,11 @@
             <template v-slot:item="props">
               <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
                 <q-card class="my-card">
-                  <q-img style="height: 150px; width: 100%" :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'" @click="validateProduct(props.row)">
+                  <q-img
+                    style="height: 150px; width: 100%"
+                    :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                    @click="validateProduct(props.row)"
+                  >
                     <div class="absolute-full text-subtitle2 flex flex-center">
                       {{ props.row.name }}
                     </div>
@@ -541,7 +545,7 @@
 
 <script>
 import { StreamBarcodeReader } from 'vue-barcode-reader'
-import { Notify, date } from 'quasar'
+import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import InvoicePrint from '../components/InvoicePrint.vue'
 // import BillOfSale from '../components/BillOfSale.vue'
@@ -757,7 +761,6 @@ export default {
     this.getPaymentMethods()
     this.getAllProducts()
     this.getLivingRooms()
-    // this.getExchange()
     this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
@@ -784,18 +787,6 @@ export default {
       } finally {
         this.loadingCashflow = true
       }
-    },
-    /**
-     * Get Data in exchange
-     */
-    getExchange () {
-      this.$api.get('exchange-rate', {
-        start_date: date.formatDate(new Date(), 'DD/MM/YYYY'),
-        coin: 'PEN'
-      })
-        .then(({ data }) => {
-          this.exchangeRate = data.venta
-        })
     },
     /**
      * Calculate taxe
@@ -1252,24 +1243,6 @@ export default {
           color: 'negative'
         })
       }
-      // this.$api.post('invoices', {
-      //   client_id: this.client.id,
-      //   seller_id: this.userSession.id,
-      //   coin_id: this.coin.id,
-      //   invoice_taxes: this.invoiceTaxes,
-      //   type_of_service_id: this.typeOfService.id,
-      //   invoice_type_id: this.invoiceType.id,
-      //   user_created_id: this.userSession.id,
-      //   exchange_rate: this.exchangeRate,
-      //   products: this.products,
-      //   payments: this.payments,
-      //   tables: this.tableSelected
-      // })
-      //   .then(({ data }) => {
-
-      //   })
-      //   .catch(err => {
-      //   })
     },
     /**
      * Get local storage
