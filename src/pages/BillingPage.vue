@@ -1062,18 +1062,6 @@ export default {
       const invoiceOne = table.invoices[0]
       this.$router.push({ name: 'Billing', query: { id: invoiceOne.id } })
       this.dialogTable = false
-      // this.calculateTotal()
-      // this.$api.post('free-tables', table)
-      //   .then(({ data }) => {
-      //     this.getTables(this.livingRoom)
-      //   })
-      //   .catch(err => {
-      //     Notify.create({
-      //       message: err.message,
-      //       icon: 'warning',
-      //       color: 'negative'
-      //     })
-      //   })
     },
     /**
      * Get all tables

@@ -211,7 +211,7 @@
       </span>
       <span class="text-h6">
         VENTAS TOTALES:
-        {{ formatNumber(categoryTotalsTotals.category_total) }}
+        {{ formatNumber(categoryTotalsTotals.category_total + cashflows.cashflow_totals) }}
       </span>
     </q-footer>
     <q-page-sticky position="bottom-right" :offset="[18, 18]">
