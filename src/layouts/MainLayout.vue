@@ -82,6 +82,12 @@ const linksList = [
         visible: true,
         icon: 'format_list_bulleted',
         link: 'Product'
+      },
+      {
+        title: 'Ordenes de comandas',
+        visible: true,
+        icon: 'receipt',
+        link: 'CommandOrder'
       }
     ]
   },

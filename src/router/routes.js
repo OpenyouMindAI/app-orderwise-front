@@ -93,6 +93,18 @@ const routes = [
         beforeEnter: validationSession,
         name: 'Taxe',
         component: () => import('pages/TaxePage.vue')
+      },
+      {
+        path: 'commands',
+        beforeEnter: validationSession,
+        name: 'Taxe',
+        component: () => import('pages/TaxePage.vue')
+      },
+      {
+        path: 'command-orders',
+        beforeEnter: validationSession,
+        name: 'CommandOrder',
+        component: () => import('pages/CommandOrderPage.vue')
       }
     ]
   },
