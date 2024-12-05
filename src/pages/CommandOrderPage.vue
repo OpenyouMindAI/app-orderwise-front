@@ -233,7 +233,7 @@ const getInvoiceTypes = async () => {
 const nextStatus = async (data, index) => {
   try {
     await api.put(`invoice-status-command/${data.id}`, { status: statuses.value[index].value })
-    getInvoices()
+    getInvoices(params.value)
   } catch (error) {
     console.log(error)
   }
