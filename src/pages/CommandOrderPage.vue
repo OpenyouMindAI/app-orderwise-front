@@ -10,6 +10,7 @@
         option-label="name"
         dense
         filled
+        clearable
       />
       <q-select
         v-model="invoiceType"
@@ -20,6 +21,7 @@
         option-label="name"
         dense
         filled
+        clearable
       />
     </div>
     <div class="board-command">
@@ -67,6 +69,11 @@
                   </span>
                 </div>
               </q-card-section>
+              <q-card-actions align="center" class="text-bold">
+                <div>
+                  Fecha: {{ formatDate(invoice.created_at, 'DD/MM/YYYY HH:mm:ss') }}
+                </div>
+              </q-card-actions>
             </q-card>
           </q-card-section>
         </q-card>
@@ -78,6 +85,7 @@
 
 <script setup>
 import { api } from 'src/boot/axios'
+import { formatDate } from 'src/const/mixins'
 import { ref, onMounted, watch } from 'vue'
 
 /**
@@ -158,9 +166,10 @@ onMounted(() => {
 watch(category, async (cat) => {
   localStorage.setItem('category-command', JSON.stringify(cat))
   params.value = {
+    ...params.value,
     dataEqualFilter: {
       ...params.value.dataEqualFilter,
-      'products.category_id': cat.id
+      'products.category_id': cat?.id
     }
   }
   await getInvoices(params.value)
@@ -169,9 +178,10 @@ watch(category, async (cat) => {
 watch(invoiceType, async (it) => {
   localStorage.setItem('invoiceType-command', JSON.stringify(it))
   params.value = {
+    ...params.value,
     dataEqualFilter: {
       ...params.value.dataEqualFilter,
-      invoice_type_id: it.id
+      invoice_type_id: it?.id
     }
   }
   await getInvoices(params.value)
