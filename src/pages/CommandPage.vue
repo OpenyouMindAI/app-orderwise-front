@@ -180,7 +180,6 @@ import { formatNumber } from '../const/mixins'
 import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
 import SlideComponent from '../components/SlideComponent.vue'
-
 export default {
   name: 'CommandPage',
   components: {

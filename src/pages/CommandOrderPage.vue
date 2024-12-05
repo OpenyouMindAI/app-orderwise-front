@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="row q-col-gutter-sm">
+    <div class="row q-gutter-sm q-mb-sm">
       <q-select
         v-model="category"
         :options="categories"
@@ -8,10 +8,7 @@
         label="Categoría"
         option-value="id"
         option-label="name"
-        emit-value
-        map-options
         dense
-        class="q-mb-md"
         filled
       />
       <q-select
@@ -21,10 +18,7 @@
         label="Tipo de factura"
         option-value="id"
         option-label="name"
-        emit-value
-        map-options
         dense
-        class="q-mb-md"
         filled
       />
     </div>
@@ -87,16 +81,23 @@ import { api } from 'src/boot/axios'
 import { ref, onMounted, watch } from 'vue'
 
 /**
+ * Local storage
+ */
+const categoryCommand = JSON.parse(localStorage.getItem('category-command')) || null
+/**
+ * Local storage
+ */
+const invoiceTypeCommand = JSON.parse(localStorage.getItem('invoiceType-command')) || null
+/**
  * Select category
  * @type {Object}
  */
-const category = ref(null)
-
+const category = ref(categoryCommand)
 /**
  * Select invoiceType
  * @type {Object}
  */
-const invoiceType = ref(null)
+const invoiceType = ref(invoiceTypeCommand)
 /**
  * List invoice
  * @type {Array}
@@ -139,36 +140,41 @@ const statuses = ref([
 
 const loading = ref(false)
 
-const params = ref({})
+const params = ref({
+  sortOrder: 'desc',
+  sortBy: 'id',
+  dataEqualFilter: {
+    'products.category_id': categoryCommand?.id,
+    invoice_type_id: invoiceTypeCommand?.id
+  }
+})
 
 onMounted(() => {
-  getInvoices()
+  getInvoices(params.value)
   getCategories()
   getInvoiceTypes()
 })
 
-watch(category, async (id) => {
-  loading.value = true
+watch(category, async (cat) => {
+  localStorage.setItem('category-command', JSON.stringify(cat))
   params.value = {
     dataEqualFilter: {
       ...params.value.dataEqualFilter,
-      'products.category_id': id
+      'products.category_id': cat.id
     }
   }
   await getInvoices(params.value)
-  loading.value = false
 })
 
-watch(invoiceType, async (id) => {
-  loading.value = true
+watch(invoiceType, async (it) => {
+  localStorage.setItem('invoiceType-command', JSON.stringify(it))
   params.value = {
     dataEqualFilter: {
       ...params.value.dataEqualFilter,
-      invoice_type_id: id
+      invoice_type_id: it.id
     }
   }
   await getInvoices(params.value)
-  loading.value = false
 })
 
 /**
@@ -176,10 +182,13 @@ watch(invoiceType, async (id) => {
  */
 const getInvoices = async (params = {}) => {
   try {
+    loading.value = true
     const { data } = await api.get('command-orders', { params })
     invoices.value = data
   } catch (error) {
     console.log(error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -213,8 +222,7 @@ const getInvoiceTypes = async () => {
  */
 const nextStatus = async (data, index) => {
   try {
-    data.status = statuses.value[index].value
-    await api.put(`invoices/${data.id}`, data)
+    await api.put(`invoice-status-command/${data.id}`, { status: statuses.value[index].value })
     getInvoices()
   } catch (error) {
     console.log(error)
