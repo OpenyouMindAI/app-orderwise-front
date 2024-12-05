@@ -174,7 +174,9 @@
 </template>
 
 <script>
+import { mapState } from 'pinia'
 import { Notify } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   data () {
     return {
@@ -246,10 +248,8 @@ export default {
       filter: undefined
     })
   },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.user.user_created_id = this.userSession.id
-    this.user.user_updated_id = this.userSession.id
+  computed: {
+    ...mapState(authentication, ['userSession'])
   },
   watch: {
     filter (data) {

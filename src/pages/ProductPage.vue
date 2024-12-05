@@ -287,7 +287,9 @@
 </template>
 
 <script>
+import { mapState } from 'pinia'
 import { Notify } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   data () {
     return {
@@ -322,7 +324,6 @@ export default {
       visible: false,
       openAddProduct: false,
       openEditProduct: null,
-      userSession: null,
       columns: [
         {
           name: 'id',
@@ -375,8 +376,10 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-    this.userSession = JSON.parse(localStorage.getItem('user'))
     this.getUnitOfMeasures()
+  },
+  computed: {
+    ...mapState(authentication, ['userSession'])
   },
   watch: {
     filter (data) {

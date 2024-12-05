@@ -292,7 +292,6 @@ export default {
       visible: false,
       openAddInvoice: false,
       openEditInvoice: null,
-      userSession: null,
       columns: [
         {
           name: 'code',
@@ -401,11 +400,6 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.coin.user_created_id = this.userSession.id
-    this.coin.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {

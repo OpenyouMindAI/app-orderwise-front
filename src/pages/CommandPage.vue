@@ -2,7 +2,7 @@
   <q-page padding>
     <div class="full-width text-subtitle1 flex justify-center">
       <q-chip class="bg-teal text-white" v-if="userSession && $q.screen.lt.sm">
-        {{  userSession.role.name }}: {{ userSession.name }}
+        {{  userSession?.roles[0]?.name }}: {{ userSession.name }}
       </q-chip>
       <q-chip class="bg-teal text-white">
         Mesa: {{ command?.table?.name || 'Sin mesa' }}
@@ -180,6 +180,8 @@ import { formatNumber } from '../const/mixins'
 import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
 import SlideComponent from '../components/SlideComponent.vue'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   name: 'CommandPage',
   components: {
@@ -198,7 +200,6 @@ export default {
       billLoading: false,
       commandDialog: false,
       formatNumber,
-      userSession: JSON.parse(localStorage.getItem('user')),
       table: null,
       loadingPage: false,
       stars: 3,
@@ -294,7 +295,8 @@ export default {
     command () {
       const store = useCommandStore()
       return store?.command
-    }
+    },
+    ...mapState(authentication, ['userSession'])
   },
   methods: {
     /**

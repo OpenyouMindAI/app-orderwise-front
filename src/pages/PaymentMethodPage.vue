@@ -112,7 +112,6 @@ export default {
       visible: false,
       openAddPaymentMethod: false,
       openEditPaymentMethod: null,
-      userSession: null,
       columns: [
         {
           name: 'id',
@@ -143,11 +142,6 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.paymentMethod.user_created_id = this.userSession.id
-    this.paymentMethod.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {

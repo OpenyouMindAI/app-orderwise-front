@@ -164,7 +164,9 @@
 </template>
 
 <script>
+import { mapState } from 'pinia'
 import { Notify } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   data () {
     return {
@@ -235,16 +237,14 @@ export default {
       }
     }
   },
+  computed: {
+    ...mapState(authentication, ['userSession'])
+  },
   mounted () {
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.seller.user_created_id = this.userSession.id
-    this.seller.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {

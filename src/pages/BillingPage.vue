@@ -548,6 +548,8 @@ import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import InvoicePrint from '../components/InvoicePrint.vue'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
 // import BillOfSale from '../components/BillOfSale.vue'
 export default {
   // name: 'PageName',
@@ -636,7 +638,6 @@ export default {
       totalBill: 0,
       allProducts: [],
       categories: [],
-      userSession: {},
       productColumns: [
         {
           name: 'barcode',
@@ -708,7 +709,8 @@ export default {
         totalPayment = totalPayment + payment.amount
       })
       return totalPayment
-    }
+    },
+    ...mapState(authentication, ['userSession'])
   },
   watch: {
     category () {
@@ -761,7 +763,6 @@ export default {
     this.getPaymentMethods()
     this.getAllProducts()
     this.getLivingRooms()
-    this.userSession = JSON.parse(localStorage.getItem('user'))
   },
   methods: {
     async saveCashflow () {

@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="row q-col-gutter-sm">
+    <!-- <div class="row q-col-gutter-sm"> -->
       <!-- <div class="col-4" v-for="total in totals" :key="total.id">
         <q-card class="my-card bg-secondary text-white relative">
           <q-card-section class="q-py-xs">
@@ -40,172 +40,150 @@
         </q-table>
       </div> -->
 
-      <div class="row full-width q-col-gutter-sm">
-        <div class="col-6">
-          <q-expansion-item
-            class="shadow-1 overflow-hidden"
-            style="border-radius: 30px; min-width: 350px;"
-            icon="receipt_long"
-            header-class="bg-secondary text-white"
-            expand-icon-class="text-white"
-            default-opened
-            :label="`Pagos de contado ${formatNumber(paymentMethodTotals.payment_total)}`"
-          >
-            <q-card>
-              <q-card-section>
-                <q-list dense>
-                  <q-item v-for="payment in paymentMethodTotals.payment_method_totals" :key="payment.id">
-                    <q-item-section>
-                      <q-item-label>{{ payment.payment_method_name }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(payment.payment_total) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator spaced inset />
-                  <q-item>
-                    <q-item-section>
-                      <q-item-label>Total</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(paymentMethodTotals.payment_total) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-card-section>
-            </q-card>
-          </q-expansion-item>
-        </div>
-        <div class="col-6">
-          <q-expansion-item
-            class="shadow-1 overflow-hidden"
-            style="border-radius: 30px; min-width: 350px;"
-            icon="receipt_long"
-            header-class="bg-secondary text-white"
-            expand-icon-class="text-white"
-            default-opened
-            :label="`Tipo de servicio ${formatNumber(typeOfServicesTotals.payment_total)}`"
-          >
-            <q-card>
-              <q-card-section>
-                <q-list dense>
-                  <q-item v-for="payment in typeOfServicesTotals.payment_method_totals" :key="payment.id">
-                    <q-item-section>
-                      <q-item-label>{{ payment.type_of_service_name }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(payment.payment_total) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator spaced inset />
-                  <q-item>
-                    <q-item-section>
-                      <q-item-label>Total</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(typeOfServicesTotals.payment_total) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-card-section>
-            </q-card>
-          </q-expansion-item>
-        </div>
-        <div class="col-6">
-          <q-expansion-item
-            class="shadow-1 overflow-hidden"
-            style="border-radius: 30px; min-width: 350px;"
-            icon="list_alt"
-            header-class="bg-secondary text-white"
-            expand-icon-class="text-white"
-            default-opened
-            :label="`Ventas por departamento: ${formatNumber(categoryTotalsTotals.category_total)}`"
-          >
-            <q-card>
-              <q-card-section>
-                <q-list dense>
-                  <q-item v-for="payment in categoryTotalsTotals.categories_totals" :key="payment.id">
-                    <q-item-section>
-                      <q-item-label>{{ payment.category_name }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(payment.total_sales) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator spaced inset />
-                  <q-item>
-                    <q-item-section>
-                      <q-item-label>Total</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(categoryTotalsTotals.category_total) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-card-section>
-            </q-card>
-          </q-expansion-item>
-        </div>
-        <div class="col-6">
-          <q-expansion-item
-            class="shadow-1 overflow-hidden"
-            style="border-radius: 30px; min-width: 350px;"
-            icon="list_alt"
-            header-class="bg-secondary text-white"
-            expand-icon-class="text-white"
-            default-opened
-            :label="`Flujo de dinero: ${formatNumber(cashflows.cashflow_totals)}`"
-          >
-            <q-card>
-              <q-card-section>
-                <q-list dense>
-                  <q-item v-for="cashFlow in cashflows.cashflow_total" :key="cashFlow.id">
-                    <q-item-section>
-                      <q-item-label>{{ translate[cashFlow.type_cashflow] }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(cashFlow.totals) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator spaced inset />
-                  <q-item>
-                    <q-item-section>
-                      <q-item-label>Total</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-item-label>{{ formatNumber(cashflows.cashflow_totals) }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-card-section>
-            </q-card>
-          </q-expansion-item>
-        </div>
+    <!-- </div> -->
+    <div class="row full-width q-col-gutter-sm">
+      <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
+        <q-expansion-item
+          class="shadow-1 overflow-hidden"
+          style="border-radius: 30px; min-width: 350px;"
+          icon="receipt_long"
+          header-class="bg-secondary text-white"
+          expand-icon-class="text-white"
+          default-opened
+          :label="`Pagos de contado ${formatNumber(paymentMethodTotals.payment_total)}`"
+        >
+          <q-card>
+            <q-card-section>
+              <q-list dense>
+                <q-item v-for="payment in paymentMethodTotals.payment_method_totals" :key="payment.id">
+                  <q-item-section>
+                    <q-item-label>{{ payment.payment_method_name }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(payment.payment_total) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator spaced inset />
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>Total</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(paymentMethodTotals.payment_total) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
       </div>
-      <q-dialog
-        v-model="dialogFilter"
-        position="right"
-        seamless
-        full-height
-      >
-        <q-card class="column full-height" style="width: 300px">
-          <q-card-section class="bg-primary text-white">
-            <div class="text-h6">Filtros</div>
-          </q-card-section>
-
-          <q-card-section class="col q-pt-sm q-gutter-sm">
-            <q-input filled v-model="from" hint="Desde" type="date"/>
-            <q-input filled v-model="to" hint="Hasta" type="date"/>
-          </q-card-section>
-
-          <q-card-actions align="center" class="bg-white text-teal">
-            <q-btn color="negative" icon="close" v-close-popup />
-            <q-btn color="primary" icon="search" @click="filterDate" />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
+      <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
+        <q-expansion-item
+          class="shadow-1 overflow-hidden"
+          style="border-radius: 30px; min-width: 350px;"
+          icon="receipt_long"
+          header-class="bg-secondary text-white"
+          expand-icon-class="text-white"
+          default-opened
+          :label="`Tipo de servicio ${formatNumber(typeOfServicesTotals.payment_total)}`"
+        >
+          <q-card>
+            <q-card-section>
+              <q-list dense>
+                <q-item v-for="payment in typeOfServicesTotals.payment_method_totals" :key="payment.id">
+                  <q-item-section>
+                    <q-item-label>{{ payment.type_of_service_name }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(payment.payment_total) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator spaced inset />
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>Total</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(typeOfServicesTotals.payment_total) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
+      </div>
+      <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
+        <q-expansion-item
+          class="shadow-1 overflow-hidden"
+          style="border-radius: 30px; min-width: 350px;"
+          icon="list_alt"
+          header-class="bg-secondary text-white"
+          expand-icon-class="text-white"
+          default-opened
+          :label="`Ventas por departamento: ${formatNumber(categoryTotalsTotals.category_total)}`"
+        >
+          <q-card>
+            <q-card-section>
+              <q-list dense>
+                <q-item v-for="payment in categoryTotalsTotals.categories_totals" :key="payment.id">
+                  <q-item-section>
+                    <q-item-label>{{ payment.category_name }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(payment.total_sales) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator spaced inset />
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>Total</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(categoryTotalsTotals.category_total) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
+      </div>
+      <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
+        <q-expansion-item
+          class="shadow-1 overflow-hidden"
+          style="border-radius: 30px; min-width: 350px;"
+          icon="list_alt"
+          header-class="bg-secondary text-white"
+          expand-icon-class="text-white"
+          default-opened
+          :label="`Flujo de dinero: ${formatNumber(cashflows.cashflow_totals)}`"
+        >
+          <q-card>
+            <q-card-section>
+              <q-list dense>
+                <q-item v-for="cashFlow in cashflows.cashflow_total" :key="cashFlow.id">
+                  <q-item-section>
+                    <q-item-label>{{ translate[cashFlow.type_cashflow] }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(cashFlow.totals) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator spaced inset />
+                <q-item>
+                  <q-item-section>
+                    <q-item-label>Total</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>{{ formatNumber(cashflows.cashflow_totals) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
+      </div>
     </div>
-    <q-footer class="q-pa-md flex justify-between">
+    <q-footer class="q-pa-md justify-between flex" style="position: fixed; bottom: 0;">
       <span class="text-h6">
         {{formatDate(new Date(), 'DD/MM/YYYY')}}
       </span>
@@ -214,6 +192,28 @@
         {{ formatNumber(categoryTotalsTotals.category_total + cashflows.cashflow_totals) }}
       </span>
     </q-footer>
+    <q-dialog
+      v-model="dialogFilter"
+      position="right"
+      seamless
+      full-height
+    >
+      <q-card class="column full-height" style="width: 300px">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">Filtros</div>
+        </q-card-section>
+
+        <q-card-section class="col q-pt-sm q-gutter-sm">
+          <q-input filled v-model="from" hint="Desde" type="date"/>
+          <q-input filled v-model="to" hint="Hasta" type="date"/>
+        </q-card-section>
+
+        <q-card-actions align="center" class="bg-white text-teal">
+          <q-btn color="negative" icon="close" v-close-popup />
+          <q-btn color="primary" icon="search" @click="filterDate" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-page-sticky position="bottom-right" :offset="[18, 18]">
       <q-btn fab icon="filter_alt" color="primary" @click="dialogFilter = true"/>
     </q-page-sticky>

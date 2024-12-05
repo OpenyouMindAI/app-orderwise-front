@@ -4,8 +4,9 @@ import { api } from './axios'
 
 const validModule = ($store, to, next) => {
   const user = $store.userSession
+  console.log(user)
   const modules = user?.roles[0]?.modules
-
+  console.log(user)
   if (user.is_root) return next()
 
   if (user?.organization_session_id) {

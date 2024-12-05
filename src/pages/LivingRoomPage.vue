@@ -246,7 +246,6 @@ export default {
       visible: false,
       openAddLivingRoom: false,
       openEditLivingRoom: null,
-      userSession: JSON.parse(localStorage.getItem('user')),
       filter: '',
       /**
        * Params search
@@ -268,14 +267,14 @@ export default {
           align: 'left',
           label: 'Código',
           field: 'id',
-          sorlivingRoom: true
+          sort: true
         },
         {
           name: 'name',
           align: 'left',
           label: 'Nombre',
           field: 'name',
-          sorlivingRoom: true
+          sort: true
         }
       ],
       paginationConfig: {
@@ -307,7 +306,7 @@ export default {
       this.tableSelected = null
     },
     livingRoom (data) {
-      this.handlerQr(data.tables)
+      this.handlerQr(data?.tables || [])
     }
   },
   methods: {
@@ -352,14 +351,13 @@ export default {
       this.getLivingRooms(this.params)
     },
     /**
-     * Add table in livi room
+     * Add table in living room
      */
     addTable () {
+      console.log(this.userSession)
       this.livingRoom.tables.push({
         name: this.tableName,
         width: 50,
-        user_created_id: this.userSession.id,
-        user_updated_id: this.userSession.id,
         height: 50
       })
       this.tableName = null
@@ -425,7 +423,7 @@ export default {
     saveLivingRoom () {
       this.loadingSave = true
       this.$api.post('living-rooms', {
-        user_created_id: this.userSession.id,
+        user_created_id: this.userSession?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {
@@ -442,7 +440,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingSave = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -463,13 +461,16 @@ export default {
     saveEditLivingRoom () {
       this.loadingEdit = true
       this.$api.put(`living-rooms/${this.livingRoom.id}`, {
-        user_created_id: this.userSession.id,
+        user_created_id: this.userSession?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {
           this.getLivingRooms()
           this.openEditLivingRoom = false
           this.loadingEdit = false
+          this.livingRoom = {
+            tables: []
+          }
           Notify.create({
             message: 'Sala de estar editada exitosamente',
             icon: 'check_circle',

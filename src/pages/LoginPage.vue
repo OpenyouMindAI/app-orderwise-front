@@ -1,5 +1,5 @@
 <template>
-  <div style="height: 100vh" class="flex flex-center bg-login">
+  <div style="height: 100vh; background-image: url('images/bg-page-login.png');" class="flex flex-center bg-login">
     <div
       class="row"
       :style="`${$q.screen.lt.sm ? 'width: 350px;' : 'width: 90vw; max-width: 1000px;'} min-height: 500px; box-shadow: rgba(0, 0, 0, 0.6) 0px 5px 15px; ${$q.screen.lt.sm ? 'border-radius: 10px;' : 'border-radius: 40px;'} background-color: white;`"
@@ -157,7 +157,6 @@ export default {
 </script>
 <style>
   .bg-login {
-    background-image: url('images/bg-page-login.png');
     background-size: cover;
     background-position: center;
   }

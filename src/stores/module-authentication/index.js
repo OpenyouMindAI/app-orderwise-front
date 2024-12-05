@@ -79,12 +79,13 @@ export const authentication = defineStore('authentication', {
      */
     async login ({ username, password }) {
       try {
-        const data = await api.post(
+        const { data } = await api.post(
           'authentication/login',
           { username, password },
           {},
           true
         )
+        console.log(data)
         this.setSessionData(data)
         return data.user
       } catch (error) {

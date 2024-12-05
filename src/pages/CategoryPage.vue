@@ -112,7 +112,6 @@ export default {
       visible: false,
       openAddCategory: false,
       openEditCategory: null,
-      userSession: null,
       columns: [
         {
           name: 'id',
@@ -143,11 +142,6 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.category.user_created_id = this.userSession.id
-    this.category.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {

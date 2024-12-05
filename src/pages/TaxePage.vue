@@ -114,7 +114,6 @@ export default {
       visible: false,
       openAddTaxe: false,
       openEditTaxe: null,
-      userSession: null,
       columns: [
         {
           name: 'id',
@@ -145,11 +144,6 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.taxe.user_created_id = this.userSession.id
-    this.taxe.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {

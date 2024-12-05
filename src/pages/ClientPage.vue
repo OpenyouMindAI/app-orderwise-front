@@ -188,7 +188,6 @@ export default {
       visible: false,
       openAddClient: false,
       openEditClient: null,
-      userSession: null,
       columns: [
         {
           name: 'id',
@@ -240,11 +239,6 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.client.user_created_id = this.userSession.id
-    this.client.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {

@@ -31,6 +31,8 @@ module.exports = configure(function (/* ctx */) {
     boot: [
       'i18n',
       'axios',
+      'pinia',
+      'authorization',
       'VueHtmlToPaper'
     ],
 

@@ -1,4 +1,3 @@
-import { validationSession, validationNotSession } from './validations-router'
 const routes = [
   {
     path: '/',
@@ -6,103 +5,109 @@ const routes = [
     children: [
       {
         path: '',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Billing',
         component: () => import('pages/BillingPage.vue')
       },
       {
         path: 'products',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Product',
         component: () => import('pages/ProductPage.vue')
       },
       {
         path: 'bills',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Bill',
         component: () => import('pages/BillPage.vue')
       },
       {
         path: 'categories',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Category',
         component: () => import('pages/CategoryPage.vue')
       },
       {
         path: 'payment-methods',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'PaymentMethod',
         component: () => import('pages/PaymentMethodPage.vue')
       },
       {
         path: 'invoice-types',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'InvoiceType',
         component: () => import('pages/InvoiceTypePage.vue')
       },
       {
         path: 'users',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'User',
         component: () => import('pages/UserPage.vue')
       },
       {
         path: 'sellers',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Seller',
         component: () => import('pages/SellerPage.vue')
       },
       {
         path: 'clients',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Client',
         component: () => import('pages/ClientPage.vue')
       },
       {
         path: 'roles',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Role',
         component: () => import('pages/RolePage.vue')
       },
       {
         path: 'living-rooms',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'LivingRoom',
         component: () => import('src/pages/LivingRoomPage.vue')
       },
       {
         path: 'coins',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Coin',
         component: () => import('pages/CoinPage.vue')
       },
       {
         path: 'box-reports',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'BoxReport',
         component: () => import('pages/BoxReportPage.vue')
       },
       {
         path: 'invoices',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Invoice',
         component: () => import('pages/InvoicePage.vue')
       },
       {
         path: 'taxes',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Taxe',
         component: () => import('pages/TaxePage.vue')
       },
       {
         path: 'commands',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Taxe',
         component: () => import('pages/TaxePage.vue')
       },
       {
+        path: 'profile',
+        name: 'Profile',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ProfilePage.vue')
+      },
+      {
         path: 'command-orders',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'CommandOrder',
         component: () => import('pages/CommandOrderPage.vue')
       }
@@ -114,7 +119,7 @@ const routes = [
     children: [
       {
         path: 'command',
-        beforeEnter: validationSession,
+        meta: { requiresAuth: true },
         name: 'Command',
         component: () => import('pages/CommandPage.vue')
       }
@@ -123,7 +128,6 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    beforeEnter: validationNotSession,
     component: () => import('pages/LoginPage.vue')
   },
 

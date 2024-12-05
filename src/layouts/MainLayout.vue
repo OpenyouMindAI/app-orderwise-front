@@ -1,265 +1,416 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="hHh Lpr lff" class="shadow-2 rounded-borders">
     <q-header elevated>
-      <q-toolbar class="q-gutter-xs">
+      <q-toolbar class="bg-primary">
         <q-btn
           flat
           dense
           round
+          class="q-mr-sm"
           icon="menu"
           aria-label="Menu"
-          @click="toggleLeftDrawer"
+          @click="leftDrawerOpen = !leftDrawerOpen"
         />
-        <q-toolbar-title>
-          {{ title.title }}
-        </q-toolbar-title>
-        <span class="text-bold q-mr-sm bg-secondary q-pa-sm rounded-borders">
-          {{ userSession.name }}
-          ({{ userSession.role.name}})
-        </span>
-        <q-btn flat @click="$q.dark.toggle()" round dense icon="invert_colors" />
-        <q-btn flat @click="logout" round dense icon="logout" />
+        <q-separator dark vertical inset />
+        <div v-if="!$q.screen.lt.md" class="flex flex-center q-ml-md">
+          <img
+            :src="userSession?.organization_session?.photo_url || logo.white"
+            width="155px"
+            style="max-height: 60px"
+            alt="logo"
+          />
+          <q-tooltip :offset="[10, 10]">
+            {{ userSession?.organization_session?.name }}
+          </q-tooltip>
+        </div>
+        <q-space />
+        <q-btn
+          icon="sync_alt"
+          round
+          flat
+          :color="$route.name === 'ChangeOrganization' ? 'secondary' : 'white'"
+          @click="changeRoute('ChangeOrganization', 'Cambio de organización')"
+        >
+          <q-tooltip> Cambio de empresa </q-tooltip>
+        </q-btn>
+        <q-btn icon="update" flat color="white" round @click="update" />
+        <q-btn dense flat round icon="notifications" color="white">
+          <q-tooltip>
+            Notificaciones {{ numberOfNotifications.length }}
+          </q-tooltip>
+          <q-badge v-if="numberOfNotifications.length" color="teal" floating>
+            {{ numberOfNotifications.length }}
+          </q-badge>
+          <q-popup-proxy>
+            <!-- <notification-component
+              style-css="min-width: 25vw;"
+              @on-load="getDataNotification"
+            /> -->
+          </q-popup-proxy>
+        </q-btn>
+        <q-btn
+          flat
+          dense
+          round
+          :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
+          aria-label="dark_mode"
+          class="q-mr-sm"
+          @click="darkMode"
+        >
+          <q-tooltip :offset="[10, 10]">
+            {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
+          </q-tooltip>
+        </q-btn>
+        <q-separator dark vertical inset />
+        <q-btn
+          v-if="userSession"
+          flat
+          dense
+          round
+          icon="person"
+          aria-label="person"
+          class="q-ml-sm"
+        >
+          <q-menu>
+            <q-list>
+              <q-item
+                v-ripple
+                v-close-popup
+                clickable
+                dense
+                @click="changeRoute('Profile', 'Perfil')"
+              >
+                <q-item-section avatar>
+                  <q-avatar>
+                    <q-icon name="person" />
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  {{ ucwords(`${userSession.name}`) }}
+                </q-item-section>
+              </q-item>
+              <q-item v-close-popup clickable dense>
+                <q-item-section avatar>
+                  <q-avatar icon="email" />
+                </q-item-section>
+                <q-item-section>
+                  {{ userSession.email }}
+                </q-item-section>
+              </q-item>
+              <q-item v-close-popup clickable dense>
+                <q-item-section avatar>
+                  <q-avatar icon="badge" />
+                </q-item-section>
+                <q-item-section>
+                  {{ userSession?.roles[0]?.name }}
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section>
+                  <q-btn
+                    v-close-popup
+                    color="negative"
+                    label="Cerrar Sesión"
+                    push
+                    size="sm"
+                    @click="logoutAt"
+                  />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
       </q-toolbar>
     </q-header>
-
     <q-drawer
       v-model="leftDrawerOpen"
-      show-if-above
       bordered
+      show-if-above
+      class="q-pa-none relative"
     >
-      <q-list>
-        <q-item-label
-          header
-        >
-          Orderwise
-        </q-item-label>
-
-        <EssentialLink
-          v-for="data in dataMenu"
-          :key="data.title"
-          v-bind="data"
+      <div v-if="$q.screen.lt.md" class="flex flex-center bg-primary q-py-sm">
+        <img
+          :src="userSession?.organization_session?.logo"
+          width="155px"
+          style="max-height: 50px"
+          alt="logo"
         />
-      </q-list>
-    </q-drawer>
+        <q-tooltip :offset="[10, 10]">
+          {{ userSession?.organization_session?.name }}
+        </q-tooltip>
+      </div>
+      <q-scroll-area
+        :thumb-style="thumbStyle"
+        :content-style="contentStyle"
+        :content-active-style="contentActiveStyle"
+        :style="
+          !$q.screen.lt.md
+            ? 'height: calc(100vh - 108px);'
+            : 'height: calc(100vh - 114px);'
+        "
+      >
+        <!-- <q-list>
+          <q-item v-ripple clickable active-class="my-menu-link">
+            <q-item-section avatar class="q-ml-sm">
+              <q-icon name="home" />
+            </q-item-section>
+            <q-item-section @click="changeRoute('Home', 'Inicio')">
+              <q-item-label>
+                Inicio
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list> -->
 
+        <q-expansion-item
+          v-for="category_module in dataMenu"
+          expand-separator
+          :key="category_module.id"
+          :icon="category_module.icon"
+          default-opened
+          :label="category_module.name"
+        >
+          <div v-for="list in category_module.modules" :key="list.id">
+            <q-item
+              v-if="
+                validateRole(list.roles) &&
+                list.name != 'home'
+              "
+              v-ripple
+              clickable
+              active-class="my-menu-link"
+              :active="list.link === $route.name"
+            >
+              <q-item-section v-if="list.icon" avatar class="q-ml-sm">
+                <q-icon :name="list.icon" />
+              </q-item-section>
+              <q-item-section @click="changeRoute(list.link, list.title)">
+                <q-item-label>
+                  {{ list.title }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </div>
+        </q-expansion-item>
+      </q-scroll-area>
+      <div
+        class="bg-primary text-white flex flex-center q-gutter-sm q-mt-xs q-pb-sm absolute-bottom"
+      >
+        <span class="text-subtitle1"> Powered by </span>
+        <q-img
+          src="https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/white.png"
+          width="70px"
+          alt="Qbits"
+        />
+      </div>
+    </q-drawer>
     <q-page-container>
       <router-view />
     </q-page-container>
+    <q-inner-loading :showing="visibleLoading">
+      <q-spinner-gears size="100px" color="primary" />
+    </q-inner-loading>
+    <q-dialog v-model="dialog" backdrop-filter="blur" persistent>
+      <q-card>
+        <q-card-section>
+          <img
+            src="image/aviso.png"
+            alt="aviso"
+            class="q-mb-md"
+            style="max-width: 450px"
+          />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
 <script>
-import { defineComponent, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import EssentialLink from 'components/EssentialLink.vue'
-
-const linksList = [
-  {
-    title: 'Gestión de facturacion',
-    icon: 'content_paste_go',
-    visible: true,
-    children: [
-      {
-        title: 'Facturar',
-        visible: true,
-        icon: 'receipt',
-        link: 'Billing'
-      },
-      {
-        title: 'Facturas',
-        visible: true,
-        icon: 'receipt_long',
-        link: 'Invoice'
-      },
-      {
-        title: 'Reporte de caja',
-        visible: true,
-        icon: 'list_alt',
-        link: 'BoxReport'
-      },
-      {
-        title: 'Productos',
-        visible: true,
-        icon: 'format_list_bulleted',
-        link: 'Product'
-      },
-      {
-        title: 'Ordenes de comandas',
-        visible: true,
-        icon: 'receipt',
-        link: 'CommandOrder'
-      }
-    ]
-  },
-  {
-    title: 'Comanda',
-    icon: 'receipt',
-    visible: true,
-    children: [
-      {
-        title: 'Comanda',
-        visible: true,
-        icon: 'orderwise_bag',
-        link: 'Command'
-      }
-    ]
-  },
-  {
-
-    title: 'Gestión de personal',
-    icon: 'groups_2',
-    visible: true,
-    children: [
-      {
-        title: 'Vendedores',
-        visible: true,
-        icon: 'face_6',
-        link: 'Seller'
-      },
-      {
-        title: 'Clientes',
-        visible: true,
-        icon: 'person_3',
-        link: 'Client'
-      }
-    ]
-  },
-  {
-    title: 'Configuración',
-    icon: 'settings',
-    visible: true,
-    children: [
-      {
-        title: 'Roles',
-        visible: true,
-        icon: 'group',
-        link: 'Role'
-      },
-      {
-        title: 'Sala de estar',
-        visible: true,
-        icon: 'room_preferences',
-        link: 'LivingRoom'
-      },
-      {
-        title: 'Categorias',
-        visible: true,
-        icon: 'category',
-        link: 'Category'
-      },
-      {
-        title: 'Metodos de pago',
-        visible: true,
-        icon: 'payments',
-        link: 'PaymentMethod'
-      },
-      {
-        title: 'Impuestos',
-        visible: true,
-        icon: 'generating_tokens',
-        link: 'Taxe'
-      },
-      {
-        title: 'Tipos de factura',
-        visible: true,
-        icon: 'book',
-        link: 'InvoiceType'
-      },
-      {
-        title: 'Tipos de servicios',
-        visible: true,
-        icon: 'room_service',
-        link: 'TypeOfService'
-      },
-      {
-        title: 'Moneda',
-        visible: true,
-        icon: 'attach_money',
-        link: 'Coin'
-      },
-      {
-        title: 'Usuarios',
-        visible: true,
-        icon: 'person',
-        link: 'User'
-      }
-    ]
-  }
-]
-
-export default defineComponent({
+import { LocalStorage } from 'quasar'
+import { api } from 'src/boot/axios'
+// import NotificationComponent from 'src/components/NotificationComponent.vue'
+import { authentication } from 'src/stores/module-authentication'
+import { mapState, mapActions } from 'pinia'
+import { logo } from 'src/const/mixins'
+export default {
   name: 'MainLayout',
+  // components: { NotificationComponent },
+  data () {
+    return {
+      logo,
+      dialog: false,
+      branchOffice: null,
+      branchOfficeSelected: null,
+      branchOffices: [],
+      role: null,
+      numberOfNotifications: [],
+      notifications: [],
+      contentStyle: {
+        backgroundColor: 'rgba(0,0,0,0.02)',
+        color: '#555'
+      },
 
-  components: {
-    EssentialLink
-  },
-  created () {
-    // this.$q.dark.set(true)
-    this.$api.defaults.headers.common.authorization = `${localStorage.getItem('tokenType')} ${localStorage.getItem('accessToken')}`
+      contentActiveStyle: {
+        color: 'black'
+      },
+      thumbStyle: {
+        right: '2px',
+        borderRadius: '5px',
+        backgroundColor: '#fd7e14',
+        width: '7px',
+        opacity: 1
+      },
+      labelDrown: null,
+      dataMenu: [],
+      active: true,
+      visibleLoading: false,
+      titleApp: null,
+      route: '',
+      modules: [],
+      /**
+       * Status menu
+       *
+       * @type {Bolean} status menu
+       */
+      leftDrawerOpen: false,
+      miniState: false,
+      titleMenu: 'Opciones'
+    }
   },
   computed: {
-    title () {
-      let titleNotCHildren = linksList.find((link) => {
-        return link.route === this.$route.name
-      })
-      if (!titleNotCHildren) {
-        linksList.forEach(child => {
-          if (child.children) {
-            const titleNotCHildrenEach = child.children.find(ch => {
-              return ch.link === this.$route.name
-            })
-            if (titleNotCHildrenEach) {
-              titleNotCHildren = titleNotCHildrenEach
-            }
-          }
+    ...mapState(authentication, ['userSession'])
+  },
+  watch: {
+    modules (value) {
+      if (value) {
+        this.dataMenu = value.filter((element) => {
+          return (
+            element.modules.filter((module) => {
+              return this.validateRole(module.roles)
+            }).length > 0
+          )
         })
       }
-      return titleNotCHildren
-    },
-    dataMenu () {
-      return linksList.filter(link => {
-        if (link.children) {
-          return link.children.filter(child => {
-            return this.validateRole(child.link)
-          }).length > 0
-        }
-        return this.validateRole(link.link)
-      })
     }
   },
-  setup () {
-    const leftDrawerOpen = ref(false)
-
-    const userSession = JSON.parse(localStorage.getItem('user'))
-    // const route = useRoute()
-    const router = useRouter()
-    return {
-      essentialLinks: linksList,
-      leftDrawerOpen,
-      userSession,
-      toggleLeftDrawer () {
-        leftDrawerOpen.value = !leftDrawerOpen.value
-      },
-      /**
-       * Validate role
-       * @param {String} route route
-       */
-      validateRole (route) {
-        const role = JSON.parse(localStorage.getItem('user')).role
-        const modules = []
-        role.modules.forEach(module => {
-          modules.push(module)
+  mounted () {
+    // this.$echo
+    //   .private("App.Models.User." + this.userSession.id)
+    //   .notification((notification) => {
+    //     this.setNotification(notification);
+    //   });
+  },
+  created () {
+    this.getAllModules()
+    this.loadingPage()
+    this.getDataNotification()
+  },
+  methods: {
+    ucwords (data) {
+      return data
+    },
+    /**
+     * Update data
+     */
+    update () {
+      window.location.reload(true)
+    },
+    // setNotification({ data }) {
+    //   Notification.requestPermission().then((permission) => {
+    //     if (permission === "granted") {
+    //       this.getDataNotification();
+    //       new Notification(
+    //         `Orden ${data.ownerable_id} ${this.$t(
+    //           `listOrderPayment.${data.name}`
+    //         )}`,
+    //         {
+    //           body: data.description,
+    //           icon: "/icons/icon-128x128.png",
+    //         }
+    //       );
+    //     }
+    //   });
+    // },
+    async getDataNotification () {
+      try {
+        const { data } = await api.get('notifications', {
+          params: { unread: true }
         })
-        return modules.find(module => module.link === route)
-      },
-      /**
-       * Logout
-       */
-      logout () {
-        localStorage.clear()
-        router.push({ name: 'Login' })
+        this.numberOfNotifications = data
+      } catch (error) {
+        console.log(error.message)
       }
-    }
+    },
+    /**
+     * Get all products
+     */
+    getAllModules () {
+      this.$api
+        .get('sections')
+        .then(({ data }) => {
+          this.modules = data
+          localStorage.setItem('sections', JSON.stringify(this.modules))
+        })
+        .catch((err) => {
+          console.log(err)
+          this.modules = JSON.parse(localStorage.getItem('sections'))
+        })
+    },
+    validateRole (roles = []) {
+      const rol = this.userSession.roles[0]
+      if (this.userSession.is_root) return true
+
+      if (roles && roles.length > 0 && rol) {
+        return roles.filter((element) => {
+          return element.id === rol.id
+        })[0]
+      }
+      return false
+    },
+    logoutAt () {
+      this.$router.push({ name: 'Login' })
+      this.logout()
+    },
+    /**
+     * Dark mode application
+     */
+    darkMode () {
+      this.$q.dark.toggle()
+      LocalStorage.set('dark', this.$q.dark.isActive)
+    },
+    /**
+     * Loading applications
+     */
+    loadingPage () {
+      this.$q.dark.set(LocalStorage.getItem('dark'))
+      this.titleApp =
+        this.userSession.roles[0].modules.find(
+          (module) => module.route === this.$route.name
+        )?.name || this.$route.name.toLowerCase()
+    },
+    /**
+     * Change route
+     * @param  {String} data name route
+     */
+    changeRoute (data, listName) {
+      this.$router.push({ name: data })
+      this.route = data
+      this.titleApp = listName
+    },
+    /**
+     * Validate device
+     * @param  {String} validate device
+     */
+    validateDevice (device) {
+      return this.$q.platform.is[device]
+    },
+    ...mapActions(authentication, ['logout'])
   }
-})
+}
 </script>
+
+<!-- <style lang="sass">
+.my-menu-link
+  color: white
+  background: #4A235A
+</style> -->

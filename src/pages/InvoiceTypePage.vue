@@ -144,7 +144,6 @@ export default {
       visible: false,
       openAddInvoiceType: false,
       openEditInvoiceType: null,
-      userSession: null,
       taxes: [],
       columns: [
         {
@@ -164,7 +163,7 @@ export default {
         {
           name: 'acronym_serie',
           align: 'left',
-          label: 'Acronimo de serie',
+          label: 'Acrónimo de serie',
           field: 'acronym_serie',
           sortable: true
         }
@@ -183,11 +182,6 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.invoiceType.user_created_id = this.userSession.id
-    this.invoiceType.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {
