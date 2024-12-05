@@ -1,17 +1,18 @@
 <template>
-  <div style="height: 100vh;" class="flex flex-center bg-login">
+  <div style="height: 100vh" class="flex flex-center bg-login">
     <div
       class="row"
-      :style="`${$q.screen.lt.sm ? 'width: 350px;' : 'width: 90vw; max-width: 1000px;'} min-height: 500px; box-shadow: rgba(0, 0, 0, 0.6) 0px 5px 15px; ${$q.screen.lt.sm ? 'border-radius: 10px;' : 'border-radius: 40px;'} background-color: white;`">
+      :style="`${$q.screen.lt.sm ? 'width: 350px;' : 'width: 90vw; max-width: 1000px;'} min-height: 500px; box-shadow: rgba(0, 0, 0, 0.6) 0px 5px 15px; ${$q.screen.lt.sm ? 'border-radius: 10px;' : 'border-radius: 40px;'} background-color: white;`"
+    >
       <div class="col-6" v-if="!$q.screen.lt.sm">
         <q-img src="images/bg-login.png" alt="bg-login" style="border-radius: 40px 170px 170px 40px; min-height: 500px;"/>
       </div>
       <div :class="`flex flex-center q-pa-lg ${$q.screen.lt.sm ? 'col-12' : 'col-6'}`" style="position: relative;">
         <div class="text-center full-width" style="position: absolute; top: 20px;">
-          <q-img :src="logo.color" style="width: 240px; max-width: 80vw;"/>
+          <q-img :src="logo.color" style='width: 240px; max-width: 80vw;'/>
         </div>
-        <q-form @submit="login" class="flex-column" style="width: 400px; max-width: 70vw;">
-          <div class="text-h5 q-mb-md">Iniciar sesión</div>
+        <q-form @submit="loginAt" class="flex-column" style="width: 400px; max-width: 70vw;">
+          <div class='text-h5 q-mb-md'>Iniciar sesión</div>
           <q-input
             class="q-mt-sm"
             color="primary"
@@ -38,7 +39,8 @@
             outlined
             dense
             @keyup.enter="login"
-            :rules="[val => !!val || 'El campo es requerido.']">
+            :rules="[val => !!val || 'El campo es requerido.']"
+          >
             <template v-slot:prepend>
               <q-icon name="lock"/>
             </template>
@@ -83,32 +85,35 @@
 </template>
 <script>
 import { logo, qBitsLogo } from 'src/const/mixins'
-
+import { Notify } from 'quasar'
+import { mapActions } from 'pinia'
+import { authentication } from 'stores/module-authentication'
 export default {
+  name: 'LoginPage',
   data () {
     return {
-      remember: true,
-      messageLogin: {
-        'Request failed with status code 401': 'Credenciales incorrectas',
-        'Network Error': 'Error de red',
-        "Cannot read properties of undefined (reading 'route')": 'El rol no tiene acceso a los modulos del menu',
-        'auth/too-many-requests': 'El acceso a esta cuenta se ha inhabilitado temporalmente debido a muchos intentos fallidos de inicio de sesión'
-      },
-      logo,
       qBitsLogo,
+      remember: true,
+      dialog: false,
+      logo,
+      slide: 'style',
       /**
-         * Email User
-         * @type {String}
-         */
+       * Email User
+       * @type {String}
+       */
       username: '',
       /**
-         * Password User
-         * @type {String}
-         */
+       * Password User
+       * @type {String}
+       */
       password: '',
 
       btnDisable: false,
-      urlDownload: null
+      urlDownload: null,
+      messageError: {
+        'The user credentials were incorrect.':
+          'El usuario o contraseña son incorrectos.'
+      }
     }
   },
   computed: {
@@ -117,46 +122,36 @@ export default {
     }
   },
   methods: {
-    setRouter (roles) {
-      const modules = []
-      roles.forEach(role => {
-        role.modules.forEach(module => {
-          modules.push(module)
-        })
-      })
-      const moduleFind = modules[0]
-      this.$router.push({ name: moduleFind.route })
-    },
-    setDataSessionStorage (data) {
-      localStorage.setItem('accessToken', data.access_token)
-      localStorage.setItem('refreshToken', data.refresh_token)
-      localStorage.setItem('tokenType', data.token_type)
-      localStorage.setItem('expiresIn', data.expires_in)
-      localStorage.setItem('user', JSON.stringify(data.user))
-    },
     /**
      * Login app
      */
-    async login () {
-      this.btnDisable = true
-      this.$api.post('authentication/login', {
-        username: this.username,
-        password: this.password
-      })
-        .then(({ data }) => {
-          console.log(data)
-          this.setDataSessionStorage(data)
-          this.$router.push({ name: 'Billing' })
-          this.btnDisable = false
+    async loginAt () {
+      try {
+        this.btnDisable = true
+        await this.login({ username: this.username, password: this.password })
+        this.$router.push({ name: 'Billing' })
+        this.btnDisable = false
+      } catch (error) {
+        Notify.create({
+          message: error?.response?.data?.message || error.message,
+          color: 'negative',
+          position: 'top',
+          icon: 'warning',
+          timeout: 5000,
+          actions: [
+            {
+              label: 'OK',
+              color: 'white',
+              handler: () => {
+                this.btnDisable = false
+              }
+            }
+          ]
         })
-        .catch((error) => {
-          this.btnDisable = false
-          this.$q.notify({
-            message: this.messageLogin[error.message] ?? error.message,
-            color: 'negative'
-          })
-        })
-    }
+        this.btnDisable = false
+      }
+    },
+    ...mapActions(authentication, ['login'])
   }
 }
 </script>
