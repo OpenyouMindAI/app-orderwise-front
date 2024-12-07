@@ -4,7 +4,7 @@
       <q-select
         v-model="category"
         :options="categories"
-        style="width: 400px;"
+        style="width: 200px;"
         label="Categoría"
         option-value="id"
         option-label="name"
@@ -15,7 +15,7 @@
       <q-select
         v-model="invoiceType"
         :options="invoiceTypes"
-        style="width: 400px;"
+        style="width: 200px;"
         label="Tipo de factura"
         option-value="id"
         option-label="name"
@@ -26,7 +26,7 @@
       <q-select
         v-model="typeOfService"
         :options="typeOfServices"
-        style="width: 400px;"
+        style="width: 200px;"
         label="Tipo de servicio"
         option-value="id"
         option-label="name"
