@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="row q-gutter-sm q-mb-sm">
+    <div class="flex flex-wrap q-gutter-sm q-mb-sm">
       <q-select
         v-model="category"
         :options="categories"
@@ -55,7 +55,7 @@
                     @click="nextStatus(invoice, index - 1)"
                   />
                   <div class="text-bold">
-                    Orden
+                    {{  invoice?.invoice_type?.name }}
                     {{ invoice.code }}
                   </div>
                 </div>
@@ -94,8 +94,8 @@
                   Fecha: {{ formatDate(invoice.created_at, 'DD/MM/YYYY HH:mm:ss') }}
                 </div>
               </q-card-section>
-              <q-separator/>
-              <q-card-section  class="text-bold q-py-sm">
+              <q-separator v-if="invoice.delivery_date"/>
+              <q-card-section  class="text-bold q-py-sm" v-if="invoice.delivery_date">
                 <div>
                   Fecha de entrega: {{ formatDate(invoice.delivery_date, 'DD/MM/YYYY HH:mm:ss') }}
                 </div>

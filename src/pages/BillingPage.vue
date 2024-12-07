@@ -1095,6 +1095,19 @@ export default {
           })
         })
     },
+
+    setPayments (invoicePayments) {
+      invoicePayments?.forEach(payment => {
+        this.payments.push({
+          id: payment.payment_method_id,
+          name: payment.payment_method.name,
+          amount: payment.amount,
+          reference: payment.reference,
+          coin_id: payment.coin_id,
+          update: true
+        })
+      })
+    },
     /**
      * Get all tables
      */
@@ -1114,6 +1127,7 @@ export default {
           this.typeOfService = data.data.type_of_service
           this.tableSelected = data.data.tables.map(table => table.id)
           this.searchInvoice = false
+          this.setPayments(data.data.invoice_payments)
           this.search = ''
           this.calculateTotal()
         })
@@ -1184,6 +1198,7 @@ export default {
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
         exchange_rate: this.exchangeRate,
+        delivery_date: this.deliveryDate,
         products: this.products,
         payments: this.payments,
         tables: this.tableSelected
