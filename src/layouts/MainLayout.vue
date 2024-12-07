@@ -28,8 +28,8 @@
           icon="sync_alt"
           round
           flat
-          :color="$route.name === 'ChangeOrganization' ? 'secondary' : 'white'"
-          @click="changeRoute('ChangeOrganization', 'Cambio de organización')"
+          :color="$route.name === 'ChangeCompany' ? 'secondary' : 'white'"
+          @click="changeRoute('ChangeCompany', 'Cambio de empresa')"
         >
           <q-tooltip> Cambio de empresa </q-tooltip>
         </q-btn>
@@ -42,10 +42,10 @@
             {{ numberOfNotifications.length }}
           </q-badge>
           <q-popup-proxy>
-            <!-- <notification-component
+            <notification-component
               style-css="min-width: 25vw;"
               @on-load="getDataNotification"
-            /> -->
+            />
           </q-popup-proxy>
         </q-btn>
         <q-btn
@@ -228,13 +228,13 @@
 <script>
 import { LocalStorage } from 'quasar'
 import { api } from 'src/boot/axios'
-// import NotificationComponent from 'src/components/NotificationComponent.vue'
+import NotificationComponent from 'src/components/NotificationComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo } from 'src/const/mixins'
 export default {
   name: 'MainLayout',
-  // components: { NotificationComponent },
+  components: { NotificationComponent },
   data () {
     return {
       logo,

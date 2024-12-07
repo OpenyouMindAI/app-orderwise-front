@@ -24,6 +24,7 @@
     "qrcode": "^1.5.3",
     "quasar": "^2.6.0",
     "swiper": "^11.1.0",
+    "timeago.js": "^4.0.2",
     "vue": "^3.0.0",
     "vue-barcode-reader": "^1.0.2",
     "vue-html-to-paper": "^1.4.4",
