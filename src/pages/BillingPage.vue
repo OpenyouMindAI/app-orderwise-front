@@ -1154,7 +1154,6 @@ export default {
       this.payments = []
       this.products = []
       this.tableSelected = []
-      this.client = null
       this.products = []
       this.dialogPayment = false
       this.calculateTotal()
