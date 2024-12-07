@@ -302,7 +302,7 @@ export default {
   },
   created () {
     this.getAllModules()
-    this.loadingPage()
+    // this.loadingPage()
     this.getDataNotification()
   },
   methods: {
@@ -381,13 +381,13 @@ export default {
     /**
      * Loading applications
      */
-    loadingPage () {
-      this.$q.dark.set(LocalStorage.getItem('dark'))
-      this.titleApp =
-        this.userSession.roles[0].modules.find(
-          (module) => module.route === this.$route.name
-        )?.name || this.$route.name.toLowerCase()
-    },
+    // loadingPage () {
+    //   this.$q.dark.set(LocalStorage.getItem('dark'))
+    //   this.titleApp =
+    //     this.userSession.roles[0].modules.find(
+    //       (module) => module.route === this.$route.name
+    //     )?.name || this.$route.name.toLowerCase()
+    // },
     /**
      * Change route
      * @param  {String} data name route

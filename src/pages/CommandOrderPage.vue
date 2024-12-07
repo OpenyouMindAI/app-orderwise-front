@@ -81,15 +81,25 @@
                 </div>
               </q-card-section>
               <q-separator/>
-              <q-card-section  class="text-bold" v-if="invoice.description">
+              <q-card-section v-if="userSession.is_root" class="q-py-sm">
+                Por pagar: {{  formatNumber(invoice.total - invoice.total_payments) }}
+              </q-card-section>
+              <q-separator/>
+              <q-card-section  class="q-py-sm" v-if="invoice.description">
                 {{  invoice.description }}
               </q-card-section>
               <q-separator/>
-              <q-card-actions align="center" class="text-bold">
+              <q-card-section  class="text-bold q-py-sm">
                 <div>
                   Fecha: {{ formatDate(invoice.created_at, 'DD/MM/YYYY HH:mm:ss') }}
                 </div>
-              </q-card-actions>
+              </q-card-section>
+              <q-separator/>
+              <q-card-section  class="text-bold q-py-sm">
+                <div>
+                  Fecha de entrega: {{ formatDate(invoice.created_at, 'DD/MM/YYYY') }}
+                </div>
+              </q-card-section>
             </q-card>
           </q-card-section>
         </q-card>
@@ -101,9 +111,13 @@
 
 <script setup>
 import { api } from 'src/boot/axios'
-import { formatDate } from 'src/const/mixins'
+import { formatDate, formatNumber } from 'src/const/mixins'
 import { ref, onMounted, watch } from 'vue'
+import { authentication } from 'src/stores/module-authentication'
 
+const store = authentication()
+
+const userSession = store.userSession
 /**
  * Local storage
  */

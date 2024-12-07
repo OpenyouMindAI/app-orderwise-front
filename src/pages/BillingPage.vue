@@ -1,273 +1,249 @@
 <template>
-  <div class="q-pa-sm">
+  <q-page padding>
     <div v-if="$route.query.id">
       <span class="text-subtitle1">Factura número: </span>
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
-    <q-form ref="saveBill" @submit="saveBill">
-      <div class="row q-col-gutter-xs q-col-gutter-y-md">
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
-          <q-card class="bg-teal text-white" @click="exchange = !exchange">
-            <q-card-section class="text-subtitle2 text-center">
-              <span v-if="coin">{{ coin.symbol }}</span>{{ totalTaxe }}
-              <!-- <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
-                <q-banner>
-                  {{ (totalBill * exchangeRate).toFixed(2) }} Bs
-                </q-banner>
-              </q-popup-proxy> -->
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
-          <q-card class="bg-positive text-white">
-            <q-card-section class="text-subtitle2 text-center">
-              Cambio {{ coin?.symbol}} {{ exchangeRate }}
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-4">
-          <q-card class="bg-negative text-white">
-            <q-card-section class="text-subtitle2 text-center">
-              Items:
-              {{ products.length }}
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-12 col-xs-12">
-          <q-select
-            use-input
-            filled
-            dense
-            label="Cliente"
-            input-debounce="0"
-            option-value="id"
-            v-model="client"
-            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-            :options="clients"
-            :rules="[val => !!val || 'El campo es requerido.']"
-            @filter="filterClients"
-          >
-            <template v-slot:append>
-              <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
-            </template>
-          </q-select>
-        </div>
-        <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-xs-6">
-          <q-select
-            use-input
-            filled
-            dense
-            label="Tipo de factura"
-            input-debounce="0"
-            option-label="name"
-            option-value="id"
-            v-model="invoiceType"
-            :options="invoiceTypes"
-            :rules="[val => !!val || 'El campo es requerido.']"
-            @filter="filterInvoiceTypes"
-          />
-        </div>
-        <div class="col-xl-3 col-lg-3 col-md-2 col-sm-6 col-xs-6">
-          <q-select
-            use-input
-            filled
-            dense
-            label="Tipo de servicio"
-            input-debounce="0"
-            option-label="name"
-            option-value="id"
-            v-model="typeOfService"
-            :options="typeOfServices"
-            :rules="[val => !!val || 'El campo es requerido.']"
-            @filter="filterTypeOfServices"
-          />
-        </div>
-        <div class="col-xl-3 col-lg-3 col-md-2 col-sm-6 col-xs-6">
-          <q-select
-            filled
-            dense
-            label="Moneda"
-            option-label="name"
-            option-value="id"
-            v-model="coin"
-            :options="coins"
-            :rules="[val => !!val || 'El campo es requerido.']"
-          />
-        </div>
-        <div class="col-7">
-          <div class="row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6">
-              <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
-                <template v-slot:append>
-                  <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
-                </template>
-              </q-input>
-            </div>
-            <div class=" col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6 q-gutter-sm">
-              <q-btn color="primary" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
-                <q-badge floating color="negative">
-                  {{ tableSelected.length }}
-                </q-badge>
-              </q-btn>
-              <q-btn
-                color="secondary"
-                icon="attach_money"
-                @click="dialogPayment = true"
-                :loading="loadingPaymentMethods"
-              >
-                <q-badge floating color="negative">
-                  {{ payments.length }}
-                </q-badge>
-              </q-btn>
-              <q-btn
-                icon="save"
-                color="positive"
-                @click="saveWithoutPrint"
-              />
-              <q-btn
-                icon="search"
-                color="primary"
-                @click="searchInvoice = true"
-              />
-              <q-btn
-                icon="payments"
-                color="info"
-                @click="cashflow = true"
-              />
-              <q-btn
-                icon="clear"
-                color="negative"
-                @click="clear"
-              />
-            </div>
-            <div class="col-xs-12 col-sm-12 col-md-12">
-              <q-table
-                row-key="name"
-                title="Artículos"
-                dense
-                :rows="products"
-                :columns="columns"
-                :loading="loadingPage"
-                hide-pagination
-                v-model:pagination="pagination"
-              >
-                <template v-slot:body="props">
-                  <q-tr :props="props">
-                    <q-td key="barcode" :props="props">
-                      {{ props.row.barcode }}
-                    </q-td>
-                    <q-td key="name" :props="props">
-                      {{ props.row.name }}
-                    </q-td>
-                    <q-td key="amount" :props="props">
-                      {{ props.row.amount }}
-                      <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                        <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
-                      </q-popup-edit>
-                    </q-td>
-                    <q-td key="price" :props="props">
-                      {{ props.row.price }}
-                      <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                        <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
-                      </q-popup-edit>
-                    </q-td>
-                    <q-td key="subtotal" :props="props">
-                      {{ props.row.subtotal }}
-                    </q-td>
-                    <q-td key="actions" :props="props">
-                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
-                    </q-td>
-                  </q-tr>
-                </template>
-              </q-table>
-            </div>
+    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
+      <div class="row q-col-gutter-md">
+        <div class="col-12 row q-col-gutter-x-xs">
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+            <q-select
+              use-input
+              filled
+              dense
+              label="Cliente"
+              input-debounce="0"
+              option-value="id"
+              v-model="client"
+              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+              :options="clients"
+              :rules="[val => !!val || 'El campo es requerido.']"
+              @filter="filterClients"
+            >
+              <template v-slot:append>
+                <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+              </template>
+            </q-select>
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-6">
+            <q-select
+              use-input
+              filled
+              dense
+              label="Tipo de factura"
+              input-debounce="0"
+              option-label="name"
+              option-value="id"
+              v-model="invoiceType"
+              :options="invoiceTypes"
+              :rules="[val => !!val || 'El campo es requerido.']"
+              @filter="filterInvoiceTypes"
+            />
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-6">
+            <q-select
+              use-input
+              filled
+              dense
+              label="Tipo de servicio"
+              input-debounce="0"
+              option-label="name"
+              option-value="id"
+              v-model="typeOfService"
+              :options="typeOfServices"
+              :rules="[val => !!val || 'El campo es requerido.']"
+              @filter="filterTypeOfServices"
+            />
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-6">
+            <q-select
+              filled
+              dense
+              label="Moneda"
+              option-label="name"
+              option-value="id"
+              v-model="coin"
+              :options="coins"
+              :rules="[val => !!val || 'El campo es requerido.']"
+            />
           </div>
         </div>
-        <div class="col-5" style="max-height: 50px;">
-          <q-table
-            row-key="name"
-            dense
-            grid
-            hide-pagination
-            :rows="allProducts"
-            :columns="productColumns"
-            :loading="loadingPage"
-            :filter="filter"
-            v-model:pagination="pagination"
-          >
-            <template v-slot:top>
-              <div class="row full-width q-col-gutter-xs">
-                <div class="col-6">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    clearable
-                    label="Categorías"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="category"
-                    :options="categories"
-                    @filter="filterCategories"
-                  />
-                </div>
-                <div class="col-6">
-                  <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
-                    <template v-slot:append>
-                      <q-icon name="search" />
-                    </template>
-                  </q-input>
-                </div>
-              </div>
-            </template>
-            <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
-                <q-card class="my-card">
-                  <q-img
-                    style="height: 150px; width: 100%"
-                    :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                    @click="validateProduct(props.row)"
-                  >
-                    <div class="absolute-full text-subtitle2 flex flex-center">
-                      {{ props.row.name }}
-                    </div>
-                  </q-img>
-                </q-card>
-              </div>
-            </template>
-          </q-table>
+        <div class="row col-7 q-col-gutter-sm">
+          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6">
+            <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
+              <template v-slot:append>
+                <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
+              </template>
+            </q-input>
+          </div>
+          <div class=" col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6 q-gutter-x-sm">
+            <q-btn color="primary" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
+              <q-badge floating color="negative">
+                {{ tableSelected.length }}
+              </q-badge>
+            </q-btn>
+            <q-btn
+              color="secondary"
+              icon="attach_money"
+              @click="dialogPayment = true"
+              :loading="loadingPaymentMethods"
+            >
+              <q-badge floating color="negative">
+                {{ payments.length }}
+              </q-badge>
+            </q-btn>
+            <q-btn
+              icon="save"
+              color="positive"
+              @click="saveWithoutPrint"
+            />
+            <q-btn
+              icon="search"
+              color="primary"
+              @click="searchInvoice = true"
+            />
+            <q-btn
+              icon="payments"
+              color="info"
+              @click="cashflow = true"
+            />
+            <q-btn
+              icon="clear"
+              color="negative"
+              @click="clear"
+            />
+          </div>
+          <div class="col-xs-12 col-sm-12 col-md-12">
+            <q-table
+              row-key="name"
+              title="Artículos"
+              dense
+              :rows="products"
+              :columns="columns"
+              :loading="loadingPage"
+              hide-pagination
+              v-model:pagination="pagination"
+            >
+              <template v-slot:body="props">
+                <q-tr :props="props">
+                  <q-td key="barcode" :props="props">
+                    {{ props.row.barcode }}
+                  </q-td>
+                  <q-td key="name" :props="props">
+                    {{ props.row.name }}
+                  </q-td>
+                  <q-td key="amount" :props="props">
+                    {{ props.row.amount }}
+                    <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
+                      <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                    </q-popup-edit>
+                  </q-td>
+                  <q-td key="price" :props="props">
+                    {{ props.row.price }}
+                    <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
+                      <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                    </q-popup-edit>
+                  </q-td>
+                  <q-td key="subtotal" :props="props">
+                    {{ props.row.subtotal }}
+                  </q-td>
+                  <q-td key="actions" :props="props">
+                    <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
+                  </q-td>
+                </q-tr>
+              </template>
+            </q-table>
+          </div>
+          <div class="col-12">
+            <q-list dense separator v-if="invoiceType">
+              <q-item>
+                <q-item-section>
+                  Op Gravada
+                </q-item-section>
+                <q-item-section side v-if="coin">
+                  {{ coin.symbol }}{{ totalBill }}
+                </q-item-section>
+              </q-item>
+              <q-item v-for="taxe in invoiceType.taxes" :key="taxe.id">
+                <q-item-section>
+                  {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
+                </q-item-section>
+                <q-item-section side v-if="coin">
+                  {{ coin.symbol }}{{ calculateTax(taxe) }}
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section>
+                  Importe total
+                </q-item-section>
+                <q-item-section side v-if="coin">
+                  {{ coin.symbol }}{{ totalTaxe }}
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+          <div class="col-12 q-gutter-sm">
+            <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+            <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" />
+          </div>
         </div>
-        <div class="col-7">
-          <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" />
-        </div>
-        <div class="col-7">
-          <q-list dense separator v-if="invoiceType">
-            <q-item>
-              <q-item-section>
-                Op Gravada
-              </q-item-section>
-              <q-item-section side v-if="coin">
-                {{ coin.symbol }}{{ totalBill }}
-              </q-item-section>
-            </q-item>
-            <q-item v-for="taxe in invoiceType.taxes" :key="taxe.id">
-              <q-item-section>
-                {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
-              </q-item-section>
-              <q-item-section side v-if="coin">
-                {{ coin.symbol }}{{ calculateTax(taxe) }}
-              </q-item-section>
-            </q-item>
-            <q-item>
-              <q-item-section>
-                Importe total
-              </q-item-section>
-              <q-item-section side v-if="coin">
-                {{ coin.symbol }}{{ totalTaxe }}
-              </q-item-section>
-            </q-item>
-          </q-list>
+        <div class="col-5">
+          <q-scroll-area style="height: calc(100vh - 250px);">
+            <q-table
+              row-key="name"
+              dense
+              grid
+              hide-pagination
+              :rows="allProducts"
+              :columns="productColumns"
+              :loading="loadingPage"
+              :filter="filter"
+              v-model:pagination="pagination"
+            >
+              <template v-slot:top>
+                <div class="row full-width q-col-gutter-xs">
+                  <div class="col-6">
+                    <q-select
+                      use-input
+                      filled
+                      dense
+                      clearable
+                      label="Categorías"
+                      input-debounce="0"
+                      option-label="name"
+                      option-value="id"
+                      v-model="category"
+                      :options="categories"
+                      @filter="filterCategories"
+                    />
+                  </div>
+                  <div class="col-6">
+                    <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
+                      <template v-slot:append>
+                        <q-icon name="search" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
+              </template>
+              <template v-slot:item="props">
+                <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
+                  <q-card class="my-card">
+                    <q-img
+                      style="height: 150px; width: 100%"
+                      :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                      @click="validateProduct(props.row)"
+                    >
+                      <div class="absolute-full text-subtitle2 flex flex-center">
+                        {{ props.row.name }}
+                      </div>
+                    </q-img>
+                  </q-card>
+                </div>
+              </template>
+            </q-table>
+          </q-scroll-area>
         </div>
       </div>
     </q-form>
@@ -543,7 +519,7 @@
     <div id="printMe" v-show="false">
       <invoice-print :data="invoice" v-if="invoice"/>
     </div>
-  </div>
+  </q-page>
 </template>
 
 <script>
@@ -553,6 +529,7 @@ import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-re
 import InvoicePrint from '../components/InvoicePrint.vue'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
+import { formatDate } from 'src/const/mixins'
 // import BillOfSale from '../components/BillOfSale.vue'
 export default {
   // name: 'PageName',
@@ -571,6 +548,7 @@ export default {
       description: '',
       invoiceDescription: '',
       cashflow: false,
+      deliveryDate: formatDate(Date(), 'YYYY-MM-DD'),
       searchInvoice: false,
       search: '',
       loadingClient: false,
