@@ -23,6 +23,17 @@
         filled
         clearable
       />
+      <q-select
+        v-model="typeOfService"
+        :options="typeOfServices"
+        style="width: 400px;"
+        label="Tipo de servicio"
+        option-value="id"
+        option-label="name"
+        dense
+        filled
+        clearable
+      />
     </div>
     <div class="board-command">
       <div v-for="(status, index) in statuses" :key="status" class="q-pa-xs">
@@ -69,6 +80,11 @@
                   </span>
                 </div>
               </q-card-section>
+              <q-separator/>
+              <q-card-section  class="text-bold" v-if="invoice.description">
+                {{  invoice.description }}
+              </q-card-section>
+              <q-separator/>
               <q-card-actions align="center" class="text-bold">
                 <div>
                   Fecha: {{ formatDate(invoice.created_at, 'DD/MM/YYYY HH:mm:ss') }}
@@ -97,6 +113,10 @@ const categoryCommand = JSON.parse(localStorage.getItem('category-command')) || 
  */
 const invoiceTypeCommand = JSON.parse(localStorage.getItem('invoiceType-command')) || null
 /**
+ * Local storage
+ */
+const typeOfServiceCommand = JSON.parse(localStorage.getItem('typeOfService-command')) || null
+/**
  * Select category
  * @type {Object}
  */
@@ -111,6 +131,13 @@ const invoiceType = ref(invoiceTypeCommand)
  * @type {Array}
  */
 const invoices = ref([])
+/**
+ * List invoice
+ * @type {Array}
+ */
+const typeOfServices = ref([])
+
+const typeOfService = ref(typeOfServiceCommand)
 
 /**
  * List invoice
@@ -161,6 +188,7 @@ onMounted(() => {
   getInvoices(params.value)
   getCategories()
   getInvoiceTypes()
+  getTypeOfServices()
 })
 
 watch(category, async (cat) => {
@@ -182,6 +210,18 @@ watch(invoiceType, async (it) => {
     dataEqualFilter: {
       ...params.value.dataEqualFilter,
       invoice_type_id: it?.id
+    }
+  }
+  await getInvoices(params.value)
+})
+
+watch(typeOfService, async (it) => {
+  localStorage.setItem('typeOfService-command', JSON.stringify(it))
+  params.value = {
+    ...params.value,
+    dataEqualFilter: {
+      ...params.value.dataEqualFilter,
+      type_of_service_id: it?.id
     }
   }
   await getInvoices(params.value)
@@ -209,6 +249,18 @@ const getCategories = async () => {
   try {
     const { data } = await api.get('categories')
     categories.value = data
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+/**
+ * Get all invoices
+ */
+const getTypeOfServices = async () => {
+  try {
+    const { data } = await api.get('type-of-services')
+    typeOfServices.value = data
   } catch (error) {
     console.log(error)
   }

@@ -239,6 +239,9 @@
           </q-table>
         </div>
         <div class="col-7">
+          <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" />
+        </div>
+        <div class="col-7">
           <q-list dense separator v-if="invoiceType">
             <q-item>
               <q-item-section>
@@ -566,6 +569,7 @@ export default {
       amount: 0,
       loadingCashflow: false,
       description: '',
+      invoiceDescription: '',
       cashflow: false,
       searchInvoice: false,
       search: '',
@@ -630,6 +634,7 @@ export default {
       },
       filter: '',
       barcode: null,
+      withoutPayment: ['Ticket', 'Pedido'],
       dialogScanner: false,
       withoutPrint: false,
       loadingLivingRoom: false,
@@ -1182,7 +1187,7 @@ export default {
     },
 
     setParamsBill () {
-      if (this.typeOfService?.code !== 2 && this.payments?.length <= 0) {
+      if (!this.withoutPayment.includes(this.invoiceType?.name) && this.payments?.length <= 0) {
         this.$q.notify({
           message: 'No a seleccionado un pago',
           icon: 'warning',
@@ -1196,6 +1201,7 @@ export default {
         client_id: this.client.id,
         seller_id: this.userSession.id,
         coin_id: this.coin.id,
+        description: this.invoiceDescription,
         invoice_taxes: this.invoiceTaxes,
         type_of_service_id: this.typeOfService.id,
         invoice_type_id: this.invoiceType.id,
