@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
             <q-select
               use-input
               filled
@@ -26,7 +26,7 @@
               </template>
             </q-select>
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-6">
+          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
             <q-select
               use-input
               filled
@@ -41,7 +41,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-6">
+          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
             <q-select
               use-input
               filled
@@ -54,18 +54,6 @@
               :options="typeOfServices"
               :rules="[val => !!val || 'El campo es requerido.']"
               @filter="filterTypeOfServices"
-            />
-          </div>
-          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-6">
-            <q-select
-              filled
-              dense
-              label="Moneda"
-              option-label="name"
-              option-value="id"
-              v-model="coin"
-              :options="coins"
-              :rules="[val => !!val || 'El campo es requerido.']"
             />
           </div>
         </div>
@@ -184,6 +172,16 @@
             </q-list>
           </div>
           <div class="col-12 q-gutter-sm">
+            <q-select
+              filled
+              dense
+              label="Moneda"
+              option-label="name"
+              option-value="id"
+              v-model="coin"
+              :options="coins"
+              :rules="[val => !!val || 'El campo es requerido.']"
+            />
             <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
             <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" />
           </div>
