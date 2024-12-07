@@ -97,7 +97,7 @@
               <q-separator/>
               <q-card-section  class="text-bold q-py-sm">
                 <div>
-                  Fecha de entrega: {{ formatDate(invoice.created_at, 'DD/MM/YYYY') }}
+                  Fecha de entrega: {{ formatDate(invoice.delivery_date, 'DD/MM/YYYY HH:mm:ss') }}
                 </div>
               </q-card-section>
             </q-card>
