@@ -15,7 +15,7 @@ const validModule = ($store, to, next) => {
   }
 }
 
-const modeleExcept = ['Profile', 'ChangeOrganization']
+const modeleExcept = ['Profile', 'ChangeCompany']
 
 export default boot(({ router, store }) => {
   router.beforeEach(async (to, from, next) => {
