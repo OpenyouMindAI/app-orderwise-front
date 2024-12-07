@@ -548,7 +548,7 @@ export default {
       description: '',
       invoiceDescription: '',
       cashflow: false,
-      deliveryDate: formatDate(Date(), 'YYYY-MM-DD'),
+      deliveryDate: formatDate(Date(), 'YYYY-MM-DD HH:mm:ss'),
       searchInvoice: false,
       search: '',
       loadingClient: false,
