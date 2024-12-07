@@ -13,14 +13,14 @@
         </div>
       </div>
       <div class="col-xl-4 col-lg-7 col-md-8 col-sm-10 col-xs-12">
-        <change-organization :organizations="organizations" />
+        <change-company :organizations="organizations" />
       </div>
     </div>
   </q-page>
 </template>
 <script setup>
 import { api } from 'src/boot/axios'
-import ChangeOrganization from 'src/components/Organization/ChangeOrganization.vue'
+import ChangeCompany from 'src/components/Company/ChangeCompany.vue'
 import { loading } from 'src/const/mixins'
 import { onBeforeMount, ref } from 'vue'
 /**
