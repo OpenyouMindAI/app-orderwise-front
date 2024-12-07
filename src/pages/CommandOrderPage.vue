@@ -15,7 +15,7 @@
       <q-select
         v-model="invoiceType"
         :options="invoiceTypes"
-        style="width: 200px;"
+        style="width: 400px;"
         label="Tipo de factura"
         option-value="id"
         option-label="name"
