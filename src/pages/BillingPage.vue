@@ -1129,6 +1129,8 @@ export default {
           this.searchInvoice = false
           this.setPayments(data.data.invoice_payments)
           this.search = ''
+          this.invoiceDescription = data.data.description
+          this.deliveryDate = data.data.delivery_date
           this.calculateTotal()
         })
         .catch(err => {
@@ -1147,6 +1149,8 @@ export default {
       this.products = []
       this.tableSelected = []
       this.products = []
+      this.invoiceDescription = ''
+      this.deliveryDate = formatDate(Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
       this.calculateTotal()
       this.$router.push({ name: 'Billing' })
