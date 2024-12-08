@@ -190,8 +190,8 @@ const statuses = ref([
 const loading = ref(false)
 
 const params = ref({
-  sortOrder: 'desc',
-  sortBy: 'id',
+  sortOrder: 'asc',
+  sortBy: 'delivery_date',
   dataEqualFilter: {
     'products.category_id': categoryCommand?.id,
     invoice_type_id: invoiceTypeCommand?.id

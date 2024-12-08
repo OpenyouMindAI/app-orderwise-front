@@ -1191,6 +1191,7 @@ export default {
       }
 
       return {
+        ...this.invoice,
         client_id: this.client.id,
         seller_id: this.userSession.id,
         coin_id: this.coin.id,
