@@ -387,7 +387,8 @@
                 {{ table.name }} {{ statusTable[table.status] }}
               </span>
               <q-checkbox v-model="tableSelected" :val="table.id" color="teal" class="fixed-top-right" v-if="table.status === 'unoccupied'"/>
-              <q-btn icon="restart_alt" color="negative" size="sm" round class="fixed-top-right" @click="freeTable(table)" v-else/>
+              <q-btn icon="receipt" color="secondary" size="sm" round class="fixed-top-right" @click="selectInvoice(table)" v-else/>
+              <q-btn icon="close" color="negative" size="sm" round  @click="freeTable(table)" v-if="table.status === 'busy'"/>
             </draggable-resizable-vue>
           </draggable-resizable-container>
         </q-card-section>
@@ -744,6 +745,7 @@ export default {
     this.getPaymentMethods()
     this.getAllProducts()
     this.getLivingRooms()
+    if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
     async saveCashflow () {
@@ -1039,11 +1041,24 @@ export default {
      * Free table
      * @param {Object} table  table data
      */
-
-    freeTable (table) {
+    selectInvoice (table) {
       const invoiceOne = table.invoices[0]
       this.$router.push({ name: 'Billing', query: { id: invoiceOne.id } })
       this.dialogTable = false
+    },
+    async freeTable (table) {
+      try {
+        this.$api.post('free-tables', {
+          id: table.id
+        })
+        this.getTables(this.livingRoom)
+      } catch (error) {
+        this.$q.notify({
+          message: error.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
     },
     /**
      * Get all tables
