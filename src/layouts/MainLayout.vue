@@ -139,29 +139,12 @@
           {{ userSession?.organization_session?.name }}
         </q-tooltip>
       </div>
-      <q-scroll-area
-        :thumb-style="thumbStyle"
-        :content-style="contentStyle"
-        :content-active-style="contentActiveStyle"
-        :style="
+      <div :style="
           !$q.screen.lt.md
             ? 'height: calc(100vh - 108px);'
             : 'height: calc(100vh - 114px);'
         "
       >
-        <!-- <q-list>
-          <q-item v-ripple clickable active-class="my-menu-link">
-            <q-item-section avatar class="q-ml-sm">
-              <q-icon name="home" />
-            </q-item-section>
-            <q-item-section @click="changeRoute('Home', 'Inicio')">
-              <q-item-label>
-                Inicio
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list> -->
-
         <q-expansion-item
           v-for="category_module in dataMenu"
           expand-separator
@@ -192,7 +175,7 @@
             </q-item>
           </div>
         </q-expansion-item>
-      </q-scroll-area>
+      </div>
       <div
         class="bg-primary text-white flex flex-center q-gutter-sm q-mt-xs q-pb-sm absolute-bottom"
       >
@@ -245,21 +228,6 @@ export default {
       role: null,
       numberOfNotifications: [],
       notifications: [],
-      contentStyle: {
-        backgroundColor: 'rgba(0,0,0,0.02)',
-        color: '#555'
-      },
-
-      contentActiveStyle: {
-        color: 'black'
-      },
-      thumbStyle: {
-        right: '2px',
-        borderRadius: '5px',
-        backgroundColor: '#fd7e14',
-        width: '7px',
-        opacity: 1
-      },
       labelDrown: null,
       dataMenu: [],
       active: true,

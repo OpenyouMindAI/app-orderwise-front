@@ -57,137 +57,144 @@
             />
           </div>
         </div>
-        <div class="row col-7 q-col-gutter-sm">
-          <div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6">
-            <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
-              <template v-slot:append>
-                <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
-              </template>
-            </q-input>
-          </div>
-          <div class=" col-xl-6 col-lg-6 col-md-12 col-sm-12 col-xs-6 q-gutter-x-sm">
-            <q-btn color="primary" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
-              <q-badge floating color="negative">
-                {{ tableSelected.length }}
-              </q-badge>
-            </q-btn>
-            <q-btn
-              color="secondary"
-              icon="attach_money"
-              @click="dialogPayment = true"
-              :loading="loadingPaymentMethods"
-            >
-              <q-badge floating color="negative">
-                {{ payments.length }}
-              </q-badge>
-            </q-btn>
-            <q-btn
-              icon="save"
-              color="positive"
-              @click="saveWithoutPrint"
-            />
-            <q-btn
-              icon="search"
-              color="primary"
-              @click="searchInvoice = true"
-            />
-            <q-btn
-              icon="payments"
-              color="info"
-              @click="cashflow = true"
-            />
-            <q-btn
-              icon="clear"
-              color="negative"
-              @click="clear"
-            />
-          </div>
-          <div class="col-xs-12 col-sm-12 col-md-12">
-            <q-table
-              row-key="name"
-              title="Artículos"
-              dense
-              :rows="products"
-              :columns="columns"
-              :loading="loadingPage"
-              hide-pagination
-              v-model:pagination="pagination"
-            >
-              <template v-slot:body="props">
-                <q-tr :props="props">
-                  <q-td key="barcode" :props="props">
-                    {{ props.row.barcode }}
-                  </q-td>
-                  <q-td key="name" :props="props">
-                    {{ props.row.name }}
-                  </q-td>
-                  <q-td key="amount" :props="props">
-                    {{ props.row.amount }}
-                    <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                      <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
-                    </q-popup-edit>
-                  </q-td>
-                  <q-td key="price" :props="props">
-                    {{ props.row.price }}
-                    <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                      <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
-                    </q-popup-edit>
-                  </q-td>
-                  <q-td key="subtotal" :props="props">
-                    {{ props.row.subtotal }}
-                  </q-td>
-                  <q-td key="actions" :props="props">
-                    <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
-                  </q-td>
-                </q-tr>
-              </template>
-            </q-table>
-          </div>
-          <div class="col-12">
-            <q-list dense separator v-if="invoiceType">
-              <q-item>
-                <q-item-section>
-                  Op Gravada
-                </q-item-section>
-                <q-item-section side v-if="coin">
-                  {{ coin.symbol }}{{ totalBill }}
-                </q-item-section>
-              </q-item>
-              <q-item v-for="taxe in invoiceType.taxes" :key="taxe.id">
-                <q-item-section>
-                  {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
-                </q-item-section>
-                <q-item-section side v-if="coin">
-                  {{ coin.symbol }}{{ calculateTax(taxe) }}
-                </q-item-section>
-              </q-item>
-              <q-item>
-                <q-item-section>
-                  Importe total
-                </q-item-section>
-                <q-item-section side v-if="coin">
-                  {{ coin.symbol }}{{ totalTaxe }}
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
-          <div class="col-12 q-gutter-sm">
-            <q-select
-              filled
-              dense
-              label="Moneda"
-              option-label="name"
-              option-value="id"
-              v-model="coin"
-              :options="coins"
-              :rules="[val => !!val || 'El campo es requerido.']"
-            />
-            <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
-            <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" />
+        <div class="col-xs-12 col-sm-12 col-md-7 col-lg-7 col-xl-7 q-col-gutter-sm">
+          <div class="row q-col-gutter-sm">
+            <div class="col-xl-6 col-lg-6 col-md-5 col-sm-12 col-xs-12">
+              <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
+                <template v-slot:append>
+                  <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
+                </template>
+              </q-input>
+            </div>
+            <div class=" col-xl-6 col-lg-6 col-md-7 col-sm-12 col-xs-12 q-gutter-xs">
+              <q-btn :dense="$q.screen.xs" color="primary" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
+                <q-badge floating color="negative">
+                  {{ tableSelected.length }}
+                </q-badge>
+              </q-btn>
+              <q-btn
+                color="secondary"
+                icon="attach_money"
+                :loading="loadingPaymentMethods"
+                :dense="$q.screen.xs"
+                @click="dialogPayment = true"
+              >
+                <q-badge floating color="negative">
+                  {{ payments.length }}
+                </q-badge>
+              </q-btn>
+              <q-btn
+                icon="save"
+                color="positive"
+                :dense="$q.screen.xs"
+                @click="saveWithoutPrint"
+              />
+              <q-btn
+                icon="search"
+                color="primary"
+                :dense="$q.screen.xs"
+                @click="searchInvoice = true"
+              />
+              <q-btn
+                icon="payments"
+                color="info"
+                :dense="$q.screen.xs"
+                @click="cashflow = true"
+              />
+              <q-btn
+                icon="clear"
+                color="negative"
+                :dense="$q.screen.xs"
+                @click="clear"
+              />
+            </div>
+            <div class="col-12">
+              <q-table
+                row-key="name"
+                title="Artículos"
+                dense
+                :rows="products"
+                :columns="columns"
+                :loading="loadingPage"
+                hide-pagination
+                v-model:pagination="pagination"
+              >
+                <template v-slot:body="props">
+                  <q-tr :props="props">
+                    <q-td key="barcode" :props="props">
+                      {{ props.row.barcode }}
+                    </q-td>
+                    <q-td key="name" :props="props">
+                      {{ props.row.name }}
+                    </q-td>
+                    <q-td key="price" :props="props">
+                      {{ props.row.price }}
+                      <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
+                        <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                      </q-popup-edit>
+                    </q-td>
+                    <q-td key="amount" :props="props">
+                      {{ formatNumber(props.row.amount) }}
+                      <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
+                        <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                      </q-popup-edit>
+                    </q-td>
+                    <q-td key="subtotal" :props="props">
+                      {{ formatNumber(props.row.subtotal) }}
+                    </q-td>
+                    <q-td key="actions" :props="props">
+                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
+                    </q-td>
+                  </q-tr>
+                </template>
+              </q-table>
+            </div>
+            <div class="col-12">
+              <q-list dense separator v-if="invoiceType">
+                <q-item>
+                  <q-item-section>
+                    Op Gravada
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{ coin.symbol }}{{ formatNumber(totalBill) }}
+                  </q-item-section>
+                </q-item>
+                <q-item v-for="taxe in invoiceType.taxes" :key="taxe.id">
+                  <q-item-section>
+                    {{ taxe.name }} ({{ formatNumber(taxe.pivot.amount) }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{ coin.symbol }}{{ formatNumber(calculateTax(taxe)) }}
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    Importe total
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{ coin.symbol }}{{ formatNumber(totalTaxe) }}
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+            <div class="col-12 q-gutter-xs">
+              <q-select
+                filled
+                dense
+                label="Moneda"
+                option-label="name"
+                option-value="id"
+                v-model="coin"
+                :options="coins"
+                :rules="[val => !!val || 'El campo es requerido.']"
+              />
+              <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+            </div>
           </div>
         </div>
-        <div class="col-5">
-          <q-scroll-area style="height: calc(100vh - 250px);">
+        <div class="col-xs-12 col-sm-12 col-md-5 col-lg-5 col-xl-5">
+          <div style="height: calc(100vh - 250px);">
             <q-table
               row-key="name"
               dense
@@ -231,7 +238,7 @@
                     <q-img
                       style="height: 150px; width: 100%"
                       :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                      @click="validateProduct(props.row)"
+                      @click="validateProduct(props.row, true)"
                     >
                       <div class="absolute-full text-subtitle2 flex flex-center">
                         {{ props.row.name }}
@@ -241,7 +248,7 @@
                 </div>
               </template>
             </q-table>
-          </q-scroll-area>
+          </div>
         </div>
       </div>
     </q-form>
@@ -515,9 +522,55 @@
         </q-form>
       </q-card>
     </q-dialog>
-    <div id="printMe" v-show="false">
-      <invoice-print :data="invoice" v-if="invoice"/>
-    </div>
+    <q-dialog v-model="quantityDialog">
+      <q-card style="width: 600px; max-width: 80vw;">
+        <q-form @submit="validateProduct(productQuantity)">
+          <q-card-section class="flex justify-between items-center q-pb-none">
+            <span class="text-h6">Cantidad del producto</span>
+            <q-btn icon="close" flat round dense @click="quantityDialog = false" />
+          </q-card-section>
+          <q-card-section class="q-pb-xs">
+            <div class="text-subtitle1 text-center">
+              {{  productQuantity.name }} x {{ productQuantity.unit_of_measure.acronym }}
+            </div>
+          </q-card-section>
+          <q-card-section class="flex q-col-gutter-sm justify-between items-center">
+            <q-input
+              filled
+              v-model.number="quantity"
+              autofocus
+              label="Cantidad"
+              type="number"
+              style="width: 50%;"
+            />
+            <q-input
+              filled
+              v-model.number="currentAmount"
+              label="Importe"
+              type="number"
+              style="width: 50%;"
+            />
+          </q-card-section>
+          <q-card-section class="q-pt-xs">
+            <div class="text-subtitle1 text-center text-weight-bold">
+              Precio por unidad = {{ formatNumber(productQuantity.price) }}
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn
+              label="Cerrar"
+              @click="quantityDialog = false"
+              color="negative"
+            />
+            <q-btn
+              label="Guardar"
+              color="primary"
+              type="submit"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -525,22 +578,23 @@
 import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
-import InvoicePrint from '../components/InvoicePrint.vue'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatDate } from 'src/const/mixins'
-// import BillOfSale from '../components/BillOfSale.vue'
+import { formatDate, formatNumber } from 'src/const/mixins'
+import { printTicket } from 'src/const/invoice'
 export default {
-  // name: 'PageName',
+  name: 'BillingPage',
   components: {
     StreamBarcodeReader,
     DraggableResizableVue,
-    DraggableResizableContainer,
-    InvoicePrint
-    // BillOfSale
+    DraggableResizableContainer
   },
   data () {
     return {
+      quantityDialog: false,
+      productQuantity: null,
+      quantity: 1,
+      currentAmount: 0,
       panel: 'debit',
       amount: 0,
       loadingCashflow: false,
@@ -548,6 +602,7 @@ export default {
       invoiceDescription: '',
       cashflow: false,
       deliveryDate: formatDate(Date(), 'YYYY-MM-DD HH:mm:ss'),
+      formatNumber,
       searchInvoice: false,
       search: '',
       loadingClient: false,
@@ -595,20 +650,6 @@ export default {
        * @type {Object}
        */
       pagination: { rowsPerPage: 10 },
-      thumbStyle: {
-        right: '4px',
-        borderRadius: '5px',
-        backgroundColor: '#027be3',
-        width: '5px',
-        opacity: 0.75
-      },
-      barStyle: {
-        right: '2px',
-        borderRadius: '9px',
-        backgroundColor: '#027be3',
-        width: '9px',
-        opacity: 0.2
-      },
       filter: '',
       barcode: null,
       withoutPayment: ['Ticket', 'Pedido'],
@@ -661,9 +702,9 @@ export default {
           field: row => row.name,
           sortable: true
         },
+        { name: 'price', align: 'right', label: 'Precio de venta', field: 'price', sortable: true },
         { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
-        { name: 'price', align: 'right', label: 'Precio', field: 'price', sortable: true },
-        { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal', sortable: true },
+        { name: 'subtotal', align: 'right', label: 'Importe', field: 'subtotal', sortable: true },
         { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
       ]
     }
@@ -736,6 +777,12 @@ export default {
     },
     invoiceRouter (data) {
       if (data) this.getInvoiceOne(data)
+    },
+    currentAmount (data) {
+      if (data) {
+        const quantity = data / this.productQuantity.price
+        this.quantity = Number(quantity.toFixed(2))
+      }
     }
   },
   created () {
@@ -748,6 +795,9 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+    /**
+     * Save cashflow
+     */
     async saveCashflow () {
       try {
         this.loadingCashflow = true
@@ -810,6 +860,9 @@ export default {
           })
         })
     },
+    /**
+     * Save without print
+     */
     saveWithoutPrint () {
       this.withoutPrint = true
       this.$refs.saveBill.submit()
@@ -1182,16 +1235,11 @@ export default {
         this.withoutPrint = false
         return
       }
-      this.invoice = data
-      setTimeout(() => {
-        this.$htmlToPaper('printMe', {
-          styles: [
-            'ticketStyle.css'
-          ]
-        })
-        this.clear()
-        this.withoutPrint = false
-      })
+      const doc = printTicket(data)
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
+      this.clear()
+      this.withoutPrint = false
     },
 
     setParamsBill () {
@@ -1304,19 +1352,32 @@ export default {
      * Validate products
      * @param {*} data product selected
      */
-    validateProduct (data) {
+    validateProduct (data, validUnitMeasurement = false) {
       const findProduct = this.products.find(product => product.id === data.id)
+      const unitMeasurement = data?.unit_of_measure?.acronym === 'KG'
+
+      if (validUnitMeasurement && unitMeasurement) {
+        this.quantityDialog = true
+        this.currentAmount = data.price
+        this.productQuantity = data
+        return
+      }
+
       if (findProduct) {
-        findProduct.amount += 1
+        const quantity = unitMeasurement ? this.quantity : findProduct?.amount + 1
+        findProduct.amount = quantity
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
-        data.amount = 1
+        data.amount = this.quantity
         data.subtotal = 0
         data.product_id = data.id
         this.products.push(data)
         this.calculate(data)
       }
+      this.quantity = 1
+      this.currentAmount = 0
+      this.quantityDialog = false
       localStorage.setItem('products', JSON.stringify(this.products))
     },
     /**
@@ -1334,7 +1395,7 @@ export default {
         .then(({ data }) => {
           const product = data[0]
           if (product) {
-            this.validateProduct(product)
+            this.validateProduct(product, true)
             this.barcode = null
             this.modelScan = false
           } else {
