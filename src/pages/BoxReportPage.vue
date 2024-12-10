@@ -199,12 +199,13 @@
       full-height
     >
       <q-card class="column full-height" style="width: 500px; max-width: 80vw;">
-        <q-card-section class="bg-primary text-white">
+        <q-card-section class="bg-primary text-white flex justify-between items-center">
           <div class="text-h6">Filtros</div>
+          <q-btn icon="close" flat round dense @click="dialogFilter = false" />
         </q-card-section>
 
         <q-card-section class="col q-pt-sm q-gutter-md">
-          <q-select
+          <!-- <q-select
             use-input
             filled
             label="Vendedor"
@@ -214,7 +215,7 @@
             :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
             :options="sellers"
             @filter="filterSellers"
-          />
+          /> -->
           <q-option-group
             v-model="panel"
             inline
@@ -238,9 +239,9 @@
           </q-tab-panels>
         </q-card-section>
 
-        <q-card-actions align="center" class="bg-white text-teal">
-          <q-btn color="negative" icon="close" v-close-popup />
-          <q-btn color="primary" icon="search" @click="filterDate" />
+        <q-card-actions align="right">
+          <q-btn color="negative" icon="filter_alt_off" @click="clearFilter" label="Limpiar" />
+          <q-btn color="primary" icon="filter_alt" @click="filterDate" label="Filtrar" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -409,6 +410,15 @@ export default {
     this.filterDate()
   },
   methods: {
+    clearFilter () {
+      this.day = date.formatDate(Date(), 'YYYY-MM-DD')
+      this.fromHours = null
+      this.toHours = null
+      this.from = date.formatDate(Date(), 'YYYY-MM-DD')
+      this.to = date.formatDate(Date(), 'YYYY-MM-DD')
+      this.panel = 'day'
+      this.filterDate()
+    },
     viewPayment (data) {
       console.log(data)
     },
