@@ -1,5 +1,12 @@
 import { Loading, Notify, copyToClipboard, date } from 'quasar'
 
+export const notify = (message, color, icon) => {
+  Notify.create({
+    message,
+    color,
+    icon
+  })
+}
 /**
  * Set date format
  * @param {String} value date value
