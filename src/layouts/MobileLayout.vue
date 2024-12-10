@@ -2,14 +2,9 @@
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
       <q-toolbar class="bg-white text-dark flex justify-between">
-        <q-avatar>
-          <img alt="logo" src="https://cdn.quasar.dev/logo-v2/svg/logo.svg">
-        </q-avatar>
-        <q-toolbar-title>
-          Menu
-        </q-toolbar-title>
+        <q-img :src="logo.color" width="155px" alt="logo"/>
         <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
-          {{  userSession.role.name }}: {{ userSession.name }}
+          {{  userSession?.roles[0]?.name }}: {{ userSession.name }}
         </q-chip>
         <q-input
           outlined
@@ -42,7 +37,7 @@
         class="text-secondary bg-white shadow-4 text-bold"
       >
         <q-tab v-for="tab in tabs" :key="tab.name" v-bind="tab"/>
-        <q-tab name="command" icon="orderwise_bag">
+        <q-tab name="command" icon="shopping_bag">
           <q-badge floating color="negative" rounded v-if="commands?.products?.length">
             <span class="text-body text-bold">
               {{ commands?.products?.length }}
@@ -56,12 +51,15 @@
 <script>
 import { watch } from 'vue'
 import { useCommandStore } from '../stores/command'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
+import { logo } from 'src/const/mixins'
 export default {
   data () {
     return {
       tab: 'scanner',
       filter: null,
-      userSession: JSON.parse(localStorage.getItem('user')),
+      logo,
       tabs: [
         { name: 'scanner', icon: 'qr_code_scanner' },
         { name: 'menu', icon: 'restaurant_menu' }
@@ -90,7 +88,8 @@ export default {
     commands () {
       const store = useCommandStore()
       return store?.command
-    }
+    },
+    ...mapState(authentication, ['userSession'])
   },
   methods: {
     setQueryParams (query) {
@@ -103,7 +102,6 @@ export default {
       })
     },
     setData () {
-      this.$api.defaults.headers.common.authorization = `${localStorage.getItem('tokenType')} ${localStorage.getItem('accessToken')}`
       this.tab = this.$route.query.tab ?? 'scanner'
     }
   }

@@ -94,22 +94,10 @@ const routes = [
         component: () => import('pages/TaxePage.vue')
       },
       {
-        path: 'commands',
-        meta: { requiresAuth: true },
-        name: 'Taxe',
-        component: () => import('pages/TaxePage.vue')
-      },
-      {
         path: 'profile',
         name: 'Profile',
         meta: { requiresAuth: true },
         component: () => import('pages/ProfilePage.vue')
-      },
-      {
-        path: 'command-orders',
-        meta: { requiresAuth: true },
-        name: 'CommandOrder',
-        component: () => import('pages/CommandOrderPage.vue')
       },
       {
         path: 'command-orders',

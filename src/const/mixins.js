@@ -94,7 +94,8 @@ export const copyClick = (data) => {
 
 export const logo = {
   white: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QOrderWise/white.png',
-  color: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QOrderWise/color.png'
+  color: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QOrderWise/color.png',
+  isoLogo: 'images/logo.png'
 }
 
 export const qBitsLogo = {
