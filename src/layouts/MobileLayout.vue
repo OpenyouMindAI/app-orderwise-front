@@ -2,9 +2,9 @@
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
       <q-toolbar class="bg-white text-dark flex justify-between">
-        <q-img :src="logo.color" width="155px" alt="logo"/>
+        <q-img :src="logo.color" width="155px" alt="logo" @click="$router.push({ name: 'Billing' })"/>
         <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
-          {{  userSession?.roles[0]?.name }}: {{ userSession.name }}
+          {{ userSession.name }}
         </q-chip>
         <q-input
           outlined
@@ -21,7 +21,6 @@
             <q-icon name="search" />
           </template>
         </q-input>
-        <!-- <q-btn flat round dense icon="whatshot" /> -->
       </q-toolbar>
     </q-header>
 

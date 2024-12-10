@@ -49,7 +49,7 @@
               label="Nombre"
             />
           </q-card-section>
-          <q-card-section class="q-py-none">
+          <q-card-section class="q-py-none flex justify-center">
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
@@ -107,11 +107,11 @@
               dense
             />
           </q-card-section>
-          <q-card-section class="q-py-none">
+          <q-card-section class="q-py-none flex justify-center">
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
-              class="container full-width"
+              class="container"
             >
               <draggable-resizable-vue
                 v-for="(table, index) in livingRoom.tables"
@@ -552,7 +552,8 @@ export default {
 </script>
 <style>
 .container {
-  height: 70vh;
+  height: 400px;
+  max-width: 900px;
   border: 1px solid black;
 }
 </style>

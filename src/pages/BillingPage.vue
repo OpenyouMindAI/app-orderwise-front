@@ -356,50 +356,20 @@
       </q-card>
     </q-dialog>
     <q-dialog v-model="dialogTable" maximized>
-      <q-card>
-        <q-card-actions class="q-pb-none q-px-md">
-          <q-select
-            filled
-            v-model="livingRoom"
-            label="Sala de estar"
-            option-label="name"
-            option-value="id"
-            style="min-width: 300px;"
-            dense
-            :options="livingRooms"
-          />
-          <q-space/>
-          <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
-        </q-card-actions>
-        <q-card-section>
-          <draggable-resizable-container
-            :show-grid="true"
-            class="container"
-          >
-            <draggable-resizable-vue
-              v-for="table in tables"
-              :key="table.id"
-              v-model:x="table.x"
-              v-model:y="table.y"
-              v-model:h="table.height"
-              v-model:w="table.width"
-              class="element-one"
-              :style="table.status ==='unoccupied' ? 'background-color: blue;': 'background-color: orange;'"
-              :handles-size="10"
-              :draggable="false"
-              :resizable="false"
-            >
-              <span class="absolute-center">
-                {{ table.name }} {{ statusTable[table.status] }}
-              </span>
-              <q-checkbox v-model="tableSelected" :val="table.id" color="teal" class="fixed-top-right" v-if="table.status === 'unoccupied'"/>
-              <q-btn icon="receipt" color="secondary" size="sm" round class="fixed-top-right" @click="selectInvoice(table)" v-else/>
-              <q-btn icon="close" color="negative" size="sm" round  @click="freeTable(table)" v-if="table.status === 'busy'"/>
-            </draggable-resizable-vue>
-          </draggable-resizable-container>
-        </q-card-section>
-      </q-card>
+      <drawer-table
+        ref="drawerTable"
+        :tablesSelected="tableSelected"
+        @update:tableSelected="setTableSelected"
+        @update:invoice="selectInvoice"
+        @update:freeTable="freeTable"
+      >
+        <template v-slot:footer>
+          <q-card-actions align="right">
+            <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
+            <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
+          </q-card-actions>
+        </template>
+      </drawer-table>
     </q-dialog>
     <q-dialog v-model="searchInvoice">
       <q-card style="width: 700px; max-width: 80vw;">
@@ -577,17 +547,17 @@
 <script>
 import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
-import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
+// import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatDate, formatNumber } from 'src/const/mixins'
+import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import { printTicket } from 'src/const/invoice'
+import DrawerTable from 'src/components/Table/DrawerTable.vue'
 export default {
   name: 'BillingPage',
   components: {
     StreamBarcodeReader,
-    DraggableResizableVue,
-    DraggableResizableContainer
+    DrawerTable
   },
   data () {
     return {
@@ -619,7 +589,6 @@ export default {
       },
       clientAdded: {},
       invoice: null,
-      livingRoom: null,
       taxes: [],
       taxe: null,
       statusTable: {
@@ -630,7 +599,6 @@ export default {
       typeOfService: null,
       typeOfServices: [],
       payments: [],
-      livingRooms: [],
       paymentMethods: [],
       dialogPayment: false,
       invoiceTypes: [],
@@ -713,12 +681,6 @@ export default {
     invoiceRouter () {
       return this.$route.query.id
     },
-    heightWindow () {
-      return screen.height
-    },
-    pagesNumber () {
-      return Math.ceil(this.products.length / this.pagination.rowsPerPage)
-    },
     pendingPayment () {
       return this.totalBill - this.totalPayment
     },
@@ -769,12 +731,6 @@ export default {
     products (data) {
       localStorage.setItem('products', JSON.stringify(data))
     },
-    livingRoom (data) {
-      this.getTables(data)
-    },
-    dialogTable (data) {
-      this.getTables(this.livingRoom)
-    },
     invoiceRouter (data) {
       if (data) this.getInvoiceOne(data)
     },
@@ -791,10 +747,16 @@ export default {
     this.getTaxes()
     this.getPaymentMethods()
     this.getAllProducts()
-    this.getLivingRooms()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+    /**
+     * Set table selected
+     * @param {Object} data table selected
+     */
+    setTableSelected (data) {
+      this.tableSelected = data
+    },
     /**
      * Save cashflow
      */
@@ -872,27 +834,6 @@ export default {
      */
     submitBill () {
       this.$refs.saveBill.submit()
-    },
-    /**
-     * Get all livingRooms
-     * @param {Object} params search params
-     */
-    getLivingRooms () {
-      this.loadingLivingRoom = true
-      this.$api.get('living-rooms')
-        .then(({ data }) => {
-          this.livingRooms = data
-          this.livingRoom = data[0]
-          this.loadingLivingRoom = false
-        })
-        .catch(err => {
-          this.loadingLivingRoom = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
     },
     /**
      * Cancel payment
@@ -1099,18 +1040,16 @@ export default {
       this.$router.push({ name: 'Billing', query: { id: invoiceOne.id } })
       this.dialogTable = false
     },
-    async freeTable (table) {
+    /**
+     * Free table
+     * @param {Object} table  table data
+     */
+    async freeTable ({ id }) {
       try {
-        this.$api.post('free-tables', {
-          id: table.id
-        })
-        this.getTables(this.livingRoom)
+        this.$api.post('free-tables', { id })
+        this.$refs.drawerTable.getTables(this.$refs.drawerTable.livingRoom)
       } catch (error) {
-        this.$q.notify({
-          message: error.message,
-          icon: 'warning',
-          color: 'negative'
-        })
+        notify(error.message, 'negative', 'warning')
       }
     },
     /**
@@ -1417,14 +1356,3 @@ export default {
   }
 }
 </script>
-<style>
-.container {
-  width: 100%;
-  height: 86vh;
-  border: 1px solid black;
-}
-
-.element-one {
-  color: white;
-}
-</style>
