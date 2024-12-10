@@ -198,14 +198,44 @@
       seamless
       full-height
     >
-      <q-card class="column full-height" style="width: 300px">
+      <q-card class="column full-height" style="width: 500px; max-width: 80vw;">
         <q-card-section class="bg-primary text-white">
           <div class="text-h6">Filtros</div>
         </q-card-section>
 
-        <q-card-section class="col q-pt-sm q-gutter-sm">
-          <q-input filled v-model="from" hint="Desde" type="date"/>
-          <q-input filled v-model="to" hint="Hasta" type="date"/>
+        <q-card-section class="col q-pt-sm q-gutter-md">
+          <q-select
+            use-input
+            filled
+            label="Vendedor"
+            input-debounce="0"
+            option-value="id"
+            v-model="seller"
+            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+            :options="sellers"
+            @filter="filterSellers"
+          />
+          <q-option-group
+            v-model="panel"
+            inline
+            :options="[
+              { label: 'Dia', value: 'day' },
+              { label: 'Entre fechas', value: 'between' }
+            ]"
+          />
+          <q-tab-panels v-model="panel" animated class="shadow-2 rounded-borders">
+            <q-tab-panel name="between" class="q-gutter-sm">
+              <div class="text-h6">Filtrar entre fechas</div>
+              <q-input filled v-model="from" hint="Desde" type="date"/>
+              <q-input filled v-model="to" hint="Hasta" type="date"/>
+            </q-tab-panel>
+            <q-tab-panel name="day" class="q-gutter-sm">
+              <div class="text-h6">Filtrar por dia y horas</div>
+              <q-input filled v-model="day" hint="Fecha del dia" type="date"/>
+              <q-input filled v-model="fromHours" hint="Desde" type="time"/>
+              <q-input filled v-model="toHours" hint="Hasta" type="time"/>
+            </q-tab-panel>
+          </q-tab-panels>
         </q-card-section>
 
         <q-card-actions align="center" class="bg-white text-teal">
@@ -221,13 +251,17 @@
 </template>
 
 <script>
-import { date } from 'quasar'
+import { date, Notify } from 'quasar'
 import { formatDate, formatNumber } from 'src/const/mixins'
 export default {
   // name: 'PageName',
   data: () => {
     return {
       formatDate,
+      panel: 'day',
+      day: date.formatDate(Date(), 'YYYY-MM-DD'),
+      fromHours: null,
+      toHours: null,
       formatNumber,
       translate: {
         debit: 'Entrada',
@@ -341,7 +375,17 @@ export default {
        * Payment all
        * @type {Array}
        */
-      categoryTotalsTotals: {}
+      categoryTotalsTotals: {},
+      /**
+       * Sellers
+       * @type {Array}
+       */
+      sellers: [],
+      /**
+       * Selected seller
+       * @type {Object}
+       */
+      seller: null
     }
   },
   watch: {
@@ -355,18 +399,41 @@ export default {
       this.getInvoicePayments(this.params)
     }
   },
-  mounted () {
-    this.setPagination({
-      pagination: this.paginationConfig,
-      filter: undefined
-    })
-  },
+  // mounted () {
+  //   this.setPagination({
+  //     pagination: this.paginationConfig,
+  //     filter: undefined
+  //   })
+  // },
   created () {
     this.filterDate()
   },
   methods: {
     viewPayment (data) {
       console.log(data)
+    },
+    /**
+     * Get all sellers
+     */
+    filterSellers (value, update) {
+      this.$api.get('sellers', {
+        params: {
+          dataSearch:
+          { name: value, document_number: value }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.sellers = data.data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     },
     /**
      * Search beneficiary
@@ -380,25 +447,27 @@ export default {
       this.getInvoicePayments(this.params)
     },
     filterDate () {
-      this.params.dateFilter = {
-        to: this.to,
-        from: this.from,
-        field: 'created_at'
-      }
-      this.getInvoicePayments(this.params)
-      this.getCategoryTotals(this.params)
-      this.getPaymentMethodTotals(this.params)
-      this.getPaymentTotals()
-      this.getCashflowTotals()
-      this.getTypeOfServicesTotals()
-    },
-    getCashflowTotals () {
-      this.$api.get('reports/cashflow-totals', {
-        params: {
+      let params = {}
+      if (this.panel === 'day') {
+        params = {
+          day: this.day,
+          fromHours: this.fromHours,
+          toHours: this.toHours
+        }
+      } else {
+        params = {
           to: this.to,
           from: this.from
         }
-      })
+      }
+      this.getCategoryTotals(params)
+      this.getPaymentMethodTotals(params)
+      this.getPaymentTotals(params)
+      this.getCashflowTotals(params)
+      this.getTypeOfServicesTotals(params)
+    },
+    getCashflowTotals (params) {
+      this.$api.get('reports/cashflow-totals', { params })
         .then(({ data }) => {
           this.cashflows = data
         })
@@ -406,13 +475,8 @@ export default {
           console.error(err.message)
         })
     },
-    getTypeOfServicesTotals () {
-      this.$api.get('reports/type-of-services-totals', {
-        params: {
-          to: this.to,
-          from: this.from
-        }
-      })
+    getTypeOfServicesTotals (params) {
+      this.$api.get('reports/type-of-services-totals', { params })
         .then(({ data }) => {
           this.typeOfServicesTotals = data
         })
@@ -435,13 +499,8 @@ export default {
     /**
      * Get total all
      */
-    getPaymentTotals (whereIn = []) {
-      this.$api.get('reports/payment-totals', {
-        params: {
-          to: this.to,
-          from: this.from
-        }
-      })
+    getPaymentTotals (params) {
+      this.$api.get('reports/payment-totals', { params })
         .then(({ data }) => {
           this.totals = data
         })
@@ -452,13 +511,8 @@ export default {
     /**
      * Get total all
      */
-    getPaymentMethodTotals () {
-      this.$api.get('reports/payment-method-totals', {
-        params: {
-          to: this.to,
-          from: this.from
-        }
-      })
+    getPaymentMethodTotals (params) {
+      this.$api.get('reports/payment-method-totals', { params })
         .then(({ data }) => {
           this.paymentMethodTotals = data
         })
@@ -469,13 +523,8 @@ export default {
     /**
      * Get total all
      */
-    getCategoryTotals () {
-      this.$api.get('reports/category-totals', {
-        params: {
-          to: this.to,
-          from: this.from
-        }
-      })
+    getCategoryTotals (params) {
+      this.$api.get('reports/category-totals', { params })
         .then(({ data }) => {
           this.categoryTotalsTotals = data
         })

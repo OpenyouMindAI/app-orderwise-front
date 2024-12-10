@@ -199,7 +199,9 @@ const params = ref({
 })
 
 onMounted(() => {
-  getInvoices(params.value)
+  setInterval(() => {
+    getInvoices(params.value)
+  }, 10000)
   getCategories()
   getInvoiceTypes()
   getTypeOfServices()
