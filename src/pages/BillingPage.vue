@@ -66,42 +66,67 @@
                 </template>
               </q-input>
             </div>
-            <div class=" col-xl-6 col-lg-6 col-md-7 col-sm-12 col-xs-12 q-gutter-xs">
-              <q-btn :dense="$q.screen.xs" color="primary" icon="table_restaurant" @click="dialogTable = true" :loading="loadingLivingRoom">
-                <q-badge floating color="negative">
-                  {{ tableSelected.length }}
+            <div class="col-xl-6 col-lg-6 col-md-7 col-sm-12 col-xs-12 flex q-gutter-xs">
+              <q-btn
+                size="sm"
+                color="primary"
+                icon="table_restaurant"
+                :dense="$q.screen.xs"
+                :loading="loadingLivingRoom"
+                @click="dialogTable = true"
+              >
+                <q-badge color="negative" align="bottom" floating>
+                  F6
                 </q-badge>
               </q-btn>
               <q-btn
+                size="sm"
                 color="secondary"
+                :push="payments.length > 0"
                 icon="attach_money"
                 :loading="loadingPaymentMethods"
                 :dense="$q.screen.xs"
                 @click="dialogPayment = true"
               >
-                <q-badge floating color="negative">
-                  {{ payments.length }}
+                <q-badge color="negative" align="bottom" floating>
+                  F12
                 </q-badge>
               </q-btn>
               <q-btn
+                size="sm"
                 icon="save"
                 color="positive"
                 :dense="$q.screen.xs"
                 @click="saveWithoutPrint"
-              />
+              >
+                <q-badge color="negative" align="bottom" floating>
+                  F8
+                </q-badge>
+              </q-btn>
               <q-btn
+                size="sm"
                 icon="search"
                 color="primary"
                 :dense="$q.screen.xs"
                 @click="searchInvoice = true"
-              />
+              >
+                <q-badge color="negative" align="bottom" floating>
+                  F10
+                </q-badge>
+              </q-btn>
               <q-btn
+                size="sm"
                 icon="payments"
                 color="info"
                 :dense="$q.screen.xs"
                 @click="cashflow = true"
-              />
+              >
+                <q-badge color="negative" align="bottom" floating>
+                  F7
+                </q-badge>
+              </q-btn>
               <q-btn
+                size="sm"
                 icon="clear"
                 color="negative"
                 :dense="$q.screen.xs"
@@ -194,61 +219,60 @@
           </div>
         </div>
         <div class="col-xs-12 col-sm-12 col-md-5 col-lg-5 col-xl-5">
-          <div style="height: calc(100vh - 250px);">
-            <q-table
-              row-key="name"
-              dense
-              grid
-              hide-pagination
-              :rows="allProducts"
-              :columns="productColumns"
-              :loading="loadingPage"
-              :filter="filter"
-              v-model:pagination="pagination"
-            >
-              <template v-slot:top>
-                <div class="row full-width q-col-gutter-xs">
-                  <div class="col-6">
-                    <q-select
-                      use-input
-                      filled
-                      dense
-                      clearable
-                      label="Categorías"
-                      input-debounce="0"
-                      option-label="name"
-                      option-value="id"
-                      v-model="category"
-                      :options="categories"
-                      @filter="filterCategories"
-                    />
-                  </div>
-                  <div class="col-6">
-                    <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
-                      <template v-slot:append>
-                        <q-icon name="search" />
-                      </template>
-                    </q-input>
-                  </div>
+          <q-table
+            row-key="name"
+            dense
+            grid
+            hide-pagination
+            style="max-height: calc(100vh - 190px); overflow: auto;"
+            :rows="allProducts"
+            :columns="productColumns"
+            :loading="loadingPage"
+            :filter="filter"
+            v-model:pagination="pagination"
+          >
+            <template v-slot:top>
+              <div class="row full-width q-col-gutter-xs">
+                <div class="col-6">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    clearable
+                    label="Categorías"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="category"
+                    :options="categories"
+                    @filter="filterCategories"
+                  />
                 </div>
-              </template>
-              <template v-slot:item="props">
-                <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
-                  <q-card class="my-card">
-                    <q-img
-                      style="height: 150px; width: 100%"
-                      :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                      @click="validateProduct(props.row, true)"
-                    >
-                      <div class="absolute-full text-subtitle2 flex flex-center">
-                        {{ props.row.name }}
-                      </div>
-                    </q-img>
-                  </q-card>
+                <div class="col-6">
+                  <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
+                    <template v-slot:append>
+                      <q-icon name="search" />
+                    </template>
+                  </q-input>
                 </div>
-              </template>
-            </q-table>
-          </div>
+              </div>
+            </template>
+            <template v-slot:item="props">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
+                <q-card class="my-card">
+                  <q-img
+                    style="height: 150px; width: 100%"
+                    :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                    @click="validateProduct(props.row, true)"
+                  >
+                    <div class="absolute-full text-subtitle2 flex flex-center">
+                      {{ props.row.name }}
+                    </div>
+                  </q-img>
+                </q-card>
+              </div>
+            </template>
+          </q-table>
         </div>
       </div>
     </q-form>
@@ -389,6 +413,7 @@
                 clearable
                 type="search"
                 required
+                autofocus
               />
             </div>
             <div class="col-auto text-right">
@@ -740,6 +765,35 @@ export default {
         this.quantity = Number(quantity.toFixed(2))
       }
     }
+  },
+  mounted () {
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F6') {
+        e.preventDefault()
+        this.dialogTable = true
+      }
+      if (e.key === 'F7') {
+        e.preventDefault()
+        this.cashflow = true
+      }
+      if (e.key === 'F8') {
+        e.preventDefault()
+        this.saveWithoutPrint()
+      }
+      if (e.key === 'F10') {
+        e.preventDefault()
+        this.searchInvoice = true
+      }
+      if (e.key === 'F12') {
+        e.preventDefault()
+        this.dialogPayment = true
+      }
+    })
+  },
+  beforeUnmount () {
+    window.removeEventListener('keydown', () => {
+      this.dialogPayment = true
+    })
   },
   created () {
     this.getLocalStorage()
@@ -1183,12 +1237,13 @@ export default {
 
     setParamsBill () {
       if (!this.withoutPayment.includes(this.invoiceType?.name) && this.payments?.length <= 0) {
-        this.$q.notify({
-          message: 'No a seleccionado un pago',
-          icon: 'warning',
-          color: 'negative'
-        })
+        notify('No a seleccionado un pago', 'negative', 'warning')
         this.dialogPayment = true
+        return false
+      }
+
+      if (this.products <= 0) {
+        notify('No hay productos seleccionados', 'negative', 'warning')
         return false
       }
 
@@ -1223,17 +1278,9 @@ export default {
           const { data } = await this.$api.post('invoices', params)
           this.printBill(data.data)
         }
-        this.$q.notify({
-          message: 'Factura guardada exitosamente',
-          icon: 'check_circle',
-          color: 'positive'
-        })
+        notify('Factura guardada exitosamente', 'positive', 'check_circle')
       } catch (error) {
-        this.$q.notify({
-          message: error.message,
-          icon: 'warning',
-          color: 'negative'
-        })
+        notify(error.message, 'negative', 'warning')
       }
     },
     /**
