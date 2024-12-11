@@ -85,7 +85,6 @@ export const authentication = defineStore('authentication', {
           {},
           true
         )
-        console.log(data)
         this.setSessionData(data)
         return data.user
       } catch (error) {

@@ -1,3 +1,8 @@
+$scrollbar-width: 8px;
+$scrollbar-track-color: #f0f0f0;
+$scrollbar-thumb-color: $primary;
+$scrollbar-thumb-hover-color: lighten($primary, 10%);
+
 * {
   &::-webkit-scrollbar {
     width: 0;
@@ -18,7 +23,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: $scrollbar-thumb-color;
+    background: $primary;
     border-radius: 50%;
   }
 
@@ -27,5 +32,5 @@
   }
 
   scrollbar-width: thin;
-  scrollbar-color: $scrollbar-thumb-color $scrollbar-track-color; // Firefox
+  scrollbar-color: $scrollbar-thumb-color $scrollbar-track-color;
 }

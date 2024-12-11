@@ -7,11 +7,11 @@
       <div class="col-6" v-if="!$q.screen.lt.sm">
         <q-img src="images/bg-login.png" alt="bg-login" style="border-radius: 40px 170px 170px 40px; min-height: 500px;"/>
       </div>
-      <div :class="`flex flex-center q-pa-lg ${$q.screen.lt.sm ? 'col-12' : 'col-6'}`" style="position: relative;">
+      <div :class="`flex flex-center ${$q.screen.lt.sm ? 'col-12' : 'col-6'}`" style="position: relative;">
         <div class="text-center full-width" style="position: absolute; top: 20px;">
           <q-img :src="logo.color" style='width: 240px; max-width: 80vw;'/>
         </div>
-        <q-form @submit="loginAt" class="flex-column" style="width: 400px; max-width: 70vw;">
+        <q-form @submit="loginAt" class="flex-column" style="width: 400px; max-width: 85vw;">
           <div class='text-h5 q-mb-md'>Iniciar sesión</div>
           <q-input
             class="q-mt-sm"
@@ -20,7 +20,7 @@
             label="Usuario o correo electrónico"
             ref="username"
             name="username"
-            outlined
+            filled
             dense
             @keyup.enter="login"
             :rules="[val => !!val || 'El campo es requerido.']">
@@ -36,7 +36,7 @@
             ref="password"
             name="password"
             type="password"
-            outlined
+            filled
             dense
             @keyup.enter="login"
             :rules="[val => !!val || 'El campo es requerido.']"
@@ -49,7 +49,6 @@
             checked
             label="Recordarme"
             color="primary"
-            class="q-mt-sm"
             v-model="remember"
           />
           <q-btn
@@ -78,7 +77,7 @@
             color="primary"
             icon="android"
             href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
-            v-if="!this.$q.platform.is.nativeMobile"
+            v-if="!$q.platform.is.nativeMobile"
             type="a"
             target="_blank"
           />

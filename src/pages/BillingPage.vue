@@ -59,23 +59,22 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-7 col-lg-7 col-xl-7 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-5 col-sm-12 col-xs-12">
+            <div class="col-xl-6 col-lg-6 col-md-5 col-sm-5 col-xs-12">
               <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
                 <template v-slot:append>
                   <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
                 </template>
               </q-input>
             </div>
-            <div class="col-xl-6 col-lg-6 col-md-7 col-sm-12 col-xs-12 flex q-gutter-xs">
+            <div class="col-xl-6 col-lg-6 col-md-7 col-sm-7 col-xs-12 flex q-gutter-xs">
               <q-btn
                 size="sm"
                 color="primary"
                 icon="table_restaurant"
-                :dense="$q.screen.xs"
                 :loading="loadingLivingRoom"
                 @click="dialogTable = true"
               >
-                <q-badge color="negative" align="bottom" floating>
+                <q-badge color="negative" align="bottom" floating v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile">
                   F6
                 </q-badge>
               </q-btn>
@@ -85,10 +84,9 @@
                 :push="payments.length > 0"
                 icon="attach_money"
                 :loading="loadingPaymentMethods"
-                :dense="$q.screen.xs"
                 @click="dialogPayment = true"
               >
-                <q-badge color="negative" align="bottom" floating>
+                <q-badge color="negative" align="bottom" floating v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile">
                   F12
                 </q-badge>
               </q-btn>
@@ -96,10 +94,14 @@
                 size="sm"
                 icon="save"
                 color="positive"
-                :dense="$q.screen.xs"
                 @click="saveWithoutPrint"
               >
-                <q-badge color="negative" align="bottom" floating>
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
                   F8
                 </q-badge>
               </q-btn>
@@ -107,10 +109,14 @@
                 size="sm"
                 icon="search"
                 color="primary"
-                :dense="$q.screen.xs"
                 @click="searchInvoice = true"
               >
-                <q-badge color="negative" align="bottom" floating>
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
                   F10
                 </q-badge>
               </q-btn>
@@ -118,10 +124,14 @@
                 size="sm"
                 icon="payments"
                 color="info"
-                :dense="$q.screen.xs"
                 @click="cashflow = true"
               >
-                <q-badge color="negative" align="bottom" floating>
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
                   F7
                 </q-badge>
               </q-btn>
@@ -129,7 +139,6 @@
                 size="sm"
                 icon="clear"
                 color="negative"
-                :dense="$q.screen.xs"
                 @click="clear"
               />
             </div>
@@ -153,7 +162,7 @@
                       {{ props.row.name }}
                     </q-td>
                     <q-td key="price" :props="props">
-                      {{ props.row.price }}
+                      {{ formatNumber(props.row.price) }}
                       <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
                         <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
                       </q-popup-edit>
@@ -175,16 +184,24 @@
               </q-table>
             </div>
             <div class="col-12">
-              <q-list dense separator v-if="invoiceType">
+              <q-list dense separator>
+                <q-item v-if="tableSelected.length">
+                  <q-item-section>
+                    Mesas
+                  </q-item-section>
+                  <q-item-section side>
+                    {{ tableSelected.length }}
+                  </q-item-section>
+                </q-item>
                 <q-item>
                   <q-item-section>
                     Op Gravada
                   </q-item-section>
                   <q-item-section side v-if="coin">
-                    {{ coin.symbol }}{{ formatNumber(totalBill) }}
+                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
                   </q-item-section>
                 </q-item>
-                <q-item v-for="taxe in invoiceType.taxes" :key="taxe.id">
+                <q-item v-for="taxe in invoiceType?.taxes" :key="taxe.id">
                   <q-item-section>
                     {{ taxe.name }} ({{ formatNumber(taxe.pivot.amount) }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
                   </q-item-section>
@@ -196,8 +213,24 @@
                   <q-item-section>
                     Importe total
                   </q-item-section>
+                  <q-item-section side v-if="coin" class="text-negative">
+                    {{ coin.symbol }} {{ formatNumber(totalTaxe) }}
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    Monto pagado
+                  </q-item-section>
+                  <q-item-section class="text-positive" side v-if="coin">
+                    {{  coin.symbol }} {{ formatNumber(totalPayment) }}
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    Por pagar
+                  </q-item-section>
                   <q-item-section side v-if="coin">
-                    {{ coin.symbol }}{{ formatNumber(totalTaxe) }}
+                    {{  coin.symbol }} {{ formatNumber(totalTaxe - totalPayment) }}
                   </q-item-section>
                 </q-item>
               </q-list>
