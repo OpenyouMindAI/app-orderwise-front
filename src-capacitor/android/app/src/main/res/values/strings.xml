@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Orderwise</string>
     <string name="title_activity_main">Orderwise</string>
-    <string name="package_name">palma.orderwise.app</string>
-    <string name="custom_url_scheme">palma.orderwise.app</string>
+    <string name="package_name">orderwise.qbitsinc.com</string>
+    <string name="custom_url_scheme">orderwise.qbitsinc.com</string>
 </resources>

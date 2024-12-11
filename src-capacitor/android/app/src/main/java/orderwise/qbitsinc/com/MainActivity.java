@@ -1,4 +1,4 @@
-package palma.orderwise.app;
+package orderwise.qbitsinc.com;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -1,7 +1,5 @@
 {
-	"appId": "palma.orderwise.app",
+	"appId": "orderwise.qbitsinc.com",
 	"appName": "Orderwise",
-	"bundledWebRuntime": false,
-	"npmClient": "npm",
 	"webDir": "www"
 }

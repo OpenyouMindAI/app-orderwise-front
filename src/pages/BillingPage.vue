@@ -229,7 +229,7 @@
             :columns="productColumns"
             :loading="loadingPage"
             :filter="filter"
-            v-model:pagination="pagination"
+            :pagination="pagination"
           >
             <template v-slot:top>
               <div class="row full-width q-col-gutter-xs">
@@ -1138,6 +1138,7 @@ export default {
         params: {
           sortBy: 'id',
           sortOrder: 'desc',
+          perPage: 10,
           dataFilter: {
             category_id: this.category ? this.category.id : null
           }
@@ -1154,7 +1155,10 @@ export default {
           })
         })
     },
-
+    /**
+     * Set payments
+     * @param {Array} invoicePayments invoice payments
+     */
     setPayments (invoicePayments) {
       invoicePayments?.forEach(payment => {
         this.payments.push({

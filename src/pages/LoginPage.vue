@@ -71,13 +71,25 @@
             </span>
           </q-btn>
         </q-form>
-        <div align="center" class="flex flex-center q-gutter-sm" style="position: absolute; bottom: 10px;">
-         <span class="text-subtitle1 text-center text-bold">
-           Powered by
-         </span>
-         <a href="https://site.qbitsinc.com" alt="qbits" target="_blank">
-           <q-img style="width:80px"  :src="qBitsLogo.black"/>
-         </a>
+        <div align="center" class="grid q-gutter-md" style="position: absolute; bottom: 10px;">
+          <q-btn
+            round
+            outline
+            color="primary"
+            icon="android"
+            href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
+            v-if="!this.$q.platform.is.nativeMobile"
+            type="a"
+            target="_blank"
+          />
+          <div>
+            <span class="text-subtitle1 text-center text-bold">
+              Powered by
+            </span>
+            <a href="https://site.qbitsinc.com" alt="qbits" target="_blank">
+              <q-img style="width:80px"  :src="qBitsLogo.black"/>
+            </a>
+          </div>
         </div>
       </div>
     </div>
