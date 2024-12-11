@@ -770,11 +770,11 @@ export default {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'F6') {
         e.preventDefault()
-        this.dialogTable = true
+        this.dialogTable = !this.dialogTable
       }
       if (e.key === 'F7') {
         e.preventDefault()
-        this.cashflow = true
+        this.cashflow = !this.cashflow
       }
       if (e.key === 'F8') {
         e.preventDefault()
@@ -782,11 +782,11 @@ export default {
       }
       if (e.key === 'F10') {
         e.preventDefault()
-        this.searchInvoice = true
+        this.searchInvoice = !this.searchInvoice
       }
       if (e.key === 'F12') {
         e.preventDefault()
-        this.dialogPayment = true
+        this.dialogPayment = !this.dialogPayment
       }
     })
   },
