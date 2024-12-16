@@ -1,21 +1,12 @@
 <template>
   <div>
-    <q-card
-      v-for="org in organizations"
-      :key="org.id"
-      class="q-mt-sm cursor-pointer q-py-sm"
-    >
+    <q-card v-for="org in companies" :key="org.id" class="q-mt-sm cursor-pointer q-py-sm">
       <q-item>
         <q-item-section avatar>
-          <img
-            alt="logo"
-            :src="org.logo"
-            :style="
-              $q.screen.lt.md
-                ? 'height: 50px; width: 70px'
-                : 'height: 50px; width: 130px'
-            "
-          />
+          <img alt="logo" :src="org.logo" :style="$q.screen.lt.md
+            ? 'height: 50px; width: 70px;'
+            : 'height: 50px; width: 130px;'
+            " />
         </q-item-section>
 
         <q-item-section>
@@ -24,35 +15,15 @@
           </q-item-label>
           <q-item-label class="q-subtitle2 text-grey-6">
             {{ org.email }}
-            <q-badge
-              rounded
-              floating
-              class="text-white text-bold q-pa-xs"
-              color="primary"
-            >
+            <q-badge rounded floating class="text-white text-bold q-pa-xs" color="primary">
               Activa
             </q-badge>
           </q-item-label>
         </q-item-section>
         <q-item-section side>
-          <q-btn
-            v-if="org.id === user.organization_session_id"
-            icon="published_with_changes"
-            color="primary"
-            size="lg"
-            dense
-            round
-            flat
-          />
-          <q-btn
-            v-else
-            flat
-            icon="sync"
-            size="lg"
-            round
-            dense
-            @click="changeCompany(org)"
-          >
+          <q-btn v-if="org.id === user.organization_session_id" icon="published_with_changes" color="primary" size="lg"
+            dense round flat />
+          <q-btn v-else flat icon="sync" size="lg" round dense @click="changeCompany(org)">
             <q-tooltip> Cambiar la session de la empresa </q-tooltip>
           </q-btn>
         </q-item-section>
@@ -61,41 +32,20 @@
     <q-dialog v-model="confirmDialog" persistent>
       <q-card style="width: 400px; max-width: 80vw">
         <q-form @submit="updateSession">
-          <q-card-section
-            class="row items-center q-py-md bg-primary text-white"
-          >
+          <q-card-section class="row items-center q-py-md bg-primary text-white">
             <div class="text-h6">Confirmar usuario</div>
           </q-card-section>
           <q-card-section class="q-py-xs flex flex-center">
-            <q-img :src="organization.logo" width="200px" />
+            <q-img :src="company.logo" width="200px" />
           </q-card-section>
           <q-card-section class="q-pb-md">
-            <q-input
-              v-model="password"
-              type="password"
-              label="Contraseña"
-              outlined
-              dense
-              autofocus
-              :rules="[
-                (val) => (val && val.length > 0) || 'Este campo es requerido',
-              ]"
-            />
+            <q-input v-model="password" type="password" label="Contraseña" outlined dense autofocus :rules="[
+              (val) => (val && val.length > 0) || 'Este campo es requerido',
+            ]" />
           </q-card-section>
           <q-card-actions align="right" class="q-gutter-sm q-pt-none">
-            <q-btn
-              color="secondary"
-              icon="cancel"
-              label="Cancelar"
-              @click="confirmDialog = false"
-            />
-            <q-btn
-              color="primary"
-              icon="check_circle"
-              label="Aceptar"
-              type="submit"
-              :loading="loading"
-            />
+            <q-btn color="secondary" icon="cancel" label="Cancelar" @click="confirmDialog = false" />
+            <q-btn color="primary" icon="check_circle" label="Aceptar" type="submit" :loading="loading" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -108,18 +58,18 @@ import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 
-// const props = defineProps({
-//   organizations: {
-//     type: Array,
-//     required: true
-//   }
-// })
+defineProps({
+  companies: {
+    type: Array,
+    required: true
+  }
+})
 
 /**
  * Company selected
  * @type {Object}
  */
-const organization = ref(null)
+const company = ref(null)
 /**
  * Password of the user
  * @type {String}
@@ -152,11 +102,11 @@ const loading = ref(false)
 const $q = useQuasar()
 
 /**
- * Change organization
+ * Change company
  * @param  {Object} data
  */
 function changeCompany (data) {
-  organization.value = data
+  company.value = data
   confirmDialog.value = true
 }
 /**
@@ -165,8 +115,9 @@ function changeCompany (data) {
 async function updateSession () {
   try {
     loading.value = true
-    const { data } = await api.post('session/organization', {
-      organization_id: organization.value.id,
+    console.log(company.value)
+    const { data } = await api.post('session/company', {
+      company_id: company.value.id,
       username: user.username || user.email,
       password: password.value
     })

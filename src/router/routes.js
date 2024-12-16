@@ -110,6 +110,12 @@ const routes = [
         name: 'ChangeCompany',
         meta: { requiresAuth: true },
         component: () => import('pages/ChangeCompanyPage.vue')
+      },
+      {
+        path: 'branch-offices',
+        name: 'BranchOffice',
+        meta: { requiresAuth: true },
+        component: () => import('pages/BranchOfficePage.vue')
       }
     ]
   },

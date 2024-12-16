@@ -33,6 +33,34 @@
         >
           <q-tooltip> Cambio de empresa </q-tooltip>
         </q-btn>
+        <q-btn
+          icon="store"
+          round
+          flat
+        >
+          <q-tooltip class="text-body2"> {{ branchOffice.name }} </q-tooltip>
+          <q-popup-proxy>
+            <q-list>
+              <q-item
+                clickable
+                v-ripple
+                v-for="bo in branchOffices"
+                :key="bo.id"
+                :active="bo.id === branchOffice.id"
+                @click="setBranchOffice(bo)"
+              >
+                <q-item-section thumbnail class="q-pa-sm">
+                  <q-icon name="store" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>
+                    {{ bo.name }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-popup-proxy>
+        </q-btn>
         <q-btn icon="update" flat color="white" round @click="update" />
         <q-btn dense flat round icon="notifications" color="white">
           <q-tooltip>
@@ -127,55 +155,53 @@
       bordered
       show-if-above
       class="q-pa-none relative"
+      :style="
+          !$q.screen.lt.md
+            ? 'max-height: calc(100vh - 94px);'
+            : 'max-height: calc(100vh - 46px);'
+        "
     >
       <div v-if="$q.screen.lt.md" class="flex flex-center bg-primary q-py-sm">
         <img
-          :src="userSession?.organization_session?.logo"
+          :src="userSession?.company_session?.logo"
           width="155px"
           style="max-height: 50px"
           alt="logo"
         />
         <q-tooltip :offset="[10, 10]">
-          {{ userSession?.organization_session?.name }}
+          {{ userSession?.company_session?.name }}
         </q-tooltip>
       </div>
-      <div :style="
-          !$q.screen.lt.md
-            ? 'height: calc(100vh - 108px);'
-            : 'height: calc(100vh - 114px);'
-        "
+      <q-expansion-item
+        v-for="category_module in dataMenu"
+        expand-separator
+        :key="category_module.id"
+        :icon="category_module.icon"
+        default-opened
+        :label="category_module.name"
       >
-        <q-expansion-item
-          v-for="category_module in dataMenu"
-          expand-separator
-          :key="category_module.id"
-          :icon="category_module.icon"
-          default-opened
-          :label="category_module.name"
-        >
-          <div v-for="list in category_module.modules" :key="list.id">
-            <q-item
-              v-if="
-                validateRole(list.roles) &&
-                list.name != 'home'
-              "
-              v-ripple
-              clickable
-              active-class="my-menu-link"
-              :active="list.link === $route.name"
-            >
-              <q-item-section v-if="list.icon" avatar class="q-ml-sm">
-                <q-icon :name="list.icon" />
-              </q-item-section>
-              <q-item-section @click="changeRoute(list.link, list.title)">
-                <q-item-label>
-                  {{ list.title }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </div>
-        </q-expansion-item>
-      </div>
+        <div v-for="list in category_module.modules" :key="list.id">
+          <q-item
+            v-if="
+              validateRole(list.roles) &&
+              list.name != 'home'
+            "
+            v-ripple
+            clickable
+            active-class="my-menu-link"
+            :active="list.link === $route.name"
+          >
+            <q-item-section v-if="list.icon" avatar class="q-ml-sm">
+              <q-icon :name="list.icon" />
+            </q-item-section>
+            <q-item-section @click="changeRoute(list.link, list.title)">
+              <q-item-label>
+                {{ list.title }}
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </div>
+      </q-expansion-item>
       <div
         class="bg-primary text-white flex flex-center q-gutter-sm q-mt-xs q-pb-sm absolute-bottom"
       >
@@ -214,7 +240,7 @@ import { api } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
-import { logo } from 'src/const/mixins'
+import { logo, notify } from 'src/const/mixins'
 export default {
   name: 'MainLayout',
   components: { NotificationComponent },
@@ -222,8 +248,6 @@ export default {
     return {
       logo,
       dialog: false,
-      branchOffice: null,
-      branchOfficeSelected: null,
       branchOffices: [],
       role: null,
       numberOfNotifications: [],
@@ -246,7 +270,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
     modules (value) {
@@ -272,6 +296,7 @@ export default {
     this.getAllModules()
     // this.loadingPage()
     this.getDataNotification()
+    this.getBrachOffice()
   },
   methods: {
     ucwords (data) {
@@ -324,6 +349,24 @@ export default {
           this.modules = JSON.parse(localStorage.getItem('sections'))
         })
     },
+    /**
+     * Get all branch offices
+     */
+    async getBrachOffice () {
+      try {
+        const params = {}
+        if (!this.userSession.is_root) {
+          params.dataFilter = {
+            'users.id': this.userSession.id
+          }
+        }
+        const { data } = await api.get('branch-offices', { params })
+        this.branchOffices = data
+        this.setBranchOffice(data[0])
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
     validateRole (roles = []) {
       const rol = this.userSession.roles[0]
       if (this.userSession.is_root) return true
@@ -372,13 +415,7 @@ export default {
     validateDevice (device) {
       return this.$q.platform.is[device]
     },
-    ...mapActions(authentication, ['logout'])
+    ...mapActions(authentication, ['logout', 'setBranchOffice'])
   }
 }
 </script>
-
-<!-- <style lang="sass">
-.my-menu-link
-  color: white
-  background: #4A235A
-</style> -->

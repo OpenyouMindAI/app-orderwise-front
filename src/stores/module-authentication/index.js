@@ -33,7 +33,11 @@ export const authentication = defineStore('authentication', {
        * Timeout
        * @type {Number}
        */
-      setTimeOut: 0
+      setTimeOut: 0,
+      /**
+       * Branch office session
+       */
+      branchOffice: null
     }
   },
   actions: {
@@ -49,6 +53,10 @@ export const authentication = defineStore('authentication', {
         this.token_type === null
       )
     },
+    /**
+     * Logout
+     * @returns {Boolean} true or false
+     */
     async logout () {
       try {
         // await axios.post(this.pageInfo.LOGOUT)
@@ -91,6 +99,10 @@ export const authentication = defineStore('authentication', {
         console.log(error)
         throw error
       }
+    },
+
+    setBranchOffice (branchOffice) {
+      this.branchOffice = branchOffice
     }
   },
   getters: {
