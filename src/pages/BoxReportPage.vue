@@ -1,47 +1,10 @@
 <template>
   <q-page padding>
-    <!-- <div class="row q-col-gutter-sm"> -->
-      <!-- <div class="col-4" v-for="total in totals" :key="total.id">
-        <q-card class="my-card bg-secondary text-white relative">
-          <q-card-section class="q-py-xs">
-            <div class="text-h6">{{ total.name }}</div>
-            <div class="text-subtitle2">{{ total.coin_symbol }}{{ total.paymentTotal }}</div>
-            <q-checkbox v-model="paymentMethods" :val="total.id" class="absolute-top-right"/>
-          </q-card-section>
-        </q-card>
-        <q-tooltip class="bg-secondary text-body2" :offset="[10, 10]">
-          {{ total.coin_name }}
-        </q-tooltip>
-      </div>
-      <div class="col-12">
-        <q-table
-          title="Lista de pagos"
-          row-key="name"
-          :columns="columns"
-          :rows="invoicePayments"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          v-model:pagination="paginationConfig"
-          @row-click="viewPayment"
-          @request="setPagination"
-          no-data-label="Registro no encontrado"
-        >
-          <template v-slot:loading>
-            <q-inner-loading showing color="primary" />
-          </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
-        </q-table>
-      </div> -->
-
-    <!-- </div> -->
     <div class="row full-width q-col-gutter-sm">
+      <div class="col-12 text-subtitle1 flex justify-between items-center">
+        {{ branchOffice.name }}
+        <q-btn icon="filter_alt" color="primary" @click="dialogFilter = true" round/>
+      </div>
       <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
         <q-expansion-item
           class="shadow-1 overflow-hidden"
@@ -183,11 +146,11 @@
         </q-expansion-item>
       </div>
     </div>
-    <q-footer class="q-pa-md justify-between flex" style="position: fixed; bottom: 0;">
-      <span class="text-h6">
+    <q-footer class="q-pa-sm justify-between flex" style="position: fixed; bottom: 0;">
+      <span class="text-subtitle2">
         {{formatDate(new Date(), 'DD/MM/YYYY')}}
       </span>
-      <span class="text-h6">
+      <span class="text-subtitle2">
         VENTAS TOTALES:
         {{ formatNumber(categoryTotalsTotals.category_total + cashflows.cashflow_totals) }}
       </span>
@@ -245,19 +208,21 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-page-sticky position="bottom-right" :offset="[18, 18]">
-      <q-btn fab icon="filter_alt" color="primary" @click="dialogFilter = true"/>
-    </q-page-sticky>
+    <q-inner-loading :showing="loading" color="primary" />
   </q-page>
 </template>
 
 <script>
+import { mapState } from 'pinia'
 import { date, Notify } from 'quasar'
 import { formatDate, formatNumber } from 'src/const/mixins'
+import { authentication } from 'src/stores/module-authentication'
+import { notify } from '../const/mixins'
 export default {
   // name: 'PageName',
   data: () => {
     return {
+      loading: false,
       formatDate,
       panel: 'day',
       day: date.formatDate(Date(), 'YYYY-MM-DD'),
@@ -393,6 +358,9 @@ export default {
     filter (data) {
       this.searchData(data)
     },
+    branchOffice (data) {
+      this.filterDate()
+    },
     paymentMethods (val) {
       this.params.whereIn = {
         payment_method_id: val
@@ -409,6 +377,9 @@ export default {
   created () {
     this.filterDate()
   },
+  computed: {
+    ...mapState(authentication, ['branchOffice'])
+  },
   methods: {
     clearFilter () {
       this.day = date.formatDate(Date(), 'YYYY-MM-DD')
@@ -418,9 +389,6 @@ export default {
       this.to = date.formatDate(Date(), 'YYYY-MM-DD')
       this.panel = 'day'
       this.filterDate()
-    },
-    viewPayment (data) {
-      console.log(data)
     },
     /**
      * Get all sellers
@@ -456,8 +424,12 @@ export default {
       this.params.page = 1
       this.getInvoicePayments(this.params)
     },
-    filterDate () {
-      let params = {}
+    async filterDate () {
+      let params = {
+        dataEqualFilter: {
+          branch_office_id: this.branchOffice?.id
+        }
+      }
       if (this.panel === 'day') {
         params = {
           day: this.day,
@@ -470,29 +442,37 @@ export default {
           from: this.from
         }
       }
-      this.getCategoryTotals(params)
-      this.getPaymentMethodTotals(params)
-      this.getPaymentTotals(params)
-      this.getCashflowTotals(params)
-      this.getTypeOfServicesTotals(params)
+      this.loading = true
+      await this.getCategoryTotals(params)
+      await this.getPaymentMethodTotals(params)
+      await this.getPaymentTotals(params)
+      await this.getCashflowTotals(params)
+      await this.getTypeOfServicesTotals(params)
+      this.loading = false
     },
-    getCashflowTotals (params) {
-      this.$api.get('reports/cashflow-totals', { params })
-        .then(({ data }) => {
-          this.cashflows = data
-        })
-        .catch(err => {
-          console.error(err.message)
-        })
+    /**
+     * Get total all
+     * @param {Object} params
+     */
+    async getCashflowTotals (params) {
+      try {
+        const { data } = await this.$api.get('reports/cashflow-totals', { params })
+        this.cashflows = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
-    getTypeOfServicesTotals (params) {
-      this.$api.get('reports/type-of-services-totals', { params })
-        .then(({ data }) => {
-          this.typeOfServicesTotals = data
-        })
-        .catch(err => {
-          console.error(err.message)
-        })
+    /**
+     * Get type of services totals
+     * @param {Object} params
+     */
+    async getTypeOfServicesTotals (params) {
+      try {
+        const { data } = await this.$api.get('reports/type-of-services-totals', { params })
+        this.typeOfServicesTotals = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
     /**
      * Set data pagination emit event
@@ -519,43 +499,40 @@ export default {
         })
     },
     /**
-     * Get total all
+     * Get payment method totals
+     * @param {Object} params
      */
-    getPaymentMethodTotals (params) {
-      this.$api.get('reports/payment-method-totals', { params })
-        .then(({ data }) => {
-          this.paymentMethodTotals = data
-        })
-        .catch(err => {
-          console.error(err.message)
-        })
+    async getPaymentMethodTotals (params) {
+      try {
+        const { data } = await this.$api.get('reports/payment-method-totals', { params })
+        this.paymentMethodTotals = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
     /**
-     * Get total all
+     * Get category totals
+     * @param {Object} params
      */
-    getCategoryTotals (params) {
-      this.$api.get('reports/category-totals', { params })
-        .then(({ data }) => {
-          this.categoryTotalsTotals = data
-        })
-        .catch(err => {
-          console.error(err.message)
-        })
+    async getCategoryTotals (params) {
+      try {
+        const { data } = await this.$api.get('reports/category-totals', { params })
+        this.categoryTotalsTotals = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
     /**
-     * Get total all
+     * Get invoice payments
+     * @param {Object} params
      */
-    getInvoicePayments (params = this.params) {
-      this.visible = true
-      this.$api.get('invoice-payments', { params })
-        .then(({ data }) => {
-          this.invoicePayments = data.data
-          this.visible = false
-        })
-        .catch(err => {
-          console.error(err.message)
-          this.visible = false
-        })
+    async getInvoicePayments (params = this.params) {
+      try {
+        const { data } = await this.$api.get('invoice-payments', { params })
+        this.invoicePayments = data.data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     }
   }
 }

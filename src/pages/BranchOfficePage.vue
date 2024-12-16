@@ -2,19 +2,19 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddCoin = true" icon="add_circle"/>
+        <q-btn color="primary" @click="openAddBranchOffice = true" icon="add_circle"/>
       </div>
       <div class="col-12">
         <q-table
-          title="Monedas"
+          title="Sucursales"
           row-key="name"
           :columns="columns"
-          :rows="coins"
+          :rows="branchOffices"
           :loading="visible"
           :filter="filter"
           binary-state-sort
           v-model:pagination="paginationConfig"
-          @row-click="editCoin"
+          @row-click="editBranchOffice"
           @request="setPagination"
           no-data-label="Registro no encontrado"
         >
@@ -31,11 +31,11 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditCoin" persistent>
+    <q-dialog v-model="openEditBranchOffice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar moneda</div>
+            <div class="text-h6">Editar sucursal</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
@@ -44,7 +44,7 @@
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="coin.name"
+                v-model="branchOffice.name"
                 autofocus
                 label="Nombre"
               />
@@ -53,51 +53,52 @@
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="coin.symbol"
+                type="textarea"
+                v-model="branchOffice.address"
                 autofocus
-                label="Simbolo"
+                label="Dirección"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteCoin" :loading="visible" />
+            <q-btn color="negative" label="Eliminar" @click="deleteBranchOffice" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddCoin" persistent>
+    <q-dialog v-model="openAddBranchOffice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveCoin">
+        <q-form @submit="saveBranchOffice">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Agregar moneda</div>
+            <div class="text-h6">Agregar sucursal</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
+                v-model="branchOffice.name"
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="coin.name"
                 autofocus
                 label="Nombre"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
+                v-model="branchOffice.address"
                 filled
-                v-model="coin.symbol"
-                autofocus
-                label="Simbolo"
+                type="textarea"
+                label="Dirección"
+                :rules="[val => !!val || 'El campo es requerido.']"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -110,8 +111,8 @@ import { Notify } from 'quasar'
 export default {
   data () {
     return {
-      coins: [],
-      coin: {},
+      branchOffices: [],
+      branchOffice: {},
       filter: '',
       /**
        * Params search
@@ -128,8 +129,8 @@ export default {
         }
       },
       visible: false,
-      openAddCoin: false,
-      openEditCoin: null,
+      openAddBranchOffice: false,
+      openEditBranchOffice: null,
       columns: [
         {
           name: 'id',
@@ -146,10 +147,10 @@ export default {
           sortable: true
         },
         {
-          name: 'symbol',
+          name: 'address',
           align: 'left',
-          label: 'Simbolo',
-          field: 'symbol',
+          label: 'Dirección',
+          field: 'address',
           sortable: true
         }
       ],
@@ -178,9 +179,9 @@ export default {
      * Close all modals
      */
     closeModal () {
-      this.openAddCoin = false
-      this.openEditCoin = false
-      this.coin = {}
+      this.openAddBranchOffice = false
+      this.openEditBranchOffice = false
+      this.branchOffice = {}
     },
     /**
      * Search beneficiary
@@ -191,16 +192,16 @@ export default {
         this.params.dataSearch[dataSearch] = data
       }
       this.params.page = 1
-      this.getCoins(this.params)
+      this.getBranchOffices(this.params)
     },
     /**
-     * Get all coins
+     * Get all branchOffices
      */
-    getCoins (params = this.params) {
+    getBranchOffices (params = this.params) {
       this.visible = true
-      this.$api.get('coins', { params })
+      this.$api.get('branch-offices', { params })
         .then(({ data }) => {
-          this.coins = data.data
+          this.branchOffices = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
         })
@@ -224,19 +225,19 @@ export default {
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
       this.params.perPage = data.pagination.rowsPerPage
       this.paginationConfig = data.pagination
-      this.getCoins(this.params)
+      this.getBranchOffices(this.params)
     },
     /**
-     * Save coins
+     * Save branchOffices
      */
-    saveCoin () {
+    saveBranchOffice () {
       this.visible = true
-      this.$api.post('coins', this.coin)
+      this.$api.post('branch-offices', this.branchOffice)
         .then(({ data }) => {
-          this.getCoins()
-          this.openAddCoin = false
+          this.getBranchOffices()
+          this.openAddBranchOffice = false
           this.visible = false
-          this.coin = {}
+          this.branchOffice = {}
           Notify.create({
             message: 'Moneda creada exitosamente',
             icon: 'check_circle',
@@ -253,23 +254,23 @@ export default {
         })
     },
     /**
-     * View coin
+     * View branchOffice
      */
-    editCoin (event, row, index) {
-      this.openEditCoin = true
-      this.coin = row
+    editBranchOffice (event, row, index) {
+      this.openEditBranchOffice = true
+      this.branchOffice = row
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`coins/${this.coin.id}`, this.coin)
+      this.$api.put(`branch-offices/${this.branchOffice.id}`, this.branchOffice)
         .then(({ data }) => {
-          this.getCoins()
-          this.openEditCoin = false
+          this.getBranchOffices()
+          this.openEditBranchOffice = false
           this.visible = false
-          this.coin = {}
+          this.branchOffice = {}
           Notify.create({
             message: 'Moneda editada exitosamente',
             icon: 'check_circle',
@@ -286,16 +287,16 @@ export default {
         })
     },
     /**
-     * Delete coin
+     * Delete branchOffice
      */
-    deleteCoin () {
+    deleteBranchOffice () {
       this.visible = true
-      this.$api.delete(`coins/${this.coin.id}`)
+      this.$api.delete(`branch-offices/${this.branchOffice.id}`)
         .then(({ data }) => {
-          this.getCoins()
-          this.openEditCoin = false
+          this.getBranchOffices()
+          this.openEditBranchOffice = false
           this.visible = false
-          this.coin = {}
+          this.branchOffice = {}
           Notify.create({
             message: 'Moneda eliminada exitosamente',
             icon: 'check_circle',

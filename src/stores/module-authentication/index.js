@@ -119,6 +119,9 @@ export const authentication = defineStore('authentication', {
      */
     userGetter (state) {
       return state.userSession
+    },
+    branchOfficeGetter (state) {
+      return state.branchOffice
     }
   },
   persist: true

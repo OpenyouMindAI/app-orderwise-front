@@ -47,7 +47,7 @@
                 v-for="bo in branchOffices"
                 :key="bo.id"
                 :active="bo.id === branchOffice.id"
-                @click="setBranchOffice(bo)"
+                @click="changeBranchOffice(bo)"
               >
                 <q-item-section thumbnail class="q-pa-sm">
                   <q-icon name="store" />
@@ -270,7 +270,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice'])
+    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice'])
   },
   watch: {
     modules (value) {
@@ -409,13 +409,21 @@ export default {
       this.titleApp = listName
     },
     /**
+     * Change branch office
+     * @param {Object} data branch office
+     */
+    changeBranchOffice (data) {
+      this.setBranchOffice(data)
+      notify(`Cambio de sucursal a ${data.name} exitosa`, 'positive', 'check_circle')
+    },
+    /**
      * Validate device
      * @param  {String} validate device
      */
     validateDevice (device) {
       return this.$q.platform.is[device]
     },
-    ...mapActions(authentication, ['logout', 'setBranchOffice'])
+    ...mapActions(authentication, ['logout'])
   }
 }
 </script>

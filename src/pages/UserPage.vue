@@ -53,14 +53,15 @@
               <q-select
                 use-input
                 filled
-                label="Rol"
+                label="Sucursales"
                 input-debounce="0"
                 option-label="name"
                 option-value="id"
-                v-model="role"
-                :options="roles"
+                multiple
+                v-model="branchOffice"
+                :options="branchOffices"
                 :rules="[val => !!val || 'El campo es requerido.']"
-                @filter="filterRoles"
+                @filter="filterBranchOffices"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -94,9 +95,9 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deleteUser" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -127,10 +128,26 @@
                 input-debounce="0"
                 option-label="name"
                 option-value="id"
+                multiple
                 v-model="role"
                 :options="roles"
                 :rules="[val => !!val || 'El campo es requerido.']"
                 @filter="filterRoles"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                label="Sucursales"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                multiple
+                v-model="branchOffice"
+                :options="branchOffices"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="filterBranchOffices"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -164,8 +181,8 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -182,6 +199,8 @@ export default {
     return {
       users: [],
       roles: [],
+      branchOffice: [],
+      branchOffices: [],
       role: null,
       user: {},
       filter: '',
@@ -202,7 +221,6 @@ export default {
       visible: false,
       openAddUser: false,
       openEditUser: null,
-      userSession: null,
       columns: [
         {
           name: 'id',
@@ -256,9 +274,10 @@ export default {
       this.searchData(data)
     },
     role (data) {
-      if (data) {
-        this.user.role_id = data.id
-      }
+      if (data && data.length > 0) this.user.roles = data.map(role => role.id)
+    },
+    branchOffice (data) {
+      if (data && data.length > 0) this.user.branchOffices = data.map(branchOffice => branchOffice.id)
     }
   },
   methods: {
@@ -278,6 +297,33 @@ export default {
         .then(({ data }) => {
           update(() => {
             this.roles = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterBranchOffices (value, update) {
+      this.$api.get('branch-offices', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          console.log(data)
+          update(() => {
+            this.branchOffices = data
           })
         })
         .catch(err => {
@@ -352,7 +398,8 @@ export default {
           this.openAddUser = false
           this.visible = false
           this.user = {}
-          this.role = null
+          this.role = []
+          this.branchOffice = []
           Notify.create({
             message: 'Usuario creado exitosamente',
             icon: 'check_circle',
@@ -374,7 +421,8 @@ export default {
     editUser (event, row, index) {
       this.openEditUser = true
       this.user = row
-      this.role = row.role
+      this.role = row.roles
+      this.branchOffice = row.branch_offices
     },
     /**
      * Save edit
@@ -387,7 +435,8 @@ export default {
           this.openEditUser = false
           this.visible = false
           this.user = {}
-          this.role = null
+          this.role = []
+          this.branchOffice = []
           Notify.create({
             message: 'Usuario editado exitosamente',
             icon: 'check_circle',

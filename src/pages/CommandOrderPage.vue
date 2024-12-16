@@ -311,13 +311,15 @@
 <script setup>
 import { api } from 'src/boot/axios'
 import { formatDate, notify, formatNumber } from 'src/const/mixins'
-import { ref, onMounted, watch, onUnmounted } from 'vue'
+import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
 import { printTicket } from 'src/const/invoice'
 import { authentication } from 'src/stores/module-authentication'
 
 const store = authentication()
 
 const userSession = store.userSession
+
+const branchOffice = computed(() => store.branchOfficeGetter)
 /**
  * Local storage
  */
@@ -402,7 +404,8 @@ const params = ref({
   sortBy: 'delivery_date',
   dataEqualFilter: {
     'products.category_id': categoryCommand?.id,
-    invoice_type_id: invoiceTypeCommand?.id
+    invoice_type_id: invoiceTypeCommand?.id,
+    branch_office_id: branchOffice.value?.id
   }
 })
 
@@ -456,6 +459,13 @@ watch(typeOfService, async (it) => {
   await getInvoices(params.value)
 })
 
+watch(branchOffice, async (bo) => {
+  params.value.dataEqualFilter = {
+    ...params.value.dataEqualFilter,
+    branch_office_id: bo?.id
+  }
+  getInvoices(params.value)
+})
 /**
  * Print invoice
  * @param {Object} data invoice saved

@@ -1,33 +1,29 @@
 <template>
   <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
-      <div class="col-12">
-        <q-table
-          title="Facturas"
-          row-key="name"
-          :columns="columns"
-          :rows="invoices"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          v-model:pagination="paginationConfig"
-          @row-click="editInvoice"
-          @request="setPagination"
-          no-data-label="Registro no encontrado"
-        >
-          <template v-slot:loading>
-            <q-inner-loading showing color="primary" />
+    <q-table
+      title="Facturas"
+      row-key="name"
+      :columns="columns"
+      :rows="invoices"
+      :loading="visible"
+      :filter="filter"
+      binary-state-sort
+      v-model:pagination="paginationConfig"
+      @row-click="editInvoice"
+      @request="setPagination"
+      no-data-label="Registro no encontrado"
+    >
+      <template v-slot:loading>
+        <q-inner-loading showing color="primary" />
+      </template>
+      <template v-slot:top-right>
+        <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+          <template v-slot:append>
+            <q-icon name="search" />
           </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
-        </q-table>
-      </div>
-    </div>
+        </q-input>
+      </template>
+    </q-table>
     <q-dialog v-model="openEditInvoice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-tabs
@@ -249,6 +245,8 @@
 <script>
 import { Notify, date, is } from 'quasar'
 import InvoicePrint from '../components/InvoicePrint.vue'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   components: {
     InvoicePrint
@@ -393,7 +391,8 @@ export default {
     totalBill () {
       const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
       return sum + this.invoice.total
-    }
+    },
+    ...mapState(authentication, ['branchOffice'])
   },
   mounted () {
     this.setPagination({
@@ -404,6 +403,13 @@ export default {
   watch: {
     filter (data) {
       this.searchData(data)
+    },
+    branchOffice (data) {
+      this.params.dataEqualFilter = {
+        ...this.params.dataEqualFilter,
+        branch_office_id: data?.id
+      }
+      this.getInvoices(this.params)
     }
   },
   methods: {
@@ -495,7 +501,6 @@ export default {
      * @param  {Object} data value pagination
      */
     setPagination (data) {
-      console.log(data.pagination.descending)
       this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
       this.params.page = data.pagination.page
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
