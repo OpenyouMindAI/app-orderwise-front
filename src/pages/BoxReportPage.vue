@@ -426,18 +426,18 @@ export default {
     },
     async filterDate () {
       let params = {
-        dataEqualFilter: {
-          branch_office_id: this.branchOffice?.id
-        }
+        branch_office_id: this.branchOffice?.id
       }
       if (this.panel === 'day') {
         params = {
+          ...params,
           day: this.day,
           fromHours: this.fromHours,
           toHours: this.toHours
         }
       } else {
         params = {
+          ...params,
           to: this.to,
           from: this.from
         }

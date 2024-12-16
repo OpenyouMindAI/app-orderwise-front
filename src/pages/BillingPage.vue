@@ -753,7 +753,7 @@ export default {
       })
       return totalPayment
     },
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
     category () {
@@ -853,6 +853,7 @@ export default {
         await this.$api.post('cashflow', {
           description: this.description,
           amount: this.amount,
+          branch_office_id: this.branchOffice.id,
           type_cashflow: this.panel
         })
         this.$q.notify({
@@ -1043,8 +1044,6 @@ export default {
     },
     /**
      * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
      */
     getCoins () {
       this.$api.get('coins', {
@@ -1067,8 +1066,6 @@ export default {
     },
     /**
      * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
      */
     getTaxes () {
       this.$api.get('taxes', {
@@ -1271,7 +1268,9 @@ export default {
       this.clear()
       this.withoutPrint = false
     },
-
+    /**
+     * Set params bill
+     */
     setParamsBill () {
       if (!this.withoutPayment.includes(this.invoiceType?.name) && this.payments?.length <= 0) {
         notify('No a seleccionado un pago', 'negative', 'warning')
@@ -1296,6 +1295,7 @@ export default {
         user_created_id: this.userSession.id,
         exchange_rate: this.exchangeRate,
         delivery_date: this.deliveryDate,
+        branch_office_id: this.branchOffice.id,
         products: this.products,
         payments: this.payments,
         tables: this.tableSelected
