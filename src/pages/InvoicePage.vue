@@ -405,10 +405,6 @@ export default {
       this.searchData(data)
     },
     branchOffice (data) {
-      this.params.dataEqualFilter = {
-        ...this.params.dataEqualFilter,
-        branch_office_id: data?.id
-      }
       this.getInvoices(this.params)
     }
   },
@@ -481,7 +477,14 @@ export default {
      */
     getInvoices (params = this.params) {
       this.visible = true
-      this.$api.get('invoices', { params })
+      this.$api.get('invoices', {
+        params: {
+          ...params,
+          dataEqualFilter: {
+            branch_office_id: this.branchOffice?.id
+          }
+        }
+      })
         .then(({ data }) => {
           this.invoices = data.data
           this.visible = false
