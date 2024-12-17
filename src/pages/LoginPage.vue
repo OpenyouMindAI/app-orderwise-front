@@ -99,6 +99,7 @@ import { logo, qBitsLogo } from 'src/const/mixins'
 import { Notify } from 'quasar'
 import { mapActions } from 'pinia'
 import { authentication } from 'stores/module-authentication'
+import { notify } from '../const/mixins'
 export default {
   name: 'LoginPage',
   data () {
@@ -139,8 +140,17 @@ export default {
     async loginAt () {
       try {
         this.btnDisable = true
-        await this.login({ username: this.username, password: this.password })
-        this.$router.push({ name: 'Billing' })
+        const data = await this.login({ username: this.username, password: this.password })
+        if (data.is_root) {
+          this.$router.push({ name: 'Billing' })
+          return
+        }
+        if (data.roles.length === 0) {
+          notify('Usuario no tiene permisos', 'negative', 'warning')
+          return
+        }
+        const { modules } = data.roles[0]
+        this.$router.push({ name: modules[0].link })
         this.btnDisable = false
       } catch (error) {
         Notify.create({
@@ -159,6 +169,7 @@ export default {
             }
           ]
         })
+      } finally {
         this.btnDisable = false
       }
     },

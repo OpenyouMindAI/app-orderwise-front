@@ -4,14 +4,12 @@ import { api } from './axios'
 
 const validModule = ($store, to, next) => {
   const user = $store.userSession
-  console.log(user)
   const modules = user?.roles[0]?.modules
-  console.log(user)
   if (user.is_root) return next()
 
-  if (user?.organization_session_id) {
-    const moduleFind = modules?.find((module) => module.route === to.name)
-    if (!moduleFind) return next(`/${modules[0].name}`)
+  if (user?.company_session_id) {
+    const moduleFind = modules?.find((module) => module.link === to.name)
+    if (!moduleFind) return next({ name: modules[0].link })
   }
 }
 

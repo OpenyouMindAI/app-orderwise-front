@@ -274,7 +274,7 @@ export default {
   },
   watch: {
     modules (value) {
-      if (value) {
+      if (value.length > 0) {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
@@ -356,8 +356,8 @@ export default {
       try {
         const params = {}
         if (!this.userSession.is_root) {
-          params.dataFilter = {
-            'users.id': this.userSession.id
+          params.dataEqualFilter = {
+            'branchOfficeUsers.user_id': this.userSession.id
           }
         }
         const { data } = await api.get('branch-offices', { params })
@@ -370,7 +370,6 @@ export default {
     validateRole (roles = []) {
       const rol = this.userSession.roles[0]
       if (this.userSession.is_root) return true
-
       if (roles && roles.length > 0 && rol) {
         return roles.filter((element) => {
           return element.id === rol.id
