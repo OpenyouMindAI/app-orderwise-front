@@ -380,7 +380,7 @@ export default {
       const store = useCommandStore()
       return store?.command
     },
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
     /**
@@ -417,6 +417,7 @@ export default {
         await this.$api.post('command-orders', {
           seller_id: this.userSession?.id,
           products: this.command.products,
+          branch_office_id: this.branchOffice?.id,
           tables: [this.command.table.id]
         })
         this.afterSaveBill()
