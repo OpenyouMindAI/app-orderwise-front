@@ -1,5 +1,28 @@
 import { jsPDF } from 'jspdf'
 import { formatDate } from './mixins'
+
+export const status = {
+  pending: {
+    label: 'Pendiente',
+    color: 'primary'
+  },
+  cancelled: {
+    label: 'Anulada',
+    color: 'negative'
+  },
+  on_process: {
+    label: 'En proceso',
+    color: 'teal'
+  },
+  finished: {
+    label: 'Finalizado',
+    color: 'positive'
+  },
+  delivered: {
+    label: 'Entregado',
+    color: 'info'
+  }
+}
 /**
  * Print invoice
  * @param {Object} data invoice saved

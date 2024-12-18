@@ -4,36 +4,64 @@
       <q-select
         v-model="category"
         :options="categories"
-        style="width: 200px;"
         label="Categoría"
         option-value="id"
         option-label="name"
+        style="min-width: 300px;"
         dense
         filled
-        clearable
-      />
-      <q-select
-        v-model="invoiceType"
-        :options="invoiceTypes"
-        style="width: 400px;"
-        label="Tipo de factura"
-        option-value="id"
-        option-label="name"
-        dense
-        filled
-        clearable
-      />
+        multiple
+      >
+        <template v-if="category.length" v-slot:append>
+          <q-icon name="cancel" @click.stop.prevent="category = []" class="cursor-pointer" />
+        </template>
+      </q-select>
       <q-select
         v-model="typeOfService"
         :options="typeOfServices"
-        style="width: 200px;"
+        style="min-width: 300px;"
         label="Tipo de servicio"
         option-value="id"
         option-label="name"
         dense
         filled
-        clearable
-      />
+        multiple
+      >
+        <template v-if="typeOfService.length" v-slot:append>
+          <q-icon name="cancel" @click.stop.prevent="typeOfService = []" class="cursor-pointer" />
+        </template>
+      </q-select>
+      <q-select
+        v-model="invoiceType"
+        :options="invoiceTypes"
+        style="min-width: 300px;"
+        label="Tipo de factura"
+        option-value="id"
+        option-label="name"
+        dense
+        filled
+        multiple
+      >
+        <template v-if="invoiceType.length" v-slot:append>
+          <q-icon name="cancel" @click.stop.prevent="invoiceType = []" class="cursor-pointer" />
+        </template>
+      </q-select>
+      <q-select
+        v-if="visibleBranchOffice"
+        v-model="branchOfficeSelect"
+        :options="branchOffices"
+        style="min-width: 300px;"
+        label="Sucursales"
+        option-value="id"
+        option-label="name"
+        dense
+        filled
+        multiple
+      >
+        <template v-if="branchOfficeSelect.length" v-slot:append>
+          <q-icon name="cancel" @click.stop.prevent="branchOfficeSelect = []" class="cursor-pointer" />
+        </template>
+      </q-select>
     </div>
     <div class="board-command">
       <div v-for="(status, index) in statuses" :key="status" class="q-pa-xs">
@@ -311,7 +339,7 @@
 <script setup>
 import { api } from 'src/boot/axios'
 import { formatDate, notify, formatNumber } from 'src/const/mixins'
-import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
+import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
 import { printTicket } from 'src/const/invoice'
 import { authentication } from 'src/stores/module-authentication'
 
@@ -323,15 +351,50 @@ const branchOffice = computed(() => store.branchOfficeGetter)
 /**
  * Local storage
  */
-const categoryCommand = JSON.parse(localStorage.getItem('category-command')) || null
+const categoryCommand = JSON.parse(localStorage.getItem('category-command')) || []
 /**
  * Local storage
  */
-const invoiceTypeCommand = JSON.parse(localStorage.getItem('invoiceType-command')) || null
+const invoiceTypeCommand = JSON.parse(localStorage.getItem('invoiceType-command')) || []
 /**
  * Local storage
  */
-const typeOfServiceCommand = JSON.parse(localStorage.getItem('typeOfService-command')) || null
+const typeOfServiceCommand = JSON.parse(localStorage.getItem('typeOfService-command')) || []
+/**
+ * List invoice
+ * @type {Array}
+ */
+const invoices = ref([])
+/**
+ * List branch office
+ * @type {Array}
+ */
+const branchOfficeSelect = ref([])
+/**
+ * Select invoice
+ * @type {Object}
+ */
+const invoice = ref(null)
+/**
+ * Loading edit
+ * @type {Boolean}
+ */
+const loadingEdit = ref(false)
+/**
+ * Loading cancel
+ * @type {Boolean}
+ */
+const cancelLoading = ref(false)
+/**
+ * List invoice
+ * @type {Array}
+ */
+const typeOfServices = ref([])
+/**
+ * Open edit invoice
+ * @type {Boolean}
+ */
+const openEditInvoice = ref(false)
 /**
  * Select category
  * @type {Object}
@@ -343,22 +406,9 @@ const category = ref(categoryCommand)
  */
 const invoiceType = ref(invoiceTypeCommand)
 /**
- * List invoice
- * @type {Array}
+ * Select typeOfService
+ * @type {Object}
  */
-const invoices = ref([])
-
-const invoice = ref(null)
-const loadingEdit = ref(false)
-const cancelLoading = ref(false)
-/**
- * List invoice
- * @type {Array}
- */
-const typeOfServices = ref([])
-
-const openEditInvoice = ref(false)
-
 const typeOfService = ref(typeOfServiceCommand)
 
 /**
@@ -371,6 +421,13 @@ const categories = ref([])
  * @type {Array}
  */
 const invoiceTypes = ref([])
+/**
+ * Branch office
+ * @type {Array}
+ */
+const branchOffices = ref([])
+
+const visibleBranchOffice = userSession.is_root || userSession.is_super_admin
 
 const interval = ref(null)
 
@@ -402,21 +459,21 @@ const loading = ref(false)
 const params = ref({
   sortOrder: 'asc',
   sortBy: 'delivery_date',
-  dataEqualFilter: {
-    'products.category_id': categoryCommand?.id,
-    invoice_type_id: invoiceTypeCommand?.id,
-    branch_office_id: branchOffice.value?.id
+  whereIn: {
+    'products.category_id': categoryCommand.map(item => item.id),
+    invoice_type_id: invoiceTypeCommand.map(item => item.id),
+    branch_office_id: branchOffice.value
   }
 })
 
 onMounted(() => {
-  getInvoices(params.value)
   interval.value = setInterval(() => {
     getInvoices(params.value)
-  }, 10000)
+  }, 20000)
   getCategories()
   getInvoiceTypes()
   getTypeOfServices()
+  getBranchOffices()
 })
 
 onUnmounted(() => {
@@ -425,47 +482,41 @@ onUnmounted(() => {
 
 watch(category, async (cat) => {
   localStorage.setItem('category-command', JSON.stringify(cat))
-  params.value = {
-    ...params.value,
-    dataEqualFilter: {
-      ...params.value.dataEqualFilter,
-      'products.category_id': cat?.id
-    }
-  }
-  await getInvoices(params.value)
+  const ids = cat.map((item) => item.id)
+  filters('products.category_id', ids, 'whereIn')
 })
 
 watch(invoiceType, async (it) => {
   localStorage.setItem('invoiceType-command', JSON.stringify(it))
-  params.value = {
-    ...params.value,
-    dataEqualFilter: {
-      ...params.value.dataEqualFilter,
-      invoice_type_id: it?.id
-    }
-  }
-  await getInvoices(params.value)
+  const ids = it.map((item) => item.id)
+  filters('invoice_type_id', ids, 'whereIn')
 })
 
 watch(typeOfService, async (it) => {
   localStorage.setItem('typeOfService-command', JSON.stringify(it))
-  params.value = {
-    ...params.value,
-    dataEqualFilter: {
-      ...params.value.dataEqualFilter,
-      type_of_service_id: it?.id
-    }
-  }
-  await getInvoices(params.value)
+  const ids = it.map((item) => item.id)
+  filters('type_of_service_id', ids, 'whereIn')
 })
 
-watch(branchOffice, async (bo) => {
-  params.value.dataEqualFilter = {
-    ...params.value.dataEqualFilter,
-    branch_office_id: bo?.id
+watch(branchOfficeSelect, async (bo) => {
+  localStorage.setItem('branchOffice-command', JSON.stringify(bo))
+  const ids = bo.map((item) => item.id)
+  filters('branch_office_id', ids, 'whereIn')
+})
+
+/**
+ * Filters
+ * @param {String} field field
+ * @param {Array} value value
+ * @param {String} filterParams filterParams
+ */
+const filters = (field, value, filterParams) => {
+  params.value[filterParams] = {
+    ...params.value[filterParams],
+    [field]: value
   }
   getInvoices(params.value)
-})
+}
 /**
  * Print invoice
  * @param {Object} data invoice saved
@@ -475,7 +526,10 @@ const print = (data) => {
   const pdfUrl = doc.output('bloburl')
   window.open(pdfUrl, '_blank')
 }
-
+/**
+ * Show invoice
+ * @param {Object} data invoice saved
+ */
 const showInvoices = (data) => {
   invoice.value = data
   setTimeout(() => {
@@ -495,6 +549,23 @@ const getInvoices = async (params = {}) => {
     console.log(error)
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * Get all invoices
+ */
+const getBranchOffices = async () => {
+  try {
+    if (visibleBranchOffice) {
+      const { data } = await api.get('branch-offices')
+      branchOffices.value = data
+      branchOfficeSelect.value = data
+    } else {
+      branchOfficeSelect.value = [branchOffice.value]
+    }
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
   }
 }
 
@@ -533,6 +604,9 @@ const getInvoiceTypes = async () => {
   }
 }
 
+/**
+ * Save edit
+ */
 const saveEdit = async () => {
   try {
     loadingEdit.value = true
@@ -594,32 +668,6 @@ const cancelInvoice = async () => {
 .column-command {
   width: 350px;
   overflow-y: auto;
-}
-
-.board::-webkit-scrollbar {
-  height: 8px;
-}
-
-.board::-webkit-scrollbar-thumb {
-  background-color: #ccc;
-  border-radius: 4px;
-}
-
-.board::-webkit-scrollbar-track {
-  background-color: #f4f4f4;
-}
-
-.board::-webkit-scrollbar {
-  height: 8px;
-}
-
-.board::-webkit-scrollbar-thumb {
-  background-color: #ccc;
-  border-radius: 4px;
-}
-
-.board::-webkit-scrollbar-track {
-  background-color: #f4f4f4;
 }
 
 </style>

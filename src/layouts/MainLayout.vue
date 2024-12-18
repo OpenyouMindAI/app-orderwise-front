@@ -130,7 +130,7 @@
                   <q-avatar icon="badge" />
                 </q-item-section>
                 <q-item-section>
-                  {{ userSession?.roles[0]?.name }}
+                  {{ userSession.is_root ? 'Root' : userSession?.roles[0]?.name }}
                 </q-item-section>
               </q-item>
               <q-item>

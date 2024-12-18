@@ -19,7 +19,12 @@
 import { api } from 'src/boot/axios'
 import ChangeCompany from 'src/components/Company/ChangeCompany.vue'
 import { loading } from 'src/const/mixins'
-import { onBeforeMount, ref } from 'vue'
+import { computed, onBeforeMount, ref } from 'vue'
+import { authentication } from 'src/stores/module-authentication'
+
+const store = authentication()
+
+const { userSession } = store
 /**
  * Store of the application authentication
  * @type {Object}
@@ -30,6 +35,16 @@ import { onBeforeMount, ref } from 'vue'
  */
 const companies = ref([])
 
+const params = computed(() => {
+  if (userSession.is_root) return {}
+
+  return {
+    dataEqualFilter: {
+      'users.user_id': userSession?.id
+    }
+  }
+})
+
 onBeforeMount(() => {
   getAllCompanies()
 })
@@ -39,7 +54,9 @@ onBeforeMount(() => {
 const getAllCompanies = async () => {
   try {
     loading(true)
-    const { data } = await api.get('companies')
+    const { data } = await api.get('companies', {
+      params: params.value
+    })
     companies.value = data
     loading(false)
   } catch (error) {

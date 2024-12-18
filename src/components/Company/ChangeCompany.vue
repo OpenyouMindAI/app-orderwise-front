@@ -21,7 +21,7 @@
           </q-item-label>
         </q-item-section>
         <q-item-section side>
-          <q-btn v-if="org.id === user.organization_session_id" icon="published_with_changes" color="primary" size="lg"
+          <q-btn v-if="org.id === user.company_session_id" icon="published_with_changes" color="primary" size="lg"
             dense round flat />
           <q-btn v-else flat icon="sync" size="lg" round dense @click="changeCompany(org)">
             <q-tooltip> Cambiar la session de la empresa </q-tooltip>
