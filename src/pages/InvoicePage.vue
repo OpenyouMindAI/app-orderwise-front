@@ -23,6 +23,18 @@
           </template>
         </q-input>
       </template>
+      <template v-slot:body-cell-status="props">
+        <q-td :props="props" v-if="props.value">
+          <q-badge
+            :color="status[props.value].color"
+            :label="status[props.value].label"
+            class="q-pa-sm"
+          />
+        </q-td>
+        <q-td :props="props" v-else>
+          -
+        </q-td>
+      </template>
     </q-table>
     <q-dialog v-model="openEditInvoice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
@@ -70,7 +82,7 @@
                 <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Moneda" filled v-model="invoice.coin.name" readonly dense/>
+                <q-input label="Moneda" filled :model-value="invoice?.coin?.name" readonly dense/>
               </div>
               <div class="col-6">
                 <q-select
@@ -126,7 +138,7 @@
                       Op Gravada
                     </q-item-section>
                     <q-item-section side v-if="invoice.coin">
-                      {{ invoice.coin.symbol }}{{ invoice.tax_base }}
+                      {{ invoice?.coin?.symbol }}{{ invoice.tax_base }}
                     </q-item-section>
                   </q-item>
                   <q-item v-for="taxe in invoice.taxes" :key="taxe.id" v-show="invoice.invoice_type.name !== 'Ticket'">
@@ -134,7 +146,7 @@
                       {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
                     </q-item-section>
                     <q-item-section side v-if="invoice.coin">
-                      {{ invoice.coin.symbol }}{{ calculateTaxe(taxe) }}
+                      {{ invoice?.coin?.symbol }}{{ calculateTaxe(taxe) }}
                     </q-item-section>
                   </q-item>
                   <q-item>
@@ -142,7 +154,7 @@
                       Importe total
                     </q-item-section>
                     <q-item-section side v-if="coin">
-                      {{ invoice.coin.symbol }}{{ totalBill }}
+                      {{ invoice?.coin?.symbol }}{{ totalBill }}
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -189,7 +201,8 @@
           </q-tab-panel>
         </q-tab-panels>
         <q-card-actions align="right">
-          <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
+          <q-btn color="warning" label="Cerrar" @click="openEditInvoice = false"/>
+          <q-btn color="negative" label="Anular" @click="cancelInvoice" :loading="cancelLoading"/>
           <q-btn color="secondary" label="Imprimir Ticket" @click="print"/>
           <q-btn color="primary" label="Guardar" @click="saveEdit"/>
         </q-card-actions>
@@ -247,12 +260,15 @@ import { Notify, date, is } from 'quasar'
 import InvoicePrint from '../components/InvoicePrint.vue'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
+import { formatNumber, notify } from 'src/const/mixins'
+import { status } from 'src/const/invoice'
 export default {
   components: {
     InvoicePrint
   },
   data () {
     return {
+      status,
       documentType: 'ruc',
       options: [
         { label: 'RUC', value: 'ruc' },
@@ -267,6 +283,7 @@ export default {
       invoices: [],
       invoice: null,
       coin: {},
+      cancelLoading: false,
       filter: '',
       /**
        * Params search
@@ -363,10 +380,10 @@ export default {
         //   sortable: true
         // },
         {
-          name: 'exchange_rate',
-          align: 'right',
-          label: 'Tipo de cambio',
-          field: 'exchange_rate',
+          name: 'status',
+          align: 'center',
+          label: 'Estado',
+          field: 'status',
           sortable: true
         },
         {
@@ -374,6 +391,7 @@ export default {
           align: 'right',
           label: 'Total',
           field: 'total',
+          format: val => formatNumber(val),
           sortable: true
         }
       ],
@@ -635,6 +653,24 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Change status
+     * @param {Object} data invoice
+     * @param {Number} index index status
+     */
+    async cancelInvoice  () {
+      try {
+        this.cancelLoading = true
+        await this.$api.put(`invoice-status-command/${this.invoice.id}`, { status: 'cancelled' })
+        this.getInvoices()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+        this.openEditInvoice = false
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.cancelLoading = false
+      }
     }
   }
 }
