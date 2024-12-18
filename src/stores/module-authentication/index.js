@@ -70,6 +70,13 @@ export const authentication = defineStore('authentication', {
       }
     },
     /**
+     * Set company session
+     * @param  {Object} companySession
+     */
+    setCompanySession (companySession) {
+      this.userSession.company_session = companySession
+    },
+    /**
      * Set local storage data
      * @param  {Object} data
      */
@@ -120,6 +127,11 @@ export const authentication = defineStore('authentication', {
     userGetter (state) {
       return state.userSession
     },
+    /**
+     * Branch office getter
+     * @param {*} state
+     * @returns {Object} branch office
+     */
     branchOfficeGetter (state) {
       return state.branchOffice
     }

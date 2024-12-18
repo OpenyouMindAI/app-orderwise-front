@@ -1,9 +1,9 @@
 <template>
   <div>
-    <q-card v-for="org in companies" :key="org.id" class="q-mt-sm cursor-pointer q-py-sm">
+    <q-card v-for="org in companies" :key="org.id" class="q-mt-sm cursor-pointer q-py-sm bg-primary text-white">
       <q-item>
         <q-item-section avatar>
-          <img alt="logo" :src="org.logo" :style="$q.screen.lt.md
+          <img alt="logo" :src="org.url" :style="$q.screen.lt.md
             ? 'height: 50px; width: 70px;'
             : 'height: 50px; width: 130px;'
             " />
@@ -13,7 +13,7 @@
           <q-item-label class="text-subtitle1">
             {{ org.name }} - {{ org.document_number }}
           </q-item-label>
-          <q-item-label class="q-subtitle2 text-grey-6">
+          <q-item-label class="q-subtitle2 ">
             {{ org.email }}
             <q-badge rounded floating class="text-white text-bold q-pa-xs" color="primary">
               Activa
@@ -21,8 +21,8 @@
           </q-item-label>
         </q-item-section>
         <q-item-section side>
-          <q-btn v-if="org.id === user.company_session_id" icon="published_with_changes" color="primary" size="lg"
-            dense round flat />
+          <q-btn v-if="org.id === user.company_session_id" icon="published_with_changes" color="white" size="lg"
+            dense round flat/>
           <q-btn v-else flat icon="sync" size="lg" round dense @click="changeCompany(org)">
             <q-tooltip> Cambiar la session de la empresa </q-tooltip>
           </q-btn>

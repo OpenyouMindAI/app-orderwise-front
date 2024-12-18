@@ -1262,7 +1262,7 @@ export default {
         this.withoutPrint = false
         return
       }
-      const doc = printTicket(data)
+      const doc = printTicket(data, this.userSession)
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')
       this.clear()
