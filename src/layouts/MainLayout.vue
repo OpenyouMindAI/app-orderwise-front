@@ -362,7 +362,9 @@ export default {
         }
         const { data } = await api.get('branch-offices', { params })
         this.branchOffices = data
-        this.setBranchOffice(data[0])
+        if (!this.branchOffice) {
+          this.setBranchOffice(data[0])
+        }
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
