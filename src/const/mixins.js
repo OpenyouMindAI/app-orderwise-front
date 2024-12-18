@@ -101,3 +101,27 @@ export const logo = {
 export const qBitsLogo = {
   black: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/black.png'
 }
+
+export const blobToBase64 = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+export const setFiles = async (files) => {
+  const filesSelected = []
+  if (files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      filesSelected.push({
+        url: await blobToBase64(file),
+        file,
+        type: file.type
+      })
+    }
+  }
+  return filesSelected
+}

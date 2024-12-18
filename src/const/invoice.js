@@ -27,8 +27,8 @@ export const status = {
  * Print invoice
  * @param {Object} data invoice saved
  */
-export const printTicket = (data) => {
-  console.log(data)
+export const printTicket = (data, userSession) => {
+  const { company_session: companySession } = userSession
   const JsPdf = jsPDF
   const altura = 40 + data.products.length * 5 + 70
 
@@ -48,13 +48,15 @@ export const printTicket = (data) => {
     return (pageWidth - textWidth) / 2
   }
 
-  doc.text('LO DE LA ABUELA', centrarTexto('LO DE LA ABUELA'), y)
+  doc.text(companySession?.name?.toUpperCase(), centrarTexto(companySession?.name?.toUpperCase()), y)
   y += 5
-  doc.text('TENIENTE IBANEZ 2911', centrarTexto('TENIENTE IBANEZ 2911'), y)
+  doc.text(companySession?.address?.toUpperCase(), centrarTexto(companySession?.address?.toUpperCase()), y)
   y += 5
-  doc.text('(555) 123 4567', centrarTexto('(555) 123 4567'), y)
+  doc.text(companySession?.phone_number, centrarTexto(companySession?.phone_number), y)
+
   y += 5
-  doc.text('RFC0313282AB1', centrarTexto('RFC0313282AB1'), y)
+  doc.text(companySession?.document_number?.toUpperCase(), centrarTexto(companySession?.document_number), y)
+
   y += 5
   doc.text('--------------------------------', centrarTexto('--------------------------------'), y)
   y += 5
