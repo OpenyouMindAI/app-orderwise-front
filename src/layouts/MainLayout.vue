@@ -12,15 +12,16 @@
           @click="leftDrawerOpen = !leftDrawerOpen"
         />
         <q-separator dark vertical inset />
-        <div v-if="!$q.screen.lt.md" class="flex flex-center q-ml-md">
-          <img
-            :src="userSession?.organization_session?.photo_url || logo.white"
+        <div v-if="!$q.screen.lt.md" class="flex">
+          <q-img
+            :src="userSession?.company_session?.url || logo.white"
             width="155px"
-            style="max-height: 60px"
+            style="max-height: 40px"
             alt="logo"
+            fit="contain"
           />
           <q-tooltip :offset="[10, 10]">
-            {{ userSession?.organization_session?.name }}
+            {{ userSession?.company_session?.name }}
           </q-tooltip>
         </div>
         <q-space />

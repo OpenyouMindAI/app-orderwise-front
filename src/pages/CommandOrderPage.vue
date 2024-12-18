@@ -522,7 +522,7 @@ const filters = (field, value, filterParams) => {
  * @param {Object} data invoice saved
  */
 const print = (data) => {
-  const doc = printTicket(data)
+  const doc = printTicket(data, userSession)
   const pdfUrl = doc.output('bloburl')
   window.open(pdfUrl, '_blank')
 }
