@@ -57,7 +57,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
-import { logo } from '../../const/mixins';
+import { logo } from '../../const/mixins'
 
 defineProps({
   companies: {
