@@ -7,7 +7,7 @@
         </q-card-section>
         <q-card-section class="flex justify-center q-pt-none">
           <q-img
-            :src="file.url"
+            :src="file.url || logo.white"
             spinner-color="white"
             style="height: 200px;"
             class="rounded-borders"
@@ -82,7 +82,7 @@
 <script setup>
 import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
-import { notify, setFiles } from '../const/mixins'
+import { logo, notify, setFiles } from '../const/mixins'
 import { api } from 'src/boot/axios'
 import { ref } from 'vue'
 

@@ -3,7 +3,7 @@
     <q-card v-for="org in companies" :key="org.id" class="q-mt-sm cursor-pointer q-py-sm bg-primary text-white">
       <q-item>
         <q-item-section avatar>
-          <img alt="logo" :src="org.url" :style="$q.screen.lt.md
+          <img alt="logo" :src="org.url || logo.white" :style="$q.screen.lt.md
             ? 'height: 50px; width: 70px;'
             : 'height: 50px; width: 130px;'
             " />
@@ -57,6 +57,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import { logo } from '../../const/mixins';
 
 defineProps({
   companies: {
