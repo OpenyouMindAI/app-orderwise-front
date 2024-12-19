@@ -1,6 +1,6 @@
 <template>
   <q-page padding :style="!$q.screen.lt.md ? 'margin-left: 50%; transform: translateX(-40%)': ''">
-    <q-card class="bg-grey-1">
+    <q-card>
       <q-form @submit="onSubmit">
         <q-card-section>
           <span class="text-h6">Cambiar logo de la empresa</span>
