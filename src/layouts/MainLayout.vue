@@ -12,7 +12,7 @@
           @click="leftDrawerOpen = !leftDrawerOpen"
         />
         <q-separator dark vertical inset />
-        <div v-if="!$q.screen.lt.md" class="flex">
+        <div v-if="!$q.screen.lt.md" class="flex q-ml-sm">
           <q-img
             :src="userSession?.company_session?.url || logo.white"
             width="155px"
