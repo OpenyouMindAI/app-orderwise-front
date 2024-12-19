@@ -74,7 +74,7 @@
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deleteRole" :loading="visible" />
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -120,7 +120,7 @@
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -129,7 +129,9 @@
 </template>
 
 <script>
+import { mapState } from 'pinia'
 import { Notify } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   data () {
     return {
@@ -155,7 +157,6 @@ export default {
       visible: false,
       openAddRole: false,
       openEditRole: null,
-      userSession: null,
       columns: [
         {
           name: 'id',
@@ -201,9 +202,9 @@ export default {
   },
   created () {
     this.getModules()
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.role.user_created_id = this.userSession.id
-    this.role.user_updated_id = this.userSession.id
+  },
+  computed: {
+    ...mapState(authentication, ['userSession'])
   },
   methods: {
     /**
@@ -264,7 +265,6 @@ export default {
     saveRole () {
       this.visible = true
       this.role.modules = this.moduleSelected
-      console.log(this.role, this.moduleSelected)
       this.$api.post('roles', this.role)
         .then(({ data }) => {
           this.getRoles()

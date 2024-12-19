@@ -33,7 +33,7 @@
                   <q-item-section>Total en $:</q-item-section>
                   <q-item-section side>{{ props.row.total }}</q-item-section>
                 </q-item>
-                <q-item clickable v-ripple active-class="text-orange">
+                <q-item clickable v-ripple active-class="text-secondary">
                   <q-item-section>Total en Bs:</q-item-section>
                   <q-item-section side>{{ props.row.totalExchange }}</q-item-section>
                 </q-item>
@@ -93,7 +93,7 @@ export default {
           await deleteDoc(doc(db, 'bills', String(data.code)))
           this.getBills()
           this.$q.notify({
-            message: 'Factura eliminado extisamente',
+            message: 'Factura eliminado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })

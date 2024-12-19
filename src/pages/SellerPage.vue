@@ -91,7 +91,7 @@
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deleteSeller" :loading="visible" />
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -155,7 +155,7 @@
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -164,7 +164,9 @@
 </template>
 
 <script>
+import { mapState } from 'pinia'
 import { Notify } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   data () {
     return {
@@ -235,16 +237,14 @@ export default {
       }
     }
   },
+  computed: {
+    ...mapState(authentication, ['userSession'])
+  },
   mounted () {
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
     })
-  },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.seller.user_created_id = this.userSession.id
-    this.seller.user_updated_id = this.userSession.id
   },
   watch: {
     filter (data) {

@@ -1,13 +1,18 @@
 {
-  "name": "shopping",
+  "name": "orderwise",
   "version": "0.0.1",
-  "description": "Shopping",
-  "productName": "Shopping",
+  "description": "Orderwise",
+  "productName": "Orderwise",
   "author": "palma001 <palmaluis1997@gmail.com>",
   "private": true,
   "scripts": {
     "lint": "eslint --ext .js,.vue ./",
-    "test": "echo \"No test specified\" && exit 0"
+    "test": "echo \"No test specified\" && exit 0",
+    "dev": "cross-env NODE_ENV=local quasar dev",
+    "build": "quasar build",
+    "build-pwa": "NODE_ENV=production quasar build -m pwa",
+    "build-pwa-dev": "NODE_ENV=development quasar build -m pwa",
+    "icons": "icongenie generate -i logo.png --skip-trim"
   },
   "dependencies": {
     "@capacitor-community/barcode-scanner": "^2.1.1",
@@ -15,10 +20,13 @@
     "axios": "^0.21.1",
     "draggable-resizable-vue3": "^1.0.94-beta",
     "firebase": "^9.9.3",
+    "jspdf": "^2.5.2",
     "pinia": "^2.0.11",
+    "pinia-plugin-persistedstate": "^3.2.1",
     "qrcode": "^1.5.3",
     "quasar": "^2.6.0",
     "swiper": "^11.1.0",
+    "timeago.js": "^4.0.2",
     "vue": "^3.0.0",
     "vue-barcode-reader": "^1.0.2",
     "vue-html-to-paper": "^1.4.4",

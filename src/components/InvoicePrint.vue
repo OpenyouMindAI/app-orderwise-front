@@ -1,62 +1,76 @@
 <template>
-  <div class="ticket">
-    <p class="centrado">
-      EL RINCON DE SETIMA S.A.C
-      <br>Norky`s
-      <br>R.U.C 20513132248
-      <br>Jr Sebastian Barranca Nro.1555(2do y
-      <br>3er Piso.Alt Cdras.7 de Gamarra) -Lima
-      <br>La victoria
-      <br>Telefono: Central Delivery: 644-91000
-    </p>
-    <p class="left">
-      <span class="text-left">Pedido: {{ data.code }}</span>
-      <span class="text-right">Cliente: {{ data.client.name }}</span>
-      <br>
-      <span class="text-left">Fecha: {{ formatDate(data.created_at, 'DD/mm/YYYY') }}</span>
-      <span class="text-right">Hora: {{ formatDate(data.created_at, 'H:mm:ss') }}</span>
-      <br>
-      <span class="text-left">Mesero: {{ data.seller.name }}</span>
-      <span class="text-right">Tipo: {{ data.invoice_type.name }}</span>
-      <br>
-      <span class="text-left">T/Cambio: {{ data.exchange_rate }}</span>
-      <span class="text-right">Mesa: {{ data.tables.map(table => `${table.name} ${table.living_room.name}`).join(', ') }}</span>
-    </p>
+  <div class="invoice">
+    <div class="center">
+      <span class="title">
+        LO DE LA ABUELA
+      </span>
+      <span>
+        <br />TENIENTE IBAÑEZ 2911 <br />(555) 123 4567 <br />RFC0031282AB1
+      </span>
+    </div>
+    <span class="separator"></span>
+    <div class="details" style="width: 100%">
+      <span>Nro: {{ data.code }}</span>
+      <br />
+      <span>Cliente: {{ data.client.name }}</span>
+      <br />
+      <span>Fecha: {{ formatDate(data.created_at, "DD/mm/YYYY") }}</span>
+      <br />
+      <span>Hora: {{ formatDate(data.created_at, "H:mm:ss") }}</span>
+      <br />
+      <span>Mesero: {{ data.seller.name }}</span>
+      <br />
+      <span>Tipo: {{ data.invoice_type.name }}</span>
+      <br />
+      <span v-if="data.tables.length > 0">
+        Mesa:
+        {{
+          data.tables
+            .map((table) => `${table.name} ${table?.living_room?.name}`)
+            .join(", ")
+        }}</span
+      >
+    </div>
+    <span class="separator"></span>
     <table>
       <thead>
         <tr>
-          <th class="producto">PRODUCTO</th>
-          <th class="cantidad">CANT</th>
-          <th class="precio">PRECIO</th>
-          <th class="cantidad">SUBTOTAL</th>
+          <th class="producto">Artículo</th>
+          <th class="cantidad">Cant</th>
+          <th class="precio" v-if="data.invoice_type.acronym_serie !== 'T'">
+            Importe
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="product in data.products" :key="product.id">
           <td class="producto">{{ product.name }}</td>
           <td class="cantidad">{{ product.pivot.amount }}</td>
-          <td class="precio">{{ product.pivot.price }}</td>
-          <td class="cantidad">{{ product.pivot.amount * product.pivot.price }}</td>
+          <td class="precio" v-if="data.invoice_type.acronym_serie !== 'T'">
+            {{ product.pivot.price * product.pivot.amount }}
+          </td>
         </tr>
-        <tr>
-            <td class="producto" colspan="3">TOTAL</td>
-            <td class="precio">{{ data.total }}</td>
+        <tr class="total">
+          <td class="producto">Total</td>
+          <td class="cantidad" v-if="data.invoice_type.acronym_serie !== 'T'"></td>
+          <td class="precio" v-if="data.invoice_type.acronym_serie !== 'T'">
+            {{ data.total }}
+          </td>
+          <td class="precio" v-else>
+            {{ sum(data.products) }}
+          </td>
         </tr>
       </tbody>
     </table>
-    <div class="footer">
-      <p>
-        Razon Social: ----------------------------------------------------------------
-      </p>
-    </div>
-    <p class="centrado end">¡GRACIAS POR SU COMPRA!</p>
+    <span class="separator"></span>
+    <p class="center">¡GRACIAS POR SU COMPRA!</p>
   </div>
 </template>
 
 <script>
 import { date } from 'quasar'
 export default {
-  // name: 'ComponentName',
+  name: 'InvoicePrint',
   props: {
     data: {
       type: Object
@@ -66,6 +80,9 @@ export default {
     return {
       formatDate (dateNew, format) {
         return date.formatDate(dateNew, format)
+      },
+      sum (data) {
+        return data.reduce((a, b) => a + b.pivot.amount, 0)
       }
     }
   }

@@ -1,33 +1,41 @@
 <template>
   <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
-      <div class="col-12">
-        <q-table
-          title="Facturas"
-          row-key="name"
-          :columns="columns"
-          :rows="invoices"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          v-model:pagination="paginationConfig"
-          @row-click="editInvoice"
-          @request="setPagination"
-          no-data-label="Registro no encontrado"
-        >
-          <template v-slot:loading>
-            <q-inner-loading showing color="primary" />
+    <q-table
+      title="Facturas"
+      row-key="name"
+      :columns="columns"
+      :rows="invoices"
+      :loading="visible"
+      :filter="filter"
+      binary-state-sort
+      v-model:pagination="paginationConfig"
+      @row-click="editInvoice"
+      @request="setPagination"
+      no-data-label="Registro no encontrado"
+    >
+      <template v-slot:loading>
+        <q-inner-loading showing color="primary" />
+      </template>
+      <template v-slot:top-right>
+        <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+          <template v-slot:append>
+            <q-icon name="search" />
           </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
-        </q-table>
-      </div>
-    </div>
+        </q-input>
+      </template>
+      <template v-slot:body-cell-status="props">
+        <q-td :props="props" v-if="props.value">
+          <q-badge
+            :color="status[props.value].color"
+            :label="status[props.value].label"
+            class="q-pa-sm"
+          />
+        </q-td>
+        <q-td :props="props" v-else>
+          -
+        </q-td>
+      </template>
+    </q-table>
     <q-dialog v-model="openEditInvoice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-tabs
@@ -74,7 +82,7 @@
                 <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Moneda" filled v-model="invoice.coin.name" readonly dense/>
+                <q-input label="Moneda" filled :model-value="invoice?.coin?.name" readonly dense/>
               </div>
               <div class="col-6">
                 <q-select
@@ -130,7 +138,7 @@
                       Op Gravada
                     </q-item-section>
                     <q-item-section side v-if="invoice.coin">
-                      {{ invoice.coin.symbol }}{{ invoice.tax_base }}
+                      {{ invoice?.coin?.symbol }}{{ invoice.tax_base }}
                     </q-item-section>
                   </q-item>
                   <q-item v-for="taxe in invoice.taxes" :key="taxe.id" v-show="invoice.invoice_type.name !== 'Ticket'">
@@ -138,7 +146,7 @@
                       {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
                     </q-item-section>
                     <q-item-section side v-if="invoice.coin">
-                      {{ invoice.coin.symbol }}{{ calculateTaxe(taxe) }}
+                      {{ invoice?.coin?.symbol }}{{ calculateTaxe(taxe) }}
                     </q-item-section>
                   </q-item>
                   <q-item>
@@ -146,7 +154,7 @@
                       Importe total
                     </q-item-section>
                     <q-item-section side v-if="coin">
-                      {{ invoice.coin.symbol }}{{ totalBill }}
+                      {{ invoice?.coin?.symbol }}{{ totalBill }}
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -158,7 +166,7 @@
             <q-markup-table dense>
               <thead>
                 <tr>
-                  <th class="text-left">Metodo de pago</th>
+                  <th class="text-left">Método de pago</th>
                   <th class="text-left">Referencia</th>
                   <th class="text-right">Monto</th>
                 </tr>
@@ -193,9 +201,9 @@
           </q-tab-panel>
         </q-tab-panels>
         <q-card-actions align="right">
-          <q-btn color="negative" label="cancelar" @click="openEditInvoice = false"/>
-          <q-btn color="secondary" label="Imprimir Ticket" @click="print" v-if="invoice.invoice_type.name === 'Ticket'"/>
-          <q-btn color="orange" label="Imprimir Boleta" @click="printInvoice" v-else/>
+          <q-btn color="warning" label="Cerrar" @click="openEditInvoice = false"/>
+          <q-btn color="negative" label="Anular" @click="cancelInvoice" :loading="cancelLoading"/>
+          <q-btn color="secondary" label="Imprimir Ticket" @click="print"/>
           <q-btn color="primary" label="Guardar" @click="saveEdit"/>
         </q-card-actions>
       </q-card>
@@ -223,7 +231,6 @@
                 filled
                 v-model="client.document_number"
                 label="Número de documento"
-                @blur="getDataApi"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -237,7 +244,7 @@
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit"/>
-            <q-btn color="orange" label="Cancelar" @click="(openAddClient = false)" />
+            <q-btn color="secondary" label="Cancelar" @click="(openAddClient = false)" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -245,23 +252,23 @@
     <div id="printMe" v-show="false">
       <invoice-print :data="invoice" v-if="invoice"/>
     </div>
-    <div id="printMeInvoice" v-show="false">
-      <bill-of-sale :data="invoice" v-if="invoice"/>
-    </div>
   </div>
 </template>
 
 <script>
 import { Notify, date, is } from 'quasar'
 import InvoicePrint from '../components/InvoicePrint.vue'
-import BillOfSale from '../components/BillOfSale.vue'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
+import { formatNumber, notify } from 'src/const/mixins'
+import { status } from 'src/const/invoice'
 export default {
   components: {
-    InvoicePrint,
-    BillOfSale
+    InvoicePrint
   },
   data () {
     return {
+      status,
       documentType: 'ruc',
       options: [
         { label: 'RUC', value: 'ruc' },
@@ -276,6 +283,7 @@ export default {
       invoices: [],
       invoice: null,
       coin: {},
+      cancelLoading: false,
       filter: '',
       /**
        * Params search
@@ -299,7 +307,6 @@ export default {
       visible: false,
       openAddInvoice: false,
       openEditInvoice: null,
-      userSession: null,
       columns: [
         {
           name: 'code',
@@ -373,10 +380,10 @@ export default {
         //   sortable: true
         // },
         {
-          name: 'exchange_rate',
-          align: 'right',
-          label: 'Tipo de cambio',
-          field: 'exchange_rate',
+          name: 'status',
+          align: 'center',
+          label: 'Estado',
+          field: 'status',
           sortable: true
         },
         {
@@ -384,6 +391,7 @@ export default {
           align: 'right',
           label: 'Total',
           field: 'total',
+          format: val => formatNumber(val),
           sortable: true
         }
       ],
@@ -401,7 +409,8 @@ export default {
     totalBill () {
       const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
       return sum + this.invoice.total
-    }
+    },
+    ...mapState(authentication, ['branchOffice'])
   },
   mounted () {
     this.setPagination({
@@ -409,14 +418,12 @@ export default {
       filter: undefined
     })
   },
-  created () {
-    this.userSession = JSON.parse(localStorage.getItem('user'))
-    this.coin.user_created_id = this.userSession.id
-    this.coin.user_updated_id = this.userSession.id
-  },
   watch: {
     filter (data) {
       this.searchData(data)
+    },
+    branchOffice (data) {
+      this.getInvoices(this.params)
     }
   },
   methods: {
@@ -426,7 +433,6 @@ export default {
       } else {
         taxe.total = this.invoice.total + taxe.pivot.amount
       }
-      console.log(this.invoice.total)
       return taxe.total
     },
     /**
@@ -455,17 +461,13 @@ export default {
           })
         })
     },
+    /**
+     * Print invoice
+     */
     print () {
       this.$htmlToPaper('printMe', {
         styles: [
-          'src/css/styleInvoice.css'
-        ]
-      })
-    },
-    printInvoice () {
-      this.$htmlToPaper('printMeInvoice', {
-        styles: [
-          'src/css/styleBillOfSale.css'
+          'ticketStyle.css'
         ]
       })
     },
@@ -493,7 +495,14 @@ export default {
      */
     getInvoices (params = this.params) {
       this.visible = true
-      this.$api.get('invoices', { params })
+      this.$api.get('invoices', {
+        params: {
+          ...params,
+          dataEqualFilter: {
+            branch_office_id: this.branchOffice?.id
+          }
+        }
+      })
         .then(({ data }) => {
           this.invoices = data.data
           this.visible = false
@@ -513,7 +522,6 @@ export default {
      * @param  {Object} data value pagination
      */
     setPagination (data) {
-      console.log(data.pagination.descending)
       this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
       this.params.page = data.pagination.page
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
@@ -595,24 +603,6 @@ export default {
         })
     },
     /**
-     * Get document
-     */
-    getDataApi () {
-      this.$api.get(`get-documents/${this.documentType}/${this.client.document_number}`)
-        .then(({ data }) => {
-          if (!data.error) {
-            this.client.name = data.nombre
-          } else {
-            Notify.create({
-              message: data.error,
-              icon: 'warning',
-              color: 'negative'
-            })
-            this.client = {}
-          }
-        })
-    },
-    /**
      * Save edit
      */
     saveEdit () {
@@ -663,6 +653,24 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Change status
+     * @param {Object} data invoice
+     * @param {Number} index index status
+     */
+    async cancelInvoice  () {
+      try {
+        this.cancelLoading = true
+        await this.$api.put(`invoice-status-command/${this.invoice.id}`, { status: 'cancelled' })
+        this.getInvoices()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+        this.openEditInvoice = false
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.cancelLoading = false
+      }
     }
   }
 }

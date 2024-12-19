@@ -49,7 +49,7 @@
               label="Nombre"
             />
           </q-card-section>
-          <q-card-section class="q-py-none">
+          <q-card-section class="q-py-none flex justify-center">
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
@@ -62,7 +62,7 @@
                 v-model:y="table.y"
                 v-model:h="table.height"
                 v-model:w="table.width"
-                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
+                :class="tableSelected?.id === table.id ? 'bg-secondary text-white' : 'bg-primary text-white'"
                 :handles-size="10"
                 @deactivated="onDeactivated(table, index)"
                 @activated="onActivated(table, index)"
@@ -77,14 +77,14 @@
             <q-btn color="primary" label="Agregar mesa" @click="(openAddTable = true)"/>
             <q-btn color="secondary" label="Editar mesa" @click="(openEditTable = true)" v-if="tableSelected"/>
             <q-btn color="negative" label="Eliminar mesa" @click="confirmDeleteTable" v-if="tableSelected"/>
-            <q-badge class="bg-orange q-ml-md text-subtitle1 q-py-xs q-px-md" v-if="tableSelected">
+            <q-badge class="bg-secondary q-ml-md text-subtitle1 q-py-xs q-px-md" v-if="tableSelected">
               {{ tableSelected.name }}
             </q-badge>
             <q-space/>
             <q-btn color="primary" label="Guardar" type="submit" :loading="loadingEdit"/>
             <q-btn color="secondary" label="Imprimir Qrs" @click="printQr"/>
             <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom" :loading="loadingEdit" />
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -107,11 +107,11 @@
               dense
             />
           </q-card-section>
-          <q-card-section class="q-py-none">
+          <q-card-section class="q-py-none flex justify-center">
             <draggable-resizable-container
               :grid="[20, 20]"
               :show-grid="true"
-              class="container full-width"
+              class="container"
             >
               <draggable-resizable-vue
                 v-for="(table, index) in livingRoom.tables"
@@ -120,7 +120,7 @@
                 v-model:y="table.y"
                 v-model:h="table.height"
                 v-model:w="table.width"
-                :class="tableSelected?.id === table.id ? 'bg-orange text-white' : 'bg-primary text-white'"
+                :class="tableSelected?.id === table.id ? 'bg-secondary text-white' : 'bg-primary text-white'"
                 :handles-size="10"
                 @deactivated="onDeactivated(table, index)"
               >
@@ -136,7 +136,7 @@
             <q-btn color="negative" label="Eliminar mesa" @click="confirmDeleteTable" v-if="tableSelected"/>
             <q-space/>
             <q-btn color="primary" label="Guardar" type="submit" :loading="loadingSave"/>
-            <q-btn color="orange" label="Cancelar" @click="closeModal" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -163,7 +163,7 @@
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit"/>
             <!-- <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom" :loading="visible" /> -->
-            <q-btn color="orange" label="Cancelar" @click="openAddTable = false" />
+            <q-btn color="secondary" label="Cancelar" @click="openAddTable = false" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -197,7 +197,7 @@
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Guardar" type="submit"/>
             <!-- <q-btn color="negative" label="Eliminar" @click="deleteLivingRoom"/> -->
-            <q-btn color="orange" label="Cancelar" @click="openEditTable = false" />
+            <q-btn color="secondary" label="Cancelar" @click="openEditTable = false" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -246,7 +246,6 @@ export default {
       visible: false,
       openAddLivingRoom: false,
       openEditLivingRoom: null,
-      userSession: JSON.parse(localStorage.getItem('user')),
       filter: '',
       /**
        * Params search
@@ -268,14 +267,14 @@ export default {
           align: 'left',
           label: 'Código',
           field: 'id',
-          sorlivingRoom: true
+          sort: true
         },
         {
           name: 'name',
           align: 'left',
           label: 'Nombre',
           field: 'name',
-          sorlivingRoom: true
+          sort: true
         }
       ],
       paginationConfig: {
@@ -307,7 +306,7 @@ export default {
       this.tableSelected = null
     },
     livingRoom (data) {
-      this.handlerQr(data.tables)
+      this.handlerQr(data?.tables || [])
     }
   },
   methods: {
@@ -352,14 +351,13 @@ export default {
       this.getLivingRooms(this.params)
     },
     /**
-     * Add table in livi room
+     * Add table in living room
      */
     addTable () {
+      console.log(this.userSession)
       this.livingRoom.tables.push({
         name: this.tableName,
         width: 50,
-        user_created_id: this.userSession.id,
-        user_updated_id: this.userSession.id,
         height: 50
       })
       this.tableName = null
@@ -425,7 +423,7 @@ export default {
     saveLivingRoom () {
       this.loadingSave = true
       this.$api.post('living-rooms', {
-        user_created_id: this.userSession.id,
+        user_created_id: this.userSession?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {
@@ -442,7 +440,7 @@ export default {
           })
         })
         .catch(err => {
-          this.visible = false
+          this.loadingSave = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -463,13 +461,16 @@ export default {
     saveEditLivingRoom () {
       this.loadingEdit = true
       this.$api.put(`living-rooms/${this.livingRoom.id}`, {
-        user_created_id: this.userSession.id,
+        user_created_id: this.userSession?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {
           this.getLivingRooms()
           this.openEditLivingRoom = false
           this.loadingEdit = false
+          this.livingRoom = {
+            tables: []
+          }
           Notify.create({
             message: 'Sala de estar editada exitosamente',
             icon: 'check_circle',
@@ -551,7 +552,8 @@ export default {
 </script>
 <style>
 .container {
-  height: 70vh;
+  height: 400px;
+  max-width: 900px;
   border: 1px solid black;
 }
 </style>

@@ -1,7 +1,5 @@
 {
-	"appId": "palma.shopping.app",
-	"appName": "Shopping",
-	"bundledWebRuntime": false,
-	"npmClient": "npm",
+	"appId": "orderwise.qbitsinc.com",
+	"appName": "Orderwise",
 	"webDir": "www"
 }

@@ -1,5 +1,12 @@
 import { Loading, Notify, copyToClipboard, date } from 'quasar'
 
+export const notify = (message, color, icon) => {
+  Notify.create({
+    message,
+    color,
+    icon
+  })
+}
 /**
  * Set date format
  * @param {String} value date value
@@ -83,4 +90,38 @@ export const copyClick = (data) => {
         message: `Copiado: ${data}`
       })
     })
+}
+
+export const logo = {
+  white: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QOrderWise/white.png',
+  color: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QOrderWise/color.png',
+  isoLogo: 'images/logo.png'
+}
+
+export const qBitsLogo = {
+  black: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/black.png'
+}
+
+export const blobToBase64 = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+export const setFiles = async (files) => {
+  const filesSelected = []
+  if (files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      filesSelected.push({
+        url: await blobToBase64(file),
+        file,
+        type: file.type
+      })
+    }
+  }
+  return filesSelected
 }

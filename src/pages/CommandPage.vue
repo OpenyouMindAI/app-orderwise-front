@@ -1,14 +1,27 @@
 <template>
   <q-page padding>
-    <div class="relative full-width" style="height: 80vh;" v-if="tab === 'scanner'">
-      <qrcode-stream @detect="getTable"/>
+    <div class="full-width text-subtitle1 flex justify-between">
+      <div>
+        <q-chip style="padding: 17px 10px; border-radius: 50px;" class="bg-primary text-white cursor-pointer text-subtitle1" v-if="userSession && $q.screen.lt.sm">
+          {{ userSession?.name }}
+        </q-chip>
+        <q-btn rounded style="padding: 5px 15px;" class="bg-primary text-white cursor-pointer" @click="dialogTable = true">
+          Mesa: {{ command?.table?.name || 'Seleccionar mesa' }}
+        </q-btn>
+      </div>
+      <q-chip class="bg-secondary text-white cursor-pointer">
+        Total: {{ formatNumber(totalBill) }}
+      </q-chip>
+    </div>
+    <div class="relative full-width q-mt-sm" style="height: calc(100vh - 190px);" v-if="tab === 'scanner'">
+      <qrcode-stream @detect="getCodeQr"/>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" class="text-center">
         <div class="scanner">
           <div class="light"></div>
         </div>
       </div>
     </div>
-    <div class="row q-col-gutter-y-xs" v-else-if="tab === 'menu'">
+    <div class="row q-col-gutter-y-xs q-mt-sm" v-else-if="tab === 'menu'">
       <div class="col-12">
         <q-tabs
           v-model="category"
@@ -53,8 +66,8 @@
           <template v-slot:item="props">
             <div class="col-xs-6 col-sm-4 col-md-3" style="padding: 2px;">
               <q-card
-                :class="findProduct(products, props.row) && 'shadow-20'"
-                :style="`${findProduct(products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
+                :class="findProduct(command.products, props.row) && 'shadow-20'"
+                :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
                 @click="() => {
                   detailProduct = true
                   product = props.row
@@ -63,50 +76,19 @@
                 <q-img
                   fit="fill"
                   no-native-menu
-                  style="height: 160px;"
-                  spinner-color="primary"
                   :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                />
-                <q-card-section class="q-pa-sm column">
-                  <span class="text-subtitle2">
-                    {{ props.row.name }}
-                  </span>
-                  <div class="col flex justify-between items-center">
-                    <span class="text-bold">
-                      {{ formatNumber(props.row.price) }}$
-                    </span>
-                    <span class="text-secondary">
-                      <q-btn icon="schedule" flat dense round/>
-                      30 min
+                  style="height: 180px;"
+                  spinner-color="primary"
+                >
+                  <div class="absolute-bottom text-center">
+                    <div class="text-bold text-subtitle1 p-a-none">
+                      {{ props.row.name }}
+                    </div>
+                    <span class="text-caption">
+                      {{ formatNumber(props.row.price) }} $
                     </span>
                   </div>
-                </q-card-section>
-                <!-- <q-separator />
-                <q-card-actions align="right" class="q-pa-sm">
-                  <q-btn
-                    rounded
-                    color="negative"
-                    icon="delete"
-                    size="md"
-                    v-if="findProduct(products, props.row)"
-                    @click="deleteProduct(props)"
-                  />
-                  <q-btn
-                    rounded
-                    color="primary"
-                    icon="add"
-                    size="md"
-                    @click="validateProduct(props.row)"
-                  />
-                  <q-badge
-                    color="primary"
-                    rounded
-                    floating
-                    v-if="findProduct(products, props.row)" class="text-bold q-py-xs"
-                  >
-                    {{ findProduct(products, props.row).amount }}
-                  </q-badge>
-                </q-card-actions> -->
+                </q-img>
               </q-card>
             </div>
           </template>
@@ -116,14 +98,13 @@
         </q-table>
       </div>
     </div>
-    <div v-else>
+    <div v-else class="q-mt-sm">
       <q-table
         row-key="name"
         title="Pedido"
         dense
-        :rows="products"
+        :rows="command.products"
         :columns="columns"
-        :loading="loadingPage"
         hide-pagination
         v-model:pagination="pagination"
       >
@@ -161,91 +142,141 @@
       </q-page-sticky>
     </div>
     <q-dialog v-model="detailProduct" maximized>
-      <q-card class="column full-height">
-        <q-img src="https://cdn.quasar.dev/img/chicken-salad.jpg" />
-
-        <q-card-section>
-          <span class="text-subtitle2">
-            {{ product?.name }}
-          </span>
-          <div class="col flex justify-between items-center">
-            <span class="text-bold">
-              {{ formatNumber(product?.price) }}$
+      <q-card class="full-height">
+        <q-card-section :horizontal="$q.screen.gt.xs" class="col q-pa-none">
+          <div class="full-width" :style="`width: ${$q.screen.gt.xs ? '60%' : '100%'};`">
+            <SlideComponent :slides="product.images"/>
+          </div>
+          <q-card-section class="column q-pb-none" :style="`width: ${$q.screen.gt.xs ? '40%' : '100%'};`">
+            <div>
+              <span class="text-subtitle1 text-uppercase text-bold">
+                {{ product?.name }}
+              </span>
+              <div class="flex justify-between text-uppercase items-center col">
+                <span class="text-subtitle2 text-grey">
+                  {{ formatNumber(product?.price) }}$
+                </span>
+              </div>
+            </div>
+            <span class="text-caption text-grey col">
+              {{ product?.description }}
             </span>
-            <span class="text-secondary">
-              <q-btn icon="schedule" flat dense round/>
-              30 min
-            </span>
-          </div>
+            <q-card-actions align="right" class="q-pr-none">
+              <q-btn  color="negative" label="Cerrar" @click="() => {
+                detailProduct = false
+                product = null
+              }"/>
+              <q-btn  color="primary" label="Agregar" @click="validateProduct(product)"/>
+            </q-card-actions>
+          </q-card-section>
         </q-card-section>
-
-        <q-card-section class="q-pt-none">
-          <div class="text-caption text-grey">
-            {{ product?.description }}
-          </div>
-        </q-card-section>
-        <q-card-section class="q-py-none col" v-if="product?.images.length">
-          <div class="text-body">
-            Mas imagenes
-          </div>
-          <swiper
-            :slidesPerView="2"
-            :centeredSlides="true"
-            :spaceBetween="30"
-            :navigation="true"
-            class="mySwiper"
-          >
-            <swiper-slide v-for="img in product?.images" :key="img.id">
-              <q-img height="200px" width="200px" :src="img.url" />
-            </swiper-slide>
-          </swiper>
-        </q-card-section>
-        <q-separator />
-        <q-card-actions align="right">
-          <q-btn v-close-popup flat color="primary" label="Reserve" />
-          <q-btn v-close-popup flat color="primary" round icon="event" />
-        </q-card-actions>
       </q-card>
+    </q-dialog>
+    <q-dialog v-model="dialogTable" maximized>
+      <drawer-table
+        ref="drawerTable"
+        :tablesSelected="tableSelected"
+        @update:tableSelected="setTableSelected"
+      >
+        <template v-slot:top>
+          <q-card-section class="flex items-center justify-between bg-primary text-white q-py-sm">
+            <span class="text-h6">Seleccionar mesa</span>
+            <q-btn flat round dense @click="dialogTable = false" icon="close" class="q-ml-sm"/>
+          </q-card-section>
+        </template>
+      </drawer-table>
     </q-dialog>
   </q-page>
 </template>
 <script>
 import { Notify } from 'quasar'
 import { QrcodeStream } from 'vue-qrcode-reader'
-import { formatNumber } from '../const/mixins'
+import { formatNumber, notify } from '../const/mixins'
 import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
-import { Swiper, SwiperSlide } from 'swiper/vue'
-
-// Import Swiper styles
-import 'swiper/css'
+import SlideComponent from '../components/SlideComponent.vue'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
+import DrawerTable from 'src/components/Table/DrawerTable.vue'
 export default {
   name: 'CommandPage',
   components: {
     QrcodeStream,
-    Swiper,
-    SwiperSlide,
-    SkeletonCard
+    SkeletonCard,
+    SlideComponent,
+    DrawerTable
   },
   data () {
     return {
+      /**
+       * Slide
+       * @type {Number}
+       */
       slide: 1,
-      fullscreen: false,
+      /**
+       * Dialog table
+       * @type {Boolean}
+       */
+      dialogTable: false,
+      /**
+       * Details product
+       * @type {Boolean}
+       */
       detailProduct: false,
-      modelScan: false,
+      /**
+       * Loading table
+       * @type {Boolean}
+       */
       loadingTable: false,
+      /**
+       * Product
+       * @type {Object}
+       */
       product: null,
+      /**
+       * Bill loading
+       * @type {Boolean}
+       */
       billLoading: false,
-      commandDialog: false,
+      /**
+       * Format number
+       * @type {Function}
+       */
       formatNumber,
-      userSession: JSON.parse(localStorage.getItem('user')),
+      /**
+       * Table
+       * @type {Object}
+       */
       table: null,
+      /**
+       * Loading page
+       * @type {Boolean}
+       */
       loadingPage: false,
-      stars: 3,
+      /**
+       * Category selected
+       * @type {Object}
+       */
       category: null,
+      /**
+       * Categories
+       * @type {Array}
+       */
       categories: [],
+      /**
+       * Total bill
+       * @type {Number}
+       */
       totalBill: 0,
+      /**
+       * Products
+       * @type {Array}
+       */
       products: [],
+      /**
+       * Columns
+       * @type {Array}
+       */
       columns: [
         {
           name: 'name',
@@ -265,7 +296,20 @@ export default {
        * @type {Object}
        */
       pagination: { rowsPerPage: 10 },
+      /**
+       * All products
+       * @type {Array}
+       */
       allProducts: [],
+      /**
+       * Table selected
+       * @type {Array}
+       */
+      tableSelected: [],
+      /**
+       * Product columns
+       * @type {Array}
+       */
       productColumns: [
         {
           name: 'barcode',
@@ -301,7 +345,9 @@ export default {
   },
   created () {
     this.getCategories()
-    this.category = this.$route.query.category
+    this.category = this.$route.query.category || 'all'
+    this.products = this.command.products || []
+    this.calculateTotal()
   },
   watch: {
     category (data) {
@@ -309,10 +355,18 @@ export default {
         path: 'command',
         query: {
           tab: this.tab,
-          category: data
+          category: data || 'all'
         }
       })
       this.getAllProducts()
+    },
+    table (table) {
+      const store = useCommandStore()
+      store.setCommands({ table })
+    },
+    products (products) {
+      const store = useCommandStore()
+      store.setCommands({ products })
     }
   },
   computed: {
@@ -321,40 +375,57 @@ export default {
     },
     filter () {
       return this.$route.query.filter
-    }
+    },
+    command () {
+      const store = useCommandStore()
+      return store?.command
+    },
+    ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
+    /**
+     * After save bill
+     */
+    afterSaveBill () {
+      this.table = null
+      this.products = []
+      this.tableSelected = []
+      this.setQueryParams({ tab: 'scanner' })
+      this.totalBill = 0
+      notify('Pedido creado exitosamente', 'positive', 'check_circle')
+    },
+    /**
+     * Set table selected
+     * @param {Object} data table selected
+     */
+    async setTableSelected (data) {
+      this.table = data[0]
+      this.tableSelected = [this.table]
+      await this.getTable(data)
+      this.dialogTable = false
+    },
     /**
      * Save bill and payments
      */
     async saveBill () {
-      this.billLoading = true
-      this.$api.post('invoices', {
-        seller_id: this.userSession.id,
-        user_created_id: this.userSession.id,
-        exchange_rate: 0,
-        products: this.products,
-        tables: [this.table.id]
-      })
-        .then(({ data }) => {
-          this.table = null
-          this.products = []
-          this.billLoading = false
-          this.commandDialog = false
-          this.$q.notify({
-            message: 'Pedido creado exitosamente',
-            icon: 'check_circle',
-            color: 'positive'
-          })
+      if (!this.command?.table?.id) {
+        notify('No se puede crear pedido sin mesa', 'negative', 'warning')
+        return
+      }
+      try {
+        this.billLoading = true
+        await this.$api.post('command-orders', {
+          seller_id: this.userSession?.id,
+          products: this.command.products,
+          branch_office_id: this.branchOffice?.id,
+          tables: [this.command.table.id]
         })
-        .catch(err => {
-          this.billLoading = false
-          this.$q.notify({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
+        this.afterSaveBill()
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.billLoading = false
+      }
     },
     /**
      * Delete product in table
@@ -364,7 +435,6 @@ export default {
       const index = this.products.map(productOne => productOne.id).indexOf(product.row.id)
       this.products.splice(index, 1)
       this.calculateTotal()
-      this.addStoreProducts()
     },
     /**
      * Calculate the total
@@ -384,8 +454,16 @@ export default {
       data.subtotal = data.price * data.amount
       this.calculateTotal()
     },
+    /**
+     * Find product
+     * @param {Array} products products
+     * @param {Object} product product
+     */
     findProduct (products, product) {
-      return products.find(productOne => productOne.id === product.id)
+      if (products) {
+        return products.find(productOne => productOne.id === product.id)
+      }
+      return false
     },
     /**
      * Validate products
@@ -407,11 +485,38 @@ export default {
         ]
         this.calculate(data)
       }
-      this.addStoreProducts()
+      this.notifyProductCar(this.products)
     },
-    addStoreProducts () {
-      const store = useCommandStore()
-      store.commandsAction(this.products)
+    /**
+     * Set query params
+     * @param {Object} query query params
+     */
+    setQueryParams (query) {
+      this.$router.push({
+        path: 'command',
+        query: {
+          ...this.$route.query,
+          ...query
+        }
+      })
+    },
+    /**
+     * Notify product car
+     */
+    notifyProductCar () {
+      Notify.create({
+        position: 'top',
+        message: '¡Plato añadido con éxito! ¡Listo para confirmar su orden!',
+        actions: [
+          {
+            label: 'Ver orden',
+            color: 'white',
+            handler: () => this.setQueryParams({ tab: 'command' })
+          }
+        ],
+        icon: 'info',
+        color: 'positive'
+      })
     },
     /**
      * Get all tables
@@ -440,20 +545,30 @@ export default {
           })
         })
     },
-    async getTable (code) {
+    getCodeQr (code) {
+      const newCode = code[0]
+      const { id } = JSON.parse(newCode.rawValue)
+      this.getTable(id)
+    },
+    /**
+     * Get table
+     * @param {Object} code code
+     */
+    async getTable (id) {
       try {
-        this.modelScan = false
         this.loadingTable = true
-        const newCode = code[0]
-        const { id } = JSON.parse(newCode.rawValue)
         const { data } = await this.$api.get(`tables/${id}`)
-        this.table = data
         this.loadingTable = false
+        if (data.status === 'busy') {
+          notify('La mesa está ocupada', 'negative', 'warning')
+          return
+        }
+        this.table = data
+        this.setQueryParams({ tab: 'menu' })
       } catch (error) {
         this.table = null
-        this.modelScan = true
         this.loadingTable = false
-        console.log(error)
+        notify(error.message, 'negative', 'warning')
       }
     },
     /**

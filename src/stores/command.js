@@ -1,15 +1,23 @@
 import { defineStore } from 'pinia'
 
 export const useCommandStore = defineStore('commands', {
-  state: () => ({
-    commandsState: 0
-  }),
+  state: () => {
+    return {
+      command: {}
+    }
+  },
   getters: {
-    commandsGetter: (state) => state.commandsState
+    commandGetter: (state) => state.command
   },
   actions: {
-    commandsAction (products) {
-      this.commandsState = products
+    setCommands (command) {
+      this.command = {
+        ...this.command,
+        ...command
+      }
     }
+  },
+  persist: {
+    key: 'command'
   }
 })

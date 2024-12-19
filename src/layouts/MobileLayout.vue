@@ -2,18 +2,25 @@
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
       <q-toolbar class="bg-white text-dark flex justify-between">
-        <q-avatar>
-          <img alt="logo" src="https://cdn.quasar.dev/logo-v2/svg/logo.svg">
-        </q-avatar>
-        <q-toolbar-title>
-          Menu
-        </q-toolbar-title>
-        <q-input label="Buscar" dense type="search" debounce="500" v-model="filter" v-if="tab === 'menu'">
+        <q-img :src="logo.color" width="155px" alt="logo" @click="$router.push({ name: 'Billing' })"/>
+        <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
+          {{ userSession.name }}
+        </q-chip>
+        <q-input
+          outlined
+          rounded
+          class="q-ml-sm"
+          label="Buscar"
+          dense
+          type="search"
+          debounce="500"
+          v-model="filter"
+          v-if="tab === 'menu'"
+        >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
-        <!-- <q-btn flat round dense icon="whatshot" /> -->
       </q-toolbar>
     </q-header>
 
@@ -30,9 +37,9 @@
       >
         <q-tab v-for="tab in tabs" :key="tab.name" v-bind="tab"/>
         <q-tab name="command" icon="shopping_bag">
-          <q-badge floating color="negative" rounded v-if="commands.length">
+          <q-badge floating color="negative" rounded v-if="commands?.products?.length">
             <span class="text-body text-bold">
-              {{ commands.length }}
+              {{ commands?.products?.length }}
             </span>
           </q-badge>
         </q-tab>
@@ -41,12 +48,17 @@
   </q-layout>
 </template>
 <script>
+import { watch } from 'vue'
 import { useCommandStore } from '../stores/command'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
+import { logo } from 'src/const/mixins'
 export default {
   data () {
     return {
       tab: 'scanner',
       filter: null,
+      logo,
       tabs: [
         { name: 'scanner', icon: 'qr_code_scanner' },
         { name: 'menu', icon: 'restaurant_menu' }
@@ -67,12 +79,16 @@ export default {
   },
   created () {
     this.setData()
+    watch(() => this.$route.query, (toParams, previousParams) => {
+      this.tab = toParams.tab
+    })
   },
   computed: {
     commands () {
       const store = useCommandStore()
-      return store.commandsState
-    }
+      return store?.command
+    },
+    ...mapState(authentication, ['userSession'])
   },
   methods: {
     setQueryParams (query) {
@@ -85,7 +101,6 @@ export default {
       })
     },
     setData () {
-      this.$api.defaults.headers.common.authorization = `${localStorage.getItem('tokenType')} ${localStorage.getItem('accessToken')}`
       this.tab = this.$route.query.tab ?? 'scanner'
     }
   }

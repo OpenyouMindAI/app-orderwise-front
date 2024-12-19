@@ -31,6 +31,8 @@ module.exports = configure(function (/* ctx */) {
     boot: [
       'i18n',
       'axios',
+      'pinia',
+      'authorization',
       'VueHtmlToPaper'
     ],
 
@@ -114,7 +116,9 @@ module.exports = configure(function (/* ctx */) {
       // Quasar plugins
       plugins: [
         'Notify',
-        'Dialog'
+        'Dialog',
+        'Screen',
+        'Loading'
       ]
     },
 
@@ -203,7 +207,7 @@ module.exports = configure(function (/* ctx */) {
       builder: {
         // https://www.electron.build/configuration/configuration
 
-        appId: 'shopping'
+        appId: 'orderwise'
       }
     },
 
