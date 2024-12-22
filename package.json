@@ -11,8 +11,7 @@
     "dev": "cross-env NODE_ENV=local quasar dev",
     "build": "quasar build",
     "build-pwa": "NODE_ENV=production quasar build -m pwa",
-    "build-pwa-dev": "NODE_ENV=development quasar build -m pwa",
-    "build-pwa-dixcont": "NODE_ENV=staging quasar build -m pwa",
+    "build-pwa-dixcont": "NODE_ENV=development quasar build -m pwa",
     "icons": "icongenie generate -i logo.png --skip-trim"
   },
   "dependencies": {
