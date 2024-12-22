@@ -7,7 +7,7 @@ on:
       - master
 
 jobs:
-  deploy-in-development:
+  deploy-in-qbitsinc-hostinger:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
