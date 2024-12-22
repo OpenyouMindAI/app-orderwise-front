@@ -3,7 +3,6 @@ name: Deploy Production in Hostinger
 on:
   push:
     branches:
-      - staging
       - develop
       - master
 
