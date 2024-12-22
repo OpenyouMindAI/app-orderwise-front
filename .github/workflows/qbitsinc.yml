@@ -1,4 +1,4 @@
-name: Deploy Production in Hostinger
+name: Deploy Production in Qbitsinc Hostinger
 
 on:
   push:
