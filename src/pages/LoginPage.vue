@@ -1,8 +1,8 @@
 <template>
   <div style="height: 100vh; background-image: url('images/bg-page-login.png');" class="flex flex-center bg-login">
-    <div
+    <q-card
       class="row"
-      :style="`${$q.screen.lt.sm ? 'width: 350px;' : 'width: 90vw; max-width: 1000px;'} min-height: 500px; box-shadow: rgba(0, 0, 0, 0.6) 0px 5px 15px; ${$q.screen.lt.sm ? 'border-radius: 10px;' : 'border-radius: 40px;'} background-color: white;`"
+      :style="`${$q.screen.lt.sm ? 'width: 95%;' : 'width: 98vw; max-width: 1000px;'} min-height: 500px; box-shadow: rgba(0, 0, 0, 0.6) 0px 5px 15px; ${$q.screen.lt.sm ? 'border-radius: 10px;' : 'border-radius: 40px;'}`"
     >
       <div class="col-6" v-if="!$q.screen.lt.sm">
         <q-img src="images/bg-login.png" alt="bg-login" style="border-radius: 40px 170px 170px 40px; min-height: 500px;"/>
@@ -11,7 +11,7 @@
         <div class="text-center full-width" style="position: absolute; top: 20px;">
           <q-img :src="logo.color" style='width: 240px; max-width: 80vw;'/>
         </div>
-        <q-form @submit="loginAt" class="flex-column" style="width: 400px; max-width: 85vw;">
+        <q-form @submit="loginAt" class="flex-column q-pa-md" style="width: 400px; max-width: 85vw;">
           <div class='text-h5 q-mb-md'>Iniciar sesión</div>
           <q-input
             class="q-mt-sm"
@@ -86,20 +86,21 @@
               Powered by
             </span>
             <a href="https://site.qbitsinc.com" alt="qbits" target="_blank">
-              <q-img style="width:80px"  :src="qBitsLogo.black"/>
+              <q-img style="width:80px"  :src="darkMode ? qBitsLogo.white : qBitsLogo.black"/>
             </a>
           </div>
         </div>
       </div>
-    </div>
+    </q-card>
   </div>
 </template>
 <script>
 import { logo, qBitsLogo } from 'src/const/mixins'
 import { Notify } from 'quasar'
-import { mapActions } from 'pinia'
+import { mapActions, mapState } from 'pinia'
 import { authentication } from 'stores/module-authentication'
 import { notify } from '../const/mixins'
+import { darkModeStore } from '../stores/darkModeStore'
 export default {
   name: 'LoginPage',
   data () {
@@ -129,9 +130,21 @@ export default {
     }
   },
   computed: {
+    /**
+     * Height window
+     * @returns {Number}
+     */
     heightWindow () {
       return screen.height
-    }
+    },
+    /**
+     * Dark mode
+     * @returns {Boolean}
+     */
+    ...mapState(darkModeStore, ['darkMode'])
+  },
+  mounted () {
+    this.$q.dark.set(this.darkMode)
   },
   methods: {
     /**

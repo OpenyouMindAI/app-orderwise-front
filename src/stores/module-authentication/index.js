@@ -64,6 +64,8 @@ export const authentication = defineStore('authentication', {
         this.token_type = null
         this.expires_In = null
         this.refresh_token = null
+        this.userSession = null
+        this.branchOffice = null
         return true
       } catch (error) {
         throw error.response.data

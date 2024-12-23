@@ -151,11 +151,10 @@
                 row-key="name"
                 title="Artículos"
                 dense
+                hide-pagination
                 :rows="products"
                 :columns="columns"
-                :loading="loadingPage"
-                hide-pagination
-                v-model:pagination="pagination"
+                :pagination="{ rowsPerPage: 0 }"
               >
                 <template v-slot:body="props">
                   <q-tr :props="props">
@@ -239,9 +238,7 @@
                 </q-item>
               </q-list>
             </div>
-            <div class="col-12 q-gutter-xs">
-              <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
-              <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+            <div class="col-12 q-gutter-xs q-mt-md">
               <q-select
                 filled
                 dense
@@ -250,8 +247,10 @@
                 option-value="id"
                 v-model="coin"
                 :options="coins"
-                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getCoins"
               />
+              <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               <div class="flex q-gutter-md" v-if="invoice">
                 <q-btn
                   color="primary"
@@ -295,16 +294,18 @@
         </div>
         <div class="col-xs-12 col-sm-12 col-md-5 col-lg-5 col-xl-5">
           <q-table
+            v-model:pagination="pagination"
             row-key="name"
             dense
             grid
-            hide-pagination
             style="max-height: calc(100vh - 190px); overflow: auto;"
+            binary-state-sort
+            :loading="loadingProducts"
             :rows="allProducts"
             :columns="productColumns"
-            :loading="loadingPage"
             :filter="filter"
-            :pagination="pagination"
+            no-data-label="Registro no encontrado"
+            @request="setPagination"
           >
             <template v-slot:top>
               <div class="row full-width q-col-gutter-xs">
@@ -324,7 +325,7 @@
                   />
                 </div>
                 <div class="col-6">
-                  <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
+                  <q-input type="search" filled dense debounce="500" v-model="filter" placeholder="Buscar">
                     <template v-slot:append>
                       <q-icon name="search" />
                     </template>
@@ -346,6 +347,9 @@
                   </q-img>
                 </q-card>
               </div>
+            </template>
+            <template v-slot:loading>
+              <q-inner-loading showing color="primary" />
             </template>
           </q-table>
         </div>
@@ -901,7 +905,13 @@ export default {
        * Pagination option
        * @type {Object}
        */
-      pagination: { rowsPerPage: 10 },
+      pagination: {
+        rowsPerPage: 10,
+        rowsNumber: 10,
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc'
+      },
       /**
        * Filter products
        * @type {String}
@@ -938,11 +948,6 @@ export default {
        */
       products: [],
       /**
-       * Loading page
-       * @type {Boolean}
-       */
-      loadingPage: false,
-      /**
        * Total bill
        * @type {Number}
        */
@@ -957,6 +962,7 @@ export default {
        * @type {Array}
        */
       categories: [],
+      loadingProducts: false,
       /**
        * Products columns
        * @type {Array}
@@ -1051,7 +1057,16 @@ export default {
   },
   watch: {
     category () {
-      this.getAllProducts()
+      this.setPagination({
+        pagination: this.pagination,
+        filter: undefined
+      })
+    },
+    filter () {
+      this.setPagination({
+        pagination: this.pagination,
+        filter: undefined
+      })
     },
     totalBill () {
       this.invoiceTaxes = this.invoiceType?.taxes?.map(taxe => {
@@ -1062,26 +1077,8 @@ export default {
         }
       })
     },
-    tableSelected (data) {
-      localStorage.setItem('tableSelected', JSON.stringify(data))
-    },
-    payments (data) {
-      localStorage.setItem('payments', JSON.stringify(data))
-    },
-    coin (data) {
-      this.taxeTranslate.amount = data.symbol
-    },
     client (data) {
       localStorage.setItem('client', JSON.stringify(data))
-    },
-    invoiceType (data) {
-      localStorage.setItem('invoiceType', JSON.stringify(data))
-    },
-    typeOfService (data) {
-      localStorage.setItem('typeOfService', JSON.stringify(data))
-    },
-    products (data) {
-      localStorage.setItem('products', JSON.stringify(data))
     },
     invoiceRouter (data) {
       if (data) this.getInvoiceOne(data)
@@ -1091,9 +1088,16 @@ export default {
         const quantity = data / this.productQuantity.price
         this.quantity = Number(quantity.toFixed(2))
       }
+    },
+    products (data) {
+      localStorage.setItem('products', JSON.stringify(data))
     }
   },
   mounted () {
+    this.setPagination({
+      pagination: this.pagination,
+      filter: undefined
+    })
     window.addEventListener('keydown', (e) => {
       if (e.key === 'F6') {
         e.preventDefault()
@@ -1134,13 +1138,30 @@ export default {
   },
   created () {
     this.getLocalStorage()
-    this.getCoins()
     this.getTaxes()
     this.getPaymentMethods()
-    this.getAllProducts()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+    /**
+     * Set data pagination emit event
+     * @param  {Object} data value pagination
+     */
+    setPagination (data) {
+      const params = {
+        sortOrder: data.pagination.descending ? 'asc' : 'desc',
+        page: data.pagination.page,
+        sortBy: data.pagination.sortBy,
+        perPage: data.pagination.rowsPerPage,
+        paginate: true,
+        dataSearch: {
+          name: this.filter,
+          barcode: this.filter
+        }
+      }
+      this.pagination = data.pagination
+      this.getAllProducts(params)
+    },
     /**
      * Set table selected
      * @param {Object} data table selected
@@ -1359,16 +1380,18 @@ export default {
     /**
      * Select category
      */
-    getCoins () {
+    getCoins (value, update) {
       this.$api.get('coins', {
         params: {
-          sortBy: 'id',
-          sortOrder: 'desc'
+          dataSearch: {
+            name: value
+          }
         }
       })
         .then(({ data }) => {
-          this.coins = data
-          this.coin = data[0]
+          update(() => {
+            this.coins = data
+          })
         })
         .catch(err => {
           Notify.create({
@@ -1475,23 +1498,26 @@ export default {
         })
     },
     /**
-     * Get all tables
+     * Get all products
+     * @param {Object} params params to search
      */
-    getAllProducts () {
+    getAllProducts (params) {
+      this.loadingProducts = true
       this.$api.get('products', {
         params: {
-          sortBy: 'id',
-          sortOrder: 'desc',
-          perPage: 10,
+          ...params,
           dataFilter: {
             category_id: this.category ? this.category.id : null
           }
         }
       })
         .then(({ data }) => {
-          this.allProducts = data
+          this.allProducts = data.data
+          this.pagination.rowsNumber = data.total
+          this.loadingProducts = false
         })
         .catch(err => {
+          this.loadingProducts = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -1574,6 +1600,7 @@ export default {
       this.$router.push({ name: 'Billing' })
       setTimeout(() => {
         this.$refs.saveBill.resetValidation()
+        this.getLocalStorage()
         this.invoice = null
       }, 100)
     },
@@ -1661,12 +1688,12 @@ export default {
      * Get local storage
      */
     getLocalStorage () {
-      this.products = JSON.parse(localStorage.getItem('products')) ?? []
-      this.payments = JSON.parse(localStorage.getItem('payments')) ?? []
-      this.tableSelected = JSON.parse(localStorage.getItem('tableSelected')) ?? []
+      const { company_session: companySession } = this.userSession
       this.client = JSON.parse(localStorage.getItem('client')) ?? null
-      this.invoiceType = JSON.parse(localStorage.getItem('invoiceType')) ?? null
-      this.typeOfService = JSON.parse(localStorage.getItem('typeOfService')) ?? null
+      this.invoiceType = companySession?.company_config.invoiceType
+      this.typeOfService = companySession?.company_config.typeOfService
+      this.coin = companySession?.company_config.coin
+      this.products = JSON.parse(localStorage.getItem('products')) ?? []
       this.calculateTotal()
     },
     /**
