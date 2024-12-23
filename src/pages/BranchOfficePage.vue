@@ -35,7 +35,7 @@
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar sucursal</div>
+            <div class="text-h6">Modificar sucursal</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>

@@ -35,7 +35,7 @@
       <q-card class="column">
         <q-form @submit="saveEditLivingRoom">
           <q-card-section class="row items-center q-py-sm bg-primary text-white">
-            <div class="text-h6">Editar sala de estar</div>
+            <div class="text-h6">Modificar sala de estar</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
@@ -75,7 +75,7 @@
           </q-card-section>
           <q-card-actions class="q-px-md">
             <q-btn color="primary" label="Agregar mesa" @click="(openAddTable = true)"/>
-            <q-btn color="secondary" label="Editar mesa" @click="(openEditTable = true)" v-if="tableSelected"/>
+            <q-btn color="secondary" label="Modificar mesa" @click="(openEditTable = true)" v-if="tableSelected"/>
             <q-btn color="negative" label="Eliminar mesa" @click="confirmDeleteTable" v-if="tableSelected"/>
             <q-badge class="bg-secondary q-ml-md text-subtitle1 q-py-xs q-px-md" v-if="tableSelected">
               {{ tableSelected.name }}
@@ -132,7 +132,7 @@
           </q-card-section>
           <q-card-actions class="text-primary q-px-md">
             <q-btn color="primary" label="Agregar mesa" @click="(openAddTable = true)"/>
-            <q-btn color="secondary" label="Editar mesa" @click="(openEditTable = true)" v-if="tableSelected"/>
+            <q-btn color="secondary" label="Modificar mesa" @click="(openEditTable = true)" v-if="tableSelected"/>
             <q-btn color="negative" label="Eliminar mesa" @click="confirmDeleteTable" v-if="tableSelected"/>
             <q-space/>
             <q-btn color="primary" label="Guardar" type="submit" :loading="loadingSave"/>
@@ -172,7 +172,7 @@
       <q-card style="width: 500px; max-width: 80vw;">
         <q-form @submit="onDeactivated(tableSelected)">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar mesa</div>
+            <div class="text-h6">Modificar mesa</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="openEditTable = false" />
           </q-card-section>
