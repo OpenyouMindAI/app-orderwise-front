@@ -1696,9 +1696,9 @@ export default {
     getLocalStorage () {
       const { company_session: companySession } = this.userSession
       this.client = JSON.parse(localStorage.getItem('client')) ?? null
-      this.invoiceType = companySession?.company_config.invoiceType
-      this.typeOfService = companySession?.company_config.typeOfService
-      this.coin = companySession?.company_config.coin
+      this.invoiceType = companySession?.company_config?.invoiceType
+      this.typeOfService = companySession?.company_config?.typeOfService
+      this.coin = companySession?.company_config?.coin
       this.products = JSON.parse(localStorage.getItem('products')) ?? []
       this.calculateTotal()
     },
