@@ -164,7 +164,7 @@
     >
       <div v-if="$q.screen.lt.md" class="flex flex-center bg-primary q-py-sm">
         <img
-          :src="userSession?.company_session?.logo"
+          :src="userSession?.company_session?.url || logo.white"
           width="155px"
           style="max-height: 50px"
           alt="logo"
