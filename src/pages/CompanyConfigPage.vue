@@ -1,81 +1,173 @@
 <template>
-  <q-page padding :style="!$q.screen.lt.md ? 'margin-left: 50%; transform: translateX(-40%)': ''">
-    <q-card>
-      <q-form @submit="onSubmit">
-        <q-card-section>
-          <span class="text-h6">Cambiar logo de la empresa</span>
-        </q-card-section>
-        <q-card-section class="flex justify-center q-pt-none">
-          <q-img
-            :src="file.url || logo.white"
-            spinner-color="white"
-            style="height: 200px;"
-            class="rounded-borders"
-            fit="contain"
-          >
-            <div class="absolute-bottom text-subtitle1 text-center">
-              <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUpload" />
+  <q-page padding>
+    <q-stepper
+      v-model="step"
+      vertical
+      color="primary"
+      animated
+      header-nav
+    >
+      <q-step
+        :name="1"
+        title="Información de la empresa"
+        icon="settings"
+        :done="step > 1"
+      >
+        <q-card>
+          <q-form @submit="onSubmit">
+            <q-card-section>
+              <span class="text-h6">Cambiar logo de la empresa</span>
+            </q-card-section>
+            <q-card-section class="flex justify-center q-pt-none">
+              <q-img
+                :src="file.url || logo.white"
+                spinner-color="white"
+                style="height: 200px;"
+                class="rounded-borders"
+                fit="contain"
+              >
+                <div class="absolute-bottom text-subtitle1 text-center">
+                  <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUpload" />
+                </div>
+              </q-img>
+            </q-card-section>
+            <q-card-section class="q-pb-none">
+              <span class="text-h6">Datos de perfil de la empresa</span>
+            </q-card-section>
+            <q-card-section class="q-pb-sm">
+              <div class="row q-col-gutter-x-md">
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
+                  <q-input
+                    v-model="company.name"
+                    filled
+                    label="Nombre de la empresa"
+                    lazy-rules
+                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+                  />
+                </div>
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
+                  <q-input
+                    v-model="company.document_number"
+                    filled
+                    label="Número de documento"
+                    lazy-rules
+                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+                  />
+                </div>
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
+                  <q-input
+                    v-model="company.email"
+                    filled
+                    label="Correo electrónico"
+                    lazy-rules
+                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+                  />
+                </div>
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
+                  <q-input
+                    v-model="company.phone_number"
+                    filled
+                    label="Número de teléfono"
+                    lazy-rules
+                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+                  />
+                </div>
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                  <q-input
+                    v-model="company.address"
+                    filled
+                    label="Dirección"
+                    lazy-rules
+                    type="textarea"
+                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+                  />
+                </div>
+              </div>
+            </q-card-section>
+            <q-card-actions align="right" class="q-pt-xs">
+              <q-btn color="primary" label="Guardar" icon="save" type="submit" :loading="loading"/>
+            </q-card-actions>
+          </q-form>
+        </q-card>
+      </q-step>
+      <q-step
+        :name="2"
+        title="Valores por defecto"
+        icon="settings"
+        clickable
+      >
+      <q-card>
+        <q-form @submit="onSubmitConfig">
+          <q-card-section>
+            <span class="text-h6">Valores por defecto para la facturación</span>
+          </q-card-section>
+          <q-card-section class="q-pb-none">
+            <div class="row q-col-gutter-x-sm">
+              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de factura"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="companyConfig.invoiceType"
+                  :options="invoiceTypes"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterInvoiceTypes"
+                />
+              </div>
+              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de servicio"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="companyConfig.typeOfService"
+                  :options="typeOfServices"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterTypeOfServices"
+                />
+              </div>
+              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                <q-select
+                  filled
+                  dense
+                  label="Método de pago"
+                  option-label="name"
+                  option-value="id"
+                  v-model="companyConfig.paymentMethod"
+                  :options="paymentMethods"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filtersPaymentMethods"
+                />
+              </div>
+              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                <q-select
+                  filled
+                  dense
+                  label="Moneda"
+                  option-label="name"
+                  option-value="id"
+                  v-model="companyConfig.coin"
+                  :options="coins"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterCoins"
+                />
+              </div>
             </div>
-          </q-img>
-        </q-card-section>
-        <q-card-section class="q-pb-none">
-          <span class="text-h6">Datos de perfil de la empresa</span>
-        </q-card-section>
-        <q-card-section class="q-pb-sm">
-          <div class="row q-col-gutter-x-md">
-            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-              <q-input
-                v-model="company.name"
-                filled
-                label="Nombre de la empresa"
-                lazy-rules
-                :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-              />
-            </div>
-            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-              <q-input
-                v-model="company.document_number"
-                filled
-                label="Número de documento"
-                lazy-rules
-                :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-              />
-            </div>
-            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-              <q-input
-                v-model="company.email"
-                filled
-                label="Correo electrónico"
-                lazy-rules
-                :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-              />
-            </div>
-            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-              <q-input
-                v-model="company.phone_number"
-                filled
-                label="Número de teléfono"
-                lazy-rules
-                :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-              />
-            </div>
-            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-              <q-input
-                v-model="company.address"
-                filled
-                label="Dirección"
-                lazy-rules
-                type="textarea"
-                :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-              />
-            </div>
-          </div>
-        </q-card-section>
-        <q-card-actions align="right" class="q-pt-xs">
-          <q-btn color="primary" label="Guardar" type="submit" :loading="loading"/>
-        </q-card-actions>
-      </q-form>
-    </q-card>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn color="primary" label="Guardar" icon="save" type="submit" :loading="loading"/>
+          </q-card-actions>
+        </q-form>
+      </q-card>
+      </q-step>
+    </q-stepper>
   </q-page>
 </template>
 
@@ -86,6 +178,31 @@ import { logo, notify, setFiles } from '../const/mixins'
 import { api } from 'src/boot/axios'
 import { ref } from 'vue'
 
+/**
+ * Coins
+ * @type {Array}
+ */
+const coins = ref([])
+/**
+ * Type of service
+ * @type {Array}
+ */
+const typeOfServices = ref([])
+/**
+ * Step
+ * @type {Number}
+ */
+const step = ref(1)
+/**
+ * Invoice types
+ * @type {Array}
+ */
+const invoiceTypes = ref([])
+/**
+ * Payment methods
+ * @type {Array}
+ */
+const paymentMethods = ref([])
 /**
  * Store module authentication
  * @type {Object}
@@ -103,6 +220,12 @@ const userSession = store.userSession
  * @type {Object}
  */
 const company = ref(userSession.company_session)
+
+/**
+ * Company config
+ * @type {Object}
+ */
+const companyConfig = ref(company.value?.company_config || {})
 
 /**
  * File
@@ -158,4 +281,97 @@ const onSubmit = async () => {
   }
 }
 
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
+const filterOptions = async (value, service, update) => {
+  try {
+    const { data } = await api.get(service, {
+      params: {
+        dataSearch: {
+          name: value
+        }
+      }
+    })
+    update(data)
+  } catch (err) {
+    notify(err.message, 'negative', 'warning')
+  }
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
+const filterInvoiceTypes = async (value, update) => {
+  filterOptions(value, 'invoice-types', (data) => {
+    update(() => {
+      invoiceTypes.value = data
+    })
+  })
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
+const filtersPaymentMethods = async (value, update) => {
+  filterOptions(value, 'payment-methods', (data) => {
+    update(() => {
+      paymentMethods.value = data
+    })
+  })
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
+const filterCoins = async (value, update) => {
+  filterOptions(value, 'coins', (data) => {
+    update(() => {
+      coins.value = data
+    })
+  })
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
+const filterTypeOfServices = async (value, update) => {
+  filterOptions(value, 'type-of-services', (data) => {
+    update(() => {
+      typeOfServices.value = data
+    })
+  })
+}
+
+/**
+ * Save company config
+ * @param {Object} data
+ */
+
+const onSubmitConfig = async () => {
+  try {
+    loading.value = true
+    const { data } = await api.post('company-configs', {
+      coin_id: companyConfig.value?.coin?.id,
+      type_of_service_id: companyConfig.value?.typeOfService?.id,
+      invoice_type_id: companyConfig.value?.invoiceType?.id,
+      payment_method_id: companyConfig.value?.paymentMethod?.id
+    })
+    store.setCompanySession({
+      ...company.value,
+      company_config: data
+    })
+    notify('Guardado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loading.value = false
+  }
+}
 </script>

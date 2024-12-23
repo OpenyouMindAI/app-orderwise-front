@@ -53,6 +53,21 @@
               <q-select
                 use-input
                 filled
+                label="Rol"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                multiple
+                v-model="role"
+                :options="roles"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="filterRoles"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
                 label="Sucursales"
                 input-debounce="0"
                 option-label="name"
