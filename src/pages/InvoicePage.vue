@@ -38,6 +38,10 @@
     </q-table>
     <q-dialog v-model="openEditInvoice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <span class="text-h6">Detalles de la factura</span>
+          <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
+        </q-card-section>
         <q-tabs
           v-model="editTab"
           class="text-grey"
@@ -54,7 +58,7 @@
           <q-tab-panel name="details">
             <div class="row q-col-gutter-sm">
               <div class="col-6">
-                <q-input label="Código" filled v-model="invoice.id" readonly dense/>
+                <q-input label="Código" filled v-model="invoice.code" readonly dense/>
               </div>
               <div class="col-6">
                 <q-select
@@ -121,13 +125,13 @@
                         {{ product.name }}
                       </td>
                       <td class="text-right">
-                        {{ product.pivot.amount }}
+                        {{ formatNumber(product.pivot.amount) }}
                       </td>
                       <td class="text-right">
-                        {{ product.pivot.price }}
+                        {{ formatNumber(product.pivot.price) }}
                       </td>
                       <td class="text-right">
-                        {{ product.pivot.amount *  product.pivot.price }}
+                        {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
                       </td>
                     </tr>
                   </tbody>
@@ -138,7 +142,7 @@
                       Op Gravada
                     </q-item-section>
                     <q-item-section side v-if="invoice.coin">
-                      {{ invoice?.coin?.symbol }}{{ invoice.tax_base }}
+                      {{ invoice?.coin?.symbol }} {{ formatNumber(invoice.tax_base) }}
                     </q-item-section>
                   </q-item>
                   <q-item v-for="taxe in invoice.taxes" :key="taxe.id" v-show="invoice.invoice_type.name !== 'Ticket'">
@@ -154,7 +158,7 @@
                       Importe total
                     </q-item-section>
                     <q-item-section side v-if="coin">
-                      {{ invoice?.coin?.symbol }}{{ totalBill }}
+                      {{ invoice?.coin?.symbol }} {{ formatNumber(totalBill) }}
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -185,7 +189,7 @@
                     </span>
                   </td>
                   <td class="text-right">
-                    {{ payment.amount }}
+                    {{ formatNumber(payment.amount) }}
                   </td>
                 </tr>
                 <tr>
@@ -193,7 +197,7 @@
                     Total:
                   </td>
                   <td class="text-right">
-                    {{ invoice.total_payments }}
+                    {{ formatNumber(invoice.total_payments) }}
                   </td>
                 </tr>
               </tbody>
@@ -201,10 +205,10 @@
           </q-tab-panel>
         </q-tab-panels>
         <q-card-actions align="right">
-          <q-btn color="warning" label="Cerrar" @click="openEditInvoice = false"/>
-          <q-btn color="negative" label="Anular" @click="cancelInvoice" :loading="cancelLoading"/>
-          <q-btn color="secondary" label="Imprimir Ticket" @click="print"/>
-          <q-btn color="primary" label="Guardar" @click="saveEdit"/>
+          <q-btn icon="block" color="negative" label="Anular" @click="cancelInvoice" :loading="cancelLoading"/>
+          <q-btn icon="receipt" color="secondary" label="Imprimir Ticket" @click="print(true)"/>
+          <q-btn icon="print" color="info" label="Imprimir Factura" @click="print(false)"/>
+          <q-btn icon="save" color="primary" label="Guardar" @click="saveEdit"/>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -249,26 +253,20 @@
         </q-form>
       </q-card>
     </q-dialog>
-    <div id="printMe" v-show="false">
-      <invoice-print :data="invoice" v-if="invoice"/>
-    </div>
   </div>
 </template>
 
 <script>
 import { Notify, date, is } from 'quasar'
-import InvoicePrint from '../components/InvoicePrint.vue'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, notify } from 'src/const/mixins'
-import { status } from 'src/const/invoice'
+import { printInvoice, printTicket, status } from 'src/const/invoice'
 export default {
-  components: {
-    InvoicePrint
-  },
   data () {
     return {
       status,
+      formatNumber,
       documentType: 'ruc',
       options: [
         { label: 'RUC', value: 'ruc' },
@@ -410,7 +408,7 @@ export default {
       const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
       return sum + this.invoice.total
     },
-    ...mapState(authentication, ['branchOffice'])
+    ...mapState(authentication, ['branchOffice', 'userSession'])
   },
   mounted () {
     this.setPagination({
@@ -463,13 +461,13 @@ export default {
     },
     /**
      * Print invoice
+     * @param {Object} data invoice saved
      */
-    print () {
-      this.$htmlToPaper('printMe', {
-        styles: [
-          'ticketStyle.css'
-        ]
-      })
+    print (ticket) {
+      let doc = printInvoice(this.invoice, this.userSession)
+      if (ticket) doc = printTicket(this.invoice, this.userSession)
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
     },
     /**
      * Close all modals
