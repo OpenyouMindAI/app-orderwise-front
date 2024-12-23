@@ -84,7 +84,7 @@
           :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
           aria-label="dark_mode"
           class="q-mr-sm"
-          @click="darkMode"
+          @click="setTheme"
         >
           <q-tooltip :offset="[10, 10]">
             {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
@@ -236,12 +236,12 @@
 </template>
 
 <script>
-import { LocalStorage } from 'quasar'
 import { api } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify } from 'src/const/mixins'
+import { darkModeStore } from '../stores/darkModeStore'
 export default {
   name: 'MainLayout',
   components: { NotificationComponent },
@@ -271,7 +271,8 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice'])
+    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice']),
+    ...mapState(darkModeStore, ['darkMode'])
   },
   watch: {
     modules (value) {
@@ -294,10 +295,7 @@ export default {
     //   });
   },
   created () {
-    this.getAllModules()
-    // this.loadingPage()
-    this.getDataNotification()
-    this.getBrachOffice()
+    this.loadingPage()
   },
   methods: {
     ucwords (data) {
@@ -370,16 +368,22 @@ export default {
         notify(error.message, 'negative', 'warning')
       }
     },
+    /**
+     * Validate role
+     * @param {Array} roles
+     * @returns {Object}
+     */
     validateRole (roles = []) {
-      const rol = this.userSession.roles[0]
-      if (this.userSession.is_root) return true
+      const rol = this.userSession?.roles[0]
+      if (this.userSession?.is_root) return true
       if (roles && roles.length > 0 && rol) {
-        return roles.filter((element) => {
-          return element.id === rol.id
-        })[0]
+        return roles.some((element) => element.id === rol.id)
       }
       return false
     },
+    /**
+     * Logout application
+     */
     logoutAt () {
       this.$router.push({ name: 'Login' })
       this.logout()
@@ -387,20 +391,19 @@ export default {
     /**
      * Dark mode application
      */
-    darkMode () {
+    setTheme () {
       this.$q.dark.toggle()
-      LocalStorage.set('dark', this.$q.dark.isActive)
+      this.setDarkMode(this.$q.dark.isActive)
     },
     /**
      * Loading applications
      */
-    // loadingPage () {
-    //   this.$q.dark.set(LocalStorage.getItem('dark'))
-    //   this.titleApp =
-    //     this.userSession.roles[0].modules.find(
-    //       (module) => module.route === this.$route.name
-    //     )?.name || this.$route.name.toLowerCase()
-    // },
+    loadingPage () {
+      this.$q.dark.set(this.darkMode)
+      this.getAllModules()
+      this.getDataNotification()
+      this.getBrachOffice()
+    },
     /**
      * Change route
      * @param  {String} data name route
@@ -425,7 +428,14 @@ export default {
     validateDevice (device) {
       return this.$q.platform.is[device]
     },
-    ...mapActions(authentication, ['logout'])
+    /**
+     * Logout map actions
+     */
+    ...mapActions(authentication, ['logout']),
+    /**
+     * Dark mode map actions
+     */
+    ...mapActions(darkModeStore, ['setDarkMode'])
   }
 }
 </script>

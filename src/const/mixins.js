@@ -99,7 +99,8 @@ export const logo = {
 }
 
 export const qBitsLogo = {
-  black: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/black.png'
+  black: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/black.png',
+  white: 'https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/white.png'
 }
 
 export const blobToBase64 = (blob) => {
