@@ -68,6 +68,9 @@
         <q-card class="column-command" style="height: calc(100vh - 170px); overflow: auto;">
           <q-card-section class="text-subtitle2 q-pb-sm">
             {{ status.label }}
+            <q-badge rounded color="secondary" class="q-ml-xs">
+              {{ invoices?.filter(ind => ind.status === status.value).length }}
+            </q-badge>
           </q-card-section>
           <q-card-section class="scroll q-pt-sm q-gutter-sm">
             <q-card
@@ -76,33 +79,44 @@
               class="cursor-pointer"
               @click="showInvoices(invoice)"
             >
-              <q-card-section class="flex justify-between items-center q-pb-xs">
-                <div class="flex q-gutter-sm items-center">
-                  <q-btn
-                    icon="arrow_back"
-                    color="primary"
-                    size="sm"
-                    round
-                    outline
-                    v-if="index"
-                    @click.stop="nextStatus(invoice, index - 1)"
-                  />
-                  <div class="text-bold">
-                    {{  invoice?.invoice_type?.name }}
-                    {{ invoice.code }}
+
+              <q-card-section class="flex justify-between items-center q-py-sm">
+                <div class="grid items-center full-width">
+                  <q-badge color="primary" class="text-bold">
+                    {{ invoice.branch_office?.name }}
+                    <q-tooltip class="text-subtitle1">
+                      {{ invoice.branch_office?.name }}
+                    </q-tooltip>
+                  </q-badge>
+                  <div class="flex items-center full-width" style="margin-top: 10px; gap: 10px;">
+                    <q-btn
+                      icon="arrow_back"
+                      color="primary"
+                      size="xs"
+                      round
+                      outline
+                      v-if="index"
+                      @click.stop="nextStatus(invoice, index - 1)"
+                    />
+                    <div class="text-bold">
+                      {{  invoice?.invoice_type?.name }}
+                      {{ invoice.code }}
+                    </div>
+                    <q-btn
+                      v-if="index !== (statuses.length - 1)"
+                      icon="arrow_forward"
+                      color="primary"
+                      size="xs"
+                      round
+                      outline
+                      @click.stop="nextStatus(invoice, index + 1)"
+                    />
                   </div>
                 </div>
-                <q-btn
-                  v-if="index !== (statuses.length - 1)"
-                  icon="arrow_forward"
-                  color="primary"
-                  size="sm"
-                  round
-                  outline
-                  @click.stop="nextStatus(invoice, index + 1)"
-                />
               </q-card-section>
-              <q-card-section class="column q-gutter-sm q-py-sm">
+              <q-separator/>
+              <q-card-section class="column q-py-xs">
+                <span class="text-bold">Artículos:</span>
                 <div v-for="product in invoice.products" :key="product.id">
                   <span>
                     {{ product.name }}
