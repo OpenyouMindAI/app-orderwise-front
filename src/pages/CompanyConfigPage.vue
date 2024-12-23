@@ -225,7 +225,12 @@ const company = ref(userSession.company_session)
  * Company config
  * @type {Object}
  */
-const companyConfig = ref(company.value?.company_config || {})
+const companyConfig = ref({
+  paymentMethod: company.value?.company_config?.payment_method,
+  invoiceType: company.value?.company_config?.invoice_type,
+  typeOfService: company.value?.company_config?.type_of_service,
+  coin: company.value?.company_config?.coin
+})
 
 /**
  * File

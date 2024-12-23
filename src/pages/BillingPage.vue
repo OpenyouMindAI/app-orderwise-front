@@ -1094,8 +1094,8 @@ export default {
     },
     dialogPayment (data) {
       const { company_session: companySession } = this.userSession
-      if (data && companySession?.company_config?.paymentMethod && this.totalBill) {
-        this.addPayment(companySession?.company_config?.paymentMethod)
+      if (data && companySession?.company_config?.payment_method && this.totalBill) {
+        this.addPayment(companySession?.company_config?.payment_method)
       }
     }
   },
@@ -1696,8 +1696,8 @@ export default {
     getLocalStorage () {
       const { company_session: companySession } = this.userSession
       this.client = JSON.parse(localStorage.getItem('client')) ?? null
-      this.invoiceType = companySession?.company_config?.invoiceType
-      this.typeOfService = companySession?.company_config?.typeOfService
+      this.invoiceType = companySession?.company_config?.invoice_type
+      this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
       this.products = JSON.parse(localStorage.getItem('products')) ?? []
       this.calculateTotal()
