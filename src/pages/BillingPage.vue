@@ -251,7 +251,7 @@
               />
               <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
-              <div class="flex q-gutter-md" v-if="invoice">
+              <div class="flex q-mt-sm" v-if="invoice" style="gap: 15px;">
                 <q-btn
                   color="primary"
                   icon="print"
