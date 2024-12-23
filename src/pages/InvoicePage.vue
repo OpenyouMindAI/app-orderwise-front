@@ -7,6 +7,7 @@
       :rows="invoices"
       :loading="visible"
       :filter="filter"
+      :visible-columns="visibleColumns"
       binary-state-sort
       v-model:pagination="paginationConfig"
       @row-click="editInvoice"
@@ -15,6 +16,22 @@
     >
       <template v-slot:loading>
         <q-inner-loading showing color="primary" />
+      </template>
+      <template v-slot:top-left>
+        <q-select
+          v-model="visibleColumns"
+          multiple
+          outlined
+          dense
+          options-dense
+          :display-value="$q.lang.table.columns"
+          emit-value
+          map-options
+          :options="columns"
+          option-value="name"
+          options-cover
+          style="min-width: 150px"
+        />
       </template>
       <template v-slot:top-right>
         <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
@@ -215,26 +232,19 @@
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center q-py-sm text-white bg-primary">
             <div class="text-h6">Agregar cliente</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-option-group
-                type="radio"
-                inline
-                autofocus
-                v-model="documentType"
-                :options="options"
-              />
-            </div>
+          <q-card-section class="row">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
                 v-model="client.document_number"
                 label="Número de documento"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                autofocus
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -245,10 +255,34 @@
                 label="Nombre"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="client.email"
+                type="email"
+                label="Correo"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="client.phone_number"
+                label="Número de teléfono"
+                :rules="[val => !!val || 'El campo es requerido.']"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="client.address"
+                label="Dirección"
+                type="textarea"
+              />
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit"/>
-            <q-btn color="secondary" label="Cancelar" @click="(openAddClient = false)" />
+            <q-btn color="primary" icon="save" label="Guardar" type="submit" :loading="loadingClient"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -265,23 +299,72 @@ import { printInvoice, printTicket, status } from 'src/const/invoice'
 export default {
   data () {
     return {
+      /**
+       * Loading client status
+       * @type {Boolean}
+       */
+      loadingClient: false,
+      /**
+       * Visible columns
+       * @type {Array}
+       */
+      visibleColumns: ['code', 'invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
+      /**
+       * Status invoice
+       * @type {Object}
+       */
       status,
+      /**
+       * Format number
+       * @type {Function}
+       */
       formatNumber,
-      documentType: 'ruc',
-      options: [
-        { label: 'RUC', value: 'ruc' },
-        { label: 'DNI', value: 'dni', color: 'green' }
-      ],
+      /**
+       * Dialog client status
+       * @type {Boolean}
+       */
       openAddClient: false,
+      /**
+       * Taxe translate
+       * @type {Object}
+       */
       taxeTranslate: {
         percentage: '%'
       },
+      /**
+       * Client form data
+       * @type {Object}
+       */
       client: {},
+      /**
+       * Edit tab
+       * @type {String}
+       */
       editTab: 'details',
+      /**
+       * Invoices list table
+       * @type {Array}
+       */
       invoices: [],
+      /**
+       * Invoice data selected
+       * @type {Object}
+       */
       invoice: null,
+      /**
+       * Coin data
+       * @type {Object}
+       */
       coin: {},
+      /**
+       * Cancel loading
+       * @type {Boolean}
+       */
       cancelLoading: false,
+      /**
+       * Filter
+       * @type {String}
+       */
       filter: '',
       /**
        * Params search
@@ -302,9 +385,25 @@ export default {
           'tables.name': ''
         }
       },
+      /**
+       * Loading table
+       * @type {Boolean}
+       */
       visible: false,
+      /**
+       * Open add invoice dialog
+       * @type {Boolean}
+       */
       openAddInvoice: false,
+      /**
+       * Open edit invoice dialog
+       * @type {Object}
+       */
       openEditInvoice: null,
+      /**
+       * Table columns
+       * @type {Array}
+       */
       columns: [
         {
           name: 'code',
@@ -393,6 +492,10 @@ export default {
           sortable: true
         }
       ],
+      /**
+       * Pagination config
+       * @type {Object}
+       */
       paginationConfig: {
         rowsPerPage: 20,
         rowsNumber: 20,
@@ -400,6 +503,10 @@ export default {
         sortBy: 'id',
         sortOrder: 'desc'
       },
+      /**
+       * Invoice types
+       * @type {Array}
+       */
       invoiceTypes: []
     }
   },
@@ -425,6 +532,10 @@ export default {
     }
   },
   methods: {
+    /**
+     * Calculate taxe
+     * @param {Object} taxe taxe
+     */
     calculateTaxe (taxe) {
       if (taxe.pivot.type_taxe === 'percentage') {
         taxe.total = (this.invoice.total * taxe.pivot.amount) / 100
@@ -554,7 +665,10 @@ export default {
         })
     },
     /**
-     * View coin
+     * View invoice data
+     * @param {Object} event event
+     * @param {Object} row row
+     * @param {Number} index index
      */
     editInvoice (event, row, index) {
       this.openEditInvoice = true
@@ -579,29 +693,21 @@ export default {
      * Save clients
      */
     saveClient () {
-      this.visible = true
+      this.loadingClient = true
       this.$api.put(`clients/${this.invoice.client.id}`, this.client)
         .then(({ data }) => {
           this.openAddClient = false
-          this.visible = false
+          this.loadingClient = false
           this.invoice.client = data
-          Notify.create({
-            message: 'Cliente creado exitosamente',
-            icon: 'check_circle',
-            color: 'positive'
-          })
+          notify('Cliente guardado exitosamente', 'positive', 'check_circle')
         })
         .catch(err => {
-          this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+          this.loadingClient = false
+          notify(err.message, 'negative', 'warning')
         })
     },
     /**
-     * Save edit
+     * Edit invoice
      */
     saveEdit () {
       this.visible = true
@@ -627,7 +733,7 @@ export default {
         })
     },
     /**
-     * Delete coin
+     * Delete invoice
      */
     deleteInvoice () {
       this.visible = true

@@ -63,7 +63,6 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.email"
-                autofocus
                 type="email"
                 label="Correo"
               />
@@ -115,7 +114,6 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.name"
-                autofocus
                 label="Nombre"
               />
             </div>
@@ -124,7 +122,6 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.email"
-                autofocus
                 type="email"
                 label="Correo"
               />
