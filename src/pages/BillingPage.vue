@@ -1091,6 +1091,12 @@ export default {
     },
     products (data) {
       localStorage.setItem('products', JSON.stringify(data))
+    },
+    dialogPayment (data) {
+      const { company_session: companySession } = this.userSession
+      if (data && companySession?.company_config?.paymentMethod && this.totalBill) {
+        this.addPayment(companySession?.company_config?.paymentMethod)
+      }
     }
   },
   mounted () {
