@@ -118,12 +118,19 @@
           header-class="bg-secondary text-white"
           expand-icon-class="text-white"
           default-opened
-          :label="`Flujo de dinero: ${formatNumber(cashflows.cashflow_totals)}`"
+          :label="`Flujo de dinero: ${formatNumber(cashflowTotals.cashflow_totals)}`"
         >
           <q-card>
             <q-card-section>
               <q-list dense>
-                <q-item v-for="cashFlow in cashflows.cashflow_total" :key="cashFlow.id">
+                <q-item
+                  v-for="cashFlow in cashflowTotals.cashflow_total"
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                  :key="cashFlow.id"
+                  @click="cashFlowDetails(cashFlow)"
+                >
                   <q-item-section>
                     <q-item-label>{{ translate[cashFlow.type_cashflow] }}</q-item-label>
                   </q-item-section>
@@ -132,12 +139,17 @@
                   </q-item-section>
                 </q-item>
                 <q-separator spaced inset />
-                <q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                  @click="cashFlowDetails"
+                >
                   <q-item-section>
                     <q-item-label>Total</q-item-label>
                   </q-item-section>
                   <q-item-section side>
-                    <q-item-label>{{ formatNumber(cashflows.cashflow_totals) }}</q-item-label>
+                    <q-item-label>{{ formatNumber(cashflowTotals.cashflow_totals) }}</q-item-label>
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -152,7 +164,7 @@
       </span>
       <span class="text-subtitle2">
         VENTAS TOTALES:
-        {{ formatNumber(categoryTotalsTotals.category_total + cashflows.cashflow_totals) }}
+        {{ formatNumber(categoryTotalsTotals.category_total + cashflowTotals.cashflow_totals) }}
       </span>
     </q-footer>
     <q-dialog
@@ -208,6 +220,54 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="cashFlowDetailsDialog">
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <div class="text-h6">Flujo de dinero</div>
+          <q-btn icon="close" flat round dense  v-close-popup />
+        </q-card-section>
+
+        <q-card-section style="max-height: 50vh" class="scroll">
+          <q-markup-table>
+            <thead>
+              <tr>
+                <th class="text-left">Fecha</th>
+                <th class="text-left">Hora</th>
+                <th class="text-left">Descripción</th>
+                <th class="text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in cashflows.data" :key="item.id">
+                <td class="text-left">{{ formatDate(item.created_at, 'DD/MM/YYYY') }}</td>
+                <td class="text-left">{{ formatDate(item.created_at, 'HH:mm:ss') }}</td>
+                <td class="text-left">{{ item.description }}</td>
+                <td class="text-right" :class="item.type_cashflow === 'debit' ? 'text-positive' : 'text-negative'">
+                  {{ formatNumber(item.amount) }}
+                </td>
+              </tr>
+              <tr>
+                <th colspan="3" class="text-right">
+                  <span class="text-subtitle1">
+                    Total:
+                  </span>
+                </th>
+                <th :class="cashflows.total > 0 ? 'text-positive' : 'text-negative'" class="text-right">
+                  <span class="text-subtitle1">
+                    {{ formatNumber(cashflows.total) }}
+                  </span>
+                </th>
+              </tr>
+            </tbody>
+          </q-markup-table>
+         </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn label="Cerrar" color="negative" icon="close" v-close-popup />
+        </q-card-actions>
+        <q-inner-loading :showing="cashFlowLoading" color="primary" />
+      </q-card>
+    </q-dialog>
     <q-inner-loading :showing="loading" color="primary" />
   </q-page>
 </template>
@@ -223,9 +283,10 @@ export default {
   data: () => {
     return {
       loading: false,
+      cashFlowDetailsDialog: false,
+      cashFlowLoading: false,
       formatDate,
       panel: 'day',
-      day: date.formatDate(Date(), 'YYYY-MM-DD'),
       fromHours: null,
       toHours: null,
       formatNumber,
@@ -233,35 +294,19 @@ export default {
         debit: 'Entrada',
         credit: 'Salida'
       },
+      day: date.formatDate(Date(), 'YYYY-MM-DD'),
       from: date.formatDate(Date(), 'YYYY-MM-DD'),
       to: date.formatDate(Date(), 'YYYY-MM-DD'),
-      paymentMethods: [],
-      cashflows: [],
+      cashflowTotals: [],
       dialogFilter: false,
       filter: '',
       /**
        * Params search
        * @type {Object}
        */
-      params: {
-        paginate: true,
-        sortBy: 'id',
-        sortOrder: 'desc',
-        perPage: 1,
-        dateFilter: {
-          field: 'created_at',
-          from: date.formatDate(Date(), 'YYYY-MM-DD'),
-          to: date.formatDate(Date(), 'YYYY-MM-DD')
-        },
-        dataSearch: {
-          id: '',
-          'coin.name': '',
-          'paymentMethod.name': '',
-          created_at: '',
-          amount: ''
-        }
-      },
+      params: {},
       visible: false,
+      cashflows: [],
       paginationConfig: {
         rowsPerPage: 20,
         rowsNumber: 20,
@@ -355,25 +400,10 @@ export default {
     }
   },
   watch: {
-    filter (data) {
-      this.searchData(data)
-    },
     branchOffice (data) {
       this.filterDate()
-    },
-    paymentMethods (val) {
-      this.params.whereIn = {
-        payment_method_id: val
-      }
-      this.getInvoicePayments(this.params)
     }
   },
-  // mounted () {
-  //   this.setPagination({
-  //     pagination: this.paginationConfig,
-  //     filter: undefined
-  //   })
-  // },
   created () {
     this.filterDate()
   },
@@ -381,6 +411,9 @@ export default {
     ...mapState(authentication, ['branchOffice'])
   },
   methods: {
+    /**
+     * Clear filter
+     */
     clearFilter () {
       this.day = date.formatDate(Date(), 'YYYY-MM-DD')
       this.fromHours = null
@@ -414,40 +447,29 @@ export default {
         })
     },
     /**
-     * Search beneficiary
-     * @param  {Object}
+     * Filter date
      */
-    searchData (data) {
-      for (const dataSearch in this.params.dataSearch) {
-        this.params.dataSearch[dataSearch] = data
-      }
-      this.params.page = 1
-      this.getInvoicePayments(this.params)
-    },
     async filterDate () {
-      let params = {
-        branch_office_id: this.branchOffice?.id
-      }
       if (this.panel === 'day') {
-        params = {
-          ...params,
+        this.params = {
+          branch_office_id: this.branchOffice?.id,
           day: this.day,
           fromHours: this.fromHours,
           toHours: this.toHours
         }
       } else {
-        params = {
-          ...params,
+        this.params = {
+          branch_office_id: this.branchOffice?.id,
           to: this.to,
           from: this.from
         }
       }
       this.loading = true
-      await this.getCategoryTotals(params)
-      await this.getPaymentMethodTotals(params)
-      await this.getPaymentTotals(params)
-      await this.getCashflowTotals(params)
-      await this.getTypeOfServicesTotals(params)
+      await this.getCategoryTotals(this.params)
+      await this.getPaymentMethodTotals(this.params)
+      await this.getPaymentTotals(this.params)
+      await this.getCashflowTotals(this.params)
+      await this.getTypeOfServicesTotals(this.params)
       this.loading = false
     },
     /**
@@ -457,9 +479,35 @@ export default {
     async getCashflowTotals (params) {
       try {
         const { data } = await this.$api.get('reports/cashflow-totals', { params })
+        this.cashflowTotals = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Get cash flow details
+     * @param {Object} data
+     */
+    cashFlowDetails (data) {
+      this.cashFlowDetailsDialog = true
+      this.getCashflowDetails({
+        ...this.params,
+        type_cashflow: data?.type_cashflow
+      })
+    },
+    /**
+     * Get total all
+     * @param {Object} params
+     */
+    async getCashflowDetails (params) {
+      try {
+        this.cashFlowLoading = true
+        const { data } = await this.$api.get('reports/cashflow-details', { params })
         this.cashflows = data
       } catch (error) {
         notify(error.message, 'negative', 'warning')
+      } finally {
+        this.cashFlowLoading = false
       }
     },
     /**
@@ -473,18 +521,6 @@ export default {
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
-    },
-    /**
-     * Set data pagination emit event
-     * @param  {Object} data value pagination
-     */
-    setPagination (data) {
-      this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
-      this.params.page = data.pagination.page
-      this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
-      this.params.perPage = data.pagination.rowsPerPage
-      this.paginationConfig = data.pagination
-      this.getInvoicePayments(this.params)
     },
     /**
      * Get total all
@@ -518,18 +554,6 @@ export default {
       try {
         const { data } = await this.$api.get('reports/category-totals', { params })
         this.categoryTotalsTotals = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Get invoice payments
-     * @param {Object} params
-     */
-    async getInvoicePayments (params = this.params) {
-      try {
-        const { data } = await this.$api.get('invoice-payments', { params })
-        this.invoicePayments = data.data
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }

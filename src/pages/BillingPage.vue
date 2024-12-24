@@ -570,22 +570,14 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-option-group
-                type="radio"
-                inline
-                autofocus
-                v-model="documentType"
-                :options="options"
-              />
-            </div>
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
                 v-model="clientAdded.document_number"
                 autofocus
                 label="Número de documento"
+                :rules="[val => !!val || 'El campo es requerido.']"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -593,14 +585,35 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="clientAdded.name"
-                autofocus
                 label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.email"
+                type="email"
+                label="Correo"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.phone_number"
+                label="Número de teléfono"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.address"
+                label="Dirección"
+                type="textarea"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="loadingClient"/>
-            <q-btn color="secondary" label="Cerrar" @click="(openAddClient = false)" />
+            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -753,19 +766,6 @@ export default {
        * @type {Boolean}
        */
       loadingPaymentMethods: false,
-      /**
-       * Document type
-       * @type {String}
-       */
-      documentType: 'ci',
-      /**
-       * Options
-       * @type {Array}
-       */
-      options: [
-        { label: 'Rif', value: 'rif' },
-        { label: 'DNI', value: 'ci', color: 'green' }
-      ],
       /**
        * Invoice taxes
        * @type {Array}

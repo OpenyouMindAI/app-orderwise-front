@@ -34,12 +34,12 @@
     <q-dialog v-model="openEditClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar cliente</div>
+          <q-card-section class="row items-center q-py-sm text-white bg-primary">
+            <div class="text-h6">Modificar cliente</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -63,35 +63,30 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.email"
-                autofocus
                 type="email"
                 label="Correo"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="client.username"
-                autofocus
-                label="Usuario"
+                v-model="client.phone_number"
+                label="Número de teléfono"
+                :rules="[val => !!val || 'El campo es requerido.']"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="client.password"
-                autofocus
-                type="password"
-                label="Contraseña"
+                v-model="client.address"
+                label="Dirección"
+                type="textarea"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
-            <q-btn color="negative" label="Eliminar" @click="deleteClient" :loading="visible" />
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn icon="delete" color="negative" label="Eliminar" @click="deleteClient" :loading="visible" />
+            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -99,12 +94,12 @@
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center q-py-sm text-white bg-primary">
             <div class="text-h6">Agregar cliente</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -119,7 +114,6 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.name"
-                autofocus
                 label="Nombre"
               />
             </div>
@@ -128,34 +122,29 @@
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.email"
-                autofocus
                 type="email"
                 label="Correo"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="client.username"
-                autofocus
-                label="Usuario"
+                v-model="client.phone_number"
+                label="Número de teléfono"
+                :rules="[val => !!val || 'El campo es requerido.']"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="client.password"
-                autofocus
-                type="password"
-                label="Contraseña"
+                v-model="client.address"
+                label="Dirección"
+                type="textarea"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -211,10 +200,10 @@ export default {
           sortable: true
         },
         {
-          name: 'username',
+          name: 'phone_number',
           align: 'left',
-          label: 'Usuario',
-          field: 'username',
+          label: 'Número de teléfono',
+          field: 'phone_number',
           sortable: true
         },
         {
