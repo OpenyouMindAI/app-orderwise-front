@@ -170,8 +170,10 @@ export default {
         sortOrder: 'desc',
         perPage: 1,
         dataSearch: {
-          id: '',
-          name: ''
+          name: '',
+          email: '',
+          phone_number: '',
+          document_number: ''
         }
       },
       visible: false,
