@@ -33,7 +33,8 @@ module.exports = configure(function (/* ctx */) {
       'axios',
       'pinia',
       'authorization',
-      'VueHtmlToPaper'
+      'VueHtmlToPaper',
+      'pusher'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#css

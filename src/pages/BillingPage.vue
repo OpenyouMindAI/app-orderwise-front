@@ -363,7 +363,7 @@
       </q-card>
     </q-dialog>
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">Desglose de pago</span>
           <q-btn flat icon="close" round size="md" v-close-popup/>
@@ -386,7 +386,7 @@
                   <th class="text-left">Método de pago</th>
                   <th class="text-left">Referencia</th>
                   <th class="text-right">Monto</th>
-                  <th class="text-right">Acciones</th>
+                  <th class="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -421,13 +421,22 @@
                       />
                     </q-popup-edit>
                   </td>
-                  <q-td class="text-right">
+                  <q-td class="text-center q-gutter-x-xs">
                     <q-btn
                       icon="delete"
-                      size="xs"
                       color="negative"
+                      rounded
+                      dense
                       @click="deletePayment(index)"
-                    />
+                      />
+                      <q-btn
+                        v-if="payment.acronym === 'MPQA'"
+                        rounded
+                        dense
+                        icon="qr_code"
+                        color="secondary"
+                        @click="waitingPayment = true"
+                      />
                   </q-td>
                 </tr>
                 <tr>
@@ -662,6 +671,12 @@
         </q-form>
       </q-card>
     </q-dialog>
+    <wait-by-payment-mp
+      v-if="waitingPayment"
+      v-model="waitingPayment"
+      :invoice="setModelInvoice()"
+      @paymentSuccess="paymentSuccess"
+    />
   </q-page>
 </template>
 
@@ -673,14 +688,17 @@ import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import { printInvoice, printTicket } from 'src/const/invoice'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
+import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 export default {
   name: 'BillingPage',
   components: {
     StreamBarcodeReader,
-    DrawerTable
+    DrawerTable,
+    WaitByPaymentMp
   },
   data () {
     return {
+      waitingPayment: false,
       /**
        * Invoice printer
        * @type {Boolean}
@@ -1092,9 +1110,14 @@ export default {
     products (data) {
       localStorage.setItem('products', JSON.stringify(data))
     },
+    /**
+     * Dialog payment
+     * @param {Object} data data payment
+     */
     dialogPayment (data) {
       const { company_session: companySession } = this.userSession
-      if (data && companySession?.company_config?.payment_method && this.totalBill) {
+      const forPayment = this.totalTaxe - this.totalPayment
+      if (data && companySession?.company_config?.payment_method && forPayment > 0) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
     }
@@ -1271,6 +1294,12 @@ export default {
       this.dialogPayment = false
       this.payments = []
     },
+
+    paymentSuccess (data) {
+      console.log(data)
+      const payment = this.payments.find(payment => payment.amount === data.transaction_amount && payment.acronym === 'MPQA')
+      payment.reference = String(data.id)
+    },
     /**
      * Add bill payment
      * @param {Object} data data payments
@@ -1278,6 +1307,7 @@ export default {
     addPayment (data) {
       this.payments.push({
         name: data.name,
+        acronym: data.acronym,
         amount: this.pendingPayment,
         reference: null,
         coin_id: this.coin.id,
@@ -1639,6 +1669,31 @@ export default {
       this.clear()
     },
     /**
+     * Set invoice model
+     * @returns {Object}
+     */
+    setModelInvoice () {
+      return {
+        ...this.invoice,
+        title: this.invoiceType?.name,
+        client_id: this.client?.id,
+        seller_id: this.userSession.id,
+        coin_id: this.coin.id,
+        description: this.invoiceDescription,
+        invoice_taxes: this.invoiceTaxes,
+        type_of_service_id: this.typeOfService.id,
+        invoice_type_id: this.invoiceType.id,
+        user_created_id: this.userSession.id,
+        exchange_rate: this.exchangeRate,
+        delivery_date: this.deliveryDate,
+        branch_office_id: this.branchOffice.id,
+        products: this.products,
+        payments: this.payments,
+        total_amount: this.totalBill,
+        tables: this.tableSelected
+      }
+    },
+    /**
      * Set params bill
      */
     setParamsBill () {
@@ -1653,23 +1708,7 @@ export default {
         return false
       }
 
-      return {
-        ...this.invoice,
-        client_id: this.client.id,
-        seller_id: this.userSession.id,
-        coin_id: this.coin.id,
-        description: this.invoiceDescription,
-        invoice_taxes: this.invoiceTaxes,
-        type_of_service_id: this.typeOfService.id,
-        invoice_type_id: this.invoiceType.id,
-        user_created_id: this.userSession.id,
-        exchange_rate: this.exchangeRate,
-        delivery_date: this.deliveryDate,
-        branch_office_id: this.branchOffice.id,
-        products: this.products,
-        payments: this.payments,
-        tables: this.tableSelected
-      }
+      return this.setModelInvoice()
     },
     /**
      * Save bill and payments
