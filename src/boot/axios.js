@@ -7,20 +7,20 @@ import axios from 'axios'
 // good idea to move this instance creation inside of the
 // "export default () => {}" function below (which runs individually
 // for each client)
-// const api = axios.create({ baseURL: 'https://api-food.dixcont.com/public/index.php/api/' })
-// const api = axios.create({ baseURL: 'https://api-food.dixcont.com/public/index.php/api/' })
 const api = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL })
 
-export default boot(({ app }) => {
-  // for use inside Vue files (Options API) through this.$axios and this.$api
+const apiQPay = axios.create({ baseURL: import.meta.env.VITE_APP_API_QPAY_URL })
 
+export default boot(({ app }) => {
   app.config.globalProperties.$axios = axios
   // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
   //       so you won't necessarily have to import axios in each vue file
 
   app.config.globalProperties.$api = api
+
+  app.config.globalProperties.$apiQPay = apiQPay
   // ^ ^ ^ this will allow you to use this.$api (for Vue Options API form)
   //       so you can easily perform requests against your app's API
 })
 
-export { api }
+export { api, apiQPay }
