@@ -7,7 +7,7 @@
       <div class="col-12">
         <q-table
           title="Clientes"
-          row-key="name"
+          row-key="id"
           :columns="columns"
           :rows="clients"
           :loading="visible"
@@ -170,8 +170,10 @@ export default {
         sortOrder: 'desc',
         perPage: 1,
         dataSearch: {
-          id: '',
-          name: ''
+          name: '',
+          email: '',
+          phone_number: '',
+          document_number: ''
         }
       },
       visible: false,
@@ -280,7 +282,6 @@ export default {
      * @param  {Object} data value pagination
      */
     setPagination (data) {
-      console.log(data.pagination.descending)
       this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
       this.params.page = data.pagination.page
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
