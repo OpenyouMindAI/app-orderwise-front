@@ -14,7 +14,7 @@
       </q-card-section>
 
       <q-card-section class="q-pa-none col" v-if="!paymentData">
-        <q-img src="animates/qr.gif" alt="qr_ gift" v-show="!loading" style="max-height: 400px;" >
+        <q-img src="animates/qr.gif" alt="qr_ gift" v-show="!loading" style="max-height: 400px;">
           <div class="absolute-full text-h6 text-center flex flex-center" style="background: rgba(0,0,0,0.4)">
             En espera de que el cliente proceda a escanear el código QR.
           </div>
@@ -27,7 +27,7 @@
       </q-card-section>
       <q-card-section v-else class="col">
         <div class="text-center text-positive column q-col-gutter-y-sm q-mt-sm">
-          <success-component/>
+          <success-component />
           <span class="text-subtitle1">El pago se ha realizado con éxito</span>
         </div>
         <div class="text-center text-positive column q-mt-md q-col-gutter-y-sm">
@@ -36,7 +36,7 @@
         </div>
       </q-card-section>
       <q-card-actions v-if="paymentData">
-        <q-btn label="Aceptar" color="positive" class="full-width" @click="acceptPayment"/>
+        <q-btn label="Aceptar" color="positive" class="full-width" @click="acceptPayment" />
       </q-card-actions>
       <q-inner-loading color="primary" size="2.5em" :showing="loading" />
     </q-card>
@@ -49,7 +49,11 @@ import { notify } from 'src/const/mixins'
 import { onMounted, ref, watch } from 'vue'
 import { echoPay } from 'src/boot/pusher'
 import SuccessComponent from './SuccessComponent.vue'
+import { authentication } from 'src/stores/module-authentication'
 
+const store = authentication()
+
+const { branchOffice } = store
 /**
  * Model value component
  * @type {Object}
@@ -123,7 +127,7 @@ const createOrder = async (invoice) => {
     referenceExternal.value = data.external_reference
     notify('Listo para escanear el código QR', 'positive', 'check_circle')
   } catch (error) {
-    notify(error.response.data.message || error.message, 'negative', 'warning')
+    notify(error?.response?.data?.message || error.message, 'negative', 'warning')
   } finally {
     loading.value = false
   }
@@ -138,8 +142,8 @@ const createOrder = async (invoice) => {
 const setBillModel = (model) => {
   return {
     ...model,
-    externalStoreId: 'default',
-    externalPosId: 'default',
+    externalStoreId: branchOffice.id,
+    externalPosId: '1',
     description: model.description || model.title,
     products: model.products.map(product => {
       return {
@@ -160,12 +164,12 @@ const setBillModel = (model) => {
 const cancelOrder = async () => {
   try {
     loading.value = true
-    await apiQPay.delete('/mercadopago/qr-attended/orders/delete/default')
+    await apiQPay.delete(`/mercadopago/qr-attended/orders/delete/${branchOffice.id}`)
     modelValue.value = false
     notify('Orden cancelada exitosamente', 'warning', 'check_circle')
     referenceExternal.value = null
   } catch (error) {
-    notify(error.response.data.message || error.message, 'negative', 'warning')
+    notify(error?.response?.data?.message || error.message, 'negative', 'warning')
   } finally {
     modelValue.value = false
     loading.value = false

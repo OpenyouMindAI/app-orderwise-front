@@ -1296,7 +1296,6 @@ export default {
     },
 
     paymentSuccess (data) {
-      console.log(data)
       const payment = this.payments.find(payment => payment.amount === data.transaction_amount && payment.acronym === 'MPQA')
       payment.reference = String(data.id)
     },
