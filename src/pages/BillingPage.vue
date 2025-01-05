@@ -408,7 +408,7 @@
                     </q-popup-edit>
                   </td>
                   <td class="text-right">
-                    {{ payment.amount }}
+                    {{ formatNumber(payment.amount) }}
                     <q-popup-edit
                       v-model.number="payment.amount"
                       auto-save
@@ -442,7 +442,7 @@
                 <tr>
                   <th colspan="4">
                     Restante a pagar:
-                    <span v-if="coin">{{ coin.symbol }}</span>{{ pendingPayment }}
+                    <span v-if="coin">{{ coin.symbol }}</span>{{ formatNumber(pendingPayment) }}
                   </th>
                 </tr>
               </tbody>
@@ -980,6 +980,10 @@ export default {
        * @type {Array}
        */
       categories: [],
+      /**
+       * Loading products
+       * @type {Boolean}
+       */
       loadingProducts: false,
       /**
        * Products columns
@@ -1414,6 +1418,8 @@ export default {
     },
     /**
      * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
      */
     getCoins (value, update) {
       this.$api.get('coins', {
@@ -1688,7 +1694,7 @@ export default {
         branch_office_id: this.branchOffice.id,
         products: this.products,
         payments: this.payments,
-        total_amount: this.totalBill,
+        total_amount: Number(formatNumber(this.totalBill)),
         tables: this.tableSelected
       }
     },
@@ -1801,11 +1807,16 @@ export default {
         this.calculate(findProduct)
       } else {
         data.amount = this.quantity
-        data.subtotal = 0
         data.product_id = data.id
+        if (this.currentAmount) {
+          data.subtotal = this.currentAmount
+          this.calculateTotal()
+        } else {
+          this.calculate(data)
+        }
         this.products.push(data)
-        this.calculate(data)
       }
+      console.log(this.products)
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false

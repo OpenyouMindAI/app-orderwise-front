@@ -72,7 +72,7 @@ export const formatNumber = (data) => {
 }
 
 /**
- * @description converte text to slug
+ * @description convert text to slug
  * @param {*} Text
  */
 export const convertToSlug = (Text) => {
