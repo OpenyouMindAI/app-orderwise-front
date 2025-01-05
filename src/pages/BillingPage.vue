@@ -1808,15 +1808,14 @@ export default {
       } else {
         data.amount = this.quantity
         data.product_id = data.id
+        this.products.push(data)
         if (this.currentAmount) {
           data.subtotal = this.currentAmount
           this.calculateTotal()
         } else {
           this.calculate(data)
         }
-        this.products.push(data)
       }
-      console.log(this.products)
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
