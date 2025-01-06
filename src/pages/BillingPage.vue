@@ -1694,7 +1694,7 @@ export default {
         branch_office_id: this.branchOffice.id,
         products: this.products,
         payments: this.payments,
-        total_amount: Number(formatNumber(this.totalBill)),
+        total_amount: this.totalBill,
         tables: this.tableSelected
       }
     },
