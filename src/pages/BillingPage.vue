@@ -647,6 +647,7 @@
               label="Cantidad"
               type="number"
               style="width: 50%;"
+              @update:model-value="updateValues('quantity')"
             />
             <q-input
               filled
@@ -654,6 +655,7 @@
               label="Importe"
               type="number"
               style="width: 50%;"
+              @update:model-value="updateValues('currentAmount')"
             />
           </q-card-section>
           <q-card-section class="q-pt-xs">
@@ -1105,12 +1107,6 @@ export default {
     invoiceRouter (data) {
       if (data) this.getInvoiceOne(data)
     },
-    currentAmount (data) {
-      if (data) {
-        const quantity = data / this.productQuantity.price
-        this.quantity = Number(quantity.toFixed(2))
-      }
-    },
     products (data) {
       localStorage.setItem('products', JSON.stringify(data))
     },
@@ -1176,6 +1172,25 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+    /**
+     * Update values
+     * @param {String} inputName input name
+     */
+    updateValues (inputName) {
+      if (inputName === 'quantity') {
+        this.currentAmount = this.roundToFourDecimals(this.quantity * this.productQuantity.price)
+      } else if (inputName === 'currentAmount') {
+        this.quantity = this.roundToFourDecimals(this.currentAmount / this.productQuantity.price)
+      }
+    },
+    /**
+     * Round to four decimals
+     * @param {Number} number number
+     * @returns {Number}
+     */
+    roundToFourDecimals (number) {
+      return parseFloat(number.toFixed(2))
+    },
     /**
      * Set data pagination emit event
      * @param  {Object} data value pagination
