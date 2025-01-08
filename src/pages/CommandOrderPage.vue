@@ -64,17 +64,17 @@
       </q-select>
     </div>
     <div class="board-command">
-      <div v-for="(status, index) in statuses" :key="status" class="q-pa-xs">
-        <q-card class="column-command" style="height: calc(100vh - 170px); overflow: auto;">
-          <q-card-section class="text-subtitle2 q-pb-sm">
+      <div v-for="(status, index) in statuses" :key="index">
+        <q-card class="column-command">
+          <q-card-section class="text-subtitle2">
             {{ status.label }}
             <q-badge rounded color="secondary" class="q-ml-xs">
-              {{ invoices?.filter(ind => ind.status === status.value).length }}
+              {{ status.total }}
             </q-badge>
           </q-card-section>
-          <q-card-section class="scroll q-pt-sm q-gutter-sm">
+          <q-card-section class="scroll q-pt-sm q-gutter-sm" style="height: calc(100vh - 250px); overflow: auto;">
             <q-card
-              v-for="invoice in invoices.filter(ind => ind.status === status.value)"
+              v-for="invoice in status.data"
               :key="invoice.id"
               class="cursor-pointer"
               @click="showInvoices(invoice)"
@@ -155,6 +155,15 @@
               </q-card-section>
             </q-card>
           </q-card-section>
+          <q-card-actions align="center" class="q-pa-sm">
+            <q-pagination
+              v-model="status.page"
+              :max="Math.ceil(status.total / 10)"
+              input
+              @update:model-value="loadInvoices(status)"
+            />
+          </q-card-actions>
+          <q-inner-loading :showing="status.loading" color="primary" />
         </q-card>
       </div>
     </div>
@@ -346,7 +355,6 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-inner-loading :showing="loading" color="primary" />
   </q-page>
 </template>
 
@@ -374,11 +382,6 @@ const invoiceTypeCommand = JSON.parse(localStorage.getItem('invoiceType-command'
  * Local storage
  */
 const typeOfServiceCommand = JSON.parse(localStorage.getItem('typeOfService-command')) || []
-/**
- * List invoice
- * @type {Array}
- */
-const invoices = ref([])
 /**
  * List branch office
  * @type {Array}
@@ -450,25 +453,11 @@ const interval = ref(null)
  * @type {Array}
  */
 const statuses = ref([
-  {
-    label: 'Pendiente',
-    value: 'pending'
-  },
-  {
-    label: 'En proceso',
-    value: 'on_process'
-  },
-  {
-    label: 'Terminado',
-    value: 'finished'
-  },
-  {
-    label: 'Entregado',
-    value: 'delivered'
-  }
+  { label: 'Pendiente', value: 'pending', data: [], page: 1, loading: false },
+  { label: 'En proceso', value: 'on_process', data: [], page: 1, loading: false },
+  { label: 'Terminado', value: 'finished', data: [], page: 1, loading: false },
+  { label: 'Entregado', value: 'delivered', data: [], page: 1, loading: false }
 ])
-
-const loading = ref(false)
 
 const params = ref({
   sortOrder: 'asc',
@@ -489,6 +478,29 @@ onMounted(() => {
   getTypeOfServices()
   getBranchOffices()
 })
+
+const loadInvoices = async (status) => {
+  try {
+    status.loading = true
+    const { data } = await api.get('command-orders', {
+      params: {
+        ...params.value,
+        page: status.page,
+        perPage: 10,
+        paginate: true,
+        dataEqualFilter: {
+          status: status.value
+        }
+      }
+    })
+    status.data = data.data
+    status.total = data.total
+  } catch (error) {
+    console.error(`Error al cargar datos para ${status.label}:`, error)
+  } finally {
+    status.loading = false
+  }
+}
 
 onUnmounted(() => {
   clearInterval(interval.value)
@@ -554,16 +566,9 @@ const showInvoices = (data) => {
 /**
  * Get all invoices
  */
-const getInvoices = async (params = {}) => {
-  try {
-    loading.value = true
-    const { data } = await api.get('command-orders', { params })
-    invoices.value = data
-  } catch (error) {
-    console.log(error)
-  } finally {
-    loading.value = false
-  }
+const getInvoices = async (dataFilter = {}) => {
+  params.value = dataFilter
+  statuses.value.forEach((column) => loadInvoices(column))
 }
 
 /**
