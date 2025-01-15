@@ -7,9 +7,44 @@ import axios from 'axios'
 // good idea to move this instance creation inside of the
 // "export default () => {}" function below (which runs individually
 // for each client)
-const api = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL })
+const baseApi = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL })
 
 const apiQPay = axios.create({ baseURL: import.meta.env.VITE_APP_API_QPAY_URL })
+
+const api = {
+  get: async (url, params) => {
+    try {
+      const { data } = await baseApi.get(url, params)
+      return { data: data.response, subscription: data.subscription }
+    } catch (error) {
+      throw error?.response?.data || error.message
+    }
+  },
+  post: async (url, params) => {
+    try {
+      const { data } = await baseApi.post(url, params)
+      return { data: data.response, subscription: data.subscription }
+    } catch (error) {
+      throw error?.response?.data || error.message
+    }
+  },
+  put: async (url, params) => {
+    try {
+      const { data } = await baseApi.put(url, params)
+      return { data: data.response, subscription: data.subscription }
+    } catch (error) {
+      throw error?.response?.data || error.message
+    }
+  },
+  delete: async (url, params) => {
+    try {
+      const { data } = await baseApi.delete(url, params)
+      return { data: data.response, subscription: data.subscription }
+    } catch (error) {
+      throw error?.response?.data || error.message
+    }
+  }
+}
 
 export default boot(({ app }) => {
   app.config.globalProperties.$axios = axios
@@ -23,4 +58,4 @@ export default boot(({ app }) => {
   //       so you can easily perform requests against your app's API
 })
 
-export { api, apiQPay }
+export { api, apiQPay, baseApi }

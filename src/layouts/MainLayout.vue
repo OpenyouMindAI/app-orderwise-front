@@ -215,6 +215,14 @@
       </div>
     </q-drawer>
     <q-page-container>
+      <div class="q-pa-sm" v-if="subscription?.subscription_missing <= 15">
+        <q-banner inline-actions rounded class="bg-orange text-white" dense>
+          Faltan {{ subscription?.subscription_missing }} días para que acabe su suscripción.
+          <template v-slot:action>
+            <q-btn flat icon="autorenew" round/>
+          </template>
+        </q-banner>
+      </div>
       <router-view />
     </q-page-container>
     <q-inner-loading :showing="visibleLoading">
@@ -232,6 +240,7 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <expiration-dialog v-model="expiration" :data="subscription"/>
   </q-layout>
 </template>
 
@@ -240,13 +249,16 @@ import { api } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
-import { logo, notify } from 'src/const/mixins'
+import { logo, notify, setCodeRequest } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
+import ExpirationDialog from '../components/MainLayout/ExpirationDialog.vue'
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent },
+  components: { NotificationComponent, ExpirationDialog },
   data () {
     return {
+      expiration: false,
+      subscription: {},
       logo,
       dialog: false,
       branchOffices: [],
@@ -325,12 +337,18 @@ export default {
     // },
     async getDataNotification () {
       try {
-        const { data } = await api.get('notifications', {
+        const { data, subscription } = await api.get('notifications', {
           params: { unread: true }
         })
         this.numberOfNotifications = data
+        this.subscription = subscription
       } catch (error) {
-        console.log(error.message)
+        if (setCodeRequest(error?.message) === 200) {
+          this.expiration = true
+          this.subscription = error.data
+        } else {
+          notify(error.message, 'negative')
+        }
       }
     },
     /**

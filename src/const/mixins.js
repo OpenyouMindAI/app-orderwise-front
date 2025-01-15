@@ -126,3 +126,12 @@ export const setFiles = async (files) => {
   }
   return filesSelected
 }
+
+export const setCodeRequest = (code) => {
+  switch (code) {
+    case 'Subscription expired':
+      return 200
+    default:
+      return 100
+  }
+}
