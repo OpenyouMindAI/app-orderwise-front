@@ -1,6 +1,6 @@
 import { boot } from 'quasar/wrappers'
 import { authentication } from 'src/stores/module-authentication'
-import { api, apiQPay, baseApi } from './axios'
+import { api, apiQPay } from './axios'
 
 const validModule = ($store, to, next) => {
   const user = $store.userSession
@@ -25,7 +25,7 @@ export default boot(({ router, store }) => {
       const validation = await $store.initStore()
       if (requiresAuth) {
         if (validation) return next('/login')
-        baseApi.defaults.headers.common.authorization = `${$store.token_type} ${$store.access_token}`
+        api.defaults.headers.common.authorization = `${$store.token_type} ${$store.access_token}`
         apiQPay.defaults.headers.common['X-Company-Token'] = 'c5c4bb6f-e7cc-4287-99d4-0a82ddec4da7'
         if ($store?.userSession?.is_root) return next()
         if (modeleExcept.includes(to.name)) return next()

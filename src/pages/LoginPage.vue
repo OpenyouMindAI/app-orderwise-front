@@ -92,25 +92,21 @@
         </div>
       </div>
     </q-card>
-    <expiration-dialog v-model="expiration" :data="subscription"/>
   </div>
 </template>
 <script>
-import { logo, qBitsLogo, setCodeRequest } from 'src/const/mixins'
+import { logo, qBitsLogo } from 'src/const/mixins'
+import { Notify } from 'quasar'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'stores/module-authentication'
 import { notify } from '../const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
-import ExpirationDialog from '../components/MainLayout/ExpirationDialog.vue'
 export default {
   name: 'LoginPage',
-  components: { ExpirationDialog },
   data () {
     return {
       qBitsLogo,
       remember: true,
-      expiration: false,
-      subscription: null,
       dialog: false,
       logo,
       slide: 'style',
@@ -170,12 +166,22 @@ export default {
         this.$router.push({ name: modules[0].link })
         this.btnDisable = false
       } catch (error) {
-        if (setCodeRequest(error.message) === 200) {
-          this.expiration = true
-          this.subscription = error.data
-        } else {
-          notify(error.message, 'negative', 'warning')
-        }
+        Notify.create({
+          message: error?.response?.data?.message || error.message,
+          color: 'negative',
+          position: 'top',
+          icon: 'warning',
+          timeout: 5000,
+          actions: [
+            {
+              label: 'OK',
+              color: 'white',
+              handler: () => {
+                this.btnDisable = false
+              }
+            }
+          ]
+        })
       } finally {
         this.btnDisable = false
       }
