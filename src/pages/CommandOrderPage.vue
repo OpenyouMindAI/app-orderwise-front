@@ -138,6 +138,14 @@
                   outline
                   @click.stop="print(invoice)"
                 />
+                <q-btn
+                  color="secondary"
+                  icon="dollar_sign"
+                  size="sm"
+                  round
+                  outline
+                  @click.stop="print(invoice)"
+                />
               </q-card-section>
               <q-separator v-if="invoice.description"/>
               <q-card-section  class="q-py-sm" v-if="invoice.description">
