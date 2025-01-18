@@ -442,6 +442,12 @@ export default {
     ...mapState(authentication, ['userSession'])
   },
   watch: {
+    openAddProduct (data) {
+      this.tab = 'basicData'
+    },
+    openEditProduct (data) {
+      this.tab = 'basicData'
+    },
     filter (data) {
       this.searchData(data)
     },
