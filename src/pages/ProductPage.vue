@@ -31,127 +31,158 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditProduct" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+    <q-dialog v-model="openEditProduct" persistent :maximized="!$q.screen.gt.sm">
+      <q-card :style="!$q.screen.gt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+        <q-card-section class="row items-center bg-primary text-white q-py-sm">
+          <div class="text-h6">Modificar producto</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeModal" />
+        </q-card-section>
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Modificar producto</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="product.barcode"
-                autofocus
-                label="Código de barra"
-                hint=""
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.description"
-                autofocus
-                label="Descripción"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.cost"
-                label="Costo"
-                type="number"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.price"
-                label="Precio"
-                type="number"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                label="Categoria"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category"
-                :options="categories"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                @filter="filterCategories"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-option-group
-                v-model="unitOfMeasure"
-                :options="unitOfMeasures"
-                color="positive"
-                inline
-              />
-            </div>
-          </q-card-section>
-          <q-card-section class="row q-py-none">
-            <div class="col-10">
-              <q-file
-                filled
-                dense
-                v-model="productImage"
-                label="Adjunte foto de su documento de identidad"
-                @update:model-value="changeImage"
-              />
-            </div>
-            <div class="col-2 text-right" >
-              <q-btn color="primary" round icon="add" dense @click="addImage"/>
-            </div>
-          </q-card-section>
-          <q-card-section>
-            <div class="row items-start q-mt-sm">
-              <q-img
-                v-for="(image, index) in product.images"
-                :key="image"
-                class="q-ml-xs"
-                :src="image.url"
-                style="max-width: 32%; height: 150px;"
-              >
-                <q-btn
-                  class="absolute all-pointer-events"
-                  size="sm"
-                  icon="close"
-                  color="negative"
-                  style="top: 1px; right: 1px"
-                  push
-                  dense
-                  round
-                  @click="deleteImage(image, index)"
-                >
-                  <q-tooltip>
-                    Eliminar Imagen
-                  </q-tooltip>
-                </q-btn>
-              </q-img>
-            </div>
-          </q-card-section>
+          <q-tabs
+            v-model="tab"
+            class="text-grey"
+            active-color="primary"
+            indicator-color="primary"
+            align="justify"
+            narrow-indicator
+          >
+            <q-tab name="basicData" label="Datos básicos" />
+            <q-tab name="images" label="Imágenes" />
+            <q-tab name="stock" label="stock" />
+          </q-tabs>
+          <q-separator />
+
+          <q-tab-panels v-model="tab" animated>
+            <q-tab-panel name="basicData">
+              <q-card-section class="q-pa-none row q-col-gutter-sm">
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    filled
+                    v-model="product.barcode"
+                    autofocus
+                    label="Código de barra"
+                    hint=""
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.name"
+                    autofocus
+                    label="Nombre"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.description"
+                    autofocus
+                    label="Descripción"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.cost"
+                    label="Costo"
+                    type="number"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.price"
+                    label="Precio"
+                    type="number"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    label="Categoria"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="category"
+                    :options="categories"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="filterCategories"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-toggle
+                    v-model="product.skip_stock"
+                    label="Facturar sin stock"
+                    :true-value="1"
+                    :false-value="0"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-option-group
+                    v-model="unitOfMeasure"
+                    :options="unitOfMeasures"
+                    color="positive"
+                    inline
+                  />
+                </div>
+              </q-card-section>
+            </q-tab-panel>
+            <q-tab-panel name="images">
+              <q-card-section class="row q-pa-none">
+                <div class="col-10">
+                  <q-file
+                    filled
+                    dense
+                    v-model="productImage"
+                    label="Adjunte foto de su documento de identidad"
+                    @update:model-value="changeImage"
+                  />
+                </div>
+                <div class="col-2 text-right" >
+                  <q-btn color="primary" round icon="add" dense @click="addImage"/>
+                </div>
+              </q-card-section>
+              <q-card-section>
+                <div class="row items-start q-mt-sm">
+                  <q-img
+                    v-for="(image, index) in product.images"
+                    :key="image"
+                    class="q-ml-xs"
+                    :src="image.url"
+                    style="max-width: 32%; height: 150px;"
+                  >
+                    <q-btn
+                      class="absolute all-pointer-events"
+                      size="sm"
+                      icon="close"
+                      color="negative"
+                      style="top: 1px; right: 1px"
+                      push
+                      dense
+                      round
+                      @click="deleteImage(image, index)"
+                    >
+                      <q-tooltip>
+                        Eliminar Imagen
+                      </q-tooltip>
+                    </q-btn>
+                  </q-img>
+                </div>
+              </q-card-section>
+            </q-tab-panel>
+            <q-tab-panel name="stock">
+              <StockProduct :product="product"/>
+            </q-tab-panel>
+          </q-tab-panels>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
@@ -159,123 +190,149 @@
     </q-dialog>
     <q-dialog v-model="openAddProduct" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
+        <q-card-section class="row items-center q-py-sm bg-primary text-white">
+          <div class="text-h6">Agregar producto</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeModal" />
+        </q-card-section>
         <q-form @submit="saveProduct">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Agregar producto</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="product.barcode"
-                autofocus
-                label="Código de barra"
-                hint=""
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.description"
-                autofocus
-                label="Descripción"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.cost"
-                label="Costo"
-                type="number"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="product.price"
-                label="Precio"
-                type="number"
-                step=".01"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                label="Categoría"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category"
-                :options="categories"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                @filter="filterCategories"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-option-group
-                v-model="unitOfMeasure"
-                :options="unitOfMeasures"
-                color="positive"
-                inline
-              />
-            </div>
-          </q-card-section>
-          <q-card-section class="row q-py-none">
-            <div class="col-10">
-              <q-file
-                filled
-                dense
-                v-model="productImage"
-                label="Adjunte foto de su documento de identidad"
-                @update:model-value="changeImage"
-              />
-            </div>
-            <div class="col-2 text-right" >
-              <q-btn color="primary" round icon="add" dense @click="addImage"/>
-            </div>
-          </q-card-section>
-          <q-card-section>
-            <div class="row items-start q-mt-sm">
-              <q-img
-                v-for="(image, index) in product.images"
-                :key="image"
-                class="q-ml-xs"
-                :src="image.url"
-                style="max-width: 32%; height: 150px;"
-              >
-                <q-btn
-                  class="absolute all-pointer-events"
-                  size="sm"
-                  icon="close"
-                  color="negative"
-                  style="top: 1px; right: 1px"
-                  push
-                  dense
-                  round
-                  @click="deleteImage(image, index)"
-                >
-                  <q-tooltip>
-                    Eliminar Imagen
-                  </q-tooltip>
-                </q-btn>
-              </q-img>
-            </div>
-          </q-card-section>
+          <q-tabs
+            v-model="tab"
+            class="text-grey"
+            active-color="primary"
+            indicator-color="primary"
+            align="justify"
+            narrow-indicator
+          >
+            <q-tab name="basicData" label="Datos básicos" />
+            <q-tab name="images" label="Imágenes" />
+          </q-tabs>
+          <q-separator />
+          <q-tab-panels v-model="tab" animated>
+            <q-tab-panel name="basicData">
+              <q-card-section class="row q-col-gutter-sm q-pa-none">
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    filled
+                    v-model="product.barcode"
+                    autofocus
+                    label="Código de barra"
+                    hint=""
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.name"
+                    autofocus
+                    label="Nombre"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.description"
+                    autofocus
+                    label="Descripción"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.cost"
+                    label="Costo"
+                    type="number"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    filled
+                    v-model="product.price"
+                    label="Precio"
+                    type="number"
+                    step=".01"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    label="Categoría"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="category"
+                    :options="categories"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="filterCategories"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-toggle
+                    v-model="product.skip_stock"
+                    label="Facturar sin stock"
+                    :true-value="1"
+                    :false-value="0"
+                  />
+                </div>
+                <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <q-option-group
+                    v-model="unitOfMeasure"
+                    :options="unitOfMeasures"
+                    color="positive"
+                    inline
+                  />
+                </div>
+              </q-card-section>
+            </q-tab-panel>
+            <q-tab-panel name="images">
+              <q-card-section class="row q-pa-none">
+                <div class="col-10">
+                  <q-file
+                    filled
+                    dense
+                    v-model="productImage"
+                    label="Adjunte foto de su documento de identidad"
+                    @update:model-value="changeImage"
+                  />
+                </div>
+                <div class="col-2 text-right" >
+                  <q-btn color="primary" round icon="add" dense @click="addImage"/>
+                </div>
+              </q-card-section>
+              <q-card-section>
+                <div class="row items-start q-mt-sm">
+                  <q-img
+                    v-for="(image, index) in product.images"
+                    :key="image"
+                    class="q-ml-xs"
+                    :src="image.url"
+                    style="max-width: 32%; height: 150px;"
+                  >
+                    <q-btn
+                      class="absolute all-pointer-events"
+                      size="sm"
+                      icon="close"
+                      color="negative"
+                      style="top: 1px; right: 1px"
+                      push
+                      dense
+                      round
+                      @click="deleteImage(image, index)"
+                    >
+                      <q-tooltip>
+                        Eliminar Imagen
+                      </q-tooltip>
+                    </q-btn>
+                  </q-img>
+                </div>
+              </q-card-section>
+            </q-tab-panel>
+          </q-tab-panels>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
@@ -290,11 +347,14 @@
 import { mapState } from 'pinia'
 import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
+import StockProduct from 'src/components/Product/StockProduct.vue'
 export default {
+  components: { StockProduct },
   data () {
     return {
       productImage: null,
       products: [],
+      tab: 'basicData',
       unitOfMeasures: [],
       unitOfMeasure: null,
       product: {
@@ -382,6 +442,12 @@ export default {
     ...mapState(authentication, ['userSession'])
   },
   watch: {
+    openAddProduct (data) {
+      this.tab = 'basicData'
+    },
+    openEditProduct (data) {
+      this.tab = 'basicData'
+    },
     filter (data) {
       this.searchData(data)
     },
@@ -453,8 +519,6 @@ export default {
       data.images.forEach((element, index) => {
         formData.append(`images[${index}]`, element.image)
       })
-
-      formData.append('user_created_id', this.userSession.id)
       return formData
     },
     /**

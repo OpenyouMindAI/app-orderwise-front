@@ -85,6 +85,7 @@
                 size="sm"
                 icon="save"
                 color="positive"
+                :disable="products.length <= 0"
                 @click="dialogPayment = true"
               >
                 <q-badge
@@ -455,18 +456,21 @@
             @click="savePrintInvoice"
             color="secondary"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
           />
           <q-btn
             label="Guardar e imprimir comanda"
             @click="submitBill"
             color="warning"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
           />
           <q-btn
             label="Guardar sin imprimir"
             @click="saveWithoutPrint"
             color="primary"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
           />
         </q-card-actions>
       </q-card>
@@ -701,6 +705,7 @@ export default {
   data () {
     return {
       waitingPayment: false,
+      loadingBilling: false,
       /**
        * Invoice printer
        * @type {Boolean}
@@ -1138,7 +1143,11 @@ export default {
       }
       if (e.key === 'F8') {
         e.preventDefault()
-        this.dialogPayment = true
+        if (this.products.length > 0) {
+          this.dialogPayment = true
+        } else {
+          notify('No hay productos seleccionados', 'negative', 'warning')
+        }
       }
       if (e.key === 'F10') {
         e.preventDefault()
@@ -1735,6 +1744,7 @@ export default {
      */
     async saveBill () {
       try {
+        this.loadingBilling = true
         const params = this.setParamsBill()
         if (!params) return
         if (this.$route.query.id) {
@@ -1747,6 +1757,8 @@ export default {
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
       } catch (error) {
         notify(error.message, 'negative', 'warning')
+      } finally {
+        this.loadingBilling = false
       }
     },
     /**

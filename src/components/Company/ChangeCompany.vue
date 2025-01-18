@@ -15,7 +15,7 @@
           </q-item-label>
           <q-item-label class="q-subtitle2 ">
             {{ org.email }}
-            <q-badge rounded floating class="text-white text-bold q-pa-xs" color="primary">
+            <q-badge rounded floating class="text-white text-bold q-pa-xs" color="secondary">
               Activa
             </q-badge>
           </q-item-label>
@@ -36,7 +36,7 @@
             <div class="text-h6">Confirmar usuario</div>
           </q-card-section>
           <q-card-section class="q-py-xs flex flex-center">
-            <q-img :src="company.logo" width="200px" />
+            <q-img :src="company.url || logo.white" width="200px" />
           </q-card-section>
           <q-card-section class="q-pb-md">
             <q-input v-model="password" type="password" label="Contraseña" outlined dense autofocus :rules="[
