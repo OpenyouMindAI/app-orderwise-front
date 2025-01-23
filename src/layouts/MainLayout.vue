@@ -220,18 +220,6 @@
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
-    <q-dialog v-model="dialog" backdrop-filter="blur" persistent>
-      <q-card>
-        <q-card-section>
-          <img
-            src="image/aviso.png"
-            alt="aviso"
-            class="q-mb-md"
-            style="max-width: 450px"
-          />
-        </q-card-section>
-      </q-card>
-    </q-dialog>
   </q-layout>
 </template>
 
@@ -248,7 +236,6 @@ export default {
   data () {
     return {
       logo,
-      dialog: false,
       branchOffices: [],
       role: null,
       numberOfNotifications: [],
