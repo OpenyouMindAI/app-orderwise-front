@@ -1,0 +1,335 @@
+<template>
+  <div class="grid q-gutter-sm">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center q-gutter-md">
+        <span class="text-subtitle1">{{ branchOffice.name }}</span>
+        <q-separator vertical/>
+        <span class="text-subtitle1">Total Stock: {{ stockTotals?.stock_quantity || 0 }}</span>
+      </div>
+      <q-btn icon="add" color="primary" @click="openAddStock = true"/>
+    </div>
+    <q-table
+      title="Stock del producto"
+      row-key="name"
+      :columns="columns"
+      :rows="stockProducts"
+      :loading="loadingTable"
+      :filter="filter"
+      binary-state-sort
+      v-model:pagination="paginationConfig"
+      @row-click="editStock"
+      @request="setPagination"
+      no-data-label="Registro no encontrado"
+    >
+      <template v-slot:loading>
+        <q-inner-loading showing color="primary" />
+      </template>
+      <template v-slot:top-right>
+        <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </template>
+    </q-table>
+    <q-dialog v-model="openEditStock" persistent>
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-form @submit="saveEditStockProduct">
+          <q-card-section class="row items-center q-py-sm bg-primary text-white">
+            <div class="text-h6">Modificar stock</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="openEditStock = false" />
+          </q-card-section>
+          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                :model-value="branchOffice?.name"
+                autofocus
+                label="Sucursal"
+                readonly
+                :rules="[val => !!val || 'El campo es requerido.']"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model.number="stockProduct.quantity"
+                type="number"
+                autofocus
+                label="Cantidad"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="stockProduct.description"
+                type="textarea"
+                label="Descripción"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary">
+            <q-btn color="negative" label="Eliminar" @click="deleteStockProduct" :loading="loadingForm" />
+            <q-btn color="secondary" label="Cancelar" @click="openEditStock = false" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="loadingForm"/>
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="openAddStock" persistent>
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-form @submit="saveStockProduct">
+          <q-card-section class="row items-center q-py-sm bg-primary text-white">
+            <div class="text-h6">Agregar stock</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="openAddStock = false" />
+          </q-card-section>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                :model-value="branchOffice?.name"
+                autofocus
+                label="Sucursal"
+                readonly
+                :rules="[val => !!val || 'El campo es requerido.']"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model.number="stockProduct.quantity"
+                type="number"
+                autofocus
+                label="Cantidad"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="stockProduct.description"
+                type="textarea"
+                label="Descripción"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary">
+            <q-btn color="secondary" label="Cancelar" @click="openAddStock = false" />
+            <q-btn color="primary" label="Agregar" type="submit" :loading="loadingForm"/>
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+  </div>
+</template>
+
+<script setup>
+import { api } from 'src/boot/axios'
+import { formatDate, notify } from 'src/const/mixins'
+import { onMounted, ref, watch } from 'vue'
+import { authentication } from 'src/stores/module-authentication'
+
+const { branchOffice } = authentication()
+
+const props = defineProps({
+  /**
+   * Product data
+   * @type {Object}
+   */
+  product: {
+    type: Object,
+    require: true
+  }
+})
+
+const columns = [
+  {
+    name: 'id',
+    align: 'left',
+    label: 'Código',
+    field: 'id',
+    sortable: true
+  },
+  {
+    name: 'description',
+    align: 'left',
+    label: 'Descripción',
+    field: 'description',
+    format: val => val || '-',
+    sortable: true
+  },
+  {
+    name: 'created_at',
+    align: 'right',
+    label: 'Fecha y hora de entrada',
+    field: 'created_at',
+    format: val => formatDate(val, 'DD/MM/YYYY HH:mm'),
+    sortable: true
+  },
+  {
+    name: 'quantity',
+    align: 'right',
+    label: 'Cantidad',
+    field: 'quantity',
+    sortable: true
+  }
+]
+
+const defaultValue = {
+  product_id: props.product.id,
+  branch_office_id: branchOffice.id
+}
+
+const loadingTable = ref(false)
+const openAddStock = ref(false)
+const openEditStock = ref(false)
+const filter = ref('')
+const stockProduct = ref({ ...defaultValue })
+const loadingForm = ref(false)
+
+const paginationConfig = ref({
+  rowsPerPage: 20,
+  rowsNumber: 20,
+  paginate: true,
+  sortBy: 'id',
+  sortOrder: 'desc'
+})
+
+const params = ref({
+  paginate: true,
+  sortBy: 'id',
+  sortOrder: 'desc',
+  perPage: 1,
+  dataSearch: {
+    description: ''
+  },
+  dataEqualFilter: defaultValue
+})
+
+watch(openAddStock, () => {
+  stockProduct.value = { ...defaultValue }
+})
+
+watch(filter, (data) => {
+  searchData(data)
+})
+
+/**
+ * Stock products
+ * @type {Array}
+ */
+const stockProducts = ref([])
+
+const stockTotals = ref(null)
+
+onMounted(() => {
+  setPagination({
+    pagination: paginationConfig.value,
+    filter: undefined
+  })
+  getBranchOfficeStockProducts()
+})
+
+const editStock = (event, row) => {
+  stockProduct.value = row
+  openEditStock.value = true
+}
+
+const setPagination = (data) => {
+  params.value.sortOrder = data.pagination.descending ? 'asc' : 'desc'
+  params.value.page = data.pagination.page
+  params.value.sortBy = data.pagination.sortBy ?? params.value.sortBy
+  params.value.perPage = data.pagination.rowsPerPage
+  paginationConfig.value = data.pagination
+  getStockProducts(params.value)
+}
+
+const getStockProducts = async (params) => {
+  try {
+    loadingTable.value = true
+    const { data } = await api.get('stock-products', { params })
+    stockProducts.value = data.data
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loadingTable.value = false
+  }
+}
+
+const getBranchOfficeStockProducts = async (params) => {
+  try {
+    loadingTable.value = true
+    const { data } = await api.get('branch-office-stock-products', {
+      params: {
+        dataEqualFilter: defaultValue
+      }
+    })
+    stockTotals.value = data[0]
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loadingTable.value = false
+  }
+}
+
+/**
+ * Search beneficiary
+ * @param  {Object}
+ */
+const searchData = (data) => {
+  for (const dataSearch in params.value.dataSearch) {
+    params.value.dataSearch[dataSearch] = data
+  }
+  params.value.page = 1
+  getStockProducts(params.value)
+}
+
+const saveStockProduct = async () => {
+  try {
+    loadingForm.value = true
+    await api.post('stock-products', stockProduct.value)
+    openAddStock.value = false
+    getStockProducts(params.value)
+    getBranchOfficeStockProducts()
+    notify('Stock agregado exitosamente', 'positive', 'warning')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loadingForm.value = false
+  }
+}
+
+const saveEditStockProduct = async () => {
+  try {
+    loadingForm.value = true
+    await api.put(`stock-products/${stockProduct.value.id}`, stockProduct.value)
+    openEditStock.value = false
+    getStockProducts(params.value)
+    getBranchOfficeStockProducts()
+    notify('Stock modificado exitosamente', 'positive', 'warning')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loadingForm.value = false
+  }
+}
+
+const deleteStockProduct = async () => {
+  try {
+    loadingForm.value = true
+    await api.delete(`stock-products/${stockProduct.value.id}`)
+    openEditStock.value = false
+    getStockProducts(params.value)
+    getBranchOfficeStockProducts()
+    notify('Stock eliminado exitosamente', 'positive', 'warning')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loadingForm.value = false
+  }
+}
+
+</script>
