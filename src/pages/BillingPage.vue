@@ -96,7 +96,7 @@
                   F8
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
-                  Guardar factura
+                  Guardar
                 </q-tooltip>
               </q-btn>
               <q-btn
