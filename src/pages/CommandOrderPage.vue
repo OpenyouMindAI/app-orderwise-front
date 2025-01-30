@@ -1,69 +1,14 @@
 <template>
   <q-page padding>
-    <div class="flex flex-wrap q-gutter-sm q-mb-sm">
-      <q-select
-        v-model="category"
-        :options="categories"
-        label="Categoría"
-        option-value="id"
-        option-label="name"
-        style="min-width: 300px;"
-        dense
-        filled
-        multiple
-      >
-        <template v-if="category.length" v-slot:append>
-          <q-icon name="cancel" @click.stop.prevent="category = []" class="cursor-pointer" />
-        </template>
-      </q-select>
-      <q-select
-        v-model="typeOfService"
-        :options="typeOfServices"
-        style="min-width: 300px;"
-        label="Tipo de servicio"
-        option-value="id"
-        option-label="name"
-        dense
-        filled
-        multiple
-      >
-        <template v-if="typeOfService.length" v-slot:append>
-          <q-icon name="cancel" @click.stop.prevent="typeOfService = []" class="cursor-pointer" />
-        </template>
-      </q-select>
-      <q-select
-        v-model="invoiceType"
-        :options="invoiceTypes"
-        style="min-width: 300px;"
-        label="Tipo de factura"
-        option-value="id"
-        option-label="name"
-        dense
-        filled
-        multiple
-      >
-        <template v-if="invoiceType.length" v-slot:append>
-          <q-icon name="cancel" @click.stop.prevent="invoiceType = []" class="cursor-pointer" />
-        </template>
-      </q-select>
-      <q-select
-        v-if="visibleBranchOffice"
-        v-model="branchOfficeSelect"
-        :options="branchOffices"
-        style="min-width: 300px;"
-        label="Sucursales"
-        option-value="id"
-        option-label="name"
-        dense
-        filled
-        multiple
-      >
-        <template v-if="branchOfficeSelect.length" v-slot:append>
-          <q-icon name="cancel" @click.stop.prevent="branchOfficeSelect = []" class="cursor-pointer" />
-        </template>
-      </q-select>
+    <div class="flex flex-wrap justify-between">
+      <div class="flex q-gutter-sm">
+        <q-badge v-for="branchOffice in branchOfficeSelect" :key="branchOffice.id">
+          {{ branchOffice.name }}
+        </q-badge>
+      </div>
+      <q-btn icon="filter_alt" color="primary" @click="dialogFilter = true" round size="sm"/>
     </div>
-    <div class="board-command">
+    <div class="board-command q-mt-sm q-gutter-x-md">
       <div v-for="(status, index) in statuses" :key="index">
         <q-card class="column-command">
           <q-card-section class="text-subtitle2">
@@ -72,7 +17,7 @@
               {{ status.total }}
             </q-badge>
           </q-card-section>
-          <q-card-section class="scroll q-pt-sm q-gutter-sm" style="height: calc(100vh - 250px); overflow: auto;">
+          <q-card-section class="scroll q-pt-sm q-gutter-sm" style="height: calc(100vh - 235px); overflow: auto;">
             <q-card
               v-for="invoice in status.data"
               :key="invoice.id"
@@ -133,14 +78,6 @@
                 <q-btn
                   color="secondary"
                   icon="print"
-                  size="sm"
-                  round
-                  outline
-                  @click.stop="print(invoice)"
-                />
-                <q-btn
-                  color="secondary"
-                  icon="dollar_sign"
                   size="sm"
                   round
                   outline
@@ -363,6 +300,96 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog
+      v-model="dialogFilter"
+      position="right"
+      seamless
+      full-height
+    >
+      <q-card class="column full-height" style="width: 500px; max-width: 80vw;">
+        <q-card-section class="bg-primary text-white flex justify-between items-center">
+          <div class="text-h6">Filtros</div>
+          <q-btn icon="close" flat round dense @click="dialogFilter = false" />
+        </q-card-section>
+
+        <q-card-section class="col q-pt-sm q-gutter-md">
+          <q-select
+            dense
+            use-input
+            filled
+            label="Vendedor"
+            input-debounce="0"
+            option-value="id"
+            clearable
+            v-model="seller"
+            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+            :options="sellers"
+            @filter="filterSellers"
+          />
+          <q-select
+            v-model="category"
+            :options="categories"
+            label="Categoría"
+            option-value="id"
+            option-label="name"
+            style="min-width: 300px;"
+            dense
+            filled
+            multiple
+          >
+            <template v-if="category.length" v-slot:append>
+              <q-icon name="cancel" @click.stop.prevent="category = []" class="cursor-pointer" />
+            </template>
+          </q-select>
+          <q-select
+            v-model="typeOfService"
+            :options="typeOfServices"
+            style="min-width: 300px;"
+            label="Tipo de servicio"
+            option-value="id"
+            option-label="name"
+            dense
+            filled
+            multiple
+          >
+            <template v-if="typeOfService.length" v-slot:append>
+              <q-icon name="cancel" @click.stop.prevent="typeOfService = []" class="cursor-pointer" />
+            </template>
+          </q-select>
+          <q-select
+            v-model="invoiceType"
+            :options="invoiceTypes"
+            style="min-width: 300px;"
+            label="Tipo de factura"
+            option-value="id"
+            option-label="name"
+            dense
+            filled
+            multiple
+          >
+            <template v-if="invoiceType.length" v-slot:append>
+              <q-icon name="cancel" @click.stop.prevent="invoiceType = []" class="cursor-pointer" />
+            </template>
+          </q-select>
+          <q-select
+            v-if="visibleBranchOffice"
+            v-model="branchOfficeSelect"
+            :options="branchOffices"
+            style="min-width: 300px;"
+            label="Sucursales"
+            option-value="id"
+            option-label="name"
+            dense
+            filled
+            multiple
+          >
+            <template v-if="branchOfficeSelect.length" v-slot:append>
+              <q-icon name="cancel" @click.stop.prevent="branchOfficeSelect = []" class="cursor-pointer" />
+            </template>
+          </q-select>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -376,6 +403,8 @@ import { authentication } from 'src/stores/module-authentication'
 const store = authentication()
 
 const userSession = store.userSession
+
+const dialogFilter = ref(false)
 
 const branchOffice = computed(() => store.branchOfficeGetter)
 /**
@@ -452,8 +481,25 @@ const invoiceTypes = ref([])
  */
 const branchOffices = ref([])
 
+/**
+ * Sellers
+ * @type {Array}
+ */
+const sellers = ref([])
+/**
+ * Selected seller
+ * @type {Object}
+ */
+const seller = ref(null)
+/**
+ * Visible branch office
+ * @type {Object}
+ */
 const visibleBranchOffice = userSession.is_root || userSession.is_super_admin
-
+/**
+ * Interval of the status
+ * @type {Number}
+ */
 const interval = ref(null)
 
 /**
@@ -467,6 +513,10 @@ const statuses = ref([
   { label: 'Entregado', value: 'delivered', data: [], page: 1, loading: false }
 ])
 
+/**
+ * Params search
+ * @type {Object}
+ */
 const params = ref({
   sortOrder: 'asc',
   sortBy: 'delivery_date',
@@ -487,6 +537,10 @@ onMounted(() => {
   getBranchOffices()
 })
 
+/**
+ * Load invoices
+ * @param {Object} status status
+ */
 const loadInvoices = async (status) => {
   try {
     status.loading = true
@@ -538,6 +592,12 @@ watch(branchOfficeSelect, async (bo) => {
   filters('branch_office_id', ids, 'whereIn')
 })
 
+watch(seller, async (seller) => {
+  localStorage.setItem('seller-command', JSON.stringify(seller))
+  const ids = seller?.id ? [seller?.id] : []
+  filters('seller_id', ids, 'whereIn')
+})
+
 /**
  * Filters
  * @param {String} field field
@@ -578,7 +638,26 @@ const getInvoices = async (dataFilter = {}) => {
   params.value = dataFilter
   statuses.value.forEach((column) => loadInvoices(column))
 }
-
+/**
+     * Get all sellers
+     */
+const filterSellers = async (value, update) => {
+  try {
+    const { data } = await api.get('sellers', {
+      params: {
+        dataSearch: {
+          name: value,
+          document_number: value
+        }
+      }
+    })
+    update(() => {
+      sellers.value = data
+    })
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
 /**
  * Get all invoices
  */

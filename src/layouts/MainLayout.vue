@@ -39,7 +39,7 @@
           round
           flat
         >
-          <q-tooltip class="text-body2"> {{ branchOffice.name }} </q-tooltip>
+          <q-tooltip class="text-body2"> {{ branchOffice?.name }} </q-tooltip>
           <q-popup-proxy>
             <q-list>
               <q-item
@@ -47,7 +47,7 @@
                 v-ripple
                 v-for="bo in branchOffices"
                 :key="bo.id"
-                :active="bo.id === branchOffice.id"
+                :active="bo.id === branchOffice?.id"
                 @click="changeBranchOffice(bo)"
               >
                 <q-item-section thumbnail class="q-pa-sm">
