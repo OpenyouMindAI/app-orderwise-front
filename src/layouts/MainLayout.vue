@@ -338,7 +338,12 @@ export default {
      */
     getAllModules () {
       this.$api
-        .get('sections')
+        .get('sections', {
+          params: {
+            sortBy: 'index',
+            sortOrder: 'asc'
+          }
+        })
         .then(({ data }) => {
           this.modules = data
           localStorage.setItem('sections', JSON.stringify(this.modules))
