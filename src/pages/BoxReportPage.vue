@@ -2,7 +2,7 @@
   <q-page padding>
     <div class="row full-width q-col-gutter-sm">
       <div class="col-12 text-subtitle1 flex justify-between items-center">
-        {{ branchOffice.name }}
+        <span>{{ branchOffice?.name }}</span>
         <q-btn icon="filter_alt" color="primary" @click="dialogFilter = true" round/>
       </div>
       <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
@@ -180,7 +180,7 @@
         </q-card-section>
 
         <q-card-section class="col q-pt-sm q-gutter-md">
-          <!-- <q-select
+          <q-select
             use-input
             filled
             label="Vendedor"
@@ -189,8 +189,10 @@
             v-model="seller"
             :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
             :options="sellers"
+            clearable
             @filter="filterSellers"
-          /> -->
+            :readonly="!validate"
+          />
           <q-option-group
             v-model="panel"
             inline
@@ -274,7 +276,7 @@
 
 <script>
 import { mapState } from 'pinia'
-import { date, Notify } from 'quasar'
+import { date } from 'quasar'
 import { formatDate, formatNumber } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { notify } from '../const/mixins'
@@ -323,7 +325,7 @@ export default {
           sortable: true
         },
         {
-          name: 'inovice_code',
+          name: 'invoice_code',
           align: 'left',
           label: 'Factura',
           field: row => row.invoice.code
@@ -351,7 +353,7 @@ export default {
         {
           name: 'payment_method',
           align: 'left',
-          label: 'Metodo de pago',
+          label: 'Método de pago',
           field: row => row.payment_method.name
         },
         {
@@ -396,21 +398,32 @@ export default {
        * Selected seller
        * @type {Object}
        */
-      seller: null
+      seller: null,
+      validate: null,
+      permissions: ['SAM']
     }
   },
   watch: {
     branchOffice (data) {
       this.filterDate()
+    },
+    validate (data) {
+      if (!data) {
+        this.seller = this.userSession
+      }
+      this.filterDate()
     }
   },
   created () {
-    this.filterDate()
+    this.setPermissions()
   },
   computed: {
-    ...mapState(authentication, ['branchOffice'])
+    ...mapState(authentication, ['branchOffice', 'userSession'])
   },
   methods: {
+    setPermissions () {
+      this.validate = this.userSession.is_root || this.userSession.roles.some(role => this.permissions.includes(role.acronym))
+    },
     /**
      * Clear filter
      */
@@ -426,25 +439,22 @@ export default {
     /**
      * Get all sellers
      */
-    filterSellers (value, update) {
-      this.$api.get('sellers', {
-        params: {
-          dataSearch:
-          { name: value, document_number: value }
-        }
-      })
-        .then(({ data }) => {
-          update(() => {
-            this.sellers = data.data
-          })
+    async filterSellers (value, update) {
+      try {
+        const { data } = await this.$api.get('sellers', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            }
+          }
         })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+        update(() => {
+          this.sellers = data
         })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
     /**
      * Filter date
@@ -453,12 +463,14 @@ export default {
       if (this.panel === 'day') {
         this.params = {
           branch_office_id: this.branchOffice?.id,
+          seller_id: this.seller?.id,
           day: this.day,
           fromHours: this.fromHours,
           toHours: this.toHours
         }
       } else {
         this.params = {
+          seller_id: this.seller?.id,
           branch_office_id: this.branchOffice?.id,
           to: this.to,
           from: this.from
