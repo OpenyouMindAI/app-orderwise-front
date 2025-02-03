@@ -1,7 +1,13 @@
 <template>
   <div class="grid q-gutter-sm">
     <div class="flex items-center justify-between">
-      <span class="text-h6">{{ product.barcode }} - {{ product.name }}</span>
+      <div class="flex q-gutter-sm">
+        <span class="text-h6">{{ branchOffice.name }}</span>
+        <q-separator vertical/>
+        <span class="text-h6">Stock: {{ stock.stock_pack }}</span>
+        <q-separator vertical/>
+        <span class="text-h6">Costo: {{ stock.cost }}</span>
+      </div>
       <q-btn icon="add" color="primary" @click="openAddProduct = true"/>
     </div>
     <q-table
@@ -120,6 +126,9 @@
 import { api } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
 import { onMounted, ref, watch } from 'vue'
+import { authentication } from 'src/stores/module-authentication'
+
+const { branchOffice } = authentication()
 
 const props = defineProps({
   /**
@@ -203,6 +212,8 @@ const productBundle = ref({ ...defaultValue })
  * @type {Boolean}
  */
 const loadingForm = ref(false)
+
+const stock = ref(0)
 /**
  * Pagination config
  * @type {Object}
@@ -274,6 +285,26 @@ const setPagination = (data) => {
 }
 
 /**
+ * Get product stock
+ * @param {Object} params params
+ */
+const getProductStock = async (product) => {
+  try {
+    loadingTable.value = true
+    const { data } = await api.get(`products/${product.id}/stock`, {
+      params: {
+        branch_office_id: branchOffice.id
+      }
+    })
+    stock.value = data
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loadingTable.value = false
+  }
+}
+
+/**
  * Get product products
  * @param {Object} params params
  */
@@ -282,6 +313,7 @@ const getProductBundles = async (params) => {
     loadingTable.value = true
     const { data } = await api.get('product-bundles', { params })
     productBundles.value = data.data
+    getProductStock(props.product)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -298,6 +330,11 @@ const filterProducts = async (value, update) => {
   try {
     const { data } = await api.get('products', {
       params: {
+        sortOrder: 'desc',
+        sortBy: 'id',
+        dataEqualFilter: {
+          is_bundle: 0
+        },
         dataSearch: {
           name: value,
           barcode: value
