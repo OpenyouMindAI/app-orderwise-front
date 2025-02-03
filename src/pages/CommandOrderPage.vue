@@ -639,8 +639,8 @@ const getInvoices = async (dataFilter = {}) => {
   statuses.value.forEach((column) => loadInvoices(column))
 }
 /**
-     * Get all sellers
-     */
+ * Get all sellers
+ */
 const filterSellers = async (value, update) => {
   try {
     const { data } = await api.get('sellers', {
