@@ -373,6 +373,7 @@ export default {
       unitOfMeasures: [],
       unitOfMeasure: null,
       product: {
+        is_bundle: 0,
         images: []
       },
       categories: [],
@@ -579,7 +580,8 @@ export default {
       this.openAddProduct = false
       this.openEditProduct = false
       this.product = {
-        images: []
+        images: [],
+        is_bundle: 0
       }
     },
     /**
@@ -652,7 +654,8 @@ export default {
           this.openAddProduct = false
           this.visible = false
           this.product = {
-            images: []
+            images: [],
+            is_bundle: 0
           }
           Notify.create({
             message: 'Producto creado exitosamente',
@@ -688,6 +691,7 @@ export default {
           this.openEditProduct = false
           this.visible = false
           this.product = {
+            is_bundle: 0,
             images: []
           }
           Notify.create({
@@ -716,6 +720,7 @@ export default {
           this.openEditProduct = false
           this.visible = false
           this.product = {
+            is_bundle: 0,
             images: []
           }
           Notify.create({
