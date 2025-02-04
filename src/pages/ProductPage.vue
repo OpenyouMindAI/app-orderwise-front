@@ -115,6 +115,12 @@
                       :true-value="1"
                       :false-value="0"
                     />
+                    <q-toggle
+                      v-model="product.is_bundle"
+                      label="Pack"
+                      :true-value="1"
+                      :false-value="0"
+                    />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
                     <q-option-group

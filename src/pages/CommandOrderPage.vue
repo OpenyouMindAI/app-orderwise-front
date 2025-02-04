@@ -73,7 +73,7 @@
                 </div>
               </q-card-section>
               <q-separator/>
-              <q-card-section v-if="userSession.is_root" class="q-py-sm flex justify-between items-center">
+              <q-card-section v-if="visibleBranchOffice" class="q-py-sm flex justify-between items-center">
                 Por pagar: {{  formatNumber(invoice.total - invoice.total_payments) }}
                 <q-btn
                   color="secondary"
