@@ -122,6 +122,7 @@ async function updateSession () {
       username: user.username || user.email,
       password: password.value
     })
+    store.setBranchOffice(null)
     store.setSessionData(data)
     $q.notify({
       message:
