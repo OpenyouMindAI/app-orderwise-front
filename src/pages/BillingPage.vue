@@ -1571,6 +1571,9 @@ export default {
       this.$api.get('products', {
         params: {
           ...params,
+          branch_office_id: this.branchOffice.id,
+          stock: true,
+          withStock: true,
           dataFilter: {
             category_id: this.category ? this.category.id : null
           }
@@ -1666,7 +1669,7 @@ export default {
       setTimeout(() => {
         this.$refs.saveBill.resetValidation()
         this.getLocalStorage()
-        this.invoice = null
+        this.invoice = []
       }, 100)
     },
     /**
@@ -1804,13 +1807,32 @@ export default {
       })
       this.totalBill = total
     },
+
+    validStockProduct (data, amount) {
+      const stock = data.branch_office_stocks[0]
+      if (!data.skip_stock) {
+        if (stock.stock_quantity < amount) {
+          notify(
+            `No hay stock suficiente para ${data.name}, cantidad restante: ${stock.stock_quantity}`,
+            'negative',
+            'warning'
+          )
+          return false
+        }
+      }
+      return true
+    },
     /**
      * Calculate the total and subtotal
      * @param {Object} data props products
      */
     calculate (data) {
-      data.subtotal = data.price * data.amount
-      this.calculateTotal()
+      if (this.validStockProduct(data, data.amount)) {
+        data.subtotal = data.price * data.amount
+        this.calculateTotal()
+      } else {
+        data.amount = 1
+      }
     },
     /**
      * Validate products
@@ -1826,6 +1848,8 @@ export default {
         this.productQuantity = data
         return
       }
+
+      if (!this.validStockProduct(data, this.quantity)) return
 
       if (findProduct) {
         const quantity = unitMeasurement ? this.quantity : findProduct?.amount + 1
