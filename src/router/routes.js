@@ -140,6 +140,11 @@ const routes = [
         meta: { requiresAuth: true },
         name: 'Command',
         component: () => import('pages/CommandPage.vue')
+      },
+      {
+        path: 'catalog/:company_id',
+        name: 'Catalog',
+        component: () => import('pages/CatalogPage.vue')
       }
     ]
   },

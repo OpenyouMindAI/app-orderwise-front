@@ -93,7 +93,7 @@ export default {
   methods: {
     setQueryParams (query) {
       this.$router.push({
-        path: 'command',
+        path: this.$route.path,
         query: {
           ...this.$route.query,
           ...query
@@ -102,6 +102,11 @@ export default {
     },
     setData () {
       this.tab = this.$route.query.tab ?? 'scanner'
+      if (this.$route.name === 'Catalog') {
+        this.tabs = [
+          { name: 'menu', icon: 'restaurant_menu' }
+        ]
+      }
     }
   }
 }
