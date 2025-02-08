@@ -338,11 +338,12 @@
               <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
                 <q-card class="my-card">
                   <q-img
-                    style="height: 150px; width: 100%"
-                    :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                    style="height: 200px; width: 100%"
+                    :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle2 flex flex-center">
+                    <div class="absolute-full text-subtitle1 flex flex-center text-bold">
+                      {{ props.row.barcode ? `${props.row.barcode} -` : '' }}
                       {{ props.row.name }}
                     </div>
                   </q-img>
@@ -1213,6 +1214,7 @@ export default {
         paginate: true,
         dataSearch: {
           name: this.filter,
+          'category.name': this.filter,
           barcode: this.filter
         }
       }
