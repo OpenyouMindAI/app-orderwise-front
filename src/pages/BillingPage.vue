@@ -345,6 +345,9 @@
                     <div class="absolute-full text-subtitle1 flex flex-center text-bold">
                       {{ props.row.barcode ? `${props.row.barcode} -` : '' }}
                       {{ props.row.name }}
+                      <q-badge v-if="!validStockProduct(props.row, props.row.amount)" color="negative" floating style="top: 3px; right: 3px;">
+                        Sin stock
+                      </q-badge>
                     </div>
                   </q-img>
                 </q-card>
@@ -1817,14 +1820,7 @@ export default {
     validStockProduct (data, amount) {
       const stock = data.is_bundle ? data.bundle_stock : data.normal_stock
       if (!data.skip_stock) {
-        if (stock < amount) {
-          notify(
-            `No hay stock suficiente para ${data.name}, cantidad restante: ${stock}`,
-            'negative',
-            'warning'
-          )
-          return false
-        }
+        return stock >= amount
       }
       return true
     },
@@ -1837,6 +1833,11 @@ export default {
         data.subtotal = data.price * data.amount
         this.calculateTotal()
       } else {
+        notify(
+          `No hay stock suficiente para ${data.name}`,
+          'negative',
+          'warning'
+        )
         data.amount = 1
       }
     },
@@ -1855,7 +1856,14 @@ export default {
         return
       }
 
-      if (!this.validStockProduct(data, this.quantity)) return
+      if (!this.validStockProduct(data, this.quantity)) {
+        notify(
+          `No hay stock suficiente para ${data.name}`,
+          'negative',
+          'warning'
+        )
+        return
+      }
 
       if (findProduct) {
         const quantity = unitMeasurement ? this.quantity : findProduct?.amount + 1
