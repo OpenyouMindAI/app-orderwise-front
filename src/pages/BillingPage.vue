@@ -1128,13 +1128,17 @@ export default {
       if (data && companySession?.company_config?.payment_method && forPayment > 0) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
+    },
+    branchOffice (data) {
+      if (data) {
+        this.setPagination({
+          pagination: this.pagination,
+          filter: undefined
+        })
+      }
     }
   },
   mounted () {
-    this.setPagination({
-      pagination: this.pagination,
-      filter: undefined
-    })
     window.addEventListener('keydown', (e) => {
       if (e.key === 'F6') {
         e.preventDefault()
