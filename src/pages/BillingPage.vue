@@ -344,7 +344,7 @@
                   >
                     <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
                       {{ props.row.name }}
-                      <q-badge v-if="!validStockProduct(props.row, props.row.amount)" color="negative" floating style="top: 3px; right: 3px;">
+                      <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
