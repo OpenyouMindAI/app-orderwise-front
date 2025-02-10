@@ -26,6 +26,14 @@
         </div>
         <q-space />
         <q-btn
+          icon="share"
+          round
+          flat
+          @click="notify('Link copiado exitosamente', 'positive', 'check_circle')"
+        >
+          <q-tooltip> Copiar link </q-tooltip>
+        </q-btn>
+        <q-btn
           icon="sync_alt"
           round
           flat
@@ -238,6 +246,7 @@ export default {
       logo,
       branchOffices: [],
       role: null,
+      notify,
       numberOfNotifications: [],
       notifications: [],
       labelDrown: null,

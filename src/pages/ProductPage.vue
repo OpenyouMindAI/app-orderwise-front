@@ -330,7 +330,7 @@
                       :key="image"
                       class="q-ml-xs"
                       :src="image.url"
-                      style="max-width: 32%; height: 250px;"
+                      style="max-width: 32%; height: 250px; border-radius: 10px;"
                     >
                       <q-btn
                         class="absolute all-pointer-events"
