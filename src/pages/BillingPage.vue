@@ -1088,6 +1088,12 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
+    category () {
+      this.setPagination({
+        pagination: this.pagination,
+        filter: undefined
+      })
+    },
     filter () {
       this.setPagination({
         pagination: this.pagination,
