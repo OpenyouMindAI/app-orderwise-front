@@ -92,6 +92,7 @@
             </span>
           </q-badge>
         </q-tab>
+        <q-tab icon="receipt_long" v-if="userSession" name="orders"/>
       </q-tabs>
     </q-footer>
   </q-layout>

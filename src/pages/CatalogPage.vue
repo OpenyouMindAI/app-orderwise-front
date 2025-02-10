@@ -1,32 +1,28 @@
 <template>
   <q-page padding>
-    <div class="full-width text-subtitle1 flex justify-between items-center">
-      <!-- <div>
-        <q-chip style="padding: 17px 10px; border-radius: 50px;" class="bg-primary text-white cursor-pointer text-subtitle1" v-if="userSession && $q.screen.lt.sm">
-          {{ userSession?.name }}
-        </q-chip>
-        <q-btn rounded style="padding: 5px 15px;" class="bg-primary text-white cursor-pointer" @click="dialogTable = true">
-          Mesa: {{ command?.table?.name || 'Seleccionar mesa' }}
-        </q-btn>
-      </div> -->
+    <div class="full-width text-subtitle1 flex justify-between items-center" v-if="tab !== 'orders'">
       <span class="text-h6">Pedido</span>
       <q-chip class="bg-secondary text-white cursor-pointer">
         Total: {{ formatNumber(totalBill) }}
       </q-chip>
     </div>
-    <!-- <div class="relative full-width q-mt-sm" style="height: calc(100vh - 190px);" v-if="tab === 'menu'">
-      <qrcode-stream @detect="getCodeQr"/>
-      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" class="text-center">
-        <div class="menu">
-          <div class="light"></div>
-        </div>
+    <div class="full-width text-subtitle1 flex justify-between items-center" v-else>
+      <span class="text-h6">Ordenes</span>
+      <div>
+        <q-btn
+          color="primary"
+          icon="refresh"
+          round
+          size="sm"
+          @click="setPagination({ pagination: invoicePagination })"
+        />
       </div>
-    </div> -->
+    </div>
     <div class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
       <div class="col-12">
         <q-tabs
           v-model="category"
-          class="text-teal"
+          class="text-teal overflow-hidden"
           dense
           v-if="categories.length"
         >
@@ -58,7 +54,6 @@
           grid
           hide-pagination
           :rows="allProducts"
-          :columns="productColumns"
           :loading="loadingPage"
           :filter="filter"
           :pagination="pagination"
@@ -102,29 +97,28 @@
         </q-table>
       </div>
     </div>
-    <div v-else class="q-mt-sm">
+    <div v-else-if="tab === 'command'" class="q-mt-sm">
       <q-table
         row-key="name"
         dense
         grid
         style="max-height: calc(100vh - 210px); overflow: auto;"
         :rows="command.products"
-        :columns="columns"
         hide-pagination
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
-            <q-card class="my-card q-mt-sm" style="width: 97%; max-width: 400px; border-radius: 30px;">
+            <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
               <q-card-section horizontal class="full-height">
                 <q-img
                   class="col-4"
                   style="max-height: 200px;"
                   :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                 />
-                <q-card-section class="column full-height">
-                  <q-card-section class="q-pa-none">
-                    <div class="flex justify-between">
+                <q-card-section class="q-pb-sm">
+                  <q-card-section class="q-pa-sm">
+                    <div class="flex justify-between q-col-gutter-sm">
                       <div class="flex justify-between items-center full-width">
                         <span class="text-subtitle2 text-uppercase text-bold">
                           {{ props.row.name }}
@@ -133,14 +127,12 @@
                           $ {{ formatNumber(props.row.price) }}
                         </span>
                       </div>
-                      <div>
-                        <span>
-                          {{ props.row.description }}
-                        </span>
-                      </div>
                     </div>
+                    <p class="text-subtitle2 text-grey bg-red">
+                      {{ props.row.description }}
+                    </p>
                   </q-card-section>
-                  <q-card-actions class="flex justify-between q-px-none">
+                  <q-card-actions class="flex justify-between q-px-none q-pb-none q-pt-md">
                     <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
                     <q-input
                       rounded
@@ -168,6 +160,64 @@
           @click="saveBill"
         />
       </q-page-sticky>
+    </div>
+    <div v-else>
+      <q-table
+        row-key="id"
+        dense
+        grid
+        style="max-height: calc(100vh - 162px); overflow: auto;"
+        :rows="invoices"
+        binary-state-sort
+        no-data-label="Registro no encontrado"
+        v-model:pagination="invoicePagination"
+        @request="setPagination"
+      >
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
+            <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
+              <q-card-section horizontal class="full-height">
+                <q-icon
+                  name="receipt"
+                  class="col-2"
+                  size="md"
+                  style="max-height: 200px;"
+                />
+                <q-card-section class="q-py-sm">
+                  <div class="flex justify-between">
+                    <div class="flex justify-between items-center full-width">
+                      <span class="text-subtitle2 text-bold">
+                        Nro {{ props.row.code }}
+                      </span>
+                      <span class="text-subtitle2 text-semibold">
+                        $ {{ formatNumber(props.row.total) }}
+                      </span>
+                    </div>
+                    <div class="flex justify-between items-center full-width">
+                      <span>
+                        {{ props.row.client.name }}
+                      </span>
+                      <q-badge
+                        :color="status[props.row.status].color"
+                        :label="status[props.row.status].label"
+                        rounded
+                      />
+                    </div>
+                    <div class="flex justify-between items-center full-width">
+                      <span>
+                        {{ formatDate(props.row.created_at, 'DD-MM-YYYY') }}
+                      </span>
+                      <span>
+                        {{ formatDate(props.row.created_at, 'HH:mm:ss') }}
+                      </span>
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-card-section>
+            </q-card>
+          </div>
+        </template>
+      </q-table>
     </div>
     <q-dialog v-model="detailProduct" maximized>
       <q-card class="full-height">
@@ -311,7 +361,7 @@
             debe ingresar el comprobante de pago.
           </p>
         </q-card-section>
-        <q-card-section class="q-gutter-sm q-pt-none">
+        <q-card-section class="q-gutter-sm q-pt-none scroll" style="max-height: calc(100vh - 320px);">
           <q-card flat bordered v-for="payment in paymentMethods" :key="payment.id">
             <q-card-section class="q-py-sm">
               <q-radio v-model="paymentMethod" :val="payment.id" :label="payment.name" />
@@ -336,7 +386,7 @@
             para la confirmación del pago.
           </p>
         </q-card-section>
-        <q-card-section class="q-pb-xs q-pt-sm flex justify-start items-center q-gutter-x-sm">
+        <q-card-section class="q-pb-xs q-pt-sm flex justify-start items-center q-gutter-x-sm scroll" style="max-height: calc(100vh - 320px);">
           <FileButtonComponent ref="fileButton" @upload="setFile" v-if="!file">
             <template v-slot:button>
               <div
@@ -384,7 +434,7 @@
             Confirme su dirección para recibir el pedido.
           </p>
         </q-card-section>
-        <q-card-section class="q-pb-xs q-pt-sm">
+        <q-card-section class="q-pt-sm">
           <q-input type="textarea" v-model="address" filled label="Dirección" class="full-width" />
         </q-card-section>
         <q-card-actions align="center" v-if="address">
@@ -396,28 +446,30 @@
 </template>
 <script>
 import { Notify } from 'quasar'
-// import { QrcodeStream } from 'vue-qrcode-reader'
-import { formatNumber, loading, notify, setFiles } from '../const/mixins'
+import { formatDate, formatNumber, loading, notify, setFiles } from '../const/mixins'
 import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
 import SlideComponent from '../components/SlideComponent.vue'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
+import { status } from 'src/const/invoice'
 export default {
-  name: 'CommandPage',
+  name: 'CatalogPage',
   components: {
-    // QrcodeStream,
     SkeletonCard,
     SlideComponent,
     FileButtonComponent
   },
   data () {
     return {
+      status,
+      formatDate,
       tabPayment: 'paymentMethod',
       client: {},
       user: {},
       address: '',
+      invoices: [],
       paymentMethod: null,
       openAddClient: false,
       dialogPayment: false,
@@ -491,24 +543,6 @@ export default {
        */
       products: [],
       /**
-       * Columns
-       * @type {Array}
-       */
-      columns: [
-        {
-          name: 'name',
-          required: true,
-          label: 'Nombre',
-          align: 'left',
-          field: row => row.name,
-          sortable: true
-        },
-        { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
-        { name: 'price', align: 'right', label: 'Precio', field: 'price', sortable: true },
-        { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal', sortable: true },
-        { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
-      ],
-      /**
        * Pagination option
        * @type {Object}
        */
@@ -524,41 +558,20 @@ export default {
        */
       tableSelected: [],
       /**
-       * Product columns
-       * @type {Array}
+       * Pagination option
+       * @type {Object}
        */
-      productColumns: [
-        {
-          name: 'barcode',
-          align: 'left',
-          label: 'Código',
-          field: 'barcode',
-          sortable: true
-        },
-        {
-          name: 'name',
-          required: true,
-          label: 'Descripción',
-          align: 'left',
-          field: row => row.name,
-          sortable: true
-        },
-        {
-          name: 'category',
-          align: 'right',
-          label: 'Categoría',
-          field: row => row.category.name,
-          sortable: true
-        },
-        {
-          name: 'price',
-          align: 'right',
-          label: 'Precio',
-          field: 'price',
-          sortable: true
-        }
-      ]
+      invoicePagination: {
+        rowsPerPage: 10,
+        rowsNumber: 10,
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc'
+      }
     }
+  },
+  mounted () {
+    this.setPagination({ pagination: this.invoicePagination })
   },
   created () {
     this.getCompany()
@@ -587,6 +600,12 @@ export default {
     products (products) {
       const store = useCommandStore()
       store.setCommands({ products })
+    },
+    userSession (data) {
+      this.address = data?.address
+    },
+    tab (data) {
+      if (data === 'orders') this.setPagination({ pagination: this.invoicePagination })
     }
   },
   computed: {
@@ -603,6 +622,24 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
+    /**
+     * Set data pagination emit event
+     * @param  {Object} data value pagination
+     */
+    setPagination (data) {
+      const params = {
+        sortOrder: data.pagination.descending ? 'asc' : 'desc',
+        page: data.pagination.page,
+        sortBy: data.pagination.sortBy,
+        perPage: data.pagination.rowsPerPage,
+        paginate: true
+      }
+      this.invoicePagination = data.pagination
+      this.getInvoices(params)
+    },
+    /**
+     * Get company
+     */
     async getCompany () {
       try {
         const { data } = await this.$api.get(`public/company/${this.$route?.params?.company_id}`)
@@ -623,11 +660,12 @@ export default {
      * After save bill
      */
     afterSaveBill () {
-      this.table = null
       this.products = []
-      this.tableSelected = []
-      this.setQueryParams({ tab: 'menu' })
+      this.setQueryParams({ tab: 'orders' })
       this.totalBill = 0
+      this.file = null
+      this.paymentMethod = null
+      this.tabPayment = 'paymentMethod'
       notify('Pedido creado exitosamente', 'positive', 'check_circle')
     },
     /**
@@ -878,45 +916,21 @@ export default {
         notify(error.message, 'negative', 'warning')
       }
     },
+    /**
+     * Get categories
+     */
+    async getInvoices (params) {
+      try {
+        loading(true)
+        const { data } = await this.$api.get('public/invoices', { params })
+        this.invoices = data.data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
     ...mapActions(authentication, ['setSessionData', 'login'])
   }
 }
 </script>
-<style>
-  .menu {
-    width: 250px;
-    height: 250px;
-    border: 4px solid #000;
-    border-radius: 10px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0px 0px 10px white;
-    background-image: url('/images/qr.png');
-    background-size: cover;
-    opacity: 0.3;
-  }
-  @keyframes scan {
-    0% {
-      transform: translateY(10px);
-    }
-    100% {
-      transform: translateY(230px);
-    }
-  }
-  .light {
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    background: red;
-    top: 0;
-    animation: scan 1.5s infinite alternate;
-  }
-  .menu::before {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    clip-path: polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%);
-  }
-</style>
