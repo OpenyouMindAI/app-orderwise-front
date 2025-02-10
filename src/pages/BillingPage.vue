@@ -1088,12 +1088,6 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
-    category () {
-      this.setPagination({
-        pagination: this.pagination,
-        filter: undefined
-      })
-    },
     filter () {
       this.setPagination({
         pagination: this.pagination,
@@ -1139,6 +1133,10 @@ export default {
     }
   },
   mounted () {
+    this.setPagination({
+      pagination: this.pagination,
+      filter: undefined
+    })
     window.addEventListener('keydown', (e) => {
       if (e.key === 'F6') {
         e.preventDefault()
@@ -1579,7 +1577,7 @@ export default {
       this.$api.get('products', {
         params: {
           ...params,
-          branch_office_id: this.branchOffice.id,
+          branch_office_id: this.branchOffice?.id,
           stock: true,
           withStock: true,
           dataFilter: {
