@@ -92,7 +92,7 @@
             </span>
           </q-badge>
         </q-tab>
-        <q-tab icon="receipt_long" v-if="userSession" name="orders"/>
+        <q-tab icon="receipt_long" v-if="userSession && $route.name === 'Catalog'" name="orders"/>
       </q-tabs>
     </q-footer>
   </q-layout>
@@ -145,7 +145,8 @@ export default {
      * Logout application
      */
     logoutAt () {
-      this.$router.push({ name: 'Catalog', query: { tab: 'menu' } })
+      const name = this.$route.name === 'Catalog' ? 'Catalog' : 'Login'
+      this.$router.push({ name, query: { tab: 'menu' } })
       this.logout()
     },
     setQueryParams (query) {
