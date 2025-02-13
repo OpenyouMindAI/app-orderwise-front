@@ -2,7 +2,7 @@
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
       <q-toolbar class="bg-white text-dark flex justify-between">
-        <q-img :src="logo.color" width="155px" alt="logo" @click="$router.push({ name: 'Billing' })"/>
+        <q-img :src="logo.color" width="155px" alt="logo"/>
         <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
           {{ userSession.name }}
         </q-chip>
@@ -21,6 +21,55 @@
             <q-icon name="search" />
           </template>
         </q-input>
+        <q-avatar
+          v-if="userSession"
+          flat
+          round
+          color="primary"
+          icon="person"
+          aria-label="person"
+          class="q-ml-sm text-white"
+        >
+          <q-menu>
+            <q-list style="min-width: 200px">
+              <q-item
+                v-ripple
+                v-close-popup
+                clickable
+                dense
+              >
+                <q-item-section avatar>
+                  <q-avatar>
+                    <q-icon name="person" />
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  {{ userSession.name }}
+                </q-item-section>
+              </q-item>
+              <q-item v-close-popup clickable dense>
+                <q-item-section avatar>
+                  <q-avatar icon="person" />
+                </q-item-section>
+                <q-item-section>
+                  {{ userSession.username }}
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section>
+                  <q-btn
+                    v-close-popup
+                    color="negative"
+                    label="Cerrar Sesión"
+                    push
+                    size="sm"
+                    @click="logoutAt"
+                  />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-avatar>
       </q-toolbar>
     </q-header>
 
@@ -43,6 +92,7 @@
             </span>
           </q-badge>
         </q-tab>
+        <q-tab icon="receipt_long" v-if="userSession" name="orders"/>
       </q-tabs>
     </q-footer>
   </q-layout>
@@ -50,7 +100,7 @@
 <script>
 import { watch } from 'vue'
 import { useCommandStore } from '../stores/command'
-import { mapState } from 'pinia'
+import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { logo } from 'src/const/mixins'
 export default {
@@ -91,6 +141,13 @@ export default {
     ...mapState(authentication, ['userSession'])
   },
   methods: {
+    /**
+     * Logout application
+     */
+    logoutAt () {
+      this.$router.push({ name: 'Catalog', query: { tab: 'menu' } })
+      this.logout()
+    },
     setQueryParams (query) {
       this.$router.push({
         path: this.$route.path,
@@ -107,7 +164,8 @@ export default {
           { name: 'menu', icon: 'restaurant_menu' }
         ]
       }
-    }
+    },
+    ...mapActions(authentication, ['logout'])
   }
 }
 </script>

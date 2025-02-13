@@ -506,7 +506,7 @@ export default {
     notifyProductCar () {
       Notify.create({
         position: 'top',
-        message: '¡Plato añadido con éxito! ¡Listo para confirmar su orden!',
+        message: '¡Producto añadido con éxito! ¡Listo para confirmar su orden!',
         actions: [
           {
             label: 'Ver orden',

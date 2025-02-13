@@ -26,6 +26,14 @@
         </div>
         <q-space />
         <q-btn
+          icon="share"
+          round
+          flat
+          @click="copyCatalog"
+        >
+          <q-tooltip> Copiar link </q-tooltip>
+        </q-btn>
+        <q-btn
           icon="sync_alt"
           round
           flat
@@ -230,6 +238,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
+import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',
   components: { NotificationComponent },
@@ -238,6 +247,7 @@ export default {
       logo,
       branchOffices: [],
       role: null,
+      notify,
       numberOfNotifications: [],
       notifications: [],
       labelDrown: null,
@@ -319,6 +329,13 @@ export default {
       } catch (error) {
         console.log(error.message)
       }
+    },
+
+    copyCatalog () {
+      copyToClipboard(`${window.location.origin}/#/catalog/${this.userSession.company_session_id}`)
+        .then(() => {
+          notify('Link copiado exitosamente', 'positive', 'check_circle')
+        })
     },
     /**
      * Get all products
