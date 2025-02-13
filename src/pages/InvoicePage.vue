@@ -406,7 +406,7 @@ export default {
        */
       columns: [
         {
-          name: 'code',
+          name: 'id',
           align: 'left',
           label: 'Código',
           field: 'code',
@@ -416,8 +416,7 @@ export default {
           name: 'invoice_type',
           align: 'left',
           label: 'Tipo de servicio',
-          field: row => row?.invoice_type?.name,
-          sortable: true
+          field: row => row?.invoice_type?.name
         },
         {
           name: 'client',
