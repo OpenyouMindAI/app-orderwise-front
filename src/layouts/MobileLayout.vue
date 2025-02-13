@@ -2,7 +2,7 @@
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
       <q-toolbar class="bg-white text-dark flex justify-between">
-        <q-img :src="logo.color" width="155px" alt="logo" @click="$router.push({ name: 'Billing' })"/>
+        <q-img :src="logo.color" width="155px" alt="logo"/>
         <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
           {{ userSession.name }}
         </q-chip>
@@ -145,7 +145,7 @@ export default {
      * Logout application
      */
     logoutAt () {
-      this.$router.push({ name: 'Login' })
+      this.$router.push({ name: 'Catalog', query: { tab: 'menu' } })
       this.logout()
     },
     setQueryParams (query) {

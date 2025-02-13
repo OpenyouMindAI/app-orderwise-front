@@ -128,7 +128,7 @@
                         </span>
                       </div>
                     </div>
-                    <p class="text-subtitle2 text-grey bg-red">
+                    <p class="text-subtitle2 text-grey">
                       {{ props.row.description }}
                     </p>
                   </q-card-section>
@@ -175,7 +175,7 @@
       >
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
-            <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
+            <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;" @click="openDetails(props.row)">
               <q-card-section horizontal class="full-height">
                 <q-icon
                   name="receipt"
@@ -442,6 +442,55 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="detailsDialog" persistent maximized>
+      <q-card>
+        <q-card-section class="flex justify-between items-center bg-primary text-white">
+          <span class="text-h6">Detalles de la orden</span>
+          <q-btn icon="close" flat round dense @click="detailsDialog = false" />
+        </q-card-section>
+        <q-card-section class="scroll" style="height: 82vh">
+          <div class="row q-col-gutter-sm">
+            <div class="col-12">
+              <q-input label="Código" filled v-model="invoice.code" readonly dense />
+            </div>
+            <div class="col-6">
+              <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
+            </div>
+            <div class="col-6">
+              <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
+            </div>
+            <div class="col-12">
+              <q-input
+                type="textarea"
+                autogrow label="Dirección"
+                filled
+                v-model="invoice.address"
+                readonly
+                dense
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                type="textarea"
+                filled
+                v-model="invoice.description"
+                readonly
+                label="Descripción"
+              />
+            </div>
+            <div class="col-12">
+              <span class="text-h6">Pagos</span>
+            </div>
+            <div class="col-12 q-mt-md column" v-for="payment in invoice.invoice_payments" :key="payment.id">
+              <span class="text-subtitle1 text-uppercase">
+                {{ payment.payment_method.name }}
+              </span>
+              <img v-for="file in payment.files" alt="pago" :key="file.id" :src="file.url" style="max-height: 300px; max-width: 400px;" />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 <script>
@@ -557,6 +606,8 @@ export default {
        * @type {Array}
        */
       tableSelected: [],
+      invoice: null,
+      detailsDialog: false,
       /**
        * Pagination option
        * @type {Object}
@@ -571,7 +622,9 @@ export default {
     }
   },
   mounted () {
-    this.setPagination({ pagination: this.invoicePagination })
+    if (this.userSession) {
+      this.setPagination({ pagination: this.invoicePagination })
+    }
   },
   created () {
     this.getCompany()
@@ -622,6 +675,11 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
+    openDetails (data) {
+      console.log(data)
+      this.invoice = data
+      this.detailsDialog = true
+    },
     /**
      * Set data pagination emit event
      * @param  {Object} data value pagination
@@ -687,7 +745,6 @@ export default {
         const { data } = await this.$api.post(`public/clients/${this.$route.params.company_id}`, this.client)
         this.openAddClient = false
         this.client = {}
-        console.log(data)
         this.setSessionData(data)
       } catch (error) {
         console.error(error)
@@ -696,13 +753,28 @@ export default {
         loading(false)
       }
     },
+
+    async saveFilePayment (data) {
+      try {
+        const formData = new FormData()
+        const { invoice_payments: invoicePayments } = data
+        if (invoicePayments.length > 0) {
+          formData.append('file', this.file?.file)
+          formData.append('fileable_type', 'App\\Models\\InvoicePayment')
+          formData.append('fileable_id', invoicePayments[0].id)
+          await this.$api.post('files', formData)
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
     /**
      * Save order
      */
     async saveOrder () {
       try {
         loading(true)
-        await this.$api.post('command-orders', {
+        const { data } = await this.$api.post('command-orders', {
           seller_id: this.userSession?.id,
           products: this.command.products,
           address: this.address,
@@ -718,6 +790,7 @@ export default {
             }
           ]
         })
+        if (this.file) await this.saveFilePayment(data)
         this.afterSaveBill()
       } catch (error) {
         notify(error.message, 'negative', 'warning')
@@ -860,7 +933,7 @@ export default {
     notifyProductCar () {
       Notify.create({
         position: 'top',
-        message: '¡Plato añadido con éxito! ¡Listo para confirmar su orden!',
+        message: '¡Producto añadido con éxito! ¡Listo para confirmar su orden!',
         actions: [
           {
             label: 'Ver orden',
