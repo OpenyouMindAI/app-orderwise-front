@@ -148,7 +148,7 @@ const routes = [
         component: () => import('pages/CommandPage.vue')
       },
       {
-        path: 'catalog/:company_id',
+        path: 'catalog/:company_id/:branch_office_id',
         name: 'Catalog',
         component: () => import('pages/CatalogPage.vue')
       }
