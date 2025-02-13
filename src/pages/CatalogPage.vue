@@ -901,7 +901,7 @@ export default {
     validateProduct (data) {
       const findProduct = this.findProduct(this.products, data)
 
-      if (!this.validStockProduct(data, this.quantity)) {
+      if (!this.validStockProduct(data, 1)) {
         notify(
           `No hay stock suficiente para ${data.name}`,
           'negative',
