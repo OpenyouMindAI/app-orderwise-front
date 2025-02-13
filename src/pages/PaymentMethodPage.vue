@@ -6,7 +6,7 @@
       </div>
       <div class="col-12">
         <q-table
-          title="Metodo de pagos"
+          title="Método de pagos"
           row-key="name"
           :columns="columns"
           :rows="paymentMethods"
@@ -34,8 +34,8 @@
     <q-dialog v-model="openEditPaymentMethod" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Modificar metodo de pago</div>
+          <q-card-section class="row items-center bg-primary text-white">
+            <div class="text-h6">Modificar método de pago</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
@@ -49,11 +49,49 @@
                 v-model="paymentMethod.name"
               />
             </div>
+            <div class="row col-12 q-gutter-y-sm">
+              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-h6">
+                Datos de pago
+              </div>
+              <div
+                v-for="(attribute, index) in paymentMethod.attributes"
+                :key="attribute.id"
+                class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12"
+              >
+                <q-input
+                  v-model="attribute.attribute_name"
+                  filled
+                  dense
+                  autofocus
+                  :label="`Nombre ${index + 1}`"
+                  @keypress.stop.enter="addAttribute"
+                >
+                  <template #append>
+                    <q-btn
+                      v-if="index >=this.paymentMethod.attributes.length - 1"
+                      color="primary"
+                      icon="add"
+                      round
+                      size="sm"
+                      @click="addAttribute"
+                    />
+                    <q-btn
+                      v-if="index > 0"
+                      round
+                      color="negative"
+                      icon="delete"
+                      size="sm"
+                      :loading="deleteLoading[attribute.attribute_name]"
+                      @click="deleteAttribute(index, attribute)"
+                    />
+                  </template>
+                </q-input>
+              </div>
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deletePaymentMethod" :loading="visible" />
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -61,8 +99,8 @@
     <q-dialog v-model="openAddPaymentMethod" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="savePaymentMethod">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Agregar metodo de pago</div>
+          <q-card-section class="row items-center bg-primary text-white">
+            <div class="text-h6">Agregar método de pago</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
@@ -76,10 +114,46 @@
                 label="Nombre"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-h6">
+              Datos de validación de pago
+            </div>
+            <div
+              v-for="(attribute, index) in paymentMethod.attributes"
+              :key="attribute.id"
+              class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12"
+            >
+              <q-input
+                v-model="attribute.attribute_name"
+                filled
+                dense
+                autofocus
+                :label="`Nombre ${index + 1}`"
+                @keypress.stop.enter="addAttribute"
+              >
+                <template #append>
+                  <q-btn
+                    v-if="index >= this.paymentMethod.attributes.length - 1"
+                    color="primary"
+                    icon="add"
+                    round
+                    size="sm"
+                    @click="addAttribute"
+                  />
+                  <q-btn
+                    v-if="index > 0"
+                    round
+                    color="negative"
+                    icon="delete"
+                    size="sm"
+                    :loading="deleteLoading[attribute.attribute_name]"
+                    @click="deleteAttribute(index, attribute)"
+                  />
+                </template>
+              </q-input>
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -94,6 +168,7 @@ export default {
     return {
       paymentMethods: [],
       paymentMethod: {},
+      deleteLoading: {},
       filter: '',
       /**
        * Params search
@@ -150,12 +225,41 @@ export default {
   },
   methods: {
     /**
+     * Add attribute
+     */
+    addAttribute () {
+      this.paymentMethod?.attributes?.push({})
+    },
+    /**
+     * Delete attribute on update
+     * @type {Number} index of attributes
+     * @type {Object} attributes payment attributes
+     */
+    deleteAttributeOnUpdate (index, attribute) {
+      this.deleteLoading[attribute.attribute_name] = true
+      this.paymentMethod.attributes.splice(index, 1)
+    },
+    /**
+     * Delete attribute
+     * @param {Number} index index of array
+     */
+    deleteAttribute (index) {
+      const attribute = this.paymentMethod.attributes[index]
+      if (attribute.id) {
+        this.deleteAttributeOnUpdate(index, attribute)
+      } else {
+        this.paymentMethod.attributes.splice(index, 1)
+      }
+    },
+    /**
      * Close all modals
      */
     closeModal () {
       this.openAddPaymentMethod = false
       this.openEditPaymentMethod = false
-      this.paymentMethod = {}
+      this.paymentMethod = {
+        attributes: [{}]
+      }
     },
     /**
      * Search beneficiary
@@ -193,7 +297,6 @@ export default {
      * @param  {Object} data value pagination
      */
     setPagination (data) {
-      console.log(data.pagination.descending)
       this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
       this.params.page = data.pagination.page
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
@@ -211,9 +314,11 @@ export default {
           this.getPaymentMethods()
           this.openAddPaymentMethod = false
           this.visible = false
-          this.paymentMethod = {}
+          this.paymentMethod = {
+            attributes: [{}]
+          }
           Notify.create({
-            message: 'Metodo de pago creado exitosamente',
+            message: 'Método de pago creado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -233,6 +338,7 @@ export default {
     editPaymentMethod (event, row, index) {
       this.openEditPaymentMethod = true
       this.paymentMethod = row
+      this.paymentMethod.attributes = row?.attributes?.length > 0 ? row?.attributes : [{}]
     },
     /**
      * Save edit
@@ -244,9 +350,11 @@ export default {
           this.getPaymentMethods()
           this.openEditPaymentMethod = false
           this.visible = false
-          this.paymentMethod = {}
+          this.paymentMethod = {
+            attributes: [{}]
+          }
           Notify.create({
-            message: 'Metodo de pago editado exitosamente',
+            message: 'Método de pago editado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -270,9 +378,11 @@ export default {
           this.getPaymentMethods()
           this.openEditPaymentMethod = false
           this.visible = false
-          this.paymentMethod = {}
+          this.paymentMethod = {
+            attributes: [{}]
+          }
           Notify.create({
-            message: 'Metodo de pago eliminado exitosamente',
+            message: 'Método de pago eliminado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })

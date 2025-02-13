@@ -362,9 +362,17 @@
           </p>
         </q-card-section>
         <q-card-section class="q-gutter-sm q-pt-none scroll" style="max-height: calc(100vh - 320px);">
-          <q-card flat bordered v-for="payment in paymentMethods" :key="payment.id">
+          <q-card v-for="payment in paymentMethods" :key="payment.id">
             <q-card-section class="q-py-sm">
               <q-radio v-model="paymentMethod" :val="payment.id" :label="payment.name" />
+            </q-card-section>
+            <q-card-section class="q-py-sm" v-if="payment.attributes && payment.attributes.length > 0">
+              <div class="column q-gutter-sm">
+                <span class="text-subtitle1">Datos del pago</span>
+                <span class="text-subtitle2" v-for="attribute in payment.attributes" :key="attribute.id">
+                  {{ attribute.attribute_name }}
+                </span>
+              </div>
             </q-card-section>
           </q-card>
         </q-card-section>
