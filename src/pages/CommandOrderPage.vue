@@ -8,9 +8,9 @@
       </div>
       <q-btn icon="filter_alt" color="primary" @click="dialogFilter = true" round size="sm"/>
     </div>
-    <div class="board-command q-mt-sm q-gutter-x-md">
+    <div class="board-command q-gutter-x-md q-py-sm justify-start">
       <div v-for="(status, index) in statuses" :key="index">
-        <q-card class="column-command">
+        <q-card class="column-command" v-if="!setPermissionsByUser(status.permissions)">
           <q-card-section class="text-subtitle2">
             {{ status.label }}
             <q-badge rounded color="secondary" class="q-ml-xs">
@@ -73,7 +73,7 @@
                 </div>
               </q-card-section>
               <q-separator/>
-              <q-card-section v-if="visibleBranchOffice" class="q-py-sm flex justify-between items-center">
+              <q-card-section v-if="visibleBranchOffice || role.deliveryPerson" class="q-py-sm flex justify-between items-center">
                 Por pagar: {{  formatNumber(invoice.total - invoice.total_payments) }}
                 <q-btn
                   color="secondary"
@@ -112,13 +112,13 @@
         </q-card>
       </div>
     </div>
-    <q-dialog v-model="openEditInvoice" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-card-section class="flex justify-between items-center">
+    <q-dialog v-model="openEditInvoice" persistent maximized>
+      <q-card>
+        <q-card-section class="flex justify-between items-center bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
           <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
         </q-card-section>
-        <q-card-section class="scroll" style="height: 70vh">
+        <q-card-section class="scroll" style="height: 82vh">
           <div class="row q-col-gutter-sm">
             <div class="col-12">
               <q-input label="Código" filled v-model="invoice.code" readonly dense />
@@ -129,7 +129,7 @@
             <div class="col-6">
               <q-input label="Vendedor" filled :model-value="invoice?.seller?.name" readonly dense />
             </div>
-            <div class="col-6">
+            <div class="col-6" v-if="!role.deliveryPerson">
               <q-select
                 filled
                 readonly
@@ -142,6 +142,16 @@
             </div>
             <div class="col-6">
               <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
+            </div>
+            <div class="col-12">
+              <q-input
+                type="textarea"
+                autogrow label="Dirección"
+                filled
+                v-model="invoice.address"
+                readonly
+                dense
+              />
             </div>
             <div class="col-12 q-mt-md">
               <q-separator />
@@ -163,7 +173,23 @@
                 option-value="id"
                 v-model="invoice.invoice_type"
                 :options="invoiceTypes"
+                :readonly="role.deliveryPerson"
                 :rules="[val => !!val || 'El campo es requerido.']"
+              />
+            </div>
+            <div class="col-12" v-if="invoice.status === 'finished'">
+              <q-select
+                use-input
+                filled
+                dense
+                label="Repartidor"
+                input-debounce="0"
+                option-value="id"
+                v-model="invoice.delivery_person"
+                :options="deliveryPersons"
+                :readonly="role.deliveryPerson"
+                :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                @filter="filterDeliveryPersons"
               />
             </div>
             <div class="col-12">
@@ -171,7 +197,27 @@
                 type="textarea"
                 filled
                 v-model="invoice.description"
+                :readonly="role.deliveryPerson"
                 label="Descripción"
+              />
+            </div>
+            <div class="col-12" v-if="role.deliveryPerson || visibleBranchOffice">
+              <span class="text-h6">Pagos</span>
+            </div>
+            <div
+              class="col-12 q-mt-md column"
+              v-for="payment in invoice.invoice_payments"
+              :key="payment.id" v-show="role.deliveryPerson || visibleBranchOffice"
+            >
+              <span class="text-subtitle1 text-uppercase">
+                {{ payment.payment_method.name }}
+              </span>
+              <img
+                v-for="file in payment.files"
+                :key="file.id"
+                :src="file.url"
+                alt="pagos"
+                style="max-height: 300px; max-width: 500px;"
               />
             </div>
           </div>
@@ -284,6 +330,7 @@
             color="negative"
             label="Anular"
             :loading="cancelLoading"
+            v-if="!role.deliveryPerson"
             @click="cancelInvoice"
           />
           <q-btn
@@ -324,7 +371,23 @@
             v-model="seller"
             :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
             :options="sellers"
+            :readonly="!validate"
+            v-if="!role.deliveryPerson"
             @filter="filterSellers"
+          />
+          <q-select
+            dense
+            use-input
+            filled
+            label="Repartidor"
+            input-debounce="0"
+            option-value="id"
+            clearable
+            v-model="deliveryPerson"
+            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+            :options="deliveryPersons"
+            :readonly="!validate"
+            @filter="filterDeliveryPersons"
           />
           <q-select
             v-model="category"
@@ -492,6 +555,16 @@ const sellers = ref([])
  */
 const seller = ref(null)
 /**
+ * Sellers
+ * @type {Array}
+ */
+const deliveryPersons = ref([])
+/**
+ * Selected seller
+ * @type {Object}
+ */
+const deliveryPerson = ref(null)
+/**
  * Visible branch office
  * @type {Object}
  */
@@ -501,16 +574,21 @@ const visibleBranchOffice = userSession.is_root || userSession.is_super_admin
  * @type {Number}
  */
 const interval = ref(null)
+const role = ref({})
+
+const validate = ref(true)
+
+const permissions = ['SAM']
 
 /**
  * List status
  * @type {Array}
  */
 const statuses = ref([
-  { label: 'Pendiente', value: 'pending', data: [], page: 1, loading: false },
-  { label: 'En proceso', value: 'on_process', data: [], page: 1, loading: false },
-  { label: 'Terminado', value: 'finished', data: [], page: 1, loading: false },
-  { label: 'Entregado', value: 'delivered', data: [], page: 1, loading: false }
+  { label: 'Pendiente', value: 'pending', data: [], page: 1, loading: false, permissions: ['DP'] },
+  { label: 'En proceso', value: 'on_process', data: [], page: 1, loading: false, permissions: ['DP'] },
+  { label: 'Terminado', value: 'finished', data: [], page: 1, loading: false, permissions: [] },
+  { label: 'Entregado', value: 'delivered', data: [], page: 1, loading: false, permissions: [] }
 ])
 
 /**
@@ -527,10 +605,8 @@ const params = ref({
   }
 })
 
-onMounted(() => {
-  interval.value = setInterval(() => {
-    getInvoices(params.value)
-  }, 20000)
+onMounted(async () => {
+  await setPermissions()
   getCategories()
   getInvoiceTypes()
   getTypeOfServices()
@@ -598,6 +674,22 @@ watch(seller, async (seller) => {
   filters('seller_id', ids, 'whereIn')
 })
 
+watch(deliveryPerson, async (data) => {
+  const ids = data?.id ? [data?.id] : []
+  filters('delivery_person_id', ids, 'whereIn')
+})
+
+watch(validate, async (data) => {
+  if (!data) {
+    if (role.value.seller) {
+      seller.value = userSession
+    }
+    if (role.value.deliveryPerson) {
+      deliveryPerson.value = userSession
+    }
+  }
+})
+
 /**
  * Filters
  * @param {String} field field
@@ -610,6 +702,23 @@ const filters = (field, value, filterParams) => {
     [field]: value
   }
   getInvoices(params.value)
+}
+
+const setPermissions = () => {
+  validate.value = userSession.is_root || userSession.roles.some(role => permissions.includes(role.acronym))
+
+  role.value = {
+    seller: setPermissionsByUser(['SEL']),
+    deliveryPerson: setPermissionsByUser(['DP'])
+  }
+
+  interval.value = setInterval(() => {
+    getInvoices(params.value)
+  }, 20000)
+}
+
+const setPermissionsByUser = (data) => {
+  return userSession.roles.some(role => data.includes(role.acronym))
 }
 /**
  * Print invoice
@@ -659,11 +768,31 @@ const filterSellers = async (value, update) => {
   }
 }
 /**
+ * Get all sellers
+ */
+const filterDeliveryPersons = async (value, update) => {
+  try {
+    const { data } = await api.get('delivery-persons', {
+      params: {
+        dataSearch: {
+          name: value,
+          document_number: value
+        }
+      }
+    })
+    update(() => {
+      deliveryPersons.value = data
+    })
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+/**
  * Get all invoices
  */
 const getBranchOffices = async () => {
   try {
-    if (visibleBranchOffice) {
+    if (visibleBranchOffice || role.value.deliveryPerson) {
       const { data } = await api.get('branch-offices')
       branchOffices.value = data
       branchOfficeSelect.value = data
@@ -718,7 +847,8 @@ const saveEdit = async () => {
     loadingEdit.value = true
     await api.put(`invoices/${invoice.value.id}`, {
       ...invoice.value,
-      invoice_type_id: invoice.value?.invoice_type?.id
+      invoice_type_id: invoice.value?.invoice_type?.id,
+      delivery_person_id: invoice.value?.delivery_person?.id
     })
     notify('Factura editada exitosamente', 'positive', 'check_circle')
     getInvoices(params.value)
@@ -766,9 +896,8 @@ const cancelInvoice = async () => {
 <style>
 
 .board-command {
-  display: flex;
-  justify-content: space-between;
   overflow-x: auto;
+  display: flex;
 }
 
 .column-command {

@@ -1,12 +1,5 @@
 <template>
-  <div>
-    <q-btn
-      :class="className"
-      :color="color"
-      :icon="icon"
-      :label="label"
-      @click="$refs.fileInput.click()"
-    />
+  <div class="full-width">
     <input
       ref="fileInput"
       type="file"
@@ -14,11 +7,25 @@
       multiple
       @change="uploadFile"
     />
-    <slot></slot>
+    <slot
+      name="button"
+      :input-file="$refs"
+      v-if="$slots.button"
+    />
+    <q-btn
+      v-else
+      :class="className"
+      :color="color"
+      :icon="icon"
+      :label="label"
+      @click="$refs.fileInput.click()"
+    />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
+
 defineOptions({
   name: 'FileButtonComponent'
 })
@@ -44,8 +51,18 @@ defineProps({
 
 const emit = defineEmits(['upload'])
 
+const fileInput = ref(null)
+
 const uploadFile = (e) => {
   const files = e.target.files
   emit('upload', files)
 }
+
+const onClick = () => {
+  fileInput.value.click()
+}
+
+defineExpose({
+  onClick
+})
 </script>

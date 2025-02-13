@@ -88,6 +88,7 @@ export const authentication = defineStore('authentication', {
       this.token_type = data.token_type
       this.expires_In = data.expires_in
       this.refresh_token = data.refresh_token
+      api.defaults.headers.common.authorization = `${this.token_type} ${this.access_token}`
     },
     /**
      * Login app

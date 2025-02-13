@@ -68,8 +68,10 @@ export const printTicket = (data, userSession) => {
   doc.text(`FECHA: ${formatDate(data.created_at, 'DD/MM/YYYY')}`, 5, y)
   y += 5
   doc.text(`HORA: ${formatDate(data.created_at, 'HH:mm:ss')}`, 5, y)
-  y += 5
-  doc.text(`MESERO: ${data?.seller?.name} ${data?.seller?.last_name || ''}`, 5, y)
+  if (data?.seller) {
+    y += 5
+    doc.text(`Vendedor: ${data?.seller?.name || ''} ${data?.seller?.last_name || ''}`, 5, y)
+  }
   y += 5
   doc.text(`TIPO: ${data?.invoice_type?.name}`, 5, y)
   y += 5
@@ -158,8 +160,10 @@ export const printInvoice = (data, userSession) => {
   doc.text(`FECHA: ${formatDate(data.created_at, 'DD/MM/YYYY')}`, 5, y)
   y += 4
   doc.text(`HORA: ${formatDate(data.created_at, 'HH:mm:ss')}`, 5, y)
-  y += 4
-  doc.text(`MESERO: ${data?.seller?.name} ${data?.seller?.last_name || ''}`, 5, y)
+  if (data?.seller) {
+    y += 5
+    doc.text(`Vendedor: ${data?.seller?.name || ''} ${data?.seller?.last_name || ''}`, 5, y)
+  }
   y += 4
   doc.text(`TIPO: ${data?.invoice_type?.name}`, 5, y)
   y += 4

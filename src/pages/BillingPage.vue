@@ -326,7 +326,7 @@
                   />
                 </div>
                 <div class="col-6">
-                  <q-input type="search" filled dense debounce="500" v-model="filter" placeholder="Buscar">
+                  <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
                     <template v-slot:append>
                       <q-icon name="search" />
                     </template>
@@ -338,12 +338,15 @@
               <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
                 <q-card class="my-card">
                   <q-img
-                    style="height: 150px; width: 100%"
-                    :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                    style="height: 200px; width: 100%"
+                    :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle2 flex flex-center">
+                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
                       {{ props.row.name }}
+                      <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
+                        Sin stock
+                      </q-badge>
                     </div>
                   </q-img>
                 </q-card>
@@ -1125,6 +1128,14 @@ export default {
       if (data && companySession?.company_config?.payment_method && forPayment > 0) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
+    },
+    branchOffice (data) {
+      if (data) {
+        this.setPagination({
+          pagination: this.pagination,
+          filter: undefined
+        })
+      }
     }
   },
   mounted () {
@@ -1213,6 +1224,7 @@ export default {
         paginate: true,
         dataSearch: {
           name: this.filter,
+          'category.name': this.filter,
           barcode: this.filter
         }
       }
@@ -1571,7 +1583,7 @@ export default {
       this.$api.get('products', {
         params: {
           ...params,
-          branch_office_id: this.branchOffice.id,
+          branch_office_id: this.branchOffice?.id,
           stock: true,
           withStock: true,
           dataFilter: {
@@ -1669,7 +1681,7 @@ export default {
       setTimeout(() => {
         this.$refs.saveBill.resetValidation()
         this.getLocalStorage()
-        this.invoice = []
+        this.invoice = null
       }, 100)
     },
     /**
@@ -1758,6 +1770,10 @@ export default {
           this.printBill(data.data)
         }
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
+        this.setPagination({
+          pagination: this.pagination,
+          filter: undefined
+        })
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
@@ -1809,16 +1825,9 @@ export default {
     },
 
     validStockProduct (data, amount) {
-      const stock = data.branch_office_stocks[0]
+      const stock = data.is_bundle ? data.bundle_stock : data.normal_stock
       if (!data.skip_stock) {
-        if (stock.stock_quantity < amount) {
-          notify(
-            `No hay stock suficiente para ${data.name}, cantidad restante: ${stock.stock_quantity}`,
-            'negative',
-            'warning'
-          )
-          return false
-        }
+        return stock >= amount
       }
       return true
     },
@@ -1831,6 +1840,11 @@ export default {
         data.subtotal = data.price * data.amount
         this.calculateTotal()
       } else {
+        notify(
+          `No hay stock suficiente para ${data.name}`,
+          'negative',
+          'warning'
+        )
         data.amount = 1
       }
     },
@@ -1849,7 +1863,14 @@ export default {
         return
       }
 
-      if (!this.validStockProduct(data, this.quantity)) return
+      if (!this.validStockProduct(data, this.quantity)) {
+        notify(
+          `No hay stock suficiente para ${data.name}`,
+          'negative',
+          'warning'
+        )
+        return
+      }
 
       if (findProduct) {
         const quantity = unitMeasurement ? this.quantity : findProduct?.amount + 1

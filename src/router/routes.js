@@ -128,6 +128,12 @@ const routes = [
         name: 'CompanyConfig',
         meta: { requiresAuth: true },
         component: () => import('pages/CompanyConfigPage.vue')
+      },
+      {
+        path: 'delivery-persons',
+        name: 'DeliveryPerson',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DeliveryPersonPage.vue')
       }
     ]
   },
@@ -140,6 +146,11 @@ const routes = [
         meta: { requiresAuth: true },
         name: 'Command',
         component: () => import('pages/CommandPage.vue')
+      },
+      {
+        path: 'catalog/:company_id',
+        name: 'Catalog',
+        component: () => import('pages/CatalogPage.vue')
       }
     ]
   },

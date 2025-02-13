@@ -330,7 +330,7 @@
                       :key="image"
                       class="q-ml-xs"
                       :src="image.url"
-                      style="max-width: 32%; height: 250px;"
+                      style="max-width: 32%; height: 250px; border-radius: 10px;"
                     >
                       <q-btn
                         class="absolute all-pointer-events"
@@ -408,13 +408,6 @@ export default {
       openEditProduct: null,
       columns: [
         {
-          name: 'id',
-          align: 'left',
-          label: 'Código',
-          field: 'id',
-          sortable: true
-        },
-        {
           name: 'barcode',
           align: 'left',
           label: 'Código de barra',
@@ -432,9 +425,8 @@ export default {
         {
           name: 'category',
           align: 'left',
-          label: 'Categoria',
-          field: row => row.category.name,
-          sortable: true
+          label: 'Categoría',
+          field: row => row.category.name
         },
         {
           name: 'price',

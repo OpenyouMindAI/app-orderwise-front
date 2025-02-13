@@ -99,7 +99,7 @@
                   </template>
                 </q-input>
               </div>
-              <div class="col-6">
+              <div class="col-6" v-if="invoice.seller">
                 <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
               </div>
               <div class="col-6">
@@ -430,7 +430,7 @@ export default {
           name: 'seller',
           align: 'left',
           label: 'Vendedor',
-          field: row => row.seller?.name,
+          field: row => row.seller?.name || '-',
           sortable: true
         },
         {
