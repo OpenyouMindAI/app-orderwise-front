@@ -27,12 +27,20 @@
 
               <q-card-section class="flex justify-between items-center q-py-sm">
                 <div class="grid items-center full-width">
-                  <q-badge color="primary" class="text-bold">
-                    {{ invoice.branch_office?.name }}
-                    <q-tooltip class="text-subtitle1">
+                  <div class="flex justify-between full-width">
+                    <q-badge color="primary" class="text-bold">
                       {{ invoice.branch_office?.name }}
-                    </q-tooltip>
-                  </q-badge>
+                      <q-tooltip class="text-subtitle1">
+                        {{ invoice.branch_office?.name }}
+                      </q-tooltip>
+                    </q-badge>
+                    <q-badge color="secondary" class="text-bold" v-if="invoice?.delivery_person">
+                      {{ invoice.delivery_person?.name }}
+                      <q-tooltip class="text-subtitle1">
+                        {{ invoice.delivery_person?.name }}
+                      </q-tooltip>
+                    </q-badge>
+                  </div>
                   <div class="flex items-center full-width" style="margin-top: 10px; gap: 10px;">
                     <q-btn
                       icon="arrow_back"
