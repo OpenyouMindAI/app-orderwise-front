@@ -967,7 +967,7 @@ export default {
           params: {
             stock: true,
             withStock: true,
-            branch_office_id: this.branchOffice.id,
+            branch_office_id: this.$route.params.branch_office_id,
             dataFilter: {
               category_id: this.category === 'all' ? null : this.category
             }
