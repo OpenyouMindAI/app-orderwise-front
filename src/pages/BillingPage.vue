@@ -1019,7 +1019,7 @@ export default {
           name: 'category',
           align: 'right',
           label: 'Categoría',
-          field: row => row.category.name,
+          field: row => row.category?.name,
           sortable: true
         },
         {

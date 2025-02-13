@@ -423,30 +423,26 @@ export default {
           name: 'client',
           align: 'left',
           label: 'Cliente',
-          field: row => row.client?.name,
-          sortable: true
+          field: row => row.client?.name
         },
         {
           name: 'seller',
           align: 'left',
           label: 'Vendedor',
-          field: row => row.seller?.name || '-',
-          sortable: true
+          field: row => row.seller?.name || '-'
         },
         {
           name: 'coin',
           align: 'left',
           label: 'Moneda',
-          field: row => row.coin?.name,
-          sortable: true
+          field: row => row.coin?.name
         },
         {
           name: 'tables',
           align: 'left',
           label: 'Mesas',
           field: row => row.tables.map(table => table.name).join(','),
-          format: row => row === '' ? 'N/A' : row,
-          sortable: true
+          format: row => row === '' ? 'N/A' : row
         },
         {
           name: 'created_at',
@@ -488,8 +484,7 @@ export default {
           align: 'right',
           label: 'Total',
           field: 'total',
-          format: val => formatNumber(val),
-          sortable: true
+          format: val => formatNumber(val)
         }
       ],
       /**
