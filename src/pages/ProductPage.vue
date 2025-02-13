@@ -426,7 +426,7 @@ export default {
           name: 'category',
           align: 'left',
           label: 'Categoría',
-          field: row => row.category.name
+          field: row => row?.category?.name || '-'
         },
         {
           name: 'price',
