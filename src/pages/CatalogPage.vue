@@ -683,8 +683,11 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
+    /**
+     * Open details
+     * @param {Object} data invoice
+     */
     openDetails (data) {
-      console.log(data)
       this.invoice = data
       this.detailsDialog = true
     },
@@ -872,6 +875,7 @@ export default {
         await this.login(this.user)
         this.openLoginDialog = false
         this.dialogPayment = true
+        this.user = {}
       } catch (error) {
         notify(error?.response?.data?.message || error.message, 'negative', 'warning')
       } finally {

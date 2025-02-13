@@ -2,9 +2,9 @@
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
       <q-toolbar class="bg-white text-dark flex justify-between">
-        <q-img :src="logo.color" width="155px" alt="logo"/>
+        <img :src="company?.url || logo.color" alt="logo" style="max-height: 70px"/>
         <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
-          {{ userSession.name }}
+          {{ company.name }}
         </q-chip>
         <q-input
           outlined
@@ -103,12 +103,14 @@ import { useCommandStore } from '../stores/command'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { logo } from 'src/const/mixins'
+import { notify } from '../const/mixins'
 export default {
   data () {
     return {
       tab: 'scanner',
       filter: null,
       logo,
+      company: {},
       tabs: [
         { name: 'scanner', icon: 'qr_code_scanner' },
         { name: 'menu', icon: 'restaurant_menu' }
@@ -129,6 +131,7 @@ export default {
   },
   created () {
     this.setData()
+    this.getCompany()
     watch(() => this.$route.query, (toParams, previousParams) => {
       this.tab = toParams.tab
     })
@@ -141,6 +144,17 @@ export default {
     ...mapState(authentication, ['userSession'])
   },
   methods: {
+    /**
+     * Get company
+     */
+    async getCompany () {
+      try {
+        const { data } = await this.$api.get(`public/company/${this.$route?.params?.company_id}`)
+        this.company = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
     /**
      * Logout application
      */

@@ -29,6 +29,11 @@
                 <div class="absolute-bottom text-subtitle1 text-center">
                   <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUpload" />
                 </div>
+                <template v-slot:error>
+                  <div class="absolute-bottom text-subtitle1 text-center">
+                    <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUpload" />
+                  </div>
+                </template>
               </q-img>
             </q-card-section>
             <q-card-section class="q-pb-none">
