@@ -52,11 +52,11 @@
           row-key="name"
           dense
           grid
-          hide-pagination
           :rows="allProducts"
           :loading="loadingPage"
           :filter="filter"
-          :pagination="pagination"
+          :v-model:pagination="pagination"
+          @request="setPaginationProducts"
           v-else
         >
           <template v-slot:item="props">
@@ -603,7 +603,13 @@ export default {
        * Pagination option
        * @type {Object}
        */
-      pagination: { rowsPerPage: 10 },
+      pagination: {
+        rowsPerPage: 10,
+        rowsNumber: 10,
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc'
+      },
       /**
        * All products
        * @type {Array}
@@ -633,6 +639,9 @@ export default {
     if (this.userSession) {
       this.setPagination({ pagination: this.invoicePagination })
     }
+    this.setPaginationProducts({
+      pagination: this.pagination
+    })
   },
   created () {
     this.getCompany()
