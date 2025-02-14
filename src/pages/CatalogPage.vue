@@ -52,7 +52,6 @@
           row-key="name"
           dense
           grid
-          hide-pagination
           :rows="allProducts"
           :loading="loadingPage"
           :filter="filter"
