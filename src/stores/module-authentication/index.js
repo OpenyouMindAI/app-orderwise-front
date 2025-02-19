@@ -66,6 +66,15 @@ export const authentication = defineStore('authentication', {
         this.refresh_token = null
         this.userSession = null
         this.branchOffice = null
+        localStorage.clear()
+        // localStorage.removeItem('client')
+        // localStorage.removeItem('command')
+        // localStorage.removeItem('products')
+        // localStorage.removeItem('tableSelected')
+        // localStorage.removeItem('payments')
+        // localStorage.removeItem('category-command')
+        // localStorage.removeItem('branchOffice-command')
+        // localStorage.removeItem('')
         return true
       } catch (error) {
         throw error.response.data

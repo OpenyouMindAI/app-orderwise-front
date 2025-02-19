@@ -2,25 +2,21 @@
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
       <q-toolbar class="bg-white text-dark flex justify-between">
-        <img :src="company?.url || logo.color" alt="logo" style="max-height: 70px"/>
+        <div class="flex items-center q-gutter-sm">
+          <q-btn
+            color="primary"
+            icon="chevron_left"
+            round
+            dense
+            flat
+            style="font-size: 20px;"
+            @click="$router.push({ name: 'Product' })"
+          />
+          <img :src="company?.url || logo.color" alt="logo" style="max-height: 40px"/>
+        </div>
         <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
-          {{ company.name }}
+          {{ company.name || userSession.company_session.name }}
         </q-chip>
-        <q-input
-          outlined
-          rounded
-          class="q-ml-sm"
-          label="Buscar"
-          dense
-          type="search"
-          debounce="500"
-          v-model="filter"
-          v-if="tab === 'menu'"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
         <q-avatar
           v-if="userSession"
           flat
@@ -122,16 +118,11 @@ export default {
       this.setQueryParams({
         tab: data
       })
-    },
-    filter (data) {
-      this.setQueryParams({
-        filter: data
-      })
     }
   },
   created () {
     this.setData()
-    this.getCompany()
+    if (!this.userSession.company_session) this.getCompany()
     watch(() => this.$route.query, (toParams, previousParams) => {
       this.tab = toParams.tab
     })
@@ -173,8 +164,9 @@ export default {
       })
     },
     setData () {
-      this.tab = this.$route.query.tab ?? 'scanner'
-      if (this.$route.name === 'Catalog') {
+      this.tab = this.$route.query.tab ?? 'menu'
+      const isTable = this.userSession?.company_session?.company_config?.is_table
+      if (this.$route.name === 'Catalog' || !isTable) {
         this.tabs = [
           { name: 'menu', icon: 'restaurant_menu' }
         ]

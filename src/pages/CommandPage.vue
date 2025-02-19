@@ -5,7 +5,7 @@
         <q-chip style="padding: 17px 10px; border-radius: 50px;" class="bg-primary text-white cursor-pointer text-subtitle1" v-if="userSession && $q.screen.lt.sm">
           {{ userSession?.name }}
         </q-chip>
-        <q-btn rounded style="padding: 5px 15px;" class="bg-primary text-white cursor-pointer" @click="dialogTable = true">
+        <q-btn  v-if="isTable" rounded style="padding: 5px 15px;" class="bg-primary text-white cursor-pointer" @click="dialogTable = true">
           Mesa: {{ command?.table?.name || 'Seleccionar mesa' }}
         </q-btn>
       </div>
@@ -13,7 +13,7 @@
         Total: {{ formatNumber(totalBill) }}
       </q-chip>
     </div>
-    <div class="relative full-width q-mt-sm" style="height: calc(100vh - 190px);" v-if="tab === 'scanner'">
+    <div class="relative full-width q-mt-sm" style="height: calc(100vh - 190px);" v-if="tab === 'scanner' && isTable">
       <qrcode-stream @detect="getCodeQr"/>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" class="text-center">
         <div class="scanner">
@@ -21,12 +21,27 @@
         </div>
       </div>
     </div>
-    <div class="row q-col-gutter-y-xs q-mt-sm" v-else-if="tab === 'menu'">
+    <div class="row q-col-gutter-y-sm q-mt-xs" v-else-if="tab === 'menu'">
+      <div class="col-12">
+        <q-input
+          outlined
+          rounded
+          label="Buscar"
+          dense
+          type="search"
+          debounce="500"
+          class="full-width"
+          v-model="filter"
+        >
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
       <div class="col-12">
         <q-tabs
           v-model="category"
           class="text-teal"
-          dense
           v-if="categories.length"
         >
           <q-tab
@@ -42,7 +57,7 @@
         </q-tabs>
         <q-skeleton type="text" height="60px" v-else/>
       </div>
-      <div class="col-12">
+      <div class="col-12" style="max-height: calc(100vh - 265px); overflow-y: auto;">
         <div v-if="loadingPage" class="row q-col-gutter-sm">
           <div
             class="col-xs-6 col-sm-4 col-md-3"
@@ -98,7 +113,24 @@
         </q-table>
       </div>
     </div>
-    <div v-else class="q-mt-sm">
+    <div v-else class="q-mt-sm q-gutter-sm">
+      <q-select
+        use-input
+        filled
+        dense
+        label="Cliente"
+        input-debounce="0"
+        option-value="id"
+        v-model="client"
+        :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+        :options="clients"
+        :rules="[val => !!val || 'El campo es requerido.']"
+        @filter="filterClients"
+      >
+        <template v-slot:append>
+          <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+        </template>
+      </q-select>
       <q-table
         row-key="name"
         title="Pedido"
@@ -186,6 +218,63 @@
         </template>
       </drawer-table>
     </q-dialog>
+
+    <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.md">
+      <q-card :style="$q.screen.lt.md ? '' : 'width: 700px; max-width: 80vw;'">
+        <q-form @submit="saveClient" class="column full-height">
+          <q-card-section class="row items-center bg-primary text-white">
+            <div class="text-h6">Agregar cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
+          </q-card-section>
+          <q-card-section class="row q-col-gutter-sm col">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.document_number"
+                autofocus
+                label="Número de documento"
+                :rules="[val => !!val || 'El campo es requerido.']"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="clientAdded.name"
+                label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.email"
+                type="email"
+                label="Correo"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.phone_number"
+                label="Número de teléfono"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.address"
+                label="Dirección"
+                type="textarea"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary">
+            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 <script>
@@ -208,6 +297,16 @@ export default {
   },
   data () {
     return {
+      /**
+       * Clients
+       * @type {Array}
+       */
+      clients: [],
+      client: null,
+      filter: null,
+      clientAdded: {},
+      openAddClient: false,
+      loadingClient: false,
       /**
        * Slide
        * @type {Number}
@@ -281,7 +380,7 @@ export default {
         {
           name: 'name',
           required: true,
-          label: 'Descripcion',
+          label: 'Descripción',
           align: 'left',
           field: row => row.name,
           sortable: true
@@ -306,6 +405,7 @@ export default {
        * @type {Array}
        */
       tableSelected: [],
+      isTable: 1,
       /**
        * Product columns
        * @type {Array}
@@ -321,7 +421,7 @@ export default {
         {
           name: 'name',
           required: true,
-          label: 'Descripcion',
+          label: 'Descripción',
           align: 'left',
           field: row => row.name,
           sortable: true
@@ -344,6 +444,7 @@ export default {
     }
   },
   created () {
+    this.isTable = this.userSession?.company_session?.company_config?.is_table
     this.getCategories()
     this.category = this.$route.query.category || 'all'
     this.products = this.command.products || []
@@ -367,14 +468,16 @@ export default {
     products (products) {
       const store = useCommandStore()
       store.setCommands({ products })
+    },
+    filter (data) {
+      this.setQueryParams({
+        filter: data
+      })
     }
   },
   computed: {
     tab () {
-      return this.$route.query.tab ?? 'scanner'
-    },
-    filter () {
-      return this.$route.query.filter
+      return this.$route.query.tab ?? 'menu'
     },
     command () {
       const store = useCommandStore()
@@ -383,14 +486,43 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
+
+    /**
+     * Save clients
+     */
+    saveClient () {
+      this.loadingClient = true
+      this.$api.post('clients', this.clientAdded)
+        .then(({ data }) => {
+          this.openAddClient = false
+          this.clientAdded = {}
+          this.client = data
+          this.loadingClient = false
+          Notify.create({
+            message: 'Cliente creado exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.loadingClient = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
     /**
      * After save bill
      */
     afterSaveBill () {
       this.table = null
+      this.client = null
+      this.clientAdded = {}
       this.products = []
       this.tableSelected = []
-      this.setQueryParams({ tab: 'scanner' })
+      this.setQueryParams({ tab: 'menu' })
       this.totalBill = 0
       notify('Pedido creado exitosamente', 'positive', 'check_circle')
     },
@@ -404,21 +536,64 @@ export default {
       await this.getTable(data)
       this.dialogTable = false
     },
+
+    /**
+     * Select category
+     * @param {String} value user Session Value filter
+     * @param {Callback} update update options
+     */
+    filterClients (value, update) {
+      this.$api.get('clients', {
+        params: {
+          sortBy: 'id',
+          sortOrder: 'desc',
+          dataSearch: {
+            name: value,
+            document_number: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.clients = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
     /**
      * Save bill and payments
      */
     async saveBill () {
-      if (!this.command?.table?.id) {
+      if (!this.command?.table?.id && this.isTable) {
         notify('No se puede crear pedido sin mesa', 'negative', 'warning')
         return
       }
+
+      if (this.products.length === 0) {
+        notify('No se puede crear pedido sin productos', 'negative', 'warning')
+        return
+      }
+
+      if (!this.client) {
+        notify('No se puede crear pedido sin cliente', 'negative', 'warning')
+        return
+      }
+
       try {
         this.billLoading = true
         await this.$api.post('command-orders', {
           seller_id: this.userSession?.id,
+          client_id: this.client?.id,
           products: this.command.products,
           branch_office_id: this.branchOffice?.id,
-          tables: [this.command.table.id]
+          tables: this.isTable ? [this.command?.table?.id] : [],
+          company_id: this.userSession?.company_session_id
         })
         this.afterSaveBill()
       } catch (error) {
