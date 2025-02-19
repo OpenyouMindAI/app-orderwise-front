@@ -167,14 +167,37 @@
                     </q-td>
                     <q-td key="price" :props="props">
                       {{ formatNumber(props.row.price) }}
-                      <q-popup-edit v-model.number="props.row.price" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                        <q-input label="Precio" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                      <q-popup-edit
+                        v-if="userSession.is_root || userSession.is_super_admin"
+                        v-model.number="props.row.price"
+                        auto-save
+                        v-slot="scope"
+                        @update:model-value="calculate(props.row)"
+                      >
+                        <q-input
+                          label="Precio"
+                          type="number"
+                          v-model.number="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
                       </q-popup-edit>
                     </q-td>
                     <q-td key="amount" :props="props">
                       {{ formatNumber(props.row.amount) }}
-                      <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                        <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
+                      <q-popup-edit
+                        v-model.number="props.row.amount"
+                        auto-save
+                        v-slot="scope"
+                        @update:model-value="calculate(props.row)"
+                      >
+                        <q-input
+                          label="Cantidad"
+                          type="number"
+                          v-model.number="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
                       </q-popup-edit>
                     </q-td>
                     <q-td key="subtotal" :props="props">
