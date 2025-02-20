@@ -6,7 +6,7 @@
       </div>
       <div class="col-12">
         <q-table
-          title="Monedas"
+          title="Tipos de Factura"
           row-key="name"
           :columns="columns"
           :rows="invoiceTypes"
