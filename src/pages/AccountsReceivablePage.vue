@@ -1,14 +1,20 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-gutter-y-sm justify-between">
-      <div class="col-lg-6 col-md-6 col-sm-12 q-pa-sm">
+      <div class="col-lg-6 col-md-6 col-sm-6  col-xs-12 q-pa-sm">
         <span class="text-h6">Cuentas por cobrar</span>
       </div>
-      <div class="col-lg-6 col-md-6 col-sm-12 text-subtitle1 flex justify-end items-center q-gutter-x-sm">
+      <div class="col-lg-6 col-md-6 col-sm-6  col-xs-12 text-subtitle1 flex justify-end items-center q-gutter-x-sm">
         <q-badge class="text-subtitle2" color="secondary">
           {{ branchOffice?.name }}
         </q-badge>
-        <q-btn icon="filter_alt" color="primary" @click="dialogFilter = true" round size="sm" />
+        <q-btn
+          icon="filter_alt"
+          color="primary"
+          round
+          size="sm"
+          @click="dialogFilter = true"
+        />
       </div>
       <div class="row full-width col-12 q-col-gutter-sm">
         <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
@@ -68,18 +74,33 @@
         </q-table>
       </div>
     </div>
-
-    <q-dialog v-model="opeDetails" maximized>
+    <q-dialog
+      v-model="opeDetails"
+      maximized
+    >
       <q-card>
-        <q-card-section class="row items-center bg-primary text-white">
+        <q-card-section class="row items-center bg-primary text-white q-py-sm">
           <div class="text-subtitle1">
-            Estado de cuenta: {{ client.document_number }} {{ client.name }}
+            Estado de cuenta
           </div>
           <q-space />
           <q-btn icon="close" flat round dense @click="opeDetails = false" />
         </q-card-section>
         <q-card-section class="q-px-sm">
-          <div class="row full-width col-12 q-col-gutter-sm">
+          <div class="row full-width col-12 q-col-gutter-sm items-center">
+            <div class="col-6">
+              <span class="text-subtitle1">
+                {{ client.document_number }} {{ client.name }}
+              </span>
+            </div>
+            <div class="col-6 text-right">
+              <q-btn
+                icon="add_circle"
+                color="primary"
+                :label="$q.screen.lt.md ? '' : 'Realizar pago'"
+                @click="addPaymentDialog = true"
+              />
+            </div>
             <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
               <q-card class="text-negative">
                 <q-card-section horizontal>
@@ -145,7 +166,7 @@
       full-height
     >
       <q-card class="column full-height" style="width: 500px; max-width: 80vw;">
-        <q-card-section class="bg-primary text-white flex justify-between items-center">
+        <q-card-section class="bg-primary text-white flex justify-between items-center q-py-sm">
           <div class="text-h6">Filtros</div>
           <q-btn icon="close" flat round dense @click="dialogFilter = false" />
         </q-card-section>
@@ -192,6 +213,48 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="addPaymentDialog">
+      <q-card class="column" style="width: 500px; max-width: 80vw;">
+        <q-card-section class="bg-primary text-white flex justify-between items-center q-py-sm">
+          <div class="text-h6">Agregar pago</div>
+          <q-btn icon="close" flat round dense @click="addPaymentDialog = false" />
+        </q-card-section>
+        <q-card-section class="row">
+          <div class="column col-6">
+            <q-radio
+              v-for="paymentMethod in paymentMethods"
+              :key="paymentMethod.id"
+              color="primary"
+              v-model="paymentMethodSelected"
+              :label="paymentMethod.name"
+              :val="paymentMethod.id"
+            />
+          </div>
+          <div class="col-6 column q-gutter-y-sm">
+            <q-input
+              v-model="amount"
+              label="Monto"
+              type="number"
+              filled
+              dense
+            />
+            <q-input
+              v-model="reference"
+              label="Referencia"
+              filled
+              dense
+            />
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn
+            color="primary"
+            label="Guardar"
+            @click="savePayment"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -207,6 +270,10 @@ export default {
       formatNumber,
       opeDetails: false,
       dialogFilter: false,
+      amount: null,
+      addPaymentDialog: false,
+      paymentMethodSelected: null,
+      reference: null,
       panel: 'day',
       client: {},
       clients: [],
@@ -341,12 +408,16 @@ export default {
         sortBy: 'id',
         sortOrder: 'desc'
       },
-      filters: {}
+      filters: {},
+      paymentMethods: []
     }
   },
   watch: {
     filter (data) {
       this.searchData(data)
+    },
+    branchOffice (data) {
+      this.filterDate()
     },
     opeDetails (data) {
       if (!data) this.client = {}
@@ -358,6 +429,7 @@ export default {
   },
   mounted () {
     this.filterDate()
+    this.getPaymentMethods()
   },
   methods: {
     /**
@@ -375,6 +447,8 @@ export default {
     },
     /**
      * Get all sellers
+     * @param {String} value
+     * @param {Function} update
      */
     async filterSellers (value, update) {
       try {
@@ -461,6 +535,7 @@ export default {
     },
     /**
      * Get all clients
+     * @param {Object} params
      */
     getClients (params = this.params) {
       this.visible = true
@@ -481,7 +556,8 @@ export default {
         })
     },
     /**
-     * Get all clients
+     * Get all sales
+     * @param {Object} params
      */
     getSales (params = this.saleParams) {
       this.visible = true
@@ -503,6 +579,7 @@ export default {
     },
     /**
      * Get totals for the current client
+     * @param {Object} params
      * @returns {Promise<void>}
      */
     async getTotals (params) {
@@ -515,6 +592,7 @@ export default {
           }
         })
         this.totals = data
+        this.amount = data.balance
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
@@ -566,6 +644,36 @@ export default {
       this.totals = {}
       this.opeDetails = true
       this.client = row
+    },
+    /**
+     * Get all payment methods
+     */
+    async getPaymentMethods () {
+      try {
+        const { data } = await this.$api.get('payment-methods')
+        this.paymentMethods = data
+        this.paymentMethodSelected = data[0].id
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+
+    async savePayment () {
+      try {
+        loading(true)
+        await this.$api.post('invoice-payments', {
+          amount: this.amount,
+          payment_method_id: this.paymentMethodSelected,
+          client_id: this.client.id,
+          reference: this.reference
+        })
+        this.filterDate()
+        this.reference = null
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
     }
   }
 }
