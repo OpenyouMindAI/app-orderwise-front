@@ -629,7 +629,7 @@ export default {
         ...this.saleParams,
         ...this.filters,
         dataEqualFilter: {
-          client_id: this.client.id
+          client_id: this.client?.id
         }
       }
       this.getSales(params)
@@ -664,7 +664,7 @@ export default {
         await this.$api.post('invoice-payments', {
           amount: this.amount,
           payment_method_id: this.paymentMethodSelected,
-          client_id: this.client.id,
+          client_id: this.client?.id,
           reference: this.reference
         })
         this.filterDate()
