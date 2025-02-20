@@ -134,6 +134,12 @@ const routes = [
         name: 'DeliveryPerson',
         meta: { requiresAuth: true },
         component: () => import('pages/DeliveryPersonPage.vue')
+      },
+      {
+        path: 'accounts-receivable',
+        name: 'AccountsReceivable',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AccountsReceivablePage.vue')
       }
     ]
   },

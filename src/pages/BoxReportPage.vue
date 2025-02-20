@@ -289,13 +289,13 @@ export default {
       cashFlowLoading: false,
       formatDate,
       panel: 'day',
-      fromHours: null,
-      toHours: null,
       formatNumber,
       translate: {
         debit: 'Entrada',
         credit: 'Salida'
       },
+      fromHours: null,
+      toHours: null,
       day: date.formatDate(Date(), 'YYYY-MM-DD'),
       from: date.formatDate(Date(), 'YYYY-MM-DD'),
       to: date.formatDate(Date(), 'YYYY-MM-DD'),
@@ -431,6 +431,7 @@ export default {
       this.day = date.formatDate(Date(), 'YYYY-MM-DD')
       this.fromHours = null
       this.toHours = null
+      this.seller = null
       this.from = date.formatDate(Date(), 'YYYY-MM-DD')
       this.to = date.formatDate(Date(), 'YYYY-MM-DD')
       this.panel = 'day'
