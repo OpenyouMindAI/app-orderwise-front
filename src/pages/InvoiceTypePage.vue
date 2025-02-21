@@ -35,7 +35,7 @@
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Modificar moneda</div>
+            <div class="text-h6">Modificar tipo de factura</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
@@ -55,7 +55,7 @@
                 filled
                 v-model="invoiceType.acronym_serie"
                 autofocus
-                label="Simbolo"
+                label="Símbolo"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
