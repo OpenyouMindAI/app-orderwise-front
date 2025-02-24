@@ -113,7 +113,7 @@
         </q-table>
       </div>
     </div>
-    <div v-else class="q-mt-sm q-gutter-sm">
+    <div v-else class="q-mt-sm">
       <q-select
         use-input
         filled
@@ -133,37 +133,77 @@
       </q-select>
       <q-table
         row-key="name"
-        title="Pedido"
         dense
+        grid
+        style="max-height: calc(100vh - 280px); overflow: auto;"
         :rows="command.products"
-        :columns="columns"
         hide-pagination
         v-model:pagination="pagination"
       >
-        <template v-slot:body="props">
-          <q-tr :props="props">
-            <q-td key="name" :props="props">
-              {{ props.row.name }}
-            </q-td>
-            <q-td key="amount" :props="props">
-              {{ formatNumber(props.row.amount) }}
-              <q-popup-edit v-model.number="props.row.amount" auto-save v-slot="scope" @update:model-value="calculate(props.row)">
-                <q-input label="Cantidad" type="number" v-model.number="scope.value" autofocus @keyup.enter="scope.set" />
-              </q-popup-edit>
-            </q-td>
-            <q-td key="price" :props="props">
-              {{ formatNumber(props.row.price) }}
-            </q-td>
-            <q-td key="subtotal" :props="props">
-              {{ formatNumber(props.row.subtotal) }}
-            </q-td>
-            <q-td key="actions" :props="props">
-              <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
-            </q-td>
-          </q-tr>
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+            <q-card
+              class="my-card q-mt-sm"
+              style="width: 100%; border-radius: 30px; height: 140px;"
+            >
+              <q-card-section horizontal class="full-height">
+                <q-img
+                  class="col-4"
+                  style="max-height: 200px;"
+                  :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
+                />
+                <q-card-section class="q-pa-sm column">
+                  <q-card-section class="q-pa-sm col">
+                    <div class="flex justify-between q-col-gutter-sm">
+                      <div class="flex justify-between items-center full-width">
+                        <span class="text-subtitle2 text-uppercase text-bold">
+                          {{ props.row.name }}
+                        </span>
+                      </div>
+                    </div>
+                    <p class="text-subtitle2 text-grey">
+                      $ {{ formatNumber(props.row.price) }}
+                    </p>
+                  </q-card-section>
+                  <q-card-actions class="q-pa-none">
+                    <div class="flex justify-between items-center full-width">
+                      <div style="width: 10%;">
+                        <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
+                      </div>
+                      <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
+                        <div>
+                          <q-btn icon="remove" round size="sm" color="primary" @click="() => {
+                              props.row.amount -= 1
+                              calculate(props.row)
+                            }"
+                          />
+                        </div>
+                        <q-input
+                          rounded
+                          outlined
+                          dense
+                          label="Cantidad"
+                          type="number"
+                          style="width: 50%;"
+                          v-model.number="props.row.amount"
+                          @update:model-value="calculate(props.row)"
+                          />
+                          <div>
+                              <q-btn icon="add" round size="sm" color="primary" @click="() => {
+                                  props.row.amount += 1
+                                  calculate(props.row)
+                              }"/>
+                          </div>
+                      </div>
+                    </div>
+                  </q-card-actions>
+                </q-card-section>
+              </q-card-section>
+            </q-card>
+          </div>
         </template>
       </q-table>
-      <q-page-sticky position="bottom-right" :offset="[15, 15]">
+      <q-page-sticky position="bottom-right" :offset="[15, 10]">
         <q-btn
           round
           icon="receipt"
