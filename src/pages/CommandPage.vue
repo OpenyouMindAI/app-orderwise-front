@@ -86,6 +86,7 @@
                 @click="() => {
                   detailProduct = true
                   product = props.row
+                  product.amount = 0
                 }"
               >
                 <q-img
@@ -213,35 +214,108 @@
         />
       </q-page-sticky>
     </div>
-    <q-dialog v-model="detailProduct" maximized>
-      <q-card class="full-height">
-        <q-card-section :horizontal="$q.screen.gt.xs" class="col q-pa-none">
-          <div class="full-width" :style="`width: ${$q.screen.gt.xs ? '60%' : '100%'};`">
-            <SlideComponent :slides="product.images"/>
-          </div>
-          <q-card-section class="column q-pb-none" :style="`width: ${$q.screen.gt.xs ? '40%' : '100%'};`">
-            <div>
-              <span class="text-subtitle1 text-uppercase text-bold">
-                {{ product?.name }}
-              </span>
-              <div class="flex justify-between text-uppercase items-center col">
-                <span class="text-subtitle2 text-grey">
-                  {{ formatNumber(product?.price) }}$
-                </span>
-              </div>
-            </div>
-            <span class="text-caption text-grey col">
-              {{ product?.description }}
+    <q-dialog v-model="detailProduct" :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'}`"
+      >
+        <SlideComponent :slides="product.images" styles="height: 300px;"/>
+        <q-card-section class="column q-pb-xs">
+          <div class="flex justify-between items-center full-width">
+            <span class="text-subtitle1 text-uppercase text-bold">
+              {{ product?.name }}
             </span>
-            <q-card-actions align="right" class="q-pr-none">
-              <q-btn  color="negative" label="Cerrar" @click="() => {
-                detailProduct = false
-                product = null
-              }"/>
-              <q-btn  color="primary" label="Agregar" @click="validateProduct(product)"/>
-            </q-card-actions>
-          </q-card-section>
+            <div class="flex justify-between items-center q-gutter-xs">
+              <q-btn
+                icon="remove"
+                color="primary"
+                round
+                size="sm"
+                @click="product.amount -= 1"
+              />
+              <q-input
+                borderless
+                dense
+                type="number"
+                style="width: 30px;"
+                input-class="text-center"
+                v-model.number="product.amount"
+              />
+              <q-btn
+                icon="add"
+                color="primary"
+                round
+                size="sm"
+                @click="product.amount += 1"
+              />
+            </div>
+          </div>
+          <span class="text-subtitle1">
+            {{ formatNumber(product?.price) }}$
+          </span>
+          <span class="text-caption q-mt-sm">
+            {{ product?.description }}
+          </span>
         </q-card-section>
+        <q-card-section class="q-px-none">
+          <div class="col-12 bg-grey-2 q-pa-sm">
+            <span class="text-subtitle2">+ Adicionales</span>
+          </div>
+        </q-card-section>
+        <q-card-section class="col q-pt-xs">
+          <div
+            class="flex justify-between full-width items-center"
+            v-for="addon in product.product_addons" :key="addon.id"
+          >
+            <div class="column">
+              <span class="text-body2 text-uppercase text-bold">
+                {{ addon.name }}
+              </span>
+              <span class="text-subtitle2 text-grey">
+                {{ formatNumber(addon.price) }}$
+              </span>
+            </div>
+            <div class="flex justify-between items-center q-gutter-xs">
+              <q-btn
+                icon="remove"
+                color="primary"
+                round
+                size="sm"
+                @click="addon.amount -= 1"
+              />
+              <q-input
+                borderless
+                dense
+                type="number"
+                style="width: 30px;"
+                input-class="text-center"
+                v-model.number="addon.amount"
+              />
+              <q-btn
+                icon="add"
+                color="primary"
+                round
+                size="sm"
+                @click="addon.amount += 1"
+              />
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn
+            color="negative"
+            label="Cerrar"
+            @click="() => {
+              detailProduct = false
+              product = null
+            }"
+          />
+          <q-btn
+            color="primary"
+            label="Agregar"
+            @click="validateProduct(product)"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
     <q-dialog v-model="dialogTable" maximized>
@@ -345,6 +419,7 @@ export default {
       client: null,
       filter: null,
       clientAdded: {},
+      temporalProducts: [],
       openAddClient: false,
       loadingClient: false,
       /**
