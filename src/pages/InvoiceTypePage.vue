@@ -330,7 +330,7 @@ export default {
      */
     deleteInvoiceType () {
       this.visible = true
-      this.$api.delete(`invoice-types${this.invoiceType.id}`)
+      this.$api.delete(`invoice-types/${this.invoiceType.id}`)
         .then(({ data }) => {
           this.getInvoiceTypes()
           this.openEditInvoiceType = false

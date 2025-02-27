@@ -57,10 +57,18 @@
             />
           </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-7 col-lg-7 col-xl-7 q-col-gutter-sm">
+        <div class="col-xs-12 col-sm-7 col-md-6 col-lg-5 col-xl-5 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
             <div class="col-xl-6 col-lg-6 col-md-5 col-sm-5 col-xs-12">
-              <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
+              <q-input
+                filled
+                dense
+                v-model="barcode"
+                autofocus
+                type="number"
+                label="Código"
+                @keypress.enter="getOneProduct(this.barcode)"
+              >
                 <template v-slot:append>
                   <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
                 </template>
@@ -74,7 +82,12 @@
                 :loading="loadingLivingRoom"
                 @click="dialogTable = true"
               >
-                <q-badge color="negative" align="bottom" floating v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile">
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
                   F6
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
@@ -316,7 +329,7 @@
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-5 col-lg-5 col-xl-5">
+        <div class="col-xs-12 col-sm-5 col-md-6 col-lg-7 col-xl-7">
           <q-table
             v-model:pagination="pagination"
             row-key="name"
@@ -358,10 +371,10 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-2 col-xl-2">
                 <q-card class="my-card">
                   <q-img
-                    style="height: 200px; width: 100%"
+                    style="height: 150px; width: 100%"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
@@ -957,8 +970,8 @@ export default {
        * @type {Object}
        */
       pagination: {
-        rowsPerPage: 10,
-        rowsNumber: 10,
+        rowsPerPage: 50,
+        rowsNumber: 50,
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
@@ -1131,9 +1144,6 @@ export default {
           type_taxe: taxe.pivot.type_taxe
         }
       })
-    },
-    client (data) {
-      localStorage.setItem('client', JSON.stringify(data))
     },
     invoiceRouter (data) {
       if (data) this.getInvoiceOne(data)
@@ -1808,7 +1818,7 @@ export default {
      */
     getLocalStorage () {
       const { company_session: companySession } = this.userSession
-      this.client = JSON.parse(localStorage.getItem('client')) ?? null
+      this.client = companySession?.company_config?.client
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin

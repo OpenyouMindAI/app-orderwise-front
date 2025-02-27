@@ -586,6 +586,7 @@ export default {
   },
   created () {
     this.isTable = this.userSession?.company_session?.company_config?.is_table
+    this.client = this.userSession?.company_session?.company_config?.client
     this.getCategories()
     this.category = this.$route.query.category || 'all'
     this.products = this.command.products || []

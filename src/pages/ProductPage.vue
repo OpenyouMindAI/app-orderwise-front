@@ -1,7 +1,8 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
+      <div class="col-12 text-right q-gutter-sm">
+        <q-btn color="secondary" @click="multipleSelected = true" icon="check_box_outline_blank"/>
         <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
       </div>
       <div class="col-12">
@@ -13,6 +14,8 @@
           :loading="visible"
           :filter="filter"
           binary-state-sort
+          :selection="multipleSelected ? 'multiple' : 'none'"
+          v-model:selected="selection"
           v-model:pagination="paginationConfig"
           @row-click="editProduct"
           @request="setPagination"
@@ -422,7 +425,9 @@ export default {
   data () {
     return {
       productImage: null,
+      multipleSelected: false,
       products: [],
+      selection: [],
       addonsProducts: [],
       addonsProductsOptions: [],
       tab: 'basicData',

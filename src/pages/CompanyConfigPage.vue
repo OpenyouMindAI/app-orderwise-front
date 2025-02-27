@@ -113,6 +113,21 @@
                   use-input
                   filled
                   dense
+                  label="Cliente"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="companyConfig.client"
+                  :options="clients"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterClients"
+                />
+              </div>
+              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                <q-select
+                  use-input
+                  filled
+                  dense
                   label="Tipo de factura"
                   input-debounce="0"
                   option-label="name"
@@ -204,6 +219,11 @@ const step = ref(1)
  */
 const invoiceTypes = ref([])
 /**
+ * Invoice types
+ * @type {Array}
+ */
+const clients = ref([])
+/**
  * Payment methods
  * @type {Array}
  */
@@ -234,7 +254,8 @@ const companyConfig = ref({
   paymentMethod: company.value?.company_config?.payment_method,
   invoiceType: company.value?.company_config?.invoice_type,
   typeOfService: company.value?.company_config?.type_of_service,
-  coin: company.value?.company_config?.coin
+  coin: company.value?.company_config?.coin,
+  client: company.value?.company_config?.client
 })
 
 /**
@@ -351,6 +372,18 @@ const filterCoins = async (value, update) => {
  * @param {String} value Value filter
  * @param {Callback} update update options
  */
+const filterClients = async (value, update) => {
+  filterOptions(value, 'clients', (data) => {
+    update(() => {
+      clients.value = data
+    })
+  })
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
 const filterTypeOfServices = async (value, update) => {
   filterOptions(value, 'type-of-services', (data) => {
     update(() => {
@@ -371,7 +404,8 @@ const onSubmitConfig = async () => {
       coin_id: companyConfig.value?.coin?.id,
       type_of_service_id: companyConfig.value?.typeOfService?.id,
       invoice_type_id: companyConfig.value?.invoiceType?.id,
-      payment_method_id: companyConfig.value?.paymentMethod?.id
+      payment_method_id: companyConfig.value?.paymentMethod?.id,
+      client_id: companyConfig.value?.client?.id
     })
     store.setCompanySession({
       ...company.value,
