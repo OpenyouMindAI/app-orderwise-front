@@ -57,7 +57,7 @@
         </q-tabs>
         <q-skeleton type="text" height="60px" v-else/>
       </div>
-      <div class="col-12" style="max-height: calc(100vh - 265px); overflow-y: auto;">
+      <div class="col-12" style="max-height: calc(100vh - 290px); overflow-y: auto;">
         <div v-if="loadingPage" class="row q-col-gutter-sm">
           <div
             class="col-xs-6 col-sm-4 col-md-3"
@@ -70,7 +70,6 @@
           row-key="name"
           dense
           grid
-          hide-pagination
           :rows="allProducts"
           :columns="productColumns"
           :loading="loadingPage"
@@ -79,20 +78,16 @@
           v-else
         >
           <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-4 col-md-3" style="padding: 2px;">
+            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-2" style="padding: 2px;">
               <q-card
                 :class="findProduct(command.products, props.row) && 'shadow-20'"
                 :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
-                @click="() => {
-                  detailProduct = true
-                  product = props.row
-                  product.amount = 0
-                }"
+                @click="openProductDetails(props.row)"
               >
                 <q-img
                   fit="fill"
                   no-native-menu
-                  :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                  :src="props.row?.images ? props.row.images[0].url : 'images/404-image.jpg'"
                   style="height: 180px;"
                   spinner-color="primary"
                 >
@@ -129,29 +124,34 @@
         @filter="filterClients"
       >
         <template v-slot:append>
-          <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+          <q-btn
+            color="primary"
+            round
+            icon="add_circle"
+            @click.stop.prevent="(openAddClient = true)"
+            size="sm"
+          />
         </template>
       </q-select>
       <q-table
-        row-key="name"
         dense
         grid
-        style="max-height: calc(100vh - 280px); overflow: auto;"
+        row-key="name"
+        style="max-height: calc(100vh - 270px); overflow: auto;"
         :rows="command.products"
-        hide-pagination
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
             <q-card
               class="my-card q-mt-sm"
-              style="width: 100%; border-radius: 30px; height: 140px;"
+              style="width: 100%; border-radius: 30px; height: 120px;"
             >
               <q-card-section horizontal class="full-height">
                 <q-img
                   class="col-4"
                   style="max-height: 200px;"
-                  :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
+                  :src="props.row?.images ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                 />
                 <q-card-section class="q-pa-sm column">
                   <q-card-section class="q-pa-sm col">
@@ -188,13 +188,13 @@
                           style="width: 50%;"
                           v-model.number="props.row.amount"
                           @update:model-value="calculate(props.row)"
-                          />
-                          <div>
-                              <q-btn icon="add" round size="sm" color="primary" @click="() => {
-                                  props.row.amount += 1
-                                  calculate(props.row)
-                              }"/>
-                          </div>
+                        />
+                        <div>
+                            <q-btn icon="add" round size="sm" color="primary" @click="() => {
+                                props.row.amount += 1
+                                calculate(props.row)
+                            }"/>
+                        </div>
                       </div>
                     </div>
                   </q-card-actions>
@@ -231,7 +231,7 @@
                 color="primary"
                 round
                 size="sm"
-                @click="product.amount -= 1"
+                @click="addTemporalProducts(product, product.amount -= 1)"
               />
               <q-input
                 borderless
@@ -240,13 +240,14 @@
                 style="width: 30px;"
                 input-class="text-center"
                 v-model.number="product.amount"
+                @update:model-value="(value) => addTemporalProducts(product, value)"
               />
               <q-btn
                 icon="add"
                 color="primary"
                 round
                 size="sm"
-                @click="product.amount += 1"
+                @click="addTemporalProducts(product, product.amount += 1)"
               />
             </div>
           </div>
@@ -257,8 +258,8 @@
             {{ product?.description }}
           </span>
         </q-card-section>
-        <q-card-section class="q-px-none">
-          <div class="col-12 bg-grey-2 q-pa-sm">
+        <q-card-section class="q-px-none" v-if="product.product_addons?.length > 0">
+          <div class="col-12 bg-grey-2 q-pa-sm text-dark">
             <span class="text-subtitle2">+ Adicionales</span>
           </div>
         </q-card-section>
@@ -281,7 +282,7 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addon.amount -= 1"
+                @click="addTemporalProducts(addon, addon.amount -= 1)"
               />
               <q-input
                 borderless
@@ -290,13 +291,14 @@
                 style="width: 30px;"
                 input-class="text-center"
                 v-model.number="addon.amount"
+                @update:model-value="(value) => addTemporalProducts(product, value)"
               />
               <q-btn
                 icon="add"
                 color="primary"
                 round
                 size="sm"
-                @click="addon.amount += 1"
+                @click="addTemporalProducts(addon, addon.amount += 1)"
               />
             </div>
           </div>
@@ -313,7 +315,7 @@
           <q-btn
             color="primary"
             label="Agregar"
-            @click="validateProduct(product)"
+            @click="addCar"
           />
         </q-card-actions>
       </q-card>
@@ -416,11 +418,35 @@ export default {
        * @type {Array}
        */
       clients: [],
+      /**
+       * Client
+       * @type {Object}
+       */
       client: null,
+      /**
+       * Filter
+       * @type {String}
+       */
       filter: null,
+      /**
+       * Client added
+       * @type {Object}
+       */
       clientAdded: {},
+      /**
+       * Temporal products
+       * @type {Array}
+       */
       temporalProducts: [],
+      /**
+       * Open add client
+       * @type {Boolean}
+       */
       openAddClient: false,
+      /**
+       * Loading client
+       * @type {Boolean}
+       */
       loadingClient: false,
       /**
        * Slide
@@ -509,7 +535,7 @@ export default {
        * Pagination option
        * @type {Object}
        */
-      pagination: { rowsPerPage: 10 },
+      pagination: { rowsPerPage: 50 },
       /**
        * All products
        * @type {Array}
@@ -601,7 +627,27 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
-
+    addCar () {
+      this.temporalProducts.forEach(product => this.validateProduct(product))
+      this.notifyProductCar(this.products)
+      this.detailProduct = false
+      this.temporalProducts = []
+    },
+    /**
+     * Open product details
+     * @param {Object} product
+     */
+    openProductDetails (product) {
+      this.detailProduct = true
+      this.product = product
+      this.product.amount = 0
+      if (product.product_addons && product.product_addons.length > 0) {
+        this.product.product_addons = product.product_addons.map(addon => {
+          addon.amount = 0
+          return addon
+        })
+      }
+    },
     /**
      * Save clients
      */
@@ -744,6 +790,17 @@ export default {
       data.subtotal = data.price * data.amount
       this.calculateTotal()
     },
+    addTemporalProducts (data, amount) {
+      const findProduct = this.findProduct(this.temporalProducts, data)
+      if (findProduct) {
+        findProduct.amount = amount
+      } else {
+        this.temporalProducts.push({
+          ...data,
+          amount
+        })
+      }
+    },
     /**
      * Find product
      * @param {Array} products products
@@ -762,11 +819,10 @@ export default {
     validateProduct (data) {
       const findProduct = this.findProduct(this.products, data)
       if (findProduct) {
-        findProduct.amount += 1
+        findProduct.amount += data.amount
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
-        data.amount = 1
         data.subtotal = 0
         data.product_id = data.id
         this.products = [
@@ -775,7 +831,6 @@ export default {
         ]
         this.calculate(data)
       }
-      this.notifyProductCar(this.products)
     },
     /**
      * Set query params
