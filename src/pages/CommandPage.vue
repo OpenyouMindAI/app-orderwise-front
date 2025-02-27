@@ -87,7 +87,7 @@
                 <q-img
                   fit="fill"
                   no-native-menu
-                  :src="props.row?.images ? props.row.images[0].url : 'images/404-image.jpg'"
+                  :src="props.row?.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                   style="height: 180px;"
                   spinner-color="primary"
                 >
@@ -151,7 +151,7 @@
                 <q-img
                   class="col-4"
                   style="max-height: 200px;"
-                  :src="props.row?.images ? props.row?.images[0]?.url : 'images/404-image.jpg'"
+                  :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                 />
                 <q-card-section class="q-pa-sm column">
                   <q-card-section class="q-pa-sm col">
