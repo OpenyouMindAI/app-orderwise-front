@@ -500,8 +500,7 @@ export default {
           name: 'stock',
           align: 'right',
           label: 'Stock',
-          field: row => row?.is_bundle ? row.bundle_stock : row?.normal_stock,
-          sortable: true
+          field: row => row?.is_bundle ? row.bundle_stock : row?.normal_stock
         }
       ],
       paginationConfig: {
