@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right q-gutter-sm">
-        <q-btn color="secondary" @click="multipleSelected = true" icon="check_box_outline_blank"/>
+        <!-- <q-btn color="secondary" @click="multipleSelected = true" icon="check_box_outline_blank"/> -->
         <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
       </div>
       <div class="col-12">
