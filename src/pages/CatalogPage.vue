@@ -20,6 +20,22 @@
     </div>
     <div class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
       <div class="col-12">
+        <q-input
+          outlined
+          rounded
+          label="Buscar"
+          dense
+          type="search"
+          debounce="500"
+          class="full-width"
+          v-model="filter"
+        >
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
+      <div class="col-12" style="max-height: calc(100vh - 290px); overflow-y: auto;">
         <q-tabs
           v-model="category"
           class="text-teal overflow-hidden"
@@ -39,7 +55,7 @@
         </q-tabs>
         <q-skeleton type="text" height="60px" v-else/>
       </div>
-      <div class="col-12">
+      <div class="col-12" style="max-height: calc(100vh - 260px); overflow-y: auto;">
         <div v-if="loadingPage" class="row q-col-gutter-sm">
           <div
             class="col-xs-6 col-sm-4 col-md-3"
@@ -59,21 +75,18 @@
           v-else
         >
           <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-4 col-md-4" style="padding: 5px;">
+            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-" style="padding: 5px;">
               <q-card
                 :class="findProduct(command.products, props.row) && 'shadow-20'"
                 :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
-                @click="() => {
-                  detailProduct = true
-                  product = props.row
-                }"
+                @click="openProductDetails(props.row)"
               >
                 <q-img
                   fit="fill"
                   no-native-menu
                   :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
                   spinner-color="primary"
-                  :style="$q.screen.xs ? 'height: 150px;' : 'height: 300px;'"
+                  style="height: 180px;"
                 >
                   <div :class="$q.screen.xs ? 'absolute-full column items-center justify-center' : 'absolute-bottom text-center'">
                     <div class="text-bold text-subtitle1">
@@ -110,42 +123,58 @@
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
             <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
               <q-card-section horizontal class="full-height">
-                <q-img
-                  class="col-4"
-                  style="max-height: 200px;"
-                  :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                />
-                <q-card-section class="q-pb-sm">
-                  <q-card-section class="q-pa-sm">
-                    <div class="flex justify-between q-col-gutter-sm">
-                      <div class="flex justify-between items-center full-width">
-                        <span class="text-subtitle2 text-uppercase text-bold">
-                          {{ props.row.name }}
-                        </span>
-                        <span>
-                          $ {{ formatNumber(props.row.price) }}
-                        </span>
+                  <q-img
+                    class="col-4"
+                    style="max-height: 200px;"
+                    :src="props.row?.images ? props.row?.images[0]?.url : 'images/404-image.jpg'"
+                  />
+                  <q-card-section class="q-pa-sm column">
+                    <q-card-section class="q-pa-sm col">
+                      <div class="flex justify-between q-col-gutter-sm">
+                        <div class="flex justify-between items-center full-width">
+                          <span class="text-subtitle2 text-uppercase text-bold">
+                            {{ props.row.name }}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <p class="text-subtitle2 text-grey">
-                      {{ props.row.description }}
-                    </p>
+                      <p class="text-subtitle2 text-grey">
+                        $ {{ formatNumber(props.row.price) }}
+                      </p>
+                    </q-card-section>
+                    <q-card-actions class="q-pa-none">
+                      <div class="flex justify-between items-center full-width">
+                        <div style="width: 10%;">
+                          <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
+                        </div>
+                        <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
+                          <div>
+                            <q-btn icon="remove" round size="sm" color="primary" @click="() => {
+                                props.row.amount -= 1
+                                calculate(props.row)
+                              }"
+                            />
+                          </div>
+                          <q-input
+                            rounded
+                            outlined
+                            dense
+                            label="Cantidad"
+                            type="number"
+                            style="width: 50%;"
+                            v-model.number="props.row.amount"
+                            @update:model-value="calculate(props.row)"
+                          />
+                          <div>
+                              <q-btn icon="add" round size="sm" color="primary" @click="() => {
+                                  props.row.amount += 1
+                                  calculate(props.row)
+                              }"/>
+                          </div>
+                        </div>
+                      </div>
+                    </q-card-actions>
                   </q-card-section>
-                  <q-card-actions class="flex justify-between q-px-none q-pb-none q-pt-md">
-                    <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
-                    <q-input
-                      rounded
-                      outlined
-                      dense
-                      v-model="props.row.amount"
-                      label="Cantidad"
-                      type="number"
-                      style="width: 70%;"
-                      @update:model-value="calculate(props.row)"
-                    />
-                  </q-card-actions>
                 </q-card-section>
-              </q-card-section>
             </q-card>
           </div>
         </template>
@@ -174,7 +203,11 @@
       >
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
-            <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;" @click="openDetails(props.row)">
+            <q-card
+              class="my-card q-mt-sm"
+              style="width: 100%; max-width: 400px; border-radius: 30px;"
+              @click="openDetails(props.row)"
+            >
               <q-card-section horizontal class="full-height">
                 <q-icon
                   name="receipt"
@@ -194,7 +227,7 @@
                     </div>
                     <div class="flex justify-between items-center full-width">
                       <span>
-                        {{ props.row.client.name }}
+                        {{ props.row?.client?.name }}
                       </span>
                       <q-badge
                         :color="status[props.row.status].color"
@@ -219,34 +252,106 @@
       </q-table>
     </div>
     <q-dialog v-model="detailProduct" maximized>
-      <q-card class="full-height">
-        <q-card-section :horizontal="$q.screen.gt.xs" class="col q-pa-none">
-          <div class="full-width" :style="`width: ${$q.screen.gt.xs ? '60%' : '100%'};`">
-            <SlideComponent :slides="product.images"/>
-          </div>
-          <q-card-section class="column q-pb-none" :style="`width: ${$q.screen.gt.xs ? '40%' : '100%'};`">
-            <div>
-              <span class="text-subtitle1 text-uppercase text-bold">
-                {{ product?.name }}
-              </span>
-              <div class="flex justify-between text-uppercase items-center col">
-                <span class="text-subtitle2 text-grey">
-                  {{ formatNumber(product?.price) }}$
-                </span>
-              </div>
-            </div>
-            <span class="text-caption text-grey col">
-              {{ product?.description }}
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'}`"
+      >
+        <SlideComponent :slides="product.images" styles="height: 300px;"/>
+        <q-card-section class="column q-pb-xs">
+          <div class="flex justify-between items-center full-width">
+            <span class="text-subtitle1 text-uppercase text-bold">
+              {{ product?.name }}
             </span>
-            <q-card-actions align="right" class="q-pr-none">
-              <q-btn  color="negative" label="Cerrar" @click="() => {
-                detailProduct = false
-                product = null
-              }"/>
-              <q-btn  color="primary" label="Agregar" @click="validateProduct(product)"/>
-            </q-card-actions>
-          </q-card-section>
+            <div class="flex justify-between items-center q-gutter-xs">
+              <q-btn
+                icon="remove"
+                color="primary"
+                round
+                size="sm"
+                @click="addTemporalProducts(product, product.amount -= 1)"
+              />
+              <q-input
+                borderless
+                dense
+                type="number"
+                style="width: 30px;"
+                input-class="text-center"
+                v-model.number="product.amount"
+                @update:model-value="(value) => addTemporalProducts(product, value)"
+              />
+              <q-btn
+                icon="add"
+                color="primary"
+                round
+                size="sm"
+                @click="addTemporalProducts(product, product.amount += 1)"
+              />
+            </div>
+          </div>
+          <span class="text-subtitle1">
+            {{ formatNumber(product?.price) }}$
+          </span>
         </q-card-section>
+        <q-card-section class="q-px-none" v-if="product.product_addons?.length > 0">
+          <div class="col-12 bg-grey-2 q-pa-sm text-dark">
+            <span class="text-subtitle2">+ Adicionales</span>
+          </div>
+        </q-card-section>
+        <q-card-section class="col q-pt-xs">
+          <div
+            class="flex justify-between full-width items-center"
+            v-for="addon in product.product_addons" :key="addon.id"
+          >
+            <div class="column">
+              <span class="text-body2 text-uppercase text-bold">
+                {{ addon.name }}
+              </span>
+              <span class="text-subtitle2 text-grey">
+                {{ formatNumber(addon.price) }}$
+              </span>
+            </div>
+            <div class="flex justify-between items-center q-gutter-xs">
+              <q-btn
+                icon="remove"
+                color="primary"
+                round
+                size="sm"
+                @click="addTemporalProducts(addon, addon.amount -= 1)"
+              />
+              <q-input
+                borderless
+                dense
+                type="number"
+                style="width: 30px;"
+                input-class="text-center"
+                v-model.number="addon.amount"
+                @update:model-value="(value) => addTemporalProducts(product, value)"
+              />
+              <q-btn
+                icon="add"
+                color="primary"
+                round
+                size="sm"
+                @click="addTemporalProducts(addon, addon.amount += 1)"
+              />
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn
+            color="negative"
+            label="Cerrar"
+            @click="() => {
+              detailProduct = false
+              product = null
+            }"
+          />
+          <q-btn
+            color="primary"
+            label="Agregar"
+            @click="addCar"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
     <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.sm">
@@ -531,6 +636,7 @@ export default {
       dialogPayment: false,
       openLoginDialog: false,
       paymentMethods: [],
+      temporalProducts: [],
       file: null,
       company: null,
       /**
@@ -615,6 +721,7 @@ export default {
       tableSelected: [],
       invoice: null,
       detailsDialog: false,
+      filter: '',
       /**
        * Pagination option
        * @type {Object}
@@ -672,9 +779,6 @@ export default {
     tab () {
       return this.$route.query.tab ?? 'menu'
     },
-    filter () {
-      return this.$route.query.filter
-    },
     command () {
       const store = useCommandStore()
       return store?.command
@@ -682,6 +786,38 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
+    /**
+     * Open product details
+     * @param {Object} product
+     */
+    openProductDetails (product) {
+      this.detailProduct = true
+      this.product = product
+      this.product.amount = 0
+      if (product.product_addons && product.product_addons.length > 0) {
+        this.product.product_addons = product.product_addons.map(addon => {
+          addon.amount = 0
+          return addon
+        })
+      }
+    },
+    addCar () {
+      this.temporalProducts.forEach(product => this.validateProduct(product))
+      this.notifyProductCar(this.products)
+      this.detailProduct = false
+      this.temporalProducts = []
+    },
+    addTemporalProducts (data, amount) {
+      const findProduct = this.findProduct(this.temporalProducts, data)
+      if (findProduct) {
+        findProduct.amount = amount
+      } else {
+        this.temporalProducts.push({
+          ...data,
+          amount
+        })
+      }
+    },
     /**
      * Open details
      * @param {Object} data invoice
@@ -923,7 +1059,6 @@ export default {
         ]
         this.calculate(data)
       }
-      this.notifyProductCar(this.products)
     },
     /**
      * Set query params

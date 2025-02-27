@@ -121,6 +121,12 @@
                       :true-value="1"
                       :false-value="0"
                     />
+                    <q-toggle
+                      v-model="product.is_addons"
+                      label="Es un adicional"
+                      :true-value="1"
+                      :false-value="0"
+                    />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
                     <q-option-group
@@ -128,6 +134,24 @@
                       :options="unitOfMeasures"
                       color="positive"
                       inline
+                    />
+                  </div>
+                  <div
+                    class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12"
+                    v-if="product.is_addons"
+                  >
+                    <q-select
+                      use-input
+                      filled
+                      label="Productos a asociar"
+                      input-debounce="0"
+                      option-label="name"
+                      option-value="id"
+                      multiple
+                      v-model="addonsProducts"
+                      :options="addonsProductsOptions"
+                      :rules="[val => !!val || 'El campo es requerido.']"
+                      @filter="filterProductsAddons"
                     />
                   </div>
                   <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -287,6 +311,12 @@
                       :true-value="1"
                       :false-value="0"
                     />
+                    <q-toggle
+                      v-model="product.is_addons"
+                      label="Es un adicional"
+                      :true-value="1"
+                      :false-value="0"
+                    />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                     <q-option-group
@@ -294,6 +324,24 @@
                       :options="unitOfMeasures"
                       color="positive"
                       inline
+                    />
+                  </div>
+                  <div
+                    class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12"
+                    v-if="product.is_addons"
+                  >
+                    <q-select
+                      use-input
+                      filled
+                      label="Productos a asociar"
+                      input-debounce="0"
+                      option-label="name"
+                      option-value="id"
+                      multiple
+                      v-model="addonsProducts"
+                      :options="addonsProductsOptions"
+                      :rules="[val => !!val || 'El campo es requerido.']"
+                      @filter="filterProductsAddons"
                     />
                   </div>
                   <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -375,11 +423,15 @@ export default {
     return {
       productImage: null,
       products: [],
+      addonsProducts: [],
+      addonsProductsOptions: [],
       tab: 'basicData',
       unitOfMeasures: [],
       unitOfMeasure: null,
       product: {
         is_bundle: 0,
+        is_addons: 0,
+        skip_stock: 0,
         images: []
       },
       categories: [],
@@ -395,6 +447,8 @@ export default {
         sortBy: 'id',
         sortOrder: 'desc',
         perPage: 1,
+        stock: true,
+        withStock: true,
         dataSearch: {
           id: '',
           barcode: '',
@@ -418,7 +472,7 @@ export default {
         {
           name: 'name',
           align: 'left',
-          label: 'Descripción',
+          label: 'Nombre',
           field: 'name',
           sortable: true
         },
@@ -429,10 +483,24 @@ export default {
           field: row => row?.category?.name || '-'
         },
         {
+          name: 'cost',
+          align: 'right',
+          label: 'Costo',
+          field: 'cost',
+          sortable: true
+        },
+        {
           name: 'price',
           align: 'right',
           label: 'Precio',
           field: 'price',
+          sortable: true
+        },
+        {
+          name: 'stock',
+          align: 'right',
+          label: 'Stock',
+          field: row => row?.is_bundle ? row.bundle_stock : row?.normal_stock,
           sortable: true
         }
       ],
@@ -453,9 +521,19 @@ export default {
     this.getUnitOfMeasures()
   },
   computed: {
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
+    /**
+     * Set pagination when branch office changes
+     * @param {Object} value branch office
+     */
+    branchOffice (value) {
+      this.setPagination({
+        pagination: this.paginationConfig,
+        filter: undefined
+      })
+    },
     openAddProduct (data) {
       this.tab = 'basicData'
     },
@@ -489,6 +567,34 @@ export default {
       reader.onload = function (e) {
         self.imageUrl = this.result
       }
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterProductsAddons (value, update) {
+      this.$api.get('products', {
+        params: {
+          paginate: true,
+          perPage: 100,
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.addonsProductsOptions = data.data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     },
     /**
      * Delete image
@@ -533,6 +639,12 @@ export default {
       data.images.forEach((element, index) => {
         formData.append(`images[${index}]`, element.image)
       })
+
+      if (this.addonsProducts.length > 0) {
+        this.addonsProducts.forEach((element, index) => {
+          formData.append(`addons[${index}]`, element.id)
+        })
+      }
       return formData
     },
     /**
@@ -579,7 +691,9 @@ export default {
       this.openEditProduct = false
       this.product = {
         images: [],
-        is_bundle: 0
+        is_bundle: 0,
+        is_addons: 0,
+        skip_stock: 0
       }
     },
     /**
@@ -598,7 +712,12 @@ export default {
      */
     getProducts (params = this.params) {
       this.visible = true
-      this.$api.get('products', { params })
+      this.$api.get('products', {
+        params: {
+          ...params,
+          branch_office_id: this.branchOffice.id
+        }
+      })
         .then(({ data }) => {
           this.products = data.data
           this.visible = false
@@ -677,6 +796,7 @@ export default {
       this.openEditProduct = true
       this.product = row
       this.unitOfMeasure = row.unit_of_measure_id
+      this.addonsProducts = row.addons
     },
     /**
      * Save edit
@@ -690,6 +810,8 @@ export default {
           this.visible = false
           this.product = {
             is_bundle: 0,
+            is_addons: 0,
+            skip_stock: 0,
             images: []
           }
           Notify.create({
@@ -719,6 +841,8 @@ export default {
           this.visible = false
           this.product = {
             is_bundle: 0,
+            is_addons: 0,
+            skip_stock: 0,
             images: []
           }
           Notify.create({
