@@ -75,7 +75,7 @@
           v-else
         >
           <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-" style="padding: 5px;">
+            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-2" style="padding: 5px;">
               <q-card
                 :class="findProduct(command.products, props.row) && 'shadow-20'"
                 :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
@@ -89,8 +89,8 @@
                   style="height: 180px;"
                 >
                   <div :class="$q.screen.xs ? 'absolute-full column items-center justify-center' : 'absolute-bottom text-center'">
-                    <div class="text-bold text-subtitle1">
-                      {{ props.row.name }}
+                    <div class="text-bold text-body1">
+                      {{ props.row.name.slice(0, 20) }}
                     </div>
                     <span class="text-caption">
                       {{ formatNumber(props.row.price) }} $
@@ -120,7 +120,7 @@
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3 q-col-gutter-sm">
             <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
               <q-card-section horizontal class="full-height">
                   <q-img
@@ -132,8 +132,8 @@
                     <q-card-section class="q-pa-sm col">
                       <div class="flex justify-between q-col-gutter-sm">
                         <div class="flex justify-between items-center full-width">
-                          <span class="text-subtitle2 text-uppercase text-bold">
-                            {{ props.row.name }}
+                          <span class="text-body2 text-uppercase text-bold">
+                            {{ props.row.name.slice(0, 20) }}
                           </span>
                         </div>
                       </div>

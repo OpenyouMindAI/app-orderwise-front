@@ -92,8 +92,8 @@
                   spinner-color="primary"
                 >
                   <div class="absolute-bottom text-center">
-                    <div class="text-bold text-subtitle1 p-a-none">
-                      {{ props.row.name }}
+                    <div class="text-bold text-body2 p-a-none">
+                      {{ props.row.name.slice(0, 20) }}
                     </div>
                     <span class="text-caption">
                       {{ formatNumber(props.row.price) }} $
@@ -157,8 +157,8 @@
                   <q-card-section class="q-pa-sm col">
                     <div class="flex justify-between q-col-gutter-sm">
                       <div class="flex justify-between items-center full-width">
-                        <span class="text-subtitle2 text-uppercase text-bold">
-                          {{ props.row.name }}
+                        <span class="text-body2 text-uppercase text-bold">
+                          {{ props.row.name.slice(0, 20) }}
                         </span>
                       </div>
                     </div>
