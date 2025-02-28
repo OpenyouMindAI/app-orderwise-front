@@ -874,7 +874,8 @@ export default {
           sortBy: 'id',
           sortOrder: 'desc',
           dataFilter: {
-            category_id: this.category === 'all' ? null : this.category
+            category_id: this.category === 'all' ? null : this.category,
+            show_catalog: 1
           }
         }
       })
@@ -923,7 +924,11 @@ export default {
      * @param {Callback} update update options
      */
     getCategories () {
-      this.$api.get('categories')
+      this.$api.get('categories', {
+        params: {
+          show_catalog: 1
+        }
+      })
         .then(({ data }) => {
           this.categories = data
         })

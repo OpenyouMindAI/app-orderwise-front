@@ -2,11 +2,15 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddCategory = true" icon="add_circle"/>
+        <q-btn
+          color="primary"
+          @click="openAddCategory = true"
+          icon="add_circle"
+        />
       </div>
       <div class="col-12">
         <q-table
-          title="Categorias"
+          title="Categorías"
           row-key="name"
           :columns="columns"
           :rows="categories"
@@ -34,12 +38,12 @@
     <q-dialog v-model="openEditCategory" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Modificar categoría</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -49,11 +53,18 @@
                 label="Nombre"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-toggle
+                v-model="category.show_catalog"
+                label="Mostrar en catálogo"
+                :true-value="1"
+                :false-value="0"
+              />
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deleteCategory" :loading="visible" />
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -61,12 +72,12 @@
     <q-dialog v-model="openAddCategory" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveCategory">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Agregar categoría</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -76,10 +87,18 @@
                 label="Nombre"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-toggle
+                v-model="category.show_catalog"
+                label="Mostrar en catálogo"
+                :true-value="1"
+                :false-value="0"
+              />
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -93,7 +112,9 @@ export default {
   data () {
     return {
       categories: [],
-      category: {},
+      category: {
+        show_catalog: 0
+      },
       filter: '',
       /**
        * Params search
@@ -126,6 +147,13 @@ export default {
           label: 'Nombre',
           field: 'name',
           sortable: true
+        },
+        {
+          name: 'show_catalog',
+          align: 'left',
+          label: 'Mostrar en catálogo',
+          field: 'show_catalog',
+          format: row => row ? 'Si' : 'No'
         }
       ],
       paginationConfig: {
@@ -155,7 +183,9 @@ export default {
     closeModal () {
       this.openAddCategory = false
       this.openEditCategory = false
-      this.category = {}
+      this.category = {
+        show_catalog: 0
+      }
     },
     /**
      * Search beneficiary
@@ -175,7 +205,6 @@ export default {
       this.visible = true
       this.$api.get('categories', { params })
         .then(({ data }) => {
-          console.log(data.data)
           this.categories = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
@@ -212,9 +241,11 @@ export default {
           this.getCategories()
           this.openAddCategory = false
           this.visible = false
-          this.category = {}
+          this.category = {
+            show_catalog: 0
+          }
           Notify.create({
-            message: 'Categoria creada exitosamente',
+            message: 'Categoría creada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -245,9 +276,11 @@ export default {
           this.getCategories()
           this.openEditCategory = false
           this.visible = false
-          this.category = {}
+          this.category = {
+            show_catalog: 0
+          }
           Notify.create({
-            message: 'Categoria editada exitosamente',
+            message: 'Categoría editada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -271,9 +304,11 @@ export default {
           this.getCategories()
           this.openEditCategory = false
           this.visible = false
-          this.category = {}
+          this.category = {
+            show_catalog: 0
+          }
           Notify.create({
-            message: 'Categoria eliminada exitosamente',
+            message: 'Categoría eliminada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })

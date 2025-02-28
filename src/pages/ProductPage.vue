@@ -130,6 +130,12 @@
                       :true-value="1"
                       :false-value="0"
                     />
+                    <q-toggle
+                      v-model="product.show_catalog"
+                      label="Mostrar en catálogo"
+                      :true-value="1"
+                      :false-value="0"
+                    />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
                     <q-option-group
@@ -320,6 +326,12 @@
                       :true-value="1"
                       :false-value="0"
                     />
+                    <q-toggle
+                      v-model="product.show_catalog"
+                      label="Mostrar en catálogo"
+                      :true-value="1"
+                      :false-value="0"
+                    />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                     <q-option-group
@@ -435,6 +447,7 @@ export default {
       unitOfMeasure: null,
       product: {
         is_bundle: 0,
+        show_catalog: 0,
         is_addons: 0,
         skip_stock: 0,
         images: []
@@ -486,6 +499,14 @@ export default {
           align: 'left',
           label: 'Categoría',
           field: row => row?.category?.name || '-'
+        },
+        {
+          name: 'show_catalog',
+          align: 'left',
+          label: 'Mostrar en catálogo',
+          field: 'show_catalog',
+          format: row => row ? 'Si' : 'No',
+          sortable: true
         },
         {
           name: 'cost',
@@ -696,6 +717,7 @@ export default {
       this.product = {
         images: [],
         is_bundle: 0,
+        show_catalog: 0,
         is_addons: 0,
         skip_stock: 0
       }
@@ -814,6 +836,7 @@ export default {
           this.visible = false
           this.product = {
             is_bundle: 0,
+            show_catalog: 0,
             is_addons: 0,
             skip_stock: 0,
             images: []
@@ -845,6 +868,7 @@ export default {
           this.visible = false
           this.product = {
             is_bundle: 0,
+            show_catalog: 0,
             is_addons: 0,
             skip_stock: 0,
             images: []

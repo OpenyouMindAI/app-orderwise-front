@@ -1103,7 +1103,8 @@ export default {
             withStock: true,
             branch_office_id: this.$route.params.branch_office_id,
             dataFilter: {
-              category_id: this.category === 'all' ? null : this.category
+              category_id: this.category === 'all' ? null : this.category,
+              show_catalog: 1
             }
           }
         })
@@ -1119,7 +1120,11 @@ export default {
      */
     async getCategories () {
       try {
-        const { data } = await this.$api.get(`public/categories/${this.$route.params.company_id}`)
+        const { data } = await this.$api.get(`public/categories/${this.$route.params.company_id}`, {
+          params: {
+            show_catalog: 1
+          }
+        })
         this.categories = data
       } catch (error) {
         notify(error.message, 'negative', 'warning')
