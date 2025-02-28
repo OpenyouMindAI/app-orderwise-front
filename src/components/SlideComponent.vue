@@ -1,7 +1,7 @@
 <template>
   <section>
     <div v-if="slides.length === 0">
-      <q-img src="https://cdn.quasar.dev/img/image-src.png" :style="styles"/>
+      <q-img src="images/404-image.jpg" :style="styles"/>
     </div>
     <div v-for="(slide, index) in slides" :key="index" v-show="currentIndex === index">
       <q-img :src="slide.url" :alt="slide.caption" fit="fill" :style="styles">

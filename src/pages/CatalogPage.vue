@@ -256,7 +256,7 @@
         :class="$q.screen.lt.sm ? 'full-height column': ''"
         :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'}`"
       >
-        <SlideComponent :slides="product.images" styles="height: 300px;"/>
+        <SlideComponent :slides="product.images" styles="height: 400px;"/>
         <q-card-section class="column q-pb-xs">
           <div class="flex justify-between items-center full-width">
             <span class="text-subtitle1 text-uppercase text-bold">
@@ -274,7 +274,7 @@
                 borderless
                 dense
                 type="number"
-                style="width: 30px;"
+                style="width: 40px;"
                 input-class="text-center"
                 v-model.number="product.amount"
                 @update:model-value="(value) => addTemporalProducts(product, value)"
