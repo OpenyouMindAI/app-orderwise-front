@@ -927,7 +927,9 @@ export default {
     getCategories () {
       this.$api.get('categories', {
         params: {
-          show_catalog: 1
+          dataFilter: {
+            show_catalog: 1
+          }
         }
       })
         .then(({ data }) => {

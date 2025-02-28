@@ -100,7 +100,14 @@
               </q-card-section>
               <q-separator v-if="invoice.description"/>
               <q-card-section  class="q-py-sm" v-if="invoice.description">
-                {{ invoice.description }}
+                <q-input
+                  type="textarea"
+                  readonly
+                  label="Descripción"
+                  autogrow
+                  borderless
+                  :model-value="invoice.description"
+                />
               </q-card-section>
               <q-separator/>
               <q-card-section  class="text-bold q-py-sm">
