@@ -875,7 +875,8 @@ export default {
           sortOrder: 'desc',
           dataFilter: {
             category_id: this.category === 'all' ? null : this.category,
-            show_catalog: 1
+            show_catalog: 1,
+            'category.show_catalog': 1
           }
         }
       })

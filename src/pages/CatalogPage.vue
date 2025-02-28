@@ -1104,7 +1104,8 @@ export default {
             branch_office_id: this.$route.params.branch_office_id,
             dataFilter: {
               category_id: this.category === 'all' ? null : this.category,
-              show_catalog: 1
+              show_catalog: 1,
+              'category.show_catalog': 1
             }
           }
         })
