@@ -81,8 +81,14 @@
                 </div>
               </q-card-section>
               <q-separator/>
-              <q-card-section v-if="visibleBranchOffice || role.deliveryPerson" class="q-py-sm flex justify-between items-center">
-                Por pagar: {{  formatNumber(invoice.total - invoice.total_payments) }}
+              <q-card-section  class="q-py-sm" v-if="invoice.client">
+                Cliente: <span class="text-bold">{{ invoice.client?.name }}</span>
+              </q-card-section>
+              <q-separator/>
+              <q-card-section class="q-py-sm flex justify-between items-center">
+                <span v-if="visibleBranchOffice || role.deliveryPerson">
+                  Por pagar: {{  formatNumber(invoice.total - invoice.total_payments) }}
+                </span>
                 <q-btn
                   color="secondary"
                   icon="print"
@@ -94,7 +100,7 @@
               </q-card-section>
               <q-separator v-if="invoice.description"/>
               <q-card-section  class="q-py-sm" v-if="invoice.description">
-                {{  invoice.description }}
+                {{ invoice.description }}
               </q-card-section>
               <q-separator/>
               <q-card-section  class="text-bold q-py-sm">
@@ -102,9 +108,7 @@
               </q-card-section>
               <q-separator v-if="invoice.delivery_date"/>
               <q-card-section  class="text-bold q-py-sm" v-if="invoice.delivery_date">
-                <div>
-                  Fecha de entrega: {{ formatDate(invoice.delivery_date, 'DD/MM/YYYY HH:mm:ss') }}
-                </div>
+                Fecha de entrega: {{ formatDate(invoice.delivery_date, 'DD/MM/YYYY HH:mm:ss') }}
               </q-card-section>
             </q-card>
           </q-card-section>
