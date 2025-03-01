@@ -108,7 +108,17 @@ export const printTicket = (data, userSession) => {
   doc.text('TOTAL', 5, y)
   doc.text(String(sum(data.products)), 68, y)
   y += 5
-
+  doc.text('--------------------------------', 5, y)
+  y += 5
+  const lines = doc.splitTextToSize(`Descripción: ${data.description}`, maxWidth)
+  lines.forEach((linea, index) => {
+    if (index === 0) {
+      doc.text(linea, 5, y)
+    } else {
+      doc.text(linea, 5, y)
+    }
+    y += 5
+  })
   doc.text('--------------------------------', 5, y)
   y += 5
   doc.text('¡GRACIAS POR SU COMPRA!', centrarTexto('¡GRACIAS POR SU COMPRA!'), y)
