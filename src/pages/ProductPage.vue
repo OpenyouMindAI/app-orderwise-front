@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right q-gutter-sm">
-        <!-- <q-btn color="secondary" @click="multipleSelected = true" icon="check_box_outline_blank"/> -->
+        <q-btn color="secondary" @click="download" icon="download"/>
         <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
       </div>
       <div class="col-12">
@@ -432,6 +432,7 @@ import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
 import PackProduct from 'src/components/Product/PackProduct.vue'
+import { getDownload } from 'src/const/services'
 export default {
   components: { StockProduct, PackProduct },
   data () {
@@ -478,6 +479,7 @@ export default {
       visible: false,
       openAddProduct: false,
       openEditProduct: null,
+      loadingDownload: 0,
       columns: [
         {
           name: 'barcode',
@@ -581,6 +583,35 @@ export default {
     }
   },
   methods: {
+
+    /**
+     * Download data
+     */
+    async download () {
+      getDownload(
+        'excel/products',
+        {
+          stock: true,
+          withStock: false,
+          branch_office_id: this.branchOffice?.id
+        },
+        (percentCompleted) => {
+          this.loadingDownload = percentCompleted / 100
+          if (percentCompleted === 100) {
+            this.loadingDownload = 0
+          }
+        },
+        (link) => {
+          link.setAttribute(
+            'download',
+            'Productos.xlsx'
+            // `Recibos de cobro: Desde ${proxyDate.value.from} Hasta ${proxyDate.value.to}.xlsx`
+          )
+          document.body.appendChild(link)
+          link.click()
+        }
+      )
+    },
     /**
      * Value image
      * @param {File} e file image
