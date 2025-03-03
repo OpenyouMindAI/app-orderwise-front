@@ -454,7 +454,7 @@
             </template>
           </q-select>
           <q-select
-            v-if="visibleBranchOffice"
+            v-if="userSession.is_root"
             v-model="branchOfficeSelect"
             :options="branchOffices"
             style="min-width: 300px;"
@@ -811,7 +811,7 @@ const filterDeliveryPersons = async (value, update) => {
  */
 const getBranchOffices = async () => {
   try {
-    if (visibleBranchOffice || role.value.deliveryPerson) {
+    if (userSession.is_root || role.value.deliveryPerson) {
       const { data } = await api.get('branch-offices')
       branchOffices.value = data
       branchOfficeSelect.value = data
