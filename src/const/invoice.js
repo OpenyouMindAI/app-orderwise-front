@@ -37,7 +37,7 @@ export const printTicket = (data, userSession) => {
     format: [80, altura]
   })
 
-  doc.setFont('Courier', 'normal')
+  doc.setFont('Courier', 'bold')
   doc.setFontSize(10)
 
   const pageWidth = 80
@@ -110,17 +110,19 @@ export const printTicket = (data, userSession) => {
   y += 5
   doc.text('--------------------------------', 5, y)
   y += 5
-  const lines = doc.splitTextToSize(`Descripción: ${data.description}`, maxWidth)
-  lines.forEach((linea, index) => {
-    if (index === 0) {
-      doc.text(linea, 5, y)
-    } else {
-      doc.text(linea, 5, y)
-    }
+  if (data.description) {
+    const lines = doc.splitTextToSize(`Descripción: ${data.description}`, maxWidth)
+    lines.forEach((linea, index) => {
+      if (index === 0) {
+        doc.text(linea, 5, y)
+      } else {
+        doc.text(linea, 5, y)
+      }
+      y += 5
+    })
+    doc.text('--------------------------------', 5, y)
     y += 5
-  })
-  doc.text('--------------------------------', 5, y)
-  y += 5
+  }
   doc.text('¡GRACIAS POR SU COMPRA!', centrarTexto('¡GRACIAS POR SU COMPRA!'), y)
 
   return doc
@@ -140,7 +142,7 @@ export const printInvoice = (data, userSession) => {
     format: [94, altura]
   })
 
-  doc.setFont('Courier', 'normal')
+  doc.setFont('Courier', 'bold')
   doc.setFontSize(10)
 
   const pageWidth = 94

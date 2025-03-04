@@ -873,6 +873,7 @@ export default {
         params: {
           sortBy: 'id',
           sortOrder: 'desc',
+          mostSold: true,
           dataFilter: {
             category_id: this.category === 'all' ? null : this.category,
             show_catalog: 1,
