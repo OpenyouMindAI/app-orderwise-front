@@ -158,14 +158,24 @@
         </q-expansion-item>
       </div>
     </div>
-    <q-footer class="q-pa-sm justify-between flex" style="position: fixed; bottom: 0;">
+    <q-footer class="q-pa-sm justify-between flex" style="position: fixed; bottom: 0;" >
       <span class="text-subtitle2">
         {{formatDate(new Date(), 'DD/MM/YYYY')}}
       </span>
-      <span class="text-subtitle2">
-        VENTAS TOTALES:
-        {{ formatNumber(categoryTotalsTotals.category_total + cashflowTotals.cashflow_totals) }}
-      </span>
+      <div :class="$q.screen.lt.sm ? 'column text-right' : 'flex text-right q-gutter-x-md'">
+        <span class="text-subtitle2">
+          COSTO TOTAL:
+          {{ formatNumber(categoryTotalsTotals.cost_total) }}
+        </span>
+        <span class="text-subtitle2">
+          VENTAS TOTALES:
+          {{ formatNumber(categoryTotalsTotals.category_total) }}
+        </span>
+        <span class="text-subtitle2">
+          GANANCIA:
+          {{ formatNumber(categoryTotalsTotals.category_total - categoryTotalsTotals.cost_total) }}
+        </span>
+      </div>
     </q-footer>
     <q-dialog
       v-model="dialogFilter"
