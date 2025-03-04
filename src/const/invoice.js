@@ -23,35 +23,47 @@ export const status = {
     color: 'info'
   }
 }
-/**
- * Print invoice
- * @param {Object} data invoice saved
- */
-export const printTicket = (data, userSession) => {
-  const { company_session: companySession } = userSession
+
+const header = (data, companySession, pageWidth = 80) => {
   const JsPdf = jsPDF
-  const altura = 40 + data.products.length * 5 + 70
+  const maxWidth = 55
+
+  let altura = 70
+  altura += calculateTextHeight(companySession?.name, maxWidth)
+  altura += calculateTextHeight(companySession?.address, maxWidth)
+  altura += 5
+  altura += 5
+  altura += data.products.length * 10
+  if (data.description) {
+    altura += calculateTextHeight(`Descripción: ${data.description}`, maxWidth)
+    altura += 5
+  }
+  altura += 10
 
   const doc = new JsPdf({
     unit: 'mm',
-    format: [80, altura]
+    format: [pageWidth, altura]
   })
 
   doc.setFont('Courier', 'bold')
   doc.setFontSize(10)
 
-  const pageWidth = 80
+  return { doc, pageWidth, companySession, maxWidth }
+}
+
+export const printTicket = (data, userSession) => {
   let y = 5
+  const { company_session: companySession } = userSession
+
+  const { doc, pageWidth, maxWidth } = header(data, companySession)
 
   const centrarTexto = (texto) => {
     const textWidth = doc.getTextWidth(texto)
     return (pageWidth - textWidth) / 2
   }
 
-  doc.text(companySession?.name?.toUpperCase(), centrarTexto(companySession?.name?.toUpperCase()), y)
-  y += 5
-  doc.text(companySession?.address?.toUpperCase(), centrarTexto(companySession?.address?.toUpperCase()), y)
-  y += 5
+  y = cutWords(companySession?.name?.toUpperCase(), 55, doc, y, true)
+  y = cutWords(companySession?.address?.toUpperCase(), 55, doc, y, true)
   doc.text(companySession?.phone_number, centrarTexto(companySession?.phone_number), y)
 
   y += 5
@@ -88,7 +100,7 @@ export const printTicket = (data, userSession) => {
   doc.text('CANT', 65, y)
   y += 5
 
-  const maxWidth = 55
+  // const maxWidth = 55
 
   data.products.forEach((product) => {
     const lines = doc.splitTextToSize(product.name, maxWidth)
@@ -111,18 +123,11 @@ export const printTicket = (data, userSession) => {
   doc.text('--------------------------------', 5, y)
   y += 5
   if (data.description) {
-    const lines = doc.splitTextToSize(`Descripción: ${data.description}`, maxWidth)
-    lines.forEach((linea, index) => {
-      if (index === 0) {
-        doc.text(linea, 5, y)
-      } else {
-        doc.text(linea, 5, y)
-      }
-      y += 5
-    })
-    doc.text('--------------------------------', 5, y)
+    y = cutWords(`Descripción: ${data.description}`, maxWidth, doc, y)
     y += 5
+    doc.text('--------------------------------', 5, y)
   }
+  y += 5
   doc.text('¡GRACIAS POR SU COMPRA!', centrarTexto('¡GRACIAS POR SU COMPRA!'), y)
 
   return doc
@@ -132,34 +137,19 @@ export const printTicket = (data, userSession) => {
  * @param {Object} data invoice saved
  */
 export const printInvoice = (data, userSession) => {
+  let y = 5
   const { company_session: companySession } = userSession
-  const JsPdf = jsPDF
 
-  const altura = 40 + data.products.length * 5 + 95
-
-  const doc = new JsPdf({
-    unit: 'mm',
-    format: [94, altura]
-  })
-
-  doc.setFont('Courier', 'bold')
-  doc.setFontSize(10)
-
-  const pageWidth = 94
-  let y = 10
+  const { doc, pageWidth } = header(data, companySession, 95)
 
   const centrarTexto = (texto) => {
     const textWidth = doc.getTextWidth(texto)
     return (pageWidth - textWidth) / 2
   }
 
-  doc.text(companySession?.name?.toUpperCase(), centrarTexto(companySession?.name?.toUpperCase()), y)
-  y += 4
-  doc.text(companySession?.address?.toUpperCase(), centrarTexto(companySession?.address?.toUpperCase()), y)
-  y += 4
+  y = cutWords(companySession?.name?.toUpperCase(), 65, doc, y, true, 95)
+  y = cutWords(companySession?.address?.toUpperCase(), 65, doc, y, true, 95)
   doc.text(companySession?.phone_number, centrarTexto(companySession?.phone_number), y)
-  y += 4
-  doc.text(companySession?.document_number?.toUpperCase(), centrarTexto(companySession?.document_number), y)
 
   y += 4
   doc.text('----------------------------------------', 5, y)
@@ -231,4 +221,29 @@ export const printInvoice = (data, userSession) => {
 
 const sum = (data) => {
   return data.reduce((a, b) => a + b.pivot.amount, 0)
+}
+
+const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80) => {
+  const centrarTexto = (texto) => {
+    const textWidth = doc.getTextWidth(texto)
+    return (pageWidth - textWidth) / 2
+  }
+  const lines = doc.splitTextToSize(text, maxWidth)
+
+  lines.forEach((linea) => {
+    if (center) {
+      doc.text(linea, centrarTexto(linea), y)
+    } else {
+      doc.text(linea, 5, y)
+    }
+    y += 5
+  })
+
+  return y
+}
+
+const calculateTextHeight = (text, maxWidth) => {
+  if (!text) return 0
+  const lines = Math.ceil(text.length / (maxWidth / 2))
+  return lines * 5
 }
