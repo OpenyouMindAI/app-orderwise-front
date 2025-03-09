@@ -20,7 +20,7 @@
         <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
           <q-card class="text-negative">
             <q-card-section horizontal>
-              <q-card-section class="full-width"> Por cobrar </q-card-section>
+              <q-card-section class="full-width"> Ventas totales </q-card-section>
               <q-card-section class="text-right full-width">
                 {{ formatNumber(totals?.total_owed || 0) }}
               </q-card-section>
@@ -283,9 +283,9 @@ export default {
       filter: '',
       fromHours: '00:00',
       toHours: '23:59',
-      day: date.formatDate(Date(), 'YYYY-MM-DD'),
-      from: date.formatDate(Date(), 'YYYY-MM-DD'),
-      to: date.formatDate(Date(), 'YYYY-MM-DD'),
+      day: null,
+      from: null,
+      to: null,
       /**
        * Params search
        * @type {Object}
