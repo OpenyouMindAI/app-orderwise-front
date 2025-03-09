@@ -619,7 +619,8 @@ export default {
         ...this.saleParams,
         ...this.filters,
         dataEqualFilter: {
-          client_id: this.client?.id
+          client_id: this.client?.id,
+          branch_office_id: this.branchOffice?.id
         }
       }
       this.getSales(params)
