@@ -1788,6 +1788,51 @@ export default {
 
       return this.setModelInvoice()
     },
+
+    modelInvoiceElectronic (params) {
+      const { company_session: companySession } = this.userSession
+      console.log(companySession?.company_config?.other)
+      return {
+        cant_reg: 1,
+        pto_vta: 1,
+        cbte_tipo: 6,
+        concepto: companySession?.company_config?.other?.concept_type?.Id,
+        doc_tipo: 99,
+        doc_nro: 0,
+        cbte_fch: formatDate(new Date(), 'YYYY-MM-DD'),
+        imp_tot_conc: 0,
+        imp_neto: this.totalBill,
+        imp_op_ex: 0,
+        imp_iva: this.totalBill * 0.21,
+        condicion_iva_receptor_id: 4,
+        imp_trib: 0,
+        pdf: true,
+        mon_id: 'PES',
+        mon_cotiz: 1,
+        user: this.userSession,
+        company_id: companySession.id,
+        company: {
+          external_id: companySession.id,
+          ...companySession
+        },
+        iva: [
+          {
+            id: 5,
+            base_imp: this.totalBill,
+            importe: this.totalBill * 0.21
+          }
+        ]
+      }
+    },
+
+    async setInvoiceElectronic (params) {
+      try {
+        const { data } = await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params))
+        this.printBill(data.data)
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
     /**
      * Save bill and payments
      */
@@ -1796,12 +1841,16 @@ export default {
         this.loadingBilling = true
         const params = this.setParamsBill()
         if (!params) return
+
         if (this.$route.query.id) {
           const { data } = await this.$api.put(`invoices/${this.$route.query.id}`, params)
           this.printBill(data.data)
         } else {
           const { data } = await this.$api.post('invoices', params)
           this.printBill(data.data)
+        }
+        if (this.invoiceType.bill) {
+          await this.setInvoiceElectronic(params)
         }
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
         this.setPagination({

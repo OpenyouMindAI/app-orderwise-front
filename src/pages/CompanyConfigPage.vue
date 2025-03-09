@@ -101,91 +101,121 @@
         icon="settings"
         clickable
       >
-      <q-card>
-        <q-form @submit="onSubmitConfig">
-          <q-card-section>
-            <span class="text-h6">Valores por defecto para la facturación</span>
-          </q-card-section>
-          <q-card-section class="q-pb-none">
-            <div class="row q-col-gutter-x-sm">
-              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                <q-select
-                  use-input
-                  filled
-                  dense
-                  label="Cliente"
-                  input-debounce="0"
-                  option-label="name"
-                  option-value="id"
-                  v-model="companyConfig.client"
-                  :options="clients"
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filterClients"
-                />
+        <q-card>
+          <q-form @submit="onSubmitConfig">
+            <q-card-section>
+              <span class="text-h6">Valores por defecto para la facturación</span>
+            </q-card-section>
+            <q-card-section class="q-pb-none">
+              <div class="row q-col-gutter-x-sm">
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    label="Cliente"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="companyConfig.client"
+                    :options="clients"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="filterClients"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    label="Tipo de factura"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="companyConfig.invoiceType"
+                    :options="invoiceTypes"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="filterInvoiceTypes"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    label="Tipo de servicio"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="companyConfig.typeOfService"
+                    :options="typeOfServices"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="filterTypeOfServices"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    filled
+                    dense
+                    label="Método de pago"
+                    option-label="name"
+                    option-value="id"
+                    v-model="companyConfig.paymentMethod"
+                    :options="paymentMethods"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="filtersPaymentMethods"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    filled
+                    dense
+                    label="Moneda"
+                    option-label="name"
+                    option-value="id"
+                    v-model="companyConfig.coin"
+                    :options="coins"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="filterCoins"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    label="Tipo de concepto"
+                    input-debounce="0"
+                    option-label="Desc"
+                    option-value="id"
+                    v-model="companyConfig.other.concept_type"
+                    :options="conceptTypes"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="getConceptTypes"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    label="Tipo de factura (Arca)"
+                    input-debounce="0"
+                    option-label="Desc"
+                    option-value="id"
+                    v-model="companyConfig.other.voucher_type"
+                    :options="voucherTypes"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="getVoucherTypes"
+                  />
+                </div>
               </div>
-              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                <q-select
-                  use-input
-                  filled
-                  dense
-                  label="Tipo de factura"
-                  input-debounce="0"
-                  option-label="name"
-                  option-value="id"
-                  v-model="companyConfig.invoiceType"
-                  :options="invoiceTypes"
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filterInvoiceTypes"
-                />
-              </div>
-              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                <q-select
-                  use-input
-                  filled
-                  dense
-                  label="Tipo de servicio"
-                  input-debounce="0"
-                  option-label="name"
-                  option-value="id"
-                  v-model="companyConfig.typeOfService"
-                  :options="typeOfServices"
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filterTypeOfServices"
-                />
-              </div>
-              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                <q-select
-                  filled
-                  dense
-                  label="Método de pago"
-                  option-label="name"
-                  option-value="id"
-                  v-model="companyConfig.paymentMethod"
-                  :options="paymentMethods"
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filtersPaymentMethods"
-                />
-              </div>
-              <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                <q-select
-                  filled
-                  dense
-                  label="Moneda"
-                  option-label="name"
-                  option-value="id"
-                  v-model="companyConfig.coin"
-                  :options="coins"
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filterCoins"
-                />
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn color="primary" label="Guardar" icon="save" type="submit" :loading="loading"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
+            </q-card-section>
+            <q-card-actions align="right">
+              <q-btn color="primary" label="Guardar" icon="save" type="submit" :loading="loading"/>
+            </q-card-actions>
+          </q-form>
+        </q-card>
       </q-step>
     </q-stepper>
   </q-page>
@@ -195,7 +225,7 @@
 import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import { logo, notify, setFiles } from '../const/mixins'
-import { api } from 'src/boot/axios'
+import { api, apiArca } from 'src/boot/axios'
 import { ref } from 'vue'
 
 /**
@@ -203,6 +233,16 @@ import { ref } from 'vue'
  * @type {Array}
  */
 const coins = ref([])
+/**
+ * Coins
+ * @type {Array}
+ */
+const conceptTypes = ref([])
+/**
+ * Coins
+ * @type {Array}
+ */
+const voucherTypes = ref([])
 /**
  * Type of service
  * @type {Array}
@@ -255,7 +295,8 @@ const companyConfig = ref({
   invoiceType: company.value?.company_config?.invoice_type,
   typeOfService: company.value?.company_config?.type_of_service,
   coin: company.value?.company_config?.coin,
-  client: company.value?.company_config?.client
+  client: company.value?.company_config?.client,
+  other: company.value?.company_config?.other || {}
 })
 
 /**
@@ -336,6 +377,36 @@ const filterOptions = async (value, service, update) => {
  * @param {String} value Value filter
  * @param {Callback} update update options
  */
+const getConceptTypes = async (value, update) => {
+  try {
+    const { data } = await apiArca.get('metadata/concept-types')
+    update(() => {
+      conceptTypes.value = data
+    })
+  } catch (err) {
+    notify(err.message, 'negative', 'warning')
+  }
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
+const getVoucherTypes = async (value, update) => {
+  try {
+    const { data } = await apiArca.get('metadata/voucher-types')
+    update(() => {
+      voucherTypes.value = data
+    })
+  } catch (err) {
+    notify(err.message, 'negative', 'warning')
+  }
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
 const filterInvoiceTypes = async (value, update) => {
   filterOptions(value, 'invoice-types', (data) => {
     update(() => {
@@ -405,7 +476,8 @@ const onSubmitConfig = async () => {
       type_of_service_id: companyConfig.value?.typeOfService?.id,
       invoice_type_id: companyConfig.value?.invoiceType?.id,
       payment_method_id: companyConfig.value?.paymentMethod?.id,
-      client_id: companyConfig.value?.client?.id
+      client_id: companyConfig.value?.client?.id,
+      other: companyConfig.value?.other
     })
     store.setCompanySession({
       ...company.value,
