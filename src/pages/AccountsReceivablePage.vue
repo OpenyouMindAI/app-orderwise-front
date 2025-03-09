@@ -477,24 +477,14 @@ export default {
           seller_id: this.seller?.id,
           day: this.day,
           fromHours: this.fromHours,
-          toHours: this.toHours,
-          dateFilter: {
-            from: `${this.day} ${this.fromHours}`,
-            to: `${this.day} ${this.toHours}`,
-            field: 'created_at'
-          }
+          toHours: this.toHours
         }
       } else {
         this.filters = {
           seller_id: this.seller?.id,
           branch_office_id: this.branchOffice?.id,
           to: this.to,
-          from: this.from,
-          dateFilter: {
-            from: `${this.from} ${this.fromHours}`,
-            to: `${this.to} ${this.toHours}`,
-            field: 'created_at'
-          }
+          from: this.from
         }
       }
       if (this.client?.id) {
