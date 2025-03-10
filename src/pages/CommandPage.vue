@@ -874,7 +874,7 @@ export default {
           sortBy: 'id',
           sortOrder: 'desc',
           mostSold: true,
-          dataFilter: {
+          dataEqualFilter: {
             category_id: this.category === 'all' ? null : this.category,
             show_catalog: 1,
             'category.show_catalog': 1
