@@ -209,6 +209,21 @@
                     @filter="getVoucherTypes"
                   />
                 </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    label="Iva (%)"
+                    input-debounce="0"
+                    option-label="Desc"
+                    option-value="id"
+                    v-model="companyConfig.other.aliquot_types"
+                    :options="aliquotTypes"
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    @filter="getAliquotTypes"
+                  />
+                </div>
               </div>
             </q-card-section>
             <q-card-actions align="right">
@@ -258,6 +273,11 @@ const step = ref(1)
  * @type {Array}
  */
 const invoiceTypes = ref([])
+/**
+ * Invoice types
+ * @type {Array}
+ */
+const aliquotTypes = ref([])
 /**
  * Invoice types
  * @type {Array}
@@ -382,6 +402,22 @@ const getConceptTypes = async (value, update) => {
     const { data } = await apiArca.get('metadata/concept-types')
     update(() => {
       conceptTypes.value = data
+    })
+  } catch (err) {
+    notify(err.message, 'negative', 'warning')
+  }
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
+const getAliquotTypes = async (value, update) => {
+  try {
+    const { data } = await apiArca.get('metadata/aliquot-types')
+    console.log(data)
+    update(() => {
+      aliquotTypes.value = data
     })
   } catch (err) {
     notify(err.message, 'negative', 'warning')
