@@ -1103,7 +1103,7 @@ export default {
             withStock: true,
             mostSold: true,
             branch_office_id: this.$route.params.branch_office_id,
-            dataFilter: {
+            dataEqualFilter: {
               category_id: this.category === 'all' ? null : this.category,
               show_catalog: 1,
               'category.show_catalog': 1

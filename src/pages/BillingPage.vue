@@ -1620,7 +1620,7 @@ export default {
           stock: true,
           withStock: true,
           mostSold: true,
-          dataFilter: {
+          dataEqualFilters: {
             category_id: this.category ? this.category.id : null
           }
         }

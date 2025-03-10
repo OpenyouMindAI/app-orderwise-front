@@ -20,7 +20,7 @@
         <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
           <q-card class="text-negative">
             <q-card-section horizontal>
-              <q-card-section class="full-width"> Por cobrar </q-card-section>
+              <q-card-section class="full-width"> Ventas totales </q-card-section>
               <q-card-section class="text-right full-width">
                 {{ formatNumber(totals?.total_owed || 0) }}
               </q-card-section>
@@ -104,7 +104,7 @@
             <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
               <q-card class="text-negative">
                 <q-card-section horizontal>
-                  <q-card-section class="full-width"> Por cobrar </q-card-section>
+                  <q-card-section class="full-width"> Ventas totales </q-card-section>
                   <q-card-section class="text-right full-width">
                     {{ formatNumber(totals?.total_owed || 0) }}
                   </q-card-section>
@@ -281,11 +281,11 @@ export default {
       sales: [],
       seller: null,
       filter: '',
-      fromHours: '00:00',
-      toHours: '23:59',
-      day: date.formatDate(Date(), 'YYYY-MM-DD'),
-      from: date.formatDate(Date(), 'YYYY-MM-DD'),
-      to: date.formatDate(Date(), 'YYYY-MM-DD'),
+      fromHours: null,
+      toHours: null,
+      day: null,
+      from: null,
+      to: null,
       /**
        * Params search
        * @type {Object}
@@ -477,24 +477,14 @@ export default {
           seller_id: this.seller?.id,
           day: this.day,
           fromHours: this.fromHours,
-          toHours: this.toHours,
-          dateFilter: {
-            from: `${this.day} ${this.fromHours}`,
-            to: `${this.day} ${this.toHours}`,
-            field: 'created_at'
-          }
+          toHours: this.toHours
         }
       } else {
         this.filters = {
           seller_id: this.seller?.id,
           branch_office_id: this.branchOffice?.id,
           to: this.to,
-          from: this.from,
-          dateFilter: {
-            from: `${this.from} ${this.fromHours}`,
-            to: `${this.to} ${this.toHours}`,
-            field: 'created_at'
-          }
+          from: this.from
         }
       }
       if (this.client?.id) {
@@ -624,12 +614,13 @@ export default {
       this.saleParams.page = data.pagination.page
       this.saleParams.sortBy = data.pagination.sortBy ?? this.saleParams.sortBy
       this.saleParams.perPage = data.pagination.rowsPerPage
-      this.paginationConfig = data.pagination
+      this.salePagination = data.pagination
       const params = {
         ...this.saleParams,
         ...this.filters,
         dataEqualFilter: {
-          client_id: this.client?.id
+          client_id: this.client?.id,
+          branch_office_id: this.branchOffice?.id
         }
       }
       this.getSales(params)
