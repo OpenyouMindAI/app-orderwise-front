@@ -293,7 +293,7 @@
                   color="primary"
                   icon="print"
                   label="Imprimir factura"
-                  @click="() => { this.invoicePrinter = true; printBill(invoice) }"
+                  @click="() => { invoicePrinter = true; printBill(invoice) }"
                 >
                   <q-badge
                     color="negative"
@@ -311,7 +311,7 @@
                   color="teal"
                   icon="receipt"
                   label="Imprimir ticket"
-                  @click="() => { this.invoicePrinter = false; printBill(invoice) }"
+                  @click="() => { invoicePrinter = false; printBill(invoice) }"
                 >
                   <q-badge
                     color="negative"
@@ -624,10 +624,24 @@
           </q-card-section>
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                autofocus
+                label="Tipo de documento"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="clientAdded.document_type"
+                :options="documentTypes"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getDocumentTypes"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
                 v-model="clientAdded.document_number"
-                autofocus
                 label="Número de documento"
                 :rules="[val => !!val || 'El campo es requerido.']"
               />
@@ -638,6 +652,20 @@
                 filled
                 v-model="clientAdded.name"
                 label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                label="Condición de IVA"
+                input-debounce="0"
+                option-label="name"
+                option-value="code"
+                v-model="clientAdded.condition_iva_receptor"
+                :options="conditionIvaReceptors"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getConditionIvaReceptor"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -734,6 +762,7 @@ import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import { printInvoice, printTicket } from 'src/const/invoice'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
+import { apiArca } from 'src/boot/axios'
 export default {
   name: 'BillingPage',
   components: {
@@ -745,6 +774,7 @@ export default {
     return {
       waitingPayment: false,
       loadingBilling: false,
+      documentTypes: [],
       /**
        * Invoice printer
        * @type {Boolean}
@@ -890,6 +920,11 @@ export default {
        * @type {Array}
        */
       typeOfServices: [],
+      /**
+       * Type of services
+       * @type {Array}
+       */
+      conditionIvaReceptors: [],
       /**
        * Payments
        * @type {Array}
@@ -1226,6 +1261,36 @@ export default {
   },
   methods: {
     /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getConditionIvaReceptor (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/condition-iva-receptors')
+        update(() => {
+          this.conditionIvaReceptors = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getDocumentTypes (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/document-types')
+        update(() => {
+          this.documentTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
      * Update values
      * @param {String} inputName input name
      */
@@ -1367,7 +1432,10 @@ export default {
       this.dialogPayment = false
       this.payments = []
     },
-
+    /**
+     * Payment success
+     * @param {Object} data data payments
+     */
     paymentSuccess (data) {
       const payment = this.payments.find(payment => payment.amount === data.transaction_amount && payment.acronym === 'MPQA')
       payment.reference = String(data.id)
@@ -1789,22 +1857,27 @@ export default {
       return this.setModelInvoice()
     },
 
+    setPercent (data) {
+      const percent = parseInt(data.replace(/\D/g, ''), 10)
+      return (Number(percent) / 100)
+    },
+
     modelInvoiceElectronic (params) {
       const { company_session: companySession } = this.userSession
-      console.log(companySession?.company_config?.other)
+      const aliquotType = this.setPercent(companySession?.company_config?.other?.aliquot_type.Desc)
       return {
         cant_reg: 1,
         pto_vta: 1,
-        cbte_tipo: 6,
+        cbte_tipo: companySession?.company_config?.other?.voucher_type?.Id,
         concepto: companySession?.company_config?.other?.concept_type?.Id,
         doc_tipo: 99,
-        doc_nro: 0,
+        doc_nro: this.client.document_number,
         cbte_fch: formatDate(new Date(), 'YYYY-MM-DD'),
         imp_tot_conc: 0,
         imp_neto: this.totalBill,
         imp_op_ex: 0,
-        imp_iva: this.totalBill * 0.21,
-        condicion_iva_receptor_id: 4,
+        imp_iva: this.totalBill * aliquotType,
+        condicion_iva_receptor_id: this.client.condition_iva_receptor.code || 4,
         imp_trib: 0,
         pdf: true,
         mon_id: 'PES',
@@ -1817,20 +1890,23 @@ export default {
         },
         iva: [
           {
-            id: 5,
+            id: companySession?.company_config?.other?.aliquot_type?.Id,
             base_imp: this.totalBill,
-            importe: this.totalBill * 0.21
+            importe: this.totalBill * aliquotType
           }
         ]
       }
     },
 
+    /**
+     * Set invoice electronic
+     * @param {Object} params
+     */
     async setInvoiceElectronic (params) {
       try {
-        const { data } = await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params))
-        this.printBill(data.data)
+        await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params))
       } catch (error) {
-        notify(error.message, 'negative', 'warning')
+        notify(`Error al crear factura electrónica: ${error.message}`, 'negative', 'warning')
       }
     },
     /**
@@ -1840,18 +1916,18 @@ export default {
       try {
         this.loadingBilling = true
         const params = this.setParamsBill()
+        let res = null
         if (!params) return
 
         if (this.$route.query.id) {
-          const { data } = await this.$api.put(`invoices/${this.$route.query.id}`, params)
-          this.printBill(data.data)
+          res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
-          const { data } = await this.$api.post('invoices', params)
-          this.printBill(data.data)
+          res = await this.$api.post('invoices', params)
         }
         if (this.invoiceType.bill) {
           await this.setInvoiceElectronic(params)
         }
+        this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
         this.setPagination({
           pagination: this.pagination,

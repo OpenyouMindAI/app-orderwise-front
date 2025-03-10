@@ -218,7 +218,7 @@
                     input-debounce="0"
                     option-label="Desc"
                     option-value="id"
-                    v-model="companyConfig.other.aliquot_types"
+                    v-model="companyConfig.other.aliquot_type"
                     :options="aliquotTypes"
                     :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="getAliquotTypes"
