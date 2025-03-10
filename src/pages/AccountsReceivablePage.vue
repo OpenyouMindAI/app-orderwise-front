@@ -614,7 +614,7 @@ export default {
       this.saleParams.page = data.pagination.page
       this.saleParams.sortBy = data.pagination.sortBy ?? this.saleParams.sortBy
       this.saleParams.perPage = data.pagination.rowsPerPage
-      this.paginationConfig = data.pagination
+      this.salePagination = data.pagination
       const params = {
         ...this.saleParams,
         ...this.filters,
