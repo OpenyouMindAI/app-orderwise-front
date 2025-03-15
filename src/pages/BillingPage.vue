@@ -1905,7 +1905,11 @@ export default {
      */
     async setInvoiceElectronic (params) {
       try {
-        await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params))
+        await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params), {
+          headers: {
+            'X-Company-External-Id': this.userSession?.company_session_id
+          }
+        })
       } catch (error) {
         notify(`Error al crear factura electrónica: ${error.message}`, 'negative', 'warning')
       }
