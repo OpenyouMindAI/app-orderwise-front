@@ -399,7 +399,11 @@ const filterOptions = async (value, service, update) => {
  */
 const getConceptTypes = async (value, update) => {
   try {
-    const { data } = await apiArca.get('metadata/concept-types')
+    const { data } = await apiArca.get('metadata/concept-types', {}, {
+      headers: {
+        'X-Company-External-Id': userSession.value?.company_session_id
+      }
+    })
     update(() => {
       conceptTypes.value = data
     })
@@ -414,8 +418,11 @@ const getConceptTypes = async (value, update) => {
  */
 const getAliquotTypes = async (value, update) => {
   try {
-    const { data } = await apiArca.get('metadata/aliquot-types')
-    console.log(data)
+    const { data } = await apiArca.get('metadata/aliquot-types', {}, {
+      headers: {
+        'X-Company-External-Id': userSession.value?.company_session_id
+      }
+    })
     update(() => {
       aliquotTypes.value = data
     })
@@ -430,7 +437,11 @@ const getAliquotTypes = async (value, update) => {
  */
 const getVoucherTypes = async (value, update) => {
   try {
-    const { data } = await apiArca.get('metadata/voucher-types')
+    const { data } = await apiArca.get('metadata/voucher-types', {}, {
+      headers: {
+        'X-Company-External-Id': userSession.value?.company_session_id
+      }
+    })
     update(() => {
       voucherTypes.value = data
     })
