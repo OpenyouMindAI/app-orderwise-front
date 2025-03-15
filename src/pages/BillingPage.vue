@@ -1858,7 +1858,7 @@ export default {
      */
     setParamsBill () {
       if (!this.withoutPayment.includes(this.invoiceType?.name) && this.payments?.length <= 0) {
-        notify('No a seleccionado un pago', 'negative', 'warning')
+        notify('No a seleccionado un método de pago', 'negative', 'warning')
         this.dialogPayment = true
         return false
       }
