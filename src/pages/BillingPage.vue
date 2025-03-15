@@ -1858,6 +1858,7 @@ export default {
     },
 
     setPercent (data) {
+      console.log(data)
       const percent = parseInt(data.replace(/\D/g, ''), 10)
       return (Number(percent) / 100)
     },
@@ -1870,14 +1871,14 @@ export default {
         pto_vta: 1,
         cbte_tipo: companySession?.company_config?.other?.voucher_type?.Id,
         concepto: companySession?.company_config?.other?.concept_type?.Id,
-        doc_tipo: 99,
+        doc_tipo: this.client?.document_type?.Id || 99,
         doc_nro: this.client.document_number,
         cbte_fch: formatDate(new Date(), 'YYYY-MM-DD'),
         imp_tot_conc: 0,
         imp_neto: this.totalBill,
         imp_op_ex: 0,
         imp_iva: this.totalBill * aliquotType,
-        condicion_iva_receptor_id: this.client.condition_iva_receptor.code || 4,
+        condicion_iva_receptor_id: this.client?.condition_iva_receptor?.code || 4,
         imp_trib: 0,
         pdf: true,
         mon_id: 'PES',

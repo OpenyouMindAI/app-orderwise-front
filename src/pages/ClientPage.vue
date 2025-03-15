@@ -413,6 +413,8 @@ export default {
       this.openEditClient = true
       this.client = row
       this.role = row.role
+      this.client.condition_iva_receptor = JSON.parse(row.condition_iva_receptor)
+      this.client.document_type = JSON.parse(row.document_type)
     },
     /**
      * Save edit

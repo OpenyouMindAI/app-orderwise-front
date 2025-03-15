@@ -23,9 +23,9 @@ export function formatDate (value, format = 'DD-MM-YYYY') {
  * Loading statusList
  * @param {Boolean} val loading statusList
  */
-export const loading = val => {
+export const loading = (val, options = {}) => {
   if (val) {
-    Loading.show()
+    Loading.show(options)
   } else {
     Loading.hide()
   }

@@ -77,9 +77,9 @@
             color="primary"
             icon="android"
             href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
+            target="_blank"
             v-if="!$q.platform.is.nativeMobile"
             type="a"
-            target="_blank"
           />
           <div>
             <span class="text-subtitle1 text-center text-bold">
