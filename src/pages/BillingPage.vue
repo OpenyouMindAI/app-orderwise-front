@@ -1874,12 +1874,14 @@ export default {
     setPercent (data) {
       console.log(data)
       const percent = parseInt(data.replace(/\D/g, ''), 10)
-      return (Number(percent) / 100)
+      return (Number(percent) / 100) + 1
     },
 
     modelInvoiceElectronic (params) {
       const { company_session: companySession } = this.userSession
       const aliquotType = this.setPercent(companySession?.company_config?.other?.aliquot_type.Desc)
+      const subtotal = this.totalBill / aliquotType
+      const iva = Number((this.totalBill - subtotal).toFixed(2))
       return {
         cant_reg: 1,
         pto_vta: 1,
@@ -1889,9 +1891,9 @@ export default {
         doc_nro: this.client.document_number,
         cbte_fch: formatDate(new Date(), 'YYYY-MM-DD'),
         imp_tot_conc: 0,
-        imp_neto: this.totalBill,
+        imp_neto: Number(subtotal.toFixed(2)),
         imp_op_ex: 0,
-        imp_iva: this.totalBill * aliquotType,
+        imp_iva: iva,
         condicion_iva_receptor_id: this.client?.condition_iva_receptor?.code || 4,
         imp_trib: 0,
         pdf: true,
@@ -1906,8 +1908,8 @@ export default {
         iva: [
           {
             id: companySession?.company_config?.other?.aliquot_type?.Id,
-            base_imp: this.totalBill,
-            importe: this.totalBill * aliquotType
+            base_imp: Number(subtotal.toFixed(2)),
+            importe: iva
           }
         ]
       }
