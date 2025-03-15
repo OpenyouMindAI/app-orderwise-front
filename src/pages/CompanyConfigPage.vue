@@ -401,7 +401,7 @@ const getConceptTypes = async (value, update) => {
   try {
     const { data } = await apiArca.get('metadata/concept-types', {}, {
       headers: {
-        'X-Company-External-Id': userSession.value?.company_session_id
+        'X-Company-External-Id': company.value?.id
       }
     })
     update(() => {
@@ -420,7 +420,7 @@ const getAliquotTypes = async (value, update) => {
   try {
     const { data } = await apiArca.get('metadata/aliquot-types', {}, {
       headers: {
-        'X-Company-External-Id': userSession.value?.company_session_id
+        'X-Company-External-Id': company.value?.id
       }
     })
     update(() => {
@@ -439,7 +439,7 @@ const getVoucherTypes = async (value, update) => {
   try {
     const { data } = await apiArca.get('metadata/voucher-types', {}, {
       headers: {
-        'X-Company-External-Id': userSession.value?.company_session_id
+        'X-Company-External-Id': company.value?.id
       }
     })
     update(() => {
