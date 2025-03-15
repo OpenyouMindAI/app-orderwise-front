@@ -212,6 +212,8 @@
 import { Notify } from 'quasar'
 import { apiArca } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
+import { authentication } from 'src/stores/module-authentication'
+import { mapState } from 'pinia'
 export default {
   data () {
     return {
@@ -296,6 +298,9 @@ export default {
       this.searchData(data)
     }
   },
+  computed: {
+    ...mapState(authentication, ['userSession'])
+  },
   methods: {
     /**
      * Close all modals
@@ -344,7 +349,14 @@ export default {
      */
     async getDocumentTypes (value, update) {
       try {
-        const { data } = await apiArca.get('metadata/document-types')
+        const { data } = await apiArca.get('metadata/document-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
         update(() => {
           this.documentTypes = data
         })

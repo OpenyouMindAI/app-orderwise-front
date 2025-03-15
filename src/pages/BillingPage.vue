@@ -1267,7 +1267,14 @@ export default {
      */
     async getConditionIvaReceptor (value, update) {
       try {
-        const { data } = await apiArca.get('metadata/condition-iva-receptors')
+        const { data } = await apiArca.get('metadata/condition-iva-receptors', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
         update(() => {
           this.conditionIvaReceptors = data
         })
@@ -1282,7 +1289,14 @@ export default {
      */
     async getDocumentTypes (value, update) {
       try {
-        const { data } = await apiArca.get('metadata/document-types')
+        const { data } = await apiArca.get('metadata/document-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
         update(() => {
           this.documentTypes = data
         })
