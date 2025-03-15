@@ -399,9 +399,12 @@ const filterOptions = async (value, service, update) => {
  */
 const getConceptTypes = async (value, update) => {
   try {
-    const { data } = await apiArca.get('metadata/concept-types', {}, {
-      headers: {
-        'X-Company-External-Id': company.value?.id
+    const { data } = await apiArca.get('metadata/concept-types', {
+      params: {
+        user: {
+          name: userSession.name,
+          email: userSession.email
+        }
       }
     })
     update(() => {
@@ -418,9 +421,12 @@ const getConceptTypes = async (value, update) => {
  */
 const getAliquotTypes = async (value, update) => {
   try {
-    const { data } = await apiArca.get('metadata/aliquot-types', {}, {
-      headers: {
-        'X-Company-External-Id': company.value?.id
+    const { data } = await apiArca.get('metadata/aliquot-types', {
+      params: {
+        user: {
+          name: userSession.name,
+          email: userSession.email
+        }
       }
     })
     update(() => {
@@ -437,9 +443,12 @@ const getAliquotTypes = async (value, update) => {
  */
 const getVoucherTypes = async (value, update) => {
   try {
-    const { data } = await apiArca.get('metadata/voucher-types', {}, {
-      headers: {
-        'X-Company-External-Id': company.value?.id
+    const { data } = await apiArca.get('metadata/voucher-types', {
+      params: {
+        user: {
+          name: userSession.name,
+          email: userSession.email
+        }
       }
     })
     update(() => {
