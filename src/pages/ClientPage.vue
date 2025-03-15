@@ -371,7 +371,14 @@ export default {
      */
     async getConditionIvaReceptor (value, update) {
       try {
-        const { data } = await apiArca.get('metadata/condition-iva-receptors')
+        const { data } = await apiArca.get('metadata/condition-iva-receptors', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
         update(() => {
           this.conditionIvaReceptors = data
         })
