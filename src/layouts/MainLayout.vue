@@ -447,19 +447,27 @@ export default {
     },
     async generateCertificate () {
       try {
-        loading(true, { message: 'Generando certificado, esto puede tardar unos minutos ...' })
+        loading(true,
+          {
+            message: 'Generando certificado, esto puede tardar unos minutos ...',
+            backgroundColor: 'cyan-10',
+            customClass: 'text-subtitle1 text-center'
+          }
+        )
         const { data } = await apiArca.post('metadata/generate-cert', {
           cuit: this.cuit,
           password: this.password,
+          company: this.userSession?.company_session,
           user: {
             email: this.userSession?.email,
             name: this.userSession?.name
           }
-        }, {
-          headers: {
-            'X-Company-External-Id': this.userSession?.company_session_id
-          }
         })
+        const res = await api.put(`session/company/${this.userSession.company_session_id}`, {
+          ...this.userSession?.company_session,
+          billing: true
+        })
+        this.setCompanySession(res.data)
         this.download = data
       } catch (error) {
         notify(error.message, 'negative', 'warning')
@@ -522,6 +530,7 @@ export default {
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
+      this.cuit = this.userSession?.company_session?.document_number
     },
     /**
      * Change route
@@ -550,7 +559,7 @@ export default {
     /**
      * Logout map actions
      */
-    ...mapActions(authentication, ['logout']),
+    ...mapActions(authentication, ['logout', 'setCompanySession']),
     /**
      * Dark mode map actions
      */
