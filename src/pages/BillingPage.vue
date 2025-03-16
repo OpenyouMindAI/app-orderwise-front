@@ -1884,7 +1884,7 @@ export default {
       const iva = Number((this.totalBill - subtotal).toFixed(2))
       return {
         cant_reg: 1,
-        pto_vta: companySession?.company_config.pointOfSale,
+        pto_vta: companySession?.company_config.point_of_sale,
         cbte_tipo: companySession?.company_config?.other?.voucher_type?.Id,
         concepto: companySession?.company_config?.other?.concept_type?.Id,
         doc_tipo: this.client?.document_type?.Id || 99,
