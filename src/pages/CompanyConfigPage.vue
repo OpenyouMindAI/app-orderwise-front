@@ -211,7 +211,7 @@
                 </div>
                 <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
                   <q-select
-                    use-input
+                  use-input
                     filled
                     dense
                     label="Iva (%)"
@@ -222,8 +222,11 @@
                     :options="aliquotTypes"
                     :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="getAliquotTypes"
-                  />
-                </div>
+                    />
+                  </div>
+                  <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                    <q-input filled label="Punto de venta" dense v-model="companyConfig.point_of_sale" />
+                  </div>
               </div>
             </q-card-section>
             <q-card-actions align="right">
@@ -316,7 +319,8 @@ const companyConfig = ref({
   typeOfService: company.value?.company_config?.type_of_service,
   coin: company.value?.company_config?.coin,
   client: company.value?.company_config?.client,
-  other: company.value?.company_config?.other || {}
+  other: company.value?.company_config?.other || {},
+  point_of_sale: company.value?.company_config?.point_of_sale
 })
 
 /**
@@ -364,7 +368,10 @@ const onSubmit = async () => {
   try {
     loading.value = true
     const { data } = await api.post(`session/company/${company.value.id}`, formDate(company.value))
-    store.setCompanySession(data)
+    store.setCompanySession({
+      ...company.value,
+      ...data
+    })
     notify('Guardado exitosamente', 'positive', 'check_circle')
   } catch (error) {
     notify(error.message, 'negative', 'warning')
@@ -533,7 +540,8 @@ const onSubmitConfig = async () => {
       invoice_type_id: companyConfig.value?.invoiceType?.id,
       payment_method_id: companyConfig.value?.paymentMethod?.id,
       client_id: companyConfig.value?.client?.id,
-      other: companyConfig.value?.other
+      other: companyConfig.value?.other,
+      point_of_sale: companyConfig.value?.point_of_sale
     })
     store.setCompanySession({
       ...company.value,
