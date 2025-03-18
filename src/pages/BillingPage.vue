@@ -1671,7 +1671,7 @@ export default {
     getTables (data) {
       this.$api.get('tables', {
         params: {
-          dataFilter: {
+          dataEqualFilter: {
             living_room_id: data.id
           },
           sortBy: 'id',
@@ -1702,7 +1702,7 @@ export default {
           stock: true,
           withStock: true,
           mostSold: true,
-          dataEqualFilters: {
+          dataEqualFilter: {
             category_id: this.category ? this.category.id : null
           }
         }
