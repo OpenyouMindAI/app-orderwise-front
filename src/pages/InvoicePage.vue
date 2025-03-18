@@ -206,6 +206,7 @@
                   icon="block"
                   color="negative"
                   label="Anular"
+                  v-if="invoice.status === 'pending'"
                   :loading="cancelLoading"
                   @click="cancelInvoice"
                 />
@@ -228,7 +229,7 @@
                   icon="send"
                   color="positive"
                   label="Factura electrónica"
-                  v-if="invoice.invoice_type.bill && !invoice.billing"
+                  v-if="invoice.invoice_type.bill && !invoice.billing && invoice.status !== 'cancelled'"
                   @click="setInvoiceElectronic(invoice)"
                 >
                   <q-tooltip class="text-body1" anchor="bottom middle">
@@ -240,6 +241,7 @@
                   icon="check_circle"
                   color="primary"
                   label="Guardar"
+                  v-if="invoice.status !== 'cancelled'"
                   @click="saveEdit"
                 />
               </div>
