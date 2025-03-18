@@ -107,7 +107,7 @@
               <span class="text-h6">Valores por defecto para la facturación</span>
             </q-card-section>
             <q-card-section class="q-pb-none">
-              <div class="row q-col-gutter-x-sm">
+              <div class="row q-col-gutter-sm">
                 <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
                   <q-select
                     use-input
@@ -119,7 +119,6 @@
                     option-value="id"
                     v-model="companyConfig.client"
                     :options="clients"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="filterClients"
                   />
                 </div>
@@ -134,7 +133,6 @@
                     option-value="id"
                     v-model="companyConfig.invoiceType"
                     :options="invoiceTypes"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="filterInvoiceTypes"
                   />
                 </div>
@@ -149,7 +147,6 @@
                     option-value="id"
                     v-model="companyConfig.typeOfService"
                     :options="typeOfServices"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="filterTypeOfServices"
                   />
                 </div>
@@ -162,7 +159,6 @@
                     option-value="id"
                     v-model="companyConfig.paymentMethod"
                     :options="paymentMethods"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="filtersPaymentMethods"
                   />
                 </div>
@@ -175,7 +171,6 @@
                     option-value="id"
                     v-model="companyConfig.coin"
                     :options="coins"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="filterCoins"
                   />
                 </div>
@@ -190,7 +185,6 @@
                     option-value="id"
                     v-model="companyConfig.other.concept_type"
                     :options="conceptTypes"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="getConceptTypes"
                   />
                 </div>
@@ -205,13 +199,12 @@
                     option-value="id"
                     v-model="companyConfig.other.voucher_type"
                     :options="voucherTypes"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="getVoucherTypes"
                   />
                 </div>
                 <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
                   <q-select
-                  use-input
+                    use-input
                     filled
                     dense
                     label="Iva (%)"
@@ -220,13 +213,33 @@
                     option-value="id"
                     v-model="companyConfig.other.aliquot_type"
                     :options="aliquotTypes"
-                    :rules="[val => !!val || 'El campo es requerido.']"
                     @filter="getAliquotTypes"
-                    />
-                  </div>
-                  <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                    <q-input filled label="Punto de venta" dense v-model="companyConfig.point_of_sale" />
-                  </div>
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    filled
+                    label="Punto de venta"
+                    dense
+                    v-model="companyConfig.point_of_sale"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    filled
+                    label="Inicio de actividades"
+                    dense
+                    type="date"
+                    v-model="companyConfig.other.activity_start_date"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-input
+                    filled
+                    label="Ingresos brutos"
+                    dense v-model="companyConfig.other.income_brut"
+                  />
+                </div>
               </div>
             </q-card-section>
             <q-card-actions align="right">

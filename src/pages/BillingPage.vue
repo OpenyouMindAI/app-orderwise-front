@@ -1820,7 +1820,7 @@ export default {
       }
 
       if (this.invoicePrinter) {
-        doc = printInvoice(invoice, this.userSession)
+        doc = await printInvoice(invoice, this.userSession)
       } else {
         doc = printTicket(invoice, this.userSession)
       }
@@ -1850,7 +1850,8 @@ export default {
         products: this.products,
         payments: this.payments,
         total_amount: this.totalBill,
-        tables: this.tableSelected
+        tables: this.tableSelected,
+        electronic_invoice: this.invoiceType?.bill
       }
     },
     /**
@@ -1872,8 +1873,8 @@ export default {
     },
 
     setPercent (data) {
-      console.log(data)
       const percent = parseInt(data.replace(/\D/g, ''), 10)
+      console.log(percent)
       return (Number(percent) / 100) + 1
     },
 
@@ -1884,27 +1885,23 @@ export default {
       const iva = Number((this.totalBill - subtotal).toFixed(2))
       return {
         cant_reg: 1,
-        pto_vta: companySession?.company_config.point_of_sale,
+        pto_vta: companySession?.company_config?.point_of_sale,
         cbte_tipo: companySession?.company_config?.other?.voucher_type?.Id,
         concepto: companySession?.company_config?.other?.concept_type?.Id,
         doc_tipo: this.client?.document_type?.Id || 99,
         doc_nro: this.client.document_number,
         cbte_fch: formatDate(new Date(), 'YYYY-MM-DD'),
-        imp_tot_conc: 0,
         imp_neto: Number(subtotal.toFixed(2)),
-        imp_op_ex: 0,
-        imp_iva: iva,
         condicion_iva_receptor_id: this.client?.condition_iva_receptor?.code || 4,
+        user: this.userSession,
+        imp_tot_conc: 0,
+        imp_op_ex: 0,
         imp_trib: 0,
+        imp_iva: iva,
         pdf: true,
         mon_id: 'PES',
         mon_cotiz: 1,
-        user: this.userSession,
         company_id: companySession.id,
-        company: {
-          external_id: companySession.id,
-          ...companySession
-        },
         iva: [
           {
             id: companySession?.company_config?.other?.aliquot_type?.Id,
@@ -1921,11 +1918,7 @@ export default {
      */
     async setInvoiceElectronic (params) {
       try {
-        await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params), {
-          headers: {
-            'X-Company-External-Id': this.userSession?.company_session_id
-          }
-        })
+        await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params))
       } catch (error) {
         notify(`Error al crear factura electrónica: ${error.message}`, 'negative', 'warning')
       }
@@ -1944,9 +1937,6 @@ export default {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
           res = await this.$api.post('invoices', params)
-        }
-        if (this.invoiceType.bill) {
-          await this.setInvoiceElectronic(params)
         }
         this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
