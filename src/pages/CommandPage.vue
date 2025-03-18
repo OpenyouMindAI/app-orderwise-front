@@ -6,7 +6,7 @@
           {{ userSession?.name }}
         </q-chip>
         <q-btn  v-if="isTable" rounded style="padding: 5px 15px;" class="bg-primary text-white cursor-pointer" @click="dialogTable = true">
-          Mesa: {{ command?.table?.name || 'Seleccionar mesa' }}
+          Mesa: {{ tables.map(table => table.name).join(', ') || 'Seleccionar mesa' }}
         </q-btn>
       </div>
       <q-chip class="bg-secondary text-white cursor-pointer">
@@ -80,20 +80,20 @@
           <template v-slot:item="props">
             <div class="col-xs-6 col-sm-3 col-md-2 col-lg-2" style="padding: 2px;">
               <q-card
-                :class="findProduct(command.products, props.row) && 'shadow-20'"
-                :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
+                :class="findProduct(products, props.row) && 'shadow-20'"
+                :style="`${findProduct(products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
                 @click="openProductDetails(props.row)"
               >
                 <q-img
                   fit="fill"
                   no-native-menu
-                  :src="props.row?.images ? props.row.images[0].url : 'images/404-image.jpg'"
+                  :src="props.row?.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                   style="height: 180px;"
                   spinner-color="primary"
                 >
                   <div class="absolute-bottom text-center">
-                    <div class="text-bold text-subtitle1 p-a-none">
-                      {{ props.row.name }}
+                    <div class="text-bold text-body2 p-a-none">
+                      {{ props.row.name.slice(0, 20) }}
                     </div>
                     <span class="text-caption">
                       {{ formatNumber(props.row.price) }} $
@@ -138,28 +138,46 @@
         grid
         row-key="name"
         style="max-height: calc(100vh - 270px); overflow: auto;"
-        :rows="command.products"
+        :rows="products"
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
             <q-card
-              class="my-card q-mt-sm"
-              style="width: 100%; border-radius: 30px; height: 120px;"
+            class="my-card q-mt-sm"
+            style="width: 100%; border-radius: 30px;"
             >
               <q-card-section horizontal class="full-height">
                 <q-img
                   class="col-4"
-                  style="max-height: 200px;"
-                  :src="props.row?.images ? props.row?.images[0]?.url : 'images/404-image.jpg'"
+                  :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                 />
                 <q-card-section class="q-pa-sm column">
                   <q-card-section class="q-pa-sm col">
                     <div class="flex justify-between q-col-gutter-sm">
                       <div class="flex justify-between items-center full-width">
-                        <span class="text-subtitle2 text-uppercase text-bold">
-                          {{ props.row.name }}
+                        <span class="text-body2 text-uppercase text-bold">
+                          {{ props.row.name.slice(0, 20) }}
                         </span>
+                        <q-icon
+                          name="info"
+                          size="sm"
+                          color="secondary"
+                          class="cursor-pointer"
+                          v-if="props.row.observation"
+                        >
+                          <q-popup-proxy>
+                            <q-banner>
+                              <q-input
+                                label="Descripción"
+                                autogrow
+                                readonly
+                                borderless
+                                :model-value="props.row.observation"
+                              />
+                            </q-banner>
+                          </q-popup-proxy>
+                        </q-icon>
                       </div>
                     </div>
                     <p class="text-subtitle2 text-grey">
@@ -174,7 +192,7 @@
                       <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
                         <div>
                           <q-btn icon="remove" round size="sm" color="primary" @click="() => {
-                              props.row.amount -= 1
+                              props.row.quantity -= 1
                               calculate(props.row)
                             }"
                           />
@@ -186,12 +204,12 @@
                           label="Cantidad"
                           type="number"
                           style="width: 50%;"
-                          v-model.number="props.row.amount"
+                          v-model.number="props.row.quantity"
                           @update:model-value="calculate(props.row)"
                         />
                         <div>
                             <q-btn icon="add" round size="sm" color="primary" @click="() => {
-                                props.row.amount += 1
+                                props.row.quantity += 1
                                 calculate(props.row)
                             }"/>
                         </div>
@@ -231,15 +249,15 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(product, product.amount -= 1)"
+                @click="addTemporalProducts(product, product.quantity -= 1)"
               />
               <q-input
                 borderless
                 dense
                 type="number"
-                style="width: 30px;"
+                style="width: 40px;"
                 input-class="text-center"
-                v-model.number="product.amount"
+                v-model.number="product.quantity"
                 @update:model-value="(value) => addTemporalProducts(product, value)"
               />
               <q-btn
@@ -247,7 +265,7 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(product, product.amount += 1)"
+                @click="addTemporalProducts(product, product.quantity += 1)"
               />
             </div>
           </div>
@@ -282,7 +300,7 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(addon, addon.amount -= 1)"
+                @click="addTemporalProducts(addon, addon.quantity -= 1)"
               />
               <q-input
                 borderless
@@ -290,7 +308,7 @@
                 type="number"
                 style="width: 30px;"
                 input-class="text-center"
-                v-model.number="addon.amount"
+                v-model.number="addon.quantity"
                 @update:model-value="(value) => addTemporalProducts(product, value)"
               />
               <q-btn
@@ -298,10 +316,13 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(addon, addon.amount += 1)"
+                @click="addTemporalProducts(addon, addon.quantity += 1)"
               />
             </div>
           </div>
+        </q-card-section>
+        <q-card-section class="col q-pt-xs">
+          <q-input type="textarea" v-model="product.observation" filled label="Descripción" />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn
@@ -309,7 +330,8 @@
             label="Cerrar"
             @click="() => {
               detailProduct = false
-              product = null
+              product = { quantity: 1 }
+              temporalProducts = []
             }"
           />
           <q-btn
@@ -397,12 +419,12 @@
 import { Notify } from 'quasar'
 import { QrcodeStream } from 'vue-qrcode-reader'
 import { formatNumber, notify } from '../const/mixins'
-import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
 import SlideComponent from '../components/SlideComponent.vue'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
+import { useCommandStore } from 'src/stores/command'
 export default {
   name: 'CommandPage',
   components: {
@@ -487,7 +509,7 @@ export default {
        * Table
        * @type {Object}
        */
-      table: null,
+      tables: [],
       /**
        * Loading page
        * @type {Boolean}
@@ -526,7 +548,7 @@ export default {
           field: row => row.name,
           sortable: true
         },
-        { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
+        { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
         { name: 'price', align: 'right', label: 'Precio', field: 'price', sortable: true },
         { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal', sortable: true },
         { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
@@ -546,6 +568,10 @@ export default {
        * @type {Array}
        */
       tableSelected: [],
+      /**
+       * Is table
+       * @type {Number}
+       */
       isTable: 1,
       /**
        * Product columns
@@ -586,9 +612,9 @@ export default {
   },
   created () {
     this.isTable = this.userSession?.company_session?.company_config?.is_table
+    this.client = this.userSession?.company_session?.company_config?.client
     this.getCategories()
     this.category = this.$route.query.category || 'all'
-    this.products = this.command.products || []
     this.calculateTotal()
   },
   watch: {
@@ -620,10 +646,6 @@ export default {
     tab () {
       return this.$route.query.tab ?? 'menu'
     },
-    command () {
-      const store = useCommandStore()
-      return store?.command
-    },
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
@@ -632,6 +654,9 @@ export default {
       this.notifyProductCar(this.products)
       this.detailProduct = false
       this.temporalProducts = []
+      this.product = {
+        quantity: 1
+      }
     },
     /**
      * Open product details
@@ -640,10 +665,11 @@ export default {
     openProductDetails (product) {
       this.detailProduct = true
       this.product = product
-      this.product.amount = 0
+      this.product.quantity = 1
+      this.addTemporalProducts(product, product.quantity)
       if (product.product_addons && product.product_addons.length > 0) {
         this.product.product_addons = product.product_addons.map(addon => {
-          addon.amount = 0
+          addon.quantity = 0
           return addon
         })
       }
@@ -678,8 +704,8 @@ export default {
      * After save bill
      */
     afterSaveBill () {
-      this.table = null
-      this.client = null
+      this.tables = []
+      this.client = this.userSession?.company_session?.company_config?.client
       this.clientAdded = {}
       this.products = []
       this.tableSelected = []
@@ -692,8 +718,7 @@ export default {
      * @param {Object} data table selected
      */
     async setTableSelected (data) {
-      this.table = data[0]
-      this.tableSelected = [this.table]
+      this.tableSelected = data
       await this.getTable(data)
       this.dialogTable = false
     },
@@ -731,7 +756,7 @@ export default {
      * Save bill and payments
      */
     async saveBill () {
-      if (!this.command?.table?.id && this.isTable) {
+      if (!this.tables?.length && this.isTable) {
         notify('No se puede crear pedido sin mesa', 'negative', 'warning')
         return
       }
@@ -748,12 +773,12 @@ export default {
 
       try {
         this.billLoading = true
-        await this.$api.post('command-orders', {
+        await this.$api.post('orders', {
           seller_id: this.userSession?.id,
           client_id: this.client?.id,
-          products: this.command.products,
+          products: this.products,
           branch_office_id: this.branchOffice?.id,
-          tables: this.isTable ? [this.command?.table?.id] : [],
+          tables: this.isTable ? this.tables?.map(table => table.id) : [],
           company_id: this.userSession?.company_session_id
         })
         this.afterSaveBill()
@@ -787,17 +812,17 @@ export default {
      * @param {Object} data props products
      */
     calculate (data) {
-      data.subtotal = data.price * data.amount
+      data.subtotal = data.price * data.quantity
       this.calculateTotal()
     },
-    addTemporalProducts (data, amount) {
+    addTemporalProducts (data, quantity) {
       const findProduct = this.findProduct(this.temporalProducts, data)
       if (findProduct) {
-        findProduct.amount = amount
+        findProduct.quantity = quantity
       } else {
         this.temporalProducts.push({
           ...data,
-          amount
+          quantity
         })
       }
     },
@@ -819,7 +844,7 @@ export default {
     validateProduct (data) {
       const findProduct = this.findProduct(this.products, data)
       if (findProduct) {
-        findProduct.amount += data.amount
+        findProduct.quantity += data.quantity
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
@@ -872,8 +897,11 @@ export default {
         params: {
           sortBy: 'id',
           sortOrder: 'desc',
-          dataFilter: {
-            category_id: this.category === 'all' ? null : this.category
+          mostSold: true,
+          dataEqualFilter: {
+            category_id: this.category === 'all' ? null : this.category,
+            show_catalog: 1,
+            'category.show_catalog': 1
           }
         }
       })
@@ -902,16 +930,22 @@ export default {
     async getTable (id) {
       try {
         this.loadingTable = true
-        const { data } = await this.$api.get(`tables/${id}`)
+        const { data } = await this.$api.get('tables', {
+          params: {
+            whereIn: {
+              id
+            }
+          }
+        })
         this.loadingTable = false
-        if (data.status === 'busy') {
+        if (data.find(table => table.status === 'busy')) {
           notify('La mesa está ocupada', 'negative', 'warning')
           return
         }
-        this.table = data
+        this.tables = data
         this.setQueryParams({ tab: 'menu' })
       } catch (error) {
-        this.table = null
+        this.tables = []
         this.loadingTable = false
         notify(error.message, 'negative', 'warning')
       }
@@ -922,7 +956,13 @@ export default {
      * @param {Callback} update update options
      */
     getCategories () {
-      this.$api.get('categories')
+      this.$api.get('categories', {
+        params: {
+          dataFilter: {
+            show_catalog: 1
+          }
+        }
+      })
         .then(({ data }) => {
           this.categories = data
         })

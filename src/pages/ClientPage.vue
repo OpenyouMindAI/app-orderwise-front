@@ -41,11 +41,25 @@
           </q-card-section>
           <q-card-section class="row">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                autofocus
+                label="Tipo de documento"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="client.document_type"
+                :options="documentTypes"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getDocumentTypes"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.document_number"
-                autofocus
                 label="Número de documento"
               />
             </div>
@@ -56,6 +70,20 @@
                 v-model="client.name"
                 autofocus
                 label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                label="Condición de IVA"
+                input-debounce="0"
+                option-label="name"
+                option-value="code"
+                v-model="client.condition_iva_receptor"
+                :options="conditionIvaReceptors"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getConditionIvaReceptor"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -99,6 +127,20 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
+          <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <q-select
+              use-input
+              filled
+              label="Tipo de documento"
+              input-debounce="0"
+              option-label="Desc"
+              option-value="id"
+              v-model="client.document_type"
+              :options="documentTypes"
+              :rules="[val => !!val || 'El campo es requerido.']"
+              @filter="getDocumentTypes"
+            />
+          </div>
           <q-card-section class="row">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
@@ -115,6 +157,20 @@
                 filled
                 v-model="client.name"
                 label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                label="Condición de IVA"
+                input-debounce="0"
+                option-label="name"
+                option-value="code"
+                v-model="client.condition_iva_receptor"
+                :options="conditionIvaReceptors"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getConditionIvaReceptor"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -154,10 +210,15 @@
 
 <script>
 import { Notify } from 'quasar'
+import { apiArca } from 'src/boot/axios'
+import { notify } from 'src/const/mixins'
+import { authentication } from 'src/stores/module-authentication'
+import { mapState } from 'pinia'
 export default {
   data () {
     return {
       clients: [],
+      documentTypes: [],
       client: {},
       filter: '',
       /**
@@ -179,6 +240,7 @@ export default {
       visible: false,
       openAddClient: false,
       openEditClient: null,
+      conditionIvaReceptors: [],
       columns: [
         {
           name: 'id',
@@ -236,6 +298,9 @@ export default {
       this.searchData(data)
     }
   },
+  computed: {
+    ...mapState(authentication, ['userSession'])
+  },
   methods: {
     /**
      * Close all modals
@@ -276,6 +341,50 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getDocumentTypes (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/document-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.documentTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getConditionIvaReceptor (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/condition-iva-receptors', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.conditionIvaReceptors = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
     },
     /**
      * Set data pagination emit event
@@ -323,6 +432,8 @@ export default {
       this.openEditClient = true
       this.client = row
       this.role = row.role
+      this.client.condition_iva_receptor = JSON.parse(row.condition_iva_receptor)
+      this.client.document_type = JSON.parse(row.document_type)
     },
     /**
      * Save edit

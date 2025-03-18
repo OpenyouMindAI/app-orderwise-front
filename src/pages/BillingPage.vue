@@ -57,10 +57,18 @@
             />
           </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-7 col-lg-7 col-xl-7 q-col-gutter-sm">
+        <div class="col-xs-12 col-sm-7 col-md-6 col-lg-5 col-xl-5 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
             <div class="col-xl-6 col-lg-6 col-md-5 col-sm-5 col-xs-12">
-              <q-input filled dense v-model="barcode" autofocus type="number" label="Código" @keypress.enter="getOneProduct(this.barcode)">
+              <q-input
+                filled
+                dense
+                v-model="barcode"
+                autofocus
+                type="number"
+                label="Código"
+                @keypress.enter="getOneProduct(this.barcode)"
+              >
                 <template v-slot:append>
                   <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
                 </template>
@@ -74,7 +82,12 @@
                 :loading="loadingLivingRoom"
                 @click="dialogTable = true"
               >
-                <q-badge color="negative" align="bottom" floating v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile">
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
                   F6
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
@@ -280,7 +293,7 @@
                   color="primary"
                   icon="print"
                   label="Imprimir factura"
-                  @click="() => { this.invoicePrinter = true; printBill(invoice) }"
+                  @click="() => { invoicePrinter = true; printBill(invoice) }"
                 >
                   <q-badge
                     color="negative"
@@ -298,7 +311,7 @@
                   color="teal"
                   icon="receipt"
                   label="Imprimir ticket"
-                  @click="() => { this.invoicePrinter = false; printBill(invoice) }"
+                  @click="() => { invoicePrinter = false; printBill(invoice) }"
                 >
                   <q-badge
                     color="negative"
@@ -316,7 +329,7 @@
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-5 col-lg-5 col-xl-5">
+        <div class="col-xs-12 col-sm-5 col-md-6 col-lg-7 col-xl-7">
           <q-table
             v-model:pagination="pagination"
             row-key="name"
@@ -358,10 +371,10 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-2 col-xl-2">
                 <q-card class="my-card">
                   <q-img
-                    style="height: 200px; width: 100%"
+                    style="height: 150px; width: 100%"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
@@ -611,10 +624,24 @@
           </q-card-section>
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                autofocus
+                label="Tipo de documento"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="clientAdded.document_type"
+                :options="documentTypes"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getDocumentTypes"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
                 v-model="clientAdded.document_number"
-                autofocus
                 label="Número de documento"
                 :rules="[val => !!val || 'El campo es requerido.']"
               />
@@ -625,6 +652,20 @@
                 filled
                 v-model="clientAdded.name"
                 label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                label="Condición de IVA"
+                input-debounce="0"
+                option-label="name"
+                option-value="code"
+                v-model="clientAdded.condition_iva_receptor"
+                :options="conditionIvaReceptors"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getConditionIvaReceptor"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -721,6 +762,7 @@ import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import { printInvoice, printTicket } from 'src/const/invoice'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
+import { apiArca } from 'src/boot/axios'
 export default {
   name: 'BillingPage',
   components: {
@@ -732,6 +774,7 @@ export default {
     return {
       waitingPayment: false,
       loadingBilling: false,
+      documentTypes: [],
       /**
        * Invoice printer
        * @type {Boolean}
@@ -878,6 +921,11 @@ export default {
        */
       typeOfServices: [],
       /**
+       * Type of services
+       * @type {Array}
+       */
+      conditionIvaReceptors: [],
+      /**
        * Payments
        * @type {Array}
        */
@@ -957,8 +1005,8 @@ export default {
        * @type {Object}
        */
       pagination: {
-        rowsPerPage: 10,
-        rowsNumber: 10,
+        rowsPerPage: 50,
+        rowsNumber: 50,
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
@@ -1132,9 +1180,6 @@ export default {
         }
       })
     },
-    client (data) {
-      localStorage.setItem('client', JSON.stringify(data))
-    },
     invoiceRouter (data) {
       if (data) this.getInvoiceOne(data)
     },
@@ -1215,6 +1260,50 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getConditionIvaReceptor (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/condition-iva-receptors', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.conditionIvaReceptors = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getDocumentTypes (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/document-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.documentTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
     /**
      * Update values
      * @param {String} inputName input name
@@ -1357,7 +1446,10 @@ export default {
       this.dialogPayment = false
       this.payments = []
     },
-
+    /**
+     * Payment success
+     * @param {Object} data data payments
+     */
     paymentSuccess (data) {
       const payment = this.payments.find(payment => payment.amount === data.transaction_amount && payment.acronym === 'MPQA')
       payment.reference = String(data.id)
@@ -1609,7 +1701,8 @@ export default {
           branch_office_id: this.branchOffice?.id,
           stock: true,
           withStock: true,
-          dataFilter: {
+          mostSold: true,
+          dataEqualFilters: {
             category_id: this.category ? this.category.id : null
           }
         }
@@ -1727,7 +1820,7 @@ export default {
       }
 
       if (this.invoicePrinter) {
-        doc = printInvoice(invoice, this.userSession)
+        doc = await printInvoice(invoice, this.userSession)
       } else {
         doc = printTicket(invoice, this.userSession)
       }
@@ -1757,7 +1850,8 @@ export default {
         products: this.products,
         payments: this.payments,
         total_amount: this.totalBill,
-        tables: this.tableSelected
+        tables: this.tableSelected,
+        electronic_invoice: this.invoiceType?.bill
       }
     },
     /**
@@ -1765,7 +1859,7 @@ export default {
      */
     setParamsBill () {
       if (!this.withoutPayment.includes(this.invoiceType?.name) && this.payments?.length <= 0) {
-        notify('No a seleccionado un pago', 'negative', 'warning')
+        notify('No a seleccionado un método de pago', 'negative', 'warning')
         this.dialogPayment = true
         return false
       }
@@ -1777,6 +1871,58 @@ export default {
 
       return this.setModelInvoice()
     },
+
+    setPercent (data) {
+      const percent = parseInt(data.replace(/\D/g, ''), 10)
+      console.log(percent)
+      return (Number(percent) / 100) + 1
+    },
+
+    modelInvoiceElectronic (params) {
+      const { company_session: companySession } = this.userSession
+      const aliquotType = this.setPercent(companySession?.company_config?.other?.aliquot_type.Desc)
+      const subtotal = this.totalBill / aliquotType
+      const iva = Number((this.totalBill - subtotal).toFixed(2))
+      return {
+        cant_reg: 1,
+        pto_vta: companySession?.company_config?.point_of_sale,
+        cbte_tipo: companySession?.company_config?.other?.voucher_type?.Id,
+        concepto: companySession?.company_config?.other?.concept_type?.Id,
+        doc_tipo: this.client?.document_type?.Id || 99,
+        doc_nro: this.client.document_number,
+        cbte_fch: formatDate(new Date(), 'YYYY-MM-DD'),
+        imp_neto: Number(subtotal.toFixed(2)),
+        condicion_iva_receptor_id: this.client?.condition_iva_receptor?.code || 4,
+        user: this.userSession,
+        imp_tot_conc: 0,
+        imp_op_ex: 0,
+        imp_trib: 0,
+        imp_iva: iva,
+        pdf: true,
+        mon_id: 'PES',
+        mon_cotiz: 1,
+        company_id: companySession.id,
+        iva: [
+          {
+            id: companySession?.company_config?.other?.aliquot_type?.Id,
+            base_imp: Number(subtotal.toFixed(2)),
+            importe: iva
+          }
+        ]
+      }
+    },
+
+    /**
+     * Set invoice electronic
+     * @param {Object} params
+     */
+    async setInvoiceElectronic (params) {
+      try {
+        await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params))
+      } catch (error) {
+        notify(`Error al crear factura electrónica: ${error.message}`, 'negative', 'warning')
+      }
+    },
     /**
      * Save bill and payments
      */
@@ -1784,14 +1930,15 @@ export default {
       try {
         this.loadingBilling = true
         const params = this.setParamsBill()
+        let res = null
         if (!params) return
+
         if (this.$route.query.id) {
-          const { data } = await this.$api.put(`invoices/${this.$route.query.id}`, params)
-          this.printBill(data.data)
+          res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
-          const { data } = await this.$api.post('invoices', params)
-          this.printBill(data.data)
+          res = await this.$api.post('invoices', params)
         }
+        this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
         this.setPagination({
           pagination: this.pagination,
@@ -1808,7 +1955,7 @@ export default {
      */
     getLocalStorage () {
       const { company_session: companySession } = this.userSession
-      this.client = JSON.parse(localStorage.getItem('client')) ?? null
+      this.client = companySession?.company_config?.client
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin

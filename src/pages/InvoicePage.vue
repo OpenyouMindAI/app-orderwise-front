@@ -568,8 +568,8 @@ export default {
      * Print invoice
      * @param {Object} data invoice saved
      */
-    print (ticket) {
-      let doc = printInvoice(this.invoice, this.userSession)
+    async print (ticket) {
+      let doc = await printInvoice(this.invoice, this.userSession)
       if (ticket) doc = printTicket(this.invoice, this.userSession)
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')

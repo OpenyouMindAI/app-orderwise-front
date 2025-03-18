@@ -12,65 +12,115 @@
           @click="leftDrawerOpen = !leftDrawerOpen"
         />
         <q-separator dark vertical inset />
-        <div v-if="!$q.screen.lt.md" class="flex q-ml-sm">
+
+        <div v-if="!$q.screen.lt.sm" class="flex q-ml-sm full-width">
           <q-img
             :src="userSession?.company_session?.url || logo.white"
             width="155px"
             style="max-height: 40px"
             alt="logo"
             fit="contain"
-          />
-          <q-tooltip :offset="[10, 10]">
-            {{ userSession?.company_session?.name }}
-          </q-tooltip>
+          >
+            <q-tooltip :offset="[10, 10]" class="text-body2">
+              {{ userSession?.company_session?.name }}
+            </q-tooltip>
+          </q-img>
         </div>
         <q-space />
-        <q-btn
-          icon="share"
-          round
-          flat
-          @click="copyCatalog"
-        >
-          <q-tooltip> Copiar link </q-tooltip>
-        </q-btn>
-        <q-btn
-          icon="sync_alt"
-          round
-          flat
-          :color="$route.name === 'ChangeCompany' ? 'secondary' : 'white'"
-          @click="changeRoute('ChangeCompany', 'Cambio de empresa')"
-        >
-          <q-tooltip> Cambio de empresa </q-tooltip>
-        </q-btn>
-        <q-btn
-          icon="store"
-          round
-          flat
-        >
-          <q-tooltip class="text-body2"> {{ branchOffice?.name }} </q-tooltip>
+        <q-btn flat icon="apps" round>
+          <q-tooltip class="text-body2">
+            Herramientas
+          </q-tooltip>
           <q-popup-proxy>
-            <q-list>
-              <q-item
-                clickable
-                v-ripple
-                v-for="bo in branchOffices"
-                :key="bo.id"
-                :active="bo.id === branchOffice?.id"
-                @click="changeBranchOffice(bo)"
-              >
-                <q-item-section thumbnail class="q-pa-sm">
-                  <q-icon name="store" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>
-                    {{ bo.name }}
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
+            <q-banner>
+              <div class="full-width text-center q-mb-xs">
+                <span class="text-subtitle2">
+                  Herramientas
+                </span>
+              </div>
+              <q-separator />
+              <div class="q-mt-xs">
+                <q-btn
+                  icon="sync_alt"
+                  round
+                  flat
+                  :color="$route.name === 'ChangeCompany' ? 'secondary' : ''"
+                  @click="changeRoute('ChangeCompany', 'Cambio de empresa')"
+                >
+                  <q-tooltip> Cambio de empresa </q-tooltip>
+                </q-btn>
+                <q-btn
+                  icon="store"
+                  round
+                  flat
+                >
+                  <q-tooltip>
+                    {{ branchOffice?.name }}
+                  </q-tooltip>
+                  <q-menu>
+                    <q-list>
+                      <q-item
+                        clickable
+                        v-ripple
+                        v-for="bo in branchOffices"
+                        :key="bo.id"
+                        :active="bo.id === branchOffice?.id"
+                        @click="changeBranchOffice(bo)"
+                      >
+                        <q-item-section thumbnail class="q-pa-sm">
+                          <q-icon name="store" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label>
+                            {{ bo.name }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-menu>
+                </q-btn>
+                <q-btn
+                  flat
+                  round
+                  :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
+                  aria-label="dark_mode"
+                  class="q-mr-sm"
+                  @click="setTheme"
+                >
+                  <q-tooltip :offset="[10, 10]">
+                    {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
+                  </q-tooltip>
+                </q-btn>
+                <q-btn
+                  icon="share"
+                  round
+                  flat
+                  @click="copyCatalog"
+                >
+                  <q-tooltip>
+                    Copiar link
+                  </q-tooltip>
+                </q-btn>
+                <q-btn
+                  icon="update"
+                  flat
+                  round
+                  @click="update"
+                />
+                <q-btn
+                  icon="cable"
+                  flat
+                  round
+                  @click="arcaDialog = true"
+                >
+                  <q-tooltip>
+                    Conectar con el ARCA
+                  </q-tooltip>
+                </q-btn>
+              </div>
+            </q-banner>
           </q-popup-proxy>
         </q-btn>
-        <q-btn icon="update" flat color="white" round @click="update" />
         <q-btn dense flat round icon="notifications" color="white">
           <q-tooltip>
             Notificaciones {{ numberOfNotifications.length }}
@@ -84,19 +134,6 @@
               @on-load="getDataNotification"
             />
           </q-popup-proxy>
-        </q-btn>
-        <q-btn
-          flat
-          dense
-          round
-          :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
-          aria-label="dark_mode"
-          class="q-mr-sm"
-          @click="setTheme"
-        >
-          <q-tooltip :offset="[10, 10]">
-            {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
-          </q-tooltip>
         </q-btn>
         <q-separator dark vertical inset />
         <q-btn
@@ -222,6 +259,53 @@
         />
       </div>
     </q-drawer>
+    <q-dialog v-model="arcaDialog">
+      <q-card style="width: 500px; max-width: 80vw;">
+        <q-card-section class="bg-primary flex justify-center items-center">
+          <q-img src="images/arca.svg" style="width: 400px; max-width: 60vw;" alt="Arca" />
+        </q-card-section>
+        <q-card-section class="text-center q-gutter-y-md" v-if="!download">
+          <div class="text-h6">Iniciar sesión con Arca</div>
+          <q-input autofocus filled v-model="cuit" label="Usuario (Cuit)"  />
+          <q-input filled v-model="password" label="Contraseña" type="password" />
+        </q-card-section>
+
+        <q-card-section v-else>
+          <div class="column full-width q-gutter-y-lg justify-center items-center text-center">
+            <q-icon
+              name="check_circle"
+              size="100px"
+              color="positive"
+            />
+            <span class="text-h6">
+              El certificado fue creado y
+              autorizado exitosamente
+            </span>
+            <div class="text-subtitle1 text-center q-gutter-sm">
+              <q-btn
+                :href="download?.certificate_url"
+                target="_blank"
+                label="Descargar certificado"
+                outline
+                color="blue-10"
+                />
+                <q-btn
+                  :href="download?.key_url"
+                  target="_blank"
+                  label="Descargar key"
+                  outline
+                  color="cyan-10"
+                />
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary" v-if="!download">
+          <q-btn flat label="Cerrar" v-close-popup />
+          <q-btn flat label="Aceptar" @click="generateCertificate" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -232,11 +316,11 @@
 </template>
 
 <script>
-import { api } from 'src/boot/axios'
+import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
-import { logo, notify } from 'src/const/mixins'
+import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
 import { copyToClipboard } from 'quasar'
 export default {
@@ -245,9 +329,13 @@ export default {
   data () {
     return {
       logo,
+      arcaDialog: false,
       branchOffices: [],
       role: null,
       notify,
+      cuit: '',
+      password: '',
+      download: null,
       numberOfNotifications: [],
       notifications: [],
       labelDrown: null,
@@ -357,6 +445,36 @@ export default {
           this.modules = JSON.parse(localStorage.getItem('sections'))
         })
     },
+    async generateCertificate () {
+      try {
+        loading(true,
+          {
+            message: 'Generando certificado, esto puede tardar unos minutos ...',
+            backgroundColor: 'cyan-10',
+            customClass: 'text-subtitle1 text-center'
+          }
+        )
+        const { data } = await apiArca.post('metadata/generate-cert', {
+          cuit: this.cuit,
+          password: this.password,
+          company: this.userSession?.company_session,
+          user: {
+            email: this.userSession?.email,
+            name: this.userSession?.name
+          }
+        })
+        const res = await api.put(`session/company/${this.userSession.company_session_id}`, {
+          ...this.userSession?.company_session,
+          billing: true
+        })
+        this.setCompanySession(res.data)
+        this.download = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
     /**
      * Get all branch offices
      */
@@ -412,6 +530,7 @@ export default {
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
+      this.cuit = this.userSession?.company_session?.document_number
     },
     /**
      * Change route
@@ -440,7 +559,7 @@ export default {
     /**
      * Logout map actions
      */
-    ...mapActions(authentication, ['logout']),
+    ...mapActions(authentication, ['logout', 'setCompanySession']),
     /**
      * Dark mode map actions
      */

@@ -75,7 +75,7 @@
           v-else
         >
           <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-" style="padding: 5px;">
+            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-2" style="padding: 5px;">
               <q-card
                 :class="findProduct(command.products, props.row) && 'shadow-20'"
                 :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
@@ -89,8 +89,8 @@
                   style="height: 180px;"
                 >
                   <div :class="$q.screen.xs ? 'absolute-full column items-center justify-center' : 'absolute-bottom text-center'">
-                    <div class="text-bold text-subtitle1">
-                      {{ props.row.name }}
+                    <div class="text-bold text-body1">
+                      {{ props.row.name.slice(0, 20) }}
                     </div>
                     <span class="text-caption">
                       {{ formatNumber(props.row.price) }} $
@@ -120,20 +120,20 @@
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3 q-col-gutter-sm">
             <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
               <q-card-section horizontal class="full-height">
                   <q-img
                     class="col-4"
                     style="max-height: 200px;"
-                    :src="props.row?.images ? props.row?.images[0]?.url : 'images/404-image.jpg'"
+                    :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                   />
                   <q-card-section class="q-pa-sm column">
                     <q-card-section class="q-pa-sm col">
                       <div class="flex justify-between q-col-gutter-sm">
                         <div class="flex justify-between items-center full-width">
-                          <span class="text-subtitle2 text-uppercase text-bold">
-                            {{ props.row.name }}
+                          <span class="text-body2 text-uppercase text-bold">
+                            {{ props.row.name.slice(0, 20) }}
                           </span>
                         </div>
                       </div>
@@ -256,7 +256,7 @@
         :class="$q.screen.lt.sm ? 'full-height column': ''"
         :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'}`"
       >
-        <SlideComponent :slides="product.images" styles="height: 300px;"/>
+        <SlideComponent :slides="product.images" styles="height: 400px;"/>
         <q-card-section class="column q-pb-xs">
           <div class="flex justify-between items-center full-width">
             <span class="text-subtitle1 text-uppercase text-bold">
@@ -274,7 +274,7 @@
                 borderless
                 dense
                 type="number"
-                style="width: 30px;"
+                style="width: 40px;"
                 input-class="text-center"
                 v-model.number="product.amount"
                 @update:model-value="(value) => addTemporalProducts(product, value)"
@@ -1101,9 +1101,12 @@ export default {
           params: {
             stock: true,
             withStock: true,
+            mostSold: true,
             branch_office_id: this.$route.params.branch_office_id,
-            dataFilter: {
-              category_id: this.category === 'all' ? null : this.category
+            dataEqualFilter: {
+              category_id: this.category === 'all' ? null : this.category,
+              show_catalog: 1,
+              'category.show_catalog': 1
             }
           }
         })
@@ -1119,7 +1122,11 @@ export default {
      */
     async getCategories () {
       try {
-        const { data } = await this.$api.get(`public/categories/${this.$route.params.company_id}`)
+        const { data } = await this.$api.get(`public/categories/${this.$route.params.company_id}`, {
+          params: {
+            show_catalog: 1
+          }
+        })
         this.categories = data
       } catch (error) {
         notify(error.message, 'negative', 'warning')
