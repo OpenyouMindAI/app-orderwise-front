@@ -213,7 +213,9 @@ export const printInvoice = async (data, userSession) => {
     const subtotal = (product.pivot.amount * product.pivot.price).toFixed(2)
 
     doc.text(cantidadPrecio, 5, y)
-    doc.text(fields.aliquot_type.Desc, 50, y, { align: 'center' })
+    if (data.billing) {
+      doc.text(fields.aliquot_type.Desc, 50, y, { align: 'center' })
+    }
     doc.text(subtotal, 90, y, { align: 'right' })
     y += 4
 
