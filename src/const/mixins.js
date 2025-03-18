@@ -126,3 +126,36 @@ export const setFiles = async (files) => {
   }
   return filesSelected
 }
+
+/**
+ * Retrieves the initials of the first name and the first surname.
+ *
+ * The function ensures that the input contains at least a first name and a surname.
+ * It supports different name formats:
+ * - First name and one surname → Takes initials from both.
+ * - First name, second name, and one surname → Takes initials from the first name and the surname.
+ * - First name, second name, and two surnames → Takes initials from the first name and the first surname.
+ *
+ * @param {string} fullName - The full name to extract initials from.
+ * @returns {string} The initials of the first name and the first surname, or an error message if invalid.
+ */
+export function getInitials (fullName) {
+  const parts = fullName.trim().split(/\s+/)
+
+  if (parts.length < 2) {
+    return parts[0][0].toUpperCase()
+  }
+
+  const firstNameInitial = parts[0][0].toUpperCase()
+  let surnameInitial = ''
+
+  if (parts.length === 2) {
+    surnameInitial = parts[1][0].toUpperCase()
+  } else if (parts.length === 3) {
+    surnameInitial = parts[2][0].toUpperCase()
+  } else if (parts.length >= 4) {
+    surnameInitial = parts[2][0].toUpperCase()
+  }
+
+  return `${firstNameInitial}${surnameInitial}`
+}

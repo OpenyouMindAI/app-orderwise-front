@@ -53,27 +53,18 @@
         </q-td>
       </template>
     </q-table>
-    <q-dialog v-model="openEditInvoice" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+    <q-dialog v-model="openEditInvoice" :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 900px; max-width: 85vw;'}`"
+        >
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
           <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
         </q-card-section>
-        <q-tabs
-          v-model="editTab"
-          class="text-grey"
-          active-color="primary"
-          indicator-color="primary"
-          align="justify"
-          narrow-indicator
-        >
-          <q-tab name="details" label="Detalles de la factura" />
-          <q-tab name="payments" label="Detalles de pago" />
-        </q-tabs>
-        <q-separator />
-        <q-tab-panels v-model="editTab" animated>
-          <q-tab-panel name="details">
-            <div class="row q-col-gutter-sm">
+        <q-card-section class="scroll col" style="max-height: 90vh">
+          <div class="row q-col-gutter-md">
+            <div class="col-xl-7 col-lg-7 col-md-7 col-sm-7 col-xs-12 row q-col-gutter-sm">
               <div class="col-6">
                 <q-input label="Código" filled v-model="invoice.code" readonly dense/>
               </div>
@@ -105,7 +96,7 @@
               <div class="col-6">
                 <q-input label="Moneda" filled :model-value="invoice?.coin?.name" readonly dense/>
               </div>
-              <div class="col-6">
+              <div class="col-6" v-if="invoice.tables.length">
                 <q-select
                   filled
                   readonly
@@ -123,110 +114,138 @@
                 <q-input label="Hora" filled v-model="invoice.hour" readonly dense/>
               </div>
               <div class="col-12">
-                <q-markup-table dense>
-                  <thead>
-                    <tr>
-                      <th class="text-left">Código</th>
-                      <th class="text-left">Descripción</th>
-                      <th class="text-right">Cantidad</th>
-                      <th class="text-right">Precio</th>
-                      <th class="text-right">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="product in invoice.products" :key="product.id">
-                      <td class="text-left">
-                        {{ product.barcode }}
-                      </td>
-                      <td class="text-left">
-                        {{ product.name }}
-                      </td>
-                      <td class="text-right">
-                        {{ formatNumber(product.pivot.amount) }}
-                      </td>
-                      <td class="text-right">
-                        {{ formatNumber(product.pivot.price) }}
-                      </td>
-                      <td class="text-right">
-                        {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </q-markup-table>
-                <q-list dense separator v-if="invoice" class="q-mt-xs">
-                  <q-item v-if="invoice.invoice_type.name !== 'Ticket'">
-                    <q-item-section>
-                      Op Gravada
-                    </q-item-section>
-                    <q-item-section side v-if="invoice.coin">
-                      {{ invoice?.coin?.symbol }} {{ formatNumber(invoice.tax_base) }}
-                    </q-item-section>
-                  </q-item>
-                  <q-item v-for="taxe in invoice.taxes" :key="taxe.id" v-show="invoice.invoice_type.name !== 'Ticket'">
-                    <q-item-section>
-                      {{ taxe.name }} ({{ taxe.pivot.amount }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
-                    </q-item-section>
-                    <q-item-section side v-if="invoice.coin">
-                      {{ invoice?.coin?.symbol }}{{ calculateTaxe(taxe) }}
-                    </q-item-section>
-                  </q-item>
-                  <q-item>
-                    <q-item-section>
-                      Importe total
-                    </q-item-section>
-                    <q-item-section side v-if="coin">
-                      {{ invoice?.coin?.symbol }} {{ formatNumber(totalBill) }}
-                    </q-item-section>
-                  </q-item>
-                </q-list>
+                <q-input
+                  label="Descripción"
+                  filled
+                  v-model="invoice.description"
+                  readonly
+                  dense
+                  type="textarea"
+                  autogrow
+                />
+              </div>
+              <div class="col-12">
+                <q-expansion-item
+                  icon="list"
+                  label="Artículos"
+                  :caption="`Total: ${formatNumber(invoice.total)}`"
+                  style="border-radius: 10px"
+                  class="shadow-1 overflow-hidden"
+                  default-opened
+                >
+                  <q-card>
+                    <q-card-section class="q-pa-xs">
+                      <q-markup-table dense>
+                        <thead>
+                          <tr>
+                            <th class="text-left">Código</th>
+                            <th class="text-left">Descripción</th>
+                            <th class="text-right">Cantidad</th>
+                            <th class="text-right">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="product in invoice.products" :key="product.id">
+                            <td class="text-left">
+                              {{ product.barcode }}
+                            </td>
+                            <td class="text-left">
+                              {{ product.name.slice(0, 15) }} ...
+                              <q-tooltip class="text-subtitle1">{{ product.name }}</q-tooltip>
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(product.pivot.amount) }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </q-markup-table>
+                    </q-card-section>
+                  </q-card>
+                </q-expansion-item>
               </div>
             </div>
-          </q-tab-panel>
-
-          <q-tab-panel name="payments">
-            <q-markup-table dense>
-              <thead>
-                <tr>
-                  <th class="text-left">Método de pago</th>
-                  <th class="text-left">Referencia</th>
-                  <th class="text-right">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(payment) in invoice.invoice_payments" :key="payment.id">
-                  <td class="text-left">
-                    {{ payment.payment_method.name }}
-                  </td>
-                  <td class="text-left">
-                    <span v-if="payment.reference">
-                      {{ payment.reference }}
-                    </span>
-                    <span v-else>
-                      -
-                    </span>
-                  </td>
-                  <td class="text-right">
-                    {{ formatNumber(payment.amount) }}
-                  </td>
-                </tr>
-                <tr>
-                  <td colspan="2" class="text-right">
-                    Total:
-                  </td>
-                  <td class="text-right">
-                    {{ formatNumber(invoice.total_payments) }}
-                  </td>
-                </tr>
-              </tbody>
-            </q-markup-table>
-          </q-tab-panel>
-        </q-tab-panels>
-        <q-card-actions align="right">
-          <q-btn icon="block" color="negative" label="Anular" @click="cancelInvoice" :loading="cancelLoading"/>
-          <q-btn icon="receipt" color="secondary" label="Imprimir Ticket" @click="print(true)"/>
-          <q-btn icon="print" color="info" label="Imprimir Factura" @click="print(false)"/>
-          <q-btn icon="save" color="primary" label="Guardar" @click="saveEdit"/>
-        </q-card-actions>
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+              <div class="col-12">
+                <q-expansion-item
+                  label="Pagos"
+                  :caption="`Total: ${formatNumber(invoice.total_payments)}`"
+                  style="border-radius: 10px"
+                  class="shadow-1 overflow-hidden"
+                  default-opened
+                >
+                  <q-card>
+                    <q-card-section class="q-pa-xs">
+                      <q-markup-table dense>
+                        <thead>
+                          <tr>
+                            <th class="text-left">Método de pago</th>
+                            <th class="text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(payment) in invoice.invoice_payments" :key="payment.id">
+                            <td class="text-left">
+                              {{ payment.payment_method.name }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(payment.amount) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </q-markup-table>
+                    </q-card-section>
+                  </q-card>
+                </q-expansion-item>
+              </div>
+              <div class="q-gutter-y-xs">
+                <q-btn
+                  class="full-width"
+                  icon="block"
+                  color="negative"
+                  label="Anular"
+                  :loading="cancelLoading"
+                  @click="cancelInvoice"
+                />
+                <q-btn
+                  class="full-width"
+                  icon="receipt"
+                  color="secondary"
+                  label="Imprimir Comanda"
+                  @click="print(true)"
+                />
+                <q-btn
+                  class="full-width"
+                  icon="print"
+                  color="info"
+                  :label="`Imprimir ${invoice.billing ? 'Factura' : 'Comprobante'}`"
+                  @click="print(false)"
+                />
+                <q-btn
+                  class="full-width"
+                  icon="send"
+                  color="positive"
+                  label="Factura electrónica"
+                  v-if="invoice.invoice_type.bill && !invoice.billing"
+                  @click="setInvoiceElectronic(invoice)"
+                >
+                  <q-tooltip class="text-body1" anchor="bottom middle">
+                    Generar factura electrónica
+                  </q-tooltip>
+                </q-btn>
+                <q-btn
+                  class="full-width"
+                  icon="check_circle"
+                  color="primary"
+                  label="Guardar"
+                  @click="saveEdit"
+                />
+              </div>
+            </div>
+          </div>
+        </q-card-section>
       </q-card>
     </q-dialog>
     <q-dialog v-model="openAddClient" persistent>
@@ -294,7 +313,7 @@
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, notify } from 'src/const/mixins'
+import { formatNumber, loading, notify } from 'src/const/mixins'
 import { printInvoice, printTicket, status } from 'src/const/invoice'
 export default {
   data () {
@@ -657,6 +676,27 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Set invoice electronic
+     * @param {Object} invoice invoice
+     */
+    async setInvoiceElectronic (invoice) {
+      try {
+        loading(true)
+        const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
+        console.log(data)
+        if (data.electronic_invoice?.fields?.error) {
+          notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
+        } else {
+          this.invoice = data
+          notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
     },
     /**
      * View invoice data
