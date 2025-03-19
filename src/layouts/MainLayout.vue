@@ -13,7 +13,7 @@
         />
         <q-separator dark vertical inset />
 
-        <div v-if="!$q.screen.lt.sm" class="flex q-ml-sm full-width">
+        <div v-if="!$q.screen.lt.sm" class="flex q-ml-md full-width">
           <q-img
             :src="userSession?.company_session?.url || logo.white"
             width="155px"
@@ -111,7 +111,7 @@
                   icon="cable"
                   flat
                   round
-                  @click="arcaDialog = true"
+                  @click="openDialogArca"
                 >
                   <q-tooltip>
                     Conectar con el ARCA
@@ -425,6 +425,32 @@ export default {
           notify('Link copiado exitosamente', 'positive', 'check_circle')
         })
     },
+
+    async openDialogArca () {
+      if (this.userSession?.company_session?.billing) {
+        try {
+          loading(true)
+          const { data } = await this.$apiArca('companies', {
+            params: {
+              user: {
+                name: this.userSession.name,
+                email: this.userSession.email
+              },
+              external_id: this.userSession.company_session_id
+            }
+          })
+          this.download = {
+            certificate_url: data.certificate_url,
+            key_url: data.key_url
+          }
+        } catch (error) {
+          notify(error.message, 'negative', 'warning')
+        } finally {
+          loading(false)
+        }
+      }
+      this.arcaDialog = true
+    },
     /**
      * Get all products
      */
@@ -445,6 +471,9 @@ export default {
           this.modules = JSON.parse(localStorage.getItem('sections'))
         })
     },
+    /**
+     * Generate certificate
+     */
     async generateCertificate () {
       try {
         loading(true,
@@ -467,7 +496,10 @@ export default {
           ...this.userSession?.company_session,
           billing: true
         })
-        this.setCompanySession(res.data)
+        this.setCompanySession({
+          ...this.userSession?.company_session,
+          ...res.data
+        })
         this.download = data
       } catch (error) {
         notify(error.message, 'negative', 'warning')
