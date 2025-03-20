@@ -1459,6 +1459,7 @@ export default {
      * @param {Object} data data payments
      */
     addPayment (data) {
+      console.log(data)
       this.payments.push({
         name: data.name,
         acronym: data.acronym,
@@ -1468,7 +1469,6 @@ export default {
         payment_method_id: data.id,
         user_created_id: this.userSession.id
       })
-      localStorage.setItem('payments', JSON.stringify(this.payments))
     },
     /**
      * Get all payment-methods
@@ -1729,11 +1729,11 @@ export default {
       invoicePayments?.forEach(payment => {
         this.payments.push({
           id: payment.payment_method_id,
+          payment_method_id: payment.payment_method_id,
           name: payment.payment_method.name,
           amount: payment.amount,
           reference: payment.reference,
-          coin_id: payment.coin_id,
-          update: true
+          coin_id: payment.coin_id
         })
       })
     },
@@ -1848,7 +1848,8 @@ export default {
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice.id,
         products: this.products,
-        payments: this.payments,
+        status: this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        payments: this.payments.filter(payment => payment.amount > 0),
         total_amount: this.totalBill,
         tables: this.tableSelected,
         electronic_invoice: this.invoiceType?.bill
@@ -1877,52 +1878,6 @@ export default {
       console.log(percent)
       return (Number(percent) / 100) + 1
     },
-
-    modelInvoiceElectronic (params) {
-      const { company_session: companySession } = this.userSession
-      const aliquotType = this.setPercent(companySession?.company_config?.other?.aliquot_type.Desc)
-      const subtotal = this.totalBill / aliquotType
-      const iva = Number((this.totalBill - subtotal).toFixed(2))
-      return {
-        cant_reg: 1,
-        pto_vta: companySession?.company_config?.point_of_sale,
-        cbte_tipo: companySession?.company_config?.other?.voucher_type?.Id,
-        concepto: companySession?.company_config?.other?.concept_type?.Id,
-        doc_tipo: this.client?.document_type?.Id || 99,
-        doc_nro: this.client.document_number,
-        cbte_fch: formatDate(new Date(), 'YYYY-MM-DD'),
-        imp_neto: Number(subtotal.toFixed(2)),
-        condicion_iva_receptor_id: this.client?.condition_iva_receptor?.code || 4,
-        user: this.userSession,
-        imp_tot_conc: 0,
-        imp_op_ex: 0,
-        imp_trib: 0,
-        imp_iva: iva,
-        pdf: true,
-        mon_id: 'PES',
-        mon_cotiz: 1,
-        company_id: companySession.id,
-        iva: [
-          {
-            id: companySession?.company_config?.other?.aliquot_type?.Id,
-            base_imp: Number(subtotal.toFixed(2)),
-            importe: iva
-          }
-        ]
-      }
-    },
-
-    /**
-     * Set invoice electronic
-     * @param {Object} params
-     */
-    async setInvoiceElectronic (params) {
-      try {
-        await this.$apiArca.post('invoices', this.modelInvoiceElectronic(params))
-      } catch (error) {
-        notify(`Error al crear factura electrónica: ${error.message}`, 'negative', 'warning')
-      }
-    },
     /**
      * Save bill and payments
      */
@@ -1930,6 +1885,7 @@ export default {
       try {
         this.loadingBilling = true
         const params = this.setParamsBill()
+        console.log(params)
         let res = null
         if (!params) return
 
