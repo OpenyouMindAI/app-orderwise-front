@@ -1026,6 +1026,8 @@ export default {
        * @type {Array}
        */
       withoutPayment: ['Ticket', 'Pedido'],
+
+      withServiceType: [4],
       /**
        * Dialog scanner
        * @type {Boolean}
@@ -1859,7 +1861,11 @@ export default {
      * Set params bill
      */
     setParamsBill () {
-      if (!this.withoutPayment.includes(this.invoiceType?.name) && this.payments?.length <= 0) {
+      if (
+        (!this.withoutPayment.includes(this.invoiceType?.name) &&
+          this.withServiceType.includes(this.typeOfService.code)) &&
+          this.payments?.length <= 0
+      ) {
         notify('No a seleccionado un método de pago', 'negative', 'warning')
         this.dialogPayment = true
         return false
