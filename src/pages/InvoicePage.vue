@@ -686,7 +686,6 @@ export default {
       try {
         loading(true)
         const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
-        console.log(data)
         if (data.electronic_invoice?.fields?.error) {
           notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
         } else {

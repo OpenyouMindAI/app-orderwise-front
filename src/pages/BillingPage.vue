@@ -1461,7 +1461,6 @@ export default {
      * @param {Object} data data payments
      */
     addPayment (data) {
-      console.log(data)
       this.payments.push({
         name: data.name,
         acronym: data.acronym,
@@ -1861,12 +1860,14 @@ export default {
      * Set params bill
      */
     setParamsBill () {
-      if (
-        (!this.withoutPayment.includes(this.invoiceType?.name) &&
-          this.withServiceType.includes(this.typeOfService.code)) &&
-          this.payments?.length <= 0
-      ) {
-        notify('No a seleccionado un método de pago', 'negative', 'warning')
+      if (!this.withoutPayment.includes(this.invoiceType?.name) && this.pendingPayment > 0) {
+        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
+        this.dialogPayment = true
+        return false
+      }
+
+      if (this.withServiceType.includes(this.typeOfService.code) && this.pendingPayment > 0) {
+        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
         return false
       }
@@ -1881,7 +1882,6 @@ export default {
 
     setPercent (data) {
       const percent = parseInt(data.replace(/\D/g, ''), 10)
-      console.log(percent)
       return (Number(percent) / 100) + 1
     },
     /**
@@ -1891,7 +1891,6 @@ export default {
       try {
         this.loadingBilling = true
         const params = this.setParamsBill()
-        console.log(params)
         let res = null
         if (!params) return
 
