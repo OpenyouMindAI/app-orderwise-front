@@ -206,7 +206,6 @@
                   icon="block"
                   color="negative"
                   label="Anular"
-                  v-if="invoice.status === 'pending'"
                   :loading="cancelLoading"
                   @click="cancelInvoice"
                 />
