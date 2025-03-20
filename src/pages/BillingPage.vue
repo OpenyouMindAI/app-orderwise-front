@@ -1461,7 +1461,6 @@ export default {
      * @param {Object} data data payments
      */
     addPayment (data) {
-      console.log(data)
       this.payments.push({
         name: data.name,
         acronym: data.acronym,
@@ -1879,11 +1878,6 @@ export default {
       return this.setModelInvoice()
     },
 
-    setPercent (data) {
-      const percent = parseInt(data.replace(/\D/g, ''), 10)
-      console.log(percent)
-      return (Number(percent) / 100) + 1
-    },
     /**
      * Save bill and payments
      */
@@ -1891,7 +1885,6 @@ export default {
       try {
         this.loadingBilling = true
         const params = this.setParamsBill()
-        console.log(params)
         let res = null
         if (!params) return
 

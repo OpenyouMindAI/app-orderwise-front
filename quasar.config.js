@@ -34,7 +34,8 @@ module.exports = configure(function (/* ctx */) {
       'pinia',
       'authorization',
       'VueHtmlToPaper',
-      'pusher'
+      'pusher',
+      'pusherPay'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#css
