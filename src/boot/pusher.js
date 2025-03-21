@@ -34,7 +34,7 @@ export default boot(async ({ app }) => {
     }
   })
 
-  app.config.globalProperties.$echo = new Echo({
+  app.config.globalProperties.$echoPay = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_APP_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_APP_PUSHER_APP_CLUSTER,

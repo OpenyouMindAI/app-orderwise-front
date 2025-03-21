@@ -373,14 +373,16 @@ export default {
     }
   },
   mounted () {
+    console.log(this.userSession.id)
     this.$echo
-      .private('App.Models.User.' + this.userSession.id)
+      .private('App.Models.User.114')
       .notification((notification) => {
         this.setNotification(notification)
       })
   },
   created () {
     this.loadingPage()
+    this.getDataNotification()
   },
   methods: {
     ucwords (data) {
