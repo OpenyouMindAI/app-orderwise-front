@@ -13,9 +13,13 @@
           </template>
         </ChartComponent>
       </div>
+      <div class="col-8">
+        <ChartComponent id="products" :options="chartProductOptions"></ChartComponent>
+      </div>
+      <div class="col-4">
+        <ChartComponent id="category" :options="chatCategoryOptions"></ChartComponent>
+      </div>
     </div>
-    <ChartComponent id="sales" :options="chartOptions"></ChartComponent>
-    <ChartComponent id="products" :options="chartProductOptions"></ChartComponent>
   </q-page>
 </template>
 
@@ -131,6 +135,14 @@ const topProductsData = ref([
   { name: 'Altavoz Portátil', y: 190 }
 ])
 
+const categoryData = ref([
+  { name: 'Electrónicos', y: 35 },
+  { name: 'Ropa', y: 25 },
+  { name: 'Hogar', y: 15 },
+  { name: 'Deportes', y: 10 },
+  { name: 'Alimentos', y: 15 }
+])
+
 const chartProductOptions = ref({
   chart: {
     type: 'bar',
@@ -182,6 +194,45 @@ const chartProductOptions = ref({
       data: topProductsData.value.map((item) => item.y)
     }
   ]
+})
+
+const chatCategoryOptions = ref({
+  chart: {
+    type: 'pie',
+    height: 300
+  },
+  title: {
+    text: undefined
+  },
+  tooltip: {
+    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+  },
+  accessibility: {
+    point: {
+      valueSuffix: '%'
+    }
+  },
+  plotOptions: {
+    pie: {
+      allowPointSelect: true,
+      cursor: 'pointer',
+      dataLabels: {
+        enabled: true,
+        format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+      }
+    }
+  },
+  series: [
+    {
+      name: 'Categorías',
+      type: 'pie',
+      colorByPoint: true,
+      data: categoryData
+    }
+  ],
+  credits: {
+    enabled: false
+  }
 })
 
 </script>
