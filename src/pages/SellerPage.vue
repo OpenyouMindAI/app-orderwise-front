@@ -39,7 +39,7 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="scroll" style="height: 70vh">
+          <q-card-section class="scroll" style="max-height: 70vh">
             <div class="q-pt-sm row q-col-gutter-sm">
               <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
                 <q-input
@@ -114,7 +114,7 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="scroll" style="height: 70vh">
+          <q-card-section class="scroll" style="max-height: 70vh">
             <div class="q-pt-sm row q-col-gutter-sm">
               <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
                 <q-input
@@ -212,7 +212,6 @@ export default {
       visible: false,
       openAddSeller: false,
       openEditSeller: null,
-      userSession: null,
       columns: [
         {
           name: 'document_number',
@@ -260,7 +259,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice'])
+    ...mapState(authentication, ['branchOffice'])
   },
   mounted () {
     this.setPagination({

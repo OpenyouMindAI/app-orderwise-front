@@ -34,12 +34,12 @@
     <q-dialog v-model="openEditUser" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Modificar usuario</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -100,7 +100,6 @@
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="user.password"
                 autofocus
@@ -120,12 +119,12 @@
     <q-dialog v-model="openAddUser" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveUser">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Agregar usuario</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -287,12 +286,6 @@ export default {
   watch: {
     filter (data) {
       this.searchData(data)
-    },
-    role (data) {
-      if (data && data.length > 0) this.user.roles = data.map(role => role.id)
-    },
-    branchOffice (data) {
-      if (data && data.length > 0) this.user.branchOffices = data.map(branchOffice => branchOffice.id)
     }
   },
   methods: {
@@ -407,7 +400,11 @@ export default {
      */
     saveUser () {
       this.visible = true
-      this.$api.post('users', this.user)
+      this.$api.post('users', {
+        ...this.user,
+        branch_offices: this.branchOffice.map(branchOffice => branchOffice.id),
+        roles: this.role.map(role => role.id)
+      })
         .then(({ data }) => {
           this.getUsers()
           this.openAddUser = false
@@ -444,7 +441,11 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`users/${this.user.id}`, this.user)
+      this.$api.put(`users/${this.user.id}`, {
+        ...this.user,
+        branch_offices: this.branchOffice.map(branchOffice => branchOffice.id),
+        roles: this.role.map(role => role.id)
+      })
         .then(({ data }) => {
           this.getUsers()
           this.openEditUser = false
