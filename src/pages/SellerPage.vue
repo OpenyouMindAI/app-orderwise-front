@@ -260,7 +260,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   mounted () {
     this.setPagination({
@@ -332,7 +332,10 @@ export default {
      */
     saveSeller () {
       this.visible = true
-      this.$api.post('sellers', this.seller)
+      this.$api.post('sellers', {
+        ...this.seller,
+        branch_offices: [this.branchOffice.id]
+      })
         .then(({ data }) => {
           this.getSellers()
           this.openAddSeller = false
@@ -367,7 +370,10 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`sellers/${this.seller.id}`, this.seller)
+      this.$api.put(`sellers/${this.seller.id}`, {
+        ...this.seller,
+        branch_offices: [this.branchOffice.id]
+      })
         .then(({ data }) => {
           this.getSellers()
           this.openEditSeller = false
