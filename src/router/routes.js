@@ -140,6 +140,12 @@ const routes = [
         name: 'AccountsReceivable',
         meta: { requiresAuth: true },
         component: () => import('pages/AccountsReceivablePage.vue')
+      },
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DashboardPage.vue')
       }
     ]
   },
