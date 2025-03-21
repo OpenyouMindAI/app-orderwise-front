@@ -1874,6 +1874,7 @@ export default {
      */
     calculate (data) {
       if (this.validStockProduct(data, data.quantity)) {
+        data.amount = data.quantity
         data.subtotal = data.price * data.quantity
         this.calculateTotal()
       } else {
