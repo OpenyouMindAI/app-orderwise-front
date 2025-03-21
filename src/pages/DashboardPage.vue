@@ -1,5 +1,19 @@
 <template>
   <q-page padding>
+    <div class="row q-col-gutter-md">
+      <div class="col-12 text-h6">
+        Dashboard de Ventas
+      </div>
+      <div class="col-12">
+        <ChartComponent id="sales" :options="chartOptions">
+          <template v-slot:top>
+            <div class="text-subtitle2">
+              Ventas por periodo
+            </div>
+          </template>
+        </ChartComponent>
+      </div>
+    </div>
     <ChartComponent id="sales" :options="chartOptions"></ChartComponent>
     <ChartComponent id="products" :options="chartProductOptions"></ChartComponent>
   </q-page>
@@ -69,7 +83,7 @@ const chartOptions = ref({
   tooltip: {
     headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
     pointFormat:
-      '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' + '<td style="padding:0"><b>point.y:.1f</b></td></tr>',
+        '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' + '<td style="padding:0"><b>$' + '{point.y:.1f}</b></td></tr>',
     footerFormat: '</table>',
     shared: true,
     useHTML: true
