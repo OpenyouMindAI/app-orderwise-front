@@ -1,8 +1,11 @@
 <template>
   <q-card class="full-width">
-    <q-card-actions align="right" class="q-pt-xs">
+    <q-card-actions class="q-pt-sm q-px-md justify-between items-center flex">
       <slot name="top"></slot>
-      <q-btn icon="fullscreen" color="primary" @click="toggleFullscreen"/>
+      <div>
+        <slot name="top-right"></slot>
+        <q-btn icon="fullscreen" color="primary" @click="toggleFullscreen"/>
+      </div>
     </q-card-actions>
     <q-card-section class="q-pa-xs q-px-none">
       <div
