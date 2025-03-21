@@ -1,12 +1,15 @@
 <template>
   <q-page padding>
     <ChartComponent id="sales" :options="chartOptions"></ChartComponent>
+    <ChartComponent id="products" :options="chartProductOptions"></ChartComponent>
   </q-page>
 </template>
 
 <script setup>
 
 import ChartComponent from 'src/components/ChartComponent.vue'
+import Highcharts from 'highcharts'
+
 import { ref } from 'vue'
 const salesData = {
   day: [
@@ -99,6 +102,72 @@ const chartOptions = ref({
   credits: {
     enabled: false
   }
+})
+
+const topProductsData = ref([
+  { name: 'Smartphone XYZ', y: 450 },
+  { name: 'Laptop Pro', y: 380 },
+  { name: 'Auriculares Bluetooth', y: 350 },
+  { name: 'Zapatillas Running', y: 310 },
+  { name: 'Smart TV 55', y: 290 },
+  { name: 'Cafetera Automática', y: 270 },
+  { name: 'Tablet Ultra', y: 250 },
+  { name: 'Reloj Inteligente', y: 230 },
+  { name: 'Cámara Digital', y: 210 },
+  { name: 'Altavoz Portátil', y: 190 }
+])
+
+const chartProductOptions = ref({
+  chart: {
+    type: 'bar',
+    height: 300
+  },
+  title: {
+    text: undefined
+  },
+  xAxis: {
+    categories: topProductsData.value.map((item) => item.name),
+    title: {
+      text: null
+    }
+  },
+  yAxis: {
+    min: 0,
+    title: {
+      text: 'Unidades vendidas',
+      align: 'high'
+    }
+  },
+  tooltip: {
+    valueSuffix: ' unidades'
+  },
+  plotOptions: {
+    bar: {
+      dataLabels: {
+        enabled: true
+      },
+      colorByPoint: true,
+      colors: topProductsData.value.map((_, i) => {
+        const ratio = i / (topProductsData.value.length - 1)
+        return Highcharts.color('#3b82f6')
+          .brighten((ratio - 0.5) * 0.8)
+          .get()
+      })
+    }
+  },
+  legend: {
+    enabled: false
+  },
+  credits: {
+    enabled: false
+  },
+  series: [
+    {
+      name: 'Ventas',
+      type: 'bar',
+      data: topProductsData.value.map((item) => item.y)
+    }
+  ]
 })
 
 </script>
