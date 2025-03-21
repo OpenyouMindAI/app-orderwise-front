@@ -47,7 +47,7 @@
 import { apiQPay } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
 import { onMounted, ref, watch } from 'vue'
-import { echoPay } from 'src/boot/pusherPay'
+import { echoPay } from 'src/boot/pusher'
 import SuccessComponent from './SuccessComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 

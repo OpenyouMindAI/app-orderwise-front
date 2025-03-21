@@ -89,7 +89,7 @@
                   lines="1"
                   :class="notify.read_at ? 'text-grey' : ''"
                 >
-                  {{ $t(`listOrderPayment.${notify.data?.title}`) }}
+                  {{ $t(`command.${notify.data?.title}`) }}
                 </q-item-label>
                 <q-item-label caption lines="2">
                   <span>{{ notify.data?.content }}</span>
