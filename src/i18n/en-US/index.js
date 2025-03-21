@@ -6,6 +6,6 @@ export default {
   success: 'Action was successful',
 
   command: {
-    pending: 'Pending'
+    pending: 'Pendiente'
   }
 }

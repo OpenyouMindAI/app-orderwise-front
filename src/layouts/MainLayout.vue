@@ -373,9 +373,8 @@ export default {
     }
   },
   mounted () {
-    console.log(this.userSession.id)
     this.$echo
-      .private('App.Models.User.114')
+      .private('App.Models.User.' + this.userSession.id)
       .notification((notification) => {
         this.setNotification(notification)
       })
@@ -395,11 +394,10 @@ export default {
       window.location.reload(true)
     },
     setNotification ({ data }) {
-      console.log(data)
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
-          createNotification(`Comanda ${data.id} ${this.$t(`command.${data.status}`)}`, {
+          createNotification(this.$t(`command.${data.name}`), {
             body: data.description,
             icon: '/icons/icon-128x128.png'
           })

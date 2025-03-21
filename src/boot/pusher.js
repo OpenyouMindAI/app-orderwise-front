@@ -3,25 +3,15 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import { authentication } from 'src/stores/module-authentication'
 
-const echo = new Echo({
-  broadcaster: 'pusher',
-  key: import.meta.env.VITE_APP_API_URL,
-  cluster: import.meta.env.VITE_APP_PUSHER_APP_CLUSTER,
-  forceTLS: true
-})
+let echo = null
 
-const echoPay = new Echo({
-  broadcaster: 'pusher',
-  key: import.meta.env.VITE_APP_PUSHER_QPAY_KEY,
-  cluster: import.meta.env.VITE_APP_PUSHER_QPAY_CLUSTER,
-  forceTLS: true
-})
+let echoPay = null
 
 export default boot(async ({ app }) => {
   const $store = authentication()
   app.config.globalProperties.$Pusher = Pusher
 
-  app.config.globalProperties.$echo = new Echo({
+  echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_APP_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_APP_PUSHER_APP_CLUSTER,
@@ -34,7 +24,7 @@ export default boot(async ({ app }) => {
     }
   })
 
-  app.config.globalProperties.$echoPay = new Echo({
+  echoPay = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_APP_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_APP_PUSHER_APP_CLUSTER,
