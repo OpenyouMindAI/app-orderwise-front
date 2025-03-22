@@ -34,7 +34,7 @@
     <q-dialog v-model="openEditClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-py-sm text-white bg-primary">
+          <q-card-section class="row items-center text-white bg-primary">
             <div class="text-h6">Modificar cliente</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
@@ -122,32 +122,32 @@
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
-          <q-card-section class="row items-center q-py-sm text-white bg-primary">
+          <q-card-section class="row items-center text-white bg-primary">
             <div class="text-h6">Agregar cliente</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-            <q-select
-              use-input
-              filled
-              label="Tipo de documento"
-              input-debounce="0"
-              option-label="Desc"
-              option-value="id"
-              v-model="client.document_type"
-              :options="documentTypes"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="getDocumentTypes"
-            />
-          </div>
           <q-card-section class="row">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                label="Tipo de documento"
+                input-debounce="0"
+                autofocus
+                option-label="Desc"
+                option-value="id"
+                v-model="client.document_type"
+                :options="documentTypes"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                @filter="getDocumentTypes"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.document_number"
-                autofocus
                 label="Número de documento"
               />
             </div>

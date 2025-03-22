@@ -477,16 +477,27 @@
 
 <script setup>
 import { api } from 'src/boot/axios'
-import { formatDate, notify, formatNumber } from 'src/const/mixins'
+import { formatDate, notify, formatNumber, loading } from 'src/const/mixins'
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
 import { printTicket } from 'src/const/invoice'
 import { authentication } from 'src/stores/module-authentication'
+import { useRoute, useRouter } from 'vue-router'
 
 const store = authentication()
 
 const userSession = store.userSession
 
 const dialogFilter = ref(false)
+
+const route = useRoute()
+const router = useRouter()
+
+watch(
+  () => route.query.id,
+  (newId, oldId) => {
+    if (newId) getInvoiceOne(newId)
+  }
+)
 
 const branchOffice = computed(() => store.branchOfficeGetter)
 /**
@@ -630,6 +641,13 @@ onMounted(async () => {
   getInvoiceTypes()
   getTypeOfServices()
   getBranchOffices()
+  if (route.query.id) getInvoiceOne(route.query.id)
+})
+
+watch(openEditInvoice, (data) => {
+  if (!data) {
+    router.push({ name: 'CommandOrder' })
+  }
 })
 
 /**
@@ -757,6 +775,18 @@ const showInvoices = (data) => {
   setTimeout(() => {
     openEditInvoice.value = true
   }, 100)
+}
+
+const getInvoiceOne = async (id) => {
+  try {
+    loading(true)
+    const { data } = await api.get(`invoices/${id}`)
+    showInvoices(data.data)
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loading(false)
+  }
 }
 
 /**

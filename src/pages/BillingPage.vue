@@ -196,10 +196,10 @@
                         />
                       </q-popup-edit>
                     </q-td>
-                    <q-td key="amount" :props="props">
-                      {{ formatNumber(props.row.amount) }}
+                    <q-td key="quantity" :props="props">
+                      {{ formatNumber(props.row.quantity) }}
                       <q-popup-edit
-                        v-model.number="props.row.amount"
+                        v-model.number="props.row.quantity"
                         auto-save
                         v-slot="scope"
                         @update:model-value="calculate(props.row)"
@@ -241,22 +241,6 @@
                     {{ coin.symbol }} {{ formatNumber(totalBill) }}
                   </q-item-section>
                 </q-item>
-                <q-item v-for="taxe in invoiceType?.taxes" :key="taxe.id">
-                  <q-item-section>
-                    {{ taxe.name }} ({{ formatNumber(taxe.pivot.amount) }}{{ taxeTranslate[taxe.pivot.type_taxe]}})
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{ coin.symbol }}{{ formatNumber(calculateTax(taxe)) }}
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section>
-                    Importe total
-                  </q-item-section>
-                  <q-item-section side v-if="coin" class="text-negative">
-                    {{ coin.symbol }} {{ formatNumber(totalTaxe) }}
-                  </q-item-section>
-                </q-item>
                 <q-item>
                   <q-item-section>
                     Monto pagado
@@ -270,7 +254,7 @@
                     Por pagar
                   </q-item-section>
                   <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(totalTaxe - totalPayment) }}
+                    {{  coin.symbol }} {{ formatNumber(totalPayment) }}
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -861,22 +845,10 @@ export default {
        */
       loadingPaymentMethods: false,
       /**
-       * Invoice taxes
-       * @type {Array}
-       */
-      invoiceTaxes: [],
-      /**
        * Open add client
        * @type {Boolean}
        */
       openAddClient: false,
-      /**
-       * Taxe translate
-       * @type {Object}
-       */
-      taxeTranslate: {
-        percentage: '%'
-      },
       /**
        * Client added data form
        * @type {Object}
@@ -887,16 +859,6 @@ export default {
        * @type {Object}
        */
       invoice: null,
-      /**
-       * Taxes list
-       * @type {Array}
-       */
-      taxes: [],
-      /**
-       * Taxe data
-       * @type {Object}
-       */
-      taxe: null,
       /**
        * Status table
        * @type {Object}
@@ -1118,7 +1080,7 @@ export default {
           sortable: true
         },
         { name: 'price', align: 'right', label: 'Precio de venta', field: 'price', sortable: true },
-        { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
+        { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
         { name: 'subtotal', align: 'right', label: 'Importe', field: 'subtotal', sortable: true },
         { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
       ]
@@ -1138,14 +1100,6 @@ export default {
      */
     pendingPayment () {
       return this.totalBill - this.totalPayment
-    },
-    /**
-     * Total taxe
-     * @returns {Number}
-     */
-    totalTaxe () {
-      const sum = this.invoiceType ? this.invoiceType?.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0) : 0
-      return sum + this.totalBill
     },
     /**
      * Total payment
@@ -1173,15 +1127,6 @@ export default {
         filter: undefined
       })
     },
-    totalBill () {
-      this.invoiceTaxes = this.invoiceType?.taxes?.map(taxe => {
-        return {
-          taxe_id: taxe.id,
-          amount: taxe.pivot.amount,
-          type_taxe: taxe.pivot.type_taxe
-        }
-      })
-    },
     invoiceRouter (data) {
       if (data) this.getInvoiceOne(data)
     },
@@ -1194,8 +1139,7 @@ export default {
      */
     dialogPayment (data) {
       const { company_session: companySession } = this.userSession
-      const forPayment = this.totalTaxe - this.totalPayment
-      if (data && companySession?.company_config?.payment_method && forPayment > 0) {
+      if (data && companySession?.company_config?.payment_method && this.totalPayment > 0) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
     },
@@ -1257,7 +1201,6 @@ export default {
   },
   created () {
     this.getLocalStorage()
-    this.getTaxes()
     this.getPaymentMethods()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
@@ -1323,7 +1266,8 @@ export default {
      * @returns {Number}
      */
     roundToFourDecimals (number) {
-      return parseFloat(number.toFixed(2))
+      const factor = Math.pow(10, 3)
+      return Math.floor(number * factor) / factor
     },
     /**
      * Set data pagination emit event
@@ -1382,18 +1326,6 @@ export default {
       } finally {
         this.loadingCashflow = false
       }
-    },
-    /**
-     * Calculate taxe
-     * @param {Object} taxe
-     */
-    calculateTax (taxe) {
-      if (taxe.pivot.type_taxe === 'percentage') {
-        taxe.total = (this.totalBill * taxe.pivot.amount) / 100
-      } else {
-        taxe.total = this.totalBill + taxe.pivot.amount
-      }
-      return taxe.total
     },
     /**
      * Save clients
@@ -1461,7 +1393,6 @@ export default {
      * @param {Object} data data payments
      */
     addPayment (data) {
-      console.log(data)
       this.payments.push({
         name: data.name,
         acronym: data.acronym,
@@ -1586,28 +1517,6 @@ export default {
           update(() => {
             this.coins = data
           })
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
-    /**
-     * Select category
-     */
-    getTaxes () {
-      this.$api.get('taxes', {
-        params: {
-          sortBy: 'id',
-          sortOrder: 'desc'
-        }
-      })
-        .then(({ data }) => {
-          this.taxes = data
-          this.taxe = data[0]
         })
         .catch(err => {
           Notify.create({
@@ -1764,6 +1673,7 @@ export default {
           return {
             ...product,
             ...product.pivot,
+            quantity: product.pivot.amount,
             subtotal: product.pivot.price * product.pivot.amount
           }
         })
@@ -1842,7 +1752,6 @@ export default {
         seller_id: this.userSession.id,
         coin_id: this.coin.id,
         description: this.invoiceDescription,
-        invoice_taxes: this.invoiceTaxes,
         type_of_service_id: this.typeOfService.id,
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
@@ -1861,12 +1770,14 @@ export default {
      * Set params bill
      */
     setParamsBill () {
-      if (
-        (!this.withoutPayment.includes(this.invoiceType?.name) &&
-          this.withServiceType.includes(this.typeOfService.code)) &&
-          this.payments?.length <= 0
-      ) {
-        notify('No a seleccionado un método de pago', 'negative', 'warning')
+      if (!this.withoutPayment.includes(this.invoiceType?.name) && this.pendingPayment > 0) {
+        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
+        this.dialogPayment = true
+        return false
+      }
+
+      if (this.withServiceType.includes(this.typeOfService.code) && this.pendingPayment > 0) {
+        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
         return false
       }
@@ -1879,11 +1790,6 @@ export default {
       return this.setModelInvoice()
     },
 
-    setPercent (data) {
-      const percent = parseInt(data.replace(/\D/g, ''), 10)
-      console.log(percent)
-      return (Number(percent) / 100) + 1
-    },
     /**
      * Save bill and payments
      */
@@ -1891,7 +1797,6 @@ export default {
       try {
         this.loadingBilling = true
         const params = this.setParamsBill()
-        console.log(params)
         let res = null
         if (!params) return
 
@@ -1968,8 +1873,9 @@ export default {
      * @param {Object} data props products
      */
     calculate (data) {
-      if (this.validStockProduct(data, data.amount)) {
-        data.subtotal = data.price * data.amount
+      if (this.validStockProduct(data, data.quantity)) {
+        data.amount = data.quantity
+        data.subtotal = data.price * data.quantity
         this.calculateTotal()
       } else {
         notify(
@@ -1977,7 +1883,7 @@ export default {
           'negative',
           'warning'
         )
-        data.amount = 1
+        data.quantity = 1
       }
     },
     /**
@@ -2005,18 +1911,21 @@ export default {
       }
 
       if (findProduct) {
-        const quantity = unitMeasurement ? this.quantity : findProduct?.amount + 1
+        const quantity = unitMeasurement ? this.quantity : findProduct?.quantity + 1
+        findProduct.quantity = quantity
         findProduct.amount = quantity
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
-        data.amount = this.quantity
         data.product_id = data.id
         this.products.push(data)
+        data.quantity = this.quantity
         if (this.currentAmount) {
+          data.amount = this.currentAmount / this.productQuantity.price
           data.subtotal = this.currentAmount
           this.calculateTotal()
         } else {
+          data.amount = this.quantity
           this.calculate(data)
         }
       }

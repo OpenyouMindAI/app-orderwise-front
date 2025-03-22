@@ -58,15 +58,10 @@ export const modelFormData = (data, put = false) => {
 }
 
 export const formatNumber = (data) => {
-  const options = {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    minimumIntegerDigits: 1,
-    useGrouping: true,
-    decimalSeparator: '.'
-  }
   if (data) {
-    return Number(data).toLocaleString('es', options)
+    const factor = Math.pow(10, 3)
+    const truncated = Math.floor(Number(data) * factor) / factor
+    return truncated.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })
   }
   return Number(data)
 }

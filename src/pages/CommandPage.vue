@@ -159,7 +159,7 @@
                         <span class="text-body2 text-uppercase text-bold">
                           {{ props.row.name.slice(0, 20) }}
                         </span>
-                        <q-icon
+                        <!-- <q-icon
                           name="info"
                           size="sm"
                           color="secondary"
@@ -177,7 +177,7 @@
                               />
                             </q-banner>
                           </q-popup-proxy>
-                        </q-icon>
+                        </q-icon> -->
                       </div>
                     </div>
                     <p class="text-subtitle2 text-grey">
@@ -192,7 +192,7 @@
                       <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
                         <div>
                           <q-btn icon="remove" round size="sm" color="primary" @click="() => {
-                              props.row.quantity -= 1
+                              props.row.amount -= 1
                               calculate(props.row)
                             }"
                           />
@@ -204,12 +204,12 @@
                           label="Cantidad"
                           type="number"
                           style="width: 50%;"
-                          v-model.number="props.row.quantity"
+                          v-model.number="props.row.amount"
                           @update:model-value="calculate(props.row)"
                         />
                         <div>
                             <q-btn icon="add" round size="sm" color="primary" @click="() => {
-                                props.row.quantity += 1
+                                props.row.amount += 1
                                 calculate(props.row)
                             }"/>
                         </div>
@@ -249,7 +249,7 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(product, product.quantity -= 1)"
+                @click="addTemporalProducts(product, product.amount -= 1)"
               />
               <q-input
                 borderless
@@ -257,7 +257,7 @@
                 type="number"
                 style="width: 40px;"
                 input-class="text-center"
-                v-model.number="product.quantity"
+                v-model.number="product.amount"
                 @update:model-value="(value) => addTemporalProducts(product, value)"
               />
               <q-btn
@@ -265,16 +265,16 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(product, product.quantity += 1)"
+                @click="addTemporalProducts(product, product.amount += 1)"
               />
             </div>
           </div>
           <span class="text-subtitle1">
             {{ formatNumber(product?.price) }}$
           </span>
-          <span class="text-caption q-mt-sm">
+          <!-- <span class="text-caption q-mt-sm">
             {{ product?.description }}
-          </span>
+          </span> -->
         </q-card-section>
         <q-card-section class="q-px-none" v-if="product.product_addons?.length > 0">
           <div class="col-12 bg-grey-2 q-pa-sm text-dark">
@@ -300,7 +300,7 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(addon, addon.quantity -= 1)"
+                @click="addTemporalProducts(addon, addon.amount -= 1)"
               />
               <q-input
                 borderless
@@ -308,7 +308,7 @@
                 type="number"
                 style="width: 30px;"
                 input-class="text-center"
-                v-model.number="addon.quantity"
+                v-model.number="addon.amount"
                 @update:model-value="(value) => addTemporalProducts(product, value)"
               />
               <q-btn
@@ -316,21 +316,21 @@
                 color="primary"
                 round
                 size="sm"
-                @click="addTemporalProducts(addon, addon.quantity += 1)"
+                @click="addTemporalProducts(addon, addon.amount += 1)"
               />
             </div>
           </div>
         </q-card-section>
-        <q-card-section class="col q-pt-xs">
+        <!-- <q-card-section class="col q-pt-xs">
           <q-input type="textarea" v-model="product.observation" filled label="Descripción" />
-        </q-card-section>
+        </q-card-section> -->
         <q-card-actions align="right">
           <q-btn
             color="negative"
             label="Cerrar"
             @click="() => {
               detailProduct = false
-              product = { quantity: 1 }
+              product = { amount: 1 }
               temporalProducts = []
             }"
           />
@@ -548,7 +548,7 @@ export default {
           field: row => row.name,
           sortable: true
         },
-        { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
+        { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
         { name: 'price', align: 'right', label: 'Precio', field: 'price', sortable: true },
         { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal', sortable: true },
         { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
@@ -655,7 +655,7 @@ export default {
       this.detailProduct = false
       this.temporalProducts = []
       this.product = {
-        quantity: 1
+        amount: 1
       }
     },
     /**
@@ -665,11 +665,11 @@ export default {
     openProductDetails (product) {
       this.detailProduct = true
       this.product = product
-      this.product.quantity = 1
-      this.addTemporalProducts(product, product.quantity)
+      this.product.amount = 1
+      this.addTemporalProducts(product, product.amount)
       if (product.product_addons && product.product_addons.length > 0) {
         this.product.product_addons = product.product_addons.map(addon => {
-          addon.quantity = 0
+          addon.amount = 0
           return addon
         })
       }
@@ -773,7 +773,7 @@ export default {
 
       try {
         this.billLoading = true
-        await this.$api.post('orders', {
+        await this.$api.post('command-orders', {
           seller_id: this.userSession?.id,
           client_id: this.client?.id,
           products: this.products,
@@ -812,17 +812,17 @@ export default {
      * @param {Object} data props products
      */
     calculate (data) {
-      data.subtotal = data.price * data.quantity
+      data.subtotal = data.price * data.amount
       this.calculateTotal()
     },
-    addTemporalProducts (data, quantity) {
+    addTemporalProducts (data, amount) {
       const findProduct = this.findProduct(this.temporalProducts, data)
       if (findProduct) {
-        findProduct.quantity = quantity
+        findProduct.amount = amount
       } else {
         this.temporalProducts.push({
           ...data,
-          quantity
+          amount
         })
       }
     },
@@ -844,7 +844,7 @@ export default {
     validateProduct (data) {
       const findProduct = this.findProduct(this.products, data)
       if (findProduct) {
-        findProduct.quantity += data.quantity
+        findProduct.amount += data.amount
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
