@@ -34,12 +34,12 @@
     <q-dialog v-model="openEditBranchOffice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Modificar sucursal</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -71,12 +71,12 @@
     <q-dialog v-model="openAddBranchOffice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveBranchOffice">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Agregar sucursal</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 v-model="branchOffice.name"

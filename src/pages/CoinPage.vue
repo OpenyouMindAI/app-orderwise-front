@@ -34,12 +34,12 @@
     <q-dialog v-model="openEditCoin" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Modificar moneda</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -55,14 +55,14 @@
                 filled
                 v-model="coin.symbol"
                 autofocus
-                label="Simbolo"
+                label="Símbolo"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
             <q-btn color="negative" label="Eliminar" @click="deleteCoin" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -70,12 +70,12 @@
     <q-dialog v-model="openAddCoin" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveCoin">
-          <q-card-section class="row items-center q-pb-none">
+          <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Agregar moneda</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="q-pt-sm row q-col-gutter-sm">
+          <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
@@ -91,13 +91,13 @@
                 filled
                 v-model="coin.symbol"
                 autofocus
-                label="Simbolo"
+                label="Símbolo"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -148,7 +148,7 @@ export default {
         {
           name: 'symbol',
           align: 'left',
-          label: 'Simbolo',
+          label: 'Símbolo',
           field: 'symbol',
           sortable: true
         }
