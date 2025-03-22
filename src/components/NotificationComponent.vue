@@ -17,7 +17,7 @@
                     <q-item-section thumbnail>
                       <q-avatar size="xl" icon="check" />
                     </q-item-section>
-                    <q-item-section>Marcar como leidos</q-item-section>
+                    <q-item-section>Marcar como leídos</q-item-section>
                   </q-item>
                   <q-item
                     v-if="$route.name !== 'Notification'"
@@ -42,7 +42,7 @@
           dense
           class="q-px-md"
           color="primary"
-          label="No leidos"
+          label="No leídos"
           rounded
           size="12px"
           :flat="!active"
@@ -63,12 +63,7 @@
         />
       </q-card-section>
       <q-card-section v-if="notifications.length" class="q-px-xs q-py-xs">
-        <q-scroll-area
-          :thumb-style="thumbStyle"
-          :content-style="contentStyle"
-          :content-active-style="contentActiveStyle"
-          style="height: calc(70vh)"
-        >
+        <div style="max-height: calc(70vh)" class="scroll">
           <q-list>
             <q-item
               v-for="notify in notifications"
@@ -107,7 +102,7 @@
               </q-item-section>
             </q-item>
           </q-list>
-        </q-scroll-area>
+        </div>
       </q-card-section>
       <q-card-section v-else class="q-px-xs q-py-xs q-pb-md text-center">
         <q-icon size="110px" name="circle_notifications" class="text-primary" />
@@ -122,6 +117,7 @@ import { useRouter } from 'vue-router'
 import SkeletonComponent from './Skeleton.vue'
 import { format } from 'timeago.js'
 import { api } from 'src/boot/axios'
+import { loading } from 'src/const/mixins'
 
 export default {
   components: {
@@ -141,10 +137,31 @@ export default {
   emits: ['onLoad'],
 
   setup (props, { emit }) {
+    /**
+     * Active read
+     * @type {Object}
+     */
     const active = ref(props.activeRead)
+    /**
+     * Loading notification
+     * @type {Boolean}
+     */
     const loadingNotification = ref(false)
+    /**
+     * Number of notifications
+     * @type {Number} number
+     */
     const numberOfNotifications = ref(0)
+    /**
+     * Notifications
+     * @type {Array}
+     */
     const notifications = ref([])
+
+    /**
+     * Router
+     * @type {Object}
+     */
     const $router = useRouter()
 
     /***
@@ -194,14 +211,30 @@ export default {
       }
     }
 
+    /**
+     * Go to about page
+     * @param {Object} notify notify
+     */
     const goToAboutPage = async (notify) => {
-      const data = await unReadOneNotifications(notify.id)
-      if (data?.route_type && data.route_type === 'query') {
-        $router.push({ name: data.route_name, query: { id: data.route_id } })
-      } else {
-        $router.push({ path: data?.route || '' })
+      try {
+        loading(true)
+        const { data } = await unReadOneNotifications(notify.id)
+        if (data?.data?.route_type && data?.data?.route_type === 'query') {
+          $router.push(
+            {
+              name: data?.data?.route_name,
+              query: { id: data?.data?.route_id }
+            }
+          )
+        } else {
+          $router.push({ path: data?.data?.route || '' })
+        }
+        getAllNotifications(true)
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
       }
-      getAllNotifications(true)
     }
 
     const gotToNotification = () => {
@@ -213,21 +246,6 @@ export default {
       loadingNotification,
       notifications,
       numberOfNotifications,
-      contentStyle: {
-        backgroundColor: 'rgba(0,0,0,0.02)',
-        color: '#555'
-      },
-
-      contentActiveStyle: {
-        color: 'black'
-      },
-      thumbStyle: {
-        right: '2px',
-        borderRadius: '5px',
-        backgroundColor: '#4A235A',
-        width: '7px',
-        opacity: 1
-      },
       unReadOneNotifications,
       gotToNotification,
       timeAgo,

@@ -393,6 +393,10 @@ export default {
     update () {
       window.location.reload(true)
     },
+    /**
+     * Set notification
+     * @param {Object} data data
+     */
     setNotification ({ data }) {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
