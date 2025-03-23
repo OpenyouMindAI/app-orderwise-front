@@ -402,7 +402,7 @@ export default {
       this.visible = true
       this.$api.post('users', {
         ...this.user,
-        branch_offices: this.branchOffice.map(branchOffice => branchOffice.id),
+        branchOffices: this.branchOffice.map(branchOffice => branchOffice.id),
         roles: this.role.map(role => role.id)
       })
         .then(({ data }) => {
@@ -443,7 +443,7 @@ export default {
       this.visible = true
       this.$api.put(`users/${this.user.id}`, {
         ...this.user,
-        branch_offices: this.branchOffice.map(branchOffice => branchOffice.id),
+        branchOffices: this.branchOffice.map(branchOffice => branchOffice.id),
         roles: this.role.map(role => role.id)
       })
         .then(({ data }) => {

@@ -373,14 +373,15 @@ export default {
     }
   },
   mounted () {
-    // this.$echo
-    //   .private("App.Models.User." + this.userSession.id)
-    //   .notification((notification) => {
-    //     this.setNotification(notification);
-    //   });
+    this.$echo
+      .private('App.Models.User.' + this.userSession.id)
+      .notification((notification) => {
+        this.setNotification(notification)
+      })
   },
   created () {
     this.loadingPage()
+    this.getDataNotification()
   },
   methods: {
     ucwords (data) {
@@ -392,22 +393,25 @@ export default {
     update () {
       window.location.reload(true)
     },
-    // setNotification({ data }) {
-    //   Notification.requestPermission().then((permission) => {
-    //     if (permission === "granted") {
-    //       this.getDataNotification();
-    //       new Notification(
-    //         `Orden ${data.ownerable_id} ${this.$t(
-    //           `listOrderPayment.${data.name}`
-    //         )}`,
-    //         {
-    //           body: data.description,
-    //           icon: "/icons/icon-128x128.png",
-    //         }
-    //       );
-    //     }
-    //   });
-    // },
+    /**
+     * Set notification
+     * @param {Object} data data
+     */
+    setNotification ({ data }) {
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          this.getDataNotification()
+          createNotification(this.$t(`command.${data.name}`), {
+            body: data.description,
+            icon: '/icons/icon-128x128.png'
+          })
+
+          function createNotification (title, options) {
+            return new Notification(title, options)
+          }
+        }
+      })
+    },
     async getDataNotification () {
       try {
         const { data } = await api.get('notifications', {

@@ -1790,10 +1790,6 @@ export default {
       return this.setModelInvoice()
     },
 
-    setPercent (data) {
-      const percent = parseInt(data.replace(/\D/g, ''), 10)
-      return (Number(percent) / 100) + 1
-    },
     /**
      * Save bill and payments
      */
