@@ -2,9 +2,11 @@
   <q-card class="full-width">
     <q-card-actions class="q-pt-sm q-px-md justify-between items-center flex">
       <slot name="top"></slot>
-      <div>
+      <div class="flex q-gutter-md items-center">
         <slot name="top-right"></slot>
-        <q-btn icon="fullscreen" color="primary" @click="toggleFullscreen"/>
+        <div>
+          <q-btn icon="fullscreen" color="primary" @click="toggleFullscreen"/>
+        </div>
       </div>
     </q-card-actions>
     <q-card-section class="q-pa-xs q-px-none">
@@ -20,10 +22,10 @@
 
 <script setup>
 import Highcharts from 'highcharts'
-// import HighchartsFullscreen from 'highcharts/modules/full-screen'
+import HighchartsFullscreen from 'highcharts/modules/full-screen'
 import { nextTick, onMounted, ref, watch } from 'vue'
 
-// HighchartsFullscreen(Highcharts)
+HighchartsFullscreen(Highcharts)
 
 defineOptions({
   name: 'ChartComponent'
