@@ -19,32 +19,64 @@
 import { api } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import ChartComponent from 'src/components/ChartComponent.vue'
 
+/**
+ * Options
+ * @type {Object}
+ */
 defineOptions({
   name: 'PaymentMethodsGraph'
 })
 
-// defineProps({
-//   filters: {
-//     type: Object,
-//     default: null
-//   }
-// })
+/**
+ * Props
+ * @type {Object}
+ */
+const props = defineProps({
+  filters: {
+    type: Object,
+    default: null
+  }
+})
 
+/**
+ * Store
+ * @type {Object}
+ */
 const store = authentication()
 
+/**
+ * Payment method data
+ * @type {Ref<Array>}
+ */
 const paymentMethodData = ref([])
 
-const loading = ref(false)
+/**
+ * Loading
+ * @type {Ref<Boolean>}
+ */
+const loading = ref(true)
 
+/**
+ * On mounted
+ */
 onMounted(() => {
   filterDate({
     branch_office_id: store.branchOffice.id
   })
 })
 
+/**
+ * Watch filters
+ */
+watch(() => props.filters, (filters) => {
+  filterDate({
+    branch_office_id: store.branchOffice.id,
+    ...filters
+  })
+})
 /**
  * Chart options
  * @type {object}

@@ -19,36 +19,77 @@
 import { api } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import ChartComponent from 'src/components/ChartComponent.vue'
 import Highcharts from 'highcharts'
 
+/**
+ * Options
+ * @type {Object}
+ */
 defineOptions({
   name: 'ProductRankingGraph'
 })
 
-// defineProps({
-//   filters: {
-//     type: Object,
-//     default: null
-//   }
-// })
+/**
+ * Props
+ * @type {Object}
+ */
+const props = defineProps({
+  filters: {
+    type: Object,
+    default: null
+  }
+})
 
+/**
+ * Store
+ * @type {Object}
+ */
 const store = authentication()
 
-const loading = ref(false)
+/**
+ * Loading
+ * @type {Ref<Boolean>}
+ */
+const loading = ref(true)
+
+/**
+ * Params
+ * @type {Ref<Object>}
+ */
+const params = ref({
+  branch_office_id: store.branchOffice.id,
+  mostSold: true,
+  paginated: true,
+  perPage: 10
+})
 
 onMounted(() => {
+  filterDate(params.value)
+})
+
+/**
+ * Watch filters
+ */
+watch(() => props.filters, (filters) => {
   filterDate({
-    branch_office_id: store.branchOffice.id,
-    mostSold: true,
-    paginated: true,
-    perPage: 10
+    ...params.value,
+    ...filters,
+    branch_office_id: store.branchOffice.id
   })
 })
 
+/**
+ * Top products data
+ * @type {Ref<Array>}
+ */
 const topProductsData = ref([])
 
+/**
+ * Chart options
+ * @type {Ref<Highcharts.Options>}
+ */
 const chartProductOptions = ref({
   chart: {
     type: 'bar',
@@ -104,11 +145,14 @@ const chartProductOptions = ref({
   ]
 })
 
+/**
+ * Filter data by date
+ * @param {Object} params
+ */
 const filterDate = async (params) => {
   try {
     loading.value = true
-    const { data } = await api.get('products', { params })
-    console.log(data)
+    const { data } = await api.get('kpi/products-ranking', { params })
     topProductsData.value = data.data
   } catch (error) {
     notify(error.message, 'negative', 'warning')

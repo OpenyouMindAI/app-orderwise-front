@@ -37,16 +37,24 @@ import { authentication } from 'src/stores/module-authentication'
 import { computed, onMounted, ref, watch } from 'vue'
 import ChartComponent from 'src/components/ChartComponent.vue'
 
+/**
+ * Options
+ * @type {Object}
+ */
 defineOptions({
   name: 'ProductRankingGraph'
 })
 
-// defineProps({
-//   filters: {
-//     type: Object,
-//     default: null
-//   }
-// })
+/**
+ * Props
+ * @type {Object}
+ */
+const props = defineProps({
+  filters: {
+    type: Object,
+    default: () => ({})
+  }
+})
 
 /**
  * Store
@@ -64,7 +72,7 @@ const tab = ref('monthly')
  * Loading state
  * @type {boolean}
  */
-const loading = ref(false)
+const loading = ref(true)
 
 /**
  * Sales data
@@ -82,10 +90,28 @@ const params = ref({
   year: 2025
 })
 
+/**
+ * On mounted
+ */
 onMounted(() => {
   filterDate(params.value)
 })
 
+/**
+ * Watch filters
+ */
+watch(() => props.filters, (filters) => {
+  params.value = {
+    ...params.value,
+    ...filters,
+    branch_office_id: store.branchOffice.id
+  }
+  filterDate(params.value)
+})
+
+/**
+ * Watch tab
+ */
 watch(() => tab.value, (groupBy) => {
   filterDate({ ...params.value, groupBy })
 })

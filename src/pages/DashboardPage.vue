@@ -10,17 +10,17 @@
         </div>
         <hr/>
       </div>
-      <div class="col-8">
+      <div class="col-xl-8 col-lg-8 col-md-12 col-sm-12 col-xs-12">
         <sales-graph :filters="filter" />
       </div>
-      <div class="col-4">
+      <div class="col-xl-4 col-lg-4 col-md-6 col-sm-6 col-xs-12">
         <payment-methods-graph :filters="filter" />
       </div>
-      <div class="col-7">
-        <product-ranking-graph :filters="filter" />
-      </div>
-      <div class="col-5">
+      <div class="col-xl-5 col-lg-5 col-md-6 col-sm-6 col-xs-12">
         <categories-graph :filters="filter" />
+      </div>
+      <div class="col-xl-7 col-lg-7 col-md-12 col-sm-12 col-xs-12">
+        <product-ranking-graph :filters="filter" />
       </div>
     </div>
     <q-dialog
@@ -42,7 +42,7 @@
             label="Vendedor"
             input-debounce="0"
             option-value="id"
-            v-model="filter.seller"
+            v-model="seller"
             :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
             :options="sellers"
             clearable
@@ -87,31 +87,106 @@ import CategoriesGraph from 'src/components/Dashboard/CategoriesGraph.vue'
 import PaymentMethodsGraph from 'src/components/Dashboard/PaymentMethodsGraph.vue'
 import ProductRankingGraph from 'src/components/Dashboard/ProductRankingGraph.vue'
 import SalesGraph from 'src/components/Dashboard/SalesGraph.vue'
-import { ref } from 'vue'
-import { date } from 'quasar'
-
-const dialogFilter = ref(false)
-
-const validate = ref(null)
-const panel = ref('day')
-const filter = ref({})
-const sellers = ref([])
+import { ref, watch } from 'vue'
+import { authentication } from 'src/stores/module-authentication'
+import { notify } from 'src/const/mixins'
+import { api } from 'src/boot/axios'
 
 /**
-     * Clear filter
-     */
+ * Dialog filter
+ * @type {Ref<Boolean>}
+ */
+const dialogFilter = ref(false)
+
+/**
+ * Panel
+ * @type {Ref<String>}
+ */
+const panel = ref('day')
+/**
+ * Filter
+ * @type {Ref<Object>}
+ */
+const filter = ref({})
+/**
+ * Seller
+ * @type {Ref<Object>}
+ */
+const seller = ref(null)
+/**
+ * Sellers
+ * @type {Ref<Array>}
+ */
+const sellers = ref([])
+/**
+ * Permissions
+ * @type {Array}
+ */
+const permissions = ['SAM']
+/**
+ * Store
+ * @type {Object}
+ */
+const store = authentication()
+/**
+ * Validate
+ * @type {Boolean}
+ */
+const validate = store.userSession.is_root || store.userSession.roles.some(role => permissions.includes(role.acronym))
+
+watch(() => store.branchOffice, () => {
+  filterDate()
+})
+/**
+ * Clear filter
+ */
 const clearFilter = () => {
-  filter.value.fromHours = null
-  filter.value.toHours = null
-  filter.value.seller = null
-  filter.value.day = date.formatDate(Date(), 'YYYY-MM-DD')
-  filter.value.from = date.formatDate(Date(), 'YYYY-MM-DD')
-  filter.value.to = date.formatDate(Date(), 'YYYY-MM-DD')
-  panel.value = 'day'
+  filter.value = {}
   filterDate()
 }
-const filterDate = () => {}
 
-const filterSellers = () => {}
+/**
+ * Filter date
+ */
+const filterDate = () => {
+  if (panel.value === 'day') {
+    filter.value = {
+      seller_id: seller.value?.id,
+      day: filter.value.day,
+      fromHours: filter.value.fromHours,
+      toHours: filter.value.toHours
+    }
+  } else {
+    filter.value = {
+      seller_id: seller.value?.id,
+      to: filter.value.to,
+      from: filter.value.from
+    }
+  }
+}
+
+/**
+ * Filter sellers
+ * @param {String} value
+ * @param {Function} update
+ */
+
+const filterSellers = async (value, update) => {
+  try {
+    const { data } = await api.get('sellers', {
+      params: {
+        dataSearch: {
+          name: value,
+          document_number: value
+        }
+      }
+    })
+    update(() => {
+      sellers.value = data
+    })
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
 
 </script>
