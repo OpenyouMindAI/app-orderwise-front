@@ -209,7 +209,7 @@ export const printInvoice = async (data, userSession) => {
 
   y += 4
   data.products.forEach((product) => {
-    const cantidadPrecio = `${product.pivot.amount} X ${product.pivot.price.toFixed(2)}`
+    const cantidadPrecio = `${product.pivot.amount.toFixed(2)} X ${product.pivot.price.toFixed(2)}`
     const subtotal = (product.pivot.amount * product.pivot.price).toFixed(2)
 
     doc.text(cantidadPrecio, 5, y)
