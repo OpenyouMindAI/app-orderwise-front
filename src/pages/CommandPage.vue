@@ -779,7 +779,8 @@ export default {
           products: this.products,
           branch_office_id: this.branchOffice?.id,
           tables: this.isTable ? this.tables?.map(table => table.id) : [],
-          company_id: this.userSession?.company_session_id
+          company_id: this.userSession?.company_session_id,
+          code: 2
         })
         this.afterSaveBill()
       } catch (error) {

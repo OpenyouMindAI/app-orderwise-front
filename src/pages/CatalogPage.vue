@@ -926,6 +926,7 @@ export default {
           address: this.address,
           company_id: this.$route?.params?.company_id,
           client_id: this.userSession.id,
+          code: 1,
           payments: [
             {
               payment_method_id: this.paymentMethod,
