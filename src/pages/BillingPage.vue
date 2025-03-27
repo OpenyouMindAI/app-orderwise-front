@@ -1115,6 +1115,12 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
+    quantityDialog (data) {
+      if (!data) {
+        this.quantity = 1
+        this.currentAmount = 0
+      }
+    },
     category () {
       this.setPagination({
         pagination: this.pagination,
@@ -1886,6 +1892,23 @@ export default {
         data.quantity = 1
       }
     },
+    pushProduct (product) {
+      this.products.push({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        amount: product.quantity,
+        quantity: product.quantity,
+        subtotal: product.subtotal,
+        product_id: product.id,
+        cost: product.cost,
+        barcode: product.barcode,
+        normal_stock: product.normal_stock,
+        bundle_stock: product.bundle_stock,
+        skip_stock: product.skip_stock,
+        aliquot_type: product.aliquot_type || product?.category?.aliquot_type
+      })
+    },
     /**
      * Validate products
      * @param {*} data product selected
@@ -1918,7 +1941,6 @@ export default {
         this.calculate(findProduct)
       } else {
         data.product_id = data.id
-        this.products.push(data)
         data.quantity = this.quantity
         if (this.currentAmount) {
           data.amount = this.currentAmount / this.productQuantity.price
@@ -1928,6 +1950,7 @@ export default {
           data.amount = this.quantity
           this.calculate(data)
         }
+        this.pushProduct(data)
       }
       this.quantity = 1
       this.currentAmount = 0

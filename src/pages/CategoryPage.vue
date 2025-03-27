@@ -53,6 +53,19 @@
                 label="Nombre"
               />
             </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                label="Iva (%)"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="category.aliquot_type"
+                :options="aliquotTypes"
+                @filter="getAliquotTypes"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
                 v-model="category.show_catalog"
@@ -87,6 +100,19 @@
                 label="Nombre"
               />
             </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                label="Iva (%)"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="category.aliquot_type"
+                :options="aliquotTypes"
+                @filter="getAliquotTypes"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
                 v-model="category.show_catalog"
@@ -108,10 +134,14 @@
 
 <script>
 import { Notify } from 'quasar'
+import { notify } from 'src/const/mixins'
+import { authentication } from 'src/stores/module-authentication'
+import { mapState } from 'pinia'
 export default {
   data () {
     return {
       categories: [],
+      aliquotTypes: [],
       category: {
         show_catalog: 0
       },
@@ -149,6 +179,14 @@ export default {
           sortable: true
         },
         {
+          name: 'aliquot_type',
+          align: 'left',
+          label: 'Impuesto',
+          field: 'aliquot_type',
+          format: row => row?.Desc || '-',
+          sortable: true
+        },
+        {
           name: 'show_catalog',
           align: 'left',
           label: 'Mostrar en catálogo',
@@ -175,6 +213,9 @@ export default {
     filter (data) {
       this.searchData(data)
     }
+  },
+  computed: {
+    ...mapState(authentication, ['userSession'])
   },
   methods: {
     /**
@@ -217,6 +258,28 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getAliquotTypes (value, update) {
+      try {
+        const { data } = await this.$apiArca.get('metadata/aliquot-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.aliquotTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
     },
     /**
      * Set data pagination emit event
