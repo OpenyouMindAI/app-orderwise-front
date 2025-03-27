@@ -2,7 +2,7 @@
   <q-page padding>
     <div class="flex flex-wrap justify-between">
       <div class="flex q-gutter-sm">
-        <q-badge v-for="branchOffice in branchOfficeSelect" :key="branchOffice.id">
+        <q-badge v-for="branchOffice in branchOfficeSelect" :key="branchOffice?.id">
           {{ branchOffice.name }}
         </q-badge>
       </div>

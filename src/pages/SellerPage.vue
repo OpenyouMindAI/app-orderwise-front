@@ -333,7 +333,7 @@ export default {
       this.visible = true
       this.$api.post('sellers', {
         ...this.seller,
-        branchOffices: [this.branchOffice.id]
+        branchOffices: [this.branchOffice?.id]
       })
         .then(({ data }) => {
           this.getSellers()
@@ -371,7 +371,7 @@ export default {
       this.visible = true
       this.$api.put(`sellers/${this.seller.id}`, {
         ...this.seller,
-        branchOffices: [this.branchOffice.id]
+        branchOffices: [this.branchOffice?.id]
       })
         .then(({ data }) => {
           this.getSellers()

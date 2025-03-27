@@ -772,7 +772,7 @@ export default {
       this.$api.get('products', {
         params: {
           ...params,
-          branch_office_id: this.branchOffice.id
+          branch_office_id: this.branchOffice?.id
         }
       })
         .then(({ data }) => {

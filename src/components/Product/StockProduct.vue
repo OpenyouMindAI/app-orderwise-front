@@ -180,7 +180,7 @@ const columns = [
 
 const defaultValue = {
   product_id: props.product.id,
-  branch_office_id: branchOffice.id
+  branch_office_id: branchOffice?.id
 }
 
 const loadingTable = ref(false)

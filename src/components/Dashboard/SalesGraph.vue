@@ -85,7 +85,7 @@ const salesData = ref([])
  * @type {object}
  */
 const params = ref({
-  branch_office_id: store.branchOffice.id,
+  branch_office_id: store.branchOffice?.id,
   groupBy: tab.value,
   year: 2025
 })
@@ -104,7 +104,7 @@ watch(() => props.filters, (filters) => {
   params.value = {
     ...params.value,
     ...filters,
-    branch_office_id: store.branchOffice.id
+    branch_office_id: store.branchOffice?.id
   }
   filterDate(params.value)
 })

@@ -293,7 +293,7 @@ const getProductStock = async (product) => {
     loadingTable.value = true
     const { data } = await api.get(`products/${product.id}/stock`, {
       params: {
-        branch_office_id: branchOffice.id
+        branch_office_id: branchOffice?.id
       }
     })
     stock.value = data

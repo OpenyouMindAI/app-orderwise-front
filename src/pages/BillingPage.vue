@@ -1303,7 +1303,7 @@ export default {
         await this.$api.post('cashflow', {
           description: this.description,
           amount: this.amount,
-          branch_office_id: this.branchOffice.id,
+          branch_office_id: this.branchOffice?.id,
           type_cashflow: this.panel
         })
         this.$q.notify({
@@ -1755,7 +1755,7 @@ export default {
         user_created_id: this.userSession.id,
         exchange_rate: this.exchangeRate,
         delivery_date: this.deliveryDate,
-        branch_office_id: this.branchOffice.id,
+        branch_office_id: this.branchOffice?.id,
         products: this.products,
         status: this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0),
