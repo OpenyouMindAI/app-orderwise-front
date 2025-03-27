@@ -265,7 +265,7 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`branch-offices/${this.branchOffice.id}`, this.branchOffice)
+      this.$api.put(`branch-offices/${this.branchOffice?.id}`, this.branchOffice)
         .then(({ data }) => {
           this.getBranchOffices()
           this.openEditBranchOffice = false
@@ -291,7 +291,7 @@ export default {
      */
     deleteBranchOffice () {
       this.visible = true
-      this.$api.delete(`branch-offices/${this.branchOffice.id}`)
+      this.$api.delete(`branch-offices/${this.branchOffice?.id}`)
         .then(({ data }) => {
           this.getBranchOffices()
           this.openEditBranchOffice = false

@@ -142,7 +142,7 @@ const createOrder = async (invoice) => {
 const setBillModel = (model) => {
   return {
     ...model,
-    externalStoreId: branchOffice.id,
+    externalStoreId: branchOffice?.id,
     externalPosId: '1',
     description: model.description || model.title,
     products: model.products.map(product => {
@@ -164,7 +164,7 @@ const setBillModel = (model) => {
 const cancelOrder = async () => {
   try {
     loading.value = true
-    await apiQPay.delete(`/mercadopago/qr-attended/orders/delete/${branchOffice.id}`)
+    await apiQPay.delete(`/mercadopago/qr-attended/orders/delete/${branchOffice?.id}`)
     modelValue.value = false
     notify('Orden cancelada exitosamente', 'warning', 'check_circle')
     referenceExternal.value = null

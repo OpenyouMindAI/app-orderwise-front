@@ -64,7 +64,7 @@ const loading = ref(true)
  */
 onMounted(() => {
   filterDate({
-    branch_office_id: store.branchOffice.id
+    branch_office_id: store.branchOffice?.id
   })
 })
 
@@ -73,7 +73,7 @@ onMounted(() => {
  */
 watch(() => props.filters, (filters) => {
   filterDate({
-    branch_office_id: store.branchOffice.id,
+    branch_office_id: store.branchOffice?.id,
     ...filters
   })
 })

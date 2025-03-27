@@ -59,7 +59,7 @@ const loading = ref(true)
  * @type {Ref<Object>}
  */
 const params = ref({
-  branch_office_id: store.branchOffice.id,
+  branch_office_id: store.branchOffice?.id,
   mostSold: true,
   paginated: true,
   perPage: 10
@@ -76,7 +76,7 @@ watch(() => props.filters, (filters) => {
   filterDate({
     ...params.value,
     ...filters,
-    branch_office_id: store.branchOffice.id
+    branch_office_id: store.branchOffice?.id
   })
 })
 

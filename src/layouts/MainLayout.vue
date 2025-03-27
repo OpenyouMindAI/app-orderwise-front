@@ -424,7 +424,7 @@ export default {
     },
 
     copyCatalog () {
-      copyToClipboard(`${window.location.origin}/#/catalog/${this.userSession.company_session_id}/${this.branchOffice.id}`)
+      copyToClipboard(`${window.location.origin}/#/catalog/${this.userSession.company_session_id}/${this.branchOffice?.id}`)
         .then(() => {
           notify('Link copiado exitosamente', 'positive', 'check_circle')
         })
