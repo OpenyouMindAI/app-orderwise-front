@@ -51,7 +51,6 @@
                 option-value="id"
                 v-model="client.document_type"
                 :options="documentTypes"
-                :rules="[val => !!val || 'El campo es requerido.']"
                 @filter="getDocumentTypes"
               />
             </div>
@@ -82,7 +81,6 @@
                 option-value="code"
                 v-model="client.condition_iva_receptor"
                 :options="conditionIvaReceptors"
-                :rules="[val => !!val || 'El campo es requerido.']"
                 @filter="getConditionIvaReceptor"
               />
             </div>
@@ -139,7 +137,6 @@
                 option-value="id"
                 v-model="client.document_type"
                 :options="documentTypes"
-                :rules="[val => !!val || 'El campo es requerido.']"
                 @filter="getDocumentTypes"
               />
             </div>
@@ -169,7 +166,6 @@
                 option-value="code"
                 v-model="client.condition_iva_receptor"
                 :options="conditionIvaReceptors"
-                :rules="[val => !!val || 'El campo es requerido.']"
                 @filter="getConditionIvaReceptor"
               />
             </div>
@@ -361,7 +357,7 @@ export default {
           this.documentTypes = data
         })
       } catch (err) {
-        notify(err.message, 'negative', 'warning')
+        notify('A ocurrido un error con la conexión con el ARCA', 'negative', 'warning')
       }
     },
     /**
@@ -383,7 +379,7 @@ export default {
           this.conditionIvaReceptors = data
         })
       } catch (err) {
-        notify(err.message, 'negative', 'warning')
+        notify('A ocurrido un error con la conexión con el ARCA', 'negative', 'warning')
       }
     },
     /**
