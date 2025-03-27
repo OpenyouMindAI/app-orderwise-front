@@ -214,7 +214,7 @@ export const printInvoice = async (data, userSession) => {
 
     doc.text(cantidadPrecio, 5, y)
     if (data.billing) {
-      doc.text(fields.aliquot_type.Desc, 50, y, { align: 'center' })
+      doc.text(`${product.pivot.taxe}%`, 50, y, { align: 'center' })
     }
     doc.text(subtotal, 90, y, { align: 'right' })
     y += 4
