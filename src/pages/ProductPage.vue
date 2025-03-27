@@ -97,7 +97,7 @@
                       type="number"
                     />
                   </div>
-                  <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                     <q-select
                       use-input
                       filled
@@ -109,6 +109,20 @@
                       :options="categories"
                       :rules="[val => !!val || 'El campo es requerido.']"
                       @filter="filterCategories"
+                      @update:model-value="setCategory"
+                    />
+                  </div>
+                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                    <q-select
+                      use-input
+                      filled
+                      label="Iva (%)"
+                      input-debounce="0"
+                      option-label="Desc"
+                      option-value="id"
+                      v-model="product.aliquot_type"
+                      :options="aliquotTypes"
+                      @filter="getAliquotTypes"
                     />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
@@ -293,7 +307,7 @@
                       step=".01"
                     />
                   </div>
-                  <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                     <q-select
                       use-input
                       filled
@@ -305,6 +319,20 @@
                       :options="categories"
                       :rules="[val => !!val || 'El campo es requerido.']"
                       @filter="filterCategories"
+                      @update:model-value="setCategory"
+                    />
+                  </div>
+                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                    <q-select
+                      use-input
+                      filled
+                      label="Iva (%)"
+                      input-debounce="0"
+                      option-label="Desc"
+                      option-value="id"
+                      v-model="product.aliquot_type"
+                      :options="aliquotTypes"
+                      @filter="getAliquotTypes"
                     />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 q-gutter-x-sm">
@@ -433,6 +461,7 @@ import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
 import PackProduct from 'src/components/Product/PackProduct.vue'
 import { getDownload } from 'src/const/services'
+import { notify } from 'src/const/mixins'
 export default {
   components: { StockProduct, PackProduct },
   data () {
@@ -455,6 +484,7 @@ export default {
       },
       categories: [],
       imageUrl: null,
+      aliquotTypes: [],
       category: null,
       filter: '',
       /**
@@ -692,6 +722,11 @@ export default {
           }
         }
       }
+
+      if (data.aliquot_type) {
+        formData.append('aliquot_type', JSON.stringify(data.aliquot_type))
+      }
+
       data.images.forEach((element, index) => {
         formData.append(`images[${index}]`, element.image)
       })
@@ -765,6 +800,28 @@ export default {
       this.getProducts(this.params)
     },
     /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getAliquotTypes (value, update) {
+      try {
+        const { data } = await this.$apiArca.get('metadata/aliquot-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.aliquotTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
      * Get all products
      */
     getProducts (params = this.params) {
@@ -788,6 +845,13 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Set category
+     * @param {Object} data category
+     */
+    setCategory (data) {
+      this.product.aliquot_type = data.aliquot_type
     },
     /**
      * Get all products
