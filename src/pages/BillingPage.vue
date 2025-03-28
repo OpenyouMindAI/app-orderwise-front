@@ -1757,7 +1757,7 @@ export default {
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         products: this.products,
-        status: this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0),
         total_amount: this.totalBill,
         tables: this.tableSelected,
@@ -1799,6 +1799,7 @@ export default {
         if (!params) return
 
         if (this.$route.query.id) {
+          console.log(params)
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
           res = await this.$api.post('invoices', params)
