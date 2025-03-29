@@ -1952,6 +1952,7 @@ export default {
           data.amount = this.quantity
           this.calculate(data)
           this.pushProduct(data)
+          this.calculateTotal()
         }
       }
       this.quantity = 1
