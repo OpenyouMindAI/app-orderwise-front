@@ -181,7 +181,6 @@ const filterDate = async (params) => {
   try {
     loading.value = true
     const { data } = await api.get('kpi/invoices', { params })
-    console.log(data)
     salesData.value = data
   } catch (error) {
     notify(error.message, 'negative', 'warning')
