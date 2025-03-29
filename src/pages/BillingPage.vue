@@ -521,7 +521,7 @@
           <q-btn flat icon="close" round size="md" v-close-popup/>
         </q-card-section>
         <q-card-section>
-          <q-form @submit="() => { this.$router.push({ name: 'Billing', query: { id: search } }) }" class="row full-width items-center justify-between">
+          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center justify-between">
             <div class="col-10">
               <q-input
                 name="search"
@@ -537,7 +537,7 @@
               />
             </div>
             <div class="col-auto text-right">
-              <q-btn type="submit" color="primary" icon="search" size="lg"/>
+              <q-btn type="submit" color="primary" icon="search" size="lg" :loading="loadingSearch"/>
             </div>
           </q-form>
         </q-card-section>
@@ -756,6 +756,7 @@ export default {
     return {
       waitingPayment: false,
       loadingBilling: false,
+      loadingSearch: false,
       documentTypes: [],
       /**
        * Invoice printer
@@ -1086,13 +1087,6 @@ export default {
   },
   computed: {
     /**
-     * Invoice router
-     * @returns {String}
-     */
-    invoiceRouter () {
-      return this.$route.query.id
-    },
-    /**
      * Pending payment
      * @returns {Number}
      */
@@ -1130,9 +1124,6 @@ export default {
         pagination: this.pagination,
         filter: undefined
       })
-    },
-    invoiceRouter (data) {
-      if (data) this.getInvoiceOne(data)
     },
     products (data) {
       localStorage.setItem('products', JSON.stringify(data))
@@ -1672,8 +1663,17 @@ export default {
      * @param {Number} id invoice id
      */
     async getInvoiceOne (data) {
+      this.loadingSearch = true
       const invoice = await this.getInvoiceOneRequest(data)
       if (invoice) {
+        if (invoice.branch_office_id !== this.branchOffice.id) {
+          notify('Esta factura no pertenece a esta sucursal', 'negative', 'warning')
+          this.$router.push({ name: 'Billing' })
+          this.loadingSearch = false
+          return
+        }
+
+        this.loadingSearch = false
         this.invoice = invoice
         this.products = invoice.products.map(product => {
           return {
@@ -1689,10 +1689,16 @@ export default {
         this.tableSelected = invoice.tables.map(table => table.id)
         this.searchInvoice = false
         this.setPayments(invoice.invoice_payments)
-        this.search = ''
+        this.$router.push({
+          name: 'Billing',
+          query: {
+            id: this.search
+          }
+        })
         this.invoiceDescription = invoice.description
         this.deliveryDate = invoice.delivery_date
         this.calculateTotal()
+        this.search = ''
       } else {
         notify('No se encontró la factura', 'negative', 'warning')
       }
