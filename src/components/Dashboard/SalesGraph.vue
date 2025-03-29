@@ -21,6 +21,7 @@
           style="border-radius: 50px;"
           dense
         >
+          <q-tab name="diary" label="Por dia" style="border-radius: 50px;"/>
           <q-tab name="weekly" label="Semanal" style="border-radius: 50px;"/>
           <q-tab name="monthly" label="Mensual" style="border-radius: 50px;"/>
           <q-tab name="yearly" label="Anual" style="border-radius: 50px;"/>
@@ -66,7 +67,7 @@ const store = authentication()
  * Tabs
  * @type {string}
  */
-const tab = ref('monthly')
+const tab = ref('weekly')
 
 /**
  * Loading state
