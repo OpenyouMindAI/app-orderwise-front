@@ -27,11 +27,11 @@
         <div class="col-12 col-md-8">
           <div class="video-player-container">
             <video
-              :src="selectedVideo.videoUrl"
+              :src="selectedVideo.video_url"
               controls
               class="full-width"
               style="max-height: 500px"
-            ></video>
+            />
             <div class="q-mt-md">
               <div class="row items-center q-mb-md">
                 <div class="text-h5">{{ selectedVideo.title }}</div>
@@ -42,7 +42,11 @@
                 </div>
               </div>
               <div class="row items-center q-mb-md">
-                <div class="text-subtitle1">{{ selectedVideo.views }} visualizaciones • {{ selectedVideo.publishedDate }}</div>
+                <div class="text-subtitle1">
+                  234K
+                  visualizaciones •
+                  {{ formatDate(selectedVideo.created_at) }}
+                </div>
                 <q-space />
                 <q-btn flat round icon="thumb_up" />
                 <q-btn flat round icon="thumb_down" />
@@ -52,11 +56,11 @@
               <q-separator />
               <div class="row q-mt-md items-center">
                 <q-avatar size="40px">
-                  <img :src="selectedVideo.channelAvatar" />
+                  <img :src="qBitsLogo.isoLogoColor"  alt="logo"/>
                 </q-avatar>
                 <div class="q-ml-sm">
                   <div class="text-subtitle1 text-weight-bold">{{ selectedVideo.channelName }}</div>
-                  <div class="text-caption">{{ selectedVideo.subscribers }} suscriptores</div>
+                  <div class="text-caption">20k suscriptores</div>
                 </div>
                 <q-space />
                 <q-btn color="red" label="Suscribirse" />
@@ -65,13 +69,13 @@
               <div class="video-description">
                 <p>{{ selectedVideo.description }}</p>
               </div>
-              <q-separator class="q-my-md" />
-              <div class="comments-section">
+              <!-- <q-separator class="q-my-md" /> -->
+              <!-- <div class="comments-section">
                 <div class="text-subtitle1 q-mb-md">{{ selectedVideo.comments.length }} comentarios</div>
                 <div v-for="(comment, index) in selectedVideo.comments" :key="index" class="q-mb-md">
                   <div class="row items-start">
                     <q-avatar size="40px">
-                      <img :src="comment.avatar" />
+                      <img :src="qBitsLogo.isoLogoColor"  alt="logo"/>
                     </q-avatar>
                     <div class="q-ml-sm">
                       <div class="text-weight-bold">{{ comment.username }} <span class="text-caption">{{ comment.date }}</span></div>
@@ -84,7 +88,7 @@
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> -->
             </div>
           </div>
         </div>
@@ -113,16 +117,16 @@
         <div class="row q-col-gutter-md">
           <div v-for="video in videos" :key="video.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
             <q-card class="video-card" flat bordered @click="selectVideo(video)">
-              <q-img :src="video.thumbnail" :ratio="16/9" />
+              <q-img :src="video.miniature_url" :ratio="16/9" />
               <q-card-section>
                 <div class="row no-wrap">
                   <q-avatar size="40px">
-                    <img :src="video.channelAvatar" />
+                    <img :src="qBitsLogo.isoLogoColor" alt="videos"/>
                   </q-avatar>
                   <div class="q-ml-sm">
                     <div class="text-subtitle1 ellipsis-2-lines">{{ video.title }}</div>
-                    <div class="text-caption">{{ video.channelName }}</div>
-                    <div class="text-caption">{{ video.views }} visualizaciones • {{ video.publishedDate }}</div>
+                    <div class="text-caption">QBits</div>
+                    <div class="text-caption">1000 visualizaciones • {{ formatDate(video.created_at) }}</div>
                   </div>
                 </div>
               </q-card-section>
@@ -174,135 +178,65 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import { formatDate, loading, qBitsLogo } from '../const/mixins'
+import { authentication } from 'src/stores/module-authentication'
 
 const $q = useQuasar()
-
+const store = authentication()
+/**
+ * Search query
+ * @type {String}
+ */
 const searchQuery = ref('')
-const isSuperAdmin = ref(true)
+/**
+ * Is super admin
+ * @type {Boolean}
+ */
+const isSuperAdmin = ref(store.userSession.is_root)
 const selectedVideo = ref(null)
 const showAddVideoDialog = ref(false)
 const showDeleteDialog = ref(false)
 const editingVideo = ref(null)
 const videoToDelete = ref(null)
 
-const videoForm = ref({
-  title: '',
-  description: '',
-  thumbnail: null,
-  videoFile: null
-})
+const videoForm = ref()
 
-const videos = ref([
-  {
-    id: 1,
-    title: 'Cómo crear una aplicación con Quasar Framework',
-    thumbnail: 'https://cdn.quasar.dev/img/mountains.jpg',
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-    channelName: 'Quasar Academy',
-    channelAvatar: 'https://cdn.quasar.dev/img/boy-avatar.png',
-    views: '120K',
-    publishedDate: 'hace 2 semanas',
-    description: 'En este tutorial, aprenderás a crear una aplicación completa con Quasar Framework y Vue.js. Veremos cómo configurar el proyecto, crear componentes y desplegar la aplicación.',
-    subscribers: '500K',
-    comments: [
-      {
-        username: 'María López',
-        avatar: 'https://cdn.quasar.dev/img/avatar2.jpg',
-        date: 'hace 3 días',
-        text: '¡Excelente tutorial! Me ha ayudado mucho a entender Quasar.'
-      },
-      {
-        username: 'Juan Pérez',
-        avatar: 'https://cdn.quasar.dev/img/avatar3.jpg',
-        date: 'hace 1 semana',
-        text: '¿Podrías hacer un tutorial sobre cómo integrar Firebase con Quasar?'
-      }
-    ]
-  },
-  {
-    id: 2,
-    title: 'Vue.js 3 Composition API - Tutorial Completo',
-    thumbnail: 'https://cdn.quasar.dev/img/parallax2.jpg',
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-    channelName: 'Vue Masters',
-    channelAvatar: 'https://cdn.quasar.dev/img/avatar1.jpg',
-    views: '85K',
-    publishedDate: 'hace 1 mes',
-    description: 'Aprende a utilizar la Composition API de Vue.js 3 con ejemplos prácticos y casos de uso reales.',
-    subscribers: '320K',
-    comments: [
-      {
-        username: 'Carlos Ruiz',
-        avatar: 'https://cdn.quasar.dev/img/avatar4.jpg',
-        date: 'hace 2 semanas',
-        text: 'La Composition API es un cambio revolucionario en Vue.'
-      }
-    ]
-  },
-  {
-    id: 3,
-    title: 'Diseño Responsive con Quasar Framework',
-    thumbnail: 'https://cdn.quasar.dev/img/parallax1.jpg',
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-    channelName: 'Quasar Academy',
-    channelAvatar: 'https://cdn.quasar.dev/img/boy-avatar.png',
-    views: '42K',
-    publishedDate: 'hace 3 meses',
-    description: 'Aprende a crear interfaces responsivas utilizando el sistema de grid y los componentes de Quasar Framework.',
-    subscribers: '500K',
-    comments: []
-  },
-  {
-    id: 4,
-    title: 'Creando una PWA con Quasar',
-    thumbnail: 'https://cdn.quasar.dev/img/quasar.jpg',
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-    channelName: 'Web Dev Pro',
-    channelAvatar: 'https://cdn.quasar.dev/img/avatar5.jpg',
-    views: '67K',
-    publishedDate: 'hace 5 días',
-    description: 'Tutorial paso a paso para crear una Progressive Web App utilizando Quasar Framework.',
-    subscribers: '250K',
-    comments: []
-  },
-  {
-    id: 5,
-    title: 'Quasar vs Vuetify - Comparativa Completa',
-    thumbnail: 'https://cdn.quasar.dev/img/mountains.jpg',
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-    channelName: 'Vue Masters',
-    channelAvatar: 'https://cdn.quasar.dev/img/avatar1.jpg',
-    views: '103K',
-    publishedDate: 'hace 2 meses',
-    description: 'Analizamos las diferencias, ventajas y desventajas entre Quasar Framework y Vuetify para ayudarte a elegir el mejor framework para tu próximo proyecto.',
-    subscribers: '320K',
-    comments: []
-  },
-  {
-    id: 6,
-    title: 'Optimización de Rendimiento en Aplicaciones Vue',
-    thumbnail: 'https://cdn.quasar.dev/img/parallax2.jpg',
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-    channelName: 'Web Dev Pro',
-    channelAvatar: 'https://cdn.quasar.dev/img/avatar5.jpg',
-    views: '29K',
-    publishedDate: 'hace 1 semana',
-    description: 'Aprende técnicas avanzadas para optimizar el rendimiento de tus aplicaciones Vue y Quasar.',
-    subscribers: '250K',
-    comments: []
-  }
-])
+const videos = ref([])
 
 const recommendedVideos = computed(() => {
   if (!selectedVideo.value) return []
   return videos.value.filter(video => video.id !== selectedVideo.value.id).slice(0, 5)
 })
 
+onMounted(() => {
+  getVideos()
+})
+
 function selectVideo (video) {
   selectedVideo.value = video
+}
+
+async function getVideos () {
+  try {
+    loading(true)
+    const { data } = await api.get('tutorials', {
+      params: {
+        status: 'published',
+        sortBy: 'id',
+        sortOrder: 'desc',
+        perPage: 10,
+        paginate: true
+      }
+    })
+    videos.value = data.data
+  } catch (error) {
+    $q.notify({ color: 'negative', message: error.message, icon: 'warning' })
+  } finally {
+    loading(false)
+  }
 }
 
 function editVideo (video) {
@@ -333,36 +267,29 @@ function deleteVideo () {
 }
 
 async function saveVideo () {
-  if (editingVideo.value) {
-    const index = videos.value.findIndex(v => v.id === editingVideo.value.id)
-    if (index !== -1) {
-      videos.value[index] = {
-        ...editingVideo.value,
-        title: videoForm.value.title,
-        description: videoForm.value.description
-      }
-      if (selectedVideo.value?.id === editingVideo.value.id) {
-        selectedVideo.value = videos.value[index]
-      }
-    }
-    $q.notify({ color: 'positive', message: 'Video actualizado correctamente', icon: 'edit' })
-  } else {
-    try {
-      const formData = new FormData()
-      formData.append('title', videoForm.value.title)
-      formData.append('description', videoForm.value.description)
-      formData.append('video_url', videoForm.value.videoUrl)
-      formData.append('status', 'published')
-      formData.append('miniature', videoForm.value.miniature)
+  try {
+    const formData = new FormData()
+    formData.append('title', videoForm.value.title)
+    formData.append('description', videoForm.value.description)
+    formData.append('video_url', videoForm.value.videoUrl)
+    formData.append('status', 'published')
+    formData.append('miniature', videoForm.value.miniature)
+    if (editingVideo.value) {
+      formData.append('_method', 'put')
+      const { data } = await api.post(`tutorials/${editingVideo.value.id}`, formData)
+      $q.notify({ color: 'positive', message: 'Video actualizado correctamente', icon: 'edit' })
+      console.log(data)
+    } else {
       const { data } = await api.post('tutorials', formData)
       videoForm.value = {}
       editingVideo.value = null
       showAddVideoDialog.value = false
       console.log(data)
       $q.notify({ color: 'positive', message: 'Video agregado correctamente', icon: 'add' })
-    } catch (error) {
-      $q.notify({ color: 'negative', message: error.message, icon: 'warning' })
     }
+    getVideos()
+  } catch (error) {
+    $q.notify({ color: 'negative', message: error.message, icon: 'warning' })
   }
 }
 </script>
