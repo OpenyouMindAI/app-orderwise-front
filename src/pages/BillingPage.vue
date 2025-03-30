@@ -842,11 +842,6 @@ export default {
        */
       loadingClient: false,
       /**
-       * Loading payment methods
-       * @type {Boolean}
-       */
-      loadingPaymentMethods: false,
-      /**
        * Open add client
        * @type {Boolean}
        */
@@ -1402,14 +1397,11 @@ export default {
      * Get all payment-methods
      */
     getPaymentMethods () {
-      this.loadingPaymentMethods = true
       this.$api.get('payment-methods')
         .then(({ data }) => {
-          this.loadingPaymentMethods = false
           this.paymentMethods = data
         })
         .catch(err => {
-          this.loadingPaymentMethods = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -1568,8 +1560,10 @@ export default {
     async freeTable (table) {
       try {
         await this.selectInvoice(table)
-        this.dialogPayment = true
         this.tableClose = true
+        setTimeout(() => {
+          this.dialogPayment = true
+        }, 200)
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
@@ -1840,12 +1834,6 @@ export default {
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
-      this.calculateTotal()
-    },
-    /**
-     * Save exchange rate
-     */
-    saveExchangeRate () {
       this.calculateTotal()
     },
     /**
