@@ -1133,16 +1133,13 @@ export default {
         filter: undefined
       })
     },
-    products (data) {
-      localStorage.setItem('products', JSON.stringify(data))
-    },
     /**
      * Dialog payment
      * @param {Object} data data payment
      */
     dialogPayment (data) {
       const { company_session: companySession } = this.userSession
-      if (data && companySession?.company_config?.payment_method && this.totalPayment > 0) {
+      if (data && companySession?.company_config?.payment_method) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
     },
@@ -1377,13 +1374,6 @@ export default {
       this.$refs.saveBill.submit()
     },
     /**
-     * Cancel payment
-     */
-    cancelPayment () {
-      this.dialogPayment = false
-      this.payments = []
-    },
-    /**
      * Payment success
      * @param {Object} data data payments
      */
@@ -1575,10 +1565,11 @@ export default {
      * Free table
      * @param {Object} table  table data
      */
-    async freeTable ({ id }) {
+    async freeTable (table) {
       try {
-        this.$api.post('free-tables', { id })
-        this.$refs.drawerTable.getTables(this.$refs.drawerTable.livingRoom)
+        await this.selectInvoice(table)
+        this.dialogPayment = true
+        this.tableClose = true
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
@@ -1682,7 +1673,6 @@ export default {
           this.loadingSearch = false
           return
         }
-
         this.loadingSearch = false
         this.invoice = invoice
         this.products = invoice.products.map(product => {
@@ -1850,7 +1840,6 @@ export default {
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
-      this.products = JSON.parse(localStorage.getItem('products')) ?? []
       this.calculateTotal()
     },
     /**
@@ -1975,7 +1964,6 @@ export default {
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
-      localStorage.setItem('products', JSON.stringify(this.products))
     },
     /**
      * Get one product
