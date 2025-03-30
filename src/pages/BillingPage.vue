@@ -1726,6 +1726,7 @@ export default {
       this.dialogPayment = false
       this.withoutPrint = false
       this.invoicePrinter = false
+      this.tableClose = false
       this.calculateTotal()
       this.$router.push({ name: 'Billing' })
       setTimeout(() => {
@@ -1824,7 +1825,6 @@ export default {
         if (!params) return
 
         if (this.$route.query.id) {
-          console.log(params)
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
           res = await this.$api.post('invoices', params)
