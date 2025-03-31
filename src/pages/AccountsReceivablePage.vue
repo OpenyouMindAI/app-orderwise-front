@@ -75,7 +75,7 @@
       </div>
     </div>
     <q-dialog
-      v-model="opeDetails"
+      v-model="openDetails"
       maximized
     >
       <q-card>
@@ -84,7 +84,7 @@
             Estado de cuenta
           </div>
           <q-space />
-          <q-btn icon="close" flat round dense @click="opeDetails = false" />
+          <q-btn icon="close" flat round dense @click="openDetails = false" />
         </q-card-section>
         <q-card-section class="q-px-sm">
           <div class="row full-width col-12 q-col-gutter-sm items-center">
@@ -144,6 +144,7 @@
             binary-state-sort
             no-data-label="Registro no encontrado"
             @request="setSalePagination"
+            @row-click="showBillDetails"
           >
             <template #loading>
               <q-inner-loading showing color="primary" />
@@ -255,6 +256,197 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="openBillDetails" :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 900px; max-width: 85vw;'}`"
+        >
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <span class="text-h6">Detalles de la factura</span>
+          <q-btn icon="close" flat round dense @click="openBillDetails = false" />
+        </q-card-section>
+        <q-card-section class="scroll col" style="max-height: 90vh">
+          <div class="row q-col-gutter-md">
+            <div class="col-xl-7 col-lg-7 col-md-7 col-sm-7 col-xs-12 row q-col-gutter-sm">
+              <div class="col-6">
+                <q-input label="Código" filled v-model="billDetails.code" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de factura"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  readonly
+                  v-model="billDetails.invoice_type"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                />
+              </div>
+              <div class="col-6">
+                <q-input label="Cliente" filled v-model="billDetails.client.name" readonly dense/>
+              </div>
+              <div class="col-6" v-if="billDetails.seller">
+                <q-input label="Vendedor" filled v-model="billDetails.seller.name" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-input label="Moneda" filled :model-value="billDetails?.coin?.name" readonly dense/>
+              </div>
+              <div class="col-6" v-if="billDetails.tables.length">
+                <q-select
+                  filled
+                  readonly
+                  dense
+                  label="Mesas"
+                  v-model="billDetails.tables"
+                  option-label="name"
+                  multiple
+                />
+              </div>
+              <div class="col-6">
+                <q-input label="Fecha" filled v-model="billDetails.date" readonly dense/>
+              </div>
+              <div class="col-6">
+                <q-input label="Hora" filled v-model="billDetails.hour" readonly dense/>
+              </div>
+              <div class="col-12">
+                <q-input
+                  label="Descripción"
+                  filled
+                  v-model="billDetails.description"
+                  readonly
+                  dense
+                  type="textarea"
+                  autogrow
+                />
+              </div>
+              <div class="col-12">
+                <q-expansion-item
+                  icon="list"
+                  label="Artículos"
+                  :caption="`Total: ${formatNumber(billDetails.total)}`"
+                  style="border-radius: 10px"
+                  class="shadow-1 overflow-hidden"
+                  default-opened
+                >
+                  <q-card>
+                    <q-card-section class="q-pa-xs">
+                      <q-markup-table dense>
+                        <thead>
+                          <tr>
+                            <th class="text-left">Código</th>
+                            <th class="text-left">Descripción</th>
+                            <th class="text-right">Cantidad</th>
+                            <th class="text-right">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="product in billDetails.products" :key="product.id">
+                            <td class="text-left">
+                              {{ product.barcode }}
+                            </td>
+                            <td class="text-left">
+                              {{ product.name.slice(0, 15) }} ...
+                              <q-tooltip class="text-subtitle1">{{ product.name }}</q-tooltip>
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(product.pivot.amount) }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </q-markup-table>
+                    </q-card-section>
+                  </q-card>
+                </q-expansion-item>
+              </div>
+            </div>
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+              <div class="col-12">
+                <q-expansion-item
+                  label="Pagos"
+                  :caption="`Total: ${formatNumber(billDetails.total_payments)}`"
+                  style="border-radius: 10px"
+                  class="shadow-1 overflow-hidden"
+                  default-opened
+                >
+                  <q-card>
+                    <q-card-section class="q-pa-xs">
+                      <q-markup-table dense>
+                        <thead>
+                          <tr>
+                            <th class="text-left">Método de pago</th>
+                            <th class="text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(payment) in billDetails.invoice_payments" :key="payment.id">
+                            <td class="text-left">
+                              {{ payment.payment_method.name }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(payment.amount) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </q-markup-table>
+                    </q-card-section>
+                  </q-card>
+                </q-expansion-item>
+              </div>
+              <div class="q-gutter-y-xs">
+                <q-btn
+                  class="full-width"
+                  icon="block"
+                  color="negative"
+                  label="Anular"
+                  :loading="cancelLoading"
+                  @click="cancelInvoice"
+                />
+                <q-btn
+                  class="full-width"
+                  icon="receipt"
+                  color="secondary"
+                  label="Imprimir Comanda"
+                  @click="print(true)"
+                />
+                <q-btn
+                  class="full-width"
+                  icon="print"
+                  color="info"
+                  :label="`Imprimir ${billDetails.billing ? 'Factura' : 'Comprobante'}`"
+                  @click="print(false)"
+                />
+                <q-btn
+                  class="full-width"
+                  icon="send"
+                  color="positive"
+                  label="Factura electrónica"
+                  v-if="billDetails.invoice_type.bill && !billDetails.billing && billDetails.status !== 'cancelled'"
+                  @click="setInvoiceElectronic(billDetails)"
+                >
+                  <q-tooltip class="text-body1" anchor="bottom middle">
+                    Generar factura electrónica
+                  </q-tooltip>
+                </q-btn>
+                <q-btn
+                  class="full-width"
+                  icon="check_circle"
+                  color="primary"
+                  label="Pagar"
+                  v-if="billDetails.balance > 0"
+                  @click="addPaymentDialog = true"
+                />
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -263,12 +455,13 @@ import { mapState } from 'pinia'
 import { date, Notify } from 'quasar'
 import { formatNumber, formatDate, notify, loading } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
+import { printInvoice, printTicket } from 'src/const/invoice'
 export default {
   name: 'AccountPayablePage',
   data () {
     return {
       formatNumber,
-      opeDetails: false,
+      openDetails: false,
       dialogFilter: false,
       amount: null,
       addPaymentDialog: false,
@@ -286,6 +479,8 @@ export default {
       day: null,
       from: null,
       to: null,
+      billDetails: null,
+      openBillDetails: false,
       /**
        * Params search
        * @type {Object}
@@ -310,6 +505,9 @@ export default {
         sortBy: 'id',
         sortOrder: 'desc',
         perPage: 1,
+        whereIn: {
+          status: ['pending', 'delivered', 'finished']
+        },
         dataSearch: {
           id: ''
         }
@@ -409,7 +607,8 @@ export default {
         sortOrder: 'desc'
       },
       filters: {},
-      paymentMethods: []
+      paymentMethods: [],
+      cancelLoading: false
     }
   },
   watch: {
@@ -419,19 +618,75 @@ export default {
     branchOffice (data) {
       this.filterDate()
     },
-    opeDetails (data) {
+    openDetails (data) {
       if (!data) this.client = {}
       this.filterDate()
+    },
+    openBillDetails (data) {
+      if (data) {
+        this.amount = this.billDetails.balance
+      } else {
+        this.amount = this.totals.balance
+        this.billDetails = null
+      }
     }
   },
   computed: {
-    ...mapState(authentication, ['branchOffice'])
+    ...mapState(authentication, ['branchOffice', 'userSession'])
   },
   mounted () {
     this.filterDate()
     this.getPaymentMethods()
   },
   methods: {
+    /**
+     * Print invoice
+     * @param {Object} data invoice saved
+     */
+    async print (ticket) {
+      let doc = await printInvoice(this.billDetails, this.userSession)
+      if (ticket) doc = printTicket(this.billDetails, this.userSession)
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
+    },
+    /**
+     * Change status
+     * @param {Object} data invoice
+     * @param {Number} index index status
+     */
+    async cancelInvoice  () {
+      try {
+        this.cancelLoading = true
+        await this.$api.put(`invoice-status-command/${this.billDetails.id}`, { status: 'cancelled' })
+        this.filterDate()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+        this.openBillDetails = false
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.cancelLoading = false
+      }
+    },
+    /**
+     * Set invoice electronic
+     * @param {Object} invoice invoice
+     */
+    async setInvoiceElectronic (invoice) {
+      try {
+        loading(true)
+        const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
+        if (data.electronic_invoice?.fields?.error) {
+          notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
+        } else {
+          this.billDetails = data
+          notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
     /**
      * Clear filter
      */
@@ -633,8 +888,19 @@ export default {
      */
     editClient (event, row, index) {
       this.totals = {}
-      this.opeDetails = true
+      this.openDetails = true
       this.client = row
+    },
+    /**
+     * View invoice data
+     * @param {Object} event event
+     * @param {Object} row row
+     * @param {Number} index index
+     */
+    showBillDetails (event, row, index) {
+      this.openBillDetails = true
+      this.billDetails = row
+      this.billDetails.balance = row.total - row.total_payments
     },
     /**
      * Get all payment methods
@@ -654,6 +920,7 @@ export default {
         loading(true)
         await this.$api.post('invoice-payments', {
           amount: this.amount,
+          invoice_id: this.billDetails?.id,
           payment_method_id: this.paymentMethodSelected,
           client_id: this.client?.id,
           reference: this.reference

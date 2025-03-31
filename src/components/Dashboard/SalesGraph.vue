@@ -21,6 +21,7 @@
           style="border-radius: 50px;"
           dense
         >
+          <q-tab name="diary" label="Por dia" style="border-radius: 50px;"/>
           <q-tab name="weekly" label="Semanal" style="border-radius: 50px;"/>
           <q-tab name="monthly" label="Mensual" style="border-radius: 50px;"/>
           <q-tab name="yearly" label="Anual" style="border-radius: 50px;"/>
@@ -66,7 +67,7 @@ const store = authentication()
  * Tabs
  * @type {string}
  */
-const tab = ref('monthly')
+const tab = ref('weekly')
 
 /**
  * Loading state
@@ -86,7 +87,6 @@ const salesData = ref([])
  */
 const params = ref({
   branch_office_id: store.branchOffice?.id,
-  groupBy: tab.value,
   year: 2025
 })
 
@@ -104,6 +104,7 @@ watch(() => props.filters, (filters) => {
   params.value = {
     ...params.value,
     ...filters,
+    groupBy: tab.value,
     branch_office_id: store.branchOffice?.id
   }
   filterDate(params.value)
@@ -180,7 +181,6 @@ const filterDate = async (params) => {
   try {
     loading.value = true
     const { data } = await api.get('kpi/invoices', { params })
-    console.log(data)
     salesData.value = data
   } catch (error) {
     notify(error.message, 'negative', 'warning')

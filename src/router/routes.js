@@ -146,6 +146,12 @@ const routes = [
         name: 'Dashboard',
         meta: { requiresAuth: true },
         component: () => import('pages/DashboardPage.vue')
+      },
+      {
+        path: 'tutorials',
+        name: 'Tutorial',
+        meta: { requiresAuth: true },
+        component: () => import('pages/TutorialPage.vue')
       }
     ]
   },

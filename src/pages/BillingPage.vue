@@ -403,74 +403,77 @@
               @click="addPayment(paymentMethod)"
             />
           </div>
-          <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-xs">
-            <q-markup-table>
-              <thead>
-                <tr>
-                  <th class="text-left">Método de pago</th>
-                  <th class="text-left">Referencia</th>
-                  <th class="text-right">Monto</th>
-                  <th class="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(payment, index) in payments" :key="payment.id">
-                  <td class="text-left">{{ payment.name }}</td>
-                  <td class="text-left">
-                    <span v-if="payment.reference"> {{ payment.reference }}</span>
-                    <span v-else>-</span>
-                    <q-popup-edit
-                      v-model="payment.reference"
-                      auto-save
-                      v-slot="scope"
-                    >
-                      <q-input
-                        v-model="scope.value"
-                        autofocus
-                        @keyup.enter="scope.set"
-                      />
-                    </q-popup-edit>
-                  </td>
-                  <td class="text-right">
-                    {{ formatNumber(payment.amount) }}
-                    <q-popup-edit
-                      v-model.number="payment.amount"
-                      auto-save
-                      v-slot="scope"
-                    >
-                      <q-input
-                        v-model="scope.value"
-                        autofocus
-                        @keyup.enter="scope.set"
-                      />
-                    </q-popup-edit>
-                  </td>
-                  <q-td class="text-center q-gutter-x-xs">
-                    <q-btn
-                      icon="delete"
-                      color="negative"
-                      rounded
-                      dense
-                      @click="deletePayment(index)"
-                      />
+          <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-xs row">
+            <div class="col-12">
+              <q-toggle v-if="tableSelected.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
+              <q-markup-table>
+                <thead>
+                  <tr>
+                    <th class="text-left">Método de pago</th>
+                    <th class="text-left">Referencia</th>
+                    <th class="text-right">Monto</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(payment, index) in payments" :key="payment.id">
+                    <td class="text-left">{{ payment.name }}</td>
+                    <td class="text-left">
+                      <span v-if="payment.reference"> {{ payment.reference }}</span>
+                      <span v-else>-</span>
+                      <q-popup-edit
+                        v-model="payment.reference"
+                        auto-save
+                        v-slot="scope"
+                      >
+                        <q-input
+                          v-model="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </td>
+                    <td class="text-right">
+                      {{ formatNumber(payment.amount) }}
+                      <q-popup-edit
+                        v-model.number="payment.amount"
+                        auto-save
+                        v-slot="scope"
+                      >
+                        <q-input
+                          v-model="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </td>
+                    <q-td class="text-center q-gutter-x-xs">
                       <q-btn
-                        v-if="payment.acronym === 'MPQA'"
+                        icon="delete"
+                        color="negative"
                         rounded
                         dense
-                        icon="qr_code"
-                        color="secondary"
-                        @click="waitingPayment = true"
-                      />
-                  </q-td>
-                </tr>
-                <tr>
-                  <th colspan="4">
-                    Restante a pagar:
-                    <span v-if="coin">{{ coin.symbol }}</span>{{ formatNumber(pendingPayment) }}
-                  </th>
-                </tr>
-              </tbody>
-            </q-markup-table>
+                        @click="deletePayment(index)"
+                        />
+                        <q-btn
+                          v-if="payment.acronym === 'MPQA'"
+                          rounded
+                          dense
+                          icon="qr_code"
+                          color="secondary"
+                          @click="waitingPayment = true"
+                        />
+                    </q-td>
+                  </tr>
+                  <tr>
+                    <th colspan="4">
+                      Restante a pagar:
+                      <span v-if="coin">{{ coin.symbol }}</span>{{ formatNumber(pendingPayment) }}
+                    </th>
+                  </tr>
+                </tbody>
+              </q-markup-table>
+            </div>
           </div>
         </q-card-section>
         <q-card-actions align="center" class="q-gutter-y-sm">
@@ -521,7 +524,7 @@
           <q-btn flat icon="close" round size="md" v-close-popup/>
         </q-card-section>
         <q-card-section>
-          <q-form @submit="() => { this.$router.push({ name: 'Billing', query: { id: search } }) }" class="row full-width items-center justify-between">
+          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center justify-between">
             <div class="col-10">
               <q-input
                 name="search"
@@ -537,7 +540,7 @@
               />
             </div>
             <div class="col-auto text-right">
-              <q-btn type="submit" color="primary" icon="search" size="lg"/>
+              <q-btn type="submit" color="primary" icon="search" size="lg" :loading="loadingSearch"/>
             </div>
           </q-form>
         </q-card-section>
@@ -740,7 +743,7 @@ import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatDate, formatNumber, notify } from 'src/const/mixins'
+import { formatDate, formatNumber, loading, notify } from 'src/const/mixins'
 import { printInvoice, printTicket } from 'src/const/invoice'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
@@ -756,6 +759,7 @@ export default {
     return {
       waitingPayment: false,
       loadingBilling: false,
+      loadingSearch: false,
       documentTypes: [],
       /**
        * Invoice printer
@@ -982,6 +986,11 @@ export default {
        */
       barcode: null,
       /**
+       * Table close
+       * @type {Boolean}
+       */
+      tableClose: false,
+      /**
        * Without payment
        * @type {Array}
        */
@@ -1086,13 +1095,6 @@ export default {
   },
   computed: {
     /**
-     * Invoice router
-     * @returns {String}
-     */
-    invoiceRouter () {
-      return this.$route.query.id
-    },
-    /**
      * Pending payment
      * @returns {Number}
      */
@@ -1131,19 +1133,13 @@ export default {
         filter: undefined
       })
     },
-    invoiceRouter (data) {
-      if (data) this.getInvoiceOne(data)
-    },
-    products (data) {
-      localStorage.setItem('products', JSON.stringify(data))
-    },
     /**
      * Dialog payment
      * @param {Object} data data payment
      */
     dialogPayment (data) {
       const { company_session: companySession } = this.userSession
-      if (data && companySession?.company_config?.payment_method && this.totalPayment > 0) {
+      if (data && companySession?.company_config?.payment_method) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
     },
@@ -1378,13 +1374,6 @@ export default {
       this.$refs.saveBill.submit()
     },
     /**
-     * Cancel payment
-     */
-    cancelPayment () {
-      this.dialogPayment = false
-      this.payments = []
-    },
-    /**
      * Payment success
      * @param {Object} data data payments
      */
@@ -1565,19 +1554,22 @@ export default {
      * Free table
      * @param {Object} table  table data
      */
-    selectInvoice (table) {
+    async selectInvoice (table) {
+      loading(true)
       const invoiceOne = table.invoices[0]
-      this.$router.push({ name: 'Billing', query: { id: invoiceOne.id } })
+      await this.getInvoiceOne(invoiceOne.id)
       this.dialogTable = false
+      loading(false)
     },
     /**
      * Free table
      * @param {Object} table  table data
      */
-    async freeTable ({ id }) {
+    async freeTable (table) {
       try {
-        this.$api.post('free-tables', { id })
-        this.$refs.drawerTable.getTables(this.$refs.drawerTable.livingRoom)
+        await this.selectInvoice(table)
+        this.dialogPayment = true
+        this.tableClose = true
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
@@ -1672,8 +1664,16 @@ export default {
      * @param {Number} id invoice id
      */
     async getInvoiceOne (data) {
+      this.loadingSearch = true
       const invoice = await this.getInvoiceOneRequest(data)
       if (invoice) {
+        if (invoice.branch_office_id !== this.branchOffice.id) {
+          notify('Esta factura no pertenece a esta sucursal', 'negative', 'warning')
+          this.$router.push({ name: 'Billing' })
+          this.loadingSearch = false
+          return
+        }
+        this.loadingSearch = false
         this.invoice = invoice
         this.products = invoice.products.map(product => {
           return {
@@ -1689,10 +1689,16 @@ export default {
         this.tableSelected = invoice.tables.map(table => table.id)
         this.searchInvoice = false
         this.setPayments(invoice.invoice_payments)
-        this.search = ''
+        this.$router.push({
+          name: 'Billing',
+          query: {
+            id: invoice.id
+          }
+        })
         this.invoiceDescription = invoice.description
         this.deliveryDate = invoice.delivery_date
         this.calculateTotal()
+        this.search = ''
       } else {
         notify('No se encontró la factura', 'negative', 'warning')
       }
@@ -1710,6 +1716,7 @@ export default {
       this.dialogPayment = false
       this.withoutPrint = false
       this.invoicePrinter = false
+      this.tableClose = false
       this.calculateTotal()
       this.$router.push({ name: 'Billing' })
       setTimeout(() => {
@@ -1753,6 +1760,7 @@ export default {
     setModelInvoice () {
       return {
         ...this.invoice,
+        tableClose: this.tableClose,
         title: this.invoiceType?.name,
         client_id: this.client?.id,
         seller_id: this.userSession.id,
@@ -1765,7 +1773,7 @@ export default {
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         products: this.products,
-        status: this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0),
         total_amount: this.totalBill,
         tables: this.tableSelected,
@@ -1832,7 +1840,6 @@ export default {
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
-      this.products = JSON.parse(localStorage.getItem('products')) ?? []
       this.calculateTotal()
     },
     /**
@@ -1951,12 +1958,12 @@ export default {
           data.amount = this.quantity
           this.calculate(data)
           this.pushProduct(data)
+          this.calculateTotal()
         }
       }
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
-      localStorage.setItem('products', JSON.stringify(this.products))
     },
     /**
      * Get one product
