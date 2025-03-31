@@ -19,6 +19,9 @@
               Activa
             </q-badge>
           </q-item-label>
+          <q-item-label class="text-subtitle1" v-if="org?.invoice">
+            Ultima actividad: {{ formatDate(org?.invoice?.created_at, 'DD/MM/YYYY HH:mm:ss') }}
+          </q-item-label>
         </q-item-section>
         <q-item-section side>
           <q-btn v-if="org.id === user.company_session_id" icon="published_with_changes" color="white" size="lg"
@@ -57,7 +60,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
-import { logo } from '../../const/mixins'
+import { formatDate, logo } from '../../const/mixins'
 
 defineProps({
   companies: {

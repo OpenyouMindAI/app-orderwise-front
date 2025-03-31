@@ -117,6 +117,17 @@
                     Conectar con el ARCA
                   </q-tooltip>
                 </q-btn>
+                <q-btn
+                  icon="play_circle"
+                  round
+                  flat
+                  :color="$route.name === 'Tutorial' ? 'secondary' : ''"
+                  @click="changeRoute('Tutorial', 'Tutoriales')"
+                >
+                  <q-tooltip>
+                    Tutoriales
+                  </q-tooltip>
+                </q-btn>
               </div>
             </q-banner>
           </q-popup-proxy>
