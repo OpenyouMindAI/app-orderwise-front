@@ -56,7 +56,7 @@
             size="sm"
             round
             @click="emit('update:freeTable', table)"
-            v-if="table.status === 'busy'"
+            v-if="table.status === 'busy' && freeTable"
           />
         </draggable-resizable-vue>
       </draggable-resizable-container>
@@ -75,6 +75,11 @@ const props = defineProps({
   tablesSelected: {
     type: Array,
     required: true
+  },
+
+  freeTable: {
+    type: Boolean,
+    default: false
   }
 })
 
