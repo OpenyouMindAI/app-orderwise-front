@@ -169,9 +169,9 @@
           Videos
         </div>
         <div class="row q-col-gutter-md">
-          <div v-for="video in videos" :key="video.id" class="col-12 col-sm-6 col-md-4 col-lg-4">
+          <div v-for="video in videos" :key="video.id" class="col-12 col-sm-6 col-md-3 col-lg-3">
             <q-card class="video-card" flat bordered @click="selectVideo(video)">
-              <q-img :src="video.miniature_url" :ratio="16/9" />
+              <q-img :src="video.miniature_url" :ratio="16/9" fit="fill"/>
               <q-card-section>
                 <div class="row no-wrap">
                   <q-avatar size="40px">
