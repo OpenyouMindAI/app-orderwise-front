@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="full-width text-subtitle1 flex justify-between">
+    <div class="full-width text-subtitle1 flex justify-between" v-if="tab !== 'orders'">
       <div>
         <q-chip style="padding: 17px 10px; border-radius: 50px;" class="bg-primary text-white cursor-pointer text-subtitle1" v-if="userSession && $q.screen.lt.sm">
           {{ userSession?.name }}
@@ -109,6 +109,115 @@
         </q-table>
       </div>
     </div>
+    <div v-else-if="tab === 'orders'">
+      <div class="text-h6 text-bold">
+        Lista de pedidos
+      </div>
+      <q-table
+        row-key="id"
+        dense
+        grid
+        style="max-height: calc(100vh - 162px); overflow: auto;"
+        :rows="invoices"
+        binary-state-sort
+        no-data-label="Registro no encontrado"
+        v-model:pagination="invoicePagination"
+        @request="setPagination"
+      >
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
+            <q-card
+              class="my-card q-mt-sm"
+              style="width: 100%; border-radius: 10px;"
+            >
+              <q-card-section horizontal class="full-height">
+                <q-card-section class="col-xl-11 col-lg-11 col-md-11 col-sm-10 col-xs-10">
+                  <div class="flex justify-between">
+                    <div class="flex justify-between items-center full-width">
+                      <span class="text-subtitle2 text-bold">
+                        Nro {{ props.row.code }}
+                      </span>
+                      <span class="text-subtitle2 text-semibold">
+                        $ {{ formatNumber(props.row.total) }}
+                      </span>
+                    </div>
+                    <div class="flex justify-between items-center full-width">
+                      <span>
+                        {{ props.row?.client?.name }}
+                      </span>
+                      <q-badge
+                        :color="status[props.row.status].color"
+                        :label="status[props.row.status].label"
+                        rounded
+                      />
+                    </div>
+                    <div class="flex justify-between items-center full-width">
+                      <span>
+                        {{ formatDate(props.row.created_at, 'DD-MM-YYYY') }}
+                      </span>
+                      <span>
+                        {{ formatDate(props.row.created_at, 'HH:mm:ss') }}
+                      </span>
+                    </div>
+                  </div>
+                </q-card-section>
+                <q-card-actions align="center" class="q-pt-none">
+                  <q-btn color="primary" icon="more_vert" round flat dense>
+                    <q-menu fit>
+                      <q-list style="min-width: 250px">
+                        <q-item clickable v-ripple @click="printTicket(props.row)">
+                          <q-item-section avatar>
+                            <q-icon color="primary" name="receipt" />
+                          </q-item-section>
+                          <q-item-section>Imprimir comanda</q-item-section>
+                        </q-item>
+                        <q-item clickable v-ripple @click="printBill(props.row)">
+                          <q-item-section avatar>
+                            <q-icon color="primary" name="print" />
+                          </q-item-section>
+                          <q-item-section>
+                            {{ `Imprimir ${props.row.billing ? 'factura' : 'comprobante'}` }}
+                          </q-item-section>
+                        </q-item>
+                        <q-item
+                          v-if="!props.row.billing && props.row.status !== 'cancelled'"
+                          clickable
+                          v-ripple
+                          @click="setInvoiceElectronic(props.row)"
+                        >
+                          <q-item-section avatar>
+                            <q-icon color="primary" name="send" />
+                          </q-item-section>
+                          <q-item-section>
+                            Generar factura
+                          </q-item-section>
+                        </q-item>
+                        <q-item clickable v-ripple @click="openPaid(props.row)">
+                          <q-item-section avatar>
+                            <q-icon color="primary" name="payments" />
+                          </q-item-section>
+                          <q-item-section>
+                            Cobrar ticket
+                          </q-item-section>
+                        </q-item>
+                        <!-- <q-item clickable v-ripple>
+                          <q-item-section avatar>
+                            <q-icon color="primary" name="visibility" />
+                          </q-item-section>
+                          <q-item-section>
+                           Ver detalles
+                          </q-item-section>
+                        </q-item> -->
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                </q-card-actions>
+              </q-card-section>
+            </q-card>
+          </div>
+        </template>
+      </q-table>
+    </div>
     <div v-else class="q-mt-sm">
       <q-select
         use-input
@@ -144,21 +253,22 @@
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
             <q-card
-            class="my-card q-mt-sm"
-            style="width: 100%; border-radius: 30px;"
+              class="my-card q-mt-sm"
+              style="width: 100%; border-radius: 10px;"
             >
               <q-card-section horizontal class="full-height">
                 <q-img
                   class="col-4"
+                  style="max-height: 135px;"
                   :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                 />
                 <q-card-section class="q-pa-sm column">
                   <q-card-section class="q-pa-sm col">
-                    <div class="flex justify-between q-col-gutter-sm">
-                      <div class="flex justify-between items-center full-width">
-                        <span class="text-body2 text-uppercase text-bold">
-                          {{ props.row.name.slice(0, 20) }}
-                        </span>
+                    <span class="text-body2 text-uppercase text-bold">
+                      {{ props.row.name.slice(0, 20) }}
+                    </span>
+                    <!-- <div class="flex justify-between q-col-gutter-sm">
+                      <div class="flex justify-between items-center full-width"> -->
                         <!-- <q-icon
                           name="info"
                           size="sm"
@@ -178,8 +288,8 @@
                             </q-banner>
                           </q-popup-proxy>
                         </q-icon> -->
-                      </div>
-                    </div>
+                      <!-- </div>
+                    </div> -->
                     <p class="text-subtitle2 text-grey">
                       $ {{ formatNumber(props.row.price) }}
                     </p>
@@ -219,6 +329,14 @@
                 </q-card-section>
               </q-card-section>
             </q-card>
+          </div>
+        </template>
+        <template v-slot:no-data>
+          <div class="full-width column flex-center justify-center">
+            <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
+            <span class="text-subtitle2 text-center">
+              No hay productos en la orden
+            </span>
           </div>
         </template>
       </q-table>
@@ -345,8 +463,10 @@
     <q-dialog v-model="dialogTable" maximized>
       <drawer-table
         ref="drawerTable"
+        :free-table="false"
         :tablesSelected="tableSelected"
         @update:tableSelected="setTableSelected"
+        @update:invoice="freeTable"
       >
         <template v-slot:top>
           <q-card-section class="flex items-center justify-between bg-primary text-white q-py-sm">
@@ -356,7 +476,177 @@
         </template>
       </drawer-table>
     </q-dialog>
-
+    <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <span class="text-h6">Desglose de pago</span>
+          <q-btn flat icon="close" round size="md" v-close-popup/>
+        </q-card-section>
+        <q-card-section class="row q-col-gutter-md q-px-sm">
+          <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 q-gutter-xs grid justify-between">
+            <q-btn
+              color="secondary"
+              style="width: 48%"
+              :label="paymentMethod.name"
+              v-for="paymentMethod in paymentMethods"
+              :key="paymentMethod.id"
+              v-show="paymentMethod.acronym !== 'MPQA'"
+              @click="addPayment(paymentMethod)"
+            />
+          </div>
+          <div class="col-xs-12 col-sm-12 col-md-8 col-lg-8 q-gutter-xs row">
+            <div class="col-12">
+              <q-markup-table>
+                <thead>
+                  <tr>
+                    <th class="text-left" colspan="4">
+                      <div class="flex q-gutter-x-md justify-between items-center">
+                        <span class="text-subtitle2 text-uppercase">
+                          {{ invoiceOne.invoice_type.name }} Nro {{ invoiceOne?.code }}
+                        </span>
+                        <span class="text-subtitle2 text-uppercase">
+                          Mesas: {{ invoiceOne?.tables?.map(table => table.name).join(', ') }}
+                        </span>
+                        <q-toggle v-model="tableClose" label="Cerrar mesa" />
+                      </div>
+                    </th>
+                  </tr>
+                  <tr>
+                    <th class="text-left">M. de pago</th>
+                    <th class="text-left">Referencia</th>
+                    <th class="text-right">Monto</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(payment, index) in payments" :key="payment.id">
+                    <td class="text-left">
+                      {{ payment.name }}
+                    </td>
+                    <td class="text-left">
+                      <span v-if="payment.reference"> {{ payment.reference }}</span>
+                      <span v-else>-</span>
+                      <q-popup-edit
+                        v-model="payment.reference"
+                        auto-save
+                        v-slot="scope"
+                      >
+                        <q-input
+                          v-model="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </td>
+                    <td class="text-right">
+                      {{ formatNumber(payment.amount) }}
+                      <q-popup-edit
+                        v-model.number="payment.amount"
+                        auto-save
+                        v-slot="scope"
+                      >
+                        <q-input
+                          v-model="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </td>
+                    <q-td class="text-center q-gutter-x-xs">
+                      <q-btn
+                        icon="delete"
+                        color="negative"
+                        rounded
+                        dense
+                        @click="deletePayment(index)"
+                      />
+                      <q-btn
+                        v-if="payment.acronym === 'MPQA'"
+                        rounded
+                        dense
+                        icon="qr_code"
+                        color="secondary"
+                        @click="waitingPayment = true"
+                      />
+                    </q-td>
+                  </tr>
+                  <tr>
+                    <th colspan="4">
+                      <span class="text-subtitle2 text-uppercase">
+                        Restante a pagar:
+                        <span v-if="coin">{{ coin.symbol }}</span>{{ formatNumber(pendingPayment) }}
+                      </span>
+                    </th>
+                  </tr>
+                </tbody>
+              </q-markup-table>
+            </div>
+          </div>
+          <div class="col-12">
+            <q-expansion-item
+              icon="list"
+              label="Artículos"
+              :caption="`Total: ${formatNumber(invoiceOne.total)}`"
+              style="border-radius: 10px"
+              class="shadow-1 overflow-hidden"
+              default-opened
+            >
+              <q-card>
+                <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 250px">
+                  <div v-for="product in invoiceOne.products" :key="product.id" class="col-12 column">
+                    <div class="full-width flex items-center justify-between">
+                      <div class="flex q-gutter-sm items-center">
+                        <file-component
+                          :files="[product.images[0]]"
+                          image-style="height: 50px; width: 50px; border-radius: 10px;"
+                          only-view
+                        />
+                        <span class="text-body1">
+                          {{ product.name.slice(0, 15) }}
+                          <q-tooltip class="text-subtitle1">
+                            {{ product.name }}
+                          </q-tooltip>
+                        </span>
+                      </div>
+                      <span class="text-bold">
+                        {{ formatNumber(product.pivot.amount) }}
+                      </span>
+                      <span class="text-bold">
+                        {{ formatNumber(product.pivot.amount * product.pivot.price) }}
+                      </span>
+                    </div>
+                    <q-separator class="q-mt-sm" />
+                  </div>
+                </q-card-section>
+              </q-card>
+            </q-expansion-item>
+          </div>
+        </q-card-section>
+        <q-card-actions align="center" class="q-gutter-y-sm">
+          <q-btn
+            :label="`Guardar e imprimir ${invoiceOne.billing ? 'factura' : 'comprobante'}`"
+            @click="submitBill('printBill')"
+            color="secondary"
+            :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
+          />
+          <q-btn
+            label="Guardar e imprimir comanda"
+            @click="submitBill('printCommand')"
+            color="warning"
+            :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
+          />
+          <q-btn
+            label="Guardar sin imprimir"
+            @click="submitBill('withoutPrint')"
+            color="primary"
+            :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.md">
       <q-card :style="$q.screen.lt.md ? '' : 'width: 700px; max-width: 80vw;'">
         <q-form @submit="saveClient" class="column full-height">
@@ -418,28 +708,51 @@
 <script>
 import { Notify } from 'quasar'
 import { QrcodeStream } from 'vue-qrcode-reader'
-import { formatNumber, notify } from '../const/mixins'
+import { formatNumber, loading, notify } from '../const/mixins'
 import SkeletonCard from '../components/SkeletonCard.vue'
 import SlideComponent from '../components/SlideComponent.vue'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import { useCommandStore } from 'src/stores/command'
+import { printInvoice, printTicket, status } from 'src/const/invoice'
+import { formatDate } from 'src/const/mixins'
+import FileComponent from 'src/components/FileComponent.vue'
 export default {
   name: 'CommandPage',
   components: {
     QrcodeStream,
     SkeletonCard,
     SlideComponent,
-    DrawerTable
+    DrawerTable,
+    FileComponent
   },
   data () {
     return {
+      formatDate,
+      status,
+      coin: null,
+      tableClose: true,
+      loadingBilling: false,
+      dialogPayment: false,
+      /**
+       * Pagination option
+       * @type {Object}
+       */
+      invoicePagination: {
+        rowsPerPage: 10,
+        rowsNumber: 10,
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc'
+      },
       /**
        * Clients
        * @type {Array}
        */
       clients: [],
+      paymentMethods: [],
+      payments: [],
       /**
        * Client
        * @type {Object}
@@ -564,6 +877,11 @@ export default {
        */
       allProducts: [],
       /**
+       * Invoices list
+       * @type {Array}
+       */
+      invoices: [],
+      /**
        * Table selected
        * @type {Array}
        */
@@ -573,6 +891,7 @@ export default {
        * @type {Number}
        */
       isTable: 1,
+      invoiceOne: null,
       /**
        * Product columns
        * @type {Array}
@@ -613,11 +932,25 @@ export default {
   created () {
     this.isTable = this.userSession?.company_session?.company_config?.is_table
     this.client = this.userSession?.company_session?.company_config?.client
+    this.coin = this.userSession?.company_session?.company_config?.coin
     this.getCategories()
+    this.setPagination({ pagination: this.invoicePagination })
     this.category = this.$route.query.category || 'all'
     this.calculateTotal()
+    this.getPaymentMethods()
   },
   watch: {
+
+    /**
+     * Dialog payment
+     * @param {Object} data data payment
+     */
+    dialogPayment (data) {
+      if (!data) {
+        this.payments = []
+        this.totalBill = 0
+      }
+    },
     category (data) {
       this.$router.push({
         path: 'command',
@@ -640,15 +973,198 @@ export default {
       this.setQueryParams({
         filter: data
       })
+    },
+    tab (data) {
+      if (data === 'orders') { this.setPagination({ pagination: this.invoicePagination }) }
     }
   },
   computed: {
     tab () {
       return this.$route.query.tab ?? 'menu'
     },
+    /**
+     * Pending payment
+     * @returns {Number}
+     */
+    pendingPayment () {
+      return this.totalBill - this.totalPayment
+    },
+    /**
+     * Total payment
+     * @returns {Number}
+     */
+    totalPayment () {
+      let totalPayment = 0
+      this.payments.forEach((payment) => {
+        totalPayment = totalPayment + payment.amount
+      })
+      return totalPayment
+    },
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
+    async submitBill (options) {
+      try {
+        loading(true)
+        await this.$api.put(`invoices/${this.invoiceOne.id}`, {
+          ...this.invoiceOne,
+          tableClose: this.tableClose,
+          status: this.tableClose ? 'delivered' : this.invoiceOne.status,
+          payments: this.payments
+        })
+        switch (options) {
+          case 'printBill':
+            this.printBill(this.invoiceOne)
+            break
+          case 'printCommand':
+            this.printTicket(this.invoiceOne)
+            break
+          case 'withoutPrint':
+            break
+        }
+        this.dialogPayment = false
+        this.dialogTable = false
+        this.setPagination({
+          pagination: this.invoicePagination
+        })
+        notify('Se ha guardado exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+
+    async printBill (data) {
+      const doc = await printInvoice(data, this.userSession)
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
+    },
+
+    async printTicket (data) {
+      const doc = await printTicket(data, this.userSession)
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
+    },
+    /**
+     * Delete invoice payment
+     * @param {Number} index value index payments
+     */
+    deletePayment (index) {
+      this.payments.splice(index, 1)
+    },
+    /**
+     * Set payments
+     * @param {Array} invoicePayments invoice payments
+     */
+    setPayments (invoicePayments) {
+      invoicePayments?.forEach(payment => {
+        this.payments.push({
+          id: payment.payment_method_id,
+          payment_method_id: payment.payment_method_id,
+          name: payment.payment_method.name,
+          amount: payment.amount,
+          reference: payment.reference,
+          coin_id: payment.coin_id
+        })
+      })
+    },
+    /**
+     * Free table
+     * @param {Object} table  table data
+     */
+    async freeTable (table) {
+      try {
+        loading(true)
+        const invoiceOne = table.invoices[0]
+        const { data } = await this.$api.get(`invoices/${invoiceOne.id}`)
+        this.openPaid(data.data)
+        loading(false)
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Open paid
+     * @param {Object} data data
+     */
+    openPaid (data) {
+      this.invoiceOne = data
+      this.totalBill = data.total
+      this.pendingPayment = data.total - data.total_payments
+      this.setPayments(data.invoice_payments)
+      this.dialogPayment = true
+    },
+    /**
+     * Get all payment-methods
+     */
+    async getPaymentMethods () {
+      try {
+        const { data } = await this.$api.get('payment-methods')
+        this.paymentMethods = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Set invoice electronic
+     * @param {Object} invoice invoice
+     */
+    async setInvoiceElectronic (invoice) {
+      try {
+        loading(true)
+        const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
+        if (data.electronic_invoice?.fields?.error) {
+          notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
+        } else {
+          notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')
+          this.printBill(data)
+          this.getInvoices(this.invoicePagination)
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+    /**
+     * Set data pagination emit event
+     * @param  {Object} data value pagination
+     */
+    setPagination (data) {
+      const params = {
+        sortOrder: data.pagination.descending ? 'asc' : 'desc',
+        page: data.pagination.page,
+        sortBy: data.pagination.sortBy,
+        perPage: data.pagination.rowsPerPage,
+        dataEqualFilter: {
+          seller_id: this.userSession.id
+        },
+        paginate: true
+      }
+      this.invoicePagination = data.pagination
+      this.getInvoices(params)
+    },
+    /**
+     * Add bill payment
+     * @param {Object} data data payments
+     */
+    addPayment (data) {
+      if (this.pendingPayment > 0) {
+        this.payments.push({
+          name: data.name,
+          acronym: data.acronym,
+          amount: this.pendingPayment,
+          reference: null,
+          coin_id: this.coin.id,
+          payment_method_id: data.id,
+          user_created_id: this.userSession.id
+        })
+      }
+    },
+    /**
+     * Add product to car
+     */
     addCar () {
       this.temporalProducts.forEach(product => this.validateProduct(product))
       this.notifyProductCar(this.products)
@@ -751,6 +1267,20 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Get categories
+     */
+    async getInvoices (params) {
+      try {
+        loading(true)
+        const { data } = await this.$api.get('invoices', { params })
+        this.invoices = data.data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
     },
     /**
      * Save bill and payments
