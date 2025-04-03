@@ -169,7 +169,7 @@
           Videos
         </div>
         <div class="row q-col-gutter-md">
-          <div v-for="video in videos" :key="video.id" class="col-12 col-sm-6 col-md-3 col-lg-2">
+          <div v-for="video in videos" :key="video.id" class="col-12 col-sm-6 col-md-4 col-lg-4">
             <q-card class="video-card" flat bordered @click="selectVideo(video)">
               <q-img :src="video.miniature_url" :ratio="16/9" />
               <q-card-section>
@@ -398,7 +398,7 @@ async function getVideos () {
         },
         sortBy: 'id',
         sortOrder: 'desc',
-        perPage: 10,
+        perPage: 100,
         paginate: true
       }
     })
