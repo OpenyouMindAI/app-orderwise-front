@@ -110,6 +110,9 @@
       </div>
     </div>
     <div v-else-if="tab === 'orders'">
+      <div class="text-h6 text-bold">
+        Lista de pedidos
+      </div>
       <q-table
         row-key="id"
         dense
@@ -125,7 +128,7 @@
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
             <q-card
               class="my-card q-mt-sm"
-              style="width: 100%; border-radius: 20px;"
+              style="width: 100%; border-radius: 10px;"
             >
               <q-card-section horizontal class="full-height">
                 <q-card-section class="col-xl-11 col-lg-11 col-md-11 col-sm-10 col-xs-10">
@@ -250,21 +253,22 @@
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
             <q-card
-            class="my-card q-mt-sm"
-            style="width: 100%; border-radius: 30px;"
+              class="my-card q-mt-sm"
+              style="width: 100%; border-radius: 10px;"
             >
               <q-card-section horizontal class="full-height">
                 <q-img
                   class="col-4"
+                  style="max-height: 135px;"
                   :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                 />
                 <q-card-section class="q-pa-sm column">
                   <q-card-section class="q-pa-sm col">
-                    <div class="flex justify-between q-col-gutter-sm">
-                      <div class="flex justify-between items-center full-width">
-                        <span class="text-body2 text-uppercase text-bold">
-                          {{ props.row.name.slice(0, 20) }}
-                        </span>
+                    <span class="text-body2 text-uppercase text-bold">
+                      {{ props.row.name.slice(0, 20) }}
+                    </span>
+                    <!-- <div class="flex justify-between q-col-gutter-sm">
+                      <div class="flex justify-between items-center full-width"> -->
                         <!-- <q-icon
                           name="info"
                           size="sm"
@@ -284,8 +288,8 @@
                             </q-banner>
                           </q-popup-proxy>
                         </q-icon> -->
-                      </div>
-                    </div>
+                      <!-- </div>
+                    </div> -->
                     <p class="text-subtitle2 text-grey">
                       $ {{ formatNumber(props.row.price) }}
                     </p>
@@ -459,8 +463,10 @@
     <q-dialog v-model="dialogTable" maximized>
       <drawer-table
         ref="drawerTable"
+        :free-table="false"
         :tablesSelected="tableSelected"
         @update:tableSelected="setTableSelected"
+        @update:invoice="freeTable"
       >
         <template v-slot:top>
           <q-card-section class="flex items-center justify-between bg-primary text-white q-py-sm">
@@ -727,7 +733,6 @@ export default {
       status,
       coin: null,
       tableClose: true,
-      paymentsDialog: false,
       loadingBilling: false,
       dialogPayment: false,
       /**
@@ -968,6 +973,9 @@ export default {
       this.setQueryParams({
         filter: data
       })
+    },
+    tab (data) {
+      if (data === 'orders') { this.setPagination({ pagination: this.invoicePagination }) }
     }
   },
   computed: {
@@ -997,8 +1005,10 @@ export default {
   methods: {
     async submitBill (options) {
       try {
+        loading(true)
         await this.$api.put(`invoices/${this.invoiceOne.id}`, {
           ...this.invoiceOne,
+          tableClose: this.tableClose,
           status: this.tableClose ? 'delivered' : this.invoiceOne.status,
           payments: this.payments
         })
@@ -1013,14 +1023,18 @@ export default {
             break
         }
         this.dialogPayment = false
+        this.dialogTable = false
         this.setPagination({
           pagination: this.invoicePagination
         })
         notify('Se ha guardado exitosamente', 'positive', 'check_circle')
       } catch (error) {
         notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
       }
     },
+
     async printBill (data) {
       const doc = await printInvoice(data, this.userSession)
       const pdfUrl = doc.output('bloburl')
@@ -1055,6 +1069,25 @@ export default {
         })
       })
     },
+    /**
+     * Free table
+     * @param {Object} table  table data
+     */
+    async freeTable (table) {
+      try {
+        loading(true)
+        const invoiceOne = table.invoices[0]
+        const { data } = await this.$api.get(`invoices/${invoiceOne.id}`)
+        this.openPaid(data.data)
+        loading(false)
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Open paid
+     * @param {Object} data data
+     */
     openPaid (data) {
       this.invoiceOne = data
       this.totalBill = data.total

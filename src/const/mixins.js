@@ -1,10 +1,11 @@
 import { Loading, Notify, copyToClipboard, date } from 'quasar'
 
-export const notify = (message, color, icon) => {
+export const notify = (message, color, icon, position = 'top') => {
   Notify.create({
     message,
     color,
-    icon
+    icon,
+    position
   })
 }
 /**
