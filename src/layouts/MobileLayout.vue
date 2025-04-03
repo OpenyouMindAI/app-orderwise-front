@@ -1,10 +1,9 @@
 <template>
   <q-layout view="lHh lpr lFf" container style="height: 100vh">
     <q-header elevated>
-      <q-toolbar class="bg-white text-dark flex justify-between">
+      <q-toolbar class="bg-primary text-white flex justify-between">
         <div class="flex items-center q-gutter-sm">
           <q-btn
-            color="primary"
             icon="chevron_left"
             round
             dense
@@ -12,19 +11,15 @@
             style="font-size: 20px;"
             @click="$router.push({ name: 'Product' })"
           />
-          <img :src="company?.url || logo.color" alt="logo" style="max-height: 40px"/>
+          <img :src="company?.url || logo.white" alt="logo" style="max-height: 40px"/>
         </div>
-        <q-chip class="bg-teal text-white" v-if="userSession && !$q.screen.lt.sm">
-          {{ company.name || userSession.company_session.name }}
-        </q-chip>
         <q-avatar
           v-if="userSession"
           flat
           round
-          color="primary"
           icon="person"
           aria-label="person"
-          class="q-ml-sm text-white"
+          class="q-ml-sm text-primary bg-white"
         >
           <q-menu>
             <q-list style="min-width: 200px">
@@ -122,7 +117,7 @@ export default {
   },
   created () {
     this.setData()
-    if (!this.userSession.company_session) this.getCompany()
+    this.getCompany()
     watch(() => this.$route.query, (toParams, previousParams) => {
       this.tab = toParams.tab
     })
@@ -140,8 +135,12 @@ export default {
      */
     async getCompany () {
       try {
-        const { data } = await this.$api.get(`public/company/${this.$route?.params?.company_id}`)
-        this.company = data
+        if (!this.userSession?.company_session) {
+          const { data } = await this.$api.get(`public/company/${this.$route?.params?.company_id}`)
+          this.company = data
+        } else {
+          this.company = this.userSession.company_session
+        }
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
