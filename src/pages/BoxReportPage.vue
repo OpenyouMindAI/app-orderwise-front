@@ -243,6 +243,7 @@
           <q-markup-table>
             <thead>
               <tr>
+                <th class="text-left">Método de pago</th>
                 <th class="text-left">Fecha</th>
                 <th class="text-left">Hora</th>
                 <th class="text-left">Descripción</th>
@@ -251,6 +252,7 @@
             </thead>
             <tbody>
               <tr v-for="item in cashflows.data" :key="item.id">
+                <td class="text-left">{{ item?.payment_method?.name }}</td>
                 <td class="text-left">{{ formatDate(item.created_at, 'DD/MM/YYYY') }}</td>
                 <td class="text-left">{{ formatDate(item.created_at, 'HH:mm:ss') }}</td>
                 <td class="text-left">{{ item.description }}</td>
@@ -259,7 +261,7 @@
                 </td>
               </tr>
               <tr>
-                <th colspan="3" class="text-right">
+                <th colspan="4" class="text-right">
                   <span class="text-subtitle1">
                     Total:
                   </span>

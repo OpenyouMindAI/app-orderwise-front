@@ -555,15 +555,27 @@
           </q-card-section>
           <q-card-section class="col">
             <div class="full-width row q-gutter-y-sm">
-              <q-option-group
-                v-model="panel"
-                inline
-                :options="[
-                  { label: 'Entrada', value: 'debit' },
-                  { label: 'Salida', value: 'credit' }
-                ]"
-              />
               <div class="col-12">
+                <q-option-group
+                  v-model="panel"
+                  inline
+                  :options="[
+                    { label: 'Entrada', value: 'debit' },
+                    { label: 'Salida', value: 'credit' }
+                  ]"
+                />
+              </div>
+              <div class="column col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+                <q-radio
+                  v-for="paymentMethod in paymentMethods"
+                  :key="paymentMethod.id"
+                  color="primary"
+                  v-model="paymentMethodCashFlow"
+                  :label="paymentMethod.name"
+                  :val="paymentMethod.id"
+                />
+              </div>
+              <div class="col-xl-8 col-lg-8 col-md-8 col-sm-12 col-xs-12 q-gutter-sm">
                 <q-input
                   name="amount"
                   autocomplete="amount"
@@ -576,8 +588,6 @@
                   required
                   autofocus
                 />
-              </div>
-              <div class="col-12">
                 <q-input
                   name="description"
                   autocomplete="description"
@@ -590,8 +600,6 @@
                   autogrow
                   required
                 />
-              </div>
-              <div class="col-12 text-right">
               </div>
             </div>
           </q-card-section>
@@ -759,6 +767,7 @@ export default {
     return {
       waitingPayment: false,
       loadingBilling: false,
+      paymentMethodCashFlow: null,
       loadingSearch: false,
       documentTypes: [],
       /**
@@ -1296,12 +1305,17 @@ export default {
      */
     async saveCashflow () {
       try {
+        if (!this.paymentMethodCashFlow) {
+          notify('Debe seleccionar un método de pago', 'negative', 'warning')
+          return
+        }
         this.loadingCashflow = true
         await this.$api.post('cashflow', {
           description: this.description,
           amount: this.amount,
           branch_office_id: this.branchOffice?.id,
-          type_cashflow: this.panel
+          type_cashflow: this.panel,
+          payment_method_id: this.paymentMethodCashFlow
         })
         this.$q.notify({
           message: 'Entrada/Salida guardada',
