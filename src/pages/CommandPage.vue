@@ -504,10 +504,10 @@
                         <span class="text-subtitle2 text-uppercase">
                           {{ invoiceOne.invoice_type.name }} Nro {{ invoiceOne?.code }}
                         </span>
-                        <span class="text-subtitle2 text-uppercase">
+                        <span class="text-subtitle2 text-uppercase" v-if="invoiceOne?.tables?.length">
                           Mesas: {{ invoiceOne?.tables?.map(table => table.name).join(', ') }}
                         </span>
-                        <q-toggle v-model="tableClose" label="Cerrar mesa" />
+                        <q-toggle v-model="tableClose" label="Cerrar mesa" v-if="invoiceOne?.tables?.length"/>
                       </div>
                     </th>
                   </tr>
