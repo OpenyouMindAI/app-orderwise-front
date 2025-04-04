@@ -1877,10 +1877,8 @@ export default {
     },
 
     validStockProduct (data, amount) {
-      const stock = data.is_bundle ? data.bundle_stock : data.normal_stock
-      if (!data.skip_stock) {
-        return stock >= amount
-      }
+      data.stock = data.is_bundle ? data.bundle_stock : data.normal_stock
+      if (!data.skip_stock) return data.stock >= amount
       return true
     },
     /**
@@ -1894,13 +1892,18 @@ export default {
         this.calculateTotal()
       } else {
         notify(
-          `No hay stock suficiente para ${data.name}`,
+          `No hay stock suficiente para ${data.name} cantidad de stock: ${data.stock}`,
           'negative',
           'warning'
         )
-        data.quantity = 1
+
+        data.quantity = data.stock
       }
     },
+    /**
+     * Push product
+     * @param {Object} product product
+     */
     pushProduct (product) {
       this.products.push({
         id: product.id,
@@ -1915,6 +1918,7 @@ export default {
         normal_stock: product.normal_stock,
         bundle_stock: product.bundle_stock,
         skip_stock: product.skip_stock,
+        is_bundle: product.is_bundle,
         aliquot_type: product.aliquot_type || product?.category?.aliquot_type
       })
     },
@@ -1932,7 +1936,6 @@ export default {
         this.productQuantity = data
         return
       }
-
       if (!this.validStockProduct(data, this.quantity)) {
         notify(
           `No hay stock suficiente para ${data.name}`,
