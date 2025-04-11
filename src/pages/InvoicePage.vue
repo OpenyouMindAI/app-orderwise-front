@@ -315,7 +315,7 @@ import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
-import { printInvoice, printTicket, status } from 'src/const/invoice'
+import { status } from 'src/const/invoice'
 export default {
   data () {
     return {
@@ -589,10 +589,16 @@ export default {
      * @param {Object} data invoice saved
      */
     async print (ticket) {
-      let doc = await printInvoice(this.invoice, this.userSession)
-      if (ticket) doc = printTicket(this.invoice, this.userSession)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
+      try {
+        await this.$api.get(`print/${this.invoice.id}`)
+        notify('Factura impresa exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+      // let doc = await printInvoice(this.invoice, this.userSession)
+      // if (ticket) doc = printTicket(this.invoice, this.userSession)
+      // const pdfUrl = doc.output('bloburl')
+      // window.open(pdfUrl, '_blank')
     },
     /**
      * Close all modals
