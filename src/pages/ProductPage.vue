@@ -956,10 +956,7 @@ export default {
           this.getProducts()
           this.openAddProduct = false
           this.visible = false
-          this.product = {
-            images: [],
-            is_bundle: 0
-          }
+          this.closeModal()
           Notify.create({
             message: 'Producto creado exitosamente',
             icon: 'check_circle',
@@ -994,13 +991,7 @@ export default {
           this.getProducts()
           this.openEditProduct = false
           this.visible = false
-          this.product = {
-            is_bundle: 0,
-            show_catalog: 0,
-            is_addons: 0,
-            skip_stock: 0,
-            images: []
-          }
+          this.closeModal()
           Notify.create({
             message: 'Producto editado exitosamente',
             icon: 'check_circle',
@@ -1026,13 +1017,7 @@ export default {
           this.getProducts()
           this.openEditProduct = false
           this.visible = false
-          this.product = {
-            is_bundle: 0,
-            show_catalog: 0,
-            is_addons: 0,
-            skip_stock: 0,
-            images: []
-          }
+          this.closeModal()
           Notify.create({
             message: 'Producto eliminado exitosamente',
             icon: 'check_circle',
