@@ -140,7 +140,7 @@ const chartProductOptions = ref({
     {
       name: 'Ventas',
       type: 'bar',
-      data: computed(() => topProductsData.value.map((item) => item.invoices_count))
+      data: computed(() => topProductsData.value.map((item) => Number(item.invoices_count.toFixed(2))))
     }
   ]
 })
