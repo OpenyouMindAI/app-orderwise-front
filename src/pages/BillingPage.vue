@@ -998,7 +998,7 @@ export default {
        * Without payment
        * @type {Array}
        */
-      withoutPayment: ['Ticket', 'Pedido'],
+      withoutPayment: ['T', 'P', 'CC'],
 
       withServiceType: [4],
       /**
@@ -1792,19 +1792,27 @@ export default {
      * Set params bill
      */
     setParamsBill () {
-      if (!this.withoutPayment.includes(this.invoiceType?.name) && this.pendingPayment > 0) {
+      console.log(this.invoiceType)
+
+      const isPendingPayment = this.pendingPayment > 0
+      const acronym = this.invoiceType?.acronym_serie
+      const isWithoutPayment = !this.withoutPayment.includes(acronym)
+      const isWithServiceType = this.withServiceType.includes(this.typeOfService.code)
+
+      const isSpecialCCCase = acronym === 'CC' && !isWithServiceType
+
+      if (
+        !isSpecialCCCase && (
+          (isWithoutPayment && isPendingPayment) ||
+          (isWithServiceType && isPendingPayment)
+        )
+      ) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
         return false
       }
 
-      if (this.withServiceType.includes(this.typeOfService.code) && this.pendingPayment > 0) {
-        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
-        this.dialogPayment = true
-        return false
-      }
-
-      if (this.products <= 0) {
+      if (!this.products || this.products.length === 0) {
         notify('No hay productos seleccionados', 'negative', 'warning')
         return false
       }
@@ -1897,6 +1905,7 @@ export default {
           'warning'
         )
 
+        data.amount = data.stock
         data.quantity = data.stock
       }
     },
