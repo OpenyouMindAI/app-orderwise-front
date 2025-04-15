@@ -1792,27 +1792,21 @@ export default {
      * Set params bill
      */
     setParamsBill () {
-      console.log(this.invoiceType)
+      if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
 
-      const isPendingPayment = this.pendingPayment > 0
-      const acronym = this.invoiceType?.acronym_serie
-      const isWithoutPayment = !this.withoutPayment.includes(acronym)
-      const isWithServiceType = this.withServiceType.includes(this.typeOfService.code)
-
-      const isSpecialCCCase = acronym === 'CC' && !isWithServiceType
-
-      if (
-        !isSpecialCCCase && (
-          (isWithoutPayment && isPendingPayment) ||
-          (isWithServiceType && isPendingPayment)
-        )
-      ) {
+      if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
         return false
       }
 
-      if (!this.products || this.products.length === 0) {
+      if (this.withServiceType.includes(this.typeOfService.code) && this.pendingPayment > 0) {
+        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
+        this.dialogPayment = true
+        return false
+      }
+
+      if (this.products <= 0) {
         notify('No hay productos seleccionados', 'negative', 'warning')
         return false
       }
