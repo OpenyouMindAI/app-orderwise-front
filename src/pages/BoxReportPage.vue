@@ -297,6 +297,7 @@ export default {
   data: () => {
     return {
       loading: false,
+      dialogFilter: false,
       cashFlowDetailsDialog: false,
       cashFlowLoading: false,
       formatDate,
@@ -312,7 +313,6 @@ export default {
       from: date.formatDate(Date(), 'YYYY-MM-DD'),
       to: date.formatDate(Date(), 'YYYY-MM-DD'),
       cashflowTotals: [],
-      dialogFilter: false,
       filter: '',
       /**
        * Params search
