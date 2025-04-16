@@ -11,19 +11,26 @@
           <q-popup-proxy>
             <q-banner>
               <q-list>
-                <q-item style="border-radius: 10px;" v-ripple clickable>
+                <q-item
+                  style="border-radius: 10px;"
+                  v-ripple
+                  clickable
+                  @click="downloadInvoiceExcel"
+                >
                   <q-item-section thumbnail>
-                    <q-icon name="archive"/>
+                    <q-icon name="archive" class="q-ml-sm"/>
                   </q-item-section>
                   <q-item-section>
-                    Descargar facturas
+                    Excel de facturas
                   </q-item-section>
                 </q-item>
-                <q-item v-ripple>
+                <q-item v-ripple style="border-radius: 10px;" clickable>
                   <q-item-section thumbnail>
-                    <q-icon name="archive"/>
+                    <q-icon name="archive" class="q-ml-sm"/>
                   </q-item-section>
-                  <q-item-section>Descargar facturas</q-item-section>
+                  <q-item-section>
+                    Facturas electrónicas
+                  </q-item-section>
                 </q-item>
               </q-list>
             </q-banner>
@@ -354,6 +361,7 @@ import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
 import { printInvoice, printTicket, status } from 'src/const/invoice'
+import { getDownload } from 'src/const/services'
 export default {
   data () {
     return {
@@ -560,7 +568,8 @@ export default {
        * Invoice types
        * @type {Array}
        */
-      invoiceTypes: []
+      invoiceTypes: [],
+      loadingDownload: 0
     }
   },
   computed: {
@@ -585,6 +594,29 @@ export default {
     }
   },
   methods: {
+    downloadInvoiceExcel () {
+      getDownload(
+        'excel/invoices',
+        {
+          branch_office_id: this.branchOffice?.id
+        },
+        (percentCompleted) => {
+          this.loadingDownload = percentCompleted / 100
+          if (percentCompleted === 100) {
+            this.loadingDownload = 0
+          }
+        },
+        (link) => {
+          link.setAttribute(
+            'download',
+            'Invoices.xlsx'
+            // `Recibos de cobro: Desde ${proxyDate.value.from} Hasta ${proxyDate.value.to}.xlsx`
+          )
+          document.body.appendChild(link)
+          link.click()
+        }
+      )
+    },
     /**
      * Calculate taxe
      * @param {Object} taxe taxe
