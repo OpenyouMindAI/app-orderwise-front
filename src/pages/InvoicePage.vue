@@ -598,7 +598,11 @@ export default {
       getDownload(
         'excel/invoices',
         {
-          branch_office_id: this.branchOffice?.id
+          params: {
+            dataEqualFilter: {
+              branch_office_id: this.branchOffice?.id
+            }
+          }
         },
         (percentCompleted) => {
           this.loadingDownload = percentCompleted / 100
