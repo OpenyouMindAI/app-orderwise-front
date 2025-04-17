@@ -169,6 +169,11 @@ const routes = [
         path: 'catalog/:company_id/:branch_office_id',
         name: 'Catalog',
         component: () => import('pages/CatalogPage.vue')
+      },
+      {
+        path: 'menu',
+        name: 'Menu',
+        component: () => import('pages/MenuPage.vue')
       }
     ]
   },

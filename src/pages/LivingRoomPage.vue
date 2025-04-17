@@ -226,6 +226,8 @@ import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import QRCode from 'qrcode'
 import { nextTick } from 'vue'
+import { authentication } from 'src/stores/module-authentication'
+import { mapState } from 'pinia'
 export default {
   components: {
     DraggableResizableContainer,
@@ -289,6 +291,9 @@ export default {
   created () {
     this.getLivingRooms()
   },
+  computed: {
+    ...mapState(authentication, ['userSession', 'branchOffice'])
+  },
   mounted () {
     this.setPagination({
       pagination: this.paginationConfig,
@@ -326,8 +331,16 @@ export default {
         margin: 2
       }
       data.forEach(table => {
+        const docQr = {
+          id: table.id,
+          name: table.name,
+          branch_office_id: this.branchOffice?.id,
+          company_id: this.userSession?.company_session_id
+        }
+        const encoded = btoa(JSON.stringify(docQr))
+        const urlQr = `${window.location.protocol}//${window.location.hostname}/#/menu/?tab=menu&category=all&p=${encoded}`
         nextTick(() => {
-          QRCode.toDataURL(JSON.stringify({ id: table.id, name: table.name }), opts, function (error, url) {
+          QRCode.toDataURL(urlQr, opts, function (error, url) {
             if (error) throw error
             const img = document.getElementById(table.id)
             img.src = url
@@ -354,7 +367,6 @@ export default {
      * Add table in living room
      */
     addTable () {
-      console.log(this.userSession)
       this.livingRoom.tables.push({
         name: this.tableName,
         width: 50,
