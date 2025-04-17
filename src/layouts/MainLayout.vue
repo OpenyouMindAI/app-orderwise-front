@@ -451,7 +451,7 @@ export default {
                 name: this.userSession.name,
                 email: this.userSession.email
               },
-              external_id: this.userSession.company_session_id
+              document_number: this.userSession?.company_session?.document_number
             }
           })
           this.download = {
