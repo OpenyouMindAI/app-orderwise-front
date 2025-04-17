@@ -41,8 +41,8 @@ export default boot(({ router, store }) => {
     }
     api.interceptors.response.use(null, async (error) => {
       if (error.response.status === 401) {
-        await $store.logout()
-        router.push('/login')
+        // await $store.logout()
+        // router.push('/login')
         notify(error?.response?.data?.message || error.message, 'negative', 'warning')
       } else if (error.response.status === 403) {
         console.error('Acceso denegado: ', error.response)
