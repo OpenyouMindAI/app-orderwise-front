@@ -3,6 +3,7 @@
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right q-gutter-sm">
         <q-btn color="secondary" @click="download" icon="download"/>
+        <q-btn color="info" @click="openCompaniesDialog" icon="content_copy" v-if="userSession.is_root"/>
         <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
       </div>
       <div class="col-12">
@@ -451,6 +452,38 @@
         </q-form>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="companiesDialog" persistent>
+      <q-card>
+        <q-card-section class="flex justify-between items-center bg-primary text-white">
+          <div class="text-h6">Compañías</div>
+          <q-btn icon="close" flat round dense @click="companiesDialog = false" />
+        </q-card-section>
+
+        <q-card-section style="max-height: 50vh" class="scroll">
+          <q-card v-for="org in companies" :key="org.id" class="q-mt-sm cursor-pointer q-py-sm">
+            <q-item>
+              <q-item-section avatar>
+                <q-img alt="logo" :src="org.url || logo.white"/>
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-subtitle1">
+                  {{ org.name }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-radio v-model="company" :val="org.id"></q-radio>
+              </q-item-section>
+            </q-item>
+          </q-card>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn label="Copiar productos" color="primary" @click="copyProducts" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </div>
 </template>
 
@@ -461,15 +494,18 @@ import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
 import PackProduct from 'src/components/Product/PackProduct.vue'
 import { getDownload } from 'src/const/services'
-import { notify } from 'src/const/mixins'
+import { loading, notify } from 'src/const/mixins'
 export default {
   components: { StockProduct, PackProduct },
   data () {
     return {
       productImage: null,
+      companiesDialog: false,
+      companies: [],
       multipleSelected: false,
       products: [],
       selection: [],
+      company: null,
       addonsProducts: [],
       addonsProductsOptions: [],
       tab: 'basicData',
@@ -576,6 +612,7 @@ export default {
       filter: undefined
     })
     this.getUnitOfMeasures()
+    this.getAllCompanies()
   },
   computed: {
     ...mapState(authentication, ['userSession', 'branchOffice'])
@@ -613,7 +650,20 @@ export default {
     }
   },
   methods: {
-
+    /**
+     * Open companies dialog
+     */
+    openCompaniesDialog () {
+      this.companiesDialog = true
+    },
+    async getAllCompanies () {
+      try {
+        const { data } = await this.$api.get('companies')
+        this.companies = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
     /**
      * Download data
      */
@@ -641,6 +691,21 @@ export default {
           link.click()
         }
       )
+    },
+    async copyProducts () {
+      try {
+        loading(true)
+        await this.$api.post('products/copy', {
+          company_from_id: this.company,
+          company_to_id: this.userSession.company_session_id
+        })
+        this.getProducts(this.params)
+        notify('Productos copiados exitosamente', 'positive', 'info')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
     },
     /**
      * Value image
@@ -891,10 +956,7 @@ export default {
           this.getProducts()
           this.openAddProduct = false
           this.visible = false
-          this.product = {
-            images: [],
-            is_bundle: 0
-          }
+          this.closeModal()
           Notify.create({
             message: 'Producto creado exitosamente',
             icon: 'check_circle',
@@ -929,13 +991,7 @@ export default {
           this.getProducts()
           this.openEditProduct = false
           this.visible = false
-          this.product = {
-            is_bundle: 0,
-            show_catalog: 0,
-            is_addons: 0,
-            skip_stock: 0,
-            images: []
-          }
+          this.closeModal()
           Notify.create({
             message: 'Producto editado exitosamente',
             icon: 'check_circle',
@@ -961,13 +1017,7 @@ export default {
           this.getProducts()
           this.openEditProduct = false
           this.visible = false
-          this.product = {
-            is_bundle: 0,
-            show_catalog: 0,
-            is_addons: 0,
-            skip_stock: 0,
-            images: []
-          }
+          this.closeModal()
           Notify.create({
             message: 'Producto eliminado exitosamente',
             icon: 'check_circle',

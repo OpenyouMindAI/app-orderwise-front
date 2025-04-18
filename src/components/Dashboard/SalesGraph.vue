@@ -86,6 +86,7 @@ const salesData = ref([])
  * @type {object}
  */
 const params = ref({
+  groupBy: tab.value,
   branch_office_id: store.branchOffice?.id,
   year: 2025
 })
@@ -178,6 +179,7 @@ const chartOptions = ref({
  * @param {Object} params
  */
 const filterDate = async (params) => {
+  console.log(params)
   try {
     loading.value = true
     const { data } = await api.get('kpi/invoices', { params })

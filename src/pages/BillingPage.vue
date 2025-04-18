@@ -998,7 +998,7 @@ export default {
        * Without payment
        * @type {Array}
        */
-      withoutPayment: ['Ticket', 'Pedido'],
+      withoutPayment: ['T', 'P', 'CC'],
 
       withServiceType: [4],
       /**
@@ -1792,7 +1792,9 @@ export default {
      * Set params bill
      */
     setParamsBill () {
-      if (!this.withoutPayment.includes(this.invoiceType?.name) && this.pendingPayment > 0) {
+      if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
+
+      if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
         return false
@@ -1897,6 +1899,7 @@ export default {
           'warning'
         )
 
+        data.amount = data.stock
         data.quantity = data.stock
       }
     },

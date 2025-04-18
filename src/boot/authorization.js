@@ -26,7 +26,7 @@ export default boot(({ router, store }) => {
       const validation = await $store.initStore()
       api.defaults.headers.common.authorization = `${$store?.token_type} ${$store?.access_token}`
       apiQPay.defaults.headers.common['X-Company-Token'] = 'c5c4bb6f-e7cc-4287-99d4-0a82ddec4da7'
-      apiArca.defaults.headers.common['X-Company-External-Id'] = $store?.userSession?.company_session_id
+      apiArca.defaults.headers.common['X-Company-External-Id'] = $store?.userSession?.company_session?.document_number
       if (requiresAuth) {
         if (validation) return next('/login')
         if ($store?.userSession?.is_root) return next()
@@ -41,6 +41,8 @@ export default boot(({ router, store }) => {
     }
     api.interceptors.response.use(null, async (error) => {
       if (error.response.status === 401) {
+        // await $store.logout()
+        // router.push('/login')
         notify(error?.response?.data?.message || error.message, 'negative', 'warning')
       } else if (error.response.status === 403) {
         console.error('Acceso denegado: ', error.response)
