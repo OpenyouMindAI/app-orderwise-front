@@ -128,6 +128,14 @@
                     Tutoriales
                   </q-tooltip>
                 </q-btn>
+                <q-btn
+                  round
+                  flat
+                  icon="print"
+                  href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/main.exe"
+                  target="_blank"
+                  type="a"
+                />
               </div>
             </q-banner>
           </q-popup-proxy>

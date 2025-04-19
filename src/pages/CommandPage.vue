@@ -1235,8 +1235,10 @@ export default {
      */
     async setTableSelected (data) {
       this.tableSelected = data
-      await this.getTable(data)
-      this.dialogTable = false
+      if (data.length > 0) {
+        await this.getTable(data)
+        this.dialogTable = false
+      }
     },
 
     /**
