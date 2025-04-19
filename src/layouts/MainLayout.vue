@@ -426,6 +426,9 @@ export default {
           })
 
           function createNotification (title, options) {
+            notify('Hay una nueva comanda', 'primary', 'notifications', 'bottom-right')
+            const audio = new Audio('audios/notify.mp3')
+            audio.play()
             return new Notification(title, options)
           }
         }

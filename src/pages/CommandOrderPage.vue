@@ -131,238 +131,165 @@
         </q-card>
       </div>
     </div>
-    <q-dialog v-model="openEditInvoice" persistent maximized>
-      <q-card>
+    <q-dialog v-model="openEditInvoice" persistent :maximized="$q.screen.lt.sm">
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
           <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
         </q-card-section>
-        <q-card-section class="scroll" style="height: 82vh">
-          <div class="row q-col-gutter-sm">
-            <div class="col-12">
-              <q-input label="Código" filled v-model="invoice.code" readonly dense />
-            </div>
-            <div class="col-6">
-              <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
-            </div>
-            <div class="col-6">
-              <q-input label="Vendedor" filled :model-value="invoice?.seller?.name" readonly dense />
-            </div>
-            <div class="col-6" v-if="!role.deliveryPerson">
-              <q-select
-                filled
-                readonly
-                dense
-                label="Mesas"
-                v-model="invoice.tables"
-                option-label="name"
-                multiple
-              />
-            </div>
-            <div class="col-6">
-              <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
-            </div>
-            <div class="col-12">
-              <q-input
-                type="textarea"
-                autogrow label="Dirección"
-                filled
-                v-model="invoice.address"
-                readonly
-                dense
-              />
-            </div>
-            <div class="col-12 q-mt-md">
-              <q-separator />
-            </div>
-            <div class="col-12">
-              <span class="text-h6">Campos para editar</span>
-            </div>
-            <div class="col-6">
-              <q-input type="datetime-local" label="Fecha de entrega" filled v-model="invoice.delivery_date" dense />
-            </div>
-            <div class="col-6">
-              <q-select
-                use-input
-                filled
-                dense
-                label="Tipo de factura"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="invoice.invoice_type"
-                :options="invoiceTypes"
-                :readonly="role.deliveryPerson"
-                :rules="[val => !!val || 'El campo es requerido.']"
-              />
-            </div>
-            <div class="col-12" v-if="invoice.status === 'finished'">
-              <q-select
-                use-input
-                filled
-                dense
-                label="Repartidor"
-                input-debounce="0"
-                option-value="id"
-                v-model="invoice.delivery_person"
-                :options="deliveryPersons"
-                :readonly="role.deliveryPerson"
-                :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-                @filter="filterDeliveryPersons"
-              />
-            </div>
-            <div class="col-12">
-              <q-input
-                type="textarea"
-                filled
-                v-model="invoice.description"
-                :readonly="role.deliveryPerson"
-                label="Descripción"
-              />
-            </div>
-            <div class="col-12" v-if="role.deliveryPerson || visibleBranchOffice">
-              <span class="text-h6">Pagos</span>
+        <q-card-section class="scroll col" style="max-height: 90vh">
+          <div class="row q-col-gutter-md">
+            <div class="row q-col-gutter-sm col-sm-12 col-md-7 col-lg-7">
+              <div class="col-6">
+                <q-input v-model="invoice.code" label="Código" filled readonly dense />
+              </div>
+              <div class="col-6">
+                <q-input v-model="invoice.date" label="Fecha" filled readonly dense />
+              </div>
+              <div class="col-6">
+                <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
+              </div>
+              <div class="col-6">
+                <q-input label="Vendedor" filled :model-value="invoice?.seller?.name" readonly dense />
+              </div>
+              <div class="col-12">
+                <q-input v-model="invoice.address" type="textarea" autogrow label="Dirección" filled readonly dense />
+              </div>
+              <div class="col-12">
+                <span class="text-h6">Datos de la comanda</span>
+              </div>
+              <div class="col-6">
+                <q-input v-model="invoice.delivery_date" type="datetime-local" label="Fecha de entrega" filled dense />
+              </div>
+              <div class="col-6">
+                <q-select
+                  v-model="invoice.invoice_type"
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de comprobante"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  :options="invoiceTypes"
+                  :readonly="role.deliveryPerson"
+                  :rules="[(val) => !!val || 'El campo es requerido.']"
+                />
+              </div>
+              <div class="col-12">
+                <q-input
+                  v-model="invoice.description"
+                  type="textarea"
+                  filled
+                  label="Descripción"
+                  autogrow
+                  :readonly="role.deliveryPerson"
+                />
+              </div>
+              <!-- <div class="col-12 q-mt-md">
+                <div class="flex justify-between items-center">
+                  <file-button-component color="primary" @upload="changeFiles" />
+                </div>
+                <file-component :files="files" @delete:files="deleteFile" />
+              </div> -->
             </div>
             <div
-              class="col-12 q-mt-md column"
-              v-for="payment in invoice.invoice_payments"
-              :key="payment.id" v-show="role.deliveryPerson || visibleBranchOffice"
+              :class="`col-sm-12 col-md-5 col-lg-5 q-gutter-y-sm ${$q.screen.lt.sm ? 'full-width' : ''}`"
             >
-              <span class="text-subtitle1 text-uppercase">
-                {{ payment.payment_method.name }}
-              </span>
-              <img
-                v-for="file in payment.files"
-                :key="file.id"
-                :src="file.url"
-                alt="pagos"
-                style="max-height: 300px; max-width: 500px;"
-              />
-            </div>
-          </div>
-          <!-- <q-stepper
-            v-model="editTab"
-            vertical
-            color="primary"
-            animated
-          >
-            <q-step
-              :name="1"
-              title="Datos básicos de la factura"
-              icon="receipt"
-              :done="editTab > 1"
+            <q-expansion-item
+              v-if="role.deliveryPerson || visibleBranchOffice"
+              icon="payments"
+              label="Pagos"
+              style="border-radius: 10px"
+              class="shadow-1 overflow-hidden"
             >
-              <q-stepper-navigation>
-                <q-btn @click="editTab = 2" color="primary" label="Ir a pagos" />
-              </q-stepper-navigation>
-            </q-step>
-            <q-step
-              :name="2"
-              title="Pagos de la factura"
-              icon="monetization_on"
-              >
-              <q-card-section class="row q-col-gutter-md">
-                <div class="col-12 q-gutter-xs flex">
-                  <div v-for="paymentMethod in paymentMethods" :key="paymentMethod.id">
-                    <q-btn
-                      color="secondary"
-                      size="17px"
-                      style="width: 100%"
-                      :label="paymentMethod.name"
-                      @click="addPayment(paymentMethod)"
+              <q-card>
+                <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 150px">
+                  <div
+                    v-for="payment in invoice.invoice_payments"
+                    :key="payment.id"
+                    class="col-12 column q-gutter-y-sm"
+                    v-show="invoice.invoice_payments.length > 0"
+                  >
+                    <div class="full-width row items-center justify-between">
+                      <span class="text-subtitle2 text-uppercase">
+                        {{ payment.payment_method.name }}
+                      </span>
+                      <span class="text-bold">
+                        {{ formatNumber(payment.amount) }}
+                      </span>
+                    </div>
+                    <img
+                      v-for="file in payment.files"
+                      :key="file.id"
+                      :src="file.url"
+                      alt="pagos"
+                      style="max-height: 150px; max-width: 300px"
                     />
                   </div>
-                </div>
-                <div class="col-12">
-                  <q-markup-table>
-                    <thead>
-                      <th colspan="4">Desglose de pago</th>
-                    </thead>
-                    <thead>
-                      <tr>
-                        <th class="text-left">Método de pago</th>
-                        <th class="text-left">Referencia</th>
-                        <th class="text-right">Monto</th>
-                        <th class="text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(payment, index) in payments" :key="payment.id">
-                        <td class="text-left">{{ payment.name }}</td>
-                        <td class="text-left">
-                          <span v-if="payment.reference"> {{ payment.reference }}</span>
-                          <span v-else>-</span>
-                          <q-popup-edit
-                            v-model="payment.reference"
-                            auto-save
-                            v-slot="scope"
-                          >
-                            <q-input
-                              v-model="scope.value"
-                              autofocus
-                              @keyup.enter="scope.set"
-                            />
-                          </q-popup-edit>
-                        </td>
-                        <td class="text-right">
-                          {{ payment.amount }}
-                          <q-popup-edit
-                            v-model.number="payment.amount"
-                            auto-save
-                            v-slot="scope"
-                          >
-                            <q-input
-                              v-model="scope.value"
-                              autofocus
-                              @keyup.enter="scope.set"
-                            />
-                          </q-popup-edit>
-                        </td>
-                        <q-td class="text-right">
-                          <q-btn
-                            icon="delete"
-                            size="xs"
-                            color="negative"
-                            @click="deletePayment(index)"
-                          />
-                        </q-td>
-                      </tr>
-                      <tr>
-                        <th colspan="4">
-                          Restante a pagar:
-                          <span v-if="invoice?.coin">
-                            {{ invoice?.coin?.symbol }}
-                          </span>
-                          {{ pendingPayment }}
-                        </th>
-                      </tr>
-                    </tbody>
-                  </q-markup-table>
-                </div>
-              </q-card-section>
-              <q-btn @click="editTab = 1" color="primary" label="Volver" />
-            </q-step>
-          </q-stepper> -->
+                  <div v-show="invoice.invoice_payments.length === 0" class="col-12 column q-gutter-y-sm">
+                    <div class="full-width row items-center justify-between">
+                      <span class="text-subtitle2 text-uppercase">
+                        No hay pagos
+                      </span>
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </q-expansion-item>
+            <q-expansion-item
+              icon="list"
+              label="Artículos"
+              style="border-radius: 10px"
+              class="shadow-1 overflow-hidden"
+              default-opened
+            >
+              <q-card>
+                <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 250px">
+                  <div v-for="product in invoice.products" :key="product.id" class="col-12 column">
+                    <div class="full-width flex items-center justify-between">
+                      <div class="flex q-gutter-sm items-center">
+                        <file-component
+                          v-if="product?.images?.length > 0"
+                          :files="[product.images[0]]"
+                          image-style="height: 50px; width: 50px; border-radius: 10px;"
+                          only-view
+                        />
+                        <span class="text-body1">
+                          {{ product.name.slice(0, 25) }}
+                          <q-tooltip class="text-subtitle1">
+                            {{ product.name }}
+                          </q-tooltip>
+                        </span>
+                      </div>
+                      <span class="text-bold">
+                        {{ formatNumber(product.pivot.amount) }}
+                      </span>
+                    </div>
+                    <q-separator class="q-mt-sm" />
+                  </div>
+                </q-card-section>
+              </q-card>
+            </q-expansion-item>
+            </div>
+          </div>
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn
-            color="negative"
-            label="Anular"
-            :loading="cancelLoading"
-            v-if="!role.deliveryPerson"
-            @click="cancelInvoice"
-          />
-          <q-btn
-            color="secondary"
-            label="Imprimir Ticket"
-            @click="print(invoice)"
-          />
-          <q-btn
-            color="primary"
-            label="Guardar"
-            :loading="loadingEdit"
-            @click="saveEdit"
-          />
+        <q-card-actions class="flex justify-between items-center">
+          <q-badge :color="setStatusValue(invoice.status, 'color')" class="q-ml-xs text-subtitle1">
+            {{ setStatusValue(invoice.status, 'label') }}
+          </q-badge>
+          <div class="q-gutter-sm">
+            <q-btn
+              v-if="!role.deliveryPerson"
+              color="negative"
+              label="Anular"
+              icon="block"
+              :loading="cancelLoading"
+              @click="cancelInvoice"
+            />
+            <q-btn color="secondary" label="Ticket" icon="print" @click="print(invoice)" />
+            <q-btn color="primary" icon="check_circle" label="Guardar" :loading="loadingEdit" @click="saveEdit()" />
+          </div>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -379,6 +306,14 @@
         </q-card-section>
 
         <q-card-section class="col q-pt-sm q-gutter-md">
+          <q-input
+            v-model="code"
+            label="Código de la comanda"
+            filled
+            dense
+            debounce="500"
+            clearable
+          />
           <q-select
             dense
             use-input
@@ -482,15 +417,18 @@ import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
 import { printTicket } from 'src/const/invoice'
 import { authentication } from 'src/stores/module-authentication'
 import { useRoute, useRouter } from 'vue-router'
+// import FileButtonComponent from 'src/components/FileButtonComponent.vue'
+import FileComponent from 'src/components/FileComponent.vue'
 
 const store = authentication()
 
 const userSession = store.userSession
 
 const dialogFilter = ref(false)
-
+// const files = ref([])
 const route = useRoute()
 const router = useRouter()
+const code = ref('')
 
 watch(
   () => route.query.id,
@@ -498,6 +436,31 @@ watch(
     if (newId) getInvoiceOne(newId)
   }
 )
+
+// const setImagesToInvoice = async (files) => {
+//   const formData = new FormData()
+//   formData.append('fileable_type', 'App\\Models\\Invoice')
+//   formData.append('fileable_id', invoice.value.id)
+//   files.forEach(async (file) => {
+//     formData.append('file', file.file)
+//     await api.post('files', formData)
+//   })
+// }
+
+// const changeFiles = async (e) => {
+//   const filesSelected = await setFiles(e)
+//   files.value = filesSelected
+//   setImagesToInvoice(filesSelected)
+// }
+
+// const deleteFile = async (file) => {
+//   try {
+//     const id = file[file.length - 1]
+//     await api.delete(`files/${id}`)
+//   } catch (error) {
+//     console.log(error)
+//   }
+// }
 
 const branchOffice = computed(() => store.branchOfficeGetter)
 /**
@@ -649,7 +612,10 @@ watch(openEditInvoice, (data) => {
     router.push({ name: 'CommandOrder' })
   }
 })
-
+const setStatusValue = (sts, field) => {
+  const st = statuses.value.find((status) => status.value === sts)
+  return st ? st[field] : {}
+}
 /**
  * Load invoices
  * @param {Object} status status
@@ -679,6 +645,10 @@ const loadInvoices = async (status) => {
 
 onUnmounted(() => {
   clearInterval(interval.value)
+})
+
+watch(code, async (cat) => {
+  filters('id', cat, 'dataFilter')
 })
 
 watch(category, async (cat) => {

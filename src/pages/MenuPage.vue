@@ -3,6 +3,9 @@
     <div class="full-width text-subtitle1 flex justify-between items-center" v-if="tab !== 'orders'">
       <span class="text-h6">Pedido</span>
       <q-chip class="bg-secondary text-white cursor-pointer">
+        {{ this.paramsUrl.name }}
+      </q-chip>
+      <q-chip class="bg-secondary text-white cursor-pointer">
         Total: {{ formatNumber(totalBill) }}
       </q-chip>
     </div>
@@ -76,11 +79,11 @@
                   spinner-color="primary"
                   style="height: 180px;"
                 >
-                  <div :class="$q.screen.xs ? 'absolute-full column items-center justify-center' : 'absolute-bottom text-center'">
+                  <div class="absolute-full column items-center justify-center text-center">
                     <div class="text-bold text-body1">
                       {{ props.row.name.slice(0, 20) }}
                     </div>
-                    <span class="text-caption">
+                    <span class="text-subtitle2">
                       {{ formatNumber(props.row.price) }} $
                     </span>
                     <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 7px; right: 7px;">
@@ -108,62 +111,69 @@
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3 q-col-gutter-sm">
-            <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+            <q-card
+              class="my-card q-mt-sm"
+              style="width: 100%; max-width: 400px; border-radius: 30px;"
+            >
               <q-card-section horizontal class="full-height">
-                  <q-img
-                    class="col-4"
-                    style="max-height: 200px;"
-                    :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
-                  />
-                  <q-card-section class="q-pa-sm column">
-                    <q-card-section class="q-pa-sm col">
-                      <div class="flex justify-between q-col-gutter-sm">
-                        <div class="flex justify-between items-center full-width">
-                          <span class="text-body2 text-uppercase text-bold">
-                            {{ props.row.name.slice(0, 20) }}
-                          </span>
-                        </div>
-                      </div>
-                      <p class="text-subtitle2 text-grey">
-                        $ {{ formatNumber(props.row.price) }}
-                      </p>
-                    </q-card-section>
-                    <q-card-actions class="q-pa-none">
-                      <div class="flex justify-between items-center full-width">
-                        <div style="width: 10%;">
-                          <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
-                        </div>
-                        <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
-                          <div>
-                            <q-btn icon="remove" round size="sm" color="primary" @click="() => {
-                                props.row.amount -= 1
-                                calculate(props.row)
-                              }"
-                            />
-                          </div>
-                          <q-input
-                            rounded
-                            outlined
-                            dense
-                            label="Cantidad"
-                            type="number"
-                            style="width: 50%;"
-                            v-model.number="props.row.amount"
-                            @update:model-value="calculate(props.row)"
-                          />
-                          <div>
-                              <q-btn icon="add" round size="sm" color="primary" @click="() => {
-                                  props.row.amount += 1
-                                  calculate(props.row)
-                              }"/>
-                          </div>
-                        </div>
-                      </div>
-                    </q-card-actions>
+                <q-img
+                  class="col-4"
+                  style="max-height: 132px;"
+                  :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
+                />
+                <q-card-section class="q-pa-sm column">
+                  <q-card-section class="q-pa-sm col">
+                    <span class="text-body2 text-uppercase text-bold">
+                      {{ props.row.name.slice(0, 20) }}
+                    </span>
+                    <p class="text-subtitle2 text-grey">
+                      $ {{ formatNumber(props.row.price) }}
+                    </p>
                   </q-card-section>
+                  <q-card-actions class="q-pa-none">
+                    <div class="flex justify-between items-center full-width">
+                      <div style="width: 10%;">
+                        <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
+                      </div>
+                      <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
+                        <div>
+                          <q-btn icon="remove" round size="sm" color="primary" @click="() => {
+                              props.row.amount -= 1
+                              calculate(props.row)
+                            }"
+                          />
+                        </div>
+                        <q-input
+                          rounded
+                          outlined
+                          dense
+                          label="Cantidad"
+                          type="number"
+                          style="width: 50%;"
+                          v-model.number="props.row.amount"
+                          @update:model-value="calculate(props.row)"
+                        />
+                        <div>
+                            <q-btn icon="add" round size="sm" color="primary" @click="() => {
+                                props.row.amount += 1
+                                calculate(props.row)
+                            }"/>
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-actions>
                 </q-card-section>
+              </q-card-section>
             </q-card>
+          </div>
+        </template>
+        <template v-slot:no-data>
+          <div class="full-width column flex-center justify-center">
+            <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
+            <span class="text-subtitle2 text-center">
+              No hay productos en la orden
+            </span>
           </div>
         </template>
       </q-table>
@@ -173,95 +183,100 @@
           icon="receipt"
           color="primary"
           :loading="billLoading"
-          @click="saveBill"
+          @click="saveOrder"
         />
       </q-page-sticky>
     </div>
-    <q-dialog v-model="detailProduct" maximized>
+    <q-dialog v-model="detailProduct">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'}`"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
       >
-        <SlideComponent :slides="product.images" styles="height: 400px;"/>
-        <q-card-section class="column q-pb-xs">
-          <div class="flex justify-between items-center full-width">
-            <span class="text-subtitle1 text-uppercase text-bold">
-              {{ product?.name }}
-            </span>
-            <div class="flex justify-between items-center q-gutter-xs">
-              <q-btn
-                icon="remove"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(product, product.amount -= 1)"
-              />
-              <q-input
-                borderless
-                dense
-                type="number"
-                style="width: 40px;"
-                input-class="text-center"
-                v-model.number="product.amount"
-                @update:model-value="(value) => addTemporalProducts(product, value)"
-              />
-              <q-btn
-                icon="add"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(product, product.amount += 1)"
-              />
-            </div>
-          </div>
-          <span class="text-subtitle1">
-            {{ formatNumber(product?.price) }}$
-          </span>
-        </q-card-section>
-        <q-card-section class="q-px-none" v-if="product.product_addons?.length > 0">
-          <div class="col-12 bg-grey-2 q-pa-sm text-dark">
-            <span class="text-subtitle2">+ Adicionales</span>
-          </div>
-        </q-card-section>
-        <q-card-section class="col q-pt-xs">
-          <div
-            class="flex justify-between full-width items-center"
-            v-for="addon in product.product_addons" :key="addon.id"
-          >
-            <div class="column">
-              <span class="text-body2 text-uppercase text-bold">
-                {{ addon.name }}
+        <SlideComponent :slides="product.images" styles="height: 200px;"/>
+        <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 150px); overflow: auto;">
+          <q-card-section class="column q-pb-xs">
+            <div class="column justify-between full-width">
+              <span class="text-subtitle1 text-uppercase text-bold">
+                {{ product?.name }}
               </span>
-              <span class="text-subtitle2 text-grey">
-                {{ formatNumber(addon.price) }}$
+              <span class="text-subtitle1">
+                {{ formatNumber(product?.price) }}$
               </span>
+              <div class="flex justify-between items-center q-gutter-xs">
+                <q-btn
+                  icon="remove"
+                  color="primary"
+                  round
+                  flat
+                  size="lg"
+                  @click="addTemporalProducts(product, product.amount -= 1)"
+                />
+                <q-input
+                  borderless
+                  dense
+                  type="number"
+                  style="width: 40px;"
+                  input-class="text-center"
+                  v-model.number="product.amount"
+                  @update:model-value="(value) => addTemporalProducts(product, value)"
+                />
+                <q-btn
+                  icon="add"
+                  color="primary"
+                  round
+                  flat
+                  size="lg"
+                  @click="addTemporalProducts(product, product.amount += 1)"
+                />
+              </div>
             </div>
-            <div class="flex justify-between items-center q-gutter-xs">
-              <q-btn
-                icon="remove"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(addon, addon.amount -= 1)"
-              />
-              <q-input
-                borderless
-                dense
-                type="number"
-                style="width: 30px;"
-                input-class="text-center"
-                v-model.number="addon.amount"
-                @update:model-value="(value) => addTemporalProducts(product, value)"
-              />
-              <q-btn
-                icon="add"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(addon, addon.amount += 1)"
-              />
+          </q-card-section>
+          <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
+            <div class="col-12 bg-grey-2 q-pa-sm text-dark">
+              <span class="text-subtitle2">+ Adicionales</span>
             </div>
-          </div>
+          </q-card-section>
+          <q-card-section class="q-pt-xs">
+            <div
+              class="flex justify-between full-width items-center"
+              v-for="addon in product.product_addons" :key="addon.id"
+            >
+              <div class="column">
+                <span class="text-body2 text-uppercase text-bold">
+                  {{ addon.name }}
+                </span>
+                <span class="text-subtitle2 text-grey">
+                  {{ formatNumber(addon.price) }}$
+                </span>
+              </div>
+              <div class="flex justify-between items-center q-gutter-xs">
+                <q-btn
+                  icon="remove"
+                  color="primary"
+                  round
+                  size="sm"
+                  @click="addTemporalProducts(addon, addon.amount -= 1)"
+                />
+                <q-input
+                  borderless
+                  dense
+                  type="number"
+                  style="width: 30px;"
+                  input-class="text-center"
+                  v-model.number="addon.amount"
+                  @update:model-value="(value) => addTemporalProducts(product, value)"
+                />
+                <q-btn
+                  icon="add"
+                  color="primary"
+                  round
+                  size="sm"
+                  @click="addTemporalProducts(addon, addon.amount += 1)"
+                />
+              </div>
+            </div>
+          </q-card-section>
+          <q-separator />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn
@@ -376,14 +391,12 @@ import SkeletonCard from '../components/SkeletonCard.vue'
 import SlideComponent from '../components/SlideComponent.vue'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import { status } from 'src/const/invoice'
 export default {
   name: 'CatalogPage',
   components: {
     SkeletonCard,
-    SlideComponent,
-    FileButtonComponent
+    SlideComponent
   },
   data () {
     return {
@@ -500,23 +513,21 @@ export default {
     }
   },
   created () {
-    if (this.$route.query.p) { this.paramsUrl = JSON.parse(atob(this.$route.query.p)) }
-    this.getCompany()
-    this.getCategories()
-    this.getPaymentMethods()
+    if (this.$route.query.p) {
+      this.paramsUrl = JSON.parse(atob(this.$route.query.p))
+      this.getCompany(this.paramsUrl)
+      this.getCategories(this.paramsUrl)
+      this.getPaymentMethods(this.paramsUrl)
+    } else {
+      this.$router.go(-1)
+    }
     this.category = this.$route.query.category || 'all'
     this.products = this.command.products || []
     this.calculateTotal()
   },
   watch: {
     category (data) {
-      this.$router.push({
-        path: this.$route.path,
-        query: {
-          tab: this.tab,
-          category: data || 'all'
-        }
-      })
+      this.setQueryParams({ category: data || 'all', tab: this.tab })
       this.getAllProducts()
     },
     table (table) {
@@ -546,7 +557,7 @@ export default {
     openProductDetails (product) {
       this.detailProduct = true
       this.product = product
-      this.product.amount = 0
+      this.product.amount = 1
       if (product.product_addons && product.product_addons.length > 0) {
         this.product.product_addons = product.product_addons.map(addon => {
           addon.amount = 0
@@ -554,15 +565,25 @@ export default {
         })
       }
     },
+    /**
+     * Add product to car
+     */
     addCar () {
       this.temporalProducts.forEach(product => this.validateProduct(product))
       this.notifyProductCar(this.products)
       this.detailProduct = false
       this.temporalProducts = []
+      this.product = {
+        amount: 1
+      }
     },
+    /**
+     * Add temporal products
+     */
     addTemporalProducts (data, amount) {
       const findProduct = this.findProduct(this.temporalProducts, data)
       if (findProduct) {
+        console.log(amount)
         findProduct.amount = amount
       } else {
         this.temporalProducts.push({
@@ -582,9 +603,9 @@ export default {
     /**
      * Get company
      */
-    async getCompany () {
+    async getCompany (params) {
       try {
-        const { data } = await this.$api.get(`public/company/${this.paramsUrl.company_id}`)
+        const { data } = await this.$api.get(`public/company/${params.company_id}`)
         this.company = data
       } catch (error) {
         notify(error.message, 'negative', 'warning')
@@ -603,7 +624,7 @@ export default {
      */
     afterSaveBill () {
       this.products = []
-      this.setQueryParams({ tab: 'orders' })
+      this.setQueryParams({ tab: 'menu' })
       this.totalBill = 0
       this.file = null
       this.paymentMethod = null
@@ -611,86 +632,25 @@ export default {
       notify('Pedido creado exitosamente', 'positive', 'check_circle')
     },
     /**
-     * Set table selected
-     * @param {Object} data table selected
-     */
-    async setTableSelected (data) {
-      this.table = data[0]
-      this.tableSelected = [this.table]
-      await this.getTable(data)
-      this.dialogTable = false
-    },
-    /**
-     * Save clients
-     */
-    async saveClient () {
-      try {
-        loading(true)
-        const { data } = await this.$api.post(`public/clients/${this.paramsUrl.company_id}`, this.client)
-        this.openAddClient = false
-        this.client = {}
-        this.setSessionData(data)
-      } catch (error) {
-        console.error(error)
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-
-    async saveFilePayment (data) {
-      try {
-        const formData = new FormData()
-        const { invoice_payments: invoicePayments } = data
-        if (invoicePayments.length > 0) {
-          formData.append('file', this.file?.file)
-          formData.append('fileable_type', 'App\\Models\\InvoicePayment')
-          formData.append('fileable_id', invoicePayments[0].id)
-          await this.$api.post('files', formData)
-        }
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
      * Save order
      */
     async saveOrder () {
       try {
         loading(true)
-        const { data } = await this.$api.post('command-orders', {
+        await this.$api.post('public/command-orders', {
           seller_id: this.userSession?.id,
           products: this.command.products,
           company_id: this.paramsUrl.company_id,
-          client_id: this.userSession.id,
-          code: 1,
-          payments: [
-            {
-              payment_method_id: this.paymentMethod,
-              amount: this.totalBill,
-              reference: null,
-              exchange: 1,
-              coin_id: this.company?.company_config?.coin_id
-            }
-          ]
+          client_id: this.company?.company_config?.client_id,
+          tables: [this.paramsUrl.id],
+          code: 1
         })
-        if (this.file) await this.saveFilePayment(data)
         this.afterSaveBill()
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
         loading(false)
       }
-    },
-    /**
-     * Save bill and payments
-     */
-    async saveBill () {
-      if (!this.userSession) {
-        this.openLoginDialog = true
-        return
-      }
-      this.dialogPayment = true
     },
     /**
      * Delete product in table
@@ -782,13 +742,11 @@ export default {
         )
         return
       }
-
       if (findProduct) {
-        findProduct.amount += 1
+        findProduct.amount += data.amount
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
-        data.amount = 1
         data.subtotal = 0
         data.product_id = data.id
         this.products = [
@@ -859,9 +817,9 @@ export default {
     /**
      * Get categories
      */
-    async getCategories () {
+    async getCategories (params) {
       try {
-        const { data } = await this.$api.get(`public/categories/${this.paramsUrl.company_id}`, {
+        const { data } = await this.$api.get(`public/categories/${params.company_id}`, {
           params: {
             show_catalog: 1
           }
@@ -874,9 +832,9 @@ export default {
     /**
      * Get categories
      */
-    async getPaymentMethods () {
+    async getPaymentMethods (params) {
       try {
-        const { data } = await this.$api.get(`public/payment-methods/${this.paramsUrl.company_id}`)
+        const { data } = await this.$api.get(`public/payment-methods/${params.company_id}`)
         this.paymentMethods = data
       } catch (error) {
         notify(error.message, 'negative', 'warning')

@@ -178,6 +178,14 @@
             </q-card>
           </div>
         </template>
+        <template v-slot:no-data>
+          <div class="full-width column flex-center justify-center">
+            <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
+            <span class="text-subtitle2 text-center">
+              No hay productos en la orden
+            </span>
+          </div>
+        </template>
       </q-table>
       <q-page-sticky position="bottom-right" :offset="[15, 5]">
         <q-btn

@@ -1451,10 +1451,18 @@ export default {
           })
         })
     },
+    getParams (url) {
+      const urlObj = new URL(url.replace('#', '?'))
+      console.log(urlObj)
+      const params = new URLSearchParams(urlObj.search)
+      return params.get('p')
+    },
     getCodeQr (code) {
       const newCode = code[0]
-      const { id } = JSON.parse(newCode.rawValue)
-      this.getTable(id)
+      const data = this.getParams(newCode.rawValue)
+      console.log(atob(data))
+      const { id } = JSON.parse(atob(data))
+      this.getTable([id])
     },
     /**
      * Get table

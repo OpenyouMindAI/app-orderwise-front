@@ -83,7 +83,7 @@
             </span>
           </q-badge>
         </q-tab>
-        <q-tab icon="receipt_long" v-if="userSession" name="orders"/>
+        <q-tab icon="receipt_long" v-if="userSession && $router.name === 'Catalog'" name="orders"/>
       </q-tabs>
     </q-footer>
   </q-layout>
@@ -136,7 +136,13 @@ export default {
     async getCompany () {
       try {
         if (!this.userSession?.company_session) {
-          const { data } = await this.$api.get(`public/company/${this.$route?.params?.company_id}`)
+          let params = {}
+          if (this.$route?.params?.company_id) {
+            params.company_id = this.$route?.params?.company_id
+          } else {
+            params = JSON.parse(atob(this.$route.query.p))
+          }
+          const { data } = await this.$api.get(`public/company/${params?.company_id}`)
           this.company = data
         } else {
           this.company = this.userSession.company_session

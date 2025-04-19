@@ -7,8 +7,8 @@
       <q-img :src="slide.url" :alt="slide.caption" fit="fill" :style="styles">
         <div class="absolute-bottom all-pointer-events" v-if="slides.length > 1">
           <div class="flex justify-center">
-            <q-btn color="primary" @click="prevSlide">&lt;</q-btn>
-            <q-btn class="q-ml-sm" color="primary" @click="nextSlide">&gt;</q-btn>
+            <q-btn round color="primary" @click="prevSlide">&lt;</q-btn>
+            <q-btn class="q-ml-sm" round color="primary" @click="nextSlide">&gt;</q-btn>
           </div>
         </div>
       </q-img>
