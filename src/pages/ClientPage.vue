@@ -239,13 +239,6 @@ export default {
       conditionIvaReceptors: [],
       columns: [
         {
-          name: 'id',
-          align: 'left',
-          label: 'Código',
-          field: 'id',
-          sortable: true
-        },
-        {
           name: 'document_number',
           align: 'left',
           label: 'Número de documento',
