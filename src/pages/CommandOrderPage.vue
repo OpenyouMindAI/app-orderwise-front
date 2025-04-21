@@ -144,22 +144,63 @@
                 <q-input v-model="invoice.code" label="Código" filled readonly dense />
               </div>
               <div class="col-6">
-                <q-input v-model="invoice.date" label="Fecha" filled readonly dense />
+                <q-input
+                  filled
+                  readonly
+                  dense
+                  :model-value="formatDate(invoice.created_at, 'DD-MM-YYYY H:mm:ss')"
+                  label="Fecha y hora"
+                />
               </div>
               <div class="col-6">
-                <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
+                <q-input
+                  label="Cliente"
+                  filled
+                  :model-value="invoice?.client?.name"
+                  readonly
+                  dense
+                />
               </div>
               <div class="col-6">
-                <q-input label="Vendedor" filled :model-value="invoice?.seller?.name" readonly dense />
+                <q-input
+                  label="Vendedor"
+                  filled
+                  :model-value="invoice?.seller?.name"
+                  readonly
+                  dense
+                />
+              </div>
+              <div class="col-12" v-if="invoice?.tables?.length">
+                <q-input
+                  label="Mesas"
+                  filled
+                  :model-value="invoice?.tables?.map(table => table.name).join(', ')"
+                  readonly
+                  dense
+                />
               </div>
               <div class="col-12">
-                <q-input v-model="invoice.address" type="textarea" autogrow label="Dirección" filled readonly dense />
+                <q-input
+                  v-model="invoice.address"
+                  type="textarea"
+                  autogrow
+                  label="Dirección"
+                  filled
+                  readonly
+                  dense
+                />
               </div>
               <div class="col-12">
                 <span class="text-h6">Datos de la comanda</span>
               </div>
               <div class="col-6">
-                <q-input v-model="invoice.delivery_date" type="datetime-local" label="Fecha de entrega" filled dense />
+                <q-input
+                  v-model="invoice.delivery_date"
+                  type="datetime-local"
+                  label="Fecha de entrega"
+                  filled
+                  dense
+                />
               </div>
               <div class="col-6">
                 <q-select
@@ -196,81 +237,81 @@
             <div
               :class="`col-sm-12 col-md-5 col-lg-5 q-gutter-y-sm ${$q.screen.lt.sm ? 'full-width' : ''}`"
             >
-            <q-expansion-item
-              v-if="role.deliveryPerson || visibleBranchOffice"
-              icon="payments"
-              label="Pagos"
-              style="border-radius: 10px"
-              class="shadow-1 overflow-hidden"
-            >
-              <q-card>
-                <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 150px">
-                  <div
-                    v-for="payment in invoice.invoice_payments"
-                    :key="payment.id"
-                    class="col-12 column q-gutter-y-sm"
-                    v-show="invoice.invoice_payments.length > 0"
-                  >
-                    <div class="full-width row items-center justify-between">
-                      <span class="text-subtitle2 text-uppercase">
-                        {{ payment.payment_method.name }}
-                      </span>
-                      <span class="text-bold">
-                        {{ formatNumber(payment.amount) }}
-                      </span>
-                    </div>
-                    <img
-                      v-for="file in payment.files"
-                      :key="file.id"
-                      :src="file.url"
-                      alt="pagos"
-                      style="max-height: 150px; max-width: 300px"
-                    />
-                  </div>
-                  <div v-show="invoice.invoice_payments.length === 0" class="col-12 column q-gutter-y-sm">
-                    <div class="full-width row items-center justify-between">
-                      <span class="text-subtitle2 text-uppercase">
-                        No hay pagos
-                      </span>
-                    </div>
-                  </div>
-                </q-card-section>
-              </q-card>
-            </q-expansion-item>
-            <q-expansion-item
-              icon="list"
-              label="Artículos"
-              style="border-radius: 10px"
-              class="shadow-1 overflow-hidden"
-              default-opened
-            >
-              <q-card>
-                <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 250px">
-                  <div v-for="product in invoice.products" :key="product.id" class="col-12 column">
-                    <div class="full-width flex items-center justify-between">
-                      <div class="flex q-gutter-sm items-center">
-                        <file-component
-                          v-if="product?.images?.length > 0"
-                          :files="[product.images[0]]"
-                          image-style="height: 50px; width: 50px; border-radius: 10px;"
-                          only-view
-                        />
-                        <span class="text-body1">
-                          {{ product.name.slice(0, 25) }}
-                          <q-tooltip class="text-subtitle1">
-                            {{ product.name }}
-                          </q-tooltip>
+              <q-expansion-item
+                v-if="role.deliveryPerson || visibleBranchOffice"
+                icon="payments"
+                label="Pagos"
+                style="border-radius: 10px"
+                class="shadow-1 overflow-hidden"
+              >
+                <q-card>
+                  <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 150px">
+                    <div
+                      v-for="payment in invoice.invoice_payments"
+                      :key="payment.id"
+                      class="col-12 column q-gutter-y-sm"
+                      v-show="invoice.invoice_payments.length > 0"
+                    >
+                      <div class="full-width row items-center justify-between">
+                        <span class="text-subtitle2 text-uppercase">
+                          {{ payment.payment_method.name }}
+                        </span>
+                        <span class="text-bold">
+                          {{ formatNumber(payment.amount) }}
                         </span>
                       </div>
-                      <span class="text-bold">
-                        {{ formatNumber(product.pivot.amount) }}
-                      </span>
+                      <img
+                        v-for="file in payment.files"
+                        :key="file.id"
+                        :src="file.url"
+                        alt="pagos"
+                        style="max-height: 150px; max-width: 300px"
+                      />
                     </div>
-                    <q-separator class="q-mt-sm" />
-                  </div>
-                </q-card-section>
-              </q-card>
-            </q-expansion-item>
+                    <div v-show="invoice.invoice_payments.length === 0" class="col-12 column q-gutter-y-sm">
+                      <div class="full-width row items-center justify-between">
+                        <span class="text-subtitle2 text-uppercase">
+                          No hay pagos
+                        </span>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
+              <q-expansion-item
+                icon="list"
+                label="Artículos"
+                style="border-radius: 10px"
+                class="shadow-1 overflow-hidden"
+                default-opened
+              >
+                <q-card>
+                  <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 250px">
+                    <div v-for="product in invoice.products" :key="product.id" class="col-12 column">
+                      <div class="full-width flex items-center justify-between">
+                        <div class="flex q-gutter-sm items-center">
+                          <file-component
+                            v-if="product?.images?.length > 0"
+                            :files="[product.images[0]]"
+                            image-style="height: 50px; width: 50px; border-radius: 10px;"
+                            only-view
+                          />
+                          <span class="text-body1">
+                            {{ product.name.slice(0, 25) }}
+                            <q-tooltip class="text-subtitle1">
+                              {{ product.name }}
+                            </q-tooltip>
+                          </span>
+                        </div>
+                        <span class="text-bold">
+                          {{ formatNumber(product.pivot.amount) }}
+                        </span>
+                      </div>
+                      <q-separator class="q-mt-sm" />
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
             </div>
           </div>
         </q-card-section>
