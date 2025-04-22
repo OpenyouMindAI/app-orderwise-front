@@ -217,6 +217,12 @@
                   @click="print(true)"
                 />
                 <q-btn
+                  icon="print"
+                  color="black"
+                  label="Comanda"
+                  @click="printCommand"
+                />
+                <q-btn
                   class="full-width"
                   icon="print"
                   color="info"
@@ -315,7 +321,7 @@ import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
-import { printInvoice, printTicket, status } from 'src/const/invoice'
+import { generarFacturaPDF, printInvoice, printTicket, status } from 'src/const/invoice'
 export default {
   data () {
     return {
@@ -589,14 +595,21 @@ export default {
      * @param {Object} data invoice saved
      */
     async print (ticket) {
-      // try {
-      //   await this.$api.get(`print/${this.invoice.id}`)
-      //   notify('Factura impresa exitosamente', 'positive', 'check_circle')
-      // } catch (error) {
-      //   notify(error.message, 'negative', 'warning')
-      // }
-      let doc = await printInvoice(this.invoice, this.userSession)
-      if (ticket) doc = printTicket(this.invoice, this.userSession)
+      let doc = null
+      if (!ticket && this.invoice.billing) {
+        doc = await generarFacturaPDF(this.invoice, this.userSession)
+      } else if (ticket) {
+        doc = await printInvoice(this.invoice, this.userSession)
+      }
+      console.log(doc)
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
+    },
+    /**
+     * Print command
+     */
+    async printCommand () {
+      const doc = await printTicket(this.invoice, this.userSession)
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')
     },
