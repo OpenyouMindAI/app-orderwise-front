@@ -360,6 +360,18 @@
         </q-form>
       </q-card>
     </q-dialog>
+    <q-inner-loading :showing="visibleLoading">
+      <q-knob
+        :step="10"
+        v-model="loadingDownload"
+        show-value
+        size="90px"
+        :thickness="0.22"
+        color="lime"
+        track-color="lime-3"
+        class="text-lime q-ma-md"
+      />
+    </q-inner-loading>
   </div>
 </template>
 
@@ -368,11 +380,16 @@ import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
-import { printInvoice, printTicket, status } from 'src/const/invoice'
+import { printInvoice, printTicket, status, generarFacturaPDF } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
     return {
+      loadingDownload: 0,
+      /**
+       * Value knob
+       * @type {Number}
+       */
       dialogFilter: false,
       /**
        * Loading client status
@@ -383,7 +400,7 @@ export default {
        * Visible columns
        * @type {Array}
        */
-      visibleColumns: ['code', 'invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
+      visibleColumns: ['invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
       /**
        * Status invoice
        * @type {Object}
@@ -576,11 +593,14 @@ export default {
        * Invoice types
        * @type {Array}
        */
-      invoiceTypes: [],
-      loadingDownload: 0
+      invoiceTypes: []
     }
   },
   computed: {
+    visibleLoading () {
+      console.log(this.loadingDownload)
+      return this.loadingDownload > 0
+    },
     totalBill () {
       const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
       return sum + this.invoice.total
@@ -613,7 +633,8 @@ export default {
           }
         },
         (percentCompleted) => {
-          this.loadingDownload = percentCompleted / 100
+          console.log(percentCompleted)
+          this.loadingDownload = percentCompleted
           if (percentCompleted === 100) {
             this.loadingDownload = 0
           }
