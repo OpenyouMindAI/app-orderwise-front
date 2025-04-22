@@ -98,8 +98,8 @@
                 filled
                 v-model="client.phone_number"
                 label="Número de teléfono"
-                :rules="[val => !!val || 'El campo es requerido.']"
               />
+                <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
@@ -142,11 +142,11 @@
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="client.document_number"
                 label="Número de documento"
               />
+              <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
@@ -183,8 +183,8 @@
                 filled
                 v-model="client.phone_number"
                 label="Número de teléfono"
-                :rules="[val => !!val || 'El campo es requerido.']"
               />
+                <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
