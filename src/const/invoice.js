@@ -67,11 +67,11 @@ const setQrImage = async (data, fields, companySession) => {
     nroDocRec: Number(data.client.document_number),
     tipoCodAut: 'E',
     ctz: 1,
-    codAut: Number(fields.cae),
+    codAut: Number(fields.cae)
   }
   const encoded = btoa(JSON.stringify(docQr))
   const url = 'https://servicioscf.afip.gob.ar/publico/comprobantes/cae.aspx?p='
-  return  await QRCode.toDataURL(`${url}${encoded}`)
+  return await QRCode.toDataURL(`${url}${encoded}`)
 }
 
 export const printTicket = (data, userSession) => {
@@ -192,7 +192,11 @@ export const printInvoice = async (data, userSession) => {
     doc.text(`Código: ${fields.voucher_type.Id}`, centrarTexto(`Código: ${fields.voucher_type.Id}`, true), y)
     y += 7
   }
-  doc.text(`NRO: ${data.code}`, 5, y)
+  if (!data.billing) {
+    doc.text(`NRO: ${data.code}`, 5, y)
+  } else {
+    doc.text(`NRO: ${data?.electronic_invoice?.fields?.cbte_hasta}`, 5, y)
+  }
   y += 4
   doc.text(`CLIENTE: ${data?.client?.name} ${data?.client?.last_name || ''}`, 5, y)
   y += 4
