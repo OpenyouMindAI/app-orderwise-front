@@ -210,23 +210,25 @@
                   @click="cancelInvoice"
                 />
                 <q-btn
-                  class="full-width"
-                  icon="receipt"
-                  color="secondary"
-                  label="Imprimir Comanda"
-                  @click="print(true)"
-                />
-                <q-btn
                   icon="print"
                   color="black"
-                  label="Comanda"
+                  label="Imprimir comanda"
+                  class="full-width"
                   @click="printCommand"
                 />
                 <q-btn
                   class="full-width"
                   icon="print"
+                  color="secondary"
+                  label="Imprimir Ticket"
+                  @click="print(true)"
+                />
+                <q-btn
+                  class="full-width"
+                  icon="print"
                   color="info"
-                  :label="`Imprimir ${invoice.billing ? 'Factura' : 'Comprobante'}`"
+                  v-if="invoice.billing"
+                  label="Imprimir Factura"
                   @click="print(false)"
                 />
                 <q-btn

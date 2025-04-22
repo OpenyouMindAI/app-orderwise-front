@@ -25,6 +25,7 @@
     "highcharts": "^10.3.2",
     "highcharts-vue": "^1.4.0",
     "jspdf": "^2.5.2",
+    "jspdf-autotable": "^5.0.2",
     "laravel-echo": "^1.17.1",
     "pinia": "^2.0.11",
     "pinia-plugin-persistedstate": "^3.2.1",
