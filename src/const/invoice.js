@@ -235,7 +235,7 @@ export const printInvoice = async (data, userSession) => {
 
   y += 4
   data.products.forEach((product) => {
-    const cantidadPrecio = `${formatNumber(product.pivot.amount)} X ${product.pivot.price.toFixed(2)}`
+    const cantidadPrecio = `${formatNumber(product.pivot.amount)} X ${product.pivot.price}`
     const subtotal = (product.pivot.amount * product.pivot.price).toFixed(2)
 
     doc.text(cantidadPrecio, 5, y)
@@ -408,7 +408,12 @@ export async function generarFacturaPDF (invoice, userSession) {
   const labelX = pageWidth - 60
   const valueX = pageWidth - 10
 
-  const format = (value) => formatNumber(value).padStart(6, ' ')
+  const format = (value) => {
+    if (value) {
+      return formatNumber(value).padStart(6, ' ')
+    }
+    return ''
+  }
 
   doc.line(10, finalY, 200, finalY)
   doc.text('Subtotal: $', labelX, finalY + 5, { align: 'right' })
@@ -449,7 +454,7 @@ export async function generarFacturaPDF (invoice, userSession) {
   return doc
 }
 const sum = (data) => {
-  return data.reduce((a, b) => a + b.pivot.amount, 0)
+  return data.reduce((a, b) => a + Number(b.pivot.amount), 0)
 }
 
 const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80) => {

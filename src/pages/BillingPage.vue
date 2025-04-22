@@ -1755,8 +1755,9 @@ export default {
       if (this.invoicePrinter) {
         doc = await printInvoice(invoice, this.userSession)
       } else {
-        doc = printTicket(invoice, this.userSession)
+        doc = await printTicket(invoice, this.userSession)
       }
+
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')
       this.clear()

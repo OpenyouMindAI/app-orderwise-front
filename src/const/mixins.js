@@ -59,7 +59,7 @@ export const modelFormData = (data, put = false) => {
 }
 
 export const formatNumber = (data) => {
-  if (data) {
+  if (data && (typeof data === 'number' || typeof data === 'string')) {
     const factor = Math.pow(10, 3)
     const truncated = Math.floor(Number(data) * factor) / factor
     return truncated.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })
