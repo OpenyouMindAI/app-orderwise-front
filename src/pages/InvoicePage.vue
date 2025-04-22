@@ -1,58 +1,103 @@
 <template>
   <div class="q-pa-md">
-    <q-table
-      title="Facturas"
-      row-key="name"
-      :columns="columns"
-      :rows="invoices"
-      :loading="visible"
-      :filter="filter"
-      :visible-columns="visibleColumns"
-      binary-state-sort
-      v-model:pagination="paginationConfig"
-      @row-click="editInvoice"
-      @request="setPagination"
-      no-data-label="Registro no encontrado"
-    >
-      <template v-slot:loading>
-        <q-inner-loading showing color="primary" />
-      </template>
-      <template v-slot:top-left>
-        <q-select
-          v-model="visibleColumns"
-          multiple
-          outlined
-          dense
-          options-dense
-          :display-value="$q.lang.table.columns"
-          emit-value
-          map-options
-          :options="columns"
-          option-value="name"
-          options-cover
-          style="min-width: 150px"
+    <div class="column q-gutter-sm">
+      <div class="full-width text-right q-gutter-sm">
+        <q-btn
+          class="text-right"
+          icon="download"
+          color="teal"
+          round
+        >
+          <q-popup-proxy>
+            <q-banner>
+              <q-list>
+                <q-item
+                  style="border-radius: 10px;"
+                  v-ripple
+                  clickable
+                  @click="downloadInvoiceExcel"
+                >
+                  <q-item-section thumbnail>
+                    <q-icon name="archive" class="q-ml-sm"/>
+                  </q-item-section>
+                  <q-item-section>
+                    Excel de facturas
+                  </q-item-section>
+                </q-item>
+                <q-item v-ripple style="border-radius: 10px;" clickable>
+                  <q-item-section thumbnail>
+                    <q-icon name="archive" class="q-ml-sm"/>
+                  </q-item-section>
+                  <q-item-section>
+                    Facturas electrónicas
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-banner>
+          </q-popup-proxy>
+        </q-btn>
+        <q-btn
+          class="text-right"
+          icon="filter_alt"
+          color="primary"
+          round
+          @click="dialogFilter = true"
         />
-      </template>
-      <template v-slot:top-right>
-        <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-      </template>
-      <template v-slot:body-cell-status="props">
-        <q-td :props="props" v-if="props.value">
-          <q-badge
-            :color="status[props.value].color"
-            :label="status[props.value].label"
-            class="q-pa-sm"
+      </div>
+      <q-table
+        title="Facturas"
+        row-key="name"
+        :columns="columns"
+        :rows="invoices"
+        :loading="visible"
+        :filter="filter"
+        :visible-columns="visibleColumns"
+        binary-state-sort
+        v-model:pagination="paginationConfig"
+        @row-click="editInvoice"
+        @request="setPagination"
+        no-data-label="Registro no encontrado"
+      >
+        <template v-slot:loading>
+          <q-inner-loading showing color="primary" />
+        </template>
+        <template v-slot:top-left>
+          <q-select
+            v-model="visibleColumns"
+            multiple
+            outlined
+            dense
+            options-dense
+            :display-value="$q.lang.table.columns"
+            emit-value
+            map-options
+            :options="columns"
+            option-value="name"
+            options-cover
+            style="min-width: 150px"
           />
-        </q-td>
-        <q-td :props="props" v-else>
-          -
-        </q-td>
-      </template>
-    </q-table>
+        </template>
+        <template v-slot:top-right>
+          <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </template>
+        <template v-slot:body-cell-status="props">
+          <q-td :props="props" v-if="props.value">
+            <q-badge
+              :color="status[props.value].color"
+              :label="status[props.value].label"
+              class="q-pa-sm"
+            />
+          </q-td>
+          <q-td :props="props" v-else>
+            -
+          </q-td>
+        </template>
+      </q-table>
+    </div>
     <q-dialog v-model="openEditInvoice" :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
@@ -323,10 +368,12 @@ import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
-import { generarFacturaPDF, printInvoice, printTicket, status } from 'src/const/invoice'
+import { printInvoice, printTicket, status } from 'src/const/invoice'
+import { getDownload } from 'src/const/services'
 export default {
   data () {
     return {
+      dialogFilter: false,
       /**
        * Loading client status
        * @type {Boolean}
@@ -529,7 +576,8 @@ export default {
        * Invoice types
        * @type {Array}
        */
-      invoiceTypes: []
+      invoiceTypes: [],
+      loadingDownload: 0
     }
   },
   computed: {
@@ -554,6 +602,33 @@ export default {
     }
   },
   methods: {
+    downloadInvoiceExcel () {
+      getDownload(
+        'excel/invoices',
+        {
+          params: {
+            dataEqualFilter: {
+              branch_office_id: this.branchOffice?.id
+            }
+          }
+        },
+        (percentCompleted) => {
+          this.loadingDownload = percentCompleted / 100
+          if (percentCompleted === 100) {
+            this.loadingDownload = 0
+          }
+        },
+        (link) => {
+          link.setAttribute(
+            'download',
+            'Invoices.xlsx'
+            // `Recibos de cobro: Desde ${proxyDate.value.from} Hasta ${proxyDate.value.to}.xlsx`
+          )
+          document.body.appendChild(link)
+          link.click()
+        }
+      )
+    },
     /**
      * Calculate taxe
      * @param {Object} taxe taxe
