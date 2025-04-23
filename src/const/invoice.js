@@ -420,7 +420,7 @@ export async function generarFacturaPDF (invoice, userSession) {
   doc.text(format(invoice?.subtotal), valueX, finalY + 5, { align: 'right' })
   // Otros tributos
   doc.text('Importe Otros Tributos: $', labelX, finalY + 10, { align: 'right' })
-  doc.text(format(invoice?.taxe_base?.toFixed(2)), valueX, finalY + 10, { align: 'right' })
+  doc.text(format(invoice?.taxe_total?.toFixed(2)), valueX, finalY + 10, { align: 'right' })
   // Total
   doc.text('Importe total: $', labelX, finalY + 15, { align: 'right' })
   doc.text(format(invoice.total), valueX, finalY + 15, { align: 'right' })
