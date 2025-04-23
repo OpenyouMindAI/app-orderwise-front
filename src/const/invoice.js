@@ -417,11 +417,10 @@ export async function generarFacturaPDF (invoice, userSession) {
 
   doc.line(10, finalY, 200, finalY)
   doc.text('Subtotal: $', labelX, finalY + 5, { align: 'right' })
-  doc.text(format(Number(invoice?.total) - Number(invoice?.total_taxe)), valueX, finalY + 5, { align: 'right' })
+  doc.text(format(invoice?.subtotal), valueX, finalY + 5, { align: 'right' })
   // Otros tributos
   doc.text('Importe Otros Tributos: $', labelX, finalY + 10, { align: 'right' })
-  doc.text(format(invoice?.total_taxe?.toFixed(2)), valueX, finalY + 10, { align: 'right' })
-
+  doc.text(format(invoice?.taxe_base?.toFixed(2)), valueX, finalY + 10, { align: 'right' })
   // Total
   doc.text('Importe total: $', labelX, finalY + 15, { align: 'right' })
   doc.text(format(invoice.total), valueX, finalY + 15, { align: 'right' })
