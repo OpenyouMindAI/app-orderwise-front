@@ -558,6 +558,7 @@ export default {
       this.detailProduct = true
       this.product = product
       this.product.amount = 1
+      this.addTemporalProducts(product, product.amount)
       if (product.product_addons && product.product_addons.length > 0) {
         this.product.product_addons = product.product_addons.map(addon => {
           addon.amount = 0
@@ -569,12 +570,16 @@ export default {
      * Add product to car
      */
     addCar () {
-      this.temporalProducts.forEach(product => this.validateProduct(product))
+      this.temporalProducts.forEach(product => {
+        console.log(product)
+        this.validateProduct(product)
+      })
       this.notifyProductCar(this.products)
       this.detailProduct = false
       this.temporalProducts = []
       this.product = {
-        amount: 1
+        amount: 1,
+        quantity: 1
       }
     },
     /**
@@ -583,7 +588,6 @@ export default {
     addTemporalProducts (data, amount) {
       const findProduct = this.findProduct(this.temporalProducts, data)
       if (findProduct) {
-        console.log(amount)
         findProduct.amount = amount
       } else {
         this.temporalProducts.push({

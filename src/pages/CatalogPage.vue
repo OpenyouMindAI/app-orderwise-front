@@ -801,7 +801,8 @@ export default {
     openProductDetails (product) {
       this.detailProduct = true
       this.product = product
-      this.product.amount = 0
+      this.product.amount = 1
+      this.addTemporalProducts(product, product.amount)
       if (product.product_addons && product.product_addons.length > 0) {
         this.product.product_addons = product.product_addons.map(addon => {
           addon.amount = 0
