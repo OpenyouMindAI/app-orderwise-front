@@ -2,7 +2,7 @@
   <q-page padding>
     <div v-if="$route.query.id">
       <span class="text-subtitle1">Factura número: </span>
-      <span class="text-subtitle2">{{ purchase?.code }}</span>
+      <span class="text-subtitle2">{{ purchase?.purchase_number }}</span>
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
@@ -1358,8 +1358,15 @@ export default {
      */
     async getInvoiceOneRequest (id) {
       try {
-        const { data } = await this.$api.get(`invoices/${id}`)
-        return data.data
+        const { data } = await this.$api.get('purchases', {
+          params: {
+            dataEqualFilter: {
+              purchase_number: id,
+              purchase_code: id
+            }
+          }
+        })
+        return data.data[0]
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
@@ -1384,7 +1391,6 @@ export default {
           return {
             ...product,
             ...product.pivot,
-            quantity: product.pivot.quantity,
             subtotal: product.pivot.price * product.pivot.quantity
           }
         })
@@ -1392,7 +1398,7 @@ export default {
         this.invoiceType = purchase.invoice_type
         this.typeOfService = purchase.type_of_service
         this.searchInvoice = false
-        this.setPayments(purchase.invoice_payments)
+        this.setPayments(purchase.purchase_payments)
         this.$router.push({
           name: 'NewPurchase',
           query: {
