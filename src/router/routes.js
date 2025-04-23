@@ -152,6 +152,24 @@ const routes = [
         name: 'Tutorial',
         meta: { requiresAuth: true },
         component: () => import('pages/TutorialPage.vue')
+      },
+      {
+        path: 'new-purchases',
+        name: 'NewPurchase',
+        meta: { requiresAuth: true },
+        component: () => import('pages/NewPurchasePage.vue')
+      },
+      {
+        path: 'providers',
+        name: 'Provider',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ProviderPage.vue')
+      },
+      {
+        path: 'purchases',
+        name: 'Purchase',
+        meta: { requiresAuth: true },
+        component: () => import('pages/PurchasePage.vue')
       }
     ]
   },
