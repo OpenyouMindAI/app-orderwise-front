@@ -76,10 +76,10 @@
                 autofocus
                 type="number"
                 label="Código"
-                @keypress.enter="getOneProduct(this.barcode)"
+                @keypress.enter="getOneProduct"
               >
                 <template v-slot:append>
-                  <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
+                  <q-btn round color="teal" icon="add_circle" size="sm" @click="modelScan = true"/>
                 </template>
               </q-input>
             </div>
@@ -150,17 +150,17 @@
                     <q-td key="name" :props="props">
                       {{ props.row.name }}
                     </q-td>
-                    <q-td key="price" :props="props">
-                      {{ formatNumber(props.row.price) }}
+                    <q-td key="cost" :props="props">
+                      {{ formatNumber(props.row.cost) }}
                       <q-popup-edit
                         v-if="userSession.is_root || userSession.is_super_admin"
-                        v-model.number="props.row.price"
+                        v-model.number="props.row.cost"
                         auto-save
                         v-slot="scope"
                         @update:model-value="calculate(props.row)"
                       >
                         <q-input
-                          label="Precio"
+                          label="Costo"
                           type="number"
                           v-model.number="scope.value"
                           autofocus
@@ -328,9 +328,6 @@
                   >
                     <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
                       {{ props.row.name }}
-                      <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
-                        Sin stock
-                      </q-badge>
                     </div>
                   </q-img>
                 </q-card>
@@ -581,7 +578,7 @@
           </q-card-section>
           <q-card-section class="q-pt-xs">
             <div class="text-subtitle1 text-center text-weight-bold">
-              Precio por unidad = {{ formatNumber(productQuantity.price) }}
+              Precio por unidad = {{ formatNumber(productQuantity.cost) }}
             </div>
           </q-card-section>
           <q-card-actions align="right">
@@ -608,7 +605,7 @@ import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatDate, formatNumber, loading, notify } from 'src/const/mixins'
+import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import { printInvoice, printTicket } from 'src/const/invoice'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 export default {
@@ -650,11 +647,6 @@ export default {
        * @type {Number}
        */
       currentAmount: 0,
-      /**
-       * Amount
-       * @type {Number}
-       */
-      amount: 0,
       /**
        * Description cashflow
        * @type {String}
@@ -894,10 +886,10 @@ export default {
           sortable: true
         },
         {
-          name: 'price',
+          name: 'cost',
           align: 'right',
-          label: 'Precio',
-          field: 'price',
+          label: 'Costo',
+          field: 'cost',
           sortable: true
         }
       ],
@@ -915,7 +907,7 @@ export default {
           field: row => row.name,
           sortable: true
         },
-        { name: 'price', align: 'right', label: 'Precio de venta', field: 'price', sortable: true },
+        { name: 'cost', align: 'right', label: 'Costo', field: 'cost', sortable: true },
         { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
         { name: 'subtotal', align: 'right', label: 'Importe', field: 'subtotal', sortable: true },
         { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
@@ -1032,9 +1024,9 @@ export default {
      */
     updateValues (inputName) {
       if (inputName === 'quantity') {
-        this.currentAmount = this.roundToFourDecimals(this.quantity * this.productQuantity.price)
+        this.currentAmount = this.roundToFourDecimals(this.quantity * this.productQuantity.cost)
       } else if (inputName === 'currentAmount') {
-        this.quantity = this.roundToFourDecimals(this.currentAmount / this.productQuantity.price)
+        this.quantity = this.roundToFourDecimals(this.currentAmount / this.productQuantity.cost)
       }
     },
     /**
@@ -1065,13 +1057,6 @@ export default {
       }
       this.pagination = data.pagination
       this.getAllProducts(params)
-    },
-    /**
-     * Set table selected
-     * @param {Object} data table selected
-     */
-    setTableSelected (data) {
-      this.tableSelected = data
     },
     /**
      * Save providers
@@ -1294,16 +1279,6 @@ export default {
         })
     },
     /**
-     * Free table
-     * @param {Object} table  table data
-     */
-    async selectInvoice (table) {
-      loading(true)
-      const invoiceOne = table.invoices[0]
-      await this.getInvoiceOne(invoiceOne.id)
-      loading(false)
-    },
-    /**
      * Get all products
      * @param {Object} params params to search
      */
@@ -1391,7 +1366,7 @@ export default {
           return {
             ...product,
             ...product.pivot,
-            subtotal: product.pivot.price * product.pivot.quantity
+            subtotal: product.pivot.cost * product.pivot.quantity
           }
         })
         this.provider = purchase.provider
@@ -1571,28 +1546,13 @@ export default {
       })
       this.totalBill = total
     },
-
-    validStockProduct (data, quantity) {
-      data.stock = data.is_bundle ? data.bundle_stock : data.normal_stock
-      if (!data.skip_stock) return data.stock >= quantity
-      return true
-    },
     /**
      * Calculate the total and subtotal
      * @param {Object} data props products
      */
     calculate (data) {
-      if (this.validStockProduct(data, data.quantity)) {
-        data.subtotal = data.price * data.quantity
-        this.calculateTotal()
-      } else {
-        notify(
-          `No hay stock suficiente para ${data.name} cantidad de stock: ${data.stock}`,
-          'negative',
-          'warning'
-        )
-        data.quantity = data.stock
-      }
+      data.subtotal = data.cost * data.quantity
+      this.calculateTotal()
     },
     /**
      * Push product
@@ -1602,17 +1562,11 @@ export default {
       this.products.push({
         id: product.id,
         name: product.name,
-        price: product.price,
         quantity: product.quantity,
         subtotal: product.subtotal,
         product_id: product.id,
         cost: product.cost,
-        barcode: product.barcode,
-        normal_stock: product.normal_stock,
-        bundle_stock: product.bundle_stock,
-        skip_stock: product.skip_stock,
-        is_bundle: product.is_bundle,
-        aliquot_type: product.aliquot_type || product?.category?.aliquot_type
+        barcode: product.barcode
       })
     },
     /**
@@ -1622,25 +1576,16 @@ export default {
     validateProduct (data, validUnitMeasurement = false) {
       const findProduct = this.products.find(product => product.id === data.id)
       const unitMeasurement = data?.unit_of_measure?.acronym === 'KG'
-
+      data.cost = data?.cost || 0
       if (validUnitMeasurement && unitMeasurement) {
         this.quantityDialog = true
-        this.currentAmount = data.price
+        this.currentAmount = data.cost
         this.productQuantity = data
-        return
-      }
-      if (!this.validStockProduct(data, this.quantity)) {
-        notify(
-          `No hay stock suficiente para ${data.name}`,
-          'negative',
-          'warning'
-        )
         return
       }
 
       if (findProduct) {
         const quantity = unitMeasurement ? this.quantity : findProduct?.quantity + 1
-        findProduct.quantity = quantity
         findProduct.quantity = quantity
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
@@ -1648,7 +1593,7 @@ export default {
         data.product_id = data.id
         data.quantity = this.quantity
         if (this.currentAmount) {
-          data.quantity = this.currentAmount / this.productQuantity.price
+          data.quantity = this.currentAmount / this.productQuantity.cost
           data.subtotal = this.currentAmount
           this.pushProduct(data)
           this.calculateTotal()
@@ -1667,7 +1612,7 @@ export default {
      * Get one product
      * @param {Number} barcode barcode product
      */
-    async getOneProduct (barcode = this.barcode) {
+    async getOneProduct () {
       this.$api.get('products', {
         params: {
           dataEqualFilter: {
