@@ -109,9 +109,9 @@
         </q-card-section>
         <q-card-section class="scroll col" style="max-height: 90vh">
           <div class="row q-col-gutter-md">
-            <div class="col-xl-7 col-lg-7 col-md-7 col-sm-7 col-xs-12 row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 row q-col-gutter-sm">
               <div class="col-6">
-                <q-input label="Código" filled v-model="purchase.code" readonly dense/>
+                <q-input label="Código" filled v-model="purchase.purchase_code" readonly dense/>
               </div>
               <div class="col-6">
                 <q-select
@@ -135,10 +135,10 @@
                 <q-input label="Moneda" filled :model-value="purchase?.coin?.name" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Fecha" filled v-model="purchase.date" readonly dense/>
+                <q-input label="Fecha" filled :model-value="formatDate(purchase.created_at)" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Hora" filled v-model="purchase.hour" readonly dense/>
+                <q-input label="Hora" filled :model-value="formatDate(purchase.created_at, 'HH:mm:ss')" readonly dense/>
               </div>
               <div class="col-12">
                 <q-input
@@ -194,7 +194,7 @@
                 </q-expansion-item>
               </div>
             </div>
-            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+            <!-- <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
@@ -237,7 +237,7 @@
                   @click="saveEdit"
                 />
               </div>
-            </div>
+            </div> -->
           </div>
         </q-card-section>
       </q-card>
@@ -261,12 +261,13 @@
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, notify } from 'src/const/mixins'
+import { formatNumber, notify, formatDate } from 'src/const/mixins'
 import { printInvoice, status, generarFacturaPDF } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
     return {
+      formatDate,
       loadingDownload: 0,
       /**
        * Value knob
