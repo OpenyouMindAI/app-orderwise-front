@@ -6,7 +6,6 @@
           class="text-right"
           icon="download"
           color="teal"
-          round
         >
           <q-popup-proxy>
             <q-banner>
@@ -40,7 +39,6 @@
           class="text-right"
           icon="filter_alt"
           color="primary"
-          round
           @click="dialogFilter = true"
         />
       </div>
@@ -360,6 +358,137 @@
         </q-form>
       </q-card>
     </q-dialog>
+    <q-dialog
+      v-model="dialogFilter"
+      position="right"
+      seamless
+      full-height
+    >
+      <q-card class="column full-height" style="width: 500px; max-width: 80vw;">
+        <q-card-section class="bg-primary text-white flex justify-between items-center">
+          <div class="text-h6">
+            Filtros
+          </div>
+          <q-btn
+            icon="close"
+            flat
+            round
+            dense
+            @click="dialogFilter = false"
+          />
+        </q-card-section>
+
+        <q-card-section class="col q-pt-sm q-gutter-md">
+          <q-input
+            v-model="filters.code"
+            label="Código"
+            filled
+            dense
+            debounce="500"
+            clearable
+          />
+          <q-select
+            dense
+            use-input
+            filled
+            label="Vendedor"
+            input-debounce="0"
+            option-value="id"
+            clearable
+            v-model="filters.seller"
+            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+            :options="filters.sellers"
+            @filter="filterSellers"
+          />
+          <q-select
+            dense
+            use-input
+            filled
+            label="Repartidor"
+            input-debounce="0"
+            option-value="id"
+            clearable
+            v-model="filters.deliveryPerson"
+            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+            :options="deliveryPersons"
+            @filter="filterDeliveryPersons"
+          />
+          <q-select
+            v-model="filters.typeOfService"
+            :options="typeOfServices"
+            style="min-width: 300px;"
+            label="Tipo de servicio"
+            option-value="id"
+            option-label="name"
+            dense
+            filled
+            multiple
+            @filter="filterServiceTypes"
+          >
+            <template v-if="filters.typeOfService.length" v-slot:append>
+              <q-icon
+                name="cancel"
+                @click.stop.prevent="typeOfService = []"
+                class="cursor-pointer"
+              />
+            </template>
+          </q-select>
+          <q-select
+            v-model="filters.invoiceType"
+            :options="invoiceTypes"
+            style="min-width: 300px;"
+            label="Tipo de factura"
+            option-value="id"
+            option-label="name"
+            dense
+            filled
+            multiple
+            @filter="filterInvoiceTypes"
+          >
+            <template v-if="filters.invoiceType.length" v-slot:append>
+              <q-icon
+                name="cancel"
+                @click.stop.prevent="filters.invoiceType = []"
+                class="cursor-pointer"
+              />
+            </template>
+          </q-select>
+          <q-select
+            v-model="filters.branchOfficeSelect"
+            :options="branchOffices"
+            style="min-width: 300px;"
+            label="Sucursales"
+            option-value="id"
+            option-label="name"
+            dense
+            filled
+            multiple
+          >
+            <template v-if="filters.branchOfficeSelect.length" v-slot:append>
+              <q-icon name="cancel" @click.stop.prevent="filters.branchOfficeSelect = []" class="cursor-pointer" />
+            </template>
+          </q-select>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            color="secondary"
+            label="Limpiar"
+            @click="clearFilter"
+          />
+          <q-btn
+            color="negative"
+            label="Cerrar"
+            @click="dialogFilter = false"
+          />
+          <q-btn
+            color="primary"
+            label="Aplicar"
+            @click="filterInvoice"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-inner-loading :showing="visibleLoading">
       <q-knob
         :step="10"
@@ -385,6 +514,19 @@ import { getDownload } from 'src/const/services'
 export default {
   data () {
     return {
+      sellers: [],
+      deliveryPersons: [],
+      categories: [],
+      branchOffices: [],
+      typeOfServices: [],
+      filters: {
+        code: '',
+        seller: null,
+        deliveryPerson: null,
+        invoiceType: [],
+        typeOfService: [],
+        branchOfficeSelect: []
+      },
       loadingDownload: 0,
       /**
        * Value knob
@@ -400,7 +542,15 @@ export default {
        * Visible columns
        * @type {Array}
        */
-      visibleColumns: ['invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
+      visibleColumns: [
+        'id',
+        'invoice_type',
+        'client',
+        'seller',
+        'created_at',
+        'status',
+        'total'
+      ],
       /**
        * Status invoice
        * @type {Object}
@@ -608,6 +758,7 @@ export default {
     ...mapState(authentication, ['branchOffice', 'userSession'])
   },
   mounted () {
+    this.getBranchOffices()
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
@@ -622,15 +773,124 @@ export default {
     }
   },
   methods: {
+    /**
+     * Filter invoice
+     */
+    filterInvoice () {
+      this.params.whereIn = {
+        ...this.params.whereIn,
+        invoice_type_id: this.filters.invoiceType.map(item => item.id),
+        type_of_service_id: this.filters.typeOfService.map(item => item.id),
+        branch_office_id: this.filters.branchOfficeSelect.map(item => item.id)
+      }
+      this.params.dataEqualFilter = {
+        ...this.params.dataEqualFilter,
+        seller_id: this.filters.seller?.id,
+        delivery_person_id: this.filters.deliveryPerson?.id,
+        id: this?.filters?.code || null
+      }
+      this.getInvoices(this.params)
+    },
+    /**
+     * Get all sellers
+     */
+    async filterSellers (value, update) {
+      try {
+        const { data } = await this.$api.get('sellers', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            }
+          }
+        })
+        update(() => {
+          this.sellers = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Clear filter
+     */
+    clearFilter () {
+      this.filters = {
+        code: null,
+        seller: null,
+        deliveryPerson: null,
+        invoiceType: [],
+        typeOfService: [],
+        branchOfficeSelect: []
+      }
+      this.filterInvoice()
+    },
+    /**
+     * Get all sellers
+     */
+    async filterServiceTypes (value, update) {
+      try {
+        const { data } = await this.$api.get('type-of-services', {
+          params: {
+            dataSearch: {
+              name: value
+            }
+          }
+        })
+        update(() => {
+          this.typeOfServices = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Get all invoices
+     */
+    async getBranchOffices () {
+      try {
+        if (this.userSession.is_root) {
+          const { data } = await this.$api.get('branch-offices')
+          this.branchOffices = data
+          this.filters.branchOfficeSelect = data
+        } else {
+          this.filters.branchOfficeSelect = [this.branchOffice]
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+
+    /**
+     * Get all sellers
+     */
+    async filterDeliveryPersons (value, update) {
+      try {
+        const { data } = await this.$api.get('delivery-persons', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            }
+          }
+        })
+        update(() => {
+          this.deliveryPersons = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Download invoice excel
+     */
     downloadInvoiceExcel () {
+      this.loadingDownload = 1
       getDownload(
         'excel/invoices',
         {
-          params: {
-            dataEqualFilter: {
-              branch_office_id: this.branchOffice?.id
-            }
-          }
+          dataEqualFilter: this.params?.dataEqualFilter,
+          whereIn: this.params?.whereIn
         },
         (percentCompleted) => {
           console.log(percentCompleted)
@@ -735,14 +995,7 @@ export default {
      */
     getInvoices (params = this.params) {
       this.visible = true
-      this.$api.get('invoices', {
-        params: {
-          ...params,
-          dataEqualFilter: {
-            branch_office_id: this.branchOffice?.id
-          }
-        }
-      })
+      this.$api.get('invoices', { params })
         .then(({ data }) => {
           this.invoices = data.data
           this.visible = false
