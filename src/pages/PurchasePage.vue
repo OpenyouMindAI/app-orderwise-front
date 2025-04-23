@@ -45,10 +45,10 @@
         />
       </div> -->
       <q-table
-        title="Facturas"
+        title="Lista de compras"
         row-key="name"
         :columns="columns"
-        :rows="invoices"
+        :rows="purchases"
         :loading="visible"
         :filter="filter"
         :visible-columns="visibleColumns"
@@ -111,7 +111,7 @@
           <div class="row q-col-gutter-md">
             <div class="col-xl-7 col-lg-7 col-md-7 col-sm-7 col-xs-12 row q-col-gutter-sm">
               <div class="col-6">
-                <q-input label="Código" filled v-model="invoice.code" readonly dense/>
+                <q-input label="Código" filled v-model="purchase.code" readonly dense/>
               </div>
               <div class="col-6">
                 <q-select
@@ -122,47 +122,29 @@
                   input-debounce="0"
                   option-label="name"
                   option-value="id"
-                  v-model="invoice.invoice_type"
+                  v-model="purchase.invoice_type"
                   :options="invoiceTypes"
                   :rules="[val => !!val || 'El campo es requerido.']"
                   @filter="filterInvoiceTypes"
                 />
               </div>
               <div class="col-6">
-                <q-input label="Cliente" filled v-model="invoice.client.name" readonly dense>
-                  <template v-slot:append>
-                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
-                  </template>
-                </q-input>
-              </div>
-              <div class="col-6" v-if="invoice.seller">
-                <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
+                <q-input label="Proveedor" filled v-model="purchase.provider.name" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Moneda" filled :model-value="invoice?.coin?.name" readonly dense/>
-              </div>
-              <div class="col-6" v-if="invoice.tables.length">
-                <q-select
-                  filled
-                  readonly
-                  dense
-                  label="Mesas"
-                  v-model="invoice.tables"
-                  option-label="name"
-                  multiple
-                />
+                <q-input label="Moneda" filled :model-value="purchase?.coin?.name" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Fecha" filled v-model="invoice.date" readonly dense/>
+                <q-input label="Fecha" filled v-model="purchase.date" readonly dense/>
               </div>
               <div class="col-6">
-                <q-input label="Hora" filled v-model="invoice.hour" readonly dense/>
+                <q-input label="Hora" filled v-model="purchase.hour" readonly dense/>
               </div>
               <div class="col-12">
                 <q-input
                   label="Descripción"
                   filled
-                  v-model="invoice.description"
+                  v-model="purchase.description"
                   readonly
                   dense
                   type="textarea"
@@ -173,7 +155,7 @@
                 <q-expansion-item
                   icon="list"
                   label="Artículos"
-                  :caption="`Total: ${formatNumber(invoice.total)}`"
+                  :caption="`Total: ${formatNumber(purchase.total)}`"
                   style="border-radius: 10px"
                   class="shadow-1 overflow-hidden"
                   default-opened
@@ -190,7 +172,7 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="product in invoice.products" :key="product.id">
+                          <tr v-for="product in purchase.products" :key="product.id">
                             <td class="text-left">
                               {{ product.barcode }}
                             </td>
@@ -199,10 +181,10 @@
                               <q-tooltip class="text-subtitle1">{{ product.name }}</q-tooltip>
                             </td>
                             <td class="text-right">
-                              {{ formatNumber(product.pivot.amount) }}
+                              {{ formatNumber(product.pivot.quantity) }}
                             </td>
                             <td class="text-right">
-                              {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
+                              {{ formatNumber(product.pivot.quantity *  product.pivot.price) }}
                             </td>
                           </tr>
                         </tbody>
@@ -216,7 +198,7 @@
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
-                  :caption="`Total: ${formatNumber(invoice.total_payments)}`"
+                  :caption="`Total: ${formatNumber(purchase.total_payments)}`"
                   style="border-radius: 10px"
                   class="shadow-1 overflow-hidden"
                   default-opened
@@ -231,7 +213,7 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="(payment) in invoice.invoice_payments" :key="payment.id">
+                          <tr v-for="(payment) in purchase.purchase_payments" :key="payment.id">
                             <td class="text-left">
                               {{ payment.payment_method.name }}
                             </td>
@@ -248,116 +230,16 @@
               <div class="q-gutter-y-xs">
                 <q-btn
                   class="full-width"
-                  icon="block"
-                  color="negative"
-                  label="Anular"
-                  :loading="cancelLoading"
-                  @click="cancelInvoice"
-                />
-                <q-btn
-                  icon="print"
-                  color="black"
-                  label="Imprimir comanda"
-                  class="full-width"
-                  @click="printCommand"
-                />
-                <q-btn
-                  class="full-width"
-                  icon="print"
-                  color="secondary"
-                  label="Imprimir Ticket"
-                  @click="print(true)"
-                />
-                <q-btn
-                  class="full-width"
-                  icon="print"
-                  color="info"
-                  v-if="invoice.billing"
-                  label="Imprimir Factura"
-                  @click="print(false)"
-                />
-                <q-btn
-                  class="full-width"
-                  icon="send"
-                  color="positive"
-                  label="Factura electrónica"
-                  v-if="invoice.invoice_type.bill && !invoice.billing && invoice.status !== 'cancelled'"
-                  @click="setInvoiceElectronic(invoice)"
-                >
-                  <q-tooltip class="text-body1" anchor="bottom middle">
-                    Generar factura electrónica
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  class="full-width"
                   icon="check_circle"
                   color="primary"
                   label="Guardar"
-                  v-if="invoice.status !== 'cancelled'"
+                  v-if="purchase.status !== 'cancelled'"
                   @click="saveEdit"
                 />
               </div>
             </div>
           </div>
         </q-card-section>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="openAddClient" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveClient">
-          <q-card-section class="row items-center q-py-sm text-white bg-primary">
-            <div class="text-h6">Agregar cliente</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
-          </q-card-section>
-          <q-card-section class="row">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.document_number"
-                label="Número de documento"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                autofocus
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="client.name"
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="client.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.phone_number"
-                label="Número de teléfono"
-                :rules="[val => !!val || 'El campo es requerido.']"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.address"
-                label="Dirección"
-                type="textarea"
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" icon="save" label="Guardar" type="submit" :loading="loadingClient"/>
-          </q-card-actions>
-        </q-form>
       </q-card>
     </q-dialog>
     <q-inner-loading :showing="visibleLoading">
@@ -379,8 +261,8 @@
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, loading, notify } from 'src/const/mixins'
-import { printInvoice, printTicket, status, generarFacturaPDF } from 'src/const/invoice'
+import { formatNumber, notify } from 'src/const/mixins'
+import { printInvoice, status, generarFacturaPDF } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
@@ -395,14 +277,14 @@ export default {
        * Loading client status
        * @type {Boolean}
        */
-      loadingClient: false,
+      loadingProvider: false,
       /**
        * Visible columns
        * @type {Array}
        */
-      visibleColumns: ['invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
+      visibleColumns: ['purchase_code', 'invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
       /**
-       * Status invoice
+       * Status purchase
        * @type {Object}
        */
       status,
@@ -415,7 +297,7 @@ export default {
        * Dialog client status
        * @type {Boolean}
        */
-      openAddClient: false,
+      openAddProvider: false,
       /**
        * Taxe translate
        * @type {Object}
@@ -424,7 +306,7 @@ export default {
         percentage: '%'
       },
       /**
-       * Client form data
+       * Provider form data
        * @type {Object}
        */
       client: {},
@@ -437,12 +319,12 @@ export default {
        * Invoices list table
        * @type {Array}
        */
-      invoices: [],
+      purchases: [],
       /**
        * Invoice data selected
        * @type {Object}
        */
-      invoice: null,
+      purchase: null,
       /**
        * Coin data
        * @type {Object}
@@ -472,9 +354,7 @@ export default {
           created_at: '',
           'coin.name': '',
           'invoiceType.name': '',
-          'client.name': '',
-          'seller.name': '',
-          'tables.name': ''
+          'provider.name': ''
         }
       },
       /**
@@ -483,12 +363,12 @@ export default {
        */
       visible: false,
       /**
-       * Open add invoice dialog
+       * Open add purchase dialog
        * @type {Boolean}
        */
       openAddInvoice: false,
       /**
-       * Open edit invoice dialog
+       * Open edit purchase dialog
        * @type {Object}
        */
       openEditInvoice: null,
@@ -498,10 +378,11 @@ export default {
        */
       columns: [
         {
-          name: 'id',
+          name: 'purchase_code',
           align: 'left',
           label: 'Código',
-          field: 'code',
+          field: 'purchase_code',
+          format: row => row?.purchase_code || '-',
           sortable: true
         },
         {
@@ -511,29 +392,16 @@ export default {
           field: row => row?.invoice_type?.name
         },
         {
-          name: 'client',
+          name: 'provider',
           align: 'left',
-          label: 'Cliente',
-          field: row => row.client?.name
-        },
-        {
-          name: 'seller',
-          align: 'left',
-          label: 'Vendedor',
-          field: row => row.seller?.name || '-'
+          label: 'Proveedor',
+          field: row => row.provider?.name
         },
         {
           name: 'coin',
           align: 'left',
           label: 'Moneda',
           field: row => row.coin?.name
-        },
-        {
-          name: 'tables',
-          align: 'left',
-          label: 'Mesas',
-          field: row => row.tables.map(table => table.name).join(','),
-          format: row => row === '' ? 'N/A' : row
         },
         {
           name: 'created_at',
@@ -602,8 +470,8 @@ export default {
       return this.loadingDownload > 0
     },
     totalBill () {
-      const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
-      return sum + this.invoice.total
+      const sum = this.purchase.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
+      return sum + this.purchase.total
     },
     ...mapState(authentication, ['branchOffice', 'userSession'])
   },
@@ -618,13 +486,13 @@ export default {
       this.searchData(data)
     },
     branchOffice (data) {
-      this.getInvoices(this.params)
+      this.getPurchases(this.params)
     }
   },
   methods: {
     downloadInvoiceExcel () {
       getDownload(
-        'excel/invoices',
+        'excel/purchases',
         {
           params: {
             dataEqualFilter: {
@@ -656,9 +524,9 @@ export default {
      */
     calculateTaxe (taxe) {
       if (taxe.pivot.type_taxe === 'percentage') {
-        taxe.total = (this.invoice.total * taxe.pivot.amount) / 100
+        taxe.total = (this.purchase.total * taxe.pivot.amount) / 100
       } else {
-        taxe.total = this.invoice.total + taxe.pivot.amount
+        taxe.total = this.purchase.total + taxe.pivot.amount
       }
       return taxe.total
     },
@@ -689,25 +557,17 @@ export default {
         })
     },
     /**
-     * Print invoice
-     * @param {Object} data invoice saved
+     * Print purchase
+     * @param {Object} data purchase saved
      */
     async print (ticket) {
       let doc = null
-      if (!ticket && this.invoice.billing) {
-        doc = await generarFacturaPDF(this.invoice, this.userSession)
+      if (!ticket && this.purchase.billing) {
+        doc = await generarFacturaPDF(this.purchase, this.userSession)
       } else if (ticket) {
-        doc = await printInvoice(this.invoice, this.userSession)
+        doc = await printInvoice(this.purchase, this.userSession)
       }
       console.log(doc)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
-    },
-    /**
-     * Print command
-     */
-    async printCommand () {
-      const doc = await printTicket(this.invoice, this.userSession)
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')
     },
@@ -728,14 +588,14 @@ export default {
         this.params.dataSearch[dataSearch] = data
       }
       this.params.page = 1
-      this.getInvoices(this.params)
+      this.getPurchases(this.params)
     },
     /**
-     * Get all invoices
+     * Get all purchases
      */
-    getInvoices (params = this.params) {
+    getPurchases (params = this.params) {
       this.visible = true
-      this.$api.get('invoices', {
+      this.$api.get('purchases', {
         params: {
           ...params,
           dataEqualFilter: {
@@ -744,7 +604,7 @@ export default {
         }
       })
         .then(({ data }) => {
-          this.invoices = data.data
+          this.purchases = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
         })
@@ -767,19 +627,19 @@ export default {
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
       this.params.perPage = data.pagination.rowsPerPage
       this.paginationConfig = data.pagination
-      this.getInvoices(this.params)
+      this.getPurchases(this.params)
     },
     /**
-     * Save invoices
+     * Save purchases
      */
     saveInvoice () {
       this.visible = true
-      this.$api.post('invoices', this.invoice)
+      this.$api.post('purchases', this.purchase)
         .then(({ data }) => {
-          this.getInvoices()
+          this.getPurchases()
           this.openAddInvoice = false
           this.visible = false
-          this.invoice = {}
+          this.purchase = {}
           Notify.create({
             message: 'Factura creada exitosamente',
             icon: 'check_circle',
@@ -796,34 +656,14 @@ export default {
         })
     },
     /**
-     * Set invoice electronic
-     * @param {Object} invoice invoice
-     */
-    async setInvoiceElectronic (invoice) {
-      try {
-        loading(true)
-        const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
-        if (data.electronic_invoice?.fields?.error) {
-          notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
-        } else {
-          this.invoice = data
-          notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')
-        }
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    /**
-     * View invoice data
+     * View purchase data
      * @param {Object} event event
      * @param {Object} row row
      * @param {Number} index index
      */
     editInvoice (event, row, index) {
       this.openEditInvoice = true
-      this.invoice = row
+      this.purchase = row
     },
     /**
      * Model product
@@ -841,33 +681,33 @@ export default {
       return data
     },
     /**
-     * Save clients
+     * Save providers
      */
-    saveClient () {
-      this.loadingClient = true
-      this.$api.put(`clients/${this.invoice.client.id}`, this.client)
+    saveProvider () {
+      this.loadingProvider = true
+      this.$api.put(`providers/${this.purchase.client.id}`, this.client)
         .then(({ data }) => {
-          this.openAddClient = false
-          this.loadingClient = false
-          this.invoice.client = data
-          notify('Cliente guardado exitosamente', 'positive', 'check_circle')
+          this.openAddProvider = false
+          this.loadingProvider = false
+          this.purchase.client = data
+          notify('Proveedor guardado exitosamente', 'positive', 'check_circle')
         })
         .catch(err => {
-          this.loadingClient = false
+          this.loadingProvider = false
           notify(err.message, 'negative', 'warning')
         })
     },
     /**
-     * Edit invoice
+     * Edit purchase
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`invoices/${this.invoice.id}`, this.modelData(this.invoice))
+      this.$api.put(`purchases/${this.purchase.id}`, this.modelData(this.purchase))
         .then(({ data }) => {
-          this.getInvoices()
+          this.getPurchases()
           this.openEditInvoice = false
           this.visible = false
-          this.invoice = null
+          this.purchase = null
           Notify.create({
             message: 'Factura editada exitosamente',
             icon: 'check_circle',
@@ -884,16 +724,16 @@ export default {
         })
     },
     /**
-     * Delete invoice
+     * Delete purchase
      */
     deleteInvoice () {
       this.visible = true
-      this.$api.delete(`invoices/${this.invoice.id}`)
+      this.$api.delete(`purchases/${this.purchase.id}`)
         .then(({ data }) => {
-          this.getInvoices()
+          this.getPurchases()
           this.openEditInvoice = false
           this.visible = false
-          this.invoice = null
+          this.purchase = null
           Notify.create({
             message: 'Factura eliminada exitosamente',
             icon: 'check_circle',
@@ -911,14 +751,14 @@ export default {
     },
     /**
      * Change status
-     * @param {Object} data invoice
+     * @param {Object} data purchase
      * @param {Number} index index status
      */
     async cancelInvoice  () {
       try {
         this.cancelLoading = true
-        await this.$api.put(`invoice-status-command/${this.invoice.id}`, { status: 'cancelled' })
-        this.getInvoices()
+        await this.$api.put(`purchase-status-command/${this.purchase.id}`, { status: 'cancelled' })
+        this.getPurchases()
         notify('Factura anulada exitosamente', 'positive', 'check_circle')
         this.openEditInvoice = false
       } catch (error) {

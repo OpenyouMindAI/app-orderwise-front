@@ -2,31 +2,40 @@
   <q-page padding>
     <div v-if="$route.query.id">
       <span class="text-subtitle1">Factura número: </span>
-      <span class="text-subtitle2">{{ invoice?.code }}</span>
+      <span class="text-subtitle2">{{ purchase?.code }}</span>
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
+            <q-input
+              filled
+              dense
+              v-model="purchaseCode"
+              autofocus
+              label="Numero de factura"
+            />
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
             <q-select
               use-input
               filled
               dense
-              label="Cliente"
+              label="Proveedor"
               input-debounce="0"
               option-value="id"
-              v-model="client"
+              v-model="provider"
               :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-              :options="clients"
+              :options="providers"
               :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterClients"
+              @filter="filterProviders"
             >
               <template v-slot:append>
-                <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+                <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddProvider = true)" size="sm"/>
               </template>
             </q-select>
           </div>
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
             <q-select
               use-input
               filled
@@ -41,7 +50,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
             <q-select
               use-input
               filled
@@ -77,25 +86,6 @@
             <div class="col-xl-6 col-lg-6 col-md-7 col-sm-7 col-xs-12 flex q-gutter-xs">
               <q-btn
                 size="sm"
-                color="primary"
-                icon="table_restaurant"
-                :loading="loadingLivingRoom"
-                @click="dialogTable = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F6
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Seleccionar mesas
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                size="sm"
                 icon="save"
                 color="positive"
                 :disable="products.length <= 0"
@@ -129,24 +119,6 @@
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
                   Buscar factura
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                size="sm"
-                icon="payments"
-                color="info"
-                @click="cashflow = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F7
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Flujo de dinero
                 </q-tooltip>
               </q-btn>
               <q-btn
@@ -225,14 +197,6 @@
             </div>
             <div class="col-12">
               <q-list dense separator>
-                <q-item v-if="tableSelected.length">
-                  <q-item-section>
-                    Mesas
-                  </q-item-section>
-                  <q-item-section side>
-                    {{ tableSelected.length }}
-                  </q-item-section>
-                </q-item>
                 <q-item>
                   <q-item-section>
                     Op Gravada
@@ -272,12 +236,12 @@
               />
               <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
-              <div class="flex q-mt-sm" v-if="invoice" style="gap: 15px;">
+              <!-- <div class="flex q-mt-sm" v-if="purchase" style="gap: 15px;">
                 <q-btn
                   color="primary"
                   icon="print"
                   label="Imprimir factura"
-                  @click="() => { invoicePrinter = true; printBill(invoice) }"
+                  @click="() => { invoicePrinter = true; printBill(purchase) }"
                 >
                   <q-badge
                     color="negative"
@@ -295,7 +259,7 @@
                   color="teal"
                   icon="receipt"
                   label="Imprimir ticket"
-                  @click="() => { invoicePrinter = false; printBill(invoice) }"
+                  @click="() => { invoicePrinter = false; printBill(purchase) }"
                 >
                   <q-badge
                     color="negative"
@@ -309,7 +273,7 @@
                     Imprimir ticket
                   </q-tooltip>
                 </q-btn>
-              </div>
+              </div> -->
             </div>
           </div>
         </div>
@@ -405,7 +369,6 @@
           </div>
           <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-xs row">
             <div class="col-12">
-              <q-toggle v-if="tableSelected.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
               <q-markup-table>
                 <thead>
                   <tr>
@@ -477,7 +440,7 @@
           </div>
         </q-card-section>
         <q-card-actions align="center" class="q-gutter-y-sm">
-          <q-btn
+          <!-- <q-btn
             label="Guardar e imprimir factura"
             @click="savePrintInvoice"
             color="secondary"
@@ -490,9 +453,9 @@
             color="warning"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
             :loading="loadingBilling"
-          />
+          /> -->
           <q-btn
-            label="Guardar sin imprimir"
+            label="Guardar"
             @click="saveWithoutPrint"
             color="primary"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
@@ -500,22 +463,6 @@
           />
         </q-card-actions>
       </q-card>
-    </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
-      <drawer-table
-        ref="drawerTable"
-        :tablesSelected="tableSelected"
-        @update:tableSelected="setTableSelected"
-        @update:invoice="selectInvoice"
-        @update:freeTable="freeTable"
-      >
-        <template v-slot:footer>
-          <q-card-actions align="right">
-            <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
-            <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          </q-card-actions>
-        </template>
-      </drawer-table>
     </q-dialog>
     <q-dialog v-model="searchInvoice">
       <q-card style="width: 700px; max-width: 80vw;">
@@ -546,125 +493,35 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
-        <q-form @submit="saveCashflow" class="column full-height">
-          <q-card-section class="q-py-sm flex justify-between items-center bg-primary text-white">
-            <span class="text-h6">Flujo de dinero</span>
-            <q-btn flat icon="close" round size="md" v-close-popup/>
-          </q-card-section>
-          <q-card-section class="col">
-            <div class="full-width row q-gutter-y-sm">
-              <div class="col-12">
-                <q-option-group
-                  v-model="panel"
-                  inline
-                  :options="[
-                    { label: 'Entrada', value: 'debit' },
-                    { label: 'Salida', value: 'credit' }
-                  ]"
-                />
-              </div>
-              <div class="column col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-                <q-radio
-                  v-for="paymentMethod in paymentMethods"
-                  :key="paymentMethod.id"
-                  color="primary"
-                  v-model="paymentMethodCashFlow"
-                  :label="paymentMethod.name"
-                  :val="paymentMethod.id"
-                />
-              </div>
-              <div class="col-xl-8 col-lg-8 col-md-8 col-sm-12 col-xs-12 q-gutter-sm">
-                <q-input
-                  name="amount"
-                  autocomplete="amount"
-                  v-model="amount"
-                  color="primary"
-                  label="Monto"
-                  filled
-                  clearable
-                  type="amount"
-                  required
-                  autofocus
-                />
-                <q-input
-                  name="description"
-                  autocomplete="description"
-                  v-model="description"
-                  color="primary"
-                  label="Descripción"
-                  filled
-                  clearable
-                  type="textarea"
-                  autogrow
-                  required
-                />
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn type="submit" color="primary" label="Guardar" icon="save" :loading="loadingCashflow"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="openAddClient" persistent>
+    <q-dialog v-model="openAddProvider" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveClient">
+        <q-form @submit="saveProvider">
           <q-card-section class="row items-center q-py-sm bg-primary text-white">
-            <div class="text-h6">Agregar cliente</div>
+            <div class="text-h6">Agregar proveedor</div>
             <q-space />
-            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
+            <q-btn icon="close" flat round dense @click="(openAddProvider = false)" />
           </q-card-section>
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                autofocus
-                label="Tipo de documento"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="clientAdded.document_type"
-                :options="documentTypes"
-                @filter="getDocumentTypes"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
-                v-model="clientAdded.document_number"
+                v-model="providerAdded.document_number"
                 label="Número de documento"
+                :rules="[val => !!val || 'El campo es requerido.']"
               />
-                <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="clientAdded.name"
+                v-model="providerAdded.name"
                 label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                label="Condición de IVA"
-                input-debounce="0"
-                option-label="name"
-                option-value="code"
-                v-model="clientAdded.condition_iva_receptor"
-                :options="conditionIvaReceptors"
-                @filter="getConditionIvaReceptor"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
-                v-model="clientAdded.email"
+                v-model="providerAdded.email"
                 type="email"
                 label="Correo"
               />
@@ -672,21 +529,21 @@
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
-                v-model="clientAdded.phone_number"
+                v-model="providerAdded.phone_number"
                 label="Número de teléfono"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
-                v-model="clientAdded.address"
+                v-model="providerAdded.address"
                 label="Dirección"
                 type="textarea"
               />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
+            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingProvider"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -740,7 +597,7 @@
     <wait-by-payment-mp
       v-if="waitingPayment"
       v-model="waitingPayment"
-      :invoice="setModelInvoice()"
+      :purchase="setModelInvoice()"
       @paymentSuccess="paymentSuccess"
     />
   </q-page>
@@ -753,19 +610,17 @@ import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, loading, notify } from 'src/const/mixins'
 import { printInvoice, printTicket } from 'src/const/invoice'
-import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
-import { apiArca } from 'src/boot/axios'
 export default {
   name: 'BillingPage',
   components: {
     StreamBarcodeReader,
-    DrawerTable,
     WaitByPaymentMp
   },
   data () {
     return {
       waitingPayment: false,
+      purchaseCode: null,
       loadingBilling: false,
       paymentMethodCashFlow: null,
       loadingSearch: false,
@@ -796,20 +651,10 @@ export default {
        */
       currentAmount: 0,
       /**
-       * Panel
-       * @type {String}
-       */
-      panel: 'debit',
-      /**
        * Amount
        * @type {Number}
        */
       amount: 0,
-      /**
-       * Loading cashflow
-       * @type {Boolean}
-       */
-      loadingCashflow: false,
       /**
        * Description cashflow
        * @type {String}
@@ -821,11 +666,6 @@ export default {
        */
       invoiceDescription: '',
       /**
-       * Cashflow dialog
-       * @type {Boolean}
-       */
-      cashflow: false,
-      /**
        * Delivery date
        * @type {String}
        */
@@ -836,7 +676,7 @@ export default {
        */
       formatNumber,
       /**
-       * Search invoice
+       * Search purchase
        * @type {Boolean}
        */
       searchInvoice: false,
@@ -846,25 +686,25 @@ export default {
        */
       search: '',
       /**
-       * Loading save client
+       * Loading save provider
        * @type {Boolean}
        */
-      loadingClient: false,
+      loadingProvider: false,
       /**
-       * Open add client
+       * Open add provider
        * @type {Boolean}
        */
-      openAddClient: false,
+      openAddProvider: false,
       /**
        * Client added data form
        * @type {Object}
        */
-      clientAdded: {},
+      providerAdded: {},
       /**
        * Invoice data
        * @type {Object}
        */
-      invoice: null,
+      purchase: null,
       /**
        * Status table
        * @type {Object}
@@ -932,22 +772,12 @@ export default {
        * Clients
        * @type {Array}
        */
-      clients: [],
+      providers: [],
       /**
        * Client to billing
        * @type {Object}
        */
-      client: null,
-      /**
-       * Table selected
-       * @type {Array}
-       */
-      tableSelected: [],
-      /**
-       * Dialog table
-       * @type {Boolean}
-       */
-      dialogTable: false,
+      provider: null,
       /**
        * Exchange
        * @type {Boolean}
@@ -989,11 +819,6 @@ export default {
        * @type {String}
        */
       barcode: null,
-      /**
-       * Table close
-       * @type {Boolean}
-       */
-      tableClose: false,
       /**
        * Without payment
        * @type {Array}
@@ -1162,14 +987,6 @@ export default {
       filter: undefined
     })
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'F6') {
-        e.preventDefault()
-        this.dialogTable = !this.dialogTable
-      }
-      if (e.key === 'F7') {
-        e.preventDefault()
-        this.cashflow = !this.cashflow
-      }
       if (e.key === 'F8') {
         e.preventDefault()
         if (this.products.length > 0) {
@@ -1184,16 +1001,16 @@ export default {
       }
       if (e.key === 'F9') {
         e.preventDefault()
-        if (this.invoice) {
+        if (this.purchase) {
           this.invoicePrinter = true
-          this.printBill(this.invoice)
+          this.printBill(this.purchase)
         }
       }
 
       if (e.key === 'F4') {
-        if (this.invoice) {
+        if (this.purchase) {
           e.preventDefault()
-          this.printBill(this.invoice)
+          this.printBill(this.purchase)
         }
       }
     })
@@ -1209,50 +1026,6 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
-    /**
-     * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
-     */
-    async getConditionIvaReceptor (value, update) {
-      try {
-        const { data } = await apiArca.get('metadata/condition-iva-receptors', {
-          params: {
-            user: {
-              name: this.userSession.name,
-              email: this.userSession.email
-            }
-          }
-        })
-        update(() => {
-          this.conditionIvaReceptors = data
-        })
-      } catch (err) {
-        notify('A ocurrido un error con la conexión con el ARCA', 'negative', 'warning')
-      }
-    },
-    /**
-     * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
-     */
-    async getDocumentTypes (value, update) {
-      try {
-        const { data } = await apiArca.get('metadata/document-types', {
-          params: {
-            user: {
-              name: this.userSession.name,
-              email: this.userSession.email
-            }
-          }
-        })
-        update(() => {
-          this.documentTypes = data
-        })
-      } catch (err) {
-        notify('A ocurrido un error con la conexión con el ARCA', 'negative', 'warning')
-      }
-    },
     /**
      * Update values
      * @param {String} inputName input name
@@ -1301,60 +1074,24 @@ export default {
       this.tableSelected = data
     },
     /**
-     * Save cashflow
+     * Save providers
      */
-    async saveCashflow () {
-      try {
-        if (!this.paymentMethodCashFlow) {
-          notify('Debe seleccionar un método de pago', 'negative', 'warning')
-          return
-        }
-        this.loadingCashflow = true
-        await this.$api.post('cashflow', {
-          description: this.description,
-          amount: this.amount,
-          branch_office_id: this.branchOffice?.id,
-          type_cashflow: this.panel,
-          payment_method_id: this.paymentMethodCashFlow
-        })
-        this.$q.notify({
-          message: 'Entrada/Salida guardada',
-          icon: 'check_circle',
-          color: 'positive'
-        })
-        this.cashflow = false
-        this.amount = 0
-        this.description = ''
-        this.panel = 'debit'
-      } catch (error) {
-        this.$q.notify({
-          message: error.message,
-          icon: 'warning',
-          color: 'negative'
-        })
-      } finally {
-        this.loadingCashflow = false
-      }
-    },
-    /**
-     * Save clients
-     */
-    saveClient () {
-      this.loadingClient = true
-      this.$api.post('clients', this.clientAdded)
+    saveProvider () {
+      this.loadingProvider = true
+      this.$api.post('providers', this.providerAdded)
         .then(({ data }) => {
-          this.openAddClient = false
-          this.clientAdded = {}
-          this.client = data
-          this.loadingClient = false
+          this.openAddProvider = false
+          this.providerAdded = {}
+          this.provider = data
+          this.loadingProvider = false
           Notify.create({
-            message: 'Cliente creado exitosamente',
+            message: 'Proveedor creado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
         })
         .catch(err => {
-          this.loadingClient = false
+          this.loadingProvider = false
           Notify.create({
             message: err.message,
             icon: 'warning',
@@ -1532,8 +1269,8 @@ export default {
      * @param {String} value user Session Value filter
      * @param {Callback} update update options
      */
-    filterClients (value, update) {
-      this.$api.get('clients', {
+    filterProviders (value, update) {
+      this.$api.get('providers', {
         params: {
           sortBy: 'id',
           sortOrder: 'desc',
@@ -1545,7 +1282,7 @@ export default {
       })
         .then(({ data }) => {
           update(() => {
-            this.clients = data
+            this.providers = data
           })
         })
         .catch(err => {
@@ -1564,47 +1301,7 @@ export default {
       loading(true)
       const invoiceOne = table.invoices[0]
       await this.getInvoiceOne(invoiceOne.id)
-      this.dialogTable = false
       loading(false)
-    },
-    /**
-     * Free table
-     * @param {Object} table  table data
-     */
-    async freeTable (table) {
-      try {
-        await this.selectInvoice(table)
-        this.tableClose = true
-        setTimeout(() => {
-          this.dialogPayment = true
-        }, 200)
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Get all tables
-     */
-    getTables (data) {
-      this.$api.get('tables', {
-        params: {
-          dataEqualFilter: {
-            living_room_id: data.id
-          },
-          sortBy: 'id',
-          sortOrder: 'desc'
-        }
-      })
-        .then(({ data }) => {
-          this.tables = data
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
     },
     /**
      * Get all products
@@ -1640,7 +1337,7 @@ export default {
     },
     /**
      * Set payments
-     * @param {Array} invoicePayments invoice payments
+     * @param {Array} invoicePayments purchase payments
      */
     setPayments (invoicePayments) {
       invoicePayments?.forEach(payment => {
@@ -1655,8 +1352,8 @@ export default {
       })
     },
     /**
-     * Get invoice one request
-     * @param {Number} id invoice id
+     * Get purchase one request
+     * @param {Number} id purchase id
      * @returns {Object}
      */
     async getInvoiceOneRequest (id) {
@@ -1668,43 +1365,42 @@ export default {
       }
     },
     /**
-     * Get invoice one
-     * @param {Number} id invoice id
+     * Get purchase one
+     * @param {Number} id purchase id
      */
     async getInvoiceOne (data) {
       this.loadingSearch = true
-      const invoice = await this.getInvoiceOneRequest(data)
-      if (invoice) {
-        if (invoice.branch_office_id !== this.branchOffice.id) {
+      const purchase = await this.getInvoiceOneRequest(data)
+      if (purchase) {
+        if (purchase.branch_office_id !== this.branchOffice.id) {
           notify('Esta factura no pertenece a esta sucursal', 'negative', 'warning')
           this.$router.push({ name: 'Billing' })
           this.loadingSearch = false
           return
         }
         this.loadingSearch = false
-        this.invoice = invoice
-        this.products = invoice.products.map(product => {
+        this.purchase = purchase
+        this.products = purchase.products.map(product => {
           return {
             ...product,
             ...product.pivot,
-            quantity: product.pivot.amount,
-            subtotal: product.pivot.price * product.pivot.amount
+            quantity: product.pivot.quantity,
+            subtotal: product.pivot.price * product.pivot.quantity
           }
         })
-        this.client = invoice.client
-        this.invoiceType = invoice.invoice_type
-        this.typeOfService = invoice.type_of_service
-        this.tableSelected = invoice.tables.map(table => table.id)
+        this.provider = purchase.provider
+        this.invoiceType = purchase.invoice_type
+        this.typeOfService = purchase.type_of_service
         this.searchInvoice = false
-        this.setPayments(invoice.invoice_payments)
+        this.setPayments(purchase.invoice_payments)
         this.$router.push({
-          name: 'Billing',
+          name: 'NewPurchase',
           query: {
-            id: invoice.id
+            id: purchase.id
           }
         })
-        this.invoiceDescription = invoice.description
-        this.deliveryDate = invoice.delivery_date
+        this.invoiceDescription = purchase.description
+        this.deliveryDate = purchase.delivery_date
         this.calculateTotal()
         this.search = ''
       } else {
@@ -1712,36 +1408,33 @@ export default {
       }
     },
     /**
-     * Clear invoice
+     * Clear purchase
      */
     clear () {
       this.payments = []
-      this.products = []
-      this.tableSelected = []
       this.products = []
       this.invoiceDescription = ''
       this.deliveryDate = formatDate(Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
       this.withoutPrint = false
       this.invoicePrinter = false
-      this.tableClose = false
       this.calculateTotal()
-      this.$router.push({ name: 'Billing' })
+      this.$router.push({ name: 'NewPurchase' })
       setTimeout(() => {
         this.$refs.saveBill.resetValidation()
         this.getLocalStorage()
-        this.invoice = null
+        this.purchase = null
       }, 100)
     },
     /**
-     * Print invoice
-     * @param {Object} data invoice saved
+     * Print purchase
+     * @param {Object} data purchase saved
      */
     async printBill (data) {
       let doc = null
-      const invoice = await this.getInvoiceOneRequest(data.id)
+      const purchase = await this.getInvoiceOneRequest(data.id)
 
-      if (!invoice) {
+      if (!purchase) {
         notify('Error al obtener la factura', 'negative', 'warning')
         return
       }
@@ -1753,9 +1446,9 @@ export default {
       }
 
       if (this.invoicePrinter) {
-        doc = await printInvoice(invoice, this.userSession)
+        doc = await printInvoice(purchase, this.userSession)
       } else {
-        doc = await printTicket(invoice, this.userSession)
+        doc = await printTicket(purchase, this.userSession)
       }
 
       const pdfUrl = doc.output('bloburl')
@@ -1763,16 +1456,14 @@ export default {
       this.clear()
     },
     /**
-     * Set invoice model
+     * Set purchase model
      * @returns {Object}
      */
     setModelInvoice () {
       return {
-        ...this.invoice,
-        tableClose: this.tableClose,
-        title: this.invoiceType?.name,
-        client_id: this.client?.id,
-        seller_id: this.userSession.id,
+        ...this.purchase,
+        purchase_code: this.purchaseCode,
+        provider_id: this.provider?.id,
         coin_id: this.coin.id,
         description: this.invoiceDescription,
         type_of_service_id: this.typeOfService.id,
@@ -1782,11 +1473,8 @@ export default {
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         products: this.products,
-        status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
-        payments: this.payments.filter(payment => payment.amount > 0),
-        total_amount: this.totalBill,
-        tables: this.tableSelected,
-        electronic_invoice: this.invoiceType?.bill
+        status: this.purchase?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        payments: this.payments.filter(payment => payment.amount > 0)
       }
     },
     /**
@@ -1822,15 +1510,14 @@ export default {
       try {
         this.loadingBilling = true
         const params = this.setParamsBill()
-        let res = null
         if (!params) return
 
         if (this.$route.query.id) {
-          res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
+          await this.$api.put(`purchases/${this.$route.query.id}`, params)
         } else {
-          res = await this.$api.post('invoices', params)
+          await this.$api.post('purchases', params)
         }
-        this.printBill(res.data.data)
+        this.clear()
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
         this.setPagination({
           pagination: this.pagination,
@@ -1847,7 +1534,7 @@ export default {
      */
     getLocalStorage () {
       const { company_session: companySession } = this.userSession
-      this.client = companySession?.company_config?.client
+      this.provider = companySession?.company_config?.provider
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
@@ -1862,7 +1549,7 @@ export default {
       this.calculateTotal()
     },
     /**
-     * Delete invoice payment
+     * Delete purchase payment
      * @param {Number} index value index payments
      */
     deletePayment (index) {
@@ -1879,9 +1566,9 @@ export default {
       this.totalBill = total
     },
 
-    validStockProduct (data, amount) {
+    validStockProduct (data, quantity) {
       data.stock = data.is_bundle ? data.bundle_stock : data.normal_stock
-      if (!data.skip_stock) return data.stock >= amount
+      if (!data.skip_stock) return data.stock >= quantity
       return true
     },
     /**
@@ -1890,7 +1577,6 @@ export default {
      */
     calculate (data) {
       if (this.validStockProduct(data, data.quantity)) {
-        data.amount = data.quantity
         data.subtotal = data.price * data.quantity
         this.calculateTotal()
       } else {
@@ -1899,8 +1585,6 @@ export default {
           'negative',
           'warning'
         )
-
-        data.amount = data.stock
         data.quantity = data.stock
       }
     },
@@ -1913,7 +1597,6 @@ export default {
         id: product.id,
         name: product.name,
         price: product.price,
-        amount: product.quantity,
         quantity: product.quantity,
         subtotal: product.subtotal,
         product_id: product.id,
@@ -1952,19 +1635,19 @@ export default {
       if (findProduct) {
         const quantity = unitMeasurement ? this.quantity : findProduct?.quantity + 1
         findProduct.quantity = quantity
-        findProduct.amount = quantity
+        findProduct.quantity = quantity
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
         data.product_id = data.id
         data.quantity = this.quantity
         if (this.currentAmount) {
-          data.amount = this.currentAmount / this.productQuantity.price
+          data.quantity = this.currentAmount / this.productQuantity.price
           data.subtotal = this.currentAmount
           this.pushProduct(data)
           this.calculateTotal()
         } else {
-          data.amount = this.quantity
+          data.quantity = this.quantity
           this.calculate(data)
           this.pushProduct(data)
           this.calculateTotal()
