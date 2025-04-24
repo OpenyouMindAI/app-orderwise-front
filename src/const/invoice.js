@@ -130,7 +130,7 @@ export const printTicket = (data, userSession) => {
     lines.forEach((linea, index) => {
       if (index === 0) {
         doc.text(linea, 5, y)
-        doc.text(`${product.pivot.amount}`, 68, y)
+        doc.text(formatNumber(product.pivot.amount), 68, y)
       } else {
         doc.text(linea, 5, y)
       }
