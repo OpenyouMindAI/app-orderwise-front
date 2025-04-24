@@ -7,16 +7,9 @@
           style="max-height: 150px; max-width: 200px;"
         />
       </div>
-      <div class="row text-center full-width">
-        <!-- <div class="col-3">
-          <q-img :src="company?.url" style="max-height: 60px; max-width: 70px;" />
-        </div> -->
-        <div>
-          <span class="text-h6 text-center">
-            {{ company?.name }}
-          </span>
-        </div>
-      </div>
+      <span class="text-h6 text-center">
+        {{ company?.name }}
+      </span>
     </div>
     <div style="max-width: 600px;" class="row q-col-gutter-y-sm q-mt-md" v-if="tab === 'menu'">
       <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6">
@@ -252,9 +245,17 @@
               <span class="text-body2 text-uppercase text-bold">
                 {{ product?.name }}
               </span>
-              <span class="text-body2">
+              <span class="text-body2 q-mt-md">
                 $ {{ formatNumber(product?.price) }}
               </span>
+            </div>
+            <div v-if="product.description">
+              <q-input
+                type="textarea"
+                v-model="product.description"
+                readonly
+                autogrow
+              />
             </div>
             <div class="flex justify-between items-center q-mt-sm">
               <q-btn
