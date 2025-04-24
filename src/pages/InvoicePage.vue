@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-md">
     <div class="column q-gutter-sm">
-      <!-- <div class="full-width text-right q-gutter-sm">
+      <div class="full-width text-right q-gutter-sm">
         <q-btn
           class="text-right"
           icon="download"
@@ -41,7 +41,7 @@
           color="primary"
           @click="dialogFilter = true"
         />
-      </div> -->
+      </div>
       <q-table
         title="Facturas"
         row-key="name"
