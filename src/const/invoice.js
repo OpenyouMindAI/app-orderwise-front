@@ -130,12 +130,19 @@ export const printTicket = (data, userSession) => {
     lines.forEach((linea, index) => {
       if (index === 0) {
         doc.text(linea, 5, y)
-        doc.text(`${product.pivot.amount}`, 68, y)
+        doc.text(formatNumber(product.pivot.amount), 68, y)
       } else {
         doc.text(linea, 5, y)
       }
       y += 5
     })
+    if (product.pivot.observation) {
+      const observationLines = doc.splitTextToSize(`Observación: ${product.pivot.observation}`, maxWidth)
+      observationLines.forEach((linea) => {
+        doc.text(linea, 5, y)
+        y += 5
+      })
+    }
   })
 
   doc.text('--------------------------------', 5, y)
@@ -192,7 +199,11 @@ export const printInvoice = async (data, userSession) => {
     doc.text(`Código: ${fields.voucher_type.Id}`, centrarTexto(`Código: ${fields.voucher_type.Id}`, true), y)
     y += 7
   }
-  doc.text(`NRO: ${data.code}`, 5, y)
+  if (!data.billing) {
+    doc.text(`NRO: ${data.code}`, 5, y)
+  } else {
+    doc.text(`NRO: ${data?.electronic_invoice?.fields?.cbte_hasta}`, 5, y)
+  }
   y += 4
   doc.text(`CLIENTE: ${data?.client?.name} ${data?.client?.last_name || ''}`, 5, y)
   y += 4
@@ -413,11 +424,10 @@ export async function generarFacturaPDF (invoice, userSession) {
 
   doc.line(10, finalY, 200, finalY)
   doc.text('Subtotal: $', labelX, finalY + 5, { align: 'right' })
-  doc.text(format(Number(invoice?.total) - Number(invoice?.total_taxe)), valueX, finalY + 5, { align: 'right' })
+  doc.text(format(invoice?.subtotal), valueX, finalY + 5, { align: 'right' })
   // Otros tributos
   doc.text('Importe Otros Tributos: $', labelX, finalY + 10, { align: 'right' })
-  doc.text(format(invoice?.total_taxe?.toFixed(2)), valueX, finalY + 10, { align: 'right' })
-
+  doc.text(format(invoice?.taxe_total?.toFixed(2)), valueX, finalY + 10, { align: 'right' })
   // Total
   doc.text('Importe total: $', labelX, finalY + 15, { align: 'right' })
   doc.text(format(invoice.total), valueX, finalY + 15, { align: 'right' })
@@ -449,6 +459,7 @@ export async function generarFacturaPDF (invoice, userSession) {
 
   return doc
 }
+
 const sum = (data) => {
   return data.reduce((a, b) => a + Number(b.pivot.amount), 0)
 }

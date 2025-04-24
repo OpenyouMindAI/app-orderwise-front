@@ -130,7 +130,7 @@ const filterDate = async (params) => {
     categoryData.value = data.categories_totals.map((item) => {
       return {
         name: item.category_name,
-        y: item.total_sales
+        y: Number(item.total_sales)
       }
     })
   } catch (error) {

@@ -154,13 +154,13 @@ const chartOptions = ref({
     {
       name: 'Ventas',
       type: 'column',
-      data: computed(() => salesData.value.map(item => item.total)),
+      data: computed(() => salesData.value.map(item => Number(item.total))),
       color: '#3b82f6'
     },
     {
       name: 'Tendencia',
       type: 'line',
-      data: computed(() => salesData.value.map(item => item.total)),
+      data: computed(() => salesData.value.map(item => Number(item.total))),
       color: '#ef4444',
       marker: {
         lineWidth: 2,

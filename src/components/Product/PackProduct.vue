@@ -234,9 +234,7 @@ const params = ref({
   sortBy: 'id',
   sortOrder: 'desc',
   perPage: 1,
-  dataSearch: {
-    description: ''
-  },
+  dataSearch: {},
   dataEqualFilter: defaultValue
 })
 

@@ -1,18 +1,5 @@
 <template>
-  <q-page padding>
-    <div class="full-width text-subtitle1 flex justify-between" v-if="tab !== 'orders'">
-      <div>
-        <q-chip style="padding: 17px 10px; border-radius: 50px;" class="bg-primary text-white cursor-pointer text-subtitle1" v-if="userSession && $q.screen.lt.sm">
-          {{ userSession?.name }}
-        </q-chip>
-        <q-btn  v-if="isTable" rounded style="padding: 5px 15px;" class="bg-primary text-white cursor-pointer" @click="dialogTable = true">
-          Mesa: {{ tables.map(table => table.name).join(', ') || 'Seleccionar mesa' }}
-        </q-btn>
-      </div>
-      <q-chip class="bg-secondary text-white cursor-pointer">
-        Total: {{ formatNumber(totalBill) }}
-      </q-chip>
-    </div>
+  <q-page padding :class="$q.screen.lt.sm ? 'q-pb-xl q-mb-lg' : 'items-center column'">
     <div class="relative full-width q-mt-sm" style="height: calc(100vh - 190px);" v-if="tab === 'scanner' && isTable">
       <qrcode-stream @detect="getCodeQr"/>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" class="text-center">
@@ -21,7 +8,23 @@
         </div>
       </div>
     </div>
-    <div class="row q-col-gutter-y-sm q-mt-xs" v-else-if="tab === 'menu'">
+    <div v-if="tab !== 'scanner'" class="column q-gutter-md" style="max-width: 600px;">
+      <div class="flex full-width justify-center items-center">
+        <q-img
+          :src="company?.catalog?.banner || company?.url"
+          style="max-height: 150px; max-width: 200px;"
+        />
+      </div>
+      <span class="text-h6 text-center">
+        {{ company?.name }}
+      </span>
+      <!-- <div class="text-center"> -->
+        <!-- <div class="col-3">
+          <q-img :src="company?.url" style="max-height: 60px; max-width: 70px;" />
+        </div> -->
+      <!-- </div> -->
+    </div>
+    <div style="max-width: 600px;" class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
       <div class="col-12">
         <q-input
           outlined
@@ -52,12 +55,13 @@
             :name="cat.id"
             :label="cat.name"
             :key="cat.id"
+            class="q-pa-md"
             v-for="cat in categories"
           />
         </q-tabs>
         <q-skeleton type="text" height="60px" v-else/>
       </div>
-      <div class="col-12" style="max-height: calc(100vh - 290px); overflow-y: auto;">
+      <div class="col-12" style="max-width: 600px;">
         <div v-if="loadingPage" class="row q-col-gutter-sm">
           <div
             class="col-xs-6 col-sm-4 col-md-3"
@@ -78,7 +82,7 @@
           v-else
         >
           <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-2" style="padding: 2px;">
+            <div class="col-xs-6 col-sm-4 col-md-4 col-lg-4" style="padding: 2px;">
               <q-card
                 :class="findProduct(products, props.row) && 'shadow-20'"
                 :style="`${findProduct(products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
@@ -91,13 +95,16 @@
                   style="height: 180px;"
                   spinner-color="primary"
                 >
-                  <div class="absolute-bottom text-center">
-                    <div class="text-bold text-body2 p-a-none">
+                <div class="absolute-full column items-center justify-center text-center">
+                  <div class="text-bold text-body2 p-a-none">
                       {{ props.row.name.slice(0, 20) }}
                     </div>
                     <span class="text-caption">
                       {{ formatNumber(props.row.price) }} $
                     </span>
+                    <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 7px; right: 7px;">
+                      Sin stock
+                    </q-badge>
                   </div>
                 </q-img>
               </q-card>
@@ -218,7 +225,7 @@
         </template>
       </q-table>
     </div>
-    <div v-else class="q-mt-sm">
+    <div v-else-if="tab === 'command'" class="q-mt-sm" style="max-width: 600px;">
       <q-select
         use-input
         filled
@@ -246,50 +253,58 @@
         dense
         grid
         row-key="name"
-        style="max-height: calc(100vh - 270px); overflow: auto;"
         :rows="products"
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+          <div class="column items-center q-pa-xs col-xs-12 col-sm-12 col-md-12">
             <q-card
               class="my-card q-mt-sm"
-              style="width: 100%; border-radius: 10px;"
+              style="max-width: 90vw; width: 500px; border-radius: 20px;"
             >
               <q-card-section horizontal class="full-height">
                 <q-img
                   class="col-4"
-                  style="max-height: 135px;"
+                  style="max-height: 132px;"
                   :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                 />
-                <q-card-section class="q-pa-sm column">
+                <q-card-section class="q-pa-sm column col-8">
                   <q-card-section class="q-pa-sm col">
                     <span class="text-body2 text-uppercase text-bold">
                       {{ props.row.name.slice(0, 20) }}
                     </span>
-                    <!-- <div class="flex justify-between q-col-gutter-sm">
-                      <div class="flex justify-between items-center full-width"> -->
-                        <!-- <q-icon
-                          name="info"
-                          size="sm"
-                          color="secondary"
-                          class="cursor-pointer"
-                          v-if="props.row.observation"
-                        >
-                          <q-popup-proxy>
-                            <q-banner>
-                              <q-input
-                                label="Descripción"
-                                autogrow
-                                readonly
-                                borderless
-                                :model-value="props.row.observation"
-                              />
-                            </q-banner>
-                          </q-popup-proxy>
-                        </q-icon> -->
-                      <!-- </div>
-                    </div> -->
+                    <q-badge
+                    floating
+                    rounded
+                    color="secondary"
+                  >
+                    <q-icon
+                      :name="props.row.observation ? 'edit' : 'add'"
+                      size="sm"
+                    />
+                    <q-popup-proxy>
+                      <q-card class="bg-white" style="width: 400px; max-width: 80vw;">
+                        <q-card-section class="q-py-sm text-h6 bg-primary text-white">
+                          Observación
+                        </q-card-section>
+                        <q-card-section class="text-body2">
+                          <q-input
+                            filled
+                            autofocus
+                            type="textarea"
+                            v-model="props.row.observation"
+                          />
+                        </q-card-section>
+                        <q-card-actions align="right">
+                          <q-btn
+                            color="primary"
+                            icon="check_circle"
+                            v-close-popup
+                          />
+                        </q-card-actions>
+                      </q-card>
+                    </q-popup-proxy>
+                  </q-badge>
                     <p class="text-subtitle2 text-grey">
                       $ {{ formatNumber(props.row.price) }}
                     </p>
@@ -340,33 +355,62 @@
           </div>
         </template>
       </q-table>
-      <q-page-sticky position="bottom-right" :offset="[15, 10]">
-        <q-btn
-          round
-          icon="receipt"
-          color="primary"
-          :loading="billLoading"
-          @click="saveBill"
-        />
-      </q-page-sticky>
     </div>
-    <q-dialog v-model="detailProduct" :maximized="$q.screen.lt.sm">
+    <q-page-sticky position="bottom-right" :offset="[15, 10]">
+      <q-btn
+        v-if="totalBill > 0"
+        rounded
+        stack
+        color="primary"
+        class="button-baseline"
+        :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
+        :label="formatNumber(totalBill)"
+        :loading="billLoading"
+        @click="saveBill"
+      />
+      <q-btn
+        rounded
+        stack
+        color="secondary"
+        class="q-ml-sm"
+        icon="table_bar"
+        :label="tables?.length > 0 ? tables?.map(table => table.name).join(', ') : 'Mesas'"
+        :loading="billLoading"
+        @click="dialogTable = true"
+        v-if="isTable"
+      />
+    </q-page-sticky>
+    <q-dialog v-model="detailProduct">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'}`"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
       >
-        <SlideComponent :slides="product.images" styles="height: 300px;"/>
-        <q-card-section class="column q-pb-xs">
-          <div class="flex justify-between items-center full-width">
-            <span class="text-subtitle1 text-uppercase text-bold">
-              {{ product?.name }}
-            </span>
-            <div class="flex justify-between items-center q-gutter-xs">
+        <SlideComponent :slides="product.images" styles="height: 200px;"/>
+        <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
+          <q-card-section class="column q-pb-none">
+            <div class="flex justify-between full-width">
+              <span class="text-body2 text-uppercase text-bold">
+                {{ product?.name }}
+              </span>
+              <span class="text-body2 q-mt-sm">
+                $ {{ formatNumber(product?.price) }}
+              </span>
+            </div>
+            <div v-if="product.description">
+              <q-input
+                type="textarea"
+                v-model="product.description"
+                readonly
+                autogrow
+              />
+            </div>
+            <div class="flex justify-between items-center q-mt-sm">
               <q-btn
                 icon="remove"
                 color="primary"
                 round
-                size="sm"
+                flat
+                size="lg"
                 @click="addTemporalProducts(product, product.amount -= 1)"
               />
               <q-input
@@ -382,79 +426,83 @@
                 icon="add"
                 color="primary"
                 round
-                size="sm"
+                flat
+                size="lg"
                 @click="addTemporalProducts(product, product.amount += 1)"
               />
             </div>
-          </div>
-          <span class="text-subtitle1">
-            {{ formatNumber(product?.price) }}$
-          </span>
-          <!-- <span class="text-caption q-mt-sm">
-            {{ product?.description }}
-          </span> -->
-        </q-card-section>
-        <q-card-section class="q-px-none" v-if="product.product_addons?.length > 0">
-          <div class="col-12 bg-grey-2 q-pa-sm text-dark">
-            <span class="text-subtitle2">+ Adicionales</span>
-          </div>
-        </q-card-section>
-        <q-card-section class="col q-pt-xs">
-          <div
-            class="flex justify-between full-width items-center"
-            v-for="addon in product.product_addons" :key="addon.id"
-          >
-            <div class="column">
-              <span class="text-body2 text-uppercase text-bold">
-                {{ addon.name }}
-              </span>
-              <span class="text-subtitle2 text-grey">
-                {{ formatNumber(addon.price) }}$
-              </span>
+          </q-card-section>
+          <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
+            <div class="col-12 bg-grey-2 q-pa-sm text-dark">
+              <span class="text-subtitle2">+ Adicionales</span>
             </div>
-            <div class="flex justify-between items-center q-gutter-xs">
-              <q-btn
-                icon="remove"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(addon, addon.amount -= 1)"
-              />
-              <q-input
-                borderless
-                dense
-                type="number"
-                style="width: 30px;"
-                input-class="text-center"
-                v-model.number="addon.amount"
-                @update:model-value="(value) => addTemporalProducts(product, value)"
-              />
-              <q-btn
-                icon="add"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(addon, addon.amount += 1)"
-              />
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <div
+              class="flex justify-between full-width items-center"
+              v-for="addon in product.product_addons" :key="addon.id"
+            >
+              <div class="column">
+                <span class="text-body2 text-uppercase text-bold">
+                  {{ addon.name }}
+                </span>
+                <span class="text-subtitle2 text-grey">
+                  {{ formatNumber(addon.price) }}$
+                </span>
+              </div>
+              <div class="flex justify-between items-center q-gutter-xs">
+                <q-btn
+                  icon="remove"
+                  color="primary"
+                  round
+                  flat
+                  size="sm"
+                  @click="addTemporalProducts(addon, addon.amount -= 1)"
+                />
+                <q-input
+                  borderless
+                  dense
+                  type="number"
+                  style="width: 30px;"
+                  input-class="text-center"
+                  v-model.number="addon.amount"
+                  @update:model-value="(value) => addTemporalProducts(product, value)"
+                />
+                <q-btn
+                  icon="add"
+                  color="primary"
+                  round
+                  flat
+                  size="sm"
+                  @click="addTemporalProducts(addon, addon.amount += 1)"
+                />
+              </div>
             </div>
-          </div>
+            <q-separator class="q-mt-md"/>
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <q-input
+              type="textarea"
+              label="Observación"
+              filled
+              v-model="observation"
+            />
+          </q-card-section>
         </q-card-section>
-        <!-- <q-card-section class="col q-pt-xs">
-          <q-input type="textarea" v-model="product.observation" filled label="Descripción" />
-        </q-card-section> -->
         <q-card-actions align="right">
           <q-btn
             color="negative"
             label="Cerrar"
+            icon="close"
             @click="() => {
               detailProduct = false
-              product = { amount: 1 }
-              temporalProducts = []
+              product = null
             }"
           />
           <q-btn
             color="primary"
             label="Agregar"
+            icon="add_shopping_cart"
             @click="addCar"
           />
         </q-card-actions>
@@ -731,10 +779,12 @@ export default {
     return {
       formatDate,
       status,
+      observation: null,
       coin: null,
       tableClose: true,
       loadingBilling: false,
       dialogPayment: false,
+      company: null,
       /**
        * Pagination option
        * @type {Object}
@@ -933,6 +983,7 @@ export default {
     this.isTable = this.userSession?.company_session?.company_config?.is_table
     this.client = this.userSession?.company_session?.company_config?.client
     this.coin = this.userSession?.company_session?.company_config?.coin
+    this.company = this.userSession?.company_session
     this.getCategories()
     this.setPagination({ pagination: this.invoicePagination })
     this.category = this.$route.query.category || 'all'
@@ -940,7 +991,12 @@ export default {
     this.getPaymentMethods()
   },
   watch: {
-
+    observation (data) {
+      if (typeof data === 'string') {
+        this.product.observation = data
+        this.addTemporalProducts(this.product, this.product.amount)
+      }
+    },
     /**
      * Dialog payment
      * @param {Object} data data payment
@@ -1052,6 +1108,18 @@ export default {
      */
     deletePayment (index) {
       this.payments.splice(index, 1)
+    },
+    /**
+     * Valid stock product
+     * @param {Object} data data
+     * @param {Number} amount amount
+     */
+    validStockProduct (data, amount) {
+      const stock = data.is_bundle ? data.bundle_stock : data.normal_stock
+      if (!data.skip_stock) {
+        return stock >= amount
+      }
+      return true
     },
     /**
      * Set payments
@@ -1170,6 +1238,7 @@ export default {
       this.notifyProductCar(this.products)
       this.detailProduct = false
       this.temporalProducts = []
+      this.observation = null
       this.product = {
         amount: 1
       }
@@ -1288,6 +1357,11 @@ export default {
      * Save bill and payments
      */
     async saveBill () {
+      if (this.tab !== 'command') {
+        this.setQueryParams({ tab: 'command' })
+        return
+      }
+
       if (!this.tables?.length && this.isTable) {
         notify('No se puede crear pedido sin mesa', 'negative', 'warning')
         return
@@ -1352,6 +1426,7 @@ export default {
       const findProduct = this.findProduct(this.temporalProducts, data)
       if (findProduct) {
         findProduct.amount = amount
+        findProduct.observation = data.observation
       } else {
         this.temporalProducts.push({
           ...data,
@@ -1376,9 +1451,20 @@ export default {
      */
     validateProduct (data) {
       const findProduct = this.findProduct(this.products, data)
+
+      if (!this.validStockProduct(data, 1)) {
+        notify(
+          `No hay stock suficiente para ${data.name}`,
+          'negative',
+          'warning'
+        )
+        return
+      }
+
       if (findProduct) {
         findProduct.amount += data.amount
         findProduct.product_id = findProduct.id
+        findProduct.observation = data.observation
         this.calculate(findProduct)
       } else {
         data.subtotal = 0
@@ -1554,5 +1640,20 @@ export default {
     height: 100%;
     background: transparent;
     clip-path: polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%);
+  }
+  .button-baseline {
+    background-color: rgb(253, 126, 20); /* Verde */
+    animation: titilar 2s infinite ease-in-out;
+  }
+  @keyframes titilar {
+    0% {
+      box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(253, 126, 20, 0.7);
+    }
+    100% {
+      box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+    }
   }
 </style>

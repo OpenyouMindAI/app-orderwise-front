@@ -1,0 +1,1647 @@
+<template>
+  <q-page padding>
+    <div v-if="$route.query.id">
+      <span class="text-subtitle1">Factura número: </span>
+      <span class="text-subtitle2">{{ purchase?.purchase_number }}</span>
+    </div>
+    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
+      <div class="row q-col-gutter-x-md">
+        <div class="col-12 row q-col-gutter-x-xs">
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
+            <q-input
+              filled
+              dense
+              v-model="purchaseCode"
+              autofocus
+              label="Numero de factura"
+            />
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
+            <q-select
+              use-input
+              filled
+              dense
+              label="Proveedor"
+              input-debounce="0"
+              option-value="id"
+              v-model="provider"
+              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+              :options="providers"
+              :rules="[val => !!val || 'El campo es requerido.']"
+              @filter="filterProviders"
+            >
+              <template v-slot:append>
+                <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddProvider = true)" size="sm"/>
+              </template>
+            </q-select>
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+            <q-select
+              use-input
+              filled
+              dense
+              label="Tipo de factura"
+              input-debounce="0"
+              option-label="name"
+              option-value="id"
+              v-model="invoiceType"
+              :options="invoiceTypes"
+              :rules="[val => !!val || 'El campo es requerido.']"
+              @filter="filterInvoiceTypes"
+            />
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+            <q-select
+              use-input
+              filled
+              dense
+              label="Tipo de servicio"
+              input-debounce="0"
+              option-label="name"
+              option-value="id"
+              v-model="typeOfService"
+              :options="typeOfServices"
+              :rules="[val => !!val || 'El campo es requerido.']"
+              @filter="filterTypeOfServices"
+            />
+          </div>
+        </div>
+        <div class="col-xs-12 col-sm-7 col-md-6 col-lg-5 col-xl-5 q-col-gutter-sm">
+          <div class="row q-col-gutter-sm">
+            <div class="col-xl-6 col-lg-6 col-md-5 col-sm-5 col-xs-12">
+              <q-input
+                filled
+                dense
+                v-model="barcode"
+                autofocus
+                type="number"
+                label="Código"
+                @keypress.enter="getOneProduct"
+              >
+                <template v-slot:append>
+                  <q-btn round color="teal" icon="add_circle" size="sm" @click="modelScan = true"/>
+                </template>
+              </q-input>
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-7 col-sm-7 col-xs-12 flex q-gutter-xs">
+              <q-btn
+                size="sm"
+                icon="save"
+                color="positive"
+                :disable="products.length <= 0"
+                @click="dialogPayment = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F8
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Guardar
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                size="sm"
+                icon="search"
+                color="primary"
+                @click="searchInvoice = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F10
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Buscar factura
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                size="sm"
+                icon="clear"
+                color="negative"
+                @click="clear"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Limpiar factura en curso
+                </q-tooltip>
+              </q-btn>
+            </div>
+            <div class="col-12">
+              <q-table
+                row-key="name"
+                title="Artículos"
+                dense
+                hide-pagination
+                :rows="products"
+                :columns="columns"
+                :pagination="{ rowsPerPage: 0 }"
+              >
+                <template v-slot:body="props">
+                  <q-tr :props="props">
+                    <q-td key="barcode" :props="props">
+                      {{ props.row.barcode }}
+                    </q-td>
+                    <q-td key="name" :props="props">
+                      {{ props.row.name }}
+                    </q-td>
+                    <q-td key="cost" :props="props">
+                      {{ formatNumber(props.row.cost) }}
+                      <q-popup-edit
+                        v-if="userSession.is_root || userSession.is_super_admin"
+                        v-model.number="props.row.cost"
+                        auto-save
+                        v-slot="scope"
+                        @update:model-value="calculate(props.row)"
+                      >
+                        <q-input
+                          label="Costo"
+                          type="number"
+                          v-model.number="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </q-td>
+                    <q-td key="quantity" :props="props">
+                      {{ formatNumber(props.row.quantity) }}
+                      <q-popup-edit
+                        v-model.number="props.row.quantity"
+                        auto-save
+                        v-slot="scope"
+                        @update:model-value="calculate(props.row)"
+                      >
+                        <q-input
+                          label="Cantidad"
+                          type="number"
+                          v-model.number="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </q-td>
+                    <q-td key="subtotal" :props="props">
+                      {{ formatNumber(props.row.subtotal) }}
+                    </q-td>
+                    <q-td key="actions" :props="props">
+                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
+                    </q-td>
+                  </q-tr>
+                </template>
+              </q-table>
+            </div>
+            <div class="col-12">
+              <q-list dense separator>
+                <q-item>
+                  <q-item-section>
+                    Op Gravada
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    Monto pagado
+                  </q-item-section>
+                  <q-item-section class="text-positive" side v-if="coin">
+                    {{  coin.symbol }} {{ formatNumber(totalPayment) }}
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    Por pagar
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{  coin.symbol }} {{ formatNumber(pendingPayment) }}
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+            <div class="col-12 q-gutter-xs q-mt-md">
+              <q-select
+                filled
+                dense
+                label="Moneda"
+                option-label="name"
+                option-value="id"
+                v-model="coin"
+                :options="coins"
+                @filter="getCoins"
+              />
+              <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+              <!-- <div class="flex q-mt-sm" v-if="purchase" style="gap: 15px;">
+                <q-btn
+                  color="primary"
+                  icon="print"
+                  label="Imprimir factura"
+                  @click="() => { invoicePrinter = true; printBill(purchase) }"
+                >
+                  <q-badge
+                    color="negative"
+                    align="bottom"
+                    floating
+                    v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                  >
+                    F9
+                  </q-badge>
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Imprimir factura
+                  </q-tooltip>
+                </q-btn>
+                <q-btn
+                  color="teal"
+                  icon="receipt"
+                  label="Imprimir ticket"
+                  @click="() => { invoicePrinter = false; printBill(purchase) }"
+                >
+                  <q-badge
+                    color="negative"
+                    align="bottom"
+                    floating
+                    v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                  >
+                    F4
+                  </q-badge>
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Imprimir ticket
+                  </q-tooltip>
+                </q-btn>
+              </div> -->
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-12 col-sm-5 col-md-6 col-lg-7 col-xl-7">
+          <q-table
+            v-model:pagination="pagination"
+            row-key="name"
+            dense
+            grid
+            style="max-height: calc(100vh - 190px); overflow: auto;"
+            binary-state-sort
+            :loading="loadingProducts"
+            :rows="allProducts"
+            :columns="productColumns"
+            :filter="filter"
+            no-data-label="Registro no encontrado"
+            @request="setPagination"
+          >
+            <template v-slot:top>
+              <div class="row full-width q-col-gutter-xs">
+                <div class="col-6">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    clearable
+                    label="Categorías"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="category"
+                    :options="categories"
+                    @filter="filterCategories"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
+                    <template v-slot:append>
+                      <q-icon name="search" />
+                    </template>
+                  </q-input>
+                </div>
+              </div>
+            </template>
+            <template v-slot:item="props">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-2 col-xl-2">
+                <q-card class="my-card">
+                  <q-img
+                    style="height: 150px; width: 100%"
+                    :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
+                    @click="validateProduct(props.row, true)"
+                  >
+                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
+                      {{ props.row.name }}
+                    </div>
+                  </q-img>
+                </q-card>
+              </div>
+            </template>
+            <template v-slot:loading>
+              <q-inner-loading showing color="primary" />
+            </template>
+          </q-table>
+        </div>
+      </div>
+    </q-form>
+    <q-dialog v-model="modelScan">
+      <q-card>
+        <q-card-section class="q-pb-none q-pt-xs q-px-xs bg-dark">
+          <stream-barcode-reader @debarcode="getOneProduct"/>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <span class="text-h6">Desglose de pago</span>
+          <q-btn flat icon="close" round size="md" v-close-popup/>
+        </q-card-section>
+        <q-card-section class="row q-col-gutter-md q-px-sm">
+          <div class="col-xs-12 col-sm-4 col-md-4 col-lg-3 q-gutter-xs">
+            <q-btn
+              color="secondary"
+              size="17px"
+              style="width: 100%"
+              :label="paymentMethod.name"
+              v-for="paymentMethod in paymentMethods" :key="paymentMethod.id"
+              @click="addPayment(paymentMethod)"
+            />
+          </div>
+          <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-xs row">
+            <div class="col-12">
+              <q-markup-table>
+                <thead>
+                  <tr>
+                    <th class="text-left">Método de pago</th>
+                    <th class="text-left">Referencia</th>
+                    <th class="text-right">Monto</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(payment, index) in payments" :key="payment.id">
+                    <td class="text-left">{{ payment.name }}</td>
+                    <td class="text-left">
+                      <span v-if="payment.reference"> {{ payment.reference }}</span>
+                      <span v-else>-</span>
+                      <q-popup-edit
+                        v-model="payment.reference"
+                        auto-save
+                        v-slot="scope"
+                      >
+                        <q-input
+                          v-model="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </td>
+                    <td class="text-right">
+                      {{ formatNumber(payment.amount) }}
+                      <q-popup-edit
+                        v-model.number="payment.amount"
+                        auto-save
+                        v-slot="scope"
+                      >
+                        <q-input
+                          v-model="scope.value"
+                          autofocus
+                          @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </td>
+                    <q-td class="text-center q-gutter-x-xs">
+                      <q-btn
+                        icon="delete"
+                        color="negative"
+                        rounded
+                        dense
+                        @click="deletePayment(index)"
+                        />
+                        <q-btn
+                          v-if="payment.acronym === 'MPQA'"
+                          rounded
+                          dense
+                          icon="qr_code"
+                          color="secondary"
+                          @click="waitingPayment = true"
+                        />
+                    </q-td>
+                  </tr>
+                  <tr>
+                    <th colspan="4">
+                      Restante a pagar:
+                      <span v-if="coin">{{ coin.symbol }}</span>{{ formatNumber(pendingPayment) }}
+                    </th>
+                  </tr>
+                </tbody>
+              </q-markup-table>
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="center" class="q-gutter-y-sm">
+          <!-- <q-btn
+            label="Guardar e imprimir factura"
+            @click="savePrintInvoice"
+            color="secondary"
+            :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
+          />
+          <q-btn
+            label="Guardar e imprimir comanda"
+            @click="submitBill"
+            color="warning"
+            :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
+          /> -->
+          <q-btn
+            label="Guardar"
+            @click="saveWithoutPrint"
+            color="primary"
+            :class="$q.screen.lt.sm ? 'full-width' : ''"
+            :loading="loadingBilling"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="searchInvoice">
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-card-section class="q-py-sm bg-primary text-white flex justify-between items-center">
+          <span class="text-h6">Buscar factura</span>
+          <q-btn flat icon="close" round size="md" v-close-popup/>
+        </q-card-section>
+        <q-card-section>
+          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center justify-between">
+            <div class="col-10">
+              <q-input
+                name="search"
+                autocomplete="search"
+                v-model="search"
+                color="primary"
+                label="Número de factura"
+                filled
+                clearable
+                type="search"
+                required
+                autofocus
+              />
+            </div>
+            <div class="col-auto text-right">
+              <q-btn type="submit" color="primary" icon="search" size="lg" :loading="loadingSearch"/>
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="openAddProvider" persistent>
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-form @submit="saveProvider">
+          <q-card-section class="row items-center q-py-sm bg-primary text-white">
+            <div class="text-h6">Agregar proveedor</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="(openAddProvider = false)" />
+          </q-card-section>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="providerAdded.document_number"
+                label="Número de documento"
+                :rules="[val => !!val || 'El campo es requerido.']"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="providerAdded.name"
+                label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="providerAdded.email"
+                type="email"
+                label="Correo"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="providerAdded.phone_number"
+                label="Número de teléfono"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="providerAdded.address"
+                label="Dirección"
+                type="textarea"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary">
+            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingProvider"/>
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+    <q-dialog v-model="quantityDialog">
+      <q-card style="width: 600px; max-width: 80vw;">
+        <q-form @submit="validateProduct(productQuantity)">
+          <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+            <span class="text-h6">Cantidad del producto</span>
+            <q-btn icon="close" flat round dense @click="quantityDialog = false" />
+          </q-card-section>
+          <q-card-section class="q-pb-xs">
+            <div class="text-subtitle1 text-center">
+              {{  productQuantity.name }} x {{ productQuantity.unit_of_measure.acronym }}
+            </div>
+          </q-card-section>
+          <q-card-section class="flex q-col-gutter-sm justify-between items-center">
+            <q-input
+              filled
+              v-model.number="quantity"
+              autofocus
+              label="Cantidad"
+              type="number"
+              style="width: 50%;"
+              @update:model-value="updateValues('quantity')"
+            />
+            <q-input
+              filled
+              v-model.number="currentAmount"
+              label="Importe"
+              type="number"
+              style="width: 50%;"
+              @update:model-value="updateValues('currentAmount')"
+            />
+          </q-card-section>
+          <q-card-section class="q-pt-xs">
+            <div class="text-subtitle1 text-center text-weight-bold">
+              Precio por unidad = {{ formatNumber(productQuantity.cost) }}
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn
+              label="Guardar"
+              color="primary"
+              type="submit"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+    <wait-by-payment-mp
+      v-if="waitingPayment"
+      v-model="waitingPayment"
+      :purchase="setModelInvoice()"
+      @paymentSuccess="paymentSuccess"
+    />
+  </q-page>
+</template>
+
+<script>
+import { StreamBarcodeReader } from 'vue-barcode-reader'
+import { Notify } from 'quasar'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
+import { formatDate, formatNumber, notify } from 'src/const/mixins'
+import { printInvoice, printTicket } from 'src/const/invoice'
+import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
+export default {
+  name: 'BillingPage',
+  components: {
+    StreamBarcodeReader,
+    WaitByPaymentMp
+  },
+  data () {
+    return {
+      waitingPayment: false,
+      purchaseCode: null,
+      loadingBilling: false,
+      paymentMethodCashFlow: null,
+      loadingSearch: false,
+      documentTypes: [],
+      /**
+       * Invoice printer
+       * @type {Boolean}
+       */
+      invoicePrinter: false,
+      /**
+       * Quantity dialog
+       * @type {Boolean}
+       */
+      quantityDialog: false,
+      /**
+       * Product quantity
+       * @type {Object}
+       */
+      productQuantity: null,
+      /**
+       * Quantity
+       * @type {Number}
+       */
+      quantity: 1,
+      /**
+       * Current amount
+       * @type {Number}
+       */
+      currentAmount: 0,
+      /**
+       * Description cashflow
+       * @type {String}
+       */
+      description: '',
+      /**
+       * Invoice description
+       * @type {String}
+       */
+      invoiceDescription: '',
+      /**
+       * Delivery date
+       * @type {String}
+       */
+      deliveryDate: formatDate(Date(), 'YYYY-MM-DD HH:mm:ss'),
+      /**
+       * Format number
+       * @type {Function}
+       */
+      formatNumber,
+      /**
+       * Search purchase
+       * @type {Boolean}
+       */
+      searchInvoice: false,
+      /**
+       * Search
+       * @type {String}
+       */
+      search: '',
+      /**
+       * Loading save provider
+       * @type {Boolean}
+       */
+      loadingProvider: false,
+      /**
+       * Open add provider
+       * @type {Boolean}
+       */
+      openAddProvider: false,
+      /**
+       * Client added data form
+       * @type {Object}
+       */
+      providerAdded: {},
+      /**
+       * Invoice data
+       * @type {Object}
+       */
+      purchase: null,
+      /**
+       * Status table
+       * @type {Object}
+       */
+      statusTable: {
+        unoccupied: 'Libre',
+        busy: 'Ocupada'
+      },
+      /**
+       * Category products filter
+       * @type {Object}
+       */
+      category: null,
+      /**
+       * Type of service
+       * @type {Object}
+       */
+      typeOfService: null,
+      /**
+       * Type of services
+       * @type {Array}
+       */
+      typeOfServices: [],
+      /**
+       * Type of services
+       * @type {Array}
+       */
+      conditionIvaReceptors: [],
+      /**
+       * Payments
+       * @type {Array}
+       */
+      payments: [],
+      /**
+       * Payment methods
+       * @type {Array}
+       */
+      paymentMethods: [],
+      /**
+       * Dialog payment
+       * @type {Boolean}
+       */
+      dialogPayment: false,
+      /**
+       * Invoice types
+       * @type {Array}
+       */
+      invoiceTypes: [],
+      /**
+       * Invoice type
+       * @type {Object}
+       */
+      invoiceType: null,
+      /**
+       * Coins
+       * @type {Array}
+       */
+      coins: [],
+      /**
+       * Coin
+       * @type {Object}
+       */
+      coin: null,
+      /**
+       * Clients
+       * @type {Array}
+       */
+      providers: [],
+      /**
+       * Client to billing
+       * @type {Object}
+       */
+      provider: null,
+      /**
+       * Exchange
+       * @type {Boolean}
+       */
+      exchange: false,
+      /**
+       * Exchange rate
+       * @type {Number}
+       */
+      exchangeRate: 0,
+      /**
+       * Scan dialog
+       * @type {Boolean}
+       */
+      modelScan: false,
+      /**
+       * Tables
+       * @type {Array}
+       */
+      tables: [],
+      /**
+       * Pagination option
+       * @type {Object}
+       */
+      pagination: {
+        rowsPerPage: 50,
+        rowsNumber: 50,
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc'
+      },
+      /**
+       * Filter products
+       * @type {String}
+       */
+      filter: '',
+      /**
+       * Barcode
+       * @type {String}
+       */
+      barcode: null,
+      /**
+       * Without payment
+       * @type {Array}
+       */
+      withoutPayment: ['T', 'P', 'CC'],
+
+      withServiceType: [4],
+      /**
+       * Dialog scanner
+       * @type {Boolean}
+       */
+      dialogScanner: false,
+      /**
+       * Without print
+       * @type {Boolean}
+       */
+      withoutPrint: false,
+      /**
+       * Loading living room
+       * @type {Boolean}
+       */
+      loadingLivingRoom: false,
+      /**
+       * Products list
+       * @type {Array}
+       */
+      products: [],
+      /**
+       * Total bill
+       * @type {Number}
+       */
+      totalBill: 0,
+      /**
+       * All products
+       * @type {Array}
+       */
+      allProducts: [],
+      /**
+       * Categories list
+       * @type {Array}
+       */
+      categories: [],
+      /**
+       * Loading products
+       * @type {Boolean}
+       */
+      loadingProducts: false,
+      /**
+       * Products columns
+       * @type {Array}
+       */
+      productColumns: [
+        {
+          name: 'barcode',
+          align: 'left',
+          label: 'Código',
+          field: 'barcode',
+          sortable: true
+        },
+        {
+          name: 'name',
+          required: true,
+          label: 'Descripción',
+          align: 'left',
+          field: row => row.name,
+          sortable: true
+        },
+        {
+          name: 'category',
+          align: 'right',
+          label: 'Categoría',
+          field: row => row.category?.name,
+          sortable: true
+        },
+        {
+          name: 'cost',
+          align: 'right',
+          label: 'Costo',
+          field: 'cost',
+          sortable: true
+        }
+      ],
+      /**
+       * Products columns
+       * @type {Array}
+       */
+      columns: [
+        { name: 'barcode', align: 'left', label: 'Código', field: 'barcode', sortable: true },
+        {
+          name: 'name',
+          required: true,
+          label: 'Descripción',
+          align: 'left',
+          field: row => row.name,
+          sortable: true
+        },
+        { name: 'cost', align: 'right', label: 'Costo', field: 'cost', sortable: true },
+        { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
+        { name: 'subtotal', align: 'right', label: 'Importe', field: 'subtotal', sortable: true },
+        { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
+      ]
+    }
+  },
+  computed: {
+    /**
+     * Pending payment
+     * @returns {Number}
+     */
+    pendingPayment () {
+      return this.totalBill - this.totalPayment
+    },
+    /**
+     * Total payment
+     * @returns {Number}
+     */
+    totalPayment () {
+      let totalPayment = 0
+      this.payments.forEach((payment) => {
+        totalPayment = totalPayment + payment.amount
+      })
+      return totalPayment
+    },
+    ...mapState(authentication, ['userSession', 'branchOffice'])
+  },
+  watch: {
+    quantityDialog (data) {
+      if (!data) {
+        this.quantity = 1
+        this.currentAmount = 0
+      }
+    },
+    category () {
+      this.setPagination({
+        pagination: this.pagination,
+        filter: undefined
+      })
+    },
+    filter () {
+      this.setPagination({
+        pagination: this.pagination,
+        filter: undefined
+      })
+    },
+    /**
+     * Dialog payment
+     * @param {Object} data data payment
+     */
+    dialogPayment (data) {
+      const { company_session: companySession } = this.userSession
+      if (data && companySession?.company_config?.payment_method) {
+        this.addPayment(companySession?.company_config?.payment_method)
+      }
+    },
+    branchOffice (data) {
+      if (data) {
+        this.setPagination({
+          pagination: this.pagination,
+          filter: undefined
+        })
+      }
+    }
+  },
+  mounted () {
+    this.setPagination({
+      pagination: this.pagination,
+      filter: undefined
+    })
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F8') {
+        e.preventDefault()
+        if (this.products.length > 0) {
+          this.dialogPayment = true
+        } else {
+          notify('No hay productos seleccionados', 'negative', 'warning')
+        }
+      }
+      if (e.key === 'F10') {
+        e.preventDefault()
+        this.searchInvoice = !this.searchInvoice
+      }
+      if (e.key === 'F9') {
+        e.preventDefault()
+        if (this.purchase) {
+          this.invoicePrinter = true
+          this.printBill(this.purchase)
+        }
+      }
+
+      if (e.key === 'F4') {
+        if (this.purchase) {
+          e.preventDefault()
+          this.printBill(this.purchase)
+        }
+      }
+    })
+  },
+  beforeUnmount () {
+    window.removeEventListener('keydown', () => {
+      this.dialogPayment = true
+    })
+  },
+  created () {
+    this.getLocalStorage()
+    this.getPaymentMethods()
+    if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
+  },
+  methods: {
+    /**
+     * Update values
+     * @param {String} inputName input name
+     */
+    updateValues (inputName) {
+      if (inputName === 'quantity') {
+        this.currentAmount = this.roundToFourDecimals(this.quantity * this.productQuantity.cost)
+      } else if (inputName === 'currentAmount') {
+        this.quantity = this.roundToFourDecimals(this.currentAmount / this.productQuantity.cost)
+      }
+    },
+    /**
+     * Round to four decimals
+     * @param {Number} number number
+     * @returns {Number}
+     */
+    roundToFourDecimals (number) {
+      const factor = Math.pow(10, 3)
+      return Math.floor(number * factor) / factor
+    },
+    /**
+     * Set data pagination emit event
+     * @param  {Object} data value pagination
+     */
+    setPagination (data) {
+      const params = {
+        sortOrder: data.pagination.descending ? 'asc' : 'desc',
+        page: data.pagination.page,
+        sortBy: data.pagination.sortBy,
+        perPage: data.pagination.rowsPerPage,
+        paginate: true,
+        dataSearch: {
+          name: this.filter,
+          'category.name': this.filter,
+          barcode: this.filter
+        }
+      }
+      this.pagination = data.pagination
+      this.getAllProducts(params)
+    },
+    /**
+     * Save providers
+     */
+    saveProvider () {
+      this.loadingProvider = true
+      this.$api.post('providers', this.providerAdded)
+        .then(({ data }) => {
+          this.openAddProvider = false
+          this.providerAdded = {}
+          this.provider = data
+          this.loadingProvider = false
+          Notify.create({
+            message: 'Proveedor creado exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.loadingProvider = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Save without print
+     */
+    saveWithoutPrint () {
+      this.withoutPrint = true
+      this.$refs.saveBill.submit()
+    },
+    /**
+     * Save without print
+     */
+    savePrintInvoice () {
+      this.invoicePrinter = true
+      this.$refs.saveBill.submit()
+    },
+    /**
+     * Submit bill
+     */
+    submitBill () {
+      this.$refs.saveBill.submit()
+    },
+    /**
+     * Payment success
+     * @param {Object} data data payments
+     */
+    paymentSuccess (data) {
+      const payment = this.payments.find(payment => payment.amount === data.transaction_amount && payment.acronym === 'MPQA')
+      payment.reference = String(data.id)
+    },
+    /**
+     * Add bill payment
+     * @param {Object} data data payments
+     */
+    addPayment (data) {
+      if (this.pendingPayment > 0) {
+        this.payments.push({
+          name: data.name,
+          acronym: data.acronym,
+          amount: this.pendingPayment,
+          reference: null,
+          coin_id: this.coin.id,
+          payment_method_id: data.id,
+          user_created_id: this.userSession.id
+        })
+      }
+    },
+    /**
+     * Get all payment-methods
+     */
+    getPaymentMethods () {
+      this.$api.get('payment-methods')
+        .then(({ data }) => {
+          this.paymentMethods = data
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterInvoiceTypes (value, update) {
+      this.$api.get('invoice-types', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.invoiceTypes = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterTypeOfServices (value, update) {
+      this.$api.get('type-of-services', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.typeOfServices = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterCategories (value, update) {
+      this.$api.get('categories', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.categories = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    getCoins (value, update) {
+      this.$api.get('coins', {
+        params: {
+          dataSearch: {
+            name: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.coins = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Select category
+     * @param {String} value user Session Value filter
+     * @param {Callback} update update options
+     */
+    filterProviders (value, update) {
+      this.$api.get('providers', {
+        params: {
+          sortBy: 'id',
+          sortOrder: 'desc',
+          dataSearch: {
+            name: value,
+            document_number: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.providers = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Get all products
+     * @param {Object} params params to search
+     */
+    getAllProducts (params) {
+      this.loadingProducts = true
+      this.$api.get('products', {
+        params: {
+          ...params,
+          branch_office_id: this.branchOffice?.id,
+          stock: true,
+          withStock: true,
+          mostSold: true,
+          dataEqualFilter: {
+            category_id: this.category ? this.category.id : null
+          }
+        }
+      })
+        .then(({ data }) => {
+          this.allProducts = data.data
+          this.pagination.rowsNumber = data.total
+          this.loadingProducts = false
+        })
+        .catch(err => {
+          this.loadingProducts = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Set payments
+     * @param {Array} invoicePayments purchase payments
+     */
+    setPayments (invoicePayments) {
+      invoicePayments?.forEach(payment => {
+        this.payments.push({
+          id: payment.payment_method_id,
+          payment_method_id: payment.payment_method_id,
+          name: payment.payment_method.name,
+          amount: payment.amount,
+          reference: payment.reference,
+          coin_id: payment.coin_id
+        })
+      })
+    },
+    /**
+     * Get purchase one request
+     * @param {Number} id purchase id
+     * @returns {Object}
+     */
+    async getInvoiceOneRequest (id) {
+      try {
+        const { data } = await this.$api.get('purchases', {
+          params: {
+            dataEqualFilter: {
+              purchase_number: id,
+              purchase_code: id
+            }
+          }
+        })
+        return data.data[0]
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Get purchase one
+     * @param {Number} id purchase id
+     */
+    async getInvoiceOne (data) {
+      this.loadingSearch = true
+      const purchase = await this.getInvoiceOneRequest(data)
+      if (purchase) {
+        if (purchase.branch_office_id !== this.branchOffice.id) {
+          notify('Esta factura no pertenece a esta sucursal', 'negative', 'warning')
+          this.$router.push({ name: 'Billing' })
+          this.loadingSearch = false
+          return
+        }
+        this.loadingSearch = false
+        this.purchase = purchase
+        this.products = purchase.products.map(product => {
+          return {
+            ...product,
+            ...product.pivot,
+            subtotal: product.pivot.cost * product.pivot.quantity
+          }
+        })
+        this.provider = purchase.provider
+        this.invoiceType = purchase.invoice_type
+        this.typeOfService = purchase.type_of_service
+        this.searchInvoice = false
+        this.setPayments(purchase.purchase_payments)
+        this.$router.push({
+          name: 'NewPurchase',
+          query: {
+            id: purchase.id
+          }
+        })
+        this.invoiceDescription = purchase.description
+        this.deliveryDate = purchase.delivery_date
+        this.calculateTotal()
+        this.search = ''
+      } else {
+        notify('No se encontró la factura', 'negative', 'warning')
+      }
+    },
+    /**
+     * Clear purchase
+     */
+    clear () {
+      this.payments = []
+      this.products = []
+      this.invoiceDescription = ''
+      this.deliveryDate = formatDate(Date(), 'YYYY-MM-DD HH:mm:ss')
+      this.dialogPayment = false
+      this.withoutPrint = false
+      this.invoicePrinter = false
+      this.calculateTotal()
+      this.$router.push({ name: 'NewPurchase' })
+      setTimeout(() => {
+        this.$refs.saveBill.resetValidation()
+        this.getLocalStorage()
+        this.purchase = null
+      }, 100)
+    },
+    /**
+     * Print purchase
+     * @param {Object} data purchase saved
+     */
+    async printBill (data) {
+      let doc = null
+      const purchase = await this.getInvoiceOneRequest(data.id)
+
+      if (!purchase) {
+        notify('Error al obtener la factura', 'negative', 'warning')
+        return
+      }
+
+      if (this.withoutPrint) {
+        this.clear()
+        this.withoutPrint = false
+        return
+      }
+
+      if (this.invoicePrinter) {
+        doc = await printInvoice(purchase, this.userSession)
+      } else {
+        doc = await printTicket(purchase, this.userSession)
+      }
+
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
+      this.clear()
+    },
+    /**
+     * Set purchase model
+     * @returns {Object}
+     */
+    setModelInvoice () {
+      return {
+        ...this.purchase,
+        purchase_code: this.purchaseCode,
+        provider_id: this.provider?.id,
+        coin_id: this.coin.id,
+        description: this.invoiceDescription,
+        type_of_service_id: this.typeOfService.id,
+        invoice_type_id: this.invoiceType.id,
+        user_created_id: this.userSession.id,
+        exchange_rate: this.exchangeRate,
+        delivery_date: this.deliveryDate,
+        branch_office_id: this.branchOffice?.id,
+        products: this.products,
+        status: this.purchase?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        payments: this.payments.filter(payment => payment.amount > 0)
+      }
+    },
+    /**
+     * Set params bill
+     */
+    setParamsBill () {
+      if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
+
+      if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
+        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
+        this.dialogPayment = true
+        return false
+      }
+
+      if (this.withServiceType.includes(this.typeOfService.code) && this.pendingPayment > 0) {
+        notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
+        this.dialogPayment = true
+        return false
+      }
+
+      if (this.products <= 0) {
+        notify('No hay productos seleccionados', 'negative', 'warning')
+        return false
+      }
+
+      return this.setModelInvoice()
+    },
+
+    /**
+     * Save bill and payments
+     */
+    async saveBill () {
+      try {
+        this.loadingBilling = true
+        const params = this.setParamsBill()
+        if (!params) return
+
+        if (this.$route.query.id) {
+          await this.$api.put(`purchases/${this.$route.query.id}`, params)
+        } else {
+          await this.$api.post('purchases', params)
+        }
+        this.clear()
+        notify('Factura guardada exitosamente', 'positive', 'check_circle')
+        this.setPagination({
+          pagination: this.pagination,
+          filter: undefined
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.loadingBilling = false
+      }
+    },
+    /**
+     * Get local storage
+     */
+    getLocalStorage () {
+      const { company_session: companySession } = this.userSession
+      this.provider = companySession?.company_config?.provider
+      this.invoiceType = companySession?.company_config?.invoice_type
+      this.typeOfService = companySession?.company_config?.type_of_service
+      this.coin = companySession?.company_config?.coin
+      this.calculateTotal()
+    },
+    /**
+     * Delete product in table
+     * @param {Object} product props table products
+     */
+    deleteProduct (product) {
+      this.products.splice(product.rowIndex, 1)
+      this.calculateTotal()
+    },
+    /**
+     * Delete purchase payment
+     * @param {Number} index value index payments
+     */
+    deletePayment (index) {
+      this.payments.splice(index, 1)
+    },
+    /**
+     * Calculate the total
+     */
+    calculateTotal () {
+      let total = 0
+      this.products.forEach(product => {
+        total += product.subtotal
+      })
+      this.totalBill = total
+    },
+    /**
+     * Calculate the total and subtotal
+     * @param {Object} data props products
+     */
+    calculate (data) {
+      data.subtotal = data.cost * data.quantity
+      this.calculateTotal()
+    },
+    /**
+     * Push product
+     * @param {Object} product product
+     */
+    pushProduct (product) {
+      this.products.push({
+        id: product.id,
+        name: product.name,
+        quantity: product.quantity,
+        subtotal: product.subtotal,
+        product_id: product.id,
+        cost: product.cost,
+        barcode: product.barcode
+      })
+    },
+    /**
+     * Validate products
+     * @param {*} data product selected
+     */
+    validateProduct (data, validUnitMeasurement = false) {
+      const findProduct = this.products.find(product => product.id === data.id)
+      const unitMeasurement = data?.unit_of_measure?.acronym === 'KG'
+      data.cost = data?.cost || 0
+      if (validUnitMeasurement && unitMeasurement) {
+        this.quantityDialog = true
+        this.currentAmount = data.cost
+        this.productQuantity = data
+        return
+      }
+
+      if (findProduct) {
+        const quantity = unitMeasurement ? this.quantity : findProduct?.quantity + 1
+        findProduct.quantity = quantity
+        findProduct.product_id = findProduct.id
+        this.calculate(findProduct)
+      } else {
+        data.product_id = data.id
+        data.quantity = this.quantity
+        if (this.currentAmount) {
+          data.quantity = this.currentAmount / this.productQuantity.cost
+          data.subtotal = this.currentAmount
+          this.pushProduct(data)
+          this.calculateTotal()
+        } else {
+          data.quantity = this.quantity
+          this.calculate(data)
+          this.pushProduct(data)
+          this.calculateTotal()
+        }
+      }
+      this.quantity = 1
+      this.currentAmount = 0
+      this.quantityDialog = false
+    },
+    /**
+     * Get one product
+     * @param {Number} barcode barcode product
+     */
+    async getOneProduct () {
+      this.$api.get('products', {
+        params: {
+          dataEqualFilter: {
+            barcode: this.barcode
+          }
+        }
+      })
+        .then(({ data }) => {
+          const product = data[0]
+          if (product) {
+            this.validateProduct(product, true)
+            this.barcode = null
+            this.modelScan = false
+          } else {
+            this.$q.notify({
+              message: 'Producto no encontrado',
+              icon: 'warning',
+              color: 'negative'
+            })
+          }
+        })
+        .catch((error) => {
+          this.$q.notify({
+            message: error.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    }
+  }
+}
+</script>

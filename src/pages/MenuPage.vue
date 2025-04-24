@@ -1,16 +1,26 @@
 <template>
-  <q-page padding>
-    <div class="full-width text-subtitle1 flex justify-between items-center" v-if="tab !== 'orders'">
-      <span class="text-h6">Pedido</span>
-      <q-chip class="bg-secondary text-white cursor-pointer">
-        {{ this.paramsUrl.name }}
-      </q-chip>
-      <q-chip class="bg-secondary text-white cursor-pointer">
-        Total: {{ formatNumber(totalBill) }}
-      </q-chip>
+  <q-page padding :class="$q.screen.lt.sm ? 'q-pb-xl q-mb-lg' : 'items-center column'">
+    <div class="column q-gutter-md" style="max-width: 600px;">
+      <div class="flex full-width justify-center items-center">
+        <q-img
+          :src="company?.catalog?.banner || company?.url"
+          style="max-height: 150px; max-width: 200px;"
+        />
+      </div>
+      <span class="text-h6 text-center">
+        {{ company?.name }}
+      </span>
     </div>
-    <div class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
-      <div class="col-12">
+    <div style="max-width: 600px;" class="row q-col-gutter-y-sm q-mt-md" v-if="tab === 'menu'">
+      <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6">
+        <q-chip class="bg-secondary text-white cursor-pointer">
+          {{ this.paramsUrl.name }}
+        </q-chip>
+        <q-chip class="bg-secondary text-white cursor-pointer">
+          Total: {{ formatNumber(totalBill) }}
+        </q-chip>
+      </div>
+      <div class="col-xs-12 col-md-6 col-lg-6">
         <q-input
           outlined
           rounded
@@ -26,7 +36,7 @@
           </template>
         </q-input>
       </div>
-      <div class="col-12" style="max-height: calc(100vh - 290px); overflow-y: auto;">
+      <div class="col-12">
         <q-tabs
           v-model="category"
           class="text-teal overflow-hidden"
@@ -36,17 +46,19 @@
           <q-tab
             name="all"
             label="Todos"
+            class="q-pa-md"
           />
           <q-tab
             :name="cat.id"
             :label="cat.name"
             :key="cat.id"
+            class="q-pa-md"
             v-for="cat in categories"
           />
         </q-tabs>
         <q-skeleton type="text" height="60px" v-else/>
       </div>
-      <div class="col-12" style="max-height: calc(100vh - 260px); overflow-y: auto;">
+      <div class="col-12">
         <div v-if="loadingPage" class="row q-col-gutter-sm">
           <div
             class="col-xs-6 col-sm-4 col-md-3"
@@ -66,7 +78,7 @@
           v-else
         >
           <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-2" style="padding: 5px;">
+            <div class="col-xs-6 col-sm-4 col-md-4 col-lg-4" style="padding: 5px;">
               <q-card
                 :class="findProduct(command.products, props.row) && 'shadow-20'"
                 :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
@@ -77,7 +89,7 @@
                   no-native-menu
                   :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
                   spinner-color="primary"
-                  style="height: 180px;"
+                  style="height: 140px;"
                 >
                   <div class="absolute-full column items-center justify-center text-center">
                     <div class="text-bold text-body1">
@@ -100,21 +112,19 @@
         </q-table>
       </div>
     </div>
-    <div v-else-if="tab === 'command'" class="q-mt-sm">
+    <div v-else-if="tab === 'command'" style="max-width: 600px;">
       <q-table
         row-key="name"
-        dense
         grid
-        style="max-height: calc(100vh - 210px); overflow: auto;"
         :rows="command.products"
         hide-pagination
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+          <div class="column items-center q-pa-xs col-xs-12 col-sm-12 col-md-12">
             <q-card
               class="my-card q-mt-sm"
-              style="width: 100%; max-width: 400px; border-radius: 30px;"
+              style="max-width: 90vw; width: 500px; border-radius: 20px;"
             >
               <q-card-section horizontal class="full-height">
                 <q-img
@@ -126,6 +136,39 @@
                   <q-card-section class="q-pa-sm col">
                     <span class="text-body2 text-uppercase text-bold">
                       {{ props.row.name.slice(0, 20) }}
+                      <q-badge
+                        floating
+                        rounded
+                        color="secondary"
+                      >
+                        <q-icon
+                          :name="props.row.observation ? 'edit' : 'add'"
+                          size="sm"
+                        />
+                        <q-popup-proxy>
+                          <q-card class="bg-white" style="width: 400px; max-width: 80vw;">
+                            <q-card-section class="q-py-sm text-h6 bg-primary text-white">
+                              Observación
+                            </q-card-section>
+                            <q-card-section class="text-body2">
+                              <q-input
+                                filled
+                                color="primary"
+                                autofocus
+                                type="textarea"
+                                v-model="props.row.observation"
+                              />
+                            </q-card-section>
+                            <q-card-actions align="right">
+                              <q-btn
+                                color="primary"
+                                icon="check_circle"
+                                v-close-popup
+                              />
+                            </q-card-actions>
+                          </q-card>
+                        </q-popup-proxy>
+                      </q-badge>
                     </span>
                     <p class="text-subtitle2 text-grey">
                       $ {{ formatNumber(props.row.price) }}
@@ -177,58 +220,69 @@
           </div>
         </template>
       </q-table>
-      <q-page-sticky position="bottom-right" :offset="[15, 5]">
-        <q-btn
-          round
-          icon="receipt"
-          color="primary"
-          :loading="billLoading"
-          @click="saveOrder"
-        />
-      </q-page-sticky>
     </div>
+    <q-page-sticky v-if="totalBill > 0" position="bottom-right" :offset="[15, 10]">
+      <q-btn
+        rounded
+        stack
+        color="primary"
+        class="button-baseline"
+        :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
+        :label="formatNumber(totalBill)"
+        :loading="billLoading"
+        @click="saveOrder"
+      />
+    </q-page-sticky>
     <q-dialog v-model="detailProduct">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
         :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
       >
         <SlideComponent :slides="product.images" styles="height: 200px;"/>
-        <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 150px); overflow: auto;">
-          <q-card-section class="column q-pb-xs">
-            <div class="column justify-between full-width">
-              <span class="text-subtitle1 text-uppercase text-bold">
+        <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
+          <q-card-section class="column q-pb-none">
+            <div class="flex justify-between full-width">
+              <span class="text-body2 text-uppercase text-bold">
                 {{ product?.name }}
               </span>
-              <span class="text-subtitle1">
-                {{ formatNumber(product?.price) }}$
+              <span class="text-body2 q-mt-md">
+                $ {{ formatNumber(product?.price) }}
               </span>
-              <div class="flex justify-between items-center q-gutter-xs">
-                <q-btn
-                  icon="remove"
-                  color="primary"
-                  round
-                  flat
-                  size="lg"
-                  @click="addTemporalProducts(product, product.amount -= 1)"
-                />
-                <q-input
-                  borderless
-                  dense
-                  type="number"
-                  style="width: 40px;"
-                  input-class="text-center"
-                  v-model.number="product.amount"
-                  @update:model-value="(value) => addTemporalProducts(product, value)"
-                />
-                <q-btn
-                  icon="add"
-                  color="primary"
-                  round
-                  flat
-                  size="lg"
-                  @click="addTemporalProducts(product, product.amount += 1)"
-                />
-              </div>
+            </div>
+            <div v-if="product.description">
+              <q-input
+                type="textarea"
+                v-model="product.description"
+                readonly
+                autogrow
+              />
+            </div>
+            <div class="flex justify-between items-center q-mt-sm">
+              <q-btn
+                icon="remove"
+                color="primary"
+                round
+                flat
+                size="lg"
+                @click="addTemporalProducts(product, product.amount -= 1)"
+              />
+              <q-input
+                borderless
+                dense
+                type="number"
+                style="width: 40px;"
+                input-class="text-center"
+                v-model.number="product.amount"
+                @update:model-value="(value) => addTemporalProducts(product, value)"
+              />
+              <q-btn
+                icon="add"
+                color="primary"
+                round
+                flat
+                size="lg"
+                @click="addTemporalProducts(product, product.amount += 1)"
+              />
             </div>
           </q-card-section>
           <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
@@ -236,7 +290,7 @@
               <span class="text-subtitle2">+ Adicionales</span>
             </div>
           </q-card-section>
-          <q-card-section class="q-pt-xs">
+          <q-card-section class="q-pt-none">
             <div
               class="flex justify-between full-width items-center"
               v-for="addon in product.product_addons" :key="addon.id"
@@ -254,6 +308,7 @@
                   icon="remove"
                   color="primary"
                   round
+                  flat
                   size="sm"
                   @click="addTemporalProducts(addon, addon.amount -= 1)"
                 />
@@ -270,18 +325,28 @@
                   icon="add"
                   color="primary"
                   round
+                  flat
                   size="sm"
                   @click="addTemporalProducts(addon, addon.amount += 1)"
                 />
               </div>
             </div>
+            <q-separator class="q-mt-md"/>
           </q-card-section>
-          <q-separator />
+          <q-card-section class="q-pt-none">
+            <q-input
+              type="textarea"
+              label="Observación"
+              filled
+              v-model="observation"
+            />
+          </q-card-section>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn
             color="negative"
             label="Cerrar"
+            icon="close"
             @click="() => {
               detailProduct = false
               product = null
@@ -290,95 +355,10 @@
           <q-btn
             color="primary"
             label="Agregar"
+            icon="add_shopping_cart"
             @click="addCar"
           />
         </q-card-actions>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="openLoginDialog" persistent>
-      <q-card :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'">
-        <q-form @submit="loginAt" class="column full-height">
-          <q-card-section class="flex justify-between q-gutter-x-sm text-white bg-primary">
-            <span class="text-h6">Iniciar sesión</span>
-            <q-btn icon="close" flat round dense @click="openLoginDialog = false"/>
-          </q-card-section>
-          <q-card-section class="col">
-            <div class="row q-gutter-y-sm">
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  filled
-                  v-model="user.username"
-                  label="Nombre de usuario"
-                />
-              </div>
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  filled
-                  v-model="user.password"
-                  label="Contraseña"
-                  type="password"
-                />
-              </div>
-              <div class="col-12 text-right">
-                <q-btn flat color="secondary" label="No tengo una cuenta" @click="openAddClient = true" />
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Iniciar sesión" type="submit" />
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="detailsDialog" persistent maximized>
-      <q-card>
-        <q-card-section class="flex justify-between items-center bg-primary text-white">
-          <span class="text-h6">Detalles de la orden</span>
-          <q-btn icon="close" flat round dense @click="detailsDialog = false" />
-        </q-card-section>
-        <q-card-section class="scroll" style="height: 82vh">
-          <div class="row q-col-gutter-sm">
-            <div class="col-12">
-              <q-input label="Código" filled v-model="invoice.code" readonly dense />
-            </div>
-            <div class="col-6">
-              <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
-            </div>
-            <div class="col-6">
-              <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
-            </div>
-            <div class="col-12">
-              <q-input
-                type="textarea"
-                autogrow label="Dirección"
-                filled
-                v-model="invoice.address"
-                readonly
-                dense
-              />
-            </div>
-            <div class="col-12">
-              <q-input
-                type="textarea"
-                filled
-                v-model="invoice.description"
-                readonly
-                label="Descripción"
-              />
-            </div>
-            <div class="col-12">
-              <span class="text-h6">Pagos</span>
-            </div>
-            <div class="col-12 q-mt-md column" v-for="payment in invoice.invoice_payments" :key="payment.id">
-              <span class="text-subtitle1 text-uppercase">
-                {{ payment.payment_method.name }}
-              </span>
-              <img v-for="file in payment.files" alt="pago" :key="file.id" :src="file.url" style="max-height: 300px; max-width: 400px;" />
-            </div>
-          </div>
-        </q-card-section>
       </q-card>
     </q-dialog>
   </q-page>
@@ -393,7 +373,7 @@ import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { status } from 'src/const/invoice'
 export default {
-  name: 'CatalogPage',
+  name: 'MenuPage',
   components: {
     SkeletonCard,
     SlideComponent
@@ -484,7 +464,7 @@ export default {
        * Pagination option
        * @type {Object}
        */
-      pagination: { rowsPerPage: 10 },
+      pagination: { rowsPerPage: 30 },
       /**
        * All products
        * @type {Array}
@@ -499,6 +479,7 @@ export default {
       detailsDialog: false,
       filter: '',
       paramsUrl: null,
+      observation: null,
       /**
        * Pagination option
        * @type {Object}
@@ -526,6 +507,12 @@ export default {
     this.calculateTotal()
   },
   watch: {
+    observation (data) {
+      if (typeof data === 'string') {
+        this.product.observation = data
+        this.addTemporalProducts(this.product, this.product.amount)
+      }
+    },
     category (data) {
       this.setQueryParams({ category: data || 'all', tab: this.tab })
       this.getAllProducts()
@@ -558,6 +545,7 @@ export default {
       this.detailProduct = true
       this.product = product
       this.product.amount = 1
+      this.addTemporalProducts(product, product.amount)
       if (product.product_addons && product.product_addons.length > 0) {
         this.product.product_addons = product.product_addons.map(addon => {
           addon.amount = 0
@@ -573,8 +561,10 @@ export default {
       this.notifyProductCar(this.products)
       this.detailProduct = false
       this.temporalProducts = []
+      this.observation = null
       this.product = {
-        amount: 1
+        amount: 1,
+        quantity: 1
       }
     },
     /**
@@ -583,8 +573,8 @@ export default {
     addTemporalProducts (data, amount) {
       const findProduct = this.findProduct(this.temporalProducts, data)
       if (findProduct) {
-        console.log(amount)
         findProduct.amount = amount
+        findProduct.observation = data.observation
       } else {
         this.temporalProducts.push({
           ...data,
@@ -636,6 +626,10 @@ export default {
      */
     async saveOrder () {
       try {
+        if (this.tab === 'menu') {
+          this.setQueryParams({ tab: 'command' })
+          return
+        }
         loading(true)
         await this.$api.post('public/command-orders', {
           seller_id: this.userSession?.id,
@@ -700,22 +694,6 @@ export default {
       return false
     },
     /**
-     * Login app
-     */
-    async loginAt () {
-      try {
-        loading(true)
-        await this.login(this.user)
-        this.openLoginDialog = false
-        this.dialogPayment = true
-        this.user = {}
-      } catch (error) {
-        notify(error?.response?.data?.message || error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    /**
      * Valid stock product
      * @param {Object} data data
      * @param {Number} amount amount
@@ -744,6 +722,7 @@ export default {
       }
       if (findProduct) {
         findProduct.amount += data.amount
+        findProduct.observation = data.observation
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
@@ -761,7 +740,6 @@ export default {
      * @param {Object} query query params
      */
     setQueryParams (query) {
-      console.log(query)
       this.$router.push({
         path: this.$route.path,
         query: {
@@ -844,3 +822,26 @@ export default {
   }
 }
 </script>
+<style>
+
+.button-baseline {
+  background-color: rgb(253, 126, 20); /* Verde */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  animation: titilar 2s infinite ease-in-out;
+}
+
+@keyframes titilar {
+  0% {
+    box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(253, 126, 20, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+  }
+}
+</style>
