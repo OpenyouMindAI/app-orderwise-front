@@ -478,7 +478,7 @@ export default {
       detailsDialog: false,
       filter: '',
       paramsUrl: null,
-      observation: '',
+      observation: null,
       /**
        * Pagination option
        * @type {Object}
@@ -507,7 +507,6 @@ export default {
   },
   watch: {
     observation (data) {
-      console.log(data)
       if (typeof data === 'string') {
         this.product.observation = data
         this.addTemporalProducts(this.product, this.product.amount)

@@ -1,12 +1,24 @@
 <template>
-  <q-page padding>
-    <div class="full-width text-subtitle1 flex justify-between items-center" v-if="tab !== 'orders'">
-      <span class="text-h6">Pedido</span>
-      <q-chip class="bg-secondary text-white cursor-pointer">
-        Total: {{ formatNumber(totalBill) }}
-      </q-chip>
+  <q-page padding :class="$q.screen.lt.sm ? 'q-pb-xl q-mb-lg' : 'items-center column'">
+    <div class="column q-gutter-md" style="max-width: 600px;">
+      <div class="flex full-width justify-center items-center">
+        <q-img
+          :src="company?.catalog?.banner || company?.url"
+          style="max-height: 150px; max-width: 200px;"
+        />
+      </div>
+      <div class="row text-center full-width">
+        <!-- <div class="col-3">
+          <q-img :src="company?.url" style="max-height: 60px; max-width: 70px;" />
+        </div> -->
+        <div>
+          <span class="text-h6 text-center">
+            {{ company?.name }}
+          </span>
+        </div>
+      </div>
     </div>
-    <div class="full-width text-subtitle1 flex justify-between items-center" v-else>
+    <div style="max-width: 600px;" class="full-width text-subtitle1 flex justify-between items-center" v-if="tab === 'orders'">
       <span class="text-h6">Ordenes</span>
       <div>
         <q-btn
@@ -18,7 +30,7 @@
         />
       </div>
     </div>
-    <div class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
+    <div style="max-width: 600px;" class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
       <div class="col-12">
         <q-input
           outlined
@@ -51,11 +63,12 @@
             :label="cat.name"
             :key="cat.id"
             v-for="cat in categories"
+            class="q-pa-md"
           />
         </q-tabs>
         <q-skeleton type="text" height="60px" v-else/>
       </div>
-      <div class="col-12" style="max-height: calc(100vh - 260px); overflow-y: auto;">
+      <div class="col-12">
         <div v-if="loadingPage" class="row q-col-gutter-sm">
           <div
             class="col-xs-6 col-sm-4 col-md-3"
@@ -75,7 +88,7 @@
           v-else
         >
           <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-3 col-md-2 col-lg-2" style="padding: 5px;">
+            <div class="col-xs-6 col-sm-4 col-md-4 col-lg-4" style="padding: 5px;">
               <q-card
                 :class="findProduct(command.products, props.row) && 'shadow-20'"
                 :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
@@ -109,34 +122,64 @@
         </q-table>
       </div>
     </div>
-    <div v-else-if="tab === 'command'" class="q-mt-sm">
+    <div style="max-width: 600px;" v-else-if="tab === 'command'" class="q-mt-sm">
       <q-table
         row-key="name"
         dense
         grid
-        style="max-height: calc(100vh - 210px); overflow: auto;"
         :rows="command.products"
         hide-pagination
         v-model:pagination="pagination"
       >
         <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3 q-col-gutter-sm">
-            <q-card class="my-card q-mt-sm" style="width: 100%; max-width: 400px; border-radius: 30px;">
+          <div class="column items-center q-pa-xs col-xs-12 col-sm-12 col-md-12">
+            <q-card
+              class="my-card q-mt-sm"
+              style="max-width: 90vw; width: 500px; border-radius: 20px;"
+            >
               <q-card-section horizontal class="full-height">
                   <q-img
                     class="col-4"
                     style="max-height: 200px;"
                     :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                   />
-                  <q-card-section class="q-pa-sm column">
+                  <q-card-section class="q-pa-sm column col-8">
                     <q-card-section class="q-pa-sm col">
-                      <div class="flex justify-between q-col-gutter-sm">
-                        <div class="flex justify-between items-center full-width">
-                          <span class="text-body2 text-uppercase text-bold">
-                            {{ props.row.name.slice(0, 20) }}
-                          </span>
-                        </div>
-                      </div>
+                      <span class="text-body2 text-uppercase text-bold">
+                        {{ props.row.name.slice(0, 20) }}
+                        <q-badge
+                          floating
+                          rounded
+                          color="secondary"
+                        >
+                          <q-icon
+                            :name="props.row.observation ? 'edit' : 'add'"
+                            size="sm"
+                          />
+                          <q-popup-proxy>
+                            <q-card class="bg-white" style="width: 400px; max-width: 80vw;">
+                              <q-card-section class="q-py-sm text-h6 bg-primary text-white">
+                                Observación
+                              </q-card-section>
+                              <q-card-section class="text-body2">
+                                <q-input
+                                  filled
+                                  autofocus
+                                  type="textarea"
+                                  v-model="props.row.observation"
+                                />
+                              </q-card-section>
+                              <q-card-actions align="right">
+                                <q-btn
+                                  color="primary"
+                                  icon="check_circle"
+                                  v-close-popup
+                                />
+                              </q-card-actions>
+                            </q-card>
+                          </q-popup-proxy>
+                        </q-badge>
+                      </span>
                       <p class="text-subtitle2 text-grey">
                         $ {{ formatNumber(props.row.price) }}
                       </p>
@@ -174,7 +217,7 @@
                       </div>
                     </q-card-actions>
                   </q-card-section>
-                </q-card-section>
+              </q-card-section>
             </q-card>
           </div>
         </template>
@@ -187,22 +230,12 @@
           </div>
         </template>
       </q-table>
-      <q-page-sticky position="bottom-right" :offset="[15, 5]">
-        <q-btn
-          round
-          icon="receipt"
-          color="primary"
-          :loading="billLoading"
-          @click="saveBill"
-        />
-      </q-page-sticky>
     </div>
-    <div v-else>
+    <div v-else style="max-width: 600px;">
       <q-table
         row-key="id"
         dense
         grid
-        style="max-height: calc(100vh - 162px); overflow: auto;"
         :rows="invoices"
         binary-state-sort
         no-data-label="Registro no encontrado"
@@ -210,10 +243,10 @@
         @request="setPagination"
       >
         <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3">
+          <div class="q-pa-xs col-xs-12 col-sm-12 col-md-12 column items-center">
             <q-card
               class="my-card q-mt-sm"
-              style="width: 100%; max-width: 400px; border-radius: 30px;"
+              style="width: 100%; border-radius: 20px;"
               @click="openDetails(props.row)"
             >
               <q-card-section horizontal class="full-height">
@@ -223,8 +256,8 @@
                   size="md"
                   style="max-height: 200px;"
                 />
-                <q-card-section class="q-py-sm">
-                  <div class="flex justify-between">
+                <q-card-section class="q-py-sm col-10">
+                  <div class="flex justify-between full-width">
                     <div class="flex justify-between items-center full-width">
                       <span class="text-subtitle2 text-bold">
                         Nro {{ props.row.code }}
@@ -259,23 +292,41 @@
         </template>
       </q-table>
     </div>
-    <q-dialog v-model="detailProduct" maximized>
+    <q-page-sticky v-if="totalBill > 0" position="bottom-right" :offset="[15, 10]">
+      <q-btn
+        rounded
+        stack
+        color="primary"
+        class="button-baseline"
+        :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
+        :label="formatNumber(totalBill)"
+        :loading="billLoading"
+        @click="saveBill"
+      />
+    </q-page-sticky>
+    <q-dialog v-model="detailProduct">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'}`"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
       >
-        <SlideComponent :slides="product.images" styles="height: 400px;"/>
-        <q-card-section class="column q-pb-xs">
-          <div class="flex justify-between items-center full-width">
-            <span class="text-subtitle1 text-uppercase text-bold">
-              {{ product?.name }}
-            </span>
-            <div class="flex justify-between items-center q-gutter-xs">
+        <SlideComponent :slides="product.images" styles="height: 200px;"/>
+        <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
+          <q-card-section class="column q-pb-none">
+            <div class="flex justify-between full-width">
+              <span class="text-body2 text-uppercase text-bold">
+                {{ product?.name }}
+              </span>
+              <span class="text-body2">
+                $ {{ formatNumber(product?.price) }}
+              </span>
+            </div>
+            <div class="flex justify-between items-center q-mt-sm">
               <q-btn
                 icon="remove"
                 color="primary"
                 round
-                size="sm"
+                flat
+                size="lg"
                 @click="addTemporalProducts(product, product.amount -= 1)"
               />
               <q-input
@@ -291,64 +342,74 @@
                 icon="add"
                 color="primary"
                 round
-                size="sm"
+                flat
+                size="lg"
                 @click="addTemporalProducts(product, product.amount += 1)"
               />
             </div>
-          </div>
-          <span class="text-subtitle1">
-            {{ formatNumber(product?.price) }}$
-          </span>
-        </q-card-section>
-        <q-card-section class="q-px-none" v-if="product.product_addons?.length > 0">
-          <div class="col-12 bg-grey-2 q-pa-sm text-dark">
-            <span class="text-subtitle2">+ Adicionales</span>
-          </div>
-        </q-card-section>
-        <q-card-section class="col q-pt-xs">
-          <div
-            class="flex justify-between full-width items-center"
-            v-for="addon in product.product_addons" :key="addon.id"
-          >
-            <div class="column">
-              <span class="text-body2 text-uppercase text-bold">
-                {{ addon.name }}
-              </span>
-              <span class="text-subtitle2 text-grey">
-                {{ formatNumber(addon.price) }}$
-              </span>
+          </q-card-section>
+          <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
+            <div class="col-12 bg-grey-2 q-pa-sm text-dark">
+              <span class="text-subtitle2">+ Adicionales</span>
             </div>
-            <div class="flex justify-between items-center q-gutter-xs">
-              <q-btn
-                icon="remove"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(addon, addon.amount -= 1)"
-              />
-              <q-input
-                borderless
-                dense
-                type="number"
-                style="width: 30px;"
-                input-class="text-center"
-                v-model.number="addon.amount"
-                @update:model-value="(value) => addTemporalProducts(product, value)"
-              />
-              <q-btn
-                icon="add"
-                color="primary"
-                round
-                size="sm"
-                @click="addTemporalProducts(addon, addon.amount += 1)"
-              />
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <div
+              class="flex justify-between full-width items-center"
+              v-for="addon in product.product_addons" :key="addon.id"
+            >
+              <div class="column">
+                <span class="text-body2 text-uppercase text-bold">
+                  {{ addon.name }}
+                </span>
+                <span class="text-subtitle2 text-grey">
+                  {{ formatNumber(addon.price) }}$
+                </span>
+              </div>
+              <div class="flex justify-between items-center q-gutter-xs">
+                <q-btn
+                  icon="remove"
+                  color="primary"
+                  round
+                  flat
+                  size="sm"
+                  @click="addTemporalProducts(addon, addon.amount -= 1)"
+                />
+                <q-input
+                  borderless
+                  dense
+                  type="number"
+                  style="width: 30px;"
+                  input-class="text-center"
+                  v-model.number="addon.amount"
+                  @update:model-value="(value) => addTemporalProducts(product, value)"
+                />
+                <q-btn
+                  icon="add"
+                  color="primary"
+                  round
+                  flat
+                  size="sm"
+                  @click="addTemporalProducts(addon, addon.amount += 1)"
+                />
+              </div>
             </div>
-          </div>
+            <q-separator class="q-mt-md"/>
+          </q-card-section>
+          <q-card-section class="q-pt-none">
+            <q-input
+              type="textarea"
+              label="Observación"
+              filled
+              v-model="observation"
+            />
+          </q-card-section>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn
             color="negative"
             label="Cerrar"
+            icon="close"
             @click="() => {
               detailProduct = false
               product = null
@@ -357,6 +418,7 @@
           <q-btn
             color="primary"
             label="Agregar"
+            icon="add_shopping_cart"
             @click="addCar"
           />
         </q-card-actions>
@@ -632,6 +694,7 @@ export default {
   },
   data () {
     return {
+      observation: null,
       status,
       formatDate,
       tabPayment: 'paymentMethod',
@@ -768,6 +831,12 @@ export default {
       })
       this.getAllProducts()
     },
+    observation (data) {
+      if (typeof data === 'string') {
+        this.product.observation = data
+        this.addTemporalProducts(this.product, this.product.amount)
+      }
+    },
     table (table) {
       const store = useCommandStore()
       store.setCommands({ table })
@@ -815,11 +884,16 @@ export default {
       this.notifyProductCar(this.products)
       this.detailProduct = false
       this.temporalProducts = []
+      this.observation = null
     },
+    /**
+     * Add temporal products
+     */
     addTemporalProducts (data, amount) {
       const findProduct = this.findProduct(this.temporalProducts, data)
       if (findProduct) {
         findProduct.amount = amount
+        findProduct.observation = data.observation
       } else {
         this.temporalProducts.push({
           ...data,
@@ -899,8 +973,10 @@ export default {
         loading(true)
         const { data } = await this.$api.post(`public/clients/${this.$route.params.company_id}`, this.client)
         this.openAddClient = false
+        this.openLoginDialog = false
         this.client = {}
         this.setSessionData(data)
+        this.saveBill()
       } catch (error) {
         console.error(error)
         notify(error.message, 'negative', 'warning')
@@ -958,6 +1034,10 @@ export default {
      * Save bill and payments
      */
     async saveBill () {
+      if (this.tab !== 'command') {
+        this.setQueryParams({ tab: 'command' })
+        return
+      }
       if (!this.userSession) {
         this.openLoginDialog = true
         return
