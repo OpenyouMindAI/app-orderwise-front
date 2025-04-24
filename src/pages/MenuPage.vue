@@ -144,13 +144,12 @@
                     <span class="text-body2 text-uppercase text-bold">
                       {{ props.row.name.slice(0, 20) }}
                       <q-badge
-                        v-if="props.row.observation"
                         floating
-                        round
+                        rounded
                         color="secondary"
                       >
                         <q-icon
-                          name="info"
+                          :name="props.row.observation ? 'edit' : 'add'"
                           size="sm"
                         />
                         <q-popup-proxy>
@@ -508,6 +507,7 @@ export default {
   },
   watch: {
     observation (data) {
+      console.log(data)
       if (typeof data === 'string') {
         this.product.observation = data
         this.addTemporalProducts(this.product, this.product.amount)
@@ -572,7 +572,6 @@ export default {
      */
     addTemporalProducts (data, amount) {
       const findProduct = this.findProduct(this.temporalProducts, data)
-      console.log('findProduct', findProduct)
       if (findProduct) {
         findProduct.amount = amount
         findProduct.observation = data.observation
@@ -723,6 +722,7 @@ export default {
       }
       if (findProduct) {
         findProduct.amount += data.amount
+        findProduct.observation = data.observation
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
       } else {
