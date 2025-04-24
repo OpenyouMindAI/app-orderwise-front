@@ -70,14 +70,24 @@
               <q-separator/>
               <q-card-section class="column q-py-xs">
                 <span class="text-bold">Artículos:</span>
-                <div v-for="product in invoice.products" :key="product.id">
-                  <span>
-                    {{ product.name }}
-                  </span>
-                  x
-                  <span>
-                    {{ product?.pivot?.amount }}
-                  </span>
+                <div
+                  v-for="product in invoice.products" :key="product.id"
+                  class="full-width"
+                >
+                  <div>
+                    <span>
+                      {{ product.name }}
+                    </span>
+                    x
+                    <span>
+                      {{ product?.pivot?.amount }}
+                    </span>
+                  </div>
+                  <div style="word-wrap: break-word; overflow-wrap: break-word">
+                    <p class="text-body2 text-grey-7" v-if="product?.pivot?.observation">
+                      Observación: {{ product?.pivot?.observation }}
+                    </p>
+                  </div>
                 </div>
               </q-card-section>
               <q-separator/>
@@ -132,12 +142,14 @@
       </div>
     </div>
     <q-dialog v-model="openEditInvoice" persistent :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
+      <q-card class="column full-height" :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
           <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
         </q-card-section>
-        <q-card-section class="scroll col" style="max-height: 90vh">
+        <q-card-section
+          class="scroll col"
+          style="max-height: calc(100vh - 230px); overflow: auto;">
           <div class="row q-col-gutter-md">
             <div class="row q-col-gutter-sm col-sm-12 col-md-7 col-lg-7">
               <div class="col-6">
@@ -307,6 +319,12 @@
                           {{ formatNumber(product.pivot.amount) }}
                         </span>
                       </div>
+                      <span
+                        v-if="product?.pivot?.observation"
+                        class="q-mt-md text-body2 text-grey-7"
+                      >
+                        Observación: {{ product?.pivot?.observation }}
+                      </span>
                       <q-separator class="q-mt-sm" />
                     </div>
                   </q-card-section>
@@ -315,11 +333,11 @@
             </div>
           </div>
         </q-card-section>
-        <q-card-actions class="flex justify-between items-center">
+        <q-card-actions class="flex justify-between items-center q-gutter-y-md" align="center">
           <q-badge :color="setStatusValue(invoice.status, 'color')" class="q-ml-xs text-subtitle1">
             {{ setStatusValue(invoice.status, 'label') }}
           </q-badge>
-          <div class="q-gutter-sm">
+          <div class="q-gutter-sm text-right full-width flex justify-end">
             <q-btn
               v-if="!role.deliveryPerson"
               color="negative"

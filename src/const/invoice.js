@@ -136,6 +136,13 @@ export const printTicket = (data, userSession) => {
       }
       y += 5
     })
+    if (product.pivot.observation) {
+      const observationLines = doc.splitTextToSize(`Observación: ${product.pivot.observation}`, maxWidth)
+      observationLines.forEach((linea) => {
+        doc.text(linea, 5, y)
+        y += 5
+      })
+    }
   })
 
   doc.text('--------------------------------', 5, y)
@@ -452,6 +459,7 @@ export async function generarFacturaPDF (invoice, userSession) {
 
   return doc
 }
+
 const sum = (data) => {
   return data.reduce((a, b) => a + Number(b.pivot.amount), 0)
 }
