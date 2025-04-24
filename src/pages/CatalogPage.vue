@@ -45,7 +45,7 @@
           </template>
         </q-input>
       </div>
-      <div class="col-12" style="max-height: calc(100vh - 290px); overflow-y: auto;">
+      <div class="col-12">
         <q-tabs
           v-model="category"
           class="text-teal overflow-hidden"
@@ -99,8 +99,8 @@
                   spinner-color="primary"
                   style="height: 180px;"
                 >
-                  <div :class="$q.screen.xs ? 'absolute-full column items-center justify-center' : 'absolute-bottom text-center'">
-                    <div class="text-bold text-body1">
+                <div class="absolute-full column items-center justify-center text-center">
+                  <div class="text-bold text-body1">
                       {{ props.row.name.slice(0, 20) }}
                     </div>
                     <span class="text-caption">
@@ -138,7 +138,7 @@
               <q-card-section horizontal class="full-height">
                   <q-img
                     class="col-4"
-                    style="max-height: 200px;"
+                    style="max-height: 132px;"
                     :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
                   />
                   <q-card-section class="q-pa-sm column col-8">
@@ -702,6 +702,7 @@ export default {
     return {
       observation: null,
       status,
+      company: null,
       formatDate,
       tabPayment: 'paymentMethod',
       client: {},
@@ -715,7 +716,6 @@ export default {
       paymentMethods: [],
       temporalProducts: [],
       file: null,
-      company: null,
       /**
        * Slide
        * @type {Number}
@@ -785,7 +785,7 @@ export default {
        * Pagination option
        * @type {Object}
        */
-      pagination: { rowsPerPage: 10 },
+      pagination: { rowsPerPage: 30 },
       /**
        * All products
        * @type {Array}
@@ -1144,6 +1144,7 @@ export default {
       if (findProduct) {
         findProduct.amount += 1
         findProduct.product_id = findProduct.id
+        findProduct.observation = data.observation
         this.calculate(findProduct)
       } else {
         data.amount = 1
@@ -1257,3 +1258,26 @@ export default {
   }
 }
 </script>
+<style>
+
+.button-baseline {
+  background-color: rgb(253, 126, 20); /* Verde */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  animation: titilar 2s infinite ease-in-out;
+}
+
+@keyframes titilar {
+  0% {
+    box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(253, 126, 20, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+  }
+}
+</style>
