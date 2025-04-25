@@ -420,10 +420,14 @@ export default {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
-          createNotification(this.$t(`command.${data.name}`), {
+          const notification = createNotification(this.$t(`command.${data.name}`), {
             body: data.description,
             icon: '/icons/icon-128x128.png'
           })
+
+          notification.onclick = () => {
+            window.open(`${window.location.origin}/#/command-orders/?id=${data.invoice_id}`, '_blank')
+          }
 
           function createNotification (title, options) {
             notify('Hay una nueva comanda', 'primary', 'notifications', 'bottom-right')

@@ -495,10 +495,7 @@
         v-model="loadingDownload"
         show-value
         size="90px"
-        :thickness="0.22"
-        color="lime"
-        track-color="lime-3"
-        class="text-lime q-ma-md"
+        class="q-ma-md"
       />
     </q-inner-loading>
   </div>
