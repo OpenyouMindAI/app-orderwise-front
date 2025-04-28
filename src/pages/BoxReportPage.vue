@@ -157,6 +157,220 @@
           </q-card>
         </q-expansion-item>
       </div>
+      <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6 col-xl-6">
+        <q-expansion-item
+          class="shadow-1 overflow-hidden"
+          style="border-radius: 30px; min-width: 350px;"
+          header-class="bg-secondary text-white"
+          expand-icon-class="text-white"
+          default-opened
+        >
+          <template v-slot:header>
+            <div class="row full-width justify-between items-center">
+              <div class="row col-xs-12 col-sm-6 col-md-6 col-lg-6 col-xl-6">
+                <q-item-section avatar>
+                  <q-avatar icon="list_alt" text-color="white" size="xl"/>
+                </q-item-section>
+                <q-item-section>
+                  Total de facturas {{ formatNumber(taxeTotals?.summary?.total_invoiced) }}
+                </q-item-section>
+              </div>
+              <div @click.stop class="col-xs-12 col-sm-6 col-md-6 col-lg-6 col-xl-6 items-center flex justify-end q-gutter-x-lg q-mr-sm">
+                <div class="cursor-pointer">
+                  {{ voucherType?.Desc || 'Todas' }}
+                  <q-popup-edit v-model="voucherType" auto-save v-slot="scope">
+                    <q-select
+                      use-input
+                      filled
+                      dense
+                      label="Tipo de factura (Arca)"
+                      input-debounce="0"
+                      option-label="Desc"
+                      option-value="id"
+                      v-model="scope.value"
+                      :options="voucherTypes"
+                      @filter="getVoucherTypes"
+                      @keyup.enter="scope.set"
+                    />
+                  </q-popup-edit>
+                </div>
+                <q-btn
+                  icon="print"
+                  color="primary"
+                  round
+                  size="sm"
+                  @click.stop="printReport"
+                />
+              </div>
+            </div>
+          </template>
+          <q-card>
+            <q-card-section>
+              <q-list dense>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      Primer comprobante
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ taxeTotals?.summary?.first_invoice_id }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      Ultimo comprobante
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ taxeTotals?.summary?.last_invoice_id }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      Total de comprobantes
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ taxeTotals?.summary?.total_invoices }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      Gravado
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ formatNumber(taxeTotals?.summary?.total_base) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      No gravado
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ formatNumber(0.00) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      Exento
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ formatNumber(taxeTotals?.ivaBreakdown.find(item => item.taxe_percentage === 0)?.taxe_total || 0) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator spaced inset />
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      Discriminación del IVA
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                  v-for="item in taxeTotals?.ivaBreakdown"
+                  :key="item.taxe_percentage"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      {{ item.taxe_percentage }}%
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ formatNumber(item.taxe_total) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item
+                  clickable
+                  v-ripple
+                  style="border-radius: 20px;"
+                >
+                  <q-item-section>
+                    <q-item-label>
+                      Total del IVA
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-item-label>
+                      {{ formatNumber(taxeTotals?.summary?.total_tax) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator spaced inset />
+                <q-item
+                clickable
+                v-ripple
+                style="border-radius: 20px;"
+              >
+                <q-item-section>
+                  <q-item-label>
+                    Importe total comp. fiscales
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-item-label>
+                    {{ formatNumber(taxeTotals?.summary?.total_invoiced) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+              </q-list>
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
+      </div>
     </div>
     <q-footer class="q-pa-sm justify-between flex" style="position: fixed; bottom: 0;" >
       <span class="text-subtitle2">
@@ -292,10 +506,14 @@ import { date } from 'quasar'
 import { formatDate, formatNumber } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { notify } from '../const/mixins'
+import { printReportTaxes } from '../const/report'
+import { apiArca } from 'src/boot/axios'
 export default {
   // name: 'PageName',
   data: () => {
     return {
+      voucherType: null,
+      taxeTotals: null,
       loading: false,
       dialogFilter: false,
       cashFlowDetailsDialog: false,
@@ -386,6 +604,7 @@ export default {
        * @type {Array}
        */
       invoicePayments: [],
+      voucherTypes: [],
       /**
        * Payment all
        * @type {Array}
@@ -416,6 +635,10 @@ export default {
     }
   },
   watch: {
+    voucherType (data) {
+      this.params.voucher_type = data.Id
+      this.reportInvoiceTaxes(this.params)
+    },
     branchOffice (data) {
       this.filterDate()
     },
@@ -495,7 +718,18 @@ export default {
       await this.getPaymentTotals(this.params)
       await this.getCashflowTotals(this.params)
       await this.getTypeOfServicesTotals(this.params)
+      await this.reportInvoiceTaxes(this.params)
       this.loading = false
+    },
+    /**
+     * Format date
+     * @param {String} date
+     * @param {String} format
+     */
+    async printReport () {
+      const doc = await printReportTaxes(this.taxeTotals, this.userSession, this.params, this.voucherType)
+      const pdfUrl = doc.output('bloburl')
+      window.open(pdfUrl, '_blank')
     },
     /**
      * Get total all
@@ -510,6 +744,18 @@ export default {
       }
     },
     /**
+     * Get total all
+     * @param {Object} params
+     */
+    async reportInvoiceTaxes (params) {
+      try {
+        const { data } = await this.$api.get('reports/report-invoice-taxes', { params })
+        this.taxeTotals = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
      * Get cash flow details
      * @param {Object} data
      */
@@ -519,6 +765,25 @@ export default {
         ...this.params,
         type_cashflow: data?.type_cashflow
       })
+    },
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getVoucherTypes (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/voucher-types', {
+          params: {
+            user: { ...this.userSession }
+          }
+        })
+        update(() => {
+          this.voucherTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
     },
     /**
      * Get total all

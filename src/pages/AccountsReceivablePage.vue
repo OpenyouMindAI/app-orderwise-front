@@ -563,11 +563,11 @@ export default {
           sortable: true
         },
         {
-          name: 'date',
+          name: 'created_at',
           align: 'left',
           label: 'Fecha del documento',
-          field: 'date',
-          format: row => formatDate(`${row} 00:00`),
+          field: 'created_at',
+          format: row => formatDate(row),
           sortable: true
         },
         {
