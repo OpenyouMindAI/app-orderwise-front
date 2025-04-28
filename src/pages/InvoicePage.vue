@@ -23,14 +23,14 @@
                     Excel de facturas
                   </q-item-section>
                 </q-item>
-                <q-item v-ripple style="border-radius: 10px;" clickable>
+                <!-- <q-item v-ripple style="border-radius: 10px;" clickable>
                   <q-item-section thumbnail>
                     <q-icon name="archive" class="q-ml-sm"/>
                   </q-item-section>
                   <q-item-section>
                     Facturas electrónicas
                   </q-item-section>
-                </q-item>
+                </q-item> -->
               </q-list>
             </q-banner>
           </q-popup-proxy>
@@ -956,7 +956,6 @@ export default {
       } else if (ticket) {
         doc = await printInvoice(this.invoice, this.userSession)
       }
-      console.log(doc)
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')
     },

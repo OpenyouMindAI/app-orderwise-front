@@ -27,7 +27,7 @@ export const status = {
   }
 }
 
-const header = (data, companySession, pageWidth = 80) => {
+export const header = (data, companySession, pageWidth = 80) => {
   const JsPdf = jsPDF
   const maxWidth = 55
 
@@ -36,7 +36,7 @@ const header = (data, companySession, pageWidth = 80) => {
   altura += calculateTextHeight(companySession?.address, maxWidth)
   altura += 5
   altura += 5
-  altura += data.products.length * 10
+  altura += data?.products?.length || 1 * 10
   if (data.description) {
     altura += calculateTextHeight(`Descripción: ${data.description}`, maxWidth)
     altura += 5
@@ -53,6 +53,7 @@ const header = (data, companySession, pageWidth = 80) => {
 
   return { doc, pageWidth, companySession, maxWidth }
 }
+
 const setQrImage = async (data, fields, companySession) => {
   const docQr = {
     ver: 1,
@@ -460,11 +461,13 @@ export async function generarFacturaPDF (invoice, userSession) {
   return doc
 }
 
-const sum = (data) => {
+export const sum = (data) => {
   return data.reduce((a, b) => a + Number(b.pivot.amount), 0)
 }
 
-const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80) => {
+export const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80) => {
+  if (!text) return text
+
   const centrarTexto = (texto) => {
     const textWidth = doc.getTextWidth(texto)
     return (pageWidth - textWidth) / 2
@@ -483,7 +486,7 @@ const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80) => {
   return y
 }
 
-const calculateTextHeight = (text, maxWidth) => {
+export const calculateTextHeight = (text, maxWidth) => {
   if (!text) return 0
   const lines = Math.ceil(text.length / (maxWidth / 2))
   return lines * 5
