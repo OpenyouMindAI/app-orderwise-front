@@ -1,46 +1,53 @@
 <template>
-  <div class="q-pa-md">
-    <div class="column q-gutter-sm">
-      <div class="full-width text-right q-gutter-sm">
-        <q-btn
-          class="text-right"
-          icon="download"
-          color="teal"
-        >
-          <q-popup-proxy>
-            <q-banner>
-              <q-list>
-                <q-item
-                  style="border-radius: 10px;"
-                  v-ripple
-                  clickable
-                  @click="downloadInvoiceExcel"
-                >
-                  <q-item-section thumbnail>
-                    <q-icon name="archive" class="q-ml-sm"/>
-                  </q-item-section>
-                  <q-item-section>
-                    Excel de facturas
-                  </q-item-section>
-                </q-item>
-                <!-- <q-item v-ripple style="border-radius: 10px;" clickable>
-                  <q-item-section thumbnail>
-                    <q-icon name="archive" class="q-ml-sm"/>
-                  </q-item-section>
-                  <q-item-section>
-                    Facturas electrónicas
-                  </q-item-section>
-                </q-item> -->
-              </q-list>
-            </q-banner>
-          </q-popup-proxy>
-        </q-btn>
-        <q-btn
-          class="text-right"
-          icon="filter_alt"
-          color="primary"
-          @click="dialogFilter = true"
-        />
+  <q-page padding>
+    <div class="column q-gutter-y-sm">
+      <div class="row justify-between items-center q-gutter-x-sm">
+        <span class="text-h6">
+          Lista de facturas
+        </span>
+        <div class="text-right q-gutter-x-sm">
+          <q-btn
+            class="text-right"
+            icon="download"
+            color="teal"
+            round
+          >
+            <q-popup-proxy>
+              <q-banner>
+                <q-list>
+                  <q-item
+                    style="border-radius: 10px;"
+                    v-ripple
+                    clickable
+                    @click="downloadInvoiceExcel"
+                  >
+                    <q-item-section thumbnail>
+                      <q-icon name="archive" class="q-ml-sm"/>
+                    </q-item-section>
+                    <q-item-section>
+                      Excel de facturas
+                    </q-item-section>
+                  </q-item>
+                  <!-- <q-item v-ripple style="border-radius: 10px;" clickable>
+                    <q-item-section thumbnail>
+                      <q-icon name="archive" class="q-ml-sm"/>
+                    </q-item-section>
+                    <q-item-section>
+                      Facturas electrónicas
+                    </q-item-section>
+                  </q-item> -->
+                </q-list>
+              </q-banner>
+            </q-popup-proxy>
+          </q-btn>
+          <q-btn
+            round
+            class="text-right"
+            icon="filter_alt"
+            color="primary"
+            @click="dialogFilter = true"
+          />
+        </div>
       </div>
       <q-table
         title="Facturas"
@@ -92,6 +99,47 @@
           </q-td>
           <q-td :props="props" v-else>
             -
+          </q-td>
+        </template>
+        <template v-slot:body-cell-billing="props">
+          <q-td :props="props">
+            <div class="full-width flex justify-center">
+              <q-btn
+                round
+                color="negative"
+                icon="restart_alt"
+                v-if="!props.value && props.row?.electronic_invoice?.fields?.error"
+                @click.stop="alertBeforeSend(props.row)"
+              >
+                <q-tooltip class="text-body1">
+                  Error al generar la factura
+                  {{ props.row?.electronic_invoice?.fields?.message }}
+                  Reintentar.
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                round
+                color="warning"
+                icon="send"
+                v-else-if="!props.value"
+                @click.stop="alertBeforeSend(props.row)"
+              >
+                <q-tooltip class="text-body1">
+                  Facturar
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                round
+                color="positive"
+                icon="check_circle"
+                v-if="props.value"
+                @click.stop
+              >
+                <q-tooltip class="text-body1">
+                  Facturado
+                </q-tooltip>
+              </q-btn>
+            </div>
           </q-td>
         </template>
       </q-table>
@@ -362,10 +410,9 @@
       v-model="dialogFilter"
       position="right"
       seamless
-      full-height
     >
-      <q-card class="column full-height" style="width: 500px; max-width: 80vw;">
-        <q-card-section class="bg-primary text-white flex justify-between items-center">
+      <q-card style="width: 500px; max-width: 80vw;">
+        <q-card-section class="bg-primary text-white row items-center justify-between">
           <div class="text-h6">
             Filtros
           </div>
@@ -378,96 +425,120 @@
           />
         </q-card-section>
 
-        <q-card-section class="col q-pt-sm q-gutter-md">
-          <q-input
-            v-model="filters.code"
-            label="Código"
-            filled
-            dense
-            debounce="500"
-            clearable
-          />
-          <q-select
-            dense
-            use-input
-            filled
-            label="Vendedor"
-            input-debounce="0"
-            option-value="id"
-            clearable
-            v-model="filters.seller"
-            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-            :options="filters.sellers"
-            @filter="filterSellers"
-          />
-          <q-select
-            dense
-            use-input
-            filled
-            label="Repartidor"
-            input-debounce="0"
-            option-value="id"
-            clearable
-            v-model="filters.deliveryPerson"
-            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-            :options="deliveryPersons"
-            @filter="filterDeliveryPersons"
-          />
-          <q-select
-            v-model="filters.typeOfService"
-            :options="typeOfServices"
-            style="min-width: 300px;"
-            label="Tipo de servicio"
-            option-value="id"
-            option-label="name"
-            dense
-            filled
-            multiple
-            @filter="filterServiceTypes"
-          >
-            <template v-if="filters.typeOfService.length" v-slot:append>
-              <q-icon
-                name="cancel"
-                @click.stop.prevent="typeOfService = []"
-                class="cursor-pointer"
-              />
-            </template>
-          </q-select>
-          <q-select
-            v-model="filters.invoiceType"
-            :options="invoiceTypes"
-            style="min-width: 300px;"
-            label="Tipo de factura"
-            option-value="id"
-            option-label="name"
-            dense
-            filled
-            multiple
-            @filter="filterInvoiceTypes"
-          >
-            <template v-if="filters.invoiceType.length" v-slot:append>
-              <q-icon
-                name="cancel"
-                @click.stop.prevent="filters.invoiceType = []"
-                class="cursor-pointer"
-              />
-            </template>
-          </q-select>
-          <q-select
-            v-model="filters.branchOfficeSelect"
-            :options="branchOffices"
-            style="min-width: 300px;"
-            label="Sucursales"
-            option-value="id"
-            option-label="name"
-            dense
-            filled
-            multiple
-          >
-            <template v-if="filters.branchOfficeSelect.length" v-slot:append>
-              <q-icon name="cancel" @click.stop.prevent="filters.branchOfficeSelect = []" class="cursor-pointer" />
-            </template>
-          </q-select>
+        <q-card-section class="q-pt-sm scroll" style="max-height: calc(100vh - 200px);">
+          <div class="column q-gutter-y-sm">
+            <q-option-group
+              v-model="panel"
+              inline
+              :options="[
+                { label: 'Dia', value: 'day' },
+                { label: 'Entre fechas', value: 'between' }
+              ]"
+            />
+            <q-tab-panels v-model="panel" animated class="q-pa-none bg-transparent">
+              <q-tab-panel name="between" class="q-gutter-y-sm q-pa-none">
+                <div class="text-h6">Filtrar entre fechas</div>
+                <q-input filled dense v-model="filterDate.from" hint="Desde" type="date"/>
+                <q-input filled dense v-model="filterDate.to" hint="Hasta" type="date"/>
+              </q-tab-panel>
+              <q-tab-panel name="day" class="q-gutter-y-sm q-pa-none">
+                <div class="text-h6">Filtrar por dia y horas</div>
+                <q-input filled dense v-model="filterDate.day" hint="Fecha del dia" type="date"/>
+                <q-input filled dense v-model="filterDate.fromHours" hint="Desde" type="time"/>
+                <q-input filled dense v-model="filterDate.toHours" hint="Hasta" type="time"/>
+              </q-tab-panel>
+            </q-tab-panels>
+            <span class="text-h6">Otros filtros</span>
+            <q-input
+              v-model="filters.code"
+              label="Código"
+              filled
+              dense
+              debounce="500"
+              clearable
+            />
+            <q-select
+              dense
+              use-input
+              filled
+              label="Vendedor"
+              input-debounce="0"
+              option-value="id"
+              clearable
+              v-model="filters.seller"
+              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+              :options="filters.sellers"
+              @filter="filterSellers"
+            />
+            <q-select
+              dense
+              use-input
+              filled
+              label="Repartidor"
+              input-debounce="0"
+              option-value="id"
+              clearable
+              v-model="filters.deliveryPerson"
+              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+              :options="deliveryPersons"
+              @filter="filterDeliveryPersons"
+            />
+            <q-select
+              v-model="filters.typeOfService"
+              :options="typeOfServices"
+              style="min-width: 300px;"
+              label="Tipo de servicio"
+              option-value="id"
+              option-label="name"
+              dense
+              filled
+              multiple
+              @filter="filterServiceTypes"
+            >
+              <template v-if="filters.typeOfService.length" v-slot:append>
+                <q-icon
+                  name="cancel"
+                  @click.stop.prevent="typeOfService = []"
+                  class="cursor-pointer"
+                />
+              </template>
+            </q-select>
+            <q-select
+              v-model="filters.invoiceType"
+              :options="invoiceTypes"
+              style="min-width: 300px;"
+              label="Tipo de factura"
+              option-value="id"
+              option-label="name"
+              dense
+              filled
+              multiple
+              @filter="filterInvoiceTypes"
+            >
+              <template v-if="filters.invoiceType.length" v-slot:append>
+                <q-icon
+                  name="cancel"
+                  @click.stop.prevent="filters.invoiceType = []"
+                  class="cursor-pointer"
+                />
+              </template>
+            </q-select>
+            <q-select
+              v-model="filters.branchOfficeSelect"
+              :options="branchOffices"
+              style="min-width: 300px;"
+              label="Sucursales"
+              option-value="id"
+              option-label="name"
+              dense
+              filled
+              multiple
+            >
+              <template v-if="filters.branchOfficeSelect.length" v-slot:append>
+                <q-icon name="cancel" @click.stop.prevent="filters.branchOfficeSelect = []" class="cursor-pointer" />
+              </template>
+            </q-select>
+          </div>
         </q-card-section>
 
         <q-card-actions align="right">
@@ -498,7 +569,7 @@
         class="q-ma-md"
       />
     </q-inner-loading>
-  </div>
+  </q-page>
 </template>
 
 <script>
@@ -511,6 +582,8 @@ import { getDownload } from 'src/const/services'
 export default {
   data () {
     return {
+      panel: 'day',
+      filterDate: {},
       sellers: [],
       deliveryPersons: [],
       categories: [],
@@ -541,6 +614,7 @@ export default {
        */
       visibleColumns: [
         'id',
+        'billing',
         'invoice_type',
         'client',
         'seller',
@@ -718,6 +792,13 @@ export default {
           sortable: true
         },
         {
+          name: 'billing',
+          align: 'center',
+          label: 'Facturado',
+          field: 'billing',
+          sortable: true
+        },
+        {
           name: 'total',
           align: 'right',
           label: 'Total',
@@ -774,6 +855,21 @@ export default {
      * Filter invoice
      */
     filterInvoice () {
+      if (this.panel === 'day') {
+        this.params.dateFilter = {
+          ...this.params.dateFilter,
+          field: 'created_at',
+          from: `${this.filterDate.day} ${this.filterDate.fromHours || '00:00'}`,
+          to: `${this.filterDate.day} ${this.filterDate.toHours || '23:59'}`
+        }
+      } else {
+        this.params.dateFilter = {
+          ...this.params.dateFilter,
+          field: 'created_at',
+          from: this.filterDate.from,
+          to: this.filterDate.to
+        }
+      }
       this.params.whereIn = {
         ...this.params.whereIn,
         invoice_type_id: this.filters.invoiceType.map(item => item.id),
@@ -885,12 +981,8 @@ export default {
       this.loadingDownload = 1
       getDownload(
         'excel/invoices',
-        {
-          dataEqualFilter: this.params?.dataEqualFilter,
-          whereIn: this.params?.whereIn
-        },
+        { ...this.params },
         (percentCompleted) => {
-          console.log(percentCompleted)
           this.loadingDownload = percentCompleted
           if (percentCompleted === 100) {
             this.loadingDownload = 0
@@ -958,6 +1050,25 @@ export default {
       }
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')
+    },
+    alertBeforeSend (row) {
+      this.$q.dialog({
+        title: '¿Está seguro?',
+        message: `Esta factura (${row.code}) no se ha enviado a ARCA. una vez enviada no podrá ser modificada, ¿Está seguro de enviar esta factura?`,
+        persistent: true,
+        ok: {
+          label: 'Enviar y guardar',
+          color: 'primary',
+          icon: 'send'
+        },
+        cancel: {
+          label: 'Cancelar',
+          icon: 'close',
+          color: 'negative'
+        }
+      }).onOk(() => {
+        this.setInvoiceElectronic(row)
+      })
     },
     /**
      * Print command
@@ -1058,8 +1169,9 @@ export default {
           this.invoice = data
           notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')
         }
+        this.getInvoices(this.params)
       } catch (error) {
-        notify(error.message, 'negative', 'warning')
+        notify(error?.response?.data?.message || error?.message, 'negative', 'warning')
       } finally {
         loading(false)
       }
