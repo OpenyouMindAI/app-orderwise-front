@@ -438,14 +438,14 @@
             <q-tab-panels v-model="panel" animated class="q-pa-none bg-transparent">
               <q-tab-panel name="between" class="q-gutter-y-sm q-pa-none">
                 <div class="text-h6">Filtrar entre fechas</div>
-                <q-input filled dense v-model="filterDate.from" hint="Desde" type="date"/>
-                <q-input filled dense v-model="filterDate.to" hint="Hasta" type="date"/>
+                <q-input filled dense v-model="filters.from" hint="Desde" type="date"/>
+                <q-input filled dense v-model="filters.to" hint="Hasta" type="date"/>
               </q-tab-panel>
               <q-tab-panel name="day" class="q-gutter-y-sm q-pa-none">
                 <div class="text-h6">Filtrar por dia y horas</div>
-                <q-input filled dense v-model="filterDate.day" hint="Fecha del dia" type="date"/>
-                <q-input filled dense v-model="filterDate.fromHours" hint="Desde" type="time"/>
-                <q-input filled dense v-model="filterDate.toHours" hint="Hasta" type="time"/>
+                <q-input filled dense v-model="filters.day" hint="Fecha del dia" type="date"/>
+                <q-input filled dense v-model="filters.fromHours" hint="Desde" type="time"/>
+                <q-input filled dense v-model="filters.toHours" hint="Hasta" type="time"/>
               </q-tab-panel>
             </q-tab-panels>
             <span class="text-h6">Otros filtros</span>
@@ -583,7 +583,6 @@ export default {
   data () {
     return {
       panel: 'day',
-      filterDate: {},
       sellers: [],
       deliveryPersons: [],
       categories: [],
@@ -856,18 +855,22 @@ export default {
      */
     filterInvoice () {
       if (this.panel === 'day') {
-        this.params.dateFilter = {
-          ...this.params.dateFilter,
-          field: 'created_at',
-          from: `${this.filterDate.day} ${this.filterDate.fromHours || '00:00'}`,
-          to: `${this.filterDate.day} ${this.filterDate.toHours || '23:59'}`
+        if (this.filters.day) {
+          this.params.dateFilter = {
+            ...this.params.dateFilter,
+            field: 'created_at',
+            from: `${this.filters.day} ${this.filters.fromHours || '00:00'}`,
+            to: `${this.filters.day} ${this.filters.toHours || '23:59'}`
+          }
         }
       } else {
-        this.params.dateFilter = {
-          ...this.params.dateFilter,
-          field: 'created_at',
-          from: this.filterDate.from,
-          to: this.filterDate.to
+        if (this.filters.from && this.filters.to) {
+          this.params.dateFilter = {
+            ...this.params.dateFilter,
+            field: 'created_at',
+            from: this.filters.from,
+            to: this.filters.to
+          }
         }
       }
       this.params.whereIn = {
@@ -907,7 +910,8 @@ export default {
     /**
      * Clear filter
      */
-    clearFilter () {
+    async clearFilter () {
+      this.params.dateFilter = {}
       this.filters = {
         code: null,
         seller: null,
@@ -916,6 +920,7 @@ export default {
         typeOfService: [],
         branchOfficeSelect: []
       }
+      await this.getBranchOffices()
       this.filterInvoice()
     },
     /**
@@ -1051,6 +1056,10 @@ export default {
       const pdfUrl = doc.output('bloburl')
       window.open(pdfUrl, '_blank')
     },
+    /**
+     * Alert before send to arca
+     * @param {Object} row row
+     */
     alertBeforeSend (row) {
       this.$q.dialog({
         title: '¿Está seguro?',
