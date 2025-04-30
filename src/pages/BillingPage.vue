@@ -1618,6 +1618,7 @@ export default {
           branch_office_id: this.branchOffice?.id,
           stock: true,
           withStock: true,
+          mostSold: true,
           dataEqualFilter: {
             category_id: this.category ? this.category.id : null
           }
