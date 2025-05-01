@@ -201,6 +201,13 @@ const routes = [
     component: () => import('pages/LoginPage.vue')
   },
 
+  {
+    path: '/invoice-details',
+    name: 'InvoiceDetails',
+    meta: { requiresAuth: false },
+    component: () => import('pages/InvoiceDetailsPage.vue')
+  },
+
   // Always leave this as last one,
   // but you can also remove it
   {

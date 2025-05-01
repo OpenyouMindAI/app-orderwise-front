@@ -57,7 +57,7 @@
             />
           </div>
         </div>
-        <div class="col-xs-12 col-sm-7 col-md-6 col-lg-5 col-xl-5 q-col-gutter-sm">
+        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-5 col-xl-5 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
             <div class="col-xl-6 col-lg-6 col-md-5 col-sm-5 col-xs-12">
               <q-input
@@ -313,7 +313,7 @@
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-5 col-md-6 col-lg-7 col-xl-7">
+        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-7 col-xl-7">
           <q-table
             v-model:pagination="pagination"
             row-key="name"
@@ -355,15 +355,15 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-2 col-xl-2">
-                <q-card class="my-card">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3 col-lg-2 col-xl-2">
+                <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
-                    style="height: 150px; width: 100%"
+                    style="height: 120px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
                     <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
-                      {{ props.row.name }}
+                      {{ props.row.name.slice(0, 20) }}
                       <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
