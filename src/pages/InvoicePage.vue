@@ -467,8 +467,21 @@
               clearable
               v-model="filters.seller"
               :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-              :options="filters.sellers"
+              :options="sellers"
               @filter="filterSellers"
+            />
+            <q-select
+              dense
+              use-input
+              filled
+              label="Cliente"
+              input-debounce="0"
+              option-value="id"
+              clearable
+              v-model="filters.client"
+              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+              :options="clients"
+              @filter="filterClients"
             />
             <q-select
               dense
@@ -584,6 +597,7 @@ export default {
     return {
       panel: 'day',
       sellers: [],
+      clients: [],
       deliveryPersons: [],
       categories: [],
       branchOffices: [],
@@ -882,6 +896,7 @@ export default {
       this.params.dataEqualFilter = {
         ...this.params.dataEqualFilter,
         seller_id: this.filters.seller?.id,
+        client_id: this.filters.client?.id,
         delivery_person_id: this.filters.deliveryPerson?.id,
         id: this?.filters?.code || null
       }
@@ -889,6 +904,8 @@ export default {
     },
     /**
      * Get all sellers
+     * @param {String} value
+     * @param {Callback} update update options
      */
     async filterSellers (value, update) {
       try {
@@ -902,6 +919,28 @@ export default {
         })
         update(() => {
           this.sellers = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Get all clients
+     * @param {String} value
+     * @param {Callback} update update options
+     */
+    async filterClients (value, update) {
+      try {
+        const { data } = await this.$api.get('clients', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            }
+          }
+        })
+        update(() => {
+          this.clients = data
         })
       } catch (error) {
         notify(error.message, 'negative', 'warning')
