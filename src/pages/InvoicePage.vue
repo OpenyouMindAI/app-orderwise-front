@@ -849,11 +849,7 @@ export default {
     ...mapState(authentication, ['branchOffice', 'userSession'])
   },
   mounted () {
-    this.getBranchOffices()
-    this.setPagination({
-      pagination: this.paginationConfig,
-      filter: undefined
-    })
+    this.getInit()
   },
   watch: {
     filter (data) {
@@ -864,6 +860,13 @@ export default {
     }
   },
   methods: {
+    async getInit () {
+      await this.getBranchOffices()
+      this.setPagination({
+        pagination: this.paginationConfig,
+        filter: undefined
+      })
+    },
     /**
      * Filter invoice
      */
