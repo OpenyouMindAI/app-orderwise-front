@@ -756,6 +756,7 @@ import { printInvoice, printTicket } from 'src/const/invoice'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
+import { useCommandStore } from 'src/stores/command'
 export default {
   name: 'BillingPage',
   components: {
@@ -769,6 +770,7 @@ export default {
       loadingBilling: false,
       paymentMethodCashFlow: null,
       loadingSearch: false,
+      invoiceShare: {},
       documentTypes: [],
       /**
        * Invoice printer
@@ -989,6 +991,7 @@ export default {
        * @type {String}
        */
       barcode: null,
+      channel: null,
       /**
        * Table close
        * @type {Boolean}
@@ -1116,9 +1119,37 @@ export default {
       })
       return totalPayment
     },
-    ...mapState(authentication, ['userSession', 'branchOffice'])
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    ...mapState(useCommandStore, ['setInvoice'])
   },
   watch: {
+    client (client) {
+      this.invoiceShare = { ...this.invoiceShare, client }
+    },
+    invoiceType (invoiceType) {
+      this.invoiceShare = { ...this.invoiceShare, invoiceType }
+    },
+    typeOfService (typeOfService) {
+      this.invoiceShare = { ...this.invoiceShare, typeOfService }
+    },
+    products (products) {
+      this.invoiceShare = {
+        ...this.invoiceShare,
+        totalBill: this.totalBill,
+        totalPayment: this.totalPayment,
+        products
+      }
+    },
+    payments (payments) {
+      this.invoiceShare = { ...this.invoiceShare, payments }
+    },
+    invoiceShare (data) {
+      const channel = new BroadcastChannel('invoiceChanel')
+      channel.postMessage({
+        tipo: 'invoiceChanel',
+        invoice: JSON.stringify(data)
+      })
+    },
     quantityDialog (data) {
       if (!data) {
         this.quantity = 1
@@ -1396,15 +1427,18 @@ export default {
      */
     addPayment (data) {
       if (this.pendingPayment > 0) {
-        this.payments.push({
-          name: data.name,
-          acronym: data.acronym,
-          amount: this.pendingPayment,
-          reference: null,
-          coin_id: this.coin.id,
-          payment_method_id: data.id,
-          user_created_id: this.userSession.id
-        })
+        this.payments = [
+          ...this.payments,
+          {
+            name: data.name,
+            acronym: data.acronym,
+            amount: this.pendingPayment,
+            reference: null,
+            coin_id: this.coin.id,
+            payment_method_id: data.id,
+            user_created_id: this.userSession.id
+          }
+        ]
       }
     },
     /**
@@ -1727,6 +1761,7 @@ export default {
       this.tableClose = false
       this.calculateTotal()
       this.$router.push({ name: 'Billing' })
+      this.setInvoice({})
       setTimeout(() => {
         this.$refs.saveBill.resetValidation()
         this.getLocalStorage()
@@ -1859,6 +1894,7 @@ export default {
      */
     deleteProduct (product) {
       this.products.splice(product.rowIndex, 1)
+      this.products = [...this.products]
       this.calculateTotal()
     },
     /**
@@ -1867,6 +1903,7 @@ export default {
      */
     deletePayment (index) {
       this.payments.splice(index, 1)
+      this.payments = [...this.payments]
     },
     /**
      * Calculate the total
@@ -1909,22 +1946,25 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
-      this.products.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        amount: product.quantity,
-        quantity: product.quantity,
-        subtotal: product.subtotal,
-        product_id: product.id,
-        cost: product.cost,
-        barcode: product.barcode,
-        normal_stock: product.normal_stock,
-        bundle_stock: product.bundle_stock,
-        skip_stock: product.skip_stock,
-        is_bundle: product.is_bundle,
-        aliquot_type: product.aliquot_type || product?.category?.aliquot_type
-      })
+      this.products = [
+        ...this.products,
+        {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          amount: product.quantity,
+          quantity: product.quantity,
+          subtotal: product.subtotal,
+          product_id: product.id,
+          cost: product.cost,
+          barcode: product.barcode,
+          normal_stock: product.normal_stock,
+          bundle_stock: product.bundle_stock,
+          skip_stock: product.skip_stock,
+          is_bundle: product.is_bundle,
+          aliquot_type: product.aliquot_type || product?.category?.aliquot_type
+        }
+      ]
     },
     /**
      * Validate products

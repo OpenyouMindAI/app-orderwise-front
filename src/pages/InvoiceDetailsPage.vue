@@ -1,13 +1,13 @@
 <template>
-  <q-layout view="hHh lpR fFf" class="bg-grey-1">
+  <q-layout view="hHh lpR fFf">
     <q-page-container>
-      <div class="row no-wrap full-height">
+      <div class="row no-wrap" style="min-height: 100vh">
         <!-- LEFT SECTION: PURCHASE DETAILS -->
-        <div class="col-5 bg-white q-pa-md column justify-between">
+        <div class="col-5 bg-white q-pa-md" v-if="products.length > 0">
           <!-- Header with customer info -->
           <div class="q-mb-md">
             <div class="row items-center justify-between q-mb-sm">
-              <div class="text-h5 text-weight-medium text-primary">Your Purchase</div>
+              <div class="text-h5 text-weight-medium text-primary">Su Compra</div>
               <div v-if="customerName" class="customer-badge">
                 <q-icon name="person" size="xs" class="q-mr-xs" />
                 {{ customerName }}
@@ -17,8 +17,8 @@
           </div>
 
           <!-- Products list -->
-          <div class="col-grow overflow-auto q-pr-sm" style="max-height: calc(100vh - 450px);">
-            <q-list separator>
+          <div class="col-grow overflow-auto q-pr-sm" style="max-height: calc(100vh - 100px);">
+            <q-list separator dense>
               <!-- Column headers -->
               <q-item class="text-caption text-grey-7 q-py-xs">
                 <q-item-section class="col-5">Producto</q-item-section>
@@ -35,65 +35,19 @@
               >
                 <q-item v-for="product in products" :key="product.id" class="q-py-xs">
                   <q-item-section class="col-5">
-                    <div class="text-subtitle1">{{ product.name }}</div>
-                    <div v-if="product.description" class="text-caption text-grey-7">{{ product.description }}</div>
+                    <div class="text-body2">{{ product.name }}</div>
                   </q-item-section>
-                  <q-item-section class="col-2 text-center">{{ product.quantity }}</q-item-section>
+                  <q-item-section class="col-2 text-center">{{ product.amount }}</q-item-section>
                   <q-item-section class="col-2 text-right">{{ formatCurrency(product.price) }}</q-item-section>
                   <q-item-section class="col-3 text-right text-weight-medium">{{ formatCurrency(product.subtotal) }}</q-item-section>
                 </q-item>
               </transition-group>
             </q-list>
           </div>
-
-          <!-- Order summary -->
-          <div class="q-mt-md">
-            <q-separator class="q-mb-md" />
-
-            <!-- Subtotal, tax, discounts -->
-            <div class="row justify-between q-mb-sm text-subtitle1">
-              <div class="text-grey-7">Subtotal</div>
-              <div>{{ formatCurrency(subtotal) }}</div>
-            </div>
-            <div class="row justify-between q-mb-sm text-subtitle1">
-              <div class="text-grey-7">Tax</div>
-              <div>{{ formatCurrency(tax) }}</div>
-            </div>
-            <div v-if="discount > 0" class="row justify-between q-mb-sm text-subtitle1 text-negative">
-              <div>Discount</div>
-              <div>-{{ formatCurrency(discount) }}</div>
-            </div>
-
-            <!-- Total -->
-            <div class="row justify-between q-my-md total-section">
-              <div class="text-h5">Total</div>
-              <div class="text-h4 text-primary text-weight-bold">{{ formatCurrency(total) }}</div>
-            </div>
-
-            <!-- Payment methods -->
-            <div v-if="paymentMethods.length > 0" class="q-mb-md">
-              <div class="text-subtitle1 text-grey-8 q-mb-sm">Métodos de pago</div>
-              <div class="payment-methods">
-                <div v-for="(payment, index) in paymentMethods" :key="index" class="payment-method-item">
-                  <div class="row items-center">
-                    <div>
-                      <div class="text-subtitle2">{{ payment.method }}</div>
-                      <div class="text-weight-medium">{{ formatCurrency(payment.amount) }}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Thank you message -->
-            <div class="text-center text-grey-7 text-caption q-mt-xs">
-              Thank you for your purchase!
-            </div>
-          </div>
         </div>
 
         <!-- RIGHT SECTION: PROMOTIONS -->
-        <div class="col-7 bg-grey-2">
+        <div :class="products.length > 0 ? 'col-7 column justify-between': 'col-12'">
           <q-carousel
             v-model="slide"
             animated
@@ -103,87 +57,73 @@
             :autoplay-timeout="8000"
             transition-prev="slide-right"
             transition-next="slide-left"
-            control-color="primary"
-            navigation
-            arrows
-            height="100%"
-            class="bg-grey-1 shadow-1"
+            :style="products.length > 0 ? 'height: calc(100vh - 190px)' : 'height: calc(100vh - 10px)'"
           >
             <!-- Featured Product Promotion -->
-            <q-carousel-slide :name="1" class="column no-wrap">
+            <q-carousel-slide :name="1" class="column no-wrap q-pb-none" v-if="userSession?.company_session">
+              <div class="promotion-content">
+                <q-img
+                  :src="userSession?.company_session?.url"
+                  spinner-color="primary"
+                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 10px)'"
+                >
+                  <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
+                    <div class="text-h5 text-weight-bold q-mb-sm">
+                      {{ userSession?.company_session?.name }}
+                    </div>
+                  </div>
+                </q-img>
+              </div>
+            </q-carousel-slide>
+            <q-carousel-slide :name="product.id" class="column no-wrap q-pb-none" v-for="product in allProducts" :key="product.id">
               <div class="promotion-header">
                 <q-icon name="star" color="amber" size="sm" class="q-mr-sm" />
-                <div class="text-h6 text-weight-medium">Featured Product</div>
+                <div class="text-h6 text-weight-medium">Oferta del dia</div>
               </div>
-              <div class="col promotion-content">
+              <div class="promotion-content">
                 <q-img
-                  src="https://cdn.quasar.dev/img/parallax2.jpg"
+                  :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
                   spinner-color="primary"
-                  class="full-height"
+                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 10px)'"
                 >
                   <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
-                    <div class="text-h5 text-weight-bold q-mb-sm">Premium Coffee Bundle</div>
-                    <div class="text-subtitle1 q-mb-md">Any Coffee + Pastry</div>
-                    <q-badge color="primary" class="q-pa-sm text-body2">
-                      <span class="text-weight-bold">{{ formatCurrency(9.99) }}</span>
-                      <span class="q-ml-xs text-caption text-weight-regular text-strike">{{ formatCurrency(14.99) }}</span>
-                    </q-badge>
-                  </div>
-                </q-img>
-              </div>
-            </q-carousel-slide>
-
-            <!-- Limited Time Offer -->
-            <q-carousel-slide :name="2" class="column no-wrap">
-              <div class="promotion-header">
-                <q-icon name="schedule" color="deep-orange" size="sm" class="q-mr-sm" />
-                <div class="text-h6 text-weight-medium">Limited Time Offer</div>
-                <q-badge outline color="deep-orange" text-color="deep-orange" class="q-ml-sm">
-                  Today Only
-                </q-badge>
-              </div>
-              <div class="col promotion-content">
-                <q-img
-                  src="https://cdn.quasar.dev/img/mountains.jpg"
-                  spinner-color="primary"
-                  class="full-height"
-                >
-                  <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
-                    <div class="text-h5 text-weight-bold q-mb-sm">20% Off All Desserts</div>
-                    <div class="text-subtitle1 q-mb-md">Sweet treats for less</div>
-                    <q-badge color="deep-orange" class="q-pa-sm text-body2">
-                      <q-icon name="timer" class="q-mr-xs" />
-                      <span>Valid until 6:00 PM</span>
-                    </q-badge>
-                  </div>
-                </q-img>
-              </div>
-            </q-carousel-slide>
-
-            <!-- Cross-Promotion Based on Purchase -->
-            <q-carousel-slide :name="3" class="column no-wrap">
-              <div class="promotion-header">
-                <q-icon name="local_offer" color="teal" size="sm" class="q-mr-sm" />
-                <div class="text-h6 text-weight-medium">Recommended For You</div>
-              </div>
-              <div class="col promotion-content">
-                <q-img
-                  src="https://cdn.quasar.dev/img/parallax1.jpg"
-                  spinner-color="primary"
-                  class="full-height"
-                >
-                  <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
-                    <div class="text-h5 text-weight-bold q-mb-sm">Perfect with your coffee</div>
-                    <div class="text-subtitle1 q-mb-md">Buy 2 croissants, get 1 free</div>
-                    <q-badge color="teal" class="q-pa-sm text-body2">
-                      <span class="text-weight-bold">{{ formatCurrency(4.50) }}</span>
-                      <span class="q-ml-xs text-caption text-weight-regular text-strike">{{ formatCurrency(6.75) }}</span>
+                    <div class="text-h5 text-weight-bold q-mb-sm">{{ product.name }}</div>
+                    <div class="text-subtitle1 q-mb-md">{{ product.description }}</div>
+                    <q-badge color="primary" class="q-pa-sm text-subtitle1">
+                      <span class="text-weight-bold">{{ formatCurrency(product.price) }}</span>
+                      <span class="q-ml-xs text-caption text-weight-regular text-strike">{{ formatCurrency(product.price + 100) }}</span>
                     </q-badge>
                   </div>
                 </q-img>
               </div>
             </q-carousel-slide>
           </q-carousel>
+          <!-- Order summary -->
+          <div class="q-px-md" v-if="products.length > 0">
+            <!-- Total -->
+            <div class="row justify-between total-section">
+              <div class="text-h5">Total</div>
+              <div class="text-h4 text-primary text-weight-bold">{{ formatCurrency(total) }}</div>
+            </div>
+            <!-- Payment methods -->
+            <div v-if="paymentMethods.length > 0" class="q-mb-xs">
+              <div class="payment-methods">
+                <div v-for="(payment, index) in paymentMethods" :key="index" class="payment-method-item">
+                  <div class="row items-center q-gutter-x-md">
+                    <q-icon name="payments" size="md" class="q-mr-xs" />
+                    <div>
+                      <div class="text-subtitle2">{{ payment.name }}</div>
+                      <div class="text-weight-medium">{{ formatCurrency(payment.amount) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Thank you message -->
+            <div class="text-center text-grey-7 text-subtitle1 q-mt-xs">
+              Gracias por su compra. ¡Vuelva pronto!
+            </div>
+          </div>
         </div>
       </div>
     </q-page-container>
@@ -191,101 +131,120 @@
 </template>
 
 <script>
+import { mapActions, mapState } from 'pinia'
+import { useCommandStore } from 'src/stores/command'
+import { notify } from '../const/mixins'
+import { authentication } from 'src/stores/module-authentication'
 export default {
   name: 'CustomerDisplay',
   data () {
     return {
-      customerName: 'John Smith',
-      products: [
-        {
-          id: 1,
-          name: 'Large Americano',
-          description: '100% Arabica beans',
-          quantity: 2,
-          price: 3.50,
-          subtotal: 7.00
-        },
-        {
-          id: 2,
-          name: 'Ham & Cheese Croissant',
-          quantity: 1,
-          price: 4.25,
-          subtotal: 4.25
-        },
-        {
-          id: 3,
-          name: 'Fresh Orange Juice',
-          description: '300ml freshly squeezed',
-          quantity: 1,
-          price: 2.75,
-          subtotal: 2.75
-        },
-        {
-          id: 4,
-          name: 'Chicken Sandwich',
-          description: 'With avocado and tomato',
-          quantity: 1,
-          price: 5.50,
-          subtotal: 5.50
-        }
-      ],
-      subtotal: 19.50,
-      tax: 1.95,
-      discount: 2.00,
-      total: 19.45,
-      paymentMethods: [
-        { method: 'Credit Card', amount: 10000000.00 },
-        { method: 'Gift Card', amount: 5000000.00 },
-        { method: 'Cash', amount: 400000000.45 }
-      ],
+      /**
+       * Customer name
+       * @type {string}
+       */
+      customerName: '',
+      /**
+       * Product list
+       * @type {Array}
+       */
+      products: [],
+      /**
+       * Total amount
+       * @type {number}
+       */
+      total: 0,
+      /**
+       * Payment methods
+       * @type {Array}
+       */
+      paymentMethods: [],
+      allProducts: [],
+      /**
+       * Slide index for the carousel
+       * @type {Number}
+       */
       slide: 1,
+      /**
+       * Currency type
+       * @type {String}
+       */
       currency: 'USD',
+      /**
+       * Locale for number formatting
+       * @type {string}
+       */
       locale: 'en-US'
     }
   },
+  computed: {
+    ...mapState(useCommandStore, ['invoice']),
+    ...mapState(authentication, ['branchOffice', 'userSession'])
+  },
+  mounted () {
+    this.getInvoice()
+    this.getAllProducts()
+    this.setInvoiceChannel(this.invoice)
+  },
   methods: {
+    /**
+     * Format currency based on locale and currency type
+     * @param {number} value - Value to format
+     * @returns {string} Formatted currency string
+     */
     formatCurrency (value) {
       return new Intl.NumberFormat(this.locale, {
         style: 'currency',
         currency: this.currency
       }).format(value)
     },
-    getPaymentIcon (method) {
-      switch (method.toLowerCase()) {
-        case 'credit card':
-          return 'credit_card'
-        case 'debit card':
-          return 'credit_card'
-        case 'cash':
-          return 'payments'
-        case 'gift card':
-          return 'card_giftcard'
-        case 'store credit':
-          return 'store'
-        case 'mobile payment':
-          return 'smartphone'
-        default:
-          return 'payment'
+    /**
+     * Get all products
+     * @param {Object} params params to search
+     */
+    getAllProducts () {
+      this.$api.get('products', {
+        params: {
+          paginate: true,
+          page: 1,
+          perPage: 10,
+          branch_office_id: this.branchOffice?.id,
+          mostSold: true
+        }
+      })
+        .then(({ data }) => {
+          this.allProducts = data.data
+        })
+        .catch(err => {
+          notify(err.message, 'negative', 'warning')
+        })
+    },
+    /**
+     * Set invoice data
+     * @param {Object} invoice - Invoice data
+     * @returns {void}
+     */
+    setInvoiceChannel (invoice) {
+      this.products = invoice.products || []
+      this.customerName = invoice.client?.name
+      this.total = invoice.totalBill || 0
+      this.paymentMethods = invoice.payments || []
+      this.setInvoice(invoice)
+    },
+    /**
+     * Get invoice
+     * @returns {void}
+     */
+    getInvoice () {
+      this.channel = new BroadcastChannel('invoiceChanel')
+      this.channel.onmessage = (event) => {
+        if (event.data.tipo === 'invoiceChanel') {
+          const invoice = JSON.parse(event.data.invoice)
+          this.setInvoiceChannel(invoice)
+        }
       }
     },
-    getPaymentColor (method) {
-      switch (method.toLowerCase()) {
-        case 'credit card':
-          return 'primary'
-        case 'debit card':
-          return 'blue'
-        case 'cash':
-          return 'green'
-        case 'gift card':
-          return 'purple'
-        case 'store credit':
-          return 'deep-orange'
-        case 'mobile payment':
-          return 'teal'
-        default:
-          return 'grey'
-      }
-    }
+    ...mapActions(useCommandStore, ['setInvoice'])
   }
 }
 </script>
@@ -300,21 +259,20 @@ export default {
 .promotion-header {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background-color: white;
-  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 12px;
 }
 
 .promotion-content {
   position: relative;
   overflow: hidden;
-  border-radius: 0 0 8px 8px;
+  border-radius: 8px;
 }
 
 /* Payment methods styling */
 .payment-methods {
   display: flex;
   flex-wrap: wrap;
+  margin-top: 8px;
   gap: 8px;
 }
 
@@ -331,9 +289,9 @@ export default {
   color: #0d47a1;
   border-radius: 16px;
   padding: 4px 12px;
-  font-size: 0.9rem;
   display: flex;
   align-items: center;
+  font-size: 18px;
 }
 
 /* Total section */
