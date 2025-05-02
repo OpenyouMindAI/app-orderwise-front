@@ -65,14 +65,9 @@
                 <q-img
                   :src="userSession?.company_session?.url"
                   spinner-color="primary"
-                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 10px)'"
-                >
-                  <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
-                    <div class="text-h5 text-weight-bold q-mb-sm">
-                      {{ userSession?.company_session?.name }}
-                    </div>
-                  </div>
-                </q-img>
+                  fit="contain"
+                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 50px)'"
+                />
               </div>
             </q-carousel-slide>
             <q-carousel-slide :name="product.id" class="column no-wrap q-pb-none" v-for="product in allProducts" :key="product.id">
@@ -82,8 +77,9 @@
               </div>
               <div class="promotion-content">
                 <q-img
-                  :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
                   spinner-color="primary"
+                  fit="cover"
+                  :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
                   :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 10px)'"
                 >
                   <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
