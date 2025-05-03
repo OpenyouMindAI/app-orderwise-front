@@ -83,7 +83,13 @@ watch(dateRange, (data) => {
           flat
           @click="emit('exportExcel')"
           class="q-mb-sm"
-        />
+          disable
+        >
+          <q-tooltip anchor="bottom middle" class="bg-primary text-white text-body2">
+            Funcionalidad no disponible,
+            estará disponible pronto
+          </q-tooltip>
+        </q-btn>
       </div>
     </div>
 

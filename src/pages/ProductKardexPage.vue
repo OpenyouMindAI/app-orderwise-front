@@ -4,7 +4,7 @@ import ProductList from 'src/components/ProductKardex/ProductList.vue'
 import ProductDetail from 'src/components/ProductKardex/ProductDetail.vue'
 import ProductMovementsTable from 'src/components/ProductKardex/ProductMovementsTable.vue'
 import MobileMovementCards from 'src/components/ProductKardex/MobileMovementCards.vue'
-import { notify } from 'src/const/mixins'
+import { loading, notify } from 'src/const/mixins'
 import { api } from 'src/boot/axios'
 
 /**
@@ -142,12 +142,15 @@ function filterData (field, data) {
  */
 const getMovements = async (product, params) => {
   try {
+    loading(true)
     const { data } = await api.get(`kardex/${product?.id}/movements`, { params })
     movements.value = data.data
     paginationConfig.value.rowsNumber = data.total
     paginationConfig.value.lastPage = data.last_page
   } catch (error) {
     notify(error.message, 'negative', 'warning')
+  } finally {
+    loading(false)
   }
 }
 
