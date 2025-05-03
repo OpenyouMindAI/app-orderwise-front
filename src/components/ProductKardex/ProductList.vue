@@ -1,22 +1,47 @@
 <script setup>
-import { defineEmits, ref, computed } from 'vue'
+import { api } from 'src/boot/axios'
+import { notify } from 'src/const/mixins'
+import { authentication } from 'src/stores/module-authentication'
+import { defineEmits, ref, onMounted, watch } from 'vue'
 
 const emit = defineEmits(['select'])
 
-const products = ref([
-  { name: 'Notebook Lenovo ThinkPad X1', code: 'NB-LEN-X1-2023', category: 'Equipos Informáticos', currentStock: 15, unit: 'Unidades' },
-  { name: 'HP EliteBook 845', code: 'HP-EL845', category: 'Equipos Informáticos', currentStock: 10, unit: 'Unidades' }
-])
+const products = ref([])
 
 const searchTerm = ref('')
 
-const filteredProducts = computed(() => {
-  const term = searchTerm.value.toLowerCase()
-  return products.value.filter(product =>
-    product.name.toLowerCase().includes(term) ||
-    product.code.toLowerCase().includes(term)
-  )
+const store = authentication()
+
+watch(searchTerm, (data) => {
+  getProducts({
+    dataSearch: {
+      name: data,
+      barcode: data
+    }
+  })
 })
+
+const getProducts = async (params) => {
+  try {
+    const { data } = await api.get('products', {
+      params: {
+        orderBy: 'id',
+        sortOrder: 'desc',
+        stock: true,
+        branch_office_id: store.branchOffice?.id,
+        ...params
+      }
+    })
+    products.value = data
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
+onMounted(() => {
+  getProducts()
+})
+
 </script>
 
 <template>
@@ -24,18 +49,34 @@ const filteredProducts = computed(() => {
     <div class="text-h6 text-primary q-mb-md text-center">
       <q-icon name="inventory_2" size="md" class="q-mr-sm" />Productos
     </div>
-    <q-input v-model="searchTerm" label="Buscar producto" outlined dense debounce="300" class="q-mb-md" />
-    <q-list bordered class="rounded-borders">
-      <q-item v-for="product in filteredProducts" :key="product.code" clickable @click="emit('select', product)" class="q-hoverable">
+    <q-input
+      v-model="searchTerm"
+      label="Buscar producto"
+      outlined
+      dense
+      debounce="300"
+      class="q-mb-md"
+      clearable
+    />
+    <q-list bordered class="rounded-borders scroll" style="max-height: calc(100vh - 220px);">
+      <q-item
+        v-for="product in products"
+        :key="product.code"
+        clickable
+        @click="emit('select', product)"
+        class="q-hoverable"
+      >
         <q-item-section>
           <q-item-label class="text-weight-medium">{{ product.name }}</q-item-label>
-          <q-item-label caption>Código: {{ product.code }} - Stock: {{ product.currentStock }} {{ product.unit }}</q-item-label>
+          <q-item-label caption>
+            Código: {{ product.barcode }} - Stock: {{ product.normal_stock || product.bundle_stock }} {{ product?.unit_of_measure?.acronym }}
+          </q-item-label>
         </q-item-section>
         <q-item-section side>
           <q-icon name="chevron_right" />
         </q-item-section>
       </q-item>
-      <q-item v-if="filteredProducts.length === 0">
+      <q-item v-if="products.length === 0">
         <q-item-section class="text-center text-grey-6">No se encontraron productos</q-item-section>
       </q-item>
     </q-list>

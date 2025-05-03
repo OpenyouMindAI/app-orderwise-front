@@ -656,6 +656,9 @@ export default {
     openCompaniesDialog () {
       this.companiesDialog = true
     },
+    /**
+     * Get all companies
+     */
     async getAllCompanies () {
       try {
         const { data } = await this.$api.get('companies')
@@ -692,6 +695,9 @@ export default {
         }
       )
     },
+    /**
+     * Copy products
+     */
     async copyProducts () {
       try {
         loading(true)

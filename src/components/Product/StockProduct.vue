@@ -186,9 +186,12 @@ const defaultValue = {
 const loadingTable = ref(false)
 const openAddStock = ref(false)
 const openEditStock = ref(false)
-const filter = ref('')
-const stockProduct = ref({ ...defaultValue })
 const loadingForm = ref(false)
+const filter = ref('')
+
+const stockProduct = ref({
+  ...defaultValue
+})
 
 const paginationConfig = ref({
   rowsPerPage: 20,
@@ -210,7 +213,11 @@ const params = ref({
 })
 
 watch(openAddStock, () => {
-  stockProduct.value = { ...defaultValue }
+  stockProduct.value = {
+    ...defaultValue,
+    cost: props.product.cost,
+    price: props.product.price
+  }
 })
 
 watch(filter, (data) => {
