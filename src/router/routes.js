@@ -176,6 +176,12 @@ const routes = [
         name: 'ProductKardex',
         meta: { requiresAuth: true },
         component: () => import('pages/ProductKardexPage.vue')
+      },
+      {
+        path: 'transfer-products',
+        name: 'TransferProduct',
+        meta: { requiresAuth: true },
+        component: () => import('pages/TransferProductPage.vue')
       }
     ]
   },
