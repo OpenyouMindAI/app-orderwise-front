@@ -923,6 +923,7 @@ const getInvoiceTypes = async () => {
 const saveEdit = async () => {
   try {
     loadingEdit.value = true
+    delete invoice.value.products
     await api.put(`invoices/${invoice.value.id}`, {
       ...invoice.value,
       invoice_type_id: invoice.value?.invoice_type?.id,
