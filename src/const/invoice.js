@@ -104,6 +104,10 @@ export const printTicket = (data, userSession) => {
   doc.text(`FECHA: ${formatDate(data.created_at, 'DD/MM/YYYY')}`, 5, y)
   y += 5
   doc.text(`HORA: ${formatDate(data.created_at, 'HH:mm:ss')}`, 5, y)
+  if (data.delivery_date) {
+    doc.text(`FECHA DE ENTREGA: ${formatDate(data.delivery_date, 'DD/MM/YYYY')}`, 70, 74)
+    doc.text(`HORA DE ENTREGA: ${formatDate(data.delivery_date, 'HH:mm:ss')}`, 70, 74)
+  }
   if (data?.seller) {
     y += 5
     doc.text(`Vendedor: ${data?.seller?.name || ''} ${data?.seller?.last_name || ''}`, 5, y)
@@ -211,6 +215,10 @@ export const printInvoice = async (data, userSession) => {
   doc.text(`FECHA: ${formatDate(data.created_at, 'DD/MM/YYYY')}`, 5, y)
   y += 4
   doc.text(`HORA: ${formatDate(data.created_at, 'HH:mm:ss')}`, 5, y)
+  if (data.delivery_date) {
+    doc.text(`FECHA DE ENTREGA: ${formatDate(data.delivery_date, 'DD/MM/YYYY')}`, 70, 74)
+    doc.text(`HORA DE ENTREGA: ${formatDate(data.delivery_date, 'HH:mm:ss')}`, 70, 74)
+  }
   if (data?.seller) {
     y += 5
     doc.text(`Vendedor: ${data?.seller?.name || ''} ${data?.seller?.last_name || ''}`, 5, y)

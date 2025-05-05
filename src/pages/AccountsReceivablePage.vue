@@ -571,6 +571,22 @@ export default {
           sortable: true
         },
         {
+          name: 'delivery_date',
+          align: 'left',
+          label: 'Fecha del entrega',
+          field: 'delivery_date',
+          format: row => row ? formatDate(row) : '-',
+          sortable: true
+        },
+        {
+          name: 'delivery_date',
+          align: 'left',
+          label: 'Hora del entrega',
+          field: 'delivery_date',
+          format: row => row ? formatDate(row, 'HH:mm') : '-',
+          sortable: true
+        },
+        {
           name: 'total',
           align: 'right',
           label: 'Monto a cobrar',
