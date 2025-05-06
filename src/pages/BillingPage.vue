@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
+          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12" id="select-client">
             <q-select
               use-input
               filled
@@ -57,7 +57,7 @@
             />
           </div>
         </div>
-        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-7 col-xl-5 q-col-gutter-sm">
+        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
@@ -69,7 +69,7 @@
                 label="Código"
               />
             </div>
-            <div class="justify-end col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm">
+            <div class="justify-end col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
               <q-btn
                 style="border-radius: 10px;"
                 color="primary"
@@ -96,6 +96,7 @@
                 label="Cobrar"
                 icon="payments"
                 color="positive"
+                id="payments"
                 :disable="products.length <= 0"
                 @click="dialogPayment = true"
               >
@@ -319,10 +320,11 @@
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-5 col-xl-7">
+        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-6 col-xl-6">
           <q-table
             v-model:pagination="pagination"
             row-key="name"
+            id="pop-products"
             dense
             grid
             style="max-height: calc(100vh - 190px); overflow: auto;"
@@ -361,7 +363,7 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-3 col-lg-2 col-xl-2">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-2 col-xl-2">
                 <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
                     style="height: 120px; width: 100%; border-radius: 10px;"
@@ -1214,10 +1216,16 @@ export default {
     }
   },
   mounted () {
+    /**
+     * Get products with pagination
+     */
     this.setPagination({
       pagination: this.pagination,
       filter: undefined
     })
+    /**
+     * Init keywords button
+     */
     window.addEventListener('keydown', (e) => {
       if (e.key === 'F6') {
         e.preventDefault()
