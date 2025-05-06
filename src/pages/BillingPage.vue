@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
             <q-select
               use-input
               filled
@@ -26,7 +26,7 @@
               </template>
             </q-select>
           </div>
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
             <q-select
               use-input
               filled
@@ -41,7 +41,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-6">
+          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
             <q-select
               use-input
               filled
@@ -57,9 +57,9 @@
             />
           </div>
         </div>
-        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-5 col-xl-5 q-col-gutter-sm">
+        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-7 col-xl-5 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-5 col-sm-5 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
                 dense
@@ -67,18 +67,14 @@
                 autofocus
                 type="number"
                 label="Código"
-                @keypress.enter="getOneProduct(this.barcode)"
-              >
-                <template v-slot:append>
-                  <q-btn round color="teal" icon="qr_code" size="sm" @click="modelScan = true"/>
-                </template>
-              </q-input>
+              />
             </div>
-            <div class="col-xl-6 col-lg-6 col-md-7 col-sm-7 col-xs-12 flex q-gutter-xs">
+            <div class="justify-end col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm">
               <q-btn
-                size="sm"
+                style="border-radius: 10px;"
                 color="primary"
                 icon="table_restaurant"
+                label="Mesas"
                 :loading="loadingLivingRoom"
                 @click="dialogTable = true"
               >
@@ -94,9 +90,11 @@
                   Seleccionar mesas
                 </q-tooltip>
               </q-btn>
+
               <q-btn
-                size="sm"
-                icon="save"
+                style="border-radius: 10px;"
+                label="Cobrar"
+                icon="payments"
                 color="positive"
                 :disable="products.length <= 0"
                 @click="dialogPayment = true"
@@ -110,13 +108,47 @@
                   F8
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
-                  Guardar
+                  Cobrar
                 </q-tooltip>
               </q-btn>
+
               <q-btn
-                size="sm"
+                icon="payments"
+                color="info"
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
+                style="border-radius: 10px;"
+                @click="cashflow = true"
+              >
+                <q-badge
+                  color="swap_horiz"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F7
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Entrada y salida de dinero
+                </q-tooltip>
+              </q-btn>
+
+              <q-btn
+                style="border-radius: 10px;"
+                icon="delete"
+                color="negative"
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
+                @click="clear"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Borrar factura
+                </q-tooltip>
+              </q-btn>
+
+              <q-btn
+                style="border-radius: 10px;"
+                label="Buscar"
                 icon="search"
-                color="primary"
+                color="teal"
                 @click="searchInvoice = true"
               >
                 <q-badge
@@ -131,34 +163,6 @@
                   Buscar factura
                 </q-tooltip>
               </q-btn>
-              <q-btn
-                size="sm"
-                icon="payments"
-                color="info"
-                @click="cashflow = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F7
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Flujo de dinero
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                size="sm"
-                icon="clear"
-                color="negative"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Limpiar factura en curso
-                </q-tooltip>
-              </q-btn>
             </div>
             <div class="col-12">
               <q-table
@@ -168,6 +172,7 @@
                 hide-pagination
                 :rows="products"
                 :columns="columns"
+                style="max-height: 400px; overflow: auto;"
                 :pagination="{ rowsPerPage: 0 }"
               >
                 <template v-slot:body="props">
@@ -176,7 +181,10 @@
                       {{ props.row.barcode }}
                     </q-td>
                     <q-td key="name" :props="props">
-                      {{ props.row.name }}
+                      {{ props.row.name.slice(0, 20) }}...
+                      <q-tooltip class="text-body2" anchor="bottom middle">
+                        {{ props.row.name }}
+                      </q-tooltip>
                     </q-td>
                     <q-td key="price" :props="props">
                       {{ formatNumber(props.row.price) }}
@@ -223,8 +231,66 @@
                 </template>
               </q-table>
             </div>
+            <div class="col-12 q-col-gutter-xs q-mt-md row">
+              <div class="col-6">
+                <q-select
+                  filled
+                  dense
+                  label="Moneda"
+                  option-label="name"
+                  option-value="id"
+                  v-model="coin"
+                  :options="coins"
+                  @filter="getCoins"
+                />
+              </div>
+              <div class="col-6">
+                <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              </div>
+              <div class="col-12">
+                <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+                <div class="flex q-mt-sm" v-if="invoice" style="gap: 15px;">
+                  <q-btn
+                    color="primary"
+                    icon="print"
+                    label="Imprimir factura"
+                    @click="() => { invoicePrinter = true; printBill(invoice) }"
+                  >
+                    <q-badge
+                      color="negative"
+                      align="bottom"
+                      floating
+                      v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                    >
+                      F9
+                    </q-badge>
+                    <q-tooltip class="text-body2" anchor="bottom middle">
+                      Imprimir factura
+                    </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    color="teal"
+                    icon="receipt"
+                    label="Imprimir ticket"
+                    @click="() => { invoicePrinter = false; printBill(invoice) }"
+                  >
+                    <q-badge
+                      color="negative"
+                      align="bottom"
+                      floating
+                      v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                    >
+                      F4
+                    </q-badge>
+                    <q-tooltip class="text-body2" anchor="bottom middle">
+                      Imprimir ticket
+                    </q-tooltip>
+                  </q-btn>
+                </div>
+              </div>
+            </div>
             <div class="col-12">
-              <q-list dense separator>
+              <q-list separator bordered style="border-radius: 10px;">
                 <q-item v-if="tableSelected.length">
                   <q-item-section>
                     Mesas
@@ -233,25 +299,17 @@
                     {{ tableSelected.length }}
                   </q-item-section>
                 </q-item>
-                <q-item>
+                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
                   <q-item-section>
-                    Op Gravada
+                    TOTAL
                   </q-item-section>
-                  <q-item-section side v-if="coin">
+                  <q-item-section v-if="coin" side class="text-white">
                     {{ coin.symbol }} {{ formatNumber(totalBill) }}
                   </q-item-section>
                 </q-item>
                 <q-item>
                   <q-item-section>
-                    Monto pagado
-                  </q-item-section>
-                  <q-item-section class="text-positive" side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(totalPayment) }}
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section>
-                    Por pagar
+                    TOTAL POR COBRAR
                   </q-item-section>
                   <q-item-section side v-if="coin">
                     {{  coin.symbol }} {{ formatNumber(pendingPayment) }}
@@ -259,61 +317,9 @@
                 </q-item>
               </q-list>
             </div>
-            <div class="col-12 q-gutter-xs q-mt-md">
-              <q-select
-                filled
-                dense
-                label="Moneda"
-                option-label="name"
-                option-value="id"
-                v-model="coin"
-                :options="coins"
-                @filter="getCoins"
-              />
-              <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
-              <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
-              <div class="flex q-mt-sm" v-if="invoice" style="gap: 15px;">
-                <q-btn
-                  color="primary"
-                  icon="print"
-                  label="Imprimir factura"
-                  @click="() => { invoicePrinter = true; printBill(invoice) }"
-                >
-                  <q-badge
-                    color="negative"
-                    align="bottom"
-                    floating
-                    v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                  >
-                    F9
-                  </q-badge>
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    Imprimir factura
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  color="teal"
-                  icon="receipt"
-                  label="Imprimir ticket"
-                  @click="() => { invoicePrinter = false; printBill(invoice) }"
-                >
-                  <q-badge
-                    color="negative"
-                    align="bottom"
-                    floating
-                    v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                  >
-                    F4
-                  </q-badge>
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    Imprimir ticket
-                  </q-tooltip>
-                </q-btn>
-              </div>
-            </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-7 col-xl-7">
+        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-5 col-xl-7">
           <q-table
             v-model:pagination="pagination"
             row-key="name"
@@ -403,7 +409,7 @@
               @click="addPayment(paymentMethod)"
             />
           </div>
-          <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-xs row">
+          <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-md row">
             <div class="col-12">
               <q-toggle v-if="tableSelected.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
               <q-markup-table>
@@ -465,14 +471,28 @@
                         />
                     </q-td>
                   </tr>
-                  <tr>
-                    <th colspan="4">
-                      Restante a pagar:
-                      <span v-if="coin">{{ coin.symbol }}</span>{{ formatNumber(pendingPayment) }}
-                    </th>
-                  </tr>
                 </tbody>
               </q-markup-table>
+            </div>
+            <div class="col-12">
+              <q-list separator bordered style="border-radius: 10px;">
+                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                  <q-item-section>
+                    TOTAL
+                  </q-item-section>
+                  <q-item-section side v-if="coin" class="text-white">
+                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section>
+                    TOTAL POR COBRAR
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{  coin.symbol }} {{ formatNumber(pendingPayment) }}
+                  </q-item-section>
+                </q-item>
+              </q-list>
             </div>
           </div>
         </q-card-section>
@@ -1132,6 +1152,12 @@ export default {
     typeOfService (typeOfService) {
       this.invoiceShare = { ...this.invoiceShare, typeOfService }
     },
+    totalBill (totalBill) {
+      this.invoiceShare = { ...this.invoiceShare, totalBill }
+    },
+    totalPayment (totalPayment) {
+      this.invoiceShare = { ...this.invoiceShare, totalPayment }
+    },
     products (products) {
       this.invoiceShare = {
         ...this.invoiceShare,
@@ -1752,7 +1778,6 @@ export default {
       this.payments = []
       this.products = []
       this.tableSelected = []
-      this.products = []
       this.invoiceDescription = ''
       this.deliveryDate = formatDate(Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
@@ -1849,7 +1874,6 @@ export default {
 
       return this.setModelInvoice()
     },
-
     /**
      * Save bill and payments
      */
@@ -1936,7 +1960,6 @@ export default {
           'negative',
           'warning'
         )
-
         data.amount = data.stock
         data.quantity = data.stock
       }
