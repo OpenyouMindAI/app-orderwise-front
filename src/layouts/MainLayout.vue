@@ -27,12 +27,12 @@
           </q-img>
         </div>
         <q-space />
-        <q-btn flat icon="apps" round>
+        <q-btn flat dense icon="apps" round class="q-mr-sm">
           <q-tooltip class="text-body2">
             Herramientas
           </q-tooltip>
           <q-popup-proxy>
-            <q-banner>
+            <q-banner class="q-gutter-sm">
               <div class="full-width text-center q-mb-xs">
                 <span class="text-subtitle2">
                   Herramientas
@@ -140,7 +140,7 @@
             </q-banner>
           </q-popup-proxy>
         </q-btn>
-        <q-btn dense flat round icon="notifications" color="white">
+        <q-btn dense flat round icon="notifications" color="white" class="q-mr-sm">
           <q-tooltip>
             Notificaciones {{ numberOfNotifications.length }}
           </q-tooltip>

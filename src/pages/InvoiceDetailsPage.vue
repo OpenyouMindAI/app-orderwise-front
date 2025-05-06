@@ -97,9 +97,9 @@
           <!-- Order summary -->
           <div class="q-px-md" v-if="products.length > 0">
             <!-- Total -->
-            <div class="row justify-between total-section">
-              <div class="text-h5">Total</div>
-              <div class="text-h4 text-primary text-weight-bold">{{ formatCurrency(total) }}</div>
+            <div class="row text-h5 justify-between total-section bg-positive text-white">
+              <div>Total</div>
+              <div class="text-h4 text-weight-bold">{{ formatCurrency(total) }}</div>
             </div>
             <!-- Payment methods -->
             <div v-if="paymentMethods.length > 0" class="q-mb-xs">
