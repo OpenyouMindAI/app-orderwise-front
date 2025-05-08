@@ -32,14 +32,14 @@
             Herramientas
           </q-tooltip>
           <q-popup-proxy>
-            <q-banner class="q-gutter-sm">
+            <q-banner>
               <div class="full-width text-center q-mb-xs">
                 <span class="text-subtitle2">
                   Herramientas
                 </span>
               </div>
               <q-separator />
-              <div class="q-mt-xs">
+              <div class="q-mt-sm">
                 <q-btn
                   icon="sync_alt"
                   round
@@ -84,7 +84,6 @@
                   round
                   :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
                   aria-label="dark_mode"
-                  class="q-mr-sm"
                   @click="setTheme"
                 >
                   <q-tooltip :offset="[10, 10]">
@@ -532,7 +531,7 @@ export default {
         })
         this.download = data
       } catch (error) {
-        notify(error.message, 'negative', 'warning')
+        notify(error?.response.data?.message || error.message, 'negative', 'warning')
       } finally {
         loading(false)
       }

@@ -67,6 +67,7 @@
                 autofocus
                 type="number"
                 label="Código"
+                @keyup.enter="getOneProduct(barcode)"
               />
             </div>
             <div class="justify-end col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
@@ -77,6 +78,7 @@
                 label="Mesas"
                 :loading="loadingLivingRoom"
                 @click="dialogTable = true"
+                v-if="companyConfig.is_table"
               >
                 <q-badge
                   color="negative"
@@ -1066,6 +1068,7 @@ export default {
        * @type {Boolean}
        */
       loadingProducts: false,
+      companyConfig: {},
       /**
        * Products columns
        * @type {Array}
@@ -1918,6 +1921,7 @@ export default {
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
+      this.companyConfig = companySession?.company_config
       this.calculateTotal()
     },
     /**
