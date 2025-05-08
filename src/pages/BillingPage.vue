@@ -1951,7 +1951,11 @@ export default {
       })
       this.totalBill = total
     },
-
+    /**
+     * Check if the stock is valid
+     * @param {Object} data props products
+     * @param {Number} amount
+     */
     validStockProduct (data, amount) {
       data.stock = data.is_bundle ? data.bundle_stock : data.normal_stock
       if (!data.skip_stock) return data.stock >= amount

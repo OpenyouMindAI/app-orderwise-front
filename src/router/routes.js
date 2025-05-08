@@ -182,6 +182,12 @@ const routes = [
         name: 'TransferProduct',
         meta: { requiresAuth: true },
         component: () => import('pages/TransferProductPage.vue')
+      },
+      {
+        path: 'sessions-manager',
+        name: 'SessionsManager',
+        meta: { requiresAuth: true },
+        component: () => import('pages/SessionsManagerPage.vue')
       }
     ]
   },
