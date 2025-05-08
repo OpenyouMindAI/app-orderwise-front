@@ -509,7 +509,7 @@ async function revokeSingleSession (sessionId) {
 
 async function revokeMultipleSessions (sessionIds) {
   try {
-    await api.post('revoke-all-sessions', { token_ids: sessionIds })
+    await api.post('revoke-multiple-sessions', { token_ids: sessionIds })
 
     $q.notify({
       color: 'positive',
