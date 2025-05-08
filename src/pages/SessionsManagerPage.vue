@@ -3,7 +3,7 @@
     <div class="text-h6 q-mb-md text-weight-medium">
       Administración de Sesiones Activas
     </div>
-    <q-card class="filter-section q-mb-md">
+    <q-card class="q-mb-md">
       <q-card-section>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-sm-6 col-md-3">
@@ -12,7 +12,7 @@
               :options="users"
               option-label="name"
               option-value="id"
-              label="User"
+              label="Usuario"
               emit-value
               map-options
               clearable
@@ -49,7 +49,7 @@
       <div>
         <q-btn
           color="negative"
-          label="Close Selected Sessions"
+          label="Cerrar seleccionadas"
           icon="logout"
           :disable="selected.length === 0"
           @click="confirmRevokeSelected"
@@ -59,7 +59,7 @@
         />
         <q-btn
           color="warning"
-          label="Close All User Sessions"
+          label="Cerrar sesiones de usuario"
           icon="person_off"
           :disable="!filters.userId"
           @click="confirmRevokeAllUserSessions"
@@ -434,6 +434,12 @@ function getStatusLabel (status) {
 function formatDate (dateString) {
   return date.formatDate(dateString, 'MMM D, YYYY HH:mm')
 }
+
+/**
+ * Is suspicious
+ * @param {*} session user session
+ * @returns {boolean}
+ */
 function isSuspicious (session) {
   if (!session.country_code) return false
 
@@ -601,11 +607,6 @@ function formatValue (key, value) {
   max-width: 1400px;
   margin: 0 auto;
 }
-
-.filter-section {
-  background-color: #f8f9fa;
-}
-
 /* Styles for suspicious rows */
 .suspicious-card {
   border-left: 4px solid #ff9800 !important;
