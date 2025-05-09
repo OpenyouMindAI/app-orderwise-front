@@ -103,7 +103,7 @@
 
     <!-- Gráficas -->
     <div class="row q-col-gutter-md q-mb-lg">
-      <div class="col-md-8 col-sm-12">
+      <div class="col-xs-12 col-sm-12 col-md-8 col-sm-12">
         <q-card class="chart-card">
           <q-card-section>
             <div class="text-h6">Facturación Mensual</div>
@@ -115,7 +115,7 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-md-4 col-sm-12">
+      <div class="col-xs-12 col-sm-12 col-md-4 col-sm-12">
         <q-card class="chart-card">
           <q-card-section>
             <div class="text-h6">Empresas que más facturaron</div>
