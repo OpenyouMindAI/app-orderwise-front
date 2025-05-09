@@ -62,7 +62,7 @@ export const printReportTaxes = (data, userSession, params, voucherType) => {
   y += 4
 
   if (params.day) {
-    doc.text(`FECHA DE LA JORNADA: ${formatDate(params.day, 'DD/MM/YYYY')}`, 5, y)
+    doc.text(`FECHA DE LA JORNADA: ${formatDate(`${params.day} 00:00:00`, 'DD/MM/YYYY')}`, 5, y)
   } else {
     doc.text(`DESDE ${formatDate(params.from, 'DD/MM/YYYY')} HASTA ${formatDate(params.to, 'DD/MM/YYYY')}`, 5, y)
   }
