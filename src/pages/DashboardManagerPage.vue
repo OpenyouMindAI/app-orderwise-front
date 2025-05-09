@@ -138,7 +138,7 @@
           </q-card-section>
           <q-separator />
           <q-card-section class="q-pa-none">
-            <div style="height: 300px" ref="topProductsChart"></div>
+            <div style="height: 600px" ref="topProductsChart"></div>
           </q-card-section>
         </q-card>
       </div>
