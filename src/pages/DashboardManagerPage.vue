@@ -186,9 +186,16 @@
                   </div>
                 </q-td>
               </template>
+              <template v-slot:body-cell-first_invoice_at="props">
+                <q-td :props="props">
+                  <q-chip color="positive" size="sm" class="date-chip" text-color="white" rounded>
+                    {{ formatDate(props.value) }}
+                  </q-chip>
+                </q-td>
+              </template>
               <template v-slot:body-cell-last_invoice_at="props">
                 <q-td :props="props">
-                  <q-chip outline color="grey" size="sm" class="date-chip">
+                  <q-chip color="blue" size="sm" class="date-chip" text-color="white" rounded>
                     {{ formatDate(props.value) }}
                   </q-chip>
                 </q-td>
@@ -257,6 +264,7 @@ export default defineComponent({
       { name: 'name', label: 'Empresa', field: 'name', sortable: true, align: 'left' },
       { name: 'invoices_count', label: 'Facturas', field: 'invoices_count', sortable: true, align: 'center' },
       { name: 'total_invoiced', label: 'Total Facturado', field: 'total_invoiced', sortable: true, align: 'right' },
+      { name: 'first_invoice_at', label: 'Primera Factura', field: 'first_invoice_at', sortable: true, align: 'center' },
       { name: 'last_invoice_at', label: 'Última Factura', field: 'last_invoice_at', sortable: true, align: 'center' }
     ]
 
