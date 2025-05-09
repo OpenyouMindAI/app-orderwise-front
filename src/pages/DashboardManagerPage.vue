@@ -150,7 +150,7 @@
         <q-card class="table-card">
           <q-card-section>
             <div class="text-h6">Resumen de Empresas</div>
-            <div class="text-subtitle2 text-grey">Actividad por empresa</div>
+            <div class="text-subtitle2">Actividad por empresa</div>
           </q-card-section>
           <q-separator />
           <q-card-section class="q-pa-none">
@@ -607,22 +607,15 @@ body {
 
 .modern-table .q-table__top,
 .modern-table .q-table__bottom,
-.modern-table thead tr:first-child th {
-  background-color: #f8f9fa;
-}
 
 .modern-table thead tr th {
   font-weight: 600;
   color: #495057;
 }
 
-.modern-table tbody tr:hover {
-  background-color: #f1f5f9 !important;
-}
-
 .date-chip {
   border-radius: 16px;
-  font-size: 0.8rem;
+  font-size: 1.5rem;
 }
 
 /* Estilos para el drawer */
