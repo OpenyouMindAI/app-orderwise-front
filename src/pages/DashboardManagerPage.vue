@@ -198,35 +198,6 @@
         </q-card>
       </div>
     </div>
-    <q-drawer v-model="leftDrawerOpen" bordered class="rounded-drawer">
-      <q-list>
-        <q-item-label header>Menú Principal</q-item-label>
-        <q-item clickable v-ripple class="q-my-sm">
-          <q-item-section avatar>
-            <q-icon name="dashboard" />
-          </q-item-section>
-          <q-item-section>Dashboard</q-item-section>
-        </q-item>
-        <q-item clickable v-ripple class="q-my-sm">
-          <q-item-section avatar>
-            <q-icon name="business" />
-          </q-item-section>
-          <q-item-section>Empresas</q-item-section>
-        </q-item>
-        <q-item clickable v-ripple class="q-my-sm">
-          <q-item-section avatar>
-            <q-icon name="receipt" />
-          </q-item-section>
-          <q-item-section>Facturas</q-item-section>
-        </q-item>
-        <q-item clickable v-ripple class="q-my-sm">
-          <q-item-section avatar>
-            <q-icon name="inventory_2" />
-          </q-item-section>
-          <q-item-section>Productos</q-item-section>
-        </q-item>
-      </q-list>
-    </q-drawer>
   </q-page>
 </template>
 
@@ -241,8 +212,6 @@ export default defineComponent({
   name: 'AdminDashboard',
 
   setup () {
-    const leftDrawerOpen = ref(false)
-
     // Referencias para los gráficos
     const monthlyRevenueChart = ref(null)
     const topCompaniesChart = ref(null)
@@ -570,7 +539,6 @@ export default defineComponent({
     })
 
     return {
-      leftDrawerOpen,
       dashboardData,
       filters,
       companyOptions,
