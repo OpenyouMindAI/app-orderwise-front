@@ -188,6 +188,12 @@ const routes = [
         name: 'SessionsManager',
         meta: { requiresAuth: true },
         component: () => import('pages/SessionsManagerPage.vue')
+      },
+      {
+        path: 'dashboard-manager',
+        name: 'DashboardManager',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DashboardManagerPage.vue')
       }
     ]
   },

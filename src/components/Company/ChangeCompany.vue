@@ -119,7 +119,6 @@ function changeCompany (data) {
 async function updateSession () {
   try {
     loading.value = true
-    console.log(company.value)
     const { data } = await api.post('session/company', {
       company_id: company.value.id,
       username: user.username || user.email,
