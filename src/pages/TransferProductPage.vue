@@ -65,7 +65,7 @@
                     @filter="getBranchOffice"
                   />
                 </div>
-                <div class="col-12 col-md-3">
+                <!-- <div class="col-12 col-md-3">
                   <q-select
                     v-model="filters.status"
                     label="Estado"
@@ -76,8 +76,8 @@
                     map-options
                     :options="statusOptions"
                   />
-                </div>
-                <div class="col-12 col-md-9 flex justify-end items-center">
+                </div> -->
+                <div class="col-12 col-md-12 flex justify-end items-center">
                   <q-btn
                     color="primary"
                     icon="add"
@@ -90,6 +90,7 @@
                     icon="file_download"
                     label="Exportar"
                     class="q-ml-sm"
+                    disabled
                   >
                     <q-menu>
                       <q-list style="min-width: 100px">
@@ -101,6 +102,9 @@
                         </q-item>
                       </q-list>
                     </q-menu>
+                    <q-tooltip class="text-body2">
+                      No disponible en este momento
+                    </q-tooltip>
                   </q-btn>
                 </div>
               </div>
@@ -142,7 +146,6 @@
                 icon="edit"
                 @click="editTransfer(props.row)"
                 size="sm"
-                :disable="!['pendiente', 'borrador'].includes(props.row.status.toLowerCase())"
               >
                 <q-tooltip>Editar</q-tooltip>
               </q-btn>
@@ -160,13 +163,13 @@
             </div>
           </q-td>
         </template>
-        <template v-slot:body-cell-status="props">
+        <!-- <template v-slot:body-cell-status="props">
           <q-td :props="props">
             <q-badge :color="getStatusColor(props.row.status)">
               {{ props.row.status }}
             </q-badge>
           </q-td>
-        </template>
+        </template> -->
         <template v-slot:no-data>
           <div class="full-width row flex-center q-pa-md text-grey-8">
             No hay transferencias que coincidan con los filtros aplicados
@@ -458,7 +461,7 @@ export default {
         { name: 'created_at', align: 'left', label: 'Fecha', field: 'created_at', sortable: true, format: v => formatDate(v) },
         { name: 'origin_branch_office', align: 'left', label: 'Origen', field: 'origin_branch_office', sortable: true, format: v => v.name },
         { name: 'destination_branch_office', align: 'left', label: 'Destino', field: 'destination_branch_office', sortable: true, format: v => v.name },
-        { name: 'status', align: 'left', label: 'Estado', field: 'status', sortable: true },
+        // { name: 'status', align: 'left', label: 'Estado', field: 'status', sortable: true },
         { name: 'actions', align: 'center', label: 'Acciones', field: 'actions', sortable: false }
       ],
       /**
@@ -493,7 +496,7 @@ export default {
         date: formatDate(new Date(), 'YYYY-MM-DD'),
         origin_branch_office: null,
         destination_branch_office: null,
-        status: 'Borrador',
+        // status: 'Borrador',
         observations: '',
         products: []
       },
@@ -540,14 +543,14 @@ export default {
         destination_branch_office_id: value
       }
       this.getTransfers(this.params)
-    },
-    'filters.status': function (value) {
-      this.params.dataEqualFilter = {
-        ...this.params.dataEqualFilter,
-        status: value
-      }
-      this.getTransfers(this.params)
     }
+    // 'filters.status': function (value) {
+    //   this.params.dataEqualFilter = {
+    //     ...this.params.dataEqualFilter,
+    //     status: value
+    //   }
+    //   this.getTransfers(this.params)
+    // }
   },
   computed: {
     ...mapState(authentication, ['branchOffice'])
@@ -606,7 +609,7 @@ export default {
       this.currentTransfer = {
         origin_branch_office: this.branchOffice,
         destination_branch_office: null,
-        status: 'Borrador',
+        // status: 'Borrador',
         observations: '',
         products: []
       }
@@ -658,7 +661,7 @@ export default {
         origin_branch_office_id: data.origin_branch_office.id,
         destination_branch_office_id: data.destination_branch_office.id,
         observations: data.observations,
-        status: data.status,
+        status: 'Enviado',
         products: data.products.map(p => ({
           product_id: p.product.id,
           quantity: p.quantity,
@@ -813,7 +816,7 @@ export default {
         const { data } = await api.get('products', {
           params: {
             stock: true,
-            branch_office_id: this.branchOffice?.id,
+            branch_office_id: this.currentTransfer?.origin_branch_office?.id,
             dataSearch: {
               name: value,
               barcode: value
