@@ -3,12 +3,12 @@
     <div class="column q-gutter-md" style="max-width: 600px;">
       <div class="flex full-width justify-center items-center">
         <q-img
-          :src="company?.catalog?.banner || company?.url"
-          style="max-height: 150px; max-width: 200px;"
+          :src="company?.company_config.other?.menu?.banner_url || company?.url"
+          style="max-height: 250px; max-width: 500px; min-width: 45vw;"
         />
       </div>
       <span class="text-h6 text-center">
-        {{ company?.name }}
+        {{ company?.company_config.other?.menu?.description || company?.name }}
       </span>
     </div>
     <div style="max-width: 600px;" class="row q-col-gutter-y-sm q-mt-md" v-if="tab === 'menu'">
@@ -221,17 +221,24 @@
         </template>
       </q-table>
     </div>
-    <q-page-sticky v-if="totalBill > 0" position="bottom-right" :offset="[15, 10]">
-      <q-btn
-        rounded
-        stack
-        color="primary"
-        class="button-baseline"
-        :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
-        :label="formatNumber(totalBill)"
-        :loading="billLoading"
-        @click="saveOrder"
-      />
+    <q-page-sticky position="bottom-right" :offset="[15, 10]">
+      <div class="flex q-gutter-sm">
+        <q-btn
+          v-if="isCurrentlyOpen && totalBill > 0"
+          rounded
+          stack
+          color="primary"
+          class="button-baseline"
+          :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
+          :label="formatNumber(totalBill)"
+          :loading="billLoading"
+          @click="saveOrder"
+        />
+        <schedule-status
+          :schedule="company?.company_config.other?.menu?.schedule"
+          @update:isCurrentlyOpen="(data) => isCurrentlyOpen = data"
+        />
+      </div>
     </q-page-sticky>
     <q-dialog v-model="detailProduct">
       <q-card
@@ -372,11 +379,13 @@ import SlideComponent from '../components/SlideComponent.vue'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { status } from 'src/const/invoice'
+import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
 export default {
   name: 'MenuPage',
   components: {
     SkeletonCard,
-    SlideComponent
+    SlideComponent,
+    ScheduleStatus
   },
   data () {
     return {
@@ -387,6 +396,7 @@ export default {
       user: {},
       address: '',
       invoices: [],
+      isCurrentlyOpen: false,
       paymentMethod: null,
       openAddClient: false,
       dialogPayment: false,

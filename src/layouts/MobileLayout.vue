@@ -5,10 +5,11 @@
         <div class="flex items-center q-gutter-sm">
           <q-btn
             icon="chevron_left"
-            round
-            dense
             flat
-            style="font-size: 20px;"
+            dense
+            round
+            class="q-mr-sm"
+            aria-label="Menu"
             @click="$router.push({ name: 'Product' })"
           />
           <img :src="company?.url || logo.white" alt="logo" style="max-height: 40px"/>

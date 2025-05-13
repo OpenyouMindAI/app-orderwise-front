@@ -60,7 +60,7 @@
 
           <q-tab-panels v-model="tab" animated>
             <q-tab-panel name="basicData">
-              <q-card-section class="q-pa-none scroll" style="height: calc(100vh - 180px);">
+              <q-card-section class="q-pa-none scroll" style="height: calc(100vh - 200px);">
                 <div class="row q-col-gutter-sm">
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
                     <q-input
@@ -80,22 +80,32 @@
                       label="Nombre"
                     />
                   </div>
-                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
                     <q-input
-                      :rules="[val => !!val || 'El campo es requerido.']"
+                      :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                       filled
                       v-model="product.cost"
                       label="Costo"
                       type="number"
                     />
                   </div>
-                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                  <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
                     <q-input
                       :rules="[val => !!val || 'El campo es requerido.']"
                       filled
                       v-model="product.price"
                       label="Precio"
                       type="number"
+                    />
+                  </div>
+                  <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                    <q-input
+                      :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                      filled
+                      v-model="product.minimum_stock"
+                      label="Stock mínimo"
+                      type="number"
+                      step=".01"
                     />
                   </div>
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
@@ -271,7 +281,7 @@
           <q-separator />
           <q-tab-panels v-model="tab" animated>
             <q-tab-panel name="basicData">
-              <q-card-section class="q-pa-none scroll" style="height: calc(100vh - 180px);">
+              <q-card-section class="q-pa-none scroll" style="height: calc(100vh - 200px);">
                 <div class="row q-col-gutter-sm">
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                     <q-input
@@ -289,21 +299,30 @@
                       label="Nombre"
                     />
                   </div>
-                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                  <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
                     <q-input
-                      :rules="[val => !!val || 'El campo es requerido.']"
+                      :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                       filled
                       v-model="product.cost"
                       label="Costo"
                       type="number"
                     />
                   </div>
-                  <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                  <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
                     <q-input
                       :rules="[val => !!val || 'El campo es requerido.']"
                       filled
                       v-model="product.price"
                       label="Precio"
+                      type="number"
+                      step=".01"
+                    />
+                  </div>
+                  <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                    <q-input
+                      filled
+                      v-model="product.minimum_stock"
+                      label="Stock mínimo"
                       type="number"
                       step=".01"
                     />

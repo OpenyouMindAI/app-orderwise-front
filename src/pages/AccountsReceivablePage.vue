@@ -259,7 +259,7 @@
     <q-dialog v-model="openBillDetails" :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 900px; max-width: 85vw;'}`"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 1000px; max-width: 85vw;'}`"
         >
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
@@ -381,6 +381,7 @@
                           <tr>
                             <th class="text-left">Método de pago</th>
                             <th class="text-right">Monto</th>
+                            <th class="text-right">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -390,6 +391,16 @@
                             </td>
                             <td class="text-right">
                               {{ formatNumber(payment.amount) }}
+                            </td>
+                            <td class="text-right">
+                              <q-btn
+                                icon="delete"
+                                size="sm"
+                                dense
+                                round
+                                color="negative"
+                                @click="removePayment(payment)"
+                              />
                             </td>
                           </tr>
                         </tbody>
@@ -684,6 +695,23 @@ export default {
       }
     },
     /**
+     * Remove payment
+     * @param {Object} payment payment
+     */
+    async removePayment (payment) {
+      try {
+        loading(true)
+        await this.$api.delete(`invoice-payments/${payment.id}`)
+        await this.getInvoice(payment.invoice_id)
+        this.filterDate()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+    /**
      * Set invoice electronic
      * @param {Object} invoice invoice
      */
@@ -930,7 +958,9 @@ export default {
         notify(error.message, 'negative', 'warning')
       }
     },
-
+    /**
+     * Save payment
+     */
     async savePayment () {
       try {
         loading(true)
@@ -941,12 +971,27 @@ export default {
           client_id: this.client?.id,
           reference: this.reference
         })
+        await this.getInvoice(this.billDetails?.id)
         this.filterDate()
         this.reference = null
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
         loading(false)
+      }
+    },
+    /**
+     * Get invoice
+     * @param {Number} invoiceId invoice id
+     */
+    async getInvoice (invoiceId) {
+      try {
+        const { data } = await this.$api.get(`invoices/${invoiceId}`)
+        console.log(data)
+        this.billDetails = data
+        this.billDetails.balance = data.total - data.total_payments
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
       }
     }
   }

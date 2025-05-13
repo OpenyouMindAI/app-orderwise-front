@@ -8,21 +8,14 @@
         </div>
       </div>
     </div>
-    <div v-if="tab !== 'scanner'" class="column q-gutter-md" style="max-width: 600px;">
+    <div v-if="tab !== 'scanner'" class="column" style="max-width: 600px;">
       <div class="flex full-width justify-center items-center">
         <q-img
-          :src="company?.catalog?.banner || company?.url"
-          style="max-height: 150px; max-width: 200px;"
+          :src="menu?.banner_url || company?.url"
+          style="max-height: 250px; max-width: 500px; min-width: 45vw;"
         />
       </div>
-      <span class="text-h6 text-center">
-        {{ company?.name }}
-      </span>
-      <!-- <div class="text-center"> -->
-        <!-- <div class="col-3">
-          <q-img :src="company?.url" style="max-height: 60px; max-width: 70px;" />
-        </div> -->
-      <!-- </div> -->
+      <span class="text-subtitle1 text-center q-mt-md" v-html="menu?.description"/>
     </div>
     <div style="max-width: 600px;" class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
       <div class="col-12">
@@ -357,28 +350,34 @@
       </q-table>
     </div>
     <q-page-sticky position="bottom-right" :offset="[15, 10]">
-      <q-btn
-        v-if="totalBill > 0"
-        rounded
-        stack
-        color="primary"
-        class="button-baseline"
-        :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
-        :label="formatNumber(totalBill)"
-        :loading="billLoading"
-        @click="saveBill"
-      />
-      <q-btn
-        rounded
-        stack
-        color="secondary"
-        class="q-ml-sm"
-        icon="table_bar"
-        :label="tables?.length > 0 ? tables?.map(table => table.name).join(', ') : 'Mesas'"
-        :loading="billLoading"
-        @click="dialogTable = true"
-        v-if="isTable"
-      />
+      <div class="flex q-gutter-sm">
+        <q-btn
+          v-if="isCurrentlyOpen && totalBill > 0"
+          rounded
+          stack
+          color="primary"
+          class="button-baseline"
+          :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
+          :label="formatNumber(totalBill)"
+          :loading="billLoading"
+          @click="saveBill"
+        />
+        <q-btn
+          rounded
+          stack
+          color="secondary"
+          class="q-ml-sm"
+          icon="table_bar"
+          :label="tables?.length > 0 ? tables?.map(table => table.name).join(', ') : 'Mesas'"
+          :loading="billLoading"
+          @click="dialogTable = true"
+          v-if="isTable && isCurrentlyOpen"
+        />
+        <schedule-status
+          :schedule="menu?.schedule"
+          @update:isCurrentlyOpen="(data) => isCurrentlyOpen = data"
+        />
+      </div>
     </q-page-sticky>
     <q-dialog v-model="detailProduct">
       <q-card
@@ -766,6 +765,7 @@ import { useCommandStore } from 'src/stores/command'
 import { printInvoice, printTicket, status } from 'src/const/invoice'
 import { formatDate } from 'src/const/mixins'
 import FileComponent from 'src/components/FileComponent.vue'
+import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
 export default {
   name: 'CommandPage',
   components: {
@@ -773,7 +773,8 @@ export default {
     SkeletonCard,
     SlideComponent,
     DrawerTable,
-    FileComponent
+    FileComponent,
+    ScheduleStatus
   },
   data () {
     return {
@@ -785,6 +786,7 @@ export default {
       loadingBilling: false,
       dialogPayment: false,
       company: null,
+      isCurrentlyOpen: false,
       /**
        * Pagination option
        * @type {Object}
@@ -942,6 +944,7 @@ export default {
        */
       isTable: 1,
       invoiceOne: null,
+      menu: null,
       /**
        * Product columns
        * @type {Array}
@@ -983,6 +986,7 @@ export default {
     this.isTable = this.userSession?.company_session?.company_config?.is_table
     this.client = this.userSession?.company_session?.company_config?.client
     this.coin = this.userSession?.company_session?.company_config?.coin
+    this.menu = this.userSession?.company_session?.company_config?.other?.menu
     this.company = this.userSession?.company_session
     this.getCategories()
     this.setPagination({ pagination: this.invoicePagination })

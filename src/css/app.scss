@@ -32,9 +32,9 @@
   --info-light: rgba(0, 122, 255, 0.1);
 
   /* Bordes casi rectos */
-  --border-radius-sm: 0px;
-  --border-radius-md: 1px;
-  --border-radius-lg: 2px;
+  --border-radius-sm: 3px;
+  --border-radius-md: 4px;
+  --border-radius-lg: 5px;
 
   /* Sombras más pronunciadas */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -72,7 +72,6 @@ body {
 }
 
 .app-container {
-  max-width: 1200px;
   margin: 0 auto;
   padding: var(--spacing-md);
 }

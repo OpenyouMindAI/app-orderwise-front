@@ -248,6 +248,74 @@
           </q-form>
         </q-card>
       </q-step>
+      <q-step
+        :name="3"
+        title="Configurar menu"
+        icon="menu_book"
+        clickable
+      >
+        <q-card class="store-hours-manager q-mb-lg">
+          <q-card-section>
+            <div class="row items-center q-mb-md">
+              <div class="col-12 col-sm-6">
+                <div class="text-h6 text-weight-bold">
+                  <q-icon name="panorama" color="primary" size="sm" class="q-mr-xs" />
+                  Banner del menu
+                </div>
+                <div class="text-caption text-grey">
+                  Configura el banner del menu de la empresa
+                </div>
+              </div>
+            </div>
+            <q-img
+              :src="fileBanner?.url || logo.white"
+              spinner-color="white"
+              class="rounded-borders"
+              style="max-width: 100%; max-height: 200px;"
+              fit="contain"
+            >
+              <div class="absolute-bottom text-subtitle1 text-center">
+                <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUploadBanner" />
+              </div>
+              <template v-slot:error>
+                <div class="absolute-bottom text-subtitle1 text-center">
+                  <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUploadBanner" />
+                </div>
+              </template>
+            </q-img>
+          </q-card-section>
+        </q-card>
+        <q-card class="store-hours-manager q-mb-lg">
+          <q-card-section>
+            <div class="row items-center q-mb-md">
+              <div class="col-12 col-sm-6">
+                <div class="text-h6 text-weight-bold">
+                  <q-icon name="edit" color="primary" size="sm" class="q-mr-xs" />
+                  Descripción de la empresa
+                </div>
+                <div class="text-caption text-grey">
+                  Configura la descripción de la empresa que aparece en el menu de la empresa
+                </div>
+              </div>
+            </div>
+            <q-editor v-model="menuConfig.description" />
+          </q-card-section>
+        </q-card>
+        <schedule-company
+          :schedule="menuConfig.schedule"
+          @update:schedule="($event) => menuConfig.schedule = $event"
+        />
+        <div class="full-width text-right">
+          <q-btn
+            color="primary"
+            label="Guardar"
+            icon="check_circle"
+            type="button"
+            @click="saveMenuConfig"
+            :loading="loading"
+          />
+        </div>
+      </q-step>
     </q-stepper>
   </q-page>
 </template>
@@ -255,6 +323,7 @@
 <script setup>
 import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
+import ScheduleCompany from 'src/components/Company/ScheduleCompany.vue'
 import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
 import { ref } from 'vue'
@@ -336,6 +405,14 @@ const companyConfig = ref({
   point_of_sale: company.value?.company_config?.point_of_sale
 })
 
+const menuConfig = ref({
+  ...companyConfig.value?.other?.menu
+})
+
+const fileBanner = ref({
+  url: menuConfig.value?.banner_url
+})
+
 /**
  * File
  * @type {Object}
@@ -357,6 +434,14 @@ const loading = ref(false)
 const onUpload = async (files) => {
   const filesSelected = await setFiles(files)
   file.value = filesSelected[0]
+}
+/**
+ * On upload
+ * @param {Array} files
+ */
+const onUploadBanner = async (files) => {
+  const filesSelected = await setFiles(files)
+  fileBanner.value = filesSelected[0]
 }
 
 /**
@@ -539,6 +624,27 @@ const filterTypeOfServices = async (value, update) => {
   })
 }
 
+const saveMenuConfig = async () => {
+  try {
+    loading.value = true
+    const formData = new FormData()
+    formData.append('file', fileBanner.value.file)
+    formData.append('other', JSON.stringify({
+      ...companyConfig.value.other,
+      menu: menuConfig.value
+    }))
+    const { data } = await api.post(`session/company-other-configs/${company.value.id}`, formData)
+    store.setCompanySession({
+      ...company.value,
+      company_config: data
+    })
+    notify('Guardado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loading.value = false
+  }
+}
 /**
  * Save company config
  * @param {Object} data
