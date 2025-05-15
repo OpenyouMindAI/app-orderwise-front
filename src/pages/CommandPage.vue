@@ -15,7 +15,16 @@
           style="max-height: 250px; max-width: 500px; min-width: 45vw;"
         />
       </div>
-      <div class="text-subtitle1 text-center q-mt-md" v-html="menu?.description"/>
+      <iframe
+        v-if="menu?.description"
+        :srcdoc="menu?.description"
+        width="100%"
+        style="min-height: 20px;"
+        frameborder="0"
+        title="Description"
+      >
+      </iframe>
+      <!-- <div class="text-subtitle1 text-center q-mt-md" v-html="menu?.description"/> -->
     </div>
     <div style="max-width: 600px;" class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
       <div class="col-12">
