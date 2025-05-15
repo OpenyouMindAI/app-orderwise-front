@@ -100,6 +100,7 @@
         title="Valores por defecto"
         icon="settings"
         clickable
+        :done="step > 2"
       >
         <q-card>
           <q-form @submit="onSubmitConfig">
@@ -253,6 +254,7 @@
         title="Configurar menu"
         icon="menu_book"
         clickable
+        :done="step > 3"
       >
         <q-card class="store-hours-manager q-mb-lg">
           <q-card-section>

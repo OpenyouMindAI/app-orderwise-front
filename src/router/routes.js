@@ -194,6 +194,12 @@ const routes = [
         name: 'DashboardManager',
         meta: { requiresAuth: true },
         component: () => import('pages/DashboardManagerPage.vue')
+      },
+      {
+        path: 'printers',
+        name: 'Printer',
+        meta: { requiresAuth: true },
+        component: () => import('pages/PrinterPage.vue')
       }
     ]
   },
