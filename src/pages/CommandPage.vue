@@ -15,7 +15,7 @@
           style="max-height: 250px; max-width: 500px; min-width: 45vw;"
         />
       </div>
-      <span class="text-subtitle1 text-center q-mt-md" v-html="menu?.description"/>
+      <div class="text-subtitle1 text-center q-mt-md" v-html="menu?.description"/>
     </div>
     <div style="max-width: 600px;" class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
       <div class="col-12">
