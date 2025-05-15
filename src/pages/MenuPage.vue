@@ -7,9 +7,7 @@
           style="max-height: 250px; max-width: 500px; min-width: 45vw;"
         />
       </div>
-      <span class="text-h6 text-center">
-        {{ company?.company_config.other?.menu?.description || company?.name }}
-      </span>
+      <div class="text-subtitle1 text-center q-mt-md" v-html="company?.company_config.other?.menu?.description || company?.name"/>
     </div>
     <div style="max-width: 600px;" class="row q-col-gutter-y-sm q-mt-md" v-if="tab === 'menu'">
       <div class="col-xs-12 col-sm-12 col-md-6 col-lg-6">

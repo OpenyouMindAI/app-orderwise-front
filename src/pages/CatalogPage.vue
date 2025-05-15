@@ -7,9 +7,7 @@
           style="max-height: 250px; max-width: 500px; min-width: 45vw;"
         />
       </div>
-      <span class="text-h6 text-center">
-        {{ company?.company_config.other?.menu?.description || company?.name }}
-      </span>
+      <div class="text-subtitle1 text-center q-mt-md" v-html="company?.company_config.other?.menu?.description"/>
     </div>
     <div style="max-width: 600px;" class="full-width text-subtitle1 flex justify-between items-center" v-if="tab === 'orders'">
       <span class="text-h6">Ordenes</span>
