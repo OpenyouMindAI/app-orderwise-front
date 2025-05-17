@@ -132,6 +132,32 @@ const createOrder = async (invoice) => {
     loading.value = false
   }
 }
+/**
+ * Converts amount and price to the minimal unit, ensuring integer quantity.
+ * @param {number} amount - The quantity in the original unit.
+ * @param {number} price - The price for that quantity.
+ * @param {string} originalUnit - E.g., 'kg', 'liter'
+ * @returns {object} - { minimalAmount, minimalUnit, pricePerMinimalUnit }
+ */
+const convertToMinimalUnit = (quantity, price, originalUnit) => {
+  const conversions = {
+    kg: { factor: 1000, minimalUnit: 'g' },
+    ml: { factor: 1000, minimalUnit: 'ml' },
+    unit: { factor: 1, minimalUnit: 'unit' }
+  }
+
+  const conv = conversions[originalUnit.toLowerCase()]
+  if (!conv) throw new Error('Unit not supported')
+
+  const minimalAmount = Math.round(quantity * conv.factor)
+  const pricePerMinimalUnit = price / conv.factor
+
+  return {
+    minimalAmount,
+    minimalUnit: conv.minimalUnit,
+    pricePerMinimalUnit
+  }
+}
 
 /**
  * Set bill model
@@ -146,9 +172,11 @@ const setBillModel = (model) => {
     externalPosId: '1',
     description: model.description || model.title,
     products: model.products.map(product => {
+      const conversion = convertToMinimalUnit(product.quantity, product.price, product.unit_of_measure?.acronym)
       return {
         ...product,
-        quantity: product.amount,
+        price: conversion.pricePerMinimalUnit,
+        quantity: conversion.minimalAmount,
         category: product?.category?.name || 'Sin categoría',
         unit_measure: product?.unit_of_measure?.name,
         currency_id: product.currency_id

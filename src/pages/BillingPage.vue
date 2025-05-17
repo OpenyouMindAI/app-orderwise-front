@@ -2001,7 +2001,8 @@ export default {
           bundle_stock: product.bundle_stock,
           skip_stock: product.skip_stock,
           is_bundle: product.is_bundle,
-          aliquot_type: product.aliquot_type || product?.category?.aliquot_type
+          aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
+          unit_of_measure: product.unit_of_measure
         }
       ]
     },
