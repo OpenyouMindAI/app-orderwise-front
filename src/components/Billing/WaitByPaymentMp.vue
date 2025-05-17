@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="modelValue" persistent>
-    <q-card style="width: 500px; max-width: 80vw; min-height: 450px;" class="column">
+    <q-card style="width: 500px; max-width: 80vw;">
       <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
         <div class="text-h6">
           Escanee el código qr
@@ -13,7 +13,7 @@
         </q-btn>
       </q-card-section>
 
-      <q-card-section class="q-pa-none col" v-if="!paymentData">
+      <q-card-section class="q-pa-none" v-if="!paymentData">
         <q-img src="animates/qr.gif" alt="qr_ gift" v-show="!loading" style="max-height: 400px;">
           <div class="absolute-full text-h6 text-center flex flex-center" style="background: rgba(0,0,0,0.4)">
             En espera de que el cliente proceda a escanear el código QR.
