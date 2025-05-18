@@ -862,10 +862,7 @@ export default {
   methods: {
     async getInit () {
       await this.getBranchOffices()
-      this.setPagination({
-        pagination: this.paginationConfig,
-        filter: undefined
-      })
+      this.filterInvoice()
     },
     /**
      * Filter invoice
