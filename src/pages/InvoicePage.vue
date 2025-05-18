@@ -900,7 +900,9 @@ export default {
         delivery_person_id: this.filters.deliveryPerson?.id,
         id: this?.filters?.code
       }
-      this.getInvoices(this.params)
+      this.setPagination({
+        pagination: this.paginationConfig
+      })
     },
     /**
      * Get all sellers
