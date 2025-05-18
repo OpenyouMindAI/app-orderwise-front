@@ -898,7 +898,7 @@ export default {
         seller_id: this.filters.seller?.id,
         client_id: this.filters.client?.id,
         delivery_person_id: this.filters.deliveryPerson?.id,
-        id: this?.filters?.code || null
+        id: this?.filters?.code
       }
       this.getInvoices(this.params)
     },
