@@ -1518,8 +1518,8 @@ export default {
       this.loadingPage = true
       this.$api.get('products', {
         params: {
-          sortBy: 'id',
           sortOrder: 'desc',
+          sortBy: 'sold',
           mostSold: true,
           dataEqualFilter: {
             category_id: this.category === 'all' ? null : this.category,

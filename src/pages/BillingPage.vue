@@ -1347,9 +1347,9 @@ export default {
      */
     setPagination (data) {
       const params = {
-        sortOrder: data.pagination.descending ? 'asc' : 'desc',
+        sortOrder: 'desc',
+        sortBy: 'sold',
         page: data.pagination.page,
-        sortBy: data.pagination.sortBy,
         perPage: data.pagination.rowsPerPage,
         paginate: true,
         dataSearch: {
@@ -1689,7 +1689,6 @@ export default {
           branch_office_id: this.branchOffice?.id,
           stock: true,
           withStock: true,
-          mostSold: true,
           dataEqualFilter: {
             category_id: this.category ? this.category.id : null
           }

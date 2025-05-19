@@ -1201,7 +1201,8 @@ export default {
           params: {
             stock: true,
             withStock: true,
-            mostSold: true,
+            sortOrder: 'desc',
+            sortBy: 'sold',
             branch_office_id: this.$route.params.branch_office_id,
             dataEqualFilter: {
               category_id: this.category === 'all' ? null : this.category,
