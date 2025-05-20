@@ -15,7 +15,7 @@
                   style="border-radius: 10px;"
                   v-ripple
                   clickable
-                  @click="downloadInvoiceExcel"
+                  @click="downloadPurchaseExcel"
                 >
                   <q-item-section thumbnail>
                     <q-icon name="archive" class="q-ml-sm"/>
@@ -54,7 +54,7 @@
         :visible-columns="visibleColumns"
         binary-state-sort
         v-model:pagination="paginationConfig"
-        @row-click="editInvoice"
+        @row-click="editPurchase"
         @request="setPagination"
         no-data-label="Registro no encontrado"
       >
@@ -98,14 +98,14 @@
         </template>
       </q-table>
     </div>
-    <q-dialog v-model="openEditInvoice" :maximized="$q.screen.lt.sm">
+    <q-dialog v-model="openEditPurchase" :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
         :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 1000px; max-width: 85vw;'}`"
         >
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
-          <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
+          <q-btn icon="close" flat round dense @click="openEditPurchase = false" />
         </q-card-section>
         <q-card-section class="scroll col" style="max-height: 90vh">
           <div class="row q-col-gutter-md">
@@ -138,7 +138,7 @@
                   option-label="name"
                   option-value="id"
                   readonly
-                  v-model="purchase.invoice_type"
+                  v-model="purchase.Purchase_type"
                   :rules="[val => !!val || 'El campo es requerido.']"
                 />
               </div>
@@ -236,6 +236,7 @@
                           <tr>
                             <th class="text-left">Método de pago</th>
                             <th class="text-right">Monto</th>
+                            <th class="text-right">Fecha de pago</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -291,7 +292,7 @@ import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, notify, formatDate } from 'src/const/mixins'
-import { printInvoice, status, generarFacturaPDF } from 'src/const/invoice'
+import { printPurchase, status, generarFacturaPDF } from 'src/const/Purchase'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
@@ -312,7 +313,7 @@ export default {
        * Visible columns
        * @type {Array}
        */
-      visibleColumns: ['purchase_code', 'invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
+      visibleColumns: ['purchase_code', 'Purchase_type', 'client', 'seller', 'created_at', 'status', 'total'],
       /**
        * Status purchase
        * @type {Object}
@@ -346,12 +347,12 @@ export default {
        */
       editTab: 'details',
       /**
-       * Invoices list table
+       * Purchases list table
        * @type {Array}
        */
       purchases: [],
       /**
-       * Invoice data selected
+       * Purchase data selected
        * @type {Object}
        */
       purchase: null,
@@ -383,7 +384,7 @@ export default {
           id: '',
           created_at: '',
           'coin.name': '',
-          'invoiceType.name': '',
+          'PurchaseType.name': '',
           'provider.name': ''
         }
       },
@@ -396,12 +397,12 @@ export default {
        * Open add purchase dialog
        * @type {Boolean}
        */
-      openAddInvoice: false,
+      openAddPurchase: false,
       /**
        * Open edit purchase dialog
        * @type {Object}
        */
-      openEditInvoice: null,
+      openEditPurchase: null,
       /**
        * Table columns
        * @type {Array}
@@ -424,10 +425,10 @@ export default {
           sortable: true
         },
         {
-          name: 'invoice_type',
+          name: 'Purchase_type',
           align: 'left',
           label: 'Tipo de servicio',
-          field: row => row?.invoice_type?.name
+          field: row => row?.Purchase_type?.name
         },
         {
           name: 'provider',
@@ -496,10 +497,10 @@ export default {
         sortOrder: 'desc'
       },
       /**
-       * Invoice types
+       * Purchase types
        * @type {Array}
        */
-      invoiceTypes: []
+      PurchaseTypes: []
     }
   },
   computed: {
@@ -528,7 +529,7 @@ export default {
     }
   },
   methods: {
-    downloadInvoiceExcel () {
+    downloadPurchaseExcel () {
       getDownload(
         'excel/purchases',
         {
@@ -539,7 +540,6 @@ export default {
           }
         },
         (percentCompleted) => {
-          console.log(percentCompleted)
           this.loadingDownload = percentCompleted
           if (percentCompleted === 100) {
             this.loadingDownload = 0
@@ -548,7 +548,7 @@ export default {
         (link) => {
           link.setAttribute(
             'download',
-            'Invoices.xlsx'
+            'Purchases.xlsx'
             // `Recibos de cobro: Desde ${proxyDate.value.from} Hasta ${proxyDate.value.to}.xlsx`
           )
           document.body.appendChild(link)
@@ -573,8 +573,8 @@ export default {
      * @param {String} value Value filter
      * @param {Callback} update update options
      */
-    filterInvoiceTypes (value, update) {
-      this.$api.get('invoice-types', {
+    filterPurchaseTypes (value, update) {
+      this.$api.get('Purchase-types', {
         params: {
           dataSearch: {
             name: value
@@ -583,7 +583,7 @@ export default {
       })
         .then(({ data }) => {
           update(() => {
-            this.invoiceTypes = data
+            this.PurchaseTypes = data
           })
         })
         .catch(err => {
@@ -603,7 +603,7 @@ export default {
       if (!ticket && this.purchase.billing) {
         doc = await generarFacturaPDF(this.purchase, this.userSession)
       } else if (ticket) {
-        doc = await printInvoice(this.purchase, this.userSession)
+        doc = await printPurchase(this.purchase, this.userSession)
       }
       console.log(doc)
       const pdfUrl = doc.output('bloburl')
@@ -613,8 +613,8 @@ export default {
      * Close all modals
      */
     closeModal () {
-      this.openAddInvoice = false
-      this.openEditInvoice = false
+      this.openAddPurchase = false
+      this.openEditPurchase = false
       this.coin = {}
     },
     /**
@@ -670,12 +670,12 @@ export default {
     /**
      * Save purchases
      */
-    saveInvoice () {
+    savePurchase () {
       this.visible = true
       this.$api.post('purchases', this.purchase)
         .then(({ data }) => {
           this.getPurchases()
-          this.openAddInvoice = false
+          this.openAddPurchase = false
           this.visible = false
           this.purchase = {}
           Notify.create({
@@ -699,8 +699,8 @@ export default {
      * @param {Object} row row
      * @param {Number} index index
      */
-    editInvoice (event, row, index) {
-      this.openEditInvoice = true
+    editPurchase (event, row, index) {
+      this.openEditPurchase = true
       this.purchase = row
     },
     /**
@@ -719,23 +719,6 @@ export default {
       return data
     },
     /**
-     * Save providers
-     */
-    saveProvider () {
-      this.loadingProvider = true
-      this.$api.put(`providers/${this.purchase.client.id}`, this.client)
-        .then(({ data }) => {
-          this.openAddProvider = false
-          this.loadingProvider = false
-          this.purchase.client = data
-          notify('Proveedor guardado exitosamente', 'positive', 'check_circle')
-        })
-        .catch(err => {
-          this.loadingProvider = false
-          notify(err.message, 'negative', 'warning')
-        })
-    },
-    /**
      * Edit purchase
      */
     saveEdit () {
@@ -743,7 +726,7 @@ export default {
       this.$api.put(`purchases/${this.purchase.id}`, this.modelData(this.purchase))
         .then(({ data }) => {
           this.getPurchases()
-          this.openEditInvoice = false
+          this.openEditPurchase = false
           this.visible = false
           this.purchase = null
           Notify.create({
@@ -764,12 +747,12 @@ export default {
     /**
      * Delete purchase
      */
-    deleteInvoice () {
+    deletePurchase () {
       this.visible = true
       this.$api.delete(`purchases/${this.purchase.id}`)
         .then(({ data }) => {
           this.getPurchases()
-          this.openEditInvoice = false
+          this.openEditPurchase = false
           this.visible = false
           this.purchase = null
           Notify.create({
@@ -792,13 +775,13 @@ export default {
      * @param {Object} data purchase
      * @param {Number} index index status
      */
-    async cancelInvoice  () {
+    async cancelPurchase  () {
       try {
         this.cancelLoading = true
         await this.$api.put(`purchase-status-command/${this.purchase.id}`, { status: 'cancelled' })
         this.getPurchases()
         notify('Factura anulada exitosamente', 'positive', 'check_circle')
-        this.openEditInvoice = false
+        this.openEditPurchase = false
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
