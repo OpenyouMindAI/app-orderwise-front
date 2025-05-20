@@ -236,7 +236,6 @@
                           <tr>
                             <th class="text-left">Método de pago</th>
                             <th class="text-right">Monto</th>
-                            <th class="text-right">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -248,14 +247,7 @@
                               {{ formatNumber(payment.amount) }}
                             </td>
                             <td class="text-right">
-                              <q-btn
-                                icon="delete"
-                                size="sm"
-                                dense
-                                round
-                                color="negative"
-                                @click="removePayment(payment)"
-                              />
+                              {{ formatDate(payment.created_at) }}
                             </td>
                           </tr>
                         </tbody>
