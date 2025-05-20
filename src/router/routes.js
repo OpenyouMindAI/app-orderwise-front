@@ -142,6 +142,12 @@ const routes = [
         component: () => import('pages/AccountsReceivablePage.vue')
       },
       {
+        path: 'accounts-payable',
+        name: 'AccountsPayable',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AccountsPayablePage.vue')
+      },
+      {
         path: 'dashboard',
         name: 'Dashboard',
         meta: { requiresAuth: true },

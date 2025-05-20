@@ -101,7 +101,7 @@
     <q-dialog v-model="openEditInvoice" :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 900px; max-width: 85vw;'}`"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 1000px; max-width: 85vw;'}`"
         >
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
@@ -109,9 +109,24 @@
         </q-card-section>
         <q-card-section class="scroll col" style="max-height: 90vh">
           <div class="row q-col-gutter-md">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 row q-col-gutter-sm">
+            <div class="col-xl-7 col-lg-7 col-md-7 col-sm-7 col-xs-12 row q-col-gutter-sm">
               <div class="col-6">
-                <q-input label="Código" filled v-model="purchase.purchase_code" readonly dense/>
+                <q-input
+                  label="Código de factura"
+                  filled
+                  v-model="purchase.purchase_code"
+                  readonly
+                  dense
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  label="Código de comprobante"
+                  filled
+                  v-model="purchase.purchase_number"
+                  readonly
+                  dense
+                />
               </div>
               <div class="col-6">
                 <q-select
@@ -122,33 +137,44 @@
                   input-debounce="0"
                   option-label="name"
                   option-value="id"
+                  readonly
                   v-model="purchase.invoice_type"
-                  :options="invoiceTypes"
                   :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filterInvoiceTypes"
                 />
               </div>
               <div class="col-6">
-                <q-input label="Proveedor" filled v-model="purchase.provider.name" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Moneda" filled :model-value="purchase?.coin?.name" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Fecha" filled :model-value="formatDate(purchase.created_at)" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Hora" filled :model-value="formatDate(purchase.created_at, 'HH:mm:ss')" readonly dense/>
-              </div>
-              <div class="col-12">
                 <q-input
-                  label="Descripción"
+                  label="Proveedor"
                   filled
-                  v-model="purchase.description"
+                  v-model="purchase.provider.name"
                   readonly
                   dense
-                  type="textarea"
-                  autogrow
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Moneda"
+                  filled
+                  :model-value="purchase?.coin?.name"
+                  readonly
+                  dense
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Fecha"
+                  filled
+                  :model-value="formatDate(purchase.created_at)"
+                  readonly dense
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Hora"
+                  filled
+                  :model-value="formatDate(purchase.created_at, 'HH:mm:ss')"
+                  readonly
+                  dense
                 />
               </div>
               <div class="col-12">
@@ -184,7 +210,7 @@
                               {{ formatNumber(product.pivot.quantity) }}
                             </td>
                             <td class="text-right">
-                              {{ formatNumber(product.pivot.quantity *  product.pivot.price) }}
+                              {{ formatNumber(product.pivot.quantity *  product.pivot.cost) }}
                             </td>
                           </tr>
                         </tbody>
@@ -194,7 +220,7 @@
                 </q-expansion-item>
               </div>
             </div>
-            <!-- <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
@@ -210,15 +236,26 @@
                           <tr>
                             <th class="text-left">Método de pago</th>
                             <th class="text-right">Monto</th>
+                            <th class="text-right">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="(payment) in purchase.purchase_payments" :key="payment.id">
+                          <tr v-for="(payment) in purchase.payments" :key="payment.id">
                             <td class="text-left">
                               {{ payment.payment_method.name }}
                             </td>
                             <td class="text-right">
                               {{ formatNumber(payment.amount) }}
+                            </td>
+                            <td class="text-right">
+                              <q-btn
+                                icon="delete"
+                                size="sm"
+                                dense
+                                round
+                                color="negative"
+                                @click="removePayment(payment)"
+                              />
                             </td>
                           </tr>
                         </tbody>
@@ -232,12 +269,12 @@
                   class="full-width"
                   icon="check_circle"
                   color="primary"
-                  label="Guardar"
-                  v-if="purchase.status !== 'cancelled'"
-                  @click="saveEdit"
+                  label="Pagar"
+                  v-if="purchase.balance > 0"
+                  @click="addPaymentDialog = true"
                 />
               </div>
-            </div> -->
+            </div>
           </div>
         </q-card-section>
       </q-card>
@@ -379,11 +416,19 @@ export default {
        */
       columns: [
         {
+          name: 'purchase_number',
+          align: 'left',
+          label: 'Número de comprobante',
+          field: 'purchase_number',
+          format: row => row || '-',
+          sortable: true
+        },
+        {
           name: 'purchase_code',
           align: 'left',
-          label: 'Código',
+          label: 'Código de factura',
           field: 'purchase_code',
-          format: row => row?.purchase_code || '-',
+          format: row => row || '-',
           sortable: true
         },
         {

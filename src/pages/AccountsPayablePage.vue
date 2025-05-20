@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row q-gutter-y-sm justify-between">
       <div class="col-lg-6 col-md-6 col-sm-6  col-xs-12 q-pa-sm">
-        <span class="text-h6">Cuentas por cobrar</span>
+        <span class="text-h6">Cuentas por pagar</span>
       </div>
       <div class="col-lg-6 col-md-6 col-sm-6  col-xs-12 text-subtitle1 flex justify-end items-center q-gutter-x-sm">
         <q-badge class="text-subtitle2" color="secondary">
@@ -20,7 +20,7 @@
         <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
           <q-card class="text-negative">
             <q-card-section horizontal>
-              <q-card-section class="full-width"> Ventas totales </q-card-section>
+              <q-card-section class="full-width"> Deuda total </q-card-section>
               <q-card-section class="text-right full-width">
                 {{ formatNumber(totals?.total_owed || 0) }}
               </q-card-section>
@@ -30,7 +30,7 @@
         <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
           <q-card class="text-positive">
             <q-card-section horizontal>
-              <q-card-section class="full-width"> Cobrado </q-card-section>
+              <q-card-section class="full-width"> Pagado </q-card-section>
               <q-card-section class="text-right full-width">
                 {{ formatNumber(totals?.total_paid || 0) }}
               </q-card-section>
@@ -53,13 +53,13 @@
           v-model:pagination="paginationConfig"
           row-key="id"
           :columns="columns"
-          :rows="clients"
+          :rows="providers"
           :loading="visible"
           :filter="filter"
           binary-state-sort
           no-data-label="Registro no encontrado"
           @request="setPagination"
-          @row-click="editClient"
+          @row-click="editProvider"
         >
           <template #loading>
             <q-inner-loading showing color="primary" />
@@ -90,7 +90,7 @@
           <div class="row full-width col-12 q-col-gutter-sm items-center">
             <div class="col-6">
               <span class="text-subtitle1">
-                {{ client.document_number }} {{ client.name }}
+                {{ provider.document_number }} {{ provider.name }}
               </span>
             </div>
             <div class="col-6 text-right">
@@ -114,7 +114,7 @@
             <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
               <q-card class="text-positive">
                 <q-card-section horizontal>
-                  <q-card-section class="full-width"> Cobrado </q-card-section>
+                  <q-card-section class="full-width"> Pagado </q-card-section>
                   <q-card-section class="text-right full-width">
                     {{ formatNumber(totals?.total_paid || 0) }}
                   </q-card-section>
@@ -138,7 +138,7 @@
             v-model:pagination="salePagination"
             row-key="id"
             :columns="saleColumns"
-            :rows="sales"
+            :rows="purchases"
             :loading="visible"
             :filter="filter"
             binary-state-sort
@@ -173,18 +173,6 @@
         </q-card-section>
 
         <q-card-section class="col q-pt-sm q-gutter-md">
-          <q-select
-            use-input
-            filled
-            label="Vendedor"
-            input-debounce="0"
-            option-value="id"
-            v-model="seller"
-            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-            :options="sellers"
-            clearable
-            @filter="filterSellers"
-          />
           <q-option-group
             v-model="panel"
             inline
@@ -233,7 +221,7 @@
           </div>
           <div class="col-6 column q-gutter-y-sm">
             <q-input
-              v-model="amount"
+              v-model.number="amount"
               label="Monto"
               type="number"
               filled
@@ -269,7 +257,22 @@
           <div class="row q-col-gutter-md">
             <div class="col-xl-7 col-lg-7 col-md-7 col-sm-7 col-xs-12 row q-col-gutter-sm">
               <div class="col-6">
-                <q-input label="Código" filled v-model="billDetails.code" readonly dense/>
+                <q-input
+                  label="Código de factura"
+                  filled
+                  v-model="billDetails.purchase_code"
+                  readonly
+                  dense
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  label="Código de comprobante"
+                  filled
+                  v-model="billDetails.purchase_number"
+                  readonly
+                  dense
+                />
               </div>
               <div class="col-6">
                 <q-select
@@ -286,40 +289,38 @@
                 />
               </div>
               <div class="col-6">
-                <q-input label="Cliente" filled v-model="billDetails.client.name" readonly dense/>
-              </div>
-              <div class="col-6" v-if="billDetails.seller">
-                <q-input label="Vendedor" filled v-model="billDetails.seller.name" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Moneda" filled :model-value="billDetails?.coin?.name" readonly dense/>
-              </div>
-              <div class="col-6" v-if="billDetails.tables.length">
-                <q-select
+                <q-input
+                  label="Proveedor"
                   filled
+                  v-model="billDetails.provider.name"
                   readonly
                   dense
-                  label="Mesas"
-                  v-model="billDetails.tables"
-                  option-label="name"
-                  multiple
                 />
               </div>
-              <div class="col-6">
-                <q-input label="Fecha" filled v-model="billDetails.date" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Hora" filled v-model="billDetails.hour" readonly dense/>
-              </div>
-              <div class="col-12">
+              <div class="col-4">
                 <q-input
-                  label="Descripción"
+                  label="Moneda"
                   filled
-                  v-model="billDetails.description"
+                  :model-value="billDetails?.coin?.name"
                   readonly
                   dense
-                  type="textarea"
-                  autogrow
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Fecha"
+                  filled
+                  :model-value="formatDate(billDetails.created_at)"
+                  readonly dense
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Hora"
+                  filled
+                  :model-value="formatDate(billDetails.created_at, 'HH:mm:ss')"
+                  readonly
+                  dense
                 />
               </div>
               <div class="col-12">
@@ -352,10 +353,10 @@
                               <q-tooltip class="text-subtitle1">{{ product.name }}</q-tooltip>
                             </td>
                             <td class="text-right">
-                              {{ formatNumber(product.pivot.amount) }}
+                              {{ formatNumber(product.pivot.quantity) }}
                             </td>
                             <td class="text-right">
-                              {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
+                              {{ formatNumber(product.pivot.quantity *  product.pivot.cost) }}
                             </td>
                           </tr>
                         </tbody>
@@ -385,7 +386,7 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="(payment) in billDetails.invoice_payments" :key="payment.id">
+                          <tr v-for="(payment) in billDetails.payments" :key="payment.id">
                             <td class="text-left">
                               {{ payment.payment_method.name }}
                             </td>
@@ -412,40 +413,6 @@
               <div class="q-gutter-y-xs">
                 <q-btn
                   class="full-width"
-                  icon="block"
-                  color="negative"
-                  label="Anular"
-                  :loading="cancelLoading"
-                  @click="cancelInvoice"
-                />
-                <q-btn
-                  class="full-width"
-                  icon="receipt"
-                  color="secondary"
-                  label="Imprimir Comanda"
-                  @click="print(true)"
-                />
-                <q-btn
-                  class="full-width"
-                  icon="print"
-                  color="info"
-                  :label="`Imprimir ${billDetails.billing ? 'Factura' : 'Comprobante'}`"
-                  @click="print(false)"
-                />
-                <q-btn
-                  class="full-width"
-                  icon="send"
-                  color="positive"
-                  label="Factura electrónica"
-                  v-if="billDetails.invoice_type.bill && !billDetails.billing && billDetails.status !== 'cancelled'"
-                  @click="setInvoiceElectronic(billDetails)"
-                >
-                  <q-tooltip class="text-body1" anchor="bottom middle">
-                    Generar factura electrónica
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  class="full-width"
                   icon="check_circle"
                   color="primary"
                   label="Pagar"
@@ -463,15 +430,15 @@
 
 <script>
 import { mapState } from 'pinia'
-import { date, Notify } from 'quasar'
+import { Notify } from 'quasar'
 import { formatNumber, formatDate, notify, loading } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import { printInvoice, printTicket } from 'src/const/invoice'
 export default {
-  name: 'AccountsReceivablePage',
+  name: 'AccountPayablePage',
   data () {
     return {
       formatNumber,
+      formatDate,
       openDetails: false,
       dialogFilter: false,
       amount: null,
@@ -479,11 +446,9 @@ export default {
       paymentMethodSelected: null,
       reference: null,
       panel: 'day',
-      client: {},
-      clients: [],
-      sellers: [],
-      sales: [],
-      seller: null,
+      provider: {},
+      providers: [],
+      purchases: [],
       filter: '',
       fromHours: null,
       toHours: null,
@@ -543,7 +508,7 @@ export default {
         {
           name: 'total_owed',
           align: 'right',
-          label: 'Monto a cobrar',
+          label: 'Monto a pagar',
           field: 'total_owed',
           sortable: true,
           format: row => formatNumber(row)
@@ -551,7 +516,7 @@ export default {
         {
           name: 'total_paid',
           align: 'right',
-          label: 'Monto cobrado',
+          label: 'Monto pagado',
           field: 'total_paid',
           sortable: true,
           format: row => formatNumber(row)
@@ -567,10 +532,17 @@ export default {
       ],
       saleColumns: [
         {
-          name: 'code',
+          name: 'purchase_number',
           align: 'left',
           label: 'Nro Comprobante',
-          field: 'code',
+          field: 'purchase_number',
+          sortable: true
+        },
+        {
+          name: 'purchase_code',
+          align: 'left',
+          label: 'Nro Factura',
+          field: 'purchase_code',
           sortable: true
         },
         {
@@ -600,14 +572,14 @@ export default {
         {
           name: 'total',
           align: 'right',
-          label: 'Monto a cobrar',
+          label: 'Monto a pagar',
           field: 'total',
           format: row => formatNumber(row)
         },
         {
           name: 'total_payments',
           align: 'right',
-          label: 'Monto cobrado',
+          label: 'Monto pagado',
           field: 'total_payments',
           format: row => formatNumber(row)
         },
@@ -646,7 +618,7 @@ export default {
       this.filterDate()
     },
     openDetails (data) {
-      if (!data) this.client = {}
+      if (!data) this.provider = {}
       this.filterDate()
     },
     openBillDetails (data) {
@@ -667,24 +639,14 @@ export default {
   },
   methods: {
     /**
-     * Print invoice
-     * @param {Object} data invoice saved
-     */
-    async print (ticket) {
-      let doc = await printInvoice(this.billDetails, this.userSession)
-      if (ticket) doc = printTicket(this.billDetails, this.userSession)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
-    },
-    /**
      * Change status
-     * @param {Object} data invoice
+     * @param {Object} data purchase
      * @param {Number} index index status
      */
-    async cancelInvoice  () {
+    async cancelPurchase  () {
       try {
         this.cancelLoading = true
-        await this.$api.put(`invoice-status-command/${this.billDetails.id}`, { status: 'cancelled' })
+        await this.$api.put(`purchase-status-command/${this.billDetails.id}`, { status: 'cancelled' })
         this.filterDate()
         notify('Factura anulada exitosamente', 'positive', 'check_circle')
         this.openBillDetails = false
@@ -701,30 +663,10 @@ export default {
     async removePayment (payment) {
       try {
         loading(true)
-        await this.$api.delete(`invoice-payments/${payment.id}`)
-        await this.getInvoice(payment.invoice_id)
+        await this.$api.delete(`purchase-payments/${payment.id}`)
+        await this.getPurchase(payment.purchase_id)
         this.filterDate()
         notify('Factura anulada exitosamente', 'positive', 'check_circle')
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    /**
-     * Set invoice electronic
-     * @param {Object} invoice invoice
-     */
-    async setInvoiceElectronic (invoice) {
-      try {
-        loading(true)
-        const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
-        if (data.electronic_invoice?.fields?.error) {
-          notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
-        } else {
-          this.billDetails = data
-          notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')
-        }
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
@@ -735,36 +677,13 @@ export default {
      * Clear filter
      */
     clearFilter () {
-      this.day = date.formatDate(Date(), 'YYYY-MM-DD')
-      this.fromHours = '00:00'
-      this.toHours = '23:59'
-      this.seller = null
-      this.from = date.formatDate(Date(), 'YYYY-MM-DD')
-      this.to = date.formatDate(Date(), 'YYYY-MM-DD')
+      this.day = null
+      this.fromHours = null
+      this.toHours = null
+      this.from = null
+      this.to = null
       this.panel = 'day'
       this.filterDate()
-    },
-    /**
-     * Get all sellers
-     * @param {String} value
-     * @param {Function} update
-     */
-    async filterSellers (value, update) {
-      try {
-        const { data } = await this.$api.get('sellers', {
-          params: {
-            dataSearch: {
-              name: value,
-              document_number: value
-            }
-          }
-        })
-        update(() => {
-          this.sellers = data
-        })
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
     },
     /**
      * Filter date
@@ -773,20 +692,18 @@ export default {
       if (this.panel === 'day') {
         this.filters = {
           branch_office_id: this.branchOffice?.id,
-          seller_id: this.seller?.id,
           day: this.day,
-          fromHours: this.fromHours,
-          toHours: this.toHours
+          fromHours: this.fromHours || '00:00',
+          toHours: this.toHours || '23:59'
         }
       } else {
         this.filters = {
-          seller_id: this.seller?.id,
           branch_office_id: this.branchOffice?.id,
           to: this.to,
           from: this.from
         }
       }
-      if (this.client?.id) {
+      if (this.provider?.id) {
         this.setSalePagination({
           pagination: this.salePagination,
           filter: undefined
@@ -802,14 +719,9 @@ export default {
      * Close all modals
      */
     closeModal () {
-      this.openAddClient = false
-      this.openEditClient = false
-      this.client = {
-        ownerable_type: 'App\\Models\\Organization',
-        ownerable_id: 1,
-        staff_type_id: 1,
-        images: []
-      }
+      this.openAddProvider = false
+      this.openEditProvider = false
+      this.provider = {}
     },
     /**
      * Search beneficiary
@@ -820,18 +732,18 @@ export default {
         this.params.dataSearch[dataSearch] = data
       }
       this.params.page = 1
-      this.getClients(this.params)
+      this.getProviders(this.params)
     },
     /**
-     * Get all clients
+     * Get all providers
      * @param {Object} params
      */
-    getClients (params = this.params) {
+    getProviders (params = this.params) {
       this.visible = true
       this.$api
-        .get('reports/clients', { params })
+        .get('reports/providers', { params })
         .then(({ data }) => {
-          this.clients = data.data
+          this.providers = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
         })
@@ -845,15 +757,15 @@ export default {
         })
     },
     /**
-     * Get all sales
+     * Get all purchases
      * @param {Object} params
      */
-    getSales (params = this.saleParams) {
+    getPurchases (params = this.saleParams) {
       this.visible = true
       this.$api
-        .get('invoices', { params })
+        .get('purchases', { params })
         .then(({ data }) => {
-          this.sales = data.data
+          this.purchases = data.data
           this.visible = false
           this.salePagination.rowsNumber = data.total
         })
@@ -867,16 +779,16 @@ export default {
         })
     },
     /**
-     * Get totals for the current client
+     * Get totals for the current provider
      * @param {Object} params
      * @returns {Promise<void>}
      */
     async getTotals (params) {
       try {
         loading(true)
-        const { data } = await this.$api.get('reports/accounts-receivable-totals', {
+        const { data } = await this.$api.get('reports/accounts-payable-totals', {
           params: {
-            client_id: this.client?.id,
+            provider_id: this.provider?.id,
             ...params
           }
         })
@@ -902,7 +814,7 @@ export default {
         ...this.params,
         ...this.filters
       }
-      this.getClients(params)
+      this.getProviders(params)
     },
     /**
      * Set data pagination emit event
@@ -916,32 +828,37 @@ export default {
       this.salePagination = data.pagination
       const params = {
         ...this.saleParams,
-        ...this.filters,
+        dateFilter: {
+          field: 'created_at',
+          from: this.filters.day ? `${this.filters.day} ${this.filters.fromHours}` : this.filters.from,
+          to: this.filters.day ? `${this.filters.day} ${this.filters.toHours}` : this.filters.to
+        },
         dataEqualFilter: {
-          client_id: this.client?.id,
+          provider_id: this.provider?.id,
           branch_office_id: this.branchOffice?.id
         }
       }
-      this.getSales(params)
+      this.getPurchases(params)
     },
     /**
-     * View client
+     * View provider
      * @param {Object} event
      * @param {Object} row
      * @param {Number} index
      */
-    editClient (event, row, index) {
+    editProvider (event, row, index) {
       this.totals = {}
       this.openDetails = true
-      this.client = row
+      this.provider = row
     },
     /**
-     * View invoice data
+     * View purchase data
      * @param {Object} event event
      * @param {Object} row row
      * @param {Number} index index
      */
     showBillDetails (event, row, index) {
+      console.log(row)
       this.openBillDetails = true
       this.billDetails = row
       this.billDetails.balance = row.total - row.total_payments
@@ -964,14 +881,16 @@ export default {
     async savePayment () {
       try {
         loading(true)
-        await this.$api.post('invoice-payments', {
+        await this.$api.post('purchase-payments', {
           amount: this.amount,
-          invoice_id: this.billDetails?.id,
+          purchase_id: this.billDetails?.id,
           payment_method_id: this.paymentMethodSelected,
-          client_id: this.client?.id,
+          provider_id: this.provider?.id,
           reference: this.reference
         })
-        await this.getInvoice(this.billDetails?.id)
+        if (this.billDetails?.id) {
+          await this.getPurchase(this.billDetails?.id)
+        }
         this.filterDate()
         this.reference = null
       } catch (error) {
@@ -981,12 +900,12 @@ export default {
       }
     },
     /**
-     * Get invoice
-     * @param {Number} invoiceId invoice id
+     * Get purchase
+     * @param {Number} purchaseId purchase id
      */
-    async getInvoice (invoiceId) {
+    async getPurchase (purchaseId) {
       try {
-        const { data } = await this.$api.get(`invoices/${invoiceId}`)
+        const { data } = await this.$api.get(`purchases/${purchaseId}`)
         this.billDetails = data
         this.billDetails.balance = data.total - data.total_payments
       } catch (error) {
