@@ -84,18 +84,6 @@
             </template>
           </q-input>
         </template>
-        <template v-slot:body-cell-status="props">
-          <q-td :props="props" v-if="props.value">
-            <q-badge
-              :color="status[props.value].color"
-              :label="status[props.value].label"
-              class="q-pa-sm"
-            />
-          </q-td>
-          <q-td :props="props" v-else>
-            -
-          </q-td>
-        </template>
       </q-table>
     </div>
     <q-dialog v-model="openEditPurchase" :maximized="$q.screen.lt.sm">
@@ -138,7 +126,7 @@
                   option-label="name"
                   option-value="id"
                   readonly
-                  v-model="purchase.Purchase_type"
+                  v-model="purchase.invoice_type"
                   :rules="[val => !!val || 'El campo es requerido.']"
                 />
               </div>
@@ -291,8 +279,7 @@
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, notify, formatDate } from 'src/const/mixins'
-import { printPurchase, status, generarFacturaPDF } from 'src/const/Purchase'
+import { formatNumber, formatDate } from 'src/const/mixins'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
@@ -305,7 +292,7 @@ export default {
        */
       dialogFilter: false,
       /**
-       * Loading client status
+       * Loading provider status
        * @type {Boolean}
        */
       loadingProvider: false,
@@ -313,19 +300,14 @@ export default {
        * Visible columns
        * @type {Array}
        */
-      visibleColumns: ['purchase_code', 'Purchase_type', 'client', 'seller', 'created_at', 'status', 'total'],
-      /**
-       * Status purchase
-       * @type {Object}
-       */
-      status,
+      visibleColumns: ['purchase_code', 'invoice_type', 'provider', 'seller', 'created_at', 'total'],
       /**
        * Format number
        * @type {Function}
        */
       formatNumber,
       /**
-       * Dialog client status
+       * Dialog provider status
        * @type {Boolean}
        */
       openAddProvider: false,
@@ -340,7 +322,7 @@ export default {
        * Provider form data
        * @type {Object}
        */
-      client: {},
+      provider: {},
       /**
        * Edit tab
        * @type {String}
@@ -425,10 +407,10 @@ export default {
           sortable: true
         },
         {
-          name: 'Purchase_type',
+          name: 'invoice_type',
           align: 'left',
           label: 'Tipo de servicio',
-          field: row => row?.Purchase_type?.name
+          field: row => row?.invoice_type?.name
         },
         {
           name: 'provider',
@@ -470,13 +452,6 @@ export default {
         //   field: 'total_taxe',
         //   sortable: true
         // },
-        {
-          name: 'status',
-          align: 'center',
-          label: 'Estado',
-          field: 'status',
-          sortable: true
-        },
         {
           name: 'total',
           align: 'right',
@@ -593,21 +568,6 @@ export default {
             color: 'negative'
           })
         })
-    },
-    /**
-     * Print purchase
-     * @param {Object} data purchase saved
-     */
-    async print (ticket) {
-      let doc = null
-      if (!ticket && this.purchase.billing) {
-        doc = await generarFacturaPDF(this.purchase, this.userSession)
-      } else if (ticket) {
-        doc = await printPurchase(this.purchase, this.userSession)
-      }
-      console.log(doc)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
     },
     /**
      * Close all modals
@@ -769,24 +729,6 @@ export default {
             color: 'negative'
           })
         })
-    },
-    /**
-     * Change status
-     * @param {Object} data purchase
-     * @param {Number} index index status
-     */
-    async cancelPurchase  () {
-      try {
-        this.cancelLoading = true
-        await this.$api.put(`purchase-status-command/${this.purchase.id}`, { status: 'cancelled' })
-        this.getPurchases()
-        notify('Factura anulada exitosamente', 'positive', 'check_circle')
-        this.openEditPurchase = false
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        this.cancelLoading = false
-      }
     }
   }
 }
