@@ -1289,8 +1289,9 @@ export default {
           ...params,
           branch_office_id: this.branchOffice?.id,
           stock: true,
+          sortOrder: 'desc',
+          sortBy: 'sold',
           withStock: true,
-          mostSold: true,
           dataEqualFilter: {
             category_id: this.category ? this.category.id : null
           }

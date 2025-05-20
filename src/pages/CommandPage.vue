@@ -1520,7 +1520,6 @@ export default {
         params: {
           sortOrder: 'desc',
           sortBy: 'sold',
-          mostSold: true,
           dataEqualFilter: {
             category_id: this.category === 'all' ? null : this.category,
             show_catalog: 1,

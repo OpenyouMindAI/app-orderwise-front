@@ -203,9 +203,10 @@ export default {
         params: {
           paginate: true,
           page: 1,
+          orderBy: 'sold',
+          sortOrder: 'desc',
           perPage: 10,
-          branch_office_id: this.branchOffice?.id,
-          mostSold: true
+          branch_office_id: this.branchOffice?.id
         }
       })
         .then(({ data }) => {
