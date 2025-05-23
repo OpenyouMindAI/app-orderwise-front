@@ -1282,7 +1282,7 @@ export default {
      * Get all products
      * @param {Object} params params to search
      */
-    async getAllProducts(params) {
+    async getAllProducts (params) {
       this.loadingProducts = true
       try {
         const { data } = await this.$api.get('products', {
