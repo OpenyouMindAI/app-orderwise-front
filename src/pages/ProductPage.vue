@@ -871,6 +871,7 @@ export default {
       this.openAddProduct = false
       this.openEditProduct = false
       this.product = {
+        unit_of_measure_id: this.unitOfMeasure?.value,
         images: [],
         is_bundle: 0,
         show_catalog: 0,

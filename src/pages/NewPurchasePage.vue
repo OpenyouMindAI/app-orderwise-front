@@ -1282,34 +1282,32 @@ export default {
      * Get all products
      * @param {Object} params params to search
      */
-    getAllProducts (params) {
+    async getAllProducts(params) {
       this.loadingProducts = true
-      this.$api.get('products', {
-        params: {
-          ...params,
-          branch_office_id: this.branchOffice?.id,
-          stock: true,
-          sortOrder: 'desc',
-          sortBy: 'sold',
-          withStock: true,
-          dataEqualFilter: {
-            category_id: this.category ? this.category.id : null
+      try {
+        const { data } = await this.$api.get('products', {
+          params: {
+            ...params,
+            branch_office_id: this.branchOffice?.id,
+            stock: true,
+            sortOrder: 'desc',
+            sortBy: 'sold',
+            dataEqualFilter: {
+              category_id: this.category ? this.category.id : null
+            }
           }
-        }
-      })
-        .then(({ data }) => {
-          this.allProducts = data.data
-          this.pagination.rowsNumber = data.total
-          this.loadingProducts = false
         })
-        .catch(err => {
-          this.loadingProducts = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+        this.allProducts = data.data
+        this.pagination.rowsNumber = data.total
+      } catch (err) {
+        Notify.create({
+          message: err.message,
+          icon: 'warning',
+          color: 'negative'
         })
+      } finally {
+        this.loadingProducts = false
+      }
     },
     /**
      * Set payments

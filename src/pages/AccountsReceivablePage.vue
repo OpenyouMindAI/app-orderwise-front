@@ -987,7 +987,7 @@ export default {
     async getInvoice (invoiceId) {
       try {
         const { data } = await this.$api.get(`invoices/${invoiceId}`)
-        this.billDetails = data
+        this.billDetails = data.data
         this.billDetails.balance = data.total - data.total_payments
       } catch (error) {
         notify(error.message, 'negative', 'warning')
