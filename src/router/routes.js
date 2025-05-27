@@ -206,6 +206,12 @@ const routes = [
         name: 'Printer',
         meta: { requiresAuth: true },
         component: () => import('pages/PrinterPage.vue')
+      },
+      {
+        path: 'product-sales',
+        name: 'ProductSales',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ProductSalesPage.vue')
       }
     ]
   },

@@ -71,6 +71,7 @@ const setQrImage = async (data, fields, companySession) => {
     codAut: Number(fields.cae)
   }
   const encoded = btoa(JSON.stringify(docQr))
+  console.log(docQr, encoded)
   const url = 'https://servicioscf.afip.gob.ar/publico/comprobantes/cae.aspx?p='
   return await QRCode.toDataURL(`${url}${encoded}`)
 }
@@ -204,10 +205,10 @@ export const printInvoice = async (data, userSession) => {
     doc.text(`Código: ${fields.voucher_type.Id}`, centrarTexto(`Código: ${fields.voucher_type.Id}`, true), y)
     y += 7
   }
-  if (!data.billing) {
-    doc.text(`NRO: ${data.code}`, 5, y)
+  if (data.billing) {
+    doc.text(`NRO: 000${data.electronic_invoice?.fields?.point_of_sale}-000${data?.electronic_invoice?.fields?.cbte_hasta}`, 5, y)
   } else {
-    doc.text(`NRO: ${data?.electronic_invoice?.fields?.cbte_hasta}`, 5, y)
+    doc.text(`NRO: ${data.code}`, 5, y)
   }
   y += 4
   doc.text(`CLIENTE: ${data?.client?.name} ${data?.client?.last_name || ''}`, 5, y)
@@ -215,14 +216,14 @@ export const printInvoice = async (data, userSession) => {
   doc.text(`FECHA: ${formatDate(data.created_at, 'DD/MM/YYYY')}`, 5, y)
   y += 4
   doc.text(`HORA: ${formatDate(data.created_at, 'HH:mm:ss')}`, 5, y)
-  if (data.delivery_date) {
-    doc.text(`FECHA DE ENTREGA: ${formatDate(data.delivery_date, 'DD/MM/YYYY')}`, 70, 74)
-    doc.text(`HORA DE ENTREGA: ${formatDate(data.delivery_date, 'HH:mm:ss')}`, 70, 74)
-  }
-  if (data?.seller) {
-    y += 5
-    doc.text(`Vendedor: ${data?.seller?.name || ''} ${data?.seller?.last_name || ''}`, 5, y)
-  }
+  // if (data.delivery_date) {
+  //   doc.text(`FECHA DE ENTREGA: ${formatDate(data.delivery_date, 'DD/MM/YYYY')}`, 70, 74)
+  //   doc.text(`HORA DE ENTREGA: ${formatDate(data.delivery_date, 'HH:mm:ss')}`, 70, 74)
+  // }
+  // if (data?.seller) {
+  //   y += 5
+  //   doc.text(`Vendedor: ${data?.seller?.name || ''} ${data?.seller?.last_name || ''}`, 5, y)
+  // }
   y += 4
   doc.text(`TIPO: ${data?.invoice_type?.name}`, 5, y)
   y += 4
