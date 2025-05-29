@@ -192,7 +192,6 @@
                   </div>
                   <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
                     <q-input
-                      :rules="[val => !!val || 'El campo es requerido.']"
                       filled
                       v-model="product.description"
                       autofocus
@@ -411,7 +410,6 @@
                   </div>
                   <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
                     <q-input
-                      :rules="[val => !!val || 'El campo es requerido.']"
                       filled
                       v-model="product.description"
                       autofocus
@@ -902,13 +900,13 @@ export default {
       this.openAddProduct = false
       this.openEditProduct = false
       this.product = {
-        unit_of_measure_id: this.unitOfMeasure?.value,
         images: [],
         is_bundle: 0,
         show_catalog: 0,
         is_addons: 0,
         skip_stock: 0
       }
+      this.getUnitOfMeasures()
     },
     /**
      * Search beneficiary
