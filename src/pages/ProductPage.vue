@@ -2,6 +2,8 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right q-gutter-sm">
+        <q-btn color="blue" @click="multipleSelected = !multipleSelected" icon="check"/>
+        <q-btn color="negative" @click="deleteMassive" icon="delete" v-if="selection.length"/>
         <q-btn color="secondary" @click="download" icon="download"/>
         <q-btn color="info" @click="openCompaniesDialog" icon="content_copy" v-if="userSession.is_root"/>
         <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
@@ -9,7 +11,7 @@
       <div class="col-12">
         <q-table
           title="Productos"
-          row-key="name"
+          row-key="id"
           :columns="columns"
           :rows="products"
           :loading="visible"
@@ -669,6 +671,35 @@ export default {
     }
   },
   methods: {
+    /**
+     * Delete massive product
+     */
+    deleteMassive () {
+      this.$q.dialog({
+        title: 'Eliminar productos',
+        message: '¿Está seguro de eliminar los productos seleccionados?',
+        persistent: true,
+        cancel: {
+          color: 'negative',
+          flat: true,
+          label: 'Cancelar'
+        },
+        ok: {
+          color: 'primary',
+          label: 'Aceptar'
+        }
+      }).onOk(async () => {
+        try {
+          const ids = this.selection.map(item => item.id)
+          await this.$api.post('products/delete-massive', { ids })
+          notify('Productos eliminados exitosamente', 'positive', 'info')
+          this.getProducts(this.params)
+          this.selection = []
+        } catch (error) {
+          notify(error.message, 'negative', 'warning')
+        }
+      })
+    },
     /**
      * Open companies dialog
      */
