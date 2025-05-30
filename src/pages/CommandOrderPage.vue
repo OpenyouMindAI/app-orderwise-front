@@ -80,7 +80,7 @@
                     </span>
                     x
                     <span>
-                      {{ product?.pivot?.amount }}
+                      {{ product?.pivot?.amount?.toFixed(2) }}
                     </span>
                   </div>
                   <div style="word-wrap: break-word; overflow-wrap: break-word">
