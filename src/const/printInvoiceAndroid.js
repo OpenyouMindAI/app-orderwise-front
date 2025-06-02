@@ -14,17 +14,11 @@ const getConfig = () => {
   }
 }
 
-const header = (invoice) => {
+const header = (invoice, lineWidth) => {
   return `Razon social: ${invoice?.company?.name} ALE\n` +
     `Direccion: ${invoice?.company?.address}\n` +
     `C.U.I.T: ${invoice?.company?.document_number}\n` +
-    '-----------------------------\n' +
-    `NRO: ${invoice.code}\n` +
-    `CLIENTE: ${invoice.client?.name || '-'}\n` +
-    `FECHA: ${invoice.date}\n` +
-    `HORA: ${invoice.hour}\n` +
-    `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
-    '-----------------------------\n'
+    separatorLine(lineWidth)
 }
 
 export const getPrintersB = async (data, quantity, type = 'command') => {
@@ -79,13 +73,21 @@ const getQr = async (data, fields) => {
   return await QRCode.toDataURL(`${url}${encoded}`)
 }
 
+function separatorLine(length = 29) {
+  return '-'.repeat(length) + '\n'
+}
+
 export async function printCommand (invoice, config) {
   // 2. Detalle solo cantidades y nombres
-  let detail =
-    'Descripcion         Cantidad\n' +
-    '-----------------------------\n'
-
   const lineWidth = config?.size?.value || 29
+  let detail = `NRO: ${invoice.code}\n` +
+    `CLIENTE: ${invoice.client?.name || '-'}\n` +
+    `FECHA: ${invoice.date}\n` +
+    `HORA: ${invoice.hour}\n` +
+    `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
+    separatorLine(lineWidth) +
+    'Descripcion         Cantidad\n' +
+    separatorLine(lineWidth)
 
   invoice.products.forEach((product) => {
     const name = product.name || ''
@@ -113,13 +115,13 @@ export async function printCommand (invoice, config) {
 
   // 3. Footer
   const footer =
-    '-----------------------------\n' +
+    separatorLine(lineWidth) +
     'Gracias por tu compra!\n'
 
   // 4. Combinamos y enviamos a la impresora
   await CapacitorThermalPrinter.begin()
     .align('left')
-    .text(header(invoice))
+    .text(header(invoice, lineWidth))
     .bold()
     .text(detail)
     .clearFormatting()
@@ -133,12 +135,16 @@ export async function printCommand (invoice, config) {
 }
 
 export async function printTicket (invoice, config) {
-  let detail =
+  const lineWidth = config?.size?.value || 29
+  let detail = `NRO: ${invoice.code}\n` +
+    `CLIENTE: ${invoice.client?.name || '-'}\n` +
+    `FECHA: ${invoice.date}\n` +
+    `HORA: ${invoice.hour}\n` +
+    `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
+    separatorLine(lineWidth) +
     'Cant./Precio Unit   IMPORTE\n' +
     'Descripcion\n' +
-    '-----------------------------\n'
-
-  const lineWidth = config?.size?.value || 29
+    separatorLine(lineWidth)
 
   let voucherType = ''
   let numberVoucher = ''
@@ -168,23 +174,23 @@ export async function printTicket (invoice, config) {
     detail += '\n'
   })
 
-  detail += '-----------------------------\n'
+  detail += separatorLine(lineWidth)
 
   const totalAmount =
     'TOTAL'.padEnd(4) + `${formatNumber(invoice.total)}\n` +
-    '-----------------------------\n'
+    separatorLine(lineWidth)
 
   if (invoice.billing) {
     detail += `Cae: ${invoice.electronic_invoice.fields.cae}\n`
     detail += `Vto: ${formatDate(invoice.electronic_invoice.fields.caef_ch_vto, 'DD/MM/YYYY')}\n`
-    detail += '-----------------------------\n'
+    detail += separatorLine(lineWidth)
   }
 
   const qr = await getQr(invoice, invoice?.electronic_invoice?.fields)
 
   await CapacitorThermalPrinter.begin()
     .align('left')
-    .text(header(invoice))
+    .text(header(invoice, lineWidth))
     .bold()
     .align('center')
     .doubleHeight()
