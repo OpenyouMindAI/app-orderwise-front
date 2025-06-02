@@ -29,18 +29,18 @@ const header = (invoice) => {
 
 export const getPrintersB = async (data, quantity, type = 'command') => {
   let qty = quantity
+  const { config } = getConfig()
   if (!quantity) {
-    const { config } = getConfig()
     qty = config?.other.printer?.quantityToPrint || 1
   }
   try {
     for (let i = 0; i < qty; i++) {
       switch (type) {
         case 'command':
-          await printCommand(data)
+          await printCommand(data, config?.printer)
           break
         case 'ticket':
-          await printTicket(data)
+          await printTicket(data, config?.printer)
           break
         default:
           break
@@ -79,13 +79,13 @@ const getQr = async (data, fields) => {
   return await QRCode.toDataURL(`${url}${encoded}`)
 }
 
-export async function printCommand (invoice) {
+export async function printCommand (invoice, config) {
   // 2. Detalle solo cantidades y nombres
   let detail =
     'Descripcion         Cantidad\n' +
     '-----------------------------\n'
 
-  const lineWidth = 29
+  const lineWidth = config?.size?.value || 29
 
   invoice.products.forEach((product) => {
     const name = product.name || ''
@@ -125,26 +125,27 @@ export async function printCommand (invoice) {
     .clearFormatting()
     .align('center')
     .text(footer)
+    .beep()
     .cutPaper()
     .write()
     .then(() => console.log('Printed!'))
     .catch((e) => notify('Error al imprimir', 'negative', 'warning'))
 }
 
-export async function printTicket (invoice) {
+export async function printTicket (invoice, config) {
   let detail =
     'Cant./Precio Unit   IMPORTE\n' +
     'Descripcion\n' +
     '-----------------------------\n'
 
-  const lineWidth = 29
+  const lineWidth = config?.size?.value || 29
 
   let voucherType = ''
-
+  let numberVoucher = ''
   if (invoice.billing) {
     voucherType += `${invoice.electronic_invoice.fields.voucher_type.Desc} \n`
-    voucherType += `Codigo: ${invoice.electronic_invoice.fields.voucher_type.Id} \n`
-    voucherType += `Nro: 000${invoice.electronic_invoice.fields.point_of_sale}-000${invoice.electronic_invoice.fields.cbte_hasta} \n`
+    numberVoucher += `Codigo: ${invoice.electronic_invoice.fields.voucher_type.Id} \n`
+    numberVoucher += `Nro: 000${invoice.electronic_invoice.fields.point_of_sale}-000${invoice.electronic_invoice.fields.cbte_hasta} \n`
   }
 
   invoice.products.forEach((p) => {
@@ -167,36 +168,39 @@ export async function printTicket (invoice) {
     detail += '\n'
   })
 
-  // 3. Totales
-  const totalLine = '-----------------------------\n'
+  detail += '-----------------------------\n'
+
   const totalAmount =
-    'TOTAL'.padEnd(7) + `${formatNumber(invoice.total)}\n` +
+    'TOTAL'.padEnd(4) + `${formatNumber(invoice.total)}\n` +
     '-----------------------------\n'
 
   if (invoice.billing) {
     detail += `Cae: ${invoice.electronic_invoice.fields.cae}\n`
     detail += `Vto: ${formatDate(invoice.electronic_invoice.fields.caef_ch_vto, 'DD/MM/YYYY')}\n`
+    detail += '-----------------------------\n'
   }
-  detail += '-----------------------------\n'
 
   const qr = await getQr(invoice, invoice?.electronic_invoice?.fields)
 
   await CapacitorThermalPrinter.begin()
     .align('left')
     .text(header(invoice))
+    .bold()
     .align('center')
+    .doubleHeight()
+    .text(voucherType)
     .clearFormatting()
     .bold()
-    .text(voucherType)
+    .align('center')
+    .text(numberVoucher)
+    .clearFormatting()
     .text(detail)
-    .text(totalLine)
-    .bold()
     .align('right')
     .text(totalAmount)
-    .clearFormatting()
     .align('center')
     .image(qr)
-    .text('Gracias por tu compra!\n')
+    .text('Gracias por su compra!\n')
+    .beep()
     .cutPaper()
     .write()
     .then(() => Loading.hide())

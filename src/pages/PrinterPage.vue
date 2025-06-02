@@ -233,6 +233,16 @@
               autofocus
               class="q-mb-md"
             />
+            <q-select
+              :rules="[requiredRule]"
+              filled
+              v-model="size"
+              label="Tamaño de impresión"
+              option-value="value"
+              option-label="label"
+              :options="sizeOptions"
+              class="q-mb-md"
+            />
           </q-card-section>
           <q-card-actions align="right" class="q-gutter-sm">
             <q-btn color="secondary" label="Cancelar" @click="configToPrint = false" flat />
@@ -413,6 +423,15 @@ const printer = reactive({
   type: 'Bluetooth'
 })
 const filter = ref('')
+const size = ref(company?.company_config?.other?.printer?.size)
+const sizeOptions = [
+  { label: '44mm', value: 29 },
+  { label: '57mm', value: 32 },
+  { label: '58mm', value: 40 },
+  { label: '76mm', value: 48 },
+  { label: '80mm', value: 48 },
+  { label: '110mm', value: 72 }
+]
 const openAddPrinter = ref(false)
 const quantityToPrint = ref(company?.company_config?.other?.printer?.quantityToPrint || 1)
 const openEditPrinter = ref(false)
@@ -486,7 +505,8 @@ const onSubmitConfig = async () => {
       other: {
         ...company.company_config.other,
         printer: {
-          quantityToPrint: quantityToPrint.value
+          quantityToPrint: quantityToPrint.value,
+          size: size.value
         }
       }
     })
