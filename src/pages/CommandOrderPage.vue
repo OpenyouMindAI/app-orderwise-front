@@ -478,6 +478,8 @@ import { authentication } from 'src/stores/module-authentication'
 import { useRoute, useRouter } from 'vue-router'
 // import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import FileComponent from 'src/components/FileComponent.vue'
+import { getPrintersB } from 'src/const/printInvoiceAndroid'
+import { useQuasar } from 'quasar'
 
 const store = authentication()
 
@@ -520,6 +522,8 @@ watch(
 //     console.log(error)
 //   }
 // }
+
+const $q = useQuasar()
 
 const branchOffice = computed(() => store.branchOfficeGetter)
 /**
@@ -791,9 +795,13 @@ const setPermissionsByUser = (data) => {
  * @param {Object} data invoice saved
  */
 const print = (data) => {
-  const doc = printTicket(data, userSession)
-  const pdfUrl = doc.output('bloburl')
-  window.open(pdfUrl, '_blank')
+  if ($q.platform.is.android) {
+    getPrintersB(data)
+  } else {
+    const doc = printTicket(data, userSession)
+    const pdfUrl = doc.output('bloburl')
+    window.open(pdfUrl, '_blank')
+  }
 }
 /**
  * Show invoice

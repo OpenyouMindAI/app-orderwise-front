@@ -15,7 +15,7 @@ const getConfig = () => {
 }
 
 const header = (invoice, lineWidth) => {
-  return `Razon social: ${invoice?.company?.name} ALE\n` +
+  return `Razon social: ${invoice?.company?.name}\n` +
     `Direccion: ${invoice?.company?.address}\n` +
     `C.U.I.T: ${invoice?.company?.document_number}\n` +
     separatorLine(lineWidth)
@@ -73,8 +73,8 @@ const getQr = async (data, fields) => {
   return await QRCode.toDataURL(`${url}${encoded}`)
 }
 
-function separatorLine(length = 29) {
-  return '-'.repeat(length) + '\n'
+function separatorLine (length = 29) {
+  return '-'.repeat(length + 3) + '\n'
 }
 
 export async function printCommand (invoice, config) {
@@ -180,10 +180,10 @@ export async function printTicket (invoice, config) {
     'TOTAL'.padEnd(4) + `${formatNumber(invoice.total)}\n` +
     separatorLine(lineWidth)
 
+  let invoiceDetail = ''
   if (invoice.billing) {
-    detail += `Cae: ${invoice.electronic_invoice.fields.cae}\n`
-    detail += `Vto: ${formatDate(invoice.electronic_invoice.fields.caef_ch_vto, 'DD/MM/YYYY')}\n`
-    detail += separatorLine(lineWidth)
+    invoiceDetail += `Cae: ${invoice.electronic_invoice.fields.cae}\n`
+    invoiceDetail += `Vto: ${formatDate(invoice.electronic_invoice.fields.caef_ch_vto, 'DD/MM/YYYY')}\n`
   }
 
   const qr = await getQr(invoice, invoice?.electronic_invoice?.fields)
@@ -203,6 +203,8 @@ export async function printTicket (invoice, config) {
     .text(detail)
     .align('right')
     .text(totalAmount)
+    .clearFormatting()
+    .text(invoiceDetail)
     .align('center')
     .image(qr)
     .text('Gracias por su compra!\n')
