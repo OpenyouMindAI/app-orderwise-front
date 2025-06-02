@@ -82,6 +82,8 @@ export async function printCommand (invoice, config) {
   const lineWidth = config?.size?.value || 29
   let detail = `NRO: ${invoice.code}\n` +
     `CLIENTE: ${invoice.client?.name || '-'}\n` +
+    `TELEFONO: ${invoice.client?.phone_number || '-'}\n` +
+    `TIPO DE SERVICIO: ${invoice.type_of_service?.name || '-'}\n` +
     `FECHA: ${invoice.date}\n` +
     `HORA: ${invoice.hour}\n` +
     `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +

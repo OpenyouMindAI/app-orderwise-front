@@ -78,9 +78,9 @@
                     <span>
                       {{ product.name }}
                     </span>
-                    x
-                    <span>
-                      {{ product?.pivot?.amount?.toFixed(2) }}
+                    <span v-if="product?.pivot?.amount">
+                      x
+                      {{ Number(product?.pivot?.amount).toFixed(2) }}
                     </span>
                   </div>
                   <div style="word-wrap: break-word; overflow-wrap: break-word">
@@ -142,9 +142,9 @@
       </div>
     </div>
     <q-dialog v-model="openEditInvoice" persistent :maximized="$q.screen.lt.sm">
-      <q-card class="column full-height" :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
+      <q-card class="column" :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center bg-primary text-white">
-          <span class="text-h6">Detalles de la factura</span>
+          <span class="text-h6">Detalles de la orden</span>
           <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
         </q-card-section>
         <q-card-section
@@ -193,7 +193,7 @@
               </div>
               <div class="col-12">
                 <q-input
-                  v-model="invoice.address"
+                  :model-value="invoice?.address || invoice.client?.address"
                   type="textarea"
                   autogrow
                   label="Dirección"
@@ -227,6 +227,20 @@
                   :options="invoiceTypes"
                   :readonly="role.deliveryPerson"
                   :rules="[(val) => !!val || 'El campo es requerido.']"
+                />
+              </div>
+              <div class="col-6">
+                <q-select
+                  v-model="invoice.type_of_service"
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de servicio"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  :options="[]"
+                  readonly
                 />
               </div>
               <div class="col-12">
