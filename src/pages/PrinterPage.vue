@@ -24,17 +24,17 @@
         color="secondary"
         icon="print"
         label="Imprimir directo"
-        @click="configToPrint = true"
-        unelevated
-        rounded
-      />
-      <q-btn
-        color="info"
-        icon="settings"
-        label="Configuración de impresión"
         @click="advertenceDialog = true"
         unelevated
         rounded
+        />
+        <q-btn
+        color="info"
+        icon="settings"
+        label="Configuración de impresión"
+        unelevated
+        rounded
+        @click="configToPrint = true"
       />
     </div>
     <!-- Buscador -->
@@ -216,6 +216,31 @@
         </q-form>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="configToPrint" persistent>
+      <q-card style="width: 400px; max-width: 90vw;">
+        <q-form @submit.prevent="onSubmitConfig">
+          <q-card-section class="row items-center bg-primary text-white">
+            <div class="text-h6">Configuración de impresión</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="configToPrint = false" />
+          </q-card-section>
+          <q-card-section>
+            <q-input
+              :rules="[requiredRule]"
+              filled
+              v-model="quantityToPrint"
+              label="Cantidad de impresiones"
+              autofocus
+              class="q-mb-md"
+            />
+          </q-card-section>
+          <q-card-actions align="right" class="q-gutter-sm">
+            <q-btn color="secondary" label="Cancelar" @click="configToPrint = false" flat />
+            <q-btn color="primary" label="Guardar" type="submit"/>
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
 
     <!-- Advertence Dialog -->
     <q-dialog v-model="advertenceDialog" persistent>
@@ -362,18 +387,22 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue'
-import { Notify, Platform, Loading, Screen, QSpinnerRadio, QSpinnerGrid, QSpinnerHourglass, QSpinnerGears } from 'quasar'
+import { Notify, Platform, Loading, Screen, QSpinnerRadio, QSpinnerGrid, QSpinnerHourglass, QSpinnerGears, useQuasar } from 'quasar'
 import { CapacitorThermalPrinter } from 'capacitor-thermal-printer'
 import { Device } from '@capacitor/device'
 import { api } from 'src/boot/axios'
-import { notify } from 'src/const/mixins'
+import { loading, notify } from 'src/const/mixins'
+import { authentication } from 'src/stores/module-authentication'
 
 const isAndroid = Platform.is.android
+const $q = useQuasar()
 const isMobile = computed(() => Screen.lt.sm)
-
+const store = authentication()
+const { company_session: company } = store?.userSession
 const dialogPrintersVisible = ref(false)
 const printersBluetooth = ref([])
 const advertenceDialog = ref(false)
+const configToPrint = ref(false)
 const printers = ref([])
 const info = ref({})
 const options = ['Bluetooth', 'Red']
@@ -385,6 +414,7 @@ const printer = reactive({
 })
 const filter = ref('')
 const openAddPrinter = ref(false)
+const quantityToPrint = ref(company?.company_config?.other?.printer?.quantityToPrint || 1)
 const openEditPrinter = ref(false)
 const confirmDeleteDialog = ref(false)
 const columns = [
@@ -441,6 +471,35 @@ function handleError (err, fallbackMsg = 'Ocurrió un error inesperado') {
     icon: 'warning',
     color: 'negative'
   })
+}
+
+/**
+ * Save company config
+ * @param {Object} data
+ */
+
+const onSubmitConfig = async () => {
+  try {
+    loading(true)
+    const { data } = await api.post('company-configs', {
+      ...company.company_config,
+      other: {
+        ...company.company_config.other,
+        printer: {
+          quantityToPrint: quantityToPrint.value
+        }
+      }
+    })
+    store.setCompanySession({
+      ...company.value,
+      company_config: data
+    })
+    notify('Guardado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loading(false)
+  }
 }
 
 // --- Bluetooth scan ---
@@ -662,14 +721,15 @@ watch(filter, (val) => {
 onMounted(async () => {
   info.value = await Device.getInfo()
   printer.device = info.value.name
-
-  CapacitorThermalPrinter.addListener('discoverDevices', async ({ devices }) => {
-    printersBluetooth.value = devices
-  })
-  CapacitorThermalPrinter.addListener('discoveryFinish', () => {
-    dialogPrintersVisible.value = true
-    Loading.hide()
-  })
+  if ($q.platform.is.android) {
+    CapacitorThermalPrinter.addListener('discoverDevices', async ({ devices }) => {
+      printersBluetooth.value = devices
+    })
+    CapacitorThermalPrinter.addListener('discoveryFinish', () => {
+      dialogPrintersVisible.value = true
+      Loading.hide()
+    })
+  }
   await getPrinters(params)
 })
 </script>

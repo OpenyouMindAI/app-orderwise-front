@@ -31,7 +31,7 @@ export const getPrintersB = async (data, quantity, type = 'command') => {
   let qty = quantity
   if (!quantity) {
     const { config } = getConfig()
-    qty = config?.other?.quantityToPrint || 1
+    qty = config?.other.printer?.quantityToPrint || 1
   }
   try {
     for (let i = 0; i < qty; i++) {
