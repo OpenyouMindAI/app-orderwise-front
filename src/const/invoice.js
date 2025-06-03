@@ -102,6 +102,14 @@ export const printTicket = (data, userSession) => {
   y += 5
   doc.text(`CLIENTE: ${data?.client?.name} ${data?.client?.last_name || ''}`, 5, y)
   y += 5
+  if (data?.client?.phone_number) {
+    doc.text(`TELEFONO: ${data?.client?.phone_number}`, 5, y)
+    y += 5
+  }
+  doc.text(`TIPO DE SERVICIO: ${data?.type_of_service?.name || '-'}`, 5, y)
+  y += 5
+  doc.text(`CLIENTE: ${data?.client?.name} ${data?.client?.last_name || ''}`, 5, y)
+  y += 5
   doc.text(`FECHA: ${formatDate(data.created_at, 'DD/MM/YYYY')}`, 5, y)
   y += 5
   doc.text(`HORA: ${formatDate(data.created_at, 'HH:mm:ss')}`, 5, y)

@@ -781,6 +781,7 @@ import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
+import { getPrintersB } from 'src/const/printInvoiceAndroid'
 export default {
   name: 'BillingPage',
   components: {
@@ -1821,15 +1822,21 @@ export default {
         this.withoutPrint = false
         return
       }
-
-      if (this.invoicePrinter) {
-        doc = await printInvoice(invoice, this.userSession)
+      console.log(this.$q.platform.is)
+      if (this.$q.platform.is.android) {
+        const type = this.invoicePrinter ? 'ticket' : 'command'
+        const quantity = this.invoicePrinter ? 1 : null
+        console.log({ type, quantity })
+        await getPrintersB(invoice, quantity, type)
       } else {
-        doc = await printTicket(invoice, this.userSession)
+        if (this.invoicePrinter) {
+          doc = await printInvoice(invoice, this.userSession)
+        } else {
+          doc = await printTicket(invoice, this.userSession)
+        }
+        const pdfUrl = doc.output('bloburl')
+        window.open(pdfUrl, '_blank')
       }
-
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
       this.clear()
     },
     /**

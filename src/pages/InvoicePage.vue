@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="column q-gutter-y-sm">
+    <div class="q-gutter-y-sm">
       <div class="row justify-between items-center q-gutter-x-sm">
         <span class="text-h6">
           Lista de facturas
@@ -66,28 +66,27 @@
         <template v-slot:loading>
           <q-inner-loading showing color="primary" />
         </template>
-        <template v-slot:top-left>
-          <q-select
-            v-model="visibleColumns"
-            multiple
-            outlined
-            dense
-            options-dense
-            :display-value="$q.lang.table.columns"
-            emit-value
-            map-options
-            :options="columns"
-            option-value="name"
-            options-cover
-            style="min-width: 150px"
-          />
-        </template>
-        <template v-slot:top-right>
-          <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+        <template v-slot:top>
+          <div class="flex justify-between items-center full-width">
+            <q-select
+              v-model="visibleColumns"
+              multiple
+              outlined
+              dense
+              options-dense
+              :display-value="$q.lang.table.columns"
+              emit-value
+              map-options
+              :options="columns"
+              option-value="name"
+              options-cover
+            />
+            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
         </template>
         <template v-slot:body-cell-status="props">
           <q-td :props="props" v-if="props.value">
@@ -310,17 +309,17 @@
                 <q-btn
                   class="full-width"
                   icon="print"
-                  color="secondary"
-                  label="Imprimir Ticket"
-                  @click="print(true)"
+                  color="positive"
+                  :label="!invoice.billing ? 'Imprimir Comprobante' : 'Imprimir Factura'"
+                  @click="print"
                 />
                 <q-btn
                   class="full-width"
                   icon="print"
                   color="info"
                   v-if="invoice.billing"
-                  label="Imprimir Factura"
-                  @click="print(false)"
+                  label="Imprimir en factura A4"
+                  @click="printInvoiceA4"
                 />
                 <q-btn
                   class="full-width"
@@ -592,6 +591,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
 import { printInvoice, printTicket, status, generarFacturaPDF } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
+import { getPrintersB } from 'src/const/printInvoiceAndroid'
 export default {
   data () {
     return {
@@ -650,6 +650,7 @@ export default {
        * @type {Boolean}
        */
       openAddClient: false,
+      printers: [],
       /**
        * Taxe translate
        * @type {Object}
@@ -1083,19 +1084,32 @@ export default {
           })
         })
     },
+
+    async printInvoiceA4 () {
+      try {
+        const doc = await generarFacturaPDF(this.invoice, this.userSession)
+        const pdfUrl = doc.output('bloburl')
+        window.open(pdfUrl, '_blank')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
     /**
      * Print invoice
      * @param {Object} data invoice saved
      */
-    async print (ticket) {
-      let doc = null
-      if (!ticket && this.invoice.billing) {
-        doc = await generarFacturaPDF(this.invoice, this.userSession)
-      } else if (ticket) {
-        doc = await printInvoice(this.invoice, this.userSession)
+    async print () {
+      try {
+        if (this.$q.platform.is.android) {
+          await getPrintersB(this.invoice, 1, 'ticket')
+          return
+        }
+        const doc = await printInvoice(this.invoice, this.userSession)
+        const pdfUrl = doc.output('bloburl')
+        window.open(pdfUrl, '_blank')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
       }
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
     },
     /**
      * Alert before send to arca
@@ -1120,13 +1134,26 @@ export default {
         this.setInvoiceElectronic(row)
       })
     },
+
+    async getPrinters () {
+      try {
+        const { data } = await this.$api.get('printers')
+        this.printers = data
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
     /**
      * Print command
      */
     async printCommand () {
-      const doc = await printTicket(this.invoice, this.userSession)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
+      if (this.$q.platform.is.android) {
+        getPrintersB(this.invoice)
+      } else {
+        const doc = await printTicket(this.invoice, this.userSession)
+        const pdfUrl = doc.output('bloburl')
+        window.open(pdfUrl, '_blank')
+      }
     },
     /**
      * Close all modals
