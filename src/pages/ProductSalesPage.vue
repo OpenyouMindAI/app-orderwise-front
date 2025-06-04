@@ -462,7 +462,7 @@ const invoiceTable = ref({
 const columnsTopProducts = [
   { name: 'product_id', label: 'ID', field: 'product_id', align: 'left', style: 'width: 80px' },
   { name: 'product_name', label: 'Producto', field: 'product_name', align: 'left' },
-  { name: 'total_quantity', label: 'Cantidad', field: 'total_quantity', align: 'right', format: val => `${val}` }
+  { name: 'total_quantity', label: 'Cantidad', field: 'total_quantity', align: 'right', format: val => formatNumber(val) }
 ]
 
 const columnsTopClients = [
