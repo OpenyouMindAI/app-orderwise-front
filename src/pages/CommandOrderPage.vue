@@ -809,7 +809,7 @@ const setPermissionsByUser = (data) => {
  * @param {Object} data invoice saved
  */
 const print = (data) => {
-  if ($q.platform.is.android) {
+  if ($q.platform.is.nativeMobile) {
     getPrintersB(data)
   } else {
     const doc = printTicket(data, userSession)

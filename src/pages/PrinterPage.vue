@@ -741,7 +741,7 @@ watch(filter, (val) => {
 onMounted(async () => {
   info.value = await Device.getInfo()
   printer.device = info.value.name
-  if ($q.platform.is.android) {
+  if ($q.platform.is.nativeMobile) {
     CapacitorThermalPrinter.addListener('discoverDevices', async ({ devices }) => {
       printersBluetooth.value = devices
     })

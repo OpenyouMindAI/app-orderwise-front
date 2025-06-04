@@ -1100,7 +1100,7 @@ export default {
      */
     async print () {
       try {
-        if (this.$q.platform.is.android) {
+        if (this.$q.platform.is.nativeMobile) {
           await getPrintersB(this.invoice, 1, 'ticket')
           return
         }
@@ -1147,7 +1147,7 @@ export default {
      * Print command
      */
     async printCommand () {
-      if (this.$q.platform.is.android) {
+      if (this.$q.platform.is.nativeMobile) {
         getPrintersB(this.invoice)
       } else {
         const doc = await printTicket(this.invoice, this.userSession)

@@ -1822,11 +1822,9 @@ export default {
         this.withoutPrint = false
         return
       }
-      console.log(this.$q.platform.is)
-      if (this.$q.platform.is.android) {
+      if (this.$q.platform.is.nativeMobile) {
         const type = this.invoicePrinter ? 'ticket' : 'command'
         const quantity = this.invoicePrinter ? 1 : null
-        console.log({ type, quantity })
         await getPrintersB(invoice, quantity, type)
       } else {
         if (this.invoicePrinter) {
