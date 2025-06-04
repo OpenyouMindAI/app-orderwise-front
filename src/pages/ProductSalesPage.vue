@@ -1,5 +1,5 @@
 <template>
-  <q-page padding>
+  <q-page padding class="dashboard-page">
     <!-- Header Section -->
     <div>
       <h6 class="dashboard-title">Panel de análisis de ventas</h6>
@@ -8,42 +8,64 @@
 
     <div class="q-mt-sm">
       <!-- KPI Cards -->
-       <div class="q-mt-md">
-         <span class="text-h6 text-weight-medium">
-           <q-icon name="analytics"/>
-           Resumen de actual
-         </span>
-       </div>
       <div class="q-mt-md">
-        <div class="row q-gutter-sm q-mt-sm">
-          <div
-            v-for="(kpi, index) in kpiCards"
-            :key="kpi.label"
-            class="col-12 col-sm-6 col-md"
-          >
-            <q-card class="kpi-card" flat :class="`kpi-card-${index + 1}`">
-              <q-card-section class="text-center q-pa-lg">
-                <div class="kpi-icon q-mb-md">
-                  <q-icon :name="kpi.icon" size="2rem" />
-                </div>
-                <div class="kpi-value">{{ formatNumber(kpi.value) }}</div>
-                <div class="kpi-label">{{ kpi.label }}</div>
-              </q-card-section>
-            </q-card>
-          </div>
-        </div>
+        <span class="text-h6 text-weight-medium section-header">
+          <q-icon name="analytics"/>
+          Resumen actual
+        </span>
       </div>
       <div class="q-mt-md">
-        <span class="text-h6 text-weight-medium">
+        <div class="row q-gutter-sm q-mt-sm">
+          <!-- KPI Skeleton Loading -->
+          <template v-if="loadingStates.kpis">
+            <div
+              v-for="index in 4"
+              :key="`kpi-skeleton-${index}`"
+              class="col-12 col-sm-6 col-md"
+            >
+              <q-card class="kpi-card" flat>
+                <q-card-section class="text-center q-pa-lg">
+                  <q-skeleton type="QAvatar" size="2rem" class="q-mb-md" />
+                  <q-skeleton type="text" width="60%" height="2rem" class="q-mb-sm" />
+                  <q-skeleton type="text" width="80%" height="1rem" />
+                </q-card-section>
+              </q-card>
+            </div>
+          </template>
+
+          <!-- KPI Cards Data -->
+          <template v-else>
+            <div
+              v-for="(kpi, index) in kpiCards"
+              :key="kpi.label"
+              class="col-12 col-sm-6 col-md"
+            >
+              <q-card class="kpi-card" flat :class="`kpi-card-${index + 1}`">
+                <q-card-section class="text-center q-pa-lg">
+                  <div class="kpi-icon q-mb-md">
+                    <q-icon :name="kpi.icon" size="2rem" />
+                  </div>
+                  <div class="kpi-value">{{ formatNumber(kpi.value) }}</div>
+                  <div class="kpi-label">{{ kpi.label }}</div>
+                </q-card-section>
+              </q-card>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="q-mt-md">
+        <span class="text-h6 text-weight-medium section-header">
           <q-icon name="analytics"/>
           Indicadores de negocio
         </span>
       </div>
+
       <!-- Modern Filters Card -->
-      <q-card class="q-mt-md" flat>
+      <q-card class="filters-card q-mt-md" flat>
         <q-card-section>
           <div class="q-mb-md">
-            <span class="text-subtitle1 text-weight-medium">
+            <span class="text-subtitle1 text-weight-medium section-header">
               <q-icon name="tune" class="q-mr-sm" />
               Filtros y controles
             </span>
@@ -61,6 +83,8 @@
                 map-options
                 clearable
                 clear-icon="close"
+                :loading="loadingStates.branches"
+                class="custom-input"
               >
                 <template #prepend>
                   <q-icon name="business" />
@@ -74,6 +98,7 @@
                 filled
                 dense
                 mask="####-##-##"
+                class="custom-input"
               >
                 <template #prepend>
                   <q-icon name="event" />
@@ -93,6 +118,7 @@
                 filled
                 dense
                 mask="####-##-##"
+                class="custom-input"
               >
                 <template #prepend>
                   <q-icon name="event" />
@@ -125,19 +151,35 @@
         <div class="row q-col-gutter-xl">
           <!-- Top Products -->
           <div class="col-12 col-lg-6">
-            <q-card class="chart-card" flat>
+            <q-card class="data-card" flat>
               <q-card-section class="q-pa-lg">
-                <div class="chart-header q-mb-lg">
-                  <h4 class="chart-title">
+                <div class="card-header q-mb-lg">
+                  <h4 class="card-title">
                     <q-icon name="inventory" class="q-mr-sm" />
                     Top 10 Productos Vendidos
                   </h4>
                 </div>
 
+                <!-- Skeleton Loading -->
+                <template v-if="loadingStates.topProducts">
+                  <div class="skeleton-table">
+                    <div class="skeleton-table-header">
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                      <q-skeleton type="text" width="50%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                    </div>
+                    <div v-for="i in 5" :key="`product-skeleton-${i}`" class="skeleton-table-row">
+                      <q-skeleton type="text" width="10%" height="1rem" />
+                      <q-skeleton type="text" width="60%" height="1rem" />
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                    </div>
+                  </div>
+                </template>
+
                 <!-- Empty State -->
-                <div v-if="!topProducts.length" class="empty-state">
-                  <q-icon name="inventory_2" size="3rem" color="grey-5" />
-                  <p class="text-grey-6 q-mt-sm q-mb-none">No hay datos de productos disponibles</p>
+                <div v-else-if="!topProducts.length" class="empty-state">
+                  <q-icon name="inventory_2" size="3rem" class="empty-icon" />
+                  <p class="empty-text q-mt-sm q-mb-none">No hay datos de productos disponibles</p>
                 </div>
 
                 <!-- Data Table -->
@@ -146,7 +188,7 @@
                   :rows="topProducts"
                   :columns="columnsTopProducts"
                   flat
-                  class="modern-table"
+                  class="data-table"
                   hide-bottom
                   :rows-per-page-options="[0]"
                 />
@@ -156,20 +198,43 @@
 
           <!-- Low Stock Products -->
           <div class="col-12 col-lg-6">
-            <q-card class="table-card" flat>
+            <q-card class="data-card" flat>
               <q-card-section class="q-pa-lg">
-                <div class="table-header q-mb-lg">
-                  <h4 class="table-title">
+                <div class="card-header q-mb-lg">
+                  <h4 class="card-title">
                     <q-icon name="warning" class="q-mr-sm text-orange" />
                     Alerta de stock bajo
                   </h4>
-                  <q-badge color="orange" :label="lowStockProducts.length"/>
+                  <q-badge
+                    v-if="!loadingStates.lowStock"
+                    color="orange"
+                    :label="lowStockProducts.length"
+                  />
+                  <q-skeleton v-else type="QBadge" />
                 </div>
 
+                <!-- Skeleton Loading -->
+                <template v-if="loadingStates.lowStock">
+                  <div class="skeleton-table">
+                    <div class="skeleton-table-header">
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                      <q-skeleton type="text" width="40%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                    </div>
+                    <div v-for="i in 3" :key="`stock-skeleton-${i}`" class="skeleton-table-row">
+                      <q-skeleton type="text" width="10%" height="1rem" />
+                      <q-skeleton type="text" width="50%" height="1rem" />
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                    </div>
+                  </div>
+                </template>
+
                 <!-- Empty State -->
-                <div v-if="!lowStockProducts.length" class="empty-state">
-                  <q-icon name="check_circle" size="3rem" color="green-5" />
-                  <p class="text-grey-6 q-mt-sm q-mb-none">Todos los productos tienen stock suficiente</p>
+                <div v-else-if="!lowStockProducts.length" class="empty-state">
+                  <q-icon name="check_circle" size="3rem" class="empty-icon text-green" />
+                  <p class="empty-text q-mt-sm q-mb-none">Todos los productos tienen stock suficiente</p>
                 </div>
 
                 <!-- Data Table -->
@@ -178,7 +243,7 @@
                   :rows="lowStockProducts"
                   :columns="columnsLowStock"
                   flat
-                  class="modern-table"
+                  class="data-table"
                   :rows-per-page-options="[10, 25, 50]"
                 />
               </q-card-section>
@@ -187,19 +252,35 @@
 
           <!-- Top Clients -->
           <div class="col-12 col-lg-6">
-            <q-card class="chart-card" flat>
+            <q-card class="data-card" flat>
               <q-card-section class="q-pa-lg">
-                <div class="chart-header">
-                  <h4 class="chart-title">
+                <div class="card-header">
+                  <h4 class="card-title">
                     <q-icon name="people" class="q-mr-sm" />
                     Top 10 Clientes
                   </h4>
                 </div>
 
+                <!-- Skeleton Loading -->
+                <template v-if="loadingStates.topClients">
+                  <div class="skeleton-table q-mt-lg">
+                    <div class="skeleton-table-header">
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                      <q-skeleton type="text" width="50%" height="1rem" />
+                      <q-skeleton type="text" width="25%" height="1rem" />
+                    </div>
+                    <div v-for="i in 5" :key="`client-skeleton-${i}`" class="skeleton-table-row">
+                      <q-skeleton type="text" width="10%" height="1rem" />
+                      <q-skeleton type="text" width="60%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                    </div>
+                  </div>
+                </template>
+
                 <!-- Empty State -->
-                <div v-if="!topClients.length" class="empty-state">
-                  <q-icon name="people_outline" size="3rem" color="grey-5" />
-                  <p class="text-grey-6 q-mt-sm q-mb-none">No hay datos de clientes disponibles</p>
+                <div v-else-if="!topClients.length" class="empty-state">
+                  <q-icon name="people_outline" size="3rem" class="empty-icon" />
+                  <p class="empty-text q-mt-sm q-mb-none">No hay datos de clientes disponibles</p>
                 </div>
 
                 <!-- Data Table -->
@@ -208,7 +289,7 @@
                   :rows="topClients"
                   :columns="columnsTopClients"
                   flat
-                  class="modern-table q-mt-lg"
+                  class="data-table q-mt-lg"
                   hide-bottom
                   :rows-per-page-options="[0]"
                 />
@@ -218,19 +299,37 @@
 
           <!-- Top Vendedores -->
           <div class="col-12 col-lg-6">
-            <q-card class="table-card" flat>
+            <q-card class="data-card" flat>
               <q-card-section class="q-pa-lg">
-                <div class="table-header q-mb-lg">
-                  <h4 class="table-title">
+                <div class="card-header q-mb-lg">
+                  <h4 class="card-title">
                     <q-icon name="star" class="q-mr-sm text-amber" />
                     Top 10 Vendedores
                   </h4>
                 </div>
 
+                <!-- Skeleton Loading -->
+                <template v-if="loadingStates.sellers">
+                  <div class="skeleton-table">
+                    <div class="skeleton-table-header">
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                      <q-skeleton type="text" width="40%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                    </div>
+                    <div v-for="i in 5" :key="`seller-skeleton-${i}`" class="skeleton-table-row">
+                      <q-skeleton type="text" width="10%" height="1rem" />
+                      <q-skeleton type="text" width="50%" height="1rem" />
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                    </div>
+                  </div>
+                </template>
+
                 <!-- Empty State -->
-                <div v-if="!sellerStats.length" class="empty-state">
-                  <q-icon name="person_outline" size="3rem" color="grey-5" />
-                  <p class="text-grey-6 q-mt-sm q-mb-none">No hay datos de vendedores disponibles</p>
+                <div v-else-if="!sellerStats.length" class="empty-state">
+                  <q-icon name="person_outline" size="3rem" class="empty-icon" />
+                  <p class="empty-text q-mt-sm q-mb-none">No hay datos de vendedores disponibles</p>
                 </div>
 
                 <!-- Data Table -->
@@ -239,7 +338,7 @@
                   :rows="sellerStats"
                   :columns="columnsSellerStats"
                   flat
-                  class="modern-table"
+                  class="data-table"
                   hide-bottom
                   :rows-per-page-options="[0]"
                 />
@@ -251,22 +350,57 @@
 
       <!-- Invoice Details -->
       <div class="invoice-section q-mt-md">
-        <q-card class="table-card" flat>
+        <q-card class="data-card" flat>
           <q-card-section class="q-pa-lg">
-            <div class="table-header q-mb-lg">
-              <h4 class="table-title">
+            <div class="card-header q-mb-lg">
+              <h4 class="card-title">
                 <q-icon name="receipt_long" class="q-mr-sm" />
                 Detalle de ventas
               </h4>
               <div class="table-actions">
-                <q-btn flat icon="download" label="Exportar" @click="downloadInvoiceTable"/>
+                <q-btn
+                  flat
+                  icon="download"
+                  label="Exportar"
+                  @click="downloadInvoiceTable"
+                  :loading="loadingStates.export"
+                  class="action-btn"
+                />
               </div>
             </div>
 
+            <!-- Skeleton Loading for Invoice Table -->
+            <template v-if="invoiceTable.loading">
+              <div class="skeleton-table">
+                <div class="skeleton-table-header">
+                  <q-skeleton type="text" width="15%" height="1rem" />
+                  <q-skeleton type="text" width="15%" height="1rem" />
+                  <q-skeleton type="text" width="25%" height="1rem" />
+                  <q-skeleton type="text" width="20%" height="1rem" />
+                  <q-skeleton type="text" width="15%" height="1rem" />
+                  <q-skeleton type="text" width="10%" height="1rem" />
+                </div>
+                <div v-for="i in 10" :key="`invoice-skeleton-${i}`" class="skeleton-table-row">
+                  <q-skeleton type="text" width="12%" height="1rem" />
+                  <q-skeleton type="text" width="18%" height="1rem" />
+                  <q-skeleton type="text" width="30%" height="1rem" />
+                  <q-skeleton type="text" width="20%" height="1rem" />
+                  <q-skeleton type="text" width="12%" height="1rem" />
+                  <q-skeleton type="text" width="8%" height="1rem" />
+                </div>
+              </div>
+              <!-- Skeleton Pagination -->
+              <div class="skeleton-pagination q-mt-md">
+                <q-skeleton type="QBtn" />
+                <q-skeleton type="text" width="100px" height="1rem" />
+                <q-skeleton type="QBtn" />
+              </div>
+            </template>
+
             <!-- Empty State -->
-            <div v-if="!invoiceTable.data.length && !invoiceTable.loading" class="empty-state">
-              <q-icon name="receipt_long" size="3rem" color="grey-5" />
-              <p class="text-grey-6 q-mt-sm q-mb-none">No hay ventas para mostrar</p>
+            <div v-else-if="!invoiceTable.data.length" class="empty-state">
+              <q-icon name="receipt_long" size="3rem" class="empty-icon" />
+              <p class="empty-text q-mt-sm q-mb-none">No hay ventas para mostrar</p>
             </div>
 
             <!-- Data Table -->
@@ -275,9 +409,8 @@
               :rows="invoiceTable.data"
               :columns="columnsInvoiceTable"
               flat
-              class="modern-table"
+              class="data-table"
               v-model:pagination="invoiceTable.pagination"
-              :loading="invoiceTable.loading"
               @request="onRequestInvoiceTable"
             />
           </q-card-section>
@@ -300,6 +433,17 @@ const dateRange = ref({ start: today, end: today })
 const showFromDate = ref(false)
 const showToDate = ref(false)
 const isLoading = ref(false)
+
+// Loading states for each data element
+const loadingStates = ref({
+  branches: false,
+  kpis: false,
+  topProducts: false,
+  topClients: false,
+  lowStock: false,
+  sellers: false,
+  export: false
+})
 
 const kpis = ref({})
 const topProducts = ref([])
@@ -377,13 +521,20 @@ const kpiCards = computed(() => [
 
 function getFilters () {
   return {
-    branch_office_id: branchOffice.value.id || undefined,
+    branch_office_id: branchOffice.value?.id || undefined,
     start_date: `${dateRange.value.start} 00:00:00`,
     end_date: `${dateRange.value.end} 23:59:59`
   }
 }
 
 async function fetchStats () {
+  // Set individual loading states
+  loadingStates.value.kpis = true
+  loadingStates.value.topProducts = true
+  loadingStates.value.topClients = true
+  loadingStates.value.lowStock = true
+  loadingStates.value.sellers = true
+
   try {
     const params = getFilters()
     const [
@@ -411,6 +562,13 @@ async function fetchStats () {
   } catch (error) {
     notify('Error al cargar los datos del dashboard', 'negative', 'warning')
     console.error('Error fetching stats:', error)
+  } finally {
+    // Reset loading states
+    loadingStates.value.kpis = false
+    loadingStates.value.topProducts = false
+    loadingStates.value.topClients = false
+    loadingStates.value.lowStock = false
+    loadingStates.value.sellers = false
   }
 }
 
@@ -457,6 +615,7 @@ async function refreshAll () {
 }
 
 async function fetchBranches () {
+  loadingStates.value.branches = true
   try {
     const { data } = await api.get('branch-offices')
     branchOptions.value = data || []
@@ -466,10 +625,13 @@ async function fetchBranches () {
   } catch (error) {
     notify('Error al cargar las sucursales', 'negative', 'warning')
     console.error('Error fetching branches:', error)
+  } finally {
+    loadingStates.value.branches = false
   }
 }
 
 async function downloadInvoiceTable () {
+  loadingStates.value.export = true
   try {
     const response = await api.post('dashboard/export-table', { ...getFilters() }, {
       responseType: 'blob'
@@ -479,19 +641,18 @@ async function downloadInvoiceTable () {
     const link = document.createElement('a')
     link.href = url
     link.download = 'ventas.xlsx'
-    document.body.appendChild(link) // Necesario para móviles
-
-    // Click programático, funciona en desktop y móvil
+    document.body.appendChild(link)
     link.click()
-
-    // Limpieza
     setTimeout(() => {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(link)
     }, 100)
+    notify('Archivo exportado correctamente', 'positive', 'download')
   } catch (error) {
     notify('Error al exportar la tabla', 'negative', 'warning')
     console.error('Error downloading invoice table:', error)
+  } finally {
+    loadingStates.value.export = false
   }
 }
 
@@ -504,37 +665,41 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ===== BASE STYLES ===== */
+.dashboard-page {
+  background-color: #f5f5f5;
+  color: #1a1a1a;
+  min-height: 100vh;
+}
+
 .dashboard-title {
   font-size: 2rem;
   font-weight: 700;
   margin: 0;
-  color: #2c3e50;
+  color: #1a1a1a;
 }
 
 .dashboard-subtitle {
   font-size: 1rem;
   opacity: 0.8;
   margin: 0.5rem 0 0 0;
-  color: #7f8c8d;
+  color: #666666;
 }
 
-.section-title {
-  color: #2c3e50;
-  margin: 0;
+.section-header {
+  color: #1a1a1a !important;
   display: flex;
   align-items: center;
 }
 
-.refresh-btn {
-  font-weight: 600;
-  text-transform: none;
-}
-
-.kpi-card {
-  background: white;
+/* ===== CARDS ===== */
+.kpi-card,
+.data-card,
+.filters-card {
+  background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid #e0e0e0;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -555,7 +720,9 @@ onMounted(async () => {
 .kpi-card-3::before { background: linear-gradient(90deg, #4facfe, #00f2fe); }
 .kpi-card-4::before { background: linear-gradient(90deg, #43e97b, #38f9d7); }
 
-.kpi-card:hover {
+.kpi-card:hover,
+.data-card:hover,
+.filters-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(0,0,0,0.12);
 }
@@ -567,57 +734,109 @@ onMounted(async () => {
 .kpi-value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: #1a1a1a;
   margin-bottom: 0.5rem;
 }
 
 .kpi-label {
   font-size: 0.85rem;
-  color: #7f8c8d;
+  color: #666666;
   font-weight: 500;
 }
 
-.chart-card, .table-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  border: 1px solid rgba(0,0,0,0.05);
-  transition: all 0.3s ease;
-}
-
-.chart-card:hover, .table-card:hover {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-}
-
-.chart-header, .table-header {
+/* ===== CARD HEADERS ===== */
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.chart-title, .table-title {
+.card-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #1a1a1a;
   margin: 0;
   display: flex;
   align-items: center;
 }
 
-.modern-table {
+/* ===== TABLES ===== */
+.data-table {
   border-radius: 8px;
   overflow: hidden;
+  background-color: #ffffff;
 }
 
-.modern-table :deep(.q-table thead th) {
-  background: #f8f9fa;
+.data-table :deep(.q-table) {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+.data-table :deep(.q-table thead) {
+  background-color: #f8f9fa;
+}
+
+.data-table :deep(.q-table thead th) {
+  background-color: #f8f9fa !important;
+  color: #1a1a1a !important;
   font-weight: 600;
-  color: #2c3e50;
   font-size: 0.85rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding: 12px 16px;
 }
 
-.modern-table :deep(.q-table tbody tr:hover) {
-  background: #f8f9fa;
+.data-table :deep(.q-table tbody) {
+  background-color: #ffffff;
+}
+
+.data-table :deep(.q-table tbody tr) {
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
+}
+
+.data-table :deep(.q-table tbody tr:hover) {
+  background-color: #f5f5f5 !important;
+}
+
+.data-table :deep(.q-table tbody td) {
+  color: #1a1a1a !important;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 12px 16px;
+}
+
+.data-table :deep(.q-table__bottom) {
+  background-color: #ffffff;
+  color: #1a1a1a;
+  border-top: 1px solid #e0e0e0;
+}
+
+.data-table :deep(.q-table__bottom .q-btn) {
+  color: #1a1a1a;
+}
+
+/* ===== INPUTS ===== */
+.custom-input :deep(.q-field__control) {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+.custom-input :deep(.q-field__label) {
+  color: #666666;
+}
+
+.custom-input :deep(.q-field__native) {
+  color: #1a1a1a;
+}
+
+.custom-input :deep(.q-icon) {
+  color: #666666;
+}
+
+/* ===== BUTTONS ===== */
+.refresh-btn,
+.action-btn {
+  font-weight: 600;
+  text-transform: none;
 }
 
 .table-actions {
@@ -625,7 +844,7 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-/* Estado vacío profesional y compacto */
+/* ===== EMPTY STATES ===== */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -636,12 +855,217 @@ onMounted(async () => {
   min-height: 120px;
 }
 
-.empty-state p {
+.empty-icon {
+  color: #999999;
+}
+
+.empty-text {
   font-size: 0.9rem;
   max-width: 200px;
   line-height: 1.4;
+  color: #666666;
 }
 
+/* ===== SKELETON STYLES ===== */
+.skeleton-table {
+  width: 100%;
+}
+
+.skeleton-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px 8px 0 0;
+  gap: 16px;
+}
+
+.skeleton-table-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  border-left: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 16px;
+}
+
+.skeleton-table-row:last-child {
+  border-radius: 0 0 8px 8px;
+}
+
+.skeleton-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+/* ===== DARK MODE STYLES ===== */
+.body--dark .dashboard-page {
+  background-color: #121212;
+  color: #ffffff;
+}
+
+.body--dark .dashboard-title {
+  color: #ffffff;
+}
+
+.body--dark .dashboard-subtitle {
+  color: #b3b3b3;
+}
+
+.body--dark .section-header {
+  color: #ffffff !important;
+}
+
+/* Dark mode cards */
+.body--dark .kpi-card,
+.body--dark .data-card,
+.body--dark .filters-card {
+  background-color: #1e1e1e;
+  border: 1px solid #333333;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+.body--dark .kpi-card:hover,
+.body--dark .data-card:hover,
+.body--dark .filters-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.body--dark .kpi-value {
+  color: #ffffff;
+}
+
+.body--dark .kpi-label {
+  color: #b3b3b3;
+}
+
+.body--dark .card-title {
+  color: #ffffff;
+}
+
+/* Dark mode tables */
+.body--dark .data-table {
+  background-color: #1e1e1e;
+}
+
+.body--dark .data-table :deep(.q-table) {
+  background-color: #1e1e1e;
+  color: #ffffff;
+}
+
+.body--dark .data-table :deep(.q-table thead) {
+  background-color: #2a2a2a;
+}
+
+.body--dark .data-table :deep(.q-table thead th) {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+  border-bottom: 2px solid #333333;
+}
+
+.body--dark .data-table :deep(.q-table tbody) {
+  background-color: #1e1e1e;
+}
+
+.body--dark .data-table :deep(.q-table tbody tr) {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
+.body--dark .data-table :deep(.q-table tbody tr:hover) {
+  background-color: #2a2a2a !important;
+}
+
+.body--dark .data-table :deep(.q-table tbody td) {
+  color: #ffffff !important;
+  border-bottom: 1px solid #333333;
+}
+
+.body--dark .data-table :deep(.q-table__bottom) {
+  background-color: #1e1e1e;
+  color: #ffffff;
+  border-top: 1px solid #333333;
+}
+
+.body--dark .data-table :deep(.q-table__bottom .q-btn) {
+  color: #ffffff;
+}
+
+/* Dark mode inputs */
+.body--dark .custom-input :deep(.q-field__control) {
+  background-color: #2a2a2a;
+  color: #ffffff;
+}
+
+.body--dark .custom-input :deep(.q-field__label) {
+  color: #b3b3b3;
+}
+
+.body--dark .custom-input :deep(.q-field__native) {
+  color: #ffffff;
+}
+
+.body--dark .custom-input :deep(.q-icon) {
+  color: #b3b3b3;
+}
+
+/* Dark mode empty states */
+.body--dark .empty-icon {
+  color: #666666;
+}
+
+.body--dark .empty-text {
+  color: #b3b3b3;
+}
+
+/* Dark mode skeletons */
+.body--dark .skeleton-table-header {
+  background-color: #2a2a2a;
+  border: 1px solid #333333;
+}
+
+.body--dark .skeleton-table-row {
+  background-color: #1e1e1e;
+  border-left: 1px solid #333333;
+  border-right: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+}
+
+.body--dark :deep(.q-skeleton--type-text) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.body--dark :deep(.q-skeleton--type-QAvatar) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.body--dark :deep(.q-skeleton--type-QBtn) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.body--dark :deep(.q-skeleton--type-QBadge) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ===== SKELETON ANIMATION ===== */
+:deep(.q-skeleton) {
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .dashboard-title {
     font-size: 1.5rem;
@@ -651,7 +1075,7 @@ onMounted(async () => {
     font-size: 1.4rem;
   }
 
-  .chart-header, .table-header {
+  .card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
@@ -660,6 +1084,13 @@ onMounted(async () => {
   .empty-state {
     min-height: 100px;
     padding: 1.5rem 1rem;
+  }
+
+  .skeleton-table-header,
+  .skeleton-table-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
 }
 </style>
