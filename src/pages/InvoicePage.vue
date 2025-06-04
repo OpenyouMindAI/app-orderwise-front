@@ -863,6 +863,7 @@ export default {
   methods: {
     async getInit () {
       await this.getBranchOffices()
+      this.getPrinters()
       this.filterInvoice()
     },
     /**
@@ -1147,7 +1148,7 @@ export default {
      * Print command
      */
     async printCommand () {
-      if (this.$q.platform.is.nativeMobile) {
+      if (this.$q.platform.is.nativeMobile && this.printers.length > 0) {
         getPrintersB(this.invoice)
       } else {
         const doc = await printTicket(this.invoice, this.userSession)
