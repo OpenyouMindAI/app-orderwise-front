@@ -631,7 +631,6 @@ export default {
       filter: undefined
     })
     this.getUnitOfMeasures()
-    this.getAllCompanies()
   },
   computed: {
     ...mapState(authentication, ['userSession', 'branchOffice'])
@@ -703,6 +702,7 @@ export default {
      */
     openCompaniesDialog () {
       this.companiesDialog = true
+      this.getAllCompanies()
     },
     /**
      * Get all companies

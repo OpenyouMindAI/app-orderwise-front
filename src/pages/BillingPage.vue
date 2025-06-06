@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12" id="select-client">
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12" id="select-client">
             <q-select
               use-input
               filled
@@ -26,7 +26,7 @@
               </template>
             </q-select>
           </div>
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
             <q-select
               use-input
               filled
@@ -41,7 +41,22 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
+          <div v-if="invoiceType.bill" class="col-xl-3 col-lg-3 col-md-3 col-sm-4 col-xs-12">
+            <q-select
+              v-model="voucherType"
+              use-input
+              filled
+              dense
+              label="Tipo de factura (Arca)"
+              input-debounce="0"
+              option-label="Desc"
+              option-value="id"
+              :options="voucherTypes"
+              :rules="[(val) => !!val || 'El campo es requerido.']"
+              @filter="getVoucherTypes"
+            />
+          </div>
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
             <q-select
               use-input
               filled
@@ -1105,6 +1120,8 @@ export default {
           sortable: true
         }
       ],
+      voucherTypes: [],
+      voucherType: null,
       /**
        * Products columns
        * @type {Array}
@@ -1278,6 +1295,28 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+    /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getVoucherTypes (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/voucher-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.voucherTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
     /**
      * Select category
      * @param {String} value Value filter
@@ -1861,7 +1900,8 @@ export default {
         payments: this.payments.filter(payment => payment.amount > 0),
         total_amount: this.totalBill,
         tables: this.tableSelected,
-        electronic_invoice: this.invoiceType?.bill
+        electronic_invoice: this.invoiceType?.bill,
+        voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
     },
     /**
@@ -1926,6 +1966,7 @@ export default {
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
       this.companyConfig = companySession?.company_config
+      this.voucherType = companySession?.company_config?.other?.voucher_type
       this.calculateTotal()
     },
     /**
