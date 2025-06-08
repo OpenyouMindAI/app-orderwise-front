@@ -517,7 +517,7 @@ export default {
         sortOrder: 'desc',
         perPage: 1,
         whereIn: {
-          status: ['pending', 'delivered', 'finished']
+          status: ['pending', 'delivered', 'finished', 'on_process']
         },
         dataSearch: {
           id: ''
