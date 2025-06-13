@@ -26,7 +26,7 @@
               </template>
             </q-select>
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
             <q-select
               use-input
               filled
@@ -41,7 +41,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div v-if="invoiceType.bill" class="col-xl-3 col-lg-3 col-md-3 col-sm-4 col-xs-12">
+          <div v-if="invoiceType.bill" class="col-xl-3 col-lg-3 col-md-3 col-sm-4 col-xs-6">
             <q-select
               v-model="voucherType"
               use-input
@@ -56,7 +56,7 @@
               @filter="getVoucherTypes"
             />
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
+          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
             <q-select
               use-input
               filled
@@ -74,7 +74,7 @@
         </div>
         <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex justify-between">
               <q-input
                 filled
                 dense
@@ -82,8 +82,21 @@
                 autofocus
                 type="number"
                 label="Código"
+                :style="$q.platform.is.nativeMobile ? 'width: 60%;' : ''"
                 @keyup.enter="getOneProduct(barcode)"
               />
+              <q-btn
+                style="border-radius: 10px;"
+                color="primary"
+                icon="qr_code_scanner"
+                label="Escanear"
+                @click.stop="startScanner"
+                v-if="$q.platform.is.nativeMobile"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Escanear código
+                </q-tooltip>
+              </q-btn>
             </div>
             <div class="justify-end col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
               <q-btn
@@ -164,7 +177,7 @@
 
               <q-btn
                 style="border-radius: 10px;"
-                label="Buscar"
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
                 icon="search"
                 color="teal"
                 @click="searchInvoice = true"
@@ -183,7 +196,9 @@
               </q-btn>
             </div>
             <div class="col-12">
+              <!-- Desktop view -->
               <q-table
+                v-if="$q.screen.gt.xs"
                 row-key="name"
                 title="Artículos"
                 dense
@@ -199,7 +214,7 @@
                       {{ props.row.barcode }}
                     </q-td>
                     <q-td key="name" :props="props">
-                      {{ props.row.name.slice(0, 20) }}...
+                      {{ props.row.name.slice(0, 20) }}{{ props.row.name.length > 20 ? '...' : '' }}
                       <q-tooltip class="text-body2" anchor="bottom middle">
                         {{ props.row.name }}
                       </q-tooltip>
@@ -243,12 +258,91 @@
                       {{ formatNumber(props.row.subtotal) }}
                     </q-td>
                     <q-td key="actions" :props="props">
-                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)"/>
+                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)" />
                     </q-td>
                   </q-tr>
                 </template>
               </q-table>
-            </div>
+
+              <!-- Mobile view -->
+              <div v-else>
+                <div class="text-h6 q-mb-md">Artículos</div>
+                <div class="q-gutter-y-md">
+                  <q-card v-for="(product, index) in products" :key="index" flat bordered class="product-card">
+                    <q-card-section>
+                      <div class="row items-center justify-between q-mb-sm">
+                        <div class="text-subtitle1 text-weight-bold">
+                          {{ product.barcode }} - {{ product.name }}
+                        </div>
+                        <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                      </div>
+                      <div class="row q-mb-xs">
+                        <div class="col-4 text-grey column text-center">
+                          <span>Precio:</span>
+                          <div>
+                            {{ formatNumber(product.price) }}
+                            <q-icon
+                              v-if="userSession.is_root || userSession.is_super_admin"
+                              name="edit"
+                              size="xs"
+                              color="primary"
+                              class="q-ml-xs cursor-pointer"
+                              @click="openPriceEdit(product)"
+                            />
+                            <q-popup-edit
+                              v-if="userSession.is_root || userSession.is_super_admin"
+                              v-model.number="product.price"
+                              auto-save
+                              v-slot="scope"
+                              @update:model-value="calculate(product)"
+                            >
+                              <q-input
+                                label="Precio"
+                                type="number"
+                                v-model.number="scope.value"
+                                autofocus
+                                @keyup.enter="scope.set"
+                              />
+                            </q-popup-edit>
+                          </div>
+                        </div>
+                        <div class="col-4 text-grey text-center">
+                          <span>Cantidad:</span>
+                          <div>
+                            {{ formatNumber(product.quantity) }}
+                            <q-icon
+                              name="edit"
+                              size="xs"
+                              color="primary"
+                              class="q-ml-xs cursor-pointer"
+                              @click="openQuantityEdit(product)"
+                            />
+                            <q-popup-edit
+                              v-model.number="product.quantity"
+                              auto-save
+                              v-slot="scope"
+                              @update:model-value="calculate(product)"
+                            >
+                              <q-input
+                                label="Cantidad"
+                                type="number"
+                                v-model.number="scope.value"
+                                autofocus
+                                @keyup.enter="scope.set"
+                              />
+                            </q-popup-edit>
+                          </div>
+                        </div>
+                        <div class="col-4 text-grey text-center">
+                          <div class="col-5 text-grey">Subtotal:</div>
+                          <div class="col-7 text-weight-bold">{{ formatNumber(product.subtotal) }}</div>
+                        </div>
+                      </div>
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </div>
+              </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row">
               <div class="col-6">
                 <q-select
@@ -404,13 +498,6 @@
         </div>
       </div>
     </q-form>
-    <q-dialog v-model="modelScan">
-      <q-card>
-        <q-card-section class="q-pb-none q-pt-xs q-px-xs bg-dark">
-          <stream-barcode-reader @debarcode="getOneProduct"/>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
@@ -786,7 +873,6 @@
 </template>
 
 <script>
-import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -797,10 +883,11 @@ import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
 import { getPrintersB } from 'src/const/printInvoiceAndroid'
+import { CapacitorBarcodeScanner, CapacitorBarcodeScannerAndroidScanningLibrary, CapacitorBarcodeScannerCameraDirection, CapacitorBarcodeScannerScanOrientation, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner'
+
 export default {
   name: 'BillingPage',
   components: {
-    StreamBarcodeReader,
     DrawerTable,
     WaitByPaymentMp
   },
@@ -1295,6 +1382,32 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+    /**
+     * Start scanner
+     */
+    async startScanner () {
+      try {
+        const result = await CapacitorBarcodeScanner.scanBarcode({
+          hint: CapacitorBarcodeScannerTypeHint.ALL,
+          scanInstructions: 'Escanear código',
+          scanButton: false,
+          scanText: 'Scan',
+          cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+          scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE,
+          android: {
+            scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING
+          }
+        })
+        await this.getOneProduct(result.ScanResult)
+        this.startScanner()
+      } catch (error) {
+        if (error instanceof Error) {
+          notify(error.message, 'negative', 'warning')
+        } else {
+          notify('Error al escanear el código', 'negative', 'warning')
+        }
+      }
+    },
     /**
      * Select category
      * @param {String} value Value filter
@@ -2103,35 +2216,23 @@ export default {
      * Get one product
      * @param {Number} barcode barcode product
      */
-    async getOneProduct (barcode = this.barcode) {
-      this.$api.get('products', {
-        params: {
-          dataEqualFilter: {
-            barcode: this.barcode
+    async getOneProduct (barcode) {
+      try {
+        const { data } = await this.$api.get('products', {
+          params: {
+            dataEqualFilter: { barcode }
           }
+        })
+        const product = data[0]
+        if (product) {
+          this.validateProduct(product, true)
+          this.barcode = null
+        } else {
+          notify('Producto no encontrado', 'negative', 'warning')
         }
-      })
-        .then(({ data }) => {
-          const product = data[0]
-          if (product) {
-            this.validateProduct(product, true)
-            this.barcode = null
-            this.modelScan = false
-          } else {
-            this.$q.notify({
-              message: 'Producto no encontrado',
-              icon: 'warning',
-              color: 'negative'
-            })
-          }
-        })
-        .catch((error) => {
-          this.$q.notify({
-            message: error.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     }
   }
 }

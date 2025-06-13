@@ -12,10 +12,12 @@
     "build": "quasar build",
     "build-pwa": "NODE_ENV=production quasar build -m pwa",
     "build-pwa-dev": "NODE_ENV=development quasar build -m pwa",
+    "build-pwa-staging": "NODE_ENV=staging quasar build -m pwa",
     "build-pwa-dixcont": "NODE_ENV=staging quasar build -m pwa",
     "icons": "icongenie generate -i logo.png --skip-trim --padding 50 50"
   },
   "dependencies": {
+    "@capacitor/barcode-scanner": "^2.0.3",
     "@capacitor/device": "^7.0.1",
     "@quasar/extras": "^1.0.0",
     "axios": "^1.9.0",
