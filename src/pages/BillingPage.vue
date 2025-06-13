@@ -9,6 +9,7 @@
         <div class="col-12 row q-col-gutter-x-xs">
           <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12" id="select-client">
             <q-select
+              :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
               filled
               dense
@@ -28,6 +29,7 @@
           </div>
           <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
             <q-select
+              :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
               filled
               dense
@@ -51,6 +53,7 @@
               input-debounce="0"
               option-label="Desc"
               option-value="id"
+              :hide-dropdown-icon="$q.platform.is.nativeMobile"
               :options="voucherTypes"
               :rules="[(val) => !!val || 'El campo es requerido.']"
               @filter="getVoucherTypes"
@@ -59,6 +62,7 @@
           <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
             <q-select
               use-input
+              :hide-dropdown-icon="$q.platform.is.nativeMobile"
               filled
               dense
               label="Tipo de servicio"
@@ -90,6 +94,8 @@
                 color="primary"
                 icon="qr_code_scanner"
                 label="Escanear"
+                class="q-px-sm"
+                dense
                 @click.stop="startScanner"
                 v-if="$q.platform.is.nativeMobile"
               >
@@ -270,14 +276,16 @@
                 <div class="q-gutter-y-md">
                   <q-card v-for="(product, index) in products" :key="index" flat bordered class="product-card">
                     <q-card-section>
-                      <div class="row items-center justify-between q-mb-sm">
+                      <div class="row items-center justify-between q-mb-sm q-pr-sm">
                         <div class="text-subtitle1 text-weight-bold">
                           {{ product.barcode }} - {{ product.name }}
                         </div>
-                        <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                        <q-badge floating class="q-pa-none" style="background-color: transparent;">
+                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                        </q-badge>
                       </div>
                       <div class="row q-mb-xs">
-                        <div class="col-4 text-grey column text-center">
+                        <div class="col-4 text-grey column text-left">
                           <span>Precio:</span>
                           <div>
                             {{ formatNumber(product.price) }}
@@ -1402,7 +1410,7 @@ export default {
         this.startScanner()
       } catch (error) {
         if (error instanceof Error) {
-          notify(error.message, 'negative', 'warning')
+          // notify(error.message, 'negative', 'warning')
         } else {
           notify('Error al escanear el código', 'negative', 'warning')
         }
