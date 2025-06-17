@@ -1,5 +1,15 @@
 {
   "appId": "orderwise.qbitsinc.com",
   "appName": "Orderwise",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "StatusBar": {
+      "style": "dark",
+      "visible": false,
+      "overlaysWebView": false
+    }
+  },
+  "android": {
+    "immersive": false
+  }
 }

@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh Lpr lff" class="shadow-2 rounded-borders">
+  <q-layout view="hHh Lpr lff" class="shadow-2 rounded-borders q-pa-safe">
     <q-header elevated>
       <q-toolbar class="bg-primary">
         <q-btn
@@ -324,7 +324,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-page-container>
+    <q-page-container style="padding-bottom: env(safe-area-inset-bottom);">
       <router-view />
     </q-page-container>
     <q-inner-loading :showing="visibleLoading">

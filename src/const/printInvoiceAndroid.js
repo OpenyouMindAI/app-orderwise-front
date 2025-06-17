@@ -3,6 +3,7 @@ import { formatDate, formatNumber, notify } from './mixins'
 import { authentication } from 'src/stores/module-authentication'
 import QRCode from 'qrcode'
 import { Dialog, Loading, QSpinnerRadio } from 'quasar'
+import { api } from 'src/boot/axios'
 
 const getConfig = () => {
   const store = authentication()
@@ -74,7 +75,7 @@ const getQr = async (data, fields) => {
 }
 
 function separatorLine (length = 29) {
-  return '-'.repeat(length + 3) + '\n'
+  return '-'.repeat(length) + '\n'
 }
 
 export async function printCommand (invoice, config) {
@@ -133,7 +134,17 @@ export async function printCommand (invoice, config) {
     .cutPaper()
     .write()
     .then(() => console.log('Printed!'))
-    .catch((e) => notify('Error al imprimir', 'negative', 'warning'))
+    .catch(async (e) => {
+      try {
+        await api.get(`print/${invoice.id}`, {
+          params: {
+            type: 'command'
+          }
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    })
 }
 
 export async function printTicket (invoice, config) {
@@ -214,29 +225,15 @@ export async function printTicket (invoice, config) {
     .cutPaper()
     .write()
     .then(() => Loading.hide())
-    .catch((e) => {
-      Dialog.create({
-        title: 'Error al imprimir',
-        message: e.message,
-        cancel: {
-          label: 'Cerrar',
-          color: 'negative',
-          icon: 'close'
-        },
-        ok: {
-          label: 'Reintentar',
-          color: 'primary',
-          icon: 'refresh'
-        }
-      }).onOk(async () => {
-        Loading.show({
-          message: 'Imprimiendo...',
-          spinner: QSpinnerRadio
+    .catch(async (e) => {
+      try {
+        await api.get(`print/${invoice.id}`, {
+          params: {
+            type: 'ticket'
+          }
         })
-        await getPrintersB(invoice, 1, 'ticket')
-        Loading.hide()
-      }).onCancel(() => {
-        Loading.hide()
-      })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     })
 }

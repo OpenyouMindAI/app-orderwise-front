@@ -162,6 +162,11 @@
               flat
             />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" flat />
+            <q-btn
+              icon="refresh"
+              color="info"
+              @click.stop="reconnectPrinter(printer)"
+            />
             <q-btn color="primary" label="Guardar" type="submit" />
           </q-card-actions>
         </q-form>
@@ -599,9 +604,9 @@ const printTest = async () => {
       .bold()
       .text('Impresora: ' + printer.name)
       .text('\n')
-      .text('Dirección: ' + printer.ip)
+      .text('Direccion: ' + printer.ip)
       .text('\n')
-      .text('Configurada con éxito')
+      .text('Configurada con exito')
       .clearFormatting()
       .cutPaper()
       .write()

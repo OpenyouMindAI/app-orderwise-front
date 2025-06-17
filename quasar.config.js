@@ -32,7 +32,9 @@ export default configure(function (/* ctx */) {
       'pinia',
       'authorization',
       'VueHtmlToPaper',
-      'pusher'
+      'pusher',
+      'background-mode',
+      'statusbar'
     ],
 
     css: [
@@ -110,6 +112,7 @@ export default configure(function (/* ctx */) {
 
     capacitor: {
       hideSplashscreen: true,
+      iosStatusBarPadding: true,
       appName: 'Orderwise'
     },
 
