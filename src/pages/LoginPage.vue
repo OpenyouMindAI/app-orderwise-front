@@ -158,12 +158,11 @@ export default {
           this.$router.push({ name: 'Billing' })
           return
         }
-        if (data.roles.length === 0) {
+        if (data?.roles?.length === 0) {
           notify('Usuario no tiene permisos', 'negative', 'warning')
           return
         }
-        const { modules } = data.roles[0]
-        this.$router.push({ name: modules[0].link })
+        this.$router.push({ name: 'Tutorial' })
         this.btnDisable = false
       } catch (error) {
         Notify.create({

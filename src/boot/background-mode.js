@@ -64,9 +64,8 @@ export default boot(async () => {
         bgMode.configure({ isForeground: true })
       }
     }, { once: true })
+    await initializeConnection($store?.userSession)
   }
-
-  await initializeConnection($store?.userSession)
 })
 
 const initializeConnection = async (userSession) => {

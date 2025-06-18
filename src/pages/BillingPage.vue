@@ -78,7 +78,7 @@
         </div>
         <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex justify-between">
+            <div class="col-xl-3 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex justify-between">
               <q-input
                 filled
                 dense
@@ -86,11 +86,12 @@
                 autofocus
                 type="number"
                 label="Código"
-                :style="$q.platform.is.nativeMobile ? 'width: 60%;' : ''"
+                ref="barcode"
+                :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
                 @keyup.enter="getOneProduct(barcode)"
               />
               <q-btn
-                style="border-radius: 10px;"
+                style="border-radius: 10px; padding: 5px 15px"
                 color="primary"
                 icon="qr_code_scanner"
                 label="Escanear"
@@ -104,11 +105,34 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="justify-end col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
+            <div class="justify-start col-xl-9 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
               <q-btn
-                style="border-radius: 10px;"
+                style="border-radius: 10px; padding: 5px 15px"
+                label="Cobrar"
+                icon="payments"
+                color="positive"
+                id="payments"
+                dense
+                :disable="products.length <= 0"
+                @click="dialogPayment = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F1
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Cobrar
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
                 color="primary"
                 icon="table_restaurant"
+                dense
                 label="Mesas"
                 :loading="loadingLivingRoom"
                 @click="dialogTable = true"
@@ -120,7 +144,7 @@
                   floating
                   v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
                 >
-                  F6
+                  F10
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
                   Seleccionar mesas
@@ -128,32 +152,11 @@
               </q-btn>
 
               <q-btn
-                style="border-radius: 10px;"
-                label="Cobrar"
-                icon="payments"
-                color="positive"
-                id="payments"
-                :disable="products.length <= 0"
-                @click="dialogPayment = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F8
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobrar
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
                 icon="payments"
                 color="info"
+                dense
                 :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
-                style="border-radius: 10px;"
+                style="border-radius: 10px; padding: 5px 15px"
                 @click="cashflow = true"
               >
                 <q-badge
@@ -162,7 +165,7 @@
                   floating
                   v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
                 >
-                  F7
+                  F11
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
                   Entrada y salida de dinero
@@ -170,22 +173,11 @@
               </q-btn>
 
               <q-btn
-                style="border-radius: 10px;"
-                icon="delete"
-                color="negative"
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Borrar factura
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                style="border-radius: 10px;"
+                style="border-radius: 10px; padding: 5px 15px"
                 :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
                 icon="search"
                 color="teal"
+                dense
                 @click="searchInvoice = true"
               >
                 <q-badge
@@ -194,10 +186,23 @@
                   floating
                   v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
                 >
-                  F10
+                  F12
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
                   Buscar factura
+                </q-tooltip>
+              </q-btn>
+
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                icon="delete"
+                color="negative"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
+                @click="clear"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Borrar factura
                 </q-tooltip>
               </q-btn>
             </div>
@@ -350,9 +355,9 @@
                   </q-card>
                 </div>
               </div>
-              </div>
+            </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <div class="col-6">
+              <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-select
                   filled
                   dense
@@ -364,11 +369,13 @@
                   @filter="getCoins"
                 />
               </div>
-              <div class="col-6">
+              <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12">
+              <div class="col-12" v-if="typeOfService.code !== 4">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+              </div>
+              <div class="col-12">
                 <div class="flex q-mt-sm" v-if="invoice" style="gap: 15px;">
                   <q-btn
                     color="primary"
@@ -428,11 +435,14 @@
                   </q-item-section>
                 </q-item>
                 <q-item>
-                  <q-item-section>
+                  <q-item-section v-if="pendingPayment >= 0">
                     TOTAL POR COBRAR
                   </q-item-section>
+                  <q-item-section v-else>
+                    VUELTO
+                  </q-item-section>
                   <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(pendingPayment) }}
+                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -482,7 +492,7 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-2 col-xl-2">
+              <div class="q-pa-xs col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2">
                 <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
                     style="height: 120px; width: 100%; border-radius: 10px;"
@@ -599,39 +609,71 @@
                   </q-item-section>
                 </q-item>
                 <q-item>
-                  <q-item-section>
+                  <q-item-section v-if="pendingPayment >= 0">
                     TOTAL POR COBRAR
                   </q-item-section>
+                  <q-item-section v-else>
+                    VUELTO
+                  </q-item-section>
                   <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(pendingPayment) }}
+                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
                   </q-item-section>
                 </q-item>
               </q-list>
             </div>
           </div>
         </q-card-section>
-        <q-card-actions align="center" class="q-gutter-y-sm">
+        <q-card-actions align="right" class="q-gutter-y-sm">
           <q-btn
-            label="Guardar e imprimir factura"
-            @click="savePrintInvoice"
+            label="Factura"
             color="secondary"
+            icon="print"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
             :loading="loadingBilling"
-          />
+            @click="savePrintInvoice"
+          >
+            <q-badge
+              color="negative"
+              align="bottom"
+              floating
+              v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+            >
+              F7
+            </q-badge>
+          </q-btn>
           <q-btn
-            label="Guardar e imprimir comanda"
+            label="Comanda"
+            icon="print"
             @click="submitBill"
             color="warning"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
             :loading="loadingBilling"
-          />
+          >
+            <q-badge
+              color="negative"
+              align="bottom"
+              floating
+              v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+            >
+              F8
+            </q-badge>
+          </q-btn>
           <q-btn
             label="Guardar sin imprimir"
             @click="saveWithoutPrint"
             color="primary"
             :class="$q.screen.lt.sm ? 'full-width' : ''"
             :loading="loadingBilling"
-          />
+          >
+            <q-badge
+              color="negative"
+              align="bottom"
+              floating
+              v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+            >
+              F9
+            </q-badge>
+          </q-btn>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -891,7 +933,13 @@ import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
 import { getPrintersB } from 'src/const/printInvoiceAndroid'
-import { CapacitorBarcodeScanner, CapacitorBarcodeScannerAndroidScanningLibrary, CapacitorBarcodeScannerCameraDirection, CapacitorBarcodeScannerScanOrientation, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner'
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerAndroidScanningLibrary,
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint
+} from '@capacitor/barcode-scanner'
 
 export default {
   name: 'BillingPage',
@@ -941,7 +989,7 @@ export default {
        * Amount
        * @type {Number}
        */
-      amount: 0,
+      amount: null,
       /**
        * Loading cashflow
        * @type {Boolean}
@@ -1126,6 +1174,10 @@ export default {
        * @type {String}
        */
       barcode: null,
+      /**
+       * Channel
+       * @type {Object}
+       */
       channel: null,
       /**
        * Table close
@@ -1179,6 +1231,10 @@ export default {
        * @type {Boolean}
        */
       loadingProducts: false,
+      /**
+       * Company config
+       * @type {Object}
+       */
       companyConfig: {},
       /**
        * Products columns
@@ -1343,39 +1399,39 @@ export default {
      * Init keywords button
      */
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'F6') {
-        e.preventDefault()
-        this.dialogTable = !this.dialogTable
-      }
-      if (e.key === 'F7') {
-        e.preventDefault()
-        this.cashflow = !this.cashflow
-      }
-      if (e.key === 'F8') {
-        e.preventDefault()
-        if (this.products.length > 0) {
-          this.dialogPayment = true
-        } else {
-          notify('No hay productos seleccionados', 'negative', 'warning')
-        }
-      }
-      if (e.key === 'F10') {
-        e.preventDefault()
-        this.searchInvoice = !this.searchInvoice
-      }
-      if (e.key === 'F9') {
-        e.preventDefault()
-        if (this.invoice) {
-          this.invoicePrinter = true
-          this.printBill(this.invoice)
-        }
-      }
-
-      if (e.key === 'F4') {
-        if (this.invoice) {
+      switch (e.key) {
+        case 'F1':
           e.preventDefault()
-          this.printBill(this.invoice)
-        }
+          if (this.products.length > 0) {
+            this.dialogPayment = true
+          } else {
+            notify('No hay productos seleccionados', 'negative', 'warning')
+          }
+          break
+        case 'F7':
+          e.preventDefault()
+          this.savePrintInvoice()
+          break
+        case 'F8':
+          e.preventDefault()
+          this.submitBill()
+          break
+        case 'F9':
+          e.preventDefault()
+          this.saveWithoutPrint()
+          break
+        case 'F10':
+          e.preventDefault()
+          this.dialogTable = !this.dialogTable
+          break
+        case 'F11':
+          e.preventDefault()
+          this.cashflow = !this.cashflow
+          break
+        case 'F12':
+          e.preventDefault()
+          this.searchInvoice = !this.searchInvoice
+          break
       }
     })
   },
@@ -1388,8 +1444,24 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
+    document.addEventListener('click', this.handleClick)
   },
   methods: {
+    handleClick (event) {
+      const clickedElement = event.target
+
+      if (
+        clickedElement.closest('button') ||
+        clickedElement.closest('input') ||
+        clickedElement.closest('textarea') ||
+        clickedElement.closest('.q-field')
+      ) {
+        return
+      }
+
+      // Si no, enfocar el input principal
+      this.$refs?.barcode?.focus()
+    },
     /**
      * Start scanner
      */
@@ -1620,25 +1692,85 @@ export default {
       payment.reference = String(data.id)
     },
     /**
-     * Add bill payment
-     * @param {Object} data data payments
+     * Add payment
+     * @param {Object} data data payment
      */
     addPayment (data) {
-      if (this.pendingPayment > 0) {
-        this.payments = [
-          ...this.payments,
-          {
-            name: data.name,
-            acronym: data.acronym,
-            amount: this.pendingPayment,
-            reference: null,
-            coin_id: this.coin.id,
-            payment_method_id: data.id,
-            user_created_id: this.userSession.id
-          }
-        ]
+      if (!this.hasPendingPayment()) return
+
+      if (data.acronym !== 'EFE') {
+        const payment = this.createPayment(data, this.pendingPayment)
+        this.appendPayment(payment)
+        return
+      }
+
+      this.promptCashAmount(data).then(amount => {
+        const payment = this.createPayment(data, amount)
+        this.appendPayment(payment)
+      })
+    },
+    /**
+     * Has pending payment
+     * @returns {Boolean}
+     */
+    hasPendingPayment () {
+      return this.pendingPayment && this.pendingPayment > 0
+    },
+    /**
+     * Create payment
+     * @param {Object} data data payment
+     * @param {Number} amount amount
+     * @returns {Object}
+     */
+    createPayment (data, amount) {
+      return {
+        name: data.name,
+        acronym: data.acronym,
+        amount: parseFloat(amount) || this.pendingPayment,
+        reference: null,
+        coin_id: this.coin?.id ?? null,
+        payment_method_id: data.id,
+        user_created_id: this.userSession?.id ?? null
       }
     },
+    /**
+     * Append payment
+     * @param {Object} payment payment
+     */
+    appendPayment (payment) {
+      this.payments = [...this.payments, payment]
+    },
+    /**
+     * Prompt cash amount
+     * @param {Object} data data payment
+     * @returns {Promise}
+     */
+    promptCashAmount (data) {
+      return new Promise((resolve) => {
+        this.$q.dialog({
+          title: data.name || 'Pago en efectivo',
+          color: 'primary',
+          message: 'Ingrese el monto en efectivo. Si es el monto exacto, presione Aceptar.',
+          persistent: true,
+          prompt: {
+            model: '',
+            type: 'number',
+            min: 0,
+            filled: true,
+            label: 'Monto'
+          },
+          ok: {
+            label: 'Aceptar',
+            color: 'primary'
+          }
+        }).onOk(val => {
+          const amount = parseFloat(val)
+          resolve(!isNaN(amount) && amount > 0 ? amount : this.pendingPayment)
+        }).onCancel(() => resolve(this.pendingPayment))
+          .onDismiss(() => resolve(this.pendingPayment))
+      })
+    },
+
     /**
      * Get all payment-methods
      */
@@ -1998,6 +2130,18 @@ export default {
       this.clear()
     },
     /**
+     * Payment model
+     * @param {Array} payments payments
+     * @returns {Array}
+     */
+    paymentModel (payments) {
+      if (this.pendingPayment < 0) {
+        const cash = payments.find(payment => payment.acronym === 'EFE')
+        cash.amount = cash.amount - Math.abs(this.pendingPayment)
+      }
+      return payments.filter(payment => payment.amount > 0)
+    },
+    /**
      * Set invoice model
      * @returns {Object}
      */
@@ -2018,7 +2162,7 @@ export default {
         branch_office_id: this.branchOffice?.id,
         products: this.products,
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
-        payments: this.payments.filter(payment => payment.amount > 0),
+        payments: this.paymentModel(this.payments),
         total_amount: this.totalBill,
         tables: this.tableSelected,
         electronic_invoice: this.invoiceType?.bill,
@@ -2043,7 +2187,7 @@ export default {
         return false
       }
 
-      if (this.products <= 0) {
+      if (this.products.length <= 0) {
         notify('No hay productos seleccionados', 'negative', 'warning')
         return false
       }
@@ -2216,9 +2360,13 @@ export default {
           this.calculateTotal()
         }
       }
+
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
+      setTimeout(() => {
+        this.$refs.barcode.focus()
+      }, 100)
     },
     /**
      * Get one product
@@ -2228,7 +2376,9 @@ export default {
       try {
         const { data } = await this.$api.get('products', {
           params: {
-            dataEqualFilter: { barcode }
+            dataEqualFilter: { barcode },
+            branch_office_id: this.branchOffice?.id,
+            stock: true
           }
         })
         const product = data[0]
