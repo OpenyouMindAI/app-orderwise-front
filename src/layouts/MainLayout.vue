@@ -34,8 +34,8 @@
           round
           class="q-mr-sm"
           @click="screen"
-          />
-          <!-- v-if="$q.platform.is.nativeMobile" -->
+          v-if="$q.platform.is.nativeMobile"
+        />
         <q-btn flat dense icon="apps" round class="q-mr-sm">
           <q-tooltip class="text-body2">
             Herramientas
