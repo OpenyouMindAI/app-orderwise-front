@@ -34,8 +34,8 @@
           round
           class="q-mr-sm"
           @click="screen"
-          v-if="$q.platform.is.nativeMobile"
-        />
+          />
+          <!-- v-if="$q.platform.is.nativeMobile" -->
         <q-btn flat dense icon="apps" round class="q-mr-sm">
           <q-tooltip class="text-body2">
             Herramientas
@@ -413,12 +413,15 @@ export default {
   },
   methods: {
     async screen () {
-      // Alternar pantalla secundaria
-      loading(true)
-      await MultiDisplayManager.showOnSecondScreen({
-        url: `${import.meta.env.VITE_APP_URL}/#/verify/${this.access_token}/${this.refresh_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
-      })
-      loading(false)
+      try {
+        loading(true)
+        await MultiDisplayManager.showOnSecondScreen({
+          url: `${import.meta.env.VITE_APP_URL}/#/verify/${this.access_token}/${this.refresh_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+        })
+        loading(false)
+      } catch (error) {
+        console.log(error.message)
+      }
     },
     async closeScreen () {
       // Obtener estado

@@ -199,14 +199,14 @@ export default {
      * @param {Object} params params to search
      */
     getAllProducts () {
-      this.$api.get(`public/products/${this.$route.params.company_id}`, {
+      this.$api.get('products', {
         params: {
           paginate: true,
           page: 1,
           orderBy: 'sold',
           sortOrder: 'desc',
           perPage: 10,
-          branch_office_id: this.$route.params.branch_office_id
+          branch_office_id: this.branchOffice?.id
         }
       })
         .then(({ data }) => {
