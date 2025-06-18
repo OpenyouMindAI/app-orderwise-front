@@ -47,7 +47,7 @@
         </div>
 
         <!-- RIGHT SECTION: PROMOTIONS -->
-        <div :class="products.length > 0 ? 'col-7 column justify-between': 'col-12'">
+        <div :class="products.length > 0 ? 'col-7 column justify-between q-pb-sm': 'col-12'">
           <q-carousel
             v-model="slide"
             animated
@@ -57,7 +57,7 @@
             :autoplay-timeout="8000"
             transition-prev="slide-right"
             transition-next="slide-left"
-            :style="products.length > 0 ? 'height: calc(100vh - 190px)' : 'height: calc(100vh - 10px)'"
+            :style="products.length > 0 ? 'height: calc(100vh - 120px)' : 'height: calc(100vh - 10px)'"
           >
             <!-- Featured Product Promotion -->
             <q-carousel-slide :name="1" class="column no-wrap q-pb-none" v-if="userSession?.company_session">
@@ -66,7 +66,7 @@
                   :src="userSession?.company_session?.url"
                   spinner-color="primary"
                   fit="contain"
-                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 50px)'"
+                  :style="products.length > 0 ? 'height: calc(100vh - 90px)' : 'height: calc(100vh - 50px)'"
                 />
               </div>
             </q-carousel-slide>
@@ -80,7 +80,7 @@
                   spinner-color="primary"
                   fit="cover"
                   :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
-                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 10px)'"
+                  :style="products.length > 0 ? 'height: calc(100vh - 180px)' : 'height: calc(100vh - 70px)'"
                 >
                   <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
                     <div class="text-h5 text-weight-bold q-mb-sm">{{ product.name }}</div>
@@ -199,14 +199,14 @@ export default {
      * @param {Object} params params to search
      */
     getAllProducts () {
-      this.$api.get('products', {
+      this.$api.get(`public/products/${this.$route.params.company_id}`, {
         params: {
           paginate: true,
           page: 1,
           orderBy: 'sold',
           sortOrder: 'desc',
           perPage: 10,
-          branch_office_id: this.branchOffice?.id
+          branch_office_id: this.$route.params.branch_office_id
         }
       })
         .then(({ data }) => {

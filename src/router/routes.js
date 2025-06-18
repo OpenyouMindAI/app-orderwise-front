@@ -216,6 +216,11 @@ const routes = [
     ]
   },
   {
+    path: '/verify/:access_token/:refresh_token/:expires_in/:token_type/:redirect',
+    name: 'VerifySession',
+    component: () => import('pages/VerifySessionPage.vue')
+  },
+  {
     path: '/',
     component: () => import('layouts/MobileLayout.vue'),
     children: [

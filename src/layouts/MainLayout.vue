@@ -27,6 +27,15 @@
           </q-img>
         </div>
         <q-space />
+        <q-btn
+          flat
+          dense
+          icon="cast_connected"
+          round
+          class="q-mr-sm"
+          @click="screen"
+          v-if="$q.platform.is.nativeMobile"
+        />
         <q-btn flat dense icon="apps" round class="q-mr-sm">
           <q-tooltip class="text-body2">
             Herramientas
@@ -340,6 +349,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
+import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',
@@ -374,7 +384,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice']),
+    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice', 'access_token', 'refresh_token', 'expires_In', 'token_type']),
     ...mapState(darkModeStore, ['darkMode'])
   },
   watch: {
@@ -402,6 +412,23 @@ export default {
     this.getDataNotification()
   },
   methods: {
+    async screen () {
+      // Alternar pantalla secundaria
+      loading(true)
+      await MultiDisplayManager.showOnSecondScreen({
+        url: `${import.meta.env.VITE_APP_URL}/#/verify/${this.access_token}/${this.refresh_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+      })
+      loading(false)
+    },
+    async closeScreen () {
+      // Obtener estado
+      const status = await MultiDisplayManager.getSecondScreenStatus()
+      alert(status.message, status.isShowing)
+      if (status.isShowing) {
+        // Cerrar pantalla
+        await MultiDisplayManager.closeSecondScreen()
+      }
+    },
     ucwords (data) {
       return data
     },

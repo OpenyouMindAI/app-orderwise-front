@@ -19,3 +19,6 @@ project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacit
 
 include ':capacitor-thermal-printer'
 project(':capacitor-thermal-printer').projectDir = new File('../node_modules/capacitor-thermal-printer/android')
+
+include ':multi-display-manager'
+project(':multi-display-manager').projectDir = new File('../../plugin/multi-display-manager/android')
