@@ -58,7 +58,7 @@
     <!-- Main Reports Grid -->
     <div class="row q-col-gutter-md">
       <!-- Compact Summary Footer -->
-       <div class="col-12">
+       <div class="col-12" v-if="validate">
          <q-expansion-item
            class="summary-expansion shadow-6"
            :default-opened="expandedCards.summary"
