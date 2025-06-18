@@ -415,12 +415,16 @@ export default {
     async screen () {
       try {
         loading(true)
+        const url = `${import.meta.env.VITE_APP_URL}/#/verify/${this.access_token}/${this.refresh_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+        alert(url)
         await MultiDisplayManager.showOnSecondScreen({
-          url: `${import.meta.env.VITE_APP_URL}/#/verify/${this.access_token}/${this.refresh_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+          url
         })
-        loading(false)
+        window.open(url, '_blank')
       } catch (error) {
-        console.log(error.message)
+        alert(error.message)
+      } finally {
+        loading(false)
       }
     },
     async closeScreen () {

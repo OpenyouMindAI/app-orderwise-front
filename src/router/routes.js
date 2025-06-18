@@ -216,11 +216,6 @@ const routes = [
     ]
   },
   {
-    path: '/verify/:access_token/:refresh_token/:expires_in/:token_type/:redirect',
-    name: 'VerifySession',
-    component: () => import('pages/VerifySessionPage.vue')
-  },
-  {
     path: '/',
     component: () => import('layouts/MobileLayout.vue'),
     children: [
@@ -247,14 +242,18 @@ const routes = [
     name: 'Login',
     component: () => import('pages/LoginPage.vue')
   },
-
+  {
+    path: '/verify/:access_token/:refresh_token/:expires_in/:token_type/:redirect',
+    name: 'VerifySession',
+    meta: { requiresAuth: false },
+    component: () => import('pages/VerifySessionPage.vue')
+  },
   {
     path: '/invoice-details',
     name: 'InvoiceDetails',
     meta: { requiresAuth: false },
     component: () => import('pages/InvoiceDetailsPage.vue')
   },
-
   // Always leave this as last one,
   // but you can also remove it
   {
