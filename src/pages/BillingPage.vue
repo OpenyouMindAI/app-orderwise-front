@@ -328,7 +328,6 @@
                               size="xs"
                               color="primary"
                               class="q-ml-xs cursor-pointer"
-                              @click="openQuantityEdit(product)"
                             />
                             <q-popup-edit
                               v-model.number="product.quantity"
@@ -1451,6 +1450,8 @@ export default {
       const clickedElement = event.target
 
       if (
+        clickedElement.closest('.product-card') ||
+        clickedElement.closest('table') ||
         clickedElement.closest('button') ||
         clickedElement.closest('input') ||
         clickedElement.closest('textarea') ||
