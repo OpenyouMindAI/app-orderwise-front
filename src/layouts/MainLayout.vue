@@ -417,11 +417,9 @@ export default {
       try {
         loading(true)
         const url = `${import.meta.env.VITE_APP_URL}/#/verifying/${this.access_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
-        alert(url)
         await MultiDisplayManager.showOnSecondScreen({
           url
         })
-        window.open(url, '_blank')
       } catch (error) {
         alert(error.message)
       } finally {
