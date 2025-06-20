@@ -589,9 +589,10 @@ import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
-import { printInvoice, printTicket, status, generarFacturaPDF } from 'src/const/invoice'
+import { status } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
-import { getPrintersB, printTicketUsb } from 'src/const/printInvoiceAndroid'
+import { commandPrint, invoicePrint, ticketPrint } from 'src/const/printers'
+// import { getPrintersB } from 'src/const/printInvoiceAndroid'
 export default {
   data () {
     return {
@@ -1088,9 +1089,7 @@ export default {
 
     async printInvoiceA4 () {
       try {
-        const doc = await generarFacturaPDF(this.invoice, this.userSession)
-        const pdfUrl = doc.output('bloburl')
-        window.open(pdfUrl, '_blank')
+        await invoicePrint(this.invoice, this.userSession)
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
@@ -1101,13 +1100,7 @@ export default {
      */
     async print () {
       try {
-        if (this.$q.platform.is.nativeMobile) {
-          await getPrintersB(this.invoice, 1, 'ticket')
-          return
-        }
-        const doc = await printInvoice(this.invoice, this.userSession)
-        const pdfUrl = doc.output('bloburl')
-        window.open(pdfUrl, '_blank')
+        ticketPrint(this.invoice)
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
@@ -1148,12 +1141,10 @@ export default {
      * Print command
      */
     async printCommand () {
-      if (this.$q.platform.is.nativeMobile) {
-        await getPrintersB(this.invoice, null, 'command')
-      } else {
-        const doc = await printTicket(this.invoice, this.userSession)
-        const pdfUrl = doc.output('bloburl')
-        window.open(pdfUrl, '_blank')
+      try {
+        commandPrint(this.invoice)
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
       }
     },
     /**

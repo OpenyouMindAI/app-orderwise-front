@@ -96,11 +96,55 @@
         </q-card>
       </q-step>
       <q-step
+        title="Configurar impresora"
+        icon="printer"
+        clickable
         :name="2"
+        :done="step > 2"
+      >
+      <q-card>
+        <q-form @submit="onSubmitConfig">
+          <q-card-section>
+            <div class="text-h6">Configuración de impresora</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="row q-col-gutter-sm items-center full-width">
+              <div class="col-xs-12 col-sm-12 col-md-2">
+                <q-checkbox
+                  label="Impresión directa"
+                  v-model="companyConfig.other.directPrint"
+                />
+              </div>
+              <div class="col-xs-12 col-sm-12 col-md-10">
+                <q-select
+                  label="Impresora por defecto"
+                  option-label="name"
+                  option-value="id"
+                  v-model="companyConfig.printer"
+                  :options="printers"
+                  @filter="filterPrinters"
+                />
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn
+              color="primary"
+              label="Guardar"
+              icon="save"
+              type="submit"
+              :loading="loading"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+      </q-step>
+      <q-step
+        :name="3"
         title="Valores por defecto"
         icon="settings"
         clickable
-        :done="step > 2"
+        :done="step > 3"
       >
         <q-card>
           <q-form @submit="onSubmitConfig">
@@ -250,11 +294,11 @@
         </q-card>
       </q-step>
       <q-step
-        :name="3"
+        :name="4"
         title="Configurar menu"
         icon="menu_book"
         clickable
-        :done="step > 3"
+        :done="step > 4"
       >
         <q-card class="store-hours-manager q-mb-lg">
           <q-card-section>
@@ -375,6 +419,8 @@ const clients = ref([])
  * @type {Array}
  */
 const paymentMethods = ref([])
+
+const printers = ref([])
 /**
  * Store module authentication
  * @type {Object}
@@ -403,6 +449,7 @@ const companyConfig = ref({
   typeOfService: company.value?.company_config?.type_of_service,
   coin: company.value?.company_config?.coin,
   client: company.value?.company_config?.client,
+  printer: company.value?.company_config?.printer,
   other: company.value?.company_config?.other || {},
   point_of_sale: company.value?.company_config?.point_of_sale
 })
@@ -606,6 +653,18 @@ const filterCoins = async (value, update) => {
  * @param {String} value Value filter
  * @param {Callback} update update options
  */
+const filterPrinters = async (value, update) => {
+  filterOptions(value, 'printers', (data) => {
+    update(() => {
+      printers.value = data
+    })
+  })
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
 const filterClients = async (value, update) => {
   filterOptions(value, 'clients', (data) => {
     update(() => {
@@ -661,6 +720,7 @@ const onSubmitConfig = async () => {
       invoice_type_id: companyConfig.value?.invoiceType?.id,
       payment_method_id: companyConfig.value?.paymentMethod?.id,
       client_id: companyConfig.value?.client?.id,
+      printer_id: companyConfig.value?.printer?.id,
       other: companyConfig.value?.other,
       point_of_sale: companyConfig.value?.point_of_sale
     })

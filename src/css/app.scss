@@ -136,7 +136,6 @@ p {
 
 /* Tarjetas elegantes con bordes rectos */
 .modern-card {
-  background-color: var(--surface);
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-md);
@@ -148,16 +147,6 @@ p {
 
 .modern-card:hover {
   box-shadow: var(--shadow-lg);
-}
-
-.modern-card:before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 2px;
-  height: 30px;
-  background-color: var(--primary);
 }
 
 .card-actions {

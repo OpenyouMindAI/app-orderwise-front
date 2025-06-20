@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-md">
     <!-- Botones principales -->
-    <div class="q-gutter-sm flex flex-center q-mb-md">
+    <div class="q-gutter-sm flex justify-end q-mb-md">
       <q-btn
         color="primary"
         icon="add_circle"
@@ -40,7 +40,7 @@
     <!-- Buscador -->
     <q-input
       filled
-      debounce="400"
+      debounce="500"
       v-model="filter"
       placeholder="Buscar impresora por nombre o IP"
       class="q-mb-md"
@@ -56,9 +56,6 @@
         :rows="printers"
         :filter="filter"
         row-key="id"
-        flat
-        bordered
-        class="modern-table"
         v-model:pagination="paginationConfig"
         @row-click="editPrinter"
         @request="setPagination"
@@ -69,6 +66,30 @@
           <q-td :props="props">
             <q-icon name="print" color="primary" class="q-mr-xs" />
             {{ props.row.name }}
+          </q-td>
+        </template>
+        <template #body-cell-actions="props">
+          <q-td :props="props" class="q-gutter-x-sm">
+            <q-icon name="check_circle" v-if="props.row.id === defaultPrinter?.id" color="positive" class="q-mr-xs">
+              <q-tooltip class="text-body2">Impresora por defecto</q-tooltip>
+            </q-icon>
+            <q-btn
+              icon="edit"
+              color="primary"
+              flat
+              dense
+              round
+              @click.stop="editPrinter(null, props.row)"
+            />
+            <q-btn
+              icon="refresh"
+              color="secondary"
+              flat
+              dense
+              @click.stop="reconnectPrinter(props.row)"
+              round
+              v-if="isAndroid"
+            />
           </q-td>
         </template>
         <template #loading>
@@ -83,9 +104,9 @@
       </div>
       <q-list separator class="modern-list">
         <q-item
-          v-for="printer in filteredPrinters"
+          v-for="printer in printers"
           :key="printer.id"
-          class="modern-card"
+          :class="$q.dark.isActive ? 'bg-dark text-white modern-card' : 'modern-card'"
           clickable
           v-ripple
           @click="editPrinter(null, printer)"
@@ -95,27 +116,49 @@
           </q-item-section>
           <q-item-section>
             <q-item-label class="text-h6">{{ printer.name }}</q-item-label>
-            <q-item-label caption>
+            <q-item-label>
               <q-icon name="dns" size="xs" class="q-mr-xs" /> {{ printer.ip }}
             </q-item-label>
-            <q-item-label caption>
+            <q-item-label>
               <q-icon name="devices" size="xs" class="q-mr-xs" /> {{ printer.device }}
             </q-item-label>
-            <q-item-label caption>
+            <q-item-label>
               <q-badge color="secondary" outline>{{ printer.type }}</q-badge>
             </q-item-label>
           </q-item-section>
           <q-item-section side>
-            <q-btn icon="refresh" class="q-mb-sm" color="secondary" flat dense @click.stop="reconnectPrinter(printer)" />
-            <q-btn icon="edit" color="primary" flat dense @click.stop="editPrinter(null, printer)" />
+            <q-icon
+              name="check_circle"
+              v-if="printer.id === defaultPrinter?.id"
+              color="positive"
+              class="q-mr-xs"
+            >
+              <q-tooltip class="text-body2">Impresora por defecto</q-tooltip>
+            </q-icon>
+            <q-btn
+              v-if="isAndroid"
+              icon="refresh"
+              class="q-mb-sm"
+              color="secondary"
+              flat
+              dense
+              @click.stop="reconnectPrinter(printer)"
+            />
+            <q-btn
+              icon="edit"
+              color="primary"
+              flat
+              dense
+              @click.stop="editPrinter(null, printer)"
+            />
           </q-item-section>
         </q-item>
       </q-list>
     </div>
 
-        <!-- Edit Printer Dialog -->
+    <!-- Edit Printer Dialog -->
     <q-dialog v-model="openEditPrinter" persistent>
-      <q-card style="width: 400px; max-width: 90vw;">
+      <q-card style="width: 500px; max-width: 90vw;">
         <q-form @submit.prevent="saveEdit">
           <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Modificar impresora</div>
@@ -144,13 +187,33 @@
               v-model="printer.device"
               label="Dispositivo"
               class="q-mb-md"
-            />
+            >
+              <template v-slot:append>
+                <q-btn
+                  icon="search"
+                  dense
+                  round
+                  color="primary"
+                  @click.stop="setDevice"
+                />
+              </template>
+            </q-input>
             <q-select
               :rules="[requiredRule]"
               filled
               v-model="printer.type"
               label="Tipo"
               :options="options"
+              class="q-mb-md"
+            />
+            <q-select
+              :rules="[requiredRule]"
+              filled
+              v-model="printer.os"
+              label="Sistema operativo"
+              option-value="value"
+              option-label="label"
+              :options="os"
               class="q-mb-md"
             />
           </q-card-section>
@@ -162,11 +225,6 @@
               flat
             />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" flat />
-            <q-btn
-              icon="refresh"
-              color="info"
-              @click.stop="reconnectPrinter(printer)"
-            />
             <q-btn color="primary" label="Guardar" type="submit" />
           </q-card-actions>
         </q-form>
@@ -175,7 +233,7 @@
 
     <!-- Add Printer Dialog -->
     <q-dialog v-model="openAddPrinter" persistent>
-      <q-card style="width: 400px; max-width: 90vw;">
+      <q-card style="width: 500px; max-width: 90vw;">
         <q-form @submit.prevent="savePrinter">
           <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Agregar impresora</div>
@@ -204,13 +262,33 @@
               v-model="printer.device"
               label="Dispositivo"
               class="q-mb-md"
-            />
+            >
+              <template v-slot:append>
+                <q-btn
+                  icon="search"
+                  dense
+                  round
+                  color="primary"
+                  @click.stop="setDevice"
+                />
+              </template>
+            </q-input>
             <q-select
               :rules="[requiredRule]"
               filled
               v-model="printer.type"
               label="Tipo"
               :options="options"
+              class="q-mb-md"
+            />
+            <q-select
+              :rules="[requiredRule]"
+              filled
+              v-model="printer.os"
+              label="Sistema operativo"
+              option-value="value"
+              option-label="label"
+              :options="os"
               class="q-mb-md"
             />
           </q-card-section>
@@ -221,6 +299,7 @@
         </q-form>
       </q-card>
     </q-dialog>
+
     <q-dialog v-model="configToPrint" persistent>
       <q-card style="width: 400px; max-width: 90vw;">
         <q-form @submit.prevent="onSubmitConfig">
@@ -259,7 +338,7 @@
 
     <!-- Advertence Dialog -->
     <q-dialog v-model="advertenceDialog" persistent>
-      <q-card class="q-pa-md q-mb-md bg-grey-1">
+      <q-card class="q-pa-md q-mb-md">
         <q-card-section>
           <div class="text-h6 text-primary">
             ⚠️ Importante: Activación del sistema de impresión
@@ -410,8 +489,8 @@ import { loading, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 
 const isAndroid = Platform.is.android
-const $q = useQuasar()
 const isMobile = computed(() => Screen.lt.sm)
+const $q = useQuasar()
 const store = authentication()
 const { company_session: company } = store?.userSession
 const dialogPrintersVisible = ref(false)
@@ -421,14 +500,15 @@ const configToPrint = ref(false)
 const printers = ref([])
 const info = ref({})
 const options = ['Bluetooth', 'Red']
+const os = ['windows', 'android']
 const printer = reactive({
   name: '',
   ip: '',
   device: '',
+  os: 'Windows',
   type: 'Bluetooth'
 })
 const filter = ref('')
-const size = ref(company?.company_config?.other?.printer?.size)
 const sizeOptions = [
   { label: '44mm', value: 29 },
   { label: '57mm', value: 32 },
@@ -438,6 +518,8 @@ const sizeOptions = [
   { label: '110mm', value: 72 }
 ]
 const openAddPrinter = ref(false)
+const size = ref(company?.company_config?.other?.printer?.size)
+const defaultPrinter = company?.company_config?.printer
 const quantityToPrint = ref(company?.company_config?.other?.printer?.quantityToPrint || 1)
 const openEditPrinter = ref(false)
 const confirmDeleteDialog = ref(false)
@@ -445,7 +527,8 @@ const columns = [
   { name: 'id', align: 'left', label: 'Código', field: 'id', sortable: true },
   { name: 'name', align: 'left', label: 'Nombre', field: 'name', sortable: true },
   { name: 'ip', align: 'left', label: 'IP', field: 'ip', sortable: true },
-  { name: 'device', align: 'left', label: 'Dispositivo', field: 'device', sortable: true }
+  { name: 'device', align: 'left', label: 'Dispositivo', field: 'device', sortable: true },
+  { name: 'actions', align: 'center', label: 'Acciones', field: 'actions' }
 ]
 const paginationConfig = ref({
   rowsPerPage: 10,
@@ -470,16 +553,6 @@ const params = reactive({
 
 const requiredRule = val => !!val || 'El campo es requerido.'
 
-const filteredPrinters = computed(() => {
-  if (!filter.value) return printers.value
-  const f = filter.value.toLowerCase()
-  return printers.value.filter(p =>
-    (p.name && p.name.toLowerCase().includes(f)) ||
-    (p.ip && p.ip.toLowerCase().includes(f)) ||
-    (p.device && p.device.toLowerCase().includes(f))
-  )
-})
-
 // --- API helpers ---
 function resetPrinterForm () {
   printer.name = ''
@@ -495,6 +568,10 @@ function handleError (err, fallbackMsg = 'Ocurrió un error inesperado') {
     icon: 'warning',
     color: 'negative'
   })
+}
+
+const setDevice = async () => {
+  printer.device = info.value.name || info.value.operatingSystem
 }
 
 /**
@@ -746,6 +823,7 @@ watch(filter, (val) => {
 onMounted(async () => {
   info.value = await Device.getInfo()
   printer.device = info.value.name
+  printer.os = info.value.operatingSystem
   if ($q.platform.is.nativeMobile) {
     CapacitorThermalPrinter.addListener('discoverDevices', async ({ devices }) => {
       printersBluetooth.value = devices
@@ -765,11 +843,6 @@ onMounted(async () => {
   font-size: 1.1rem;
   font-weight: 600;
   border-radius: 24px;
-}
-.modern-table {
-  border-radius: 14px;
-  font-size: 1rem;
-  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08);
 }
 .modern-list {
   max-width: 600px;
