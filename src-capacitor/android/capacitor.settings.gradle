@@ -22,3 +22,6 @@ project(':capacitor-thermal-printer').projectDir = new File('../node_modules/cap
 
 include ':multi-display-manager'
 project(':multi-display-manager').projectDir = new File('../../plugin/multi-display-manager/android')
+
+include ':printers'
+project(':printers').projectDir = new File('../../plugin/printers/android')

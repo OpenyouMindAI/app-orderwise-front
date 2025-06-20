@@ -434,7 +434,7 @@ const sizeOptions = [
   { label: '57mm', value: 32 },
   { label: '58mm', value: 40 },
   { label: '76mm', value: 48 },
-  { label: '80mm', value: 48 },
+  { label: '80mm', value: 58 },
   { label: '110mm', value: 72 }
 ]
 const openAddPrinter = ref(false)

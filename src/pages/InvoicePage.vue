@@ -591,7 +591,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify } from 'src/const/mixins'
 import { printInvoice, printTicket, status, generarFacturaPDF } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
-import { getPrintersB } from 'src/const/printInvoiceAndroid'
+import { getPrintersB, printTicketUsb } from 'src/const/printInvoiceAndroid'
 export default {
   data () {
     return {
@@ -1148,8 +1148,8 @@ export default {
      * Print command
      */
     async printCommand () {
-      if (this.$q.platform.is.nativeMobile && this.printers.length > 0) {
-        getPrintersB(this.invoice)
+      if (this.$q.platform.is.nativeMobile) {
+        await getPrintersB(this.invoice, null, 'command')
       } else {
         const doc = await printTicket(this.invoice, this.userSession)
         const pdfUrl = doc.output('bloburl')

@@ -1443,7 +1443,7 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
-    document.addEventListener('click', this.handleClick)
+    // document.addEventListener('click', this.handleClick)
   },
   methods: {
     handleClick (event) {
@@ -2365,9 +2365,6 @@ export default {
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
-      setTimeout(() => {
-        this.$refs.barcode.focus()
-      }, 100)
     },
     /**
      * Get one product

@@ -34,7 +34,8 @@ export default configure(function (/* ctx */) {
       'VueHtmlToPaper',
       'pusher',
       'background-mode',
-      'statusbar'
+      'statusbar',
+      'printer'
     ],
 
     css: [

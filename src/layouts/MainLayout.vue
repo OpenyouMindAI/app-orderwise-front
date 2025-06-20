@@ -350,6 +350,7 @@ import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
+import { printer } from 'src/utils/printer'
 import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',

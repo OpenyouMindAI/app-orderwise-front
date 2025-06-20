@@ -19,6 +19,7 @@
     "cordova-plugin-insomnia": "^4.3.0",
     "harware-multi-display-manager": "file:../../DisplayManager/harware-multi-display-manager",
     "multi-display-manager": "file:../plugin/multi-display-manager",
-    "or": "^0.2.0"
+    "or": "^0.2.0",
+    "printers": "file:../plugin/printers"
   }
 }
