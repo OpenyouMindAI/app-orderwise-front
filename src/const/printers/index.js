@@ -3,7 +3,8 @@ import { authentication } from 'src/stores/module-authentication'
 import { companyConfig } from 'src/boot/company-config'
 import { notify } from '../mixins'
 import { sendCommand, sendTicket, sendInvoice } from './preview'
-import { directCommandPrint, directTicketPrint } from './bluetooth'
+import { directCommandPrint as directCommandPrintBluetooth, directTicketPrint as directTicketPrintBluetooth } from './bluetooth'
+import { printCommandUsb, printTicketUsb } from './usb'
 
 /**
  * Get config
@@ -28,12 +29,16 @@ const getConfig = async () => {
 export const commandPrint = async (data, printer = null) => {
   try {
     const { device, user } = await getConfig()
-    if (!companyConfig.other.directPrint) {
+    if (!companyConfig?.other?.directPrint) {
       await sendCommand(data, user)
       return
     }
     const printerSelected = printer || companyConfig.printer
-    directCommandPrint(printerSelected, data, device)
+    if (printerSelected.type === 'USB') {
+      printCommandUsb(data, companyConfig?.other?.printer)
+    } else {
+      directCommandPrintBluetooth(printerSelected, data, device)
+    }
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   }
@@ -48,12 +53,16 @@ export const commandPrint = async (data, printer = null) => {
 export const ticketPrint = async (data, printer = null) => {
   try {
     const { device, user } = await getConfig()
-    if (!companyConfig.other.directPrint) {
+    if (!companyConfig?.other?.directPrint) {
       await sendTicket(data, user)
       return
     }
     const printerSelected = printer || companyConfig.printer
-    directTicketPrint(printerSelected, data, device)
+    if (printerSelected.type === 'USB') {
+      printTicketUsb(data, companyConfig?.other?.printer)
+    } else {
+      directTicketPrintBluetooth(printerSelected, data, device)
+    }
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   }
@@ -64,7 +73,7 @@ export const ticketPrint = async (data, printer = null) => {
  * @param {Object} data data
  * @param {Object} printer printer
  */
-export const invoicePrint = async (data, printer = null) => {
+export const invoicePrint = async (data) => {
   try {
     const { user } = await getConfig()
     await sendInvoice(data, user)

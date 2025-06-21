@@ -1,5 +1,5 @@
 import { formatDate, formatNumber } from '../../mixins'
-import { cutWords, header, sum } from './common'
+import { cutWords, header, sum } from '../common'
 
 /**
  * Print command

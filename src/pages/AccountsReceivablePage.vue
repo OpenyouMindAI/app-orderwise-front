@@ -466,7 +466,7 @@ import { mapState } from 'pinia'
 import { date, Notify } from 'quasar'
 import { formatNumber, formatDate, notify, loading } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import { printInvoice, printTicket } from 'src/const/invoice'
+import { commandPrint, ticketPrint } from 'src/const/printers'
 export default {
   name: 'AccountsReceivablePage',
   data () {
@@ -671,10 +671,11 @@ export default {
      * @param {Object} data invoice saved
      */
     async print (ticket) {
-      let doc = await printInvoice(this.billDetails, this.userSession)
-      if (ticket) doc = printTicket(this.billDetails, this.userSession)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
+      if (ticket) {
+        await commandPrint(this.billDetails)
+      } else {
+        await ticketPrint(this.billDetails)
+      }
     },
     /**
      * Change status

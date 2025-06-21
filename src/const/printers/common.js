@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import { formatDate } from '../../mixins'
+import { formatDate } from '../mixins'
 import QRCode from 'qrcode'
 
 /**
@@ -99,6 +99,14 @@ export const header = (data, companySession, pageWidth = 80) => {
  */
 
 export const setQrImage = async (data, fields, companySession) => {
+  if (!data.billing) {
+    const img = JSON.stringify({
+      cliente: data.client.name,
+      fecha: formatDate(data.date, 'YYYY-MM-DD'),
+      total: data.total
+    })
+    return await QRCode.toDataURL(img)
+  }
   const docQr = {
     ver: 1,
     fecha: formatDate(data.date, 'YYYY-MM-DD'),
@@ -115,7 +123,6 @@ export const setQrImage = async (data, fields, companySession) => {
     codAut: Number(fields.cae)
   }
   const encoded = btoa(JSON.stringify(docQr))
-  console.log(docQr, encoded)
   const url = 'https://servicioscf.afip.gob.ar/publico/comprobantes/cae.aspx?p='
   return await QRCode.toDataURL(`${url}${encoded}`)
 }

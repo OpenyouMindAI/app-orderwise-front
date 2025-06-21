@@ -1,5 +1,5 @@
-import { header, cutWords } from './invoice'
 import { formatDate, formatNumber } from './mixins'
+import { cutWords, header } from './printers/common'
 
 const numberToString = (number) => {
   if (!number) {

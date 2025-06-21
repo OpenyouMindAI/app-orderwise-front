@@ -487,12 +487,11 @@
 import { api } from 'src/boot/axios'
 import { formatDate, notify, formatNumber, loading } from 'src/const/mixins'
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
-import { printTicket } from 'src/const/invoice'
 import { authentication } from 'src/stores/module-authentication'
 import { useRoute, useRouter } from 'vue-router'
 // import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import FileComponent from 'src/components/FileComponent.vue'
-import { getPrintersB } from 'src/const/printInvoiceAndroid'
+import { commandPrint } from 'src/const/printers'
 import { useQuasar } from 'quasar'
 
 const store = authentication()
@@ -808,14 +807,8 @@ const setPermissionsByUser = (data) => {
  * Print invoice
  * @param {Object} data invoice saved
  */
-const print = (data) => {
-  if ($q.platform.is.nativeMobile) {
-    getPrintersB(data)
-  } else {
-    const doc = printTicket(data, userSession)
-    const pdfUrl = doc.output('bloburl')
-    window.open(pdfUrl, '_blank')
-  }
+const print = async (data) => {
+  await commandPrint(data)
 }
 /**
  * Show invoice

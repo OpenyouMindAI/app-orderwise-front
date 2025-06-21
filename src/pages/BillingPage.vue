@@ -926,12 +926,10 @@ import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, loading, notify } from 'src/const/mixins'
-import { printInvoice, printTicket } from 'src/const/invoice'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
-import { getPrintersB } from 'src/const/printInvoiceAndroid'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -939,6 +937,7 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
+import { commandPrint, ticketPrint } from 'src/const/printers'
 
 export default {
   name: 'BillingPage',
@@ -2102,7 +2101,6 @@ export default {
      * @param {Object} data invoice saved
      */
     async printBill (data) {
-      let doc = null
       const invoice = await this.getInvoiceOneRequest(data.id)
 
       if (!invoice) {
@@ -2115,19 +2113,19 @@ export default {
         this.withoutPrint = false
         return
       }
-      if (this.$q.platform.is.nativeMobile) {
-        const type = this.invoicePrinter ? 'ticket' : 'command'
-        const quantity = this.invoicePrinter ? 1 : null
-        await getPrintersB(invoice, quantity, type)
+      if (this.invoicePrinter) {
+        await ticketPrint(invoice)
       } else {
-        if (this.invoicePrinter) {
-          doc = await printInvoice(invoice, this.userSession)
-        } else {
-          doc = await printTicket(invoice, this.userSession)
-        }
-        const pdfUrl = doc.output('bloburl')
-        window.open(pdfUrl, '_blank')
+        await commandPrint(invoice)
       }
+      // if (this.$q.platform.is.nativeMobile) {
+      //   const type = this.invoicePrinter ? 'ticket' : 'command'
+      //   const quantity = this.invoicePrinter ? 1 : null
+      //   await getPrintersB(invoice, quantity, type)
+      // } else {
+      //   const pdfUrl = doc.output('bloburl')
+      //   window.open(pdfUrl, '_blank')
+      // }
       this.clear()
     },
     /**

@@ -56,8 +56,8 @@ export default configure(function (/* ctx */) {
 
       env,
 
-      vueRouterMode: 'hash', // available values: 'hash', 'history'
-
+      vueRouterMode: 'history', // available values: 'hash', 'history'
+      extractCSS: true,
       vitePlugins: [
         ['@intlify/vite-plugin-vue-i18n', {
           include: path.resolve(__dirname, './src/i18n/**')
@@ -103,7 +103,7 @@ export default configure(function (/* ctx */) {
     pwa: {
       workboxMode: 'GenerateSW',
       injectPwaMetaTags: true,
-      swFilename: 'sw.js',
+      swFilename: 'register-service-worker.js',
       manifestFilename: 'manifest.json',
       useCredentialsForManifestTag: false
     },

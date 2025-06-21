@@ -70,27 +70,14 @@
                 />
               </div>
             </q-carousel-slide>
-            <q-carousel-slide :name="product.id" class="column no-wrap q-pb-none" v-for="product in allProducts" :key="product.id">
-              <div class="promotion-header">
-                <q-icon name="star" color="amber" size="sm" class="q-mr-sm" />
-                <div class="text-h6 text-weight-medium">Oferta del dia</div>
-              </div>
+            <q-carousel-slide :name="file.id" class="column no-wrap q-pb-none" v-for="file in files" :key="file.id">
               <div class="promotion-content">
                 <q-img
                   spinner-color="primary"
                   fit="cover"
-                  :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
-                  :style="products.length > 0 ? 'height: calc(100vh - 180px)' : 'height: calc(100vh - 70px)'"
-                >
-                  <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
-                    <div class="text-h5 text-weight-bold q-mb-sm">{{ product.name }}</div>
-                    <div class="text-subtitle1 q-mb-md">{{ product.description }}</div>
-                    <q-badge color="primary" class="q-pa-sm text-subtitle1">
-                      <span class="text-weight-bold">{{ formatCurrency(product.price) }}</span>
-                      <span class="q-ml-xs text-caption text-weight-regular text-strike">{{ formatCurrency(product.price + 100) }}</span>
-                    </q-badge>
-                  </div>
-                </q-img>
+                  :src="file ? file.url : 'images/404-image.jpg'"
+                  style="height: 100vh"
+                />
               </div>
             </q-carousel-slide>
           </q-carousel>
@@ -170,7 +157,9 @@ export default {
        * Locale for number formatting
        * @type {string}
        */
-      locale: 'en-US'
+      locale: 'en-US',
+
+      files: []
     }
   },
   computed: {
@@ -199,22 +188,7 @@ export default {
      * @param {Object} params params to search
      */
     getAllProducts () {
-      this.$api.get('products', {
-        params: {
-          paginate: true,
-          page: 1,
-          orderBy: 'sold',
-          sortOrder: 'desc',
-          perPage: 10,
-          branch_office_id: this.branchOffice?.id
-        }
-      })
-        .then(({ data }) => {
-          this.allProducts = data.data
-        })
-        .catch(err => {
-          notify(err.message, 'negative', 'warning')
-        })
+      this.files = this.$companyConfig.files
     },
     /**
      * Set invoice data

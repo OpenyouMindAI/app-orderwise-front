@@ -762,7 +762,7 @@ import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import { useCommandStore } from 'src/stores/command'
-import { printInvoice, printTicket, status } from 'src/const/invoice'
+import { commandPrint, ticketPrint } from 'src/const/printers'
 import { formatDate } from 'src/const/mixins'
 import FileComponent from 'src/components/FileComponent.vue'
 import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
@@ -1096,15 +1096,11 @@ export default {
     },
 
     async printBill (data) {
-      const doc = await printInvoice(data, this.userSession)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
+      await ticketPrint(data)
     },
 
     async printTicket (data) {
-      const doc = await printTicket(data, this.userSession)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
+      await commandPrint(data)
     },
     /**
      * Delete invoice payment

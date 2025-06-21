@@ -606,7 +606,6 @@ import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, notify } from 'src/const/mixins'
-import { printInvoice, printTicket } from 'src/const/invoice'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 export default {
   name: 'BillingPage',
@@ -1411,7 +1410,6 @@ export default {
      * @param {Object} data purchase saved
      */
     async printBill (data) {
-      let doc = null
       const purchase = await this.getInvoiceOneRequest(data.id)
 
       if (!purchase) {
@@ -1424,15 +1422,6 @@ export default {
         this.withoutPrint = false
         return
       }
-
-      if (this.invoicePrinter) {
-        doc = await printInvoice(purchase, this.userSession)
-      } else {
-        doc = await printTicket(purchase, this.userSession)
-      }
-
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
       this.clear()
     },
     /**

@@ -2,21 +2,12 @@
   <div>
     <div
       class="image-gallery__blinder bg-grey-8"
-      :class="
-        indexZoomed !== void 0 ? 'image-gallery__blinder--active' : void 0
-      "
+      :class="indexZoomed !== void 0 ? 'image-gallery__blinder--active' : void 0"
       @click="zoomImage()"
     />
-    <div
-      class="flex flex-wrap justify-start items-center full-width q-gutter-y-sm"
-    >
+    <div class="flex flex-wrap justify-start items-center full-width q-gutter-y-sm">
       <div v-for="(f, index) in fileAll" :key="index">
-        <q-card
-          v-if="f.type === 'application/pdf'"
-          class="my-card"
-          style="width: 310px"
-          @click="openPdf(f)"
-        >
+        <q-card v-if="f.type === 'application/pdf'" class="my-card" style="width: 310px" @click="openPdf(f)">
           <q-img src="image/pdf.png" :style="imageStyle">
             <div class="absolute-full text-h6 text-bold flex flex-center">
               {{ f.type }}
@@ -32,7 +23,7 @@
               round
               @click.prevent.stop="alertDialogFile(index, f)"
             >
-              <q-tooltip> Eliminar documento </q-tooltip>
+              <q-tooltip>Eliminar documento</q-tooltip>
             </q-btn>
           </q-img>
         </q-card>
@@ -40,7 +31,7 @@
           v-else
           :ref="
             (el) => {
-              thumbRef[index] = el;
+              thumbRef[index] = el
             }
           "
           style="width: 210px; height: 150px; margin-top: 10px"
@@ -63,7 +54,7 @@
             round
             @click.prevent.stop="alertDialogFile(index, f)"
           >
-            <q-tooltip> Eliminar documento </q-tooltip>
+            <q-tooltip>Eliminar documento</q-tooltip>
           </q-btn>
         </q-img>
       </div>
@@ -72,9 +63,7 @@
       ref="fullRef"
       v-touch-pan.prevent.mouse="moveFab"
       class="image-gallery__image image-gallery__image-full fixed-center"
-      :class="
-        indexZoomed !== void 0 ? 'image-gallery__image-full--active' : void 0
-      "
+      :class="indexZoomed !== void 0 ? 'image-gallery__image-full--active' : void 0"
       :src="fileAll[indexZoomed] && fileAll[indexZoomed][nameImage]"
       :style="`left: ${fabPos.clientX}px; top: ${fabPos.clientY}px;`"
       @load="fileLoadedResolve"
@@ -101,22 +90,11 @@
           <div class="text-h6">Confirmación</div>
         </q-card-section>
 
-        <q-card-section class="text-subtitle1">
-          ¿Desea eliminar este archivo?
-        </q-card-section>
+        <q-card-section class="text-subtitle1">¿Desea eliminar este archivo?</q-card-section>
 
         <q-card-actions align="right">
-          <q-btn
-            label="Cancelar"
-            color="negative"
-            @click="deleteConfirm = false"
-          />
-          <q-btn
-            label="Aceptar"
-            color="primary"
-            :loading="loadingDelete"
-            @click="deleteFile"
-          />
+          <q-btn label="Cancelar" color="negative" @click="deleteConfirm = false" />
+          <q-btn label="Aceptar" color="primary" :loading="loadingDelete" @click="deleteFile" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -331,10 +309,7 @@ export default {
         }
       }
 
-      if (
-        indexZoomedState !== void 0 &&
-        (cancel === void 0 || cancel() === false)
-      ) {
+      if (indexZoomedState !== void 0 && (cancel === void 0 || cancel() === false)) {
         morph({
           from: fullRef.value.$el,
           to: thumbRef.value[indexZoomedState].$el,

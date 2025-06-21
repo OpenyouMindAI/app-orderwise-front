@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import { formatDate, formatNumber } from '../../mixins'
-import { cutWords, header, setQrImage } from './common'
+import { cutWords, header, setQrImage } from '../common'
 import qbitsLogo from '../../logo'
 import autoTable from 'jspdf-autotable'
 

@@ -499,7 +499,7 @@ const advertenceDialog = ref(false)
 const configToPrint = ref(false)
 const printers = ref([])
 const info = ref({})
-const options = ['Bluetooth', 'Red']
+const options = ['Bluetooth', 'Red', 'USB']
 const os = ['windows', 'android']
 const printer = reactive({
   name: '',

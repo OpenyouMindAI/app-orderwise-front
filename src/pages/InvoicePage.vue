@@ -592,7 +592,6 @@ import { formatNumber, loading, notify } from 'src/const/mixins'
 import { status } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
 import { commandPrint, invoicePrint, ticketPrint } from 'src/const/printers'
-// import { getPrintersB } from 'src/const/printInvoiceAndroid'
 export default {
   data () {
     return {
