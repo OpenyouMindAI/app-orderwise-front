@@ -35,7 +35,6 @@ export default configure(function (/* ctx */) {
       'pusher',
       'background-mode',
       'statusbar',
-      'printer',
       'company-config'
     ],
 

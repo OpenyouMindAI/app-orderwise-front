@@ -13,11 +13,7 @@ export default boot(async ({ app }) => {
     app.config.globalProperties.$companyConfig = data.data
     companyConfig = data.data
   } catch (error) {
-    Notify.create({
-      message: error.message,
-      icon: 'warning',
-      color: 'negative'
-    })
+    console.log(error)
   }
 })
 
