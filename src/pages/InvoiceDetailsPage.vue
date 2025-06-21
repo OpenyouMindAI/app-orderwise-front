@@ -207,13 +207,16 @@ export default {
      * @returns {void}
      */
     getInvoice () {
-      this.channel = new BroadcastChannel('invoiceChanel')
-      this.channel.onmessage = (event) => {
-        if (event.data.tipo === 'invoiceChanel') {
-          const invoice = JSON.parse(event.data.invoice)
-          this.setInvoiceChannel(invoice)
-        }
-      }
+      this.$echo.private('invoice-details').listen(`.NewInvoiceDetails_${this.userSession.id}`, async (event) => {
+        console.log(event)
+        this.setInvoiceChannel(event.invoice)
+      })
+      // this.channel.onmessage = (event) => {
+      //   if (event.data.tipo === 'invoiceChanel') {
+      //     const invoice = JSON.parse(event.data.invoice)
+      //     this.setInvoiceChannel(invoice)
+      //   }
+      // }
     },
     ...mapActions(useCommandStore, ['setInvoice'])
   }

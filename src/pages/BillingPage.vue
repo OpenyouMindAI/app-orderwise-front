@@ -1341,12 +1341,15 @@ export default {
     payments (payments) {
       this.invoiceShare = { ...this.invoiceShare, payments }
     },
-    invoiceShare (data) {
-      const channel = new BroadcastChannel('invoiceChanel')
-      channel.postMessage({
-        tipo: 'invoiceChanel',
-        invoice: JSON.stringify(data)
-      })
+    async invoiceShare (data) {
+      try {
+        await this.$api.post('invoice-details-event', {
+          invoice: data,
+          user_id: this.userSession.id
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
     quantityDialog (data) {
       if (!data) {

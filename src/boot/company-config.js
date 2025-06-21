@@ -1,4 +1,3 @@
-import { Notify } from 'quasar'
 import { boot } from 'quasar/wrappers'
 import { api } from 'src/boot/axios'
 import { authentication } from 'src/stores/module-authentication'
