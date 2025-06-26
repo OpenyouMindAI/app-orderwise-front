@@ -1450,7 +1450,6 @@ export default {
 .dropzone-card:hover,
 .dropzone-active {
   border-color: #1976d2;
-  background-color: #f3f8ff;
 }
 
 .image-preview-card {

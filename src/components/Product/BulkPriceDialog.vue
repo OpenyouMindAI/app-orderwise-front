@@ -490,7 +490,6 @@ export default {
 .section-header {
   display: flex;
   align-items: center;
-  margin-bottom: 2px;
 }
 
 .section-icon {
@@ -501,11 +500,9 @@ export default {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1e293b;
 }
 
 .custom-select {
-  background: white;
   border-radius: 12px;
 }
 
@@ -571,7 +568,6 @@ export default {
 
 /* Options */
 .options-card {
-  background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px;
@@ -614,13 +610,11 @@ export default {
 
 .summary-value {
   font-weight: 600;
-  color: #1e293b;
   font-size: 14px;
 }
 
 /* Prices Panel */
 .prices-panel {
-  background: white;
   padding: 0px 24px;
   overflow-y: auto;
 }
@@ -637,7 +631,6 @@ export default {
 .prices-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
   display: flex;
   align-items: center;
 }
@@ -673,18 +666,12 @@ export default {
 
 .price-label {
   font-weight: 600;
-  color: #1e293b;
   display: flex;
   align-items: center;
 }
 
 .remove-btn {
   color: #ef4444;
-}
-
-.price-input {
-  background: white;
-  border-radius: 8px;
 }
 
 /* Empty State */
@@ -705,7 +692,6 @@ export default {
 
 /* Footer */
 .dialog-footer {
-  background: #f8fafc;
   border-top: 1px solid #e2e8f0;
   padding: 20px 24px;
 }
@@ -729,7 +715,6 @@ export default {
 
 /* Loading */
 .custom-loading {
-  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
 }
 
