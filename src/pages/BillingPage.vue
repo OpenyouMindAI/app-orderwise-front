@@ -239,13 +239,44 @@
                         v-slot="scope"
                         @update:model-value="calculate(props.row)"
                       >
-                        <q-input
-                          label="Precio"
-                          type="number"
-                          v-model.number="scope.value"
-                          autofocus
-                          @keyup.enter="scope.set"
-                        />
+                        <div class="q-gutter-md" style="min-width: 250px">
+                          <!-- Toggle para seleccionar tipo de precio (solo si hay listas de precios) -->
+                          <q-radio
+                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0"
+                            v-model="priceInputType"
+                            val="list"
+                            label="Lista de precios"
+                          />
+                          <q-radio
+                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0"
+                            v-model="priceInputType"
+                            val="manual"
+                            label="Precio manual"
+                          />
+
+                          <!-- Selector de lista de precios -->
+                          <q-select
+                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0 && priceInputType === 'list'"
+                            v-model="selectedPriceList"
+                            :options="props.row.product_price_lists"
+                            option-label="name"
+                            option-value="price"
+                            label="Seleccionar lista de precios"
+                            emit-value
+                            map-options
+                            @update:model-value="(value) => { scope.value = value; scope.set(); }"
+                          />
+
+                          <!-- Input manual de precio -->
+                          <q-input
+                            v-if="!props.row.product_price_lists || props.row.product_price_lists.length === 0 || priceInputType === 'manual'"
+                            label="Precio"
+                            type="number"
+                            v-model.number="scope.value"
+                            autofocus
+                            @keyup.enter="scope.set"
+                          />
+                        </div>
                       </q-popup-edit>
                     </q-td>
                     <q-td key="quantity" :props="props">
@@ -947,6 +978,8 @@ export default {
   },
   data () {
     return {
+      selectedPriceList: null,
+      priceInputType: 'list',
       waitingPayment: false,
       loadingBilling: false,
       paymentMethodCashFlow: null,
@@ -2054,7 +2087,8 @@ export default {
             ...product,
             ...product.pivot,
             quantity: product.pivot.amount,
-            subtotal: product.pivot.price * product.pivot.amount
+            subtotal: product.pivot.price * product.pivot.amount,
+            product_price_lists: product.product_price_lists
           }
         })
         this.client = invoice.client
@@ -2297,6 +2331,7 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
+      console.log(product)
       this.products = [
         ...this.products,
         {
@@ -2314,7 +2349,8 @@ export default {
           skip_stock: product.skip_stock,
           is_bundle: product.is_bundle,
           aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
-          unit_of_measure: product.unit_of_measure
+          unit_of_measure: product.unit_of_measure,
+          product_price_lists: product.product_price_lists
         }
       ]
     },
