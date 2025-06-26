@@ -2,12 +2,42 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right q-gutter-sm">
-        <q-btn color="blue" @click="multipleSelected = !multipleSelected" icon="check"/>
-        <q-btn color="negative" @click="deleteMassive" icon="delete" v-if="selection.length"/>
-        <q-btn color="purple" @click="listPriceDialog = true" icon="list"/>
-        <q-btn color="secondary" @click="download" icon="download"/>
-        <q-btn color="info" @click="openCompaniesDialog" icon="content_copy" v-if="userSession.is_root"/>
-        <q-btn color="primary" @click="openAddProduct = true" icon="add_circle"/>
+        <q-btn
+          color="blue"
+          @click="multipleSelected = !multipleSelected"
+          :icon="multipleSelected ? 'check_box' : 'check_box_outline_blank'"
+          label="Seleccionar múltiples"
+        />
+        <q-btn
+          color="negative"
+          @click="deleteMassive"
+          icon="delete"
+          v-if="selection.length"
+          label="Eliminar masivo"
+        />
+        <q-btn
+          color="purple"
+          @click="listPriceDialog = true"
+          icon="list"
+          label="Modificar lista de precios"
+        />
+        <q-btn
+          color="secondary"
+          @click="download"
+          icon="download"
+          label="Exportar excel"
+        />
+        <q-btn
+          color="info"
+          @click="openCompaniesDialog"
+          icon="content_copy"
+          v-if="userSession.is_root"
+        />
+        <q-btn
+          color="primary"
+          @click="openAddProduct = true"
+          icon="add_circle"
+        />
       </div>
       <div class="col-12">
         <q-table
