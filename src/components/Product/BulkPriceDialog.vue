@@ -9,7 +9,6 @@
           </div>
           <div class="header-content">
             <div class="header-title">Ajuste Masivo de Precios</div>
-            <div class="header-subtitle">{{ products.length }} productos seleccionados</div>
           </div>
           <q-space />
           <q-btn
