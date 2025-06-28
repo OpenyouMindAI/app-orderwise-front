@@ -47,7 +47,7 @@
         </div>
 
         <!-- RIGHT SECTION: PROMOTIONS -->
-        <div :class="products.length > 0 ? 'col-7 column justify-between': 'col-12'">
+        <div :class="products.length > 0 ? 'col-7 column justify-between q-pb-sm': 'col-12'">
           <q-carousel
             v-model="slide"
             animated
@@ -57,7 +57,7 @@
             :autoplay-timeout="8000"
             transition-prev="slide-right"
             transition-next="slide-left"
-            :style="products.length > 0 ? 'height: calc(100vh - 190px)' : 'height: calc(100vh - 10px)'"
+            :style="products.length > 0 ? 'height: calc(100vh - 120px)' : 'height: calc(100vh - 10px)'"
           >
             <!-- Featured Product Promotion -->
             <q-carousel-slide :name="1" class="column no-wrap q-pb-none" v-if="userSession?.company_session">
@@ -66,40 +66,27 @@
                   :src="userSession?.company_session?.url"
                   spinner-color="primary"
                   fit="contain"
-                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 50px)'"
+                  :style="products.length > 0 ? 'height: calc(100vh - 90px)' : 'height: calc(100vh - 50px)'"
                 />
               </div>
             </q-carousel-slide>
-            <q-carousel-slide :name="product.id" class="column no-wrap q-pb-none" v-for="product in allProducts" :key="product.id">
-              <div class="promotion-header">
-                <q-icon name="star" color="amber" size="sm" class="q-mr-sm" />
-                <div class="text-h6 text-weight-medium">Oferta del dia</div>
-              </div>
+            <q-carousel-slide :name="file.id" class="column no-wrap q-pb-none" v-for="file in files" :key="file.id">
               <div class="promotion-content">
                 <q-img
                   spinner-color="primary"
                   fit="cover"
-                  :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
-                  :style="products.length > 0 ? 'height: calc(100vh - 250px)' : 'height: calc(100vh - 10px)'"
-                >
-                  <div class="absolute-bottom text-subtitle1 text-center promotion-gradient q-pa-md">
-                    <div class="text-h5 text-weight-bold q-mb-sm">{{ product.name }}</div>
-                    <div class="text-subtitle1 q-mb-md">{{ product.description }}</div>
-                    <q-badge color="primary" class="q-pa-sm text-subtitle1">
-                      <span class="text-weight-bold">{{ formatCurrency(product.price) }}</span>
-                      <span class="q-ml-xs text-caption text-weight-regular text-strike">{{ formatCurrency(product.price + 100) }}</span>
-                    </q-badge>
-                  </div>
-                </q-img>
+                  :src="file ? file.url : 'images/404-image.jpg'"
+                  style="height: 100vh"
+                />
               </div>
             </q-carousel-slide>
           </q-carousel>
           <!-- Order summary -->
           <div class="q-px-md" v-if="products.length > 0">
             <!-- Total -->
-            <div class="row justify-between total-section">
-              <div class="text-h5">Total</div>
-              <div class="text-h4 text-primary text-weight-bold">{{ formatCurrency(total) }}</div>
+            <div class="row text-h5 justify-between total-section bg-positive text-white">
+              <div>Total</div>
+              <div class="text-h4 text-weight-bold">{{ formatCurrency(total) }}</div>
             </div>
             <!-- Payment methods -->
             <div v-if="paymentMethods.length > 0" class="q-mb-xs">
@@ -170,7 +157,9 @@ export default {
        * Locale for number formatting
        * @type {string}
        */
-      locale: 'en-US'
+      locale: 'en-US',
+
+      files: []
     }
   },
   computed: {
@@ -199,21 +188,7 @@ export default {
      * @param {Object} params params to search
      */
     getAllProducts () {
-      this.$api.get('products', {
-        params: {
-          paginate: true,
-          page: 1,
-          perPage: 10,
-          branch_office_id: this.branchOffice?.id,
-          mostSold: true
-        }
-      })
-        .then(({ data }) => {
-          this.allProducts = data.data
-        })
-        .catch(err => {
-          notify(err.message, 'negative', 'warning')
-        })
+      this.files = this.$companyConfig.files
     },
     /**
      * Set invoice data
@@ -232,13 +207,16 @@ export default {
      * @returns {void}
      */
     getInvoice () {
-      this.channel = new BroadcastChannel('invoiceChanel')
-      this.channel.onmessage = (event) => {
-        if (event.data.tipo === 'invoiceChanel') {
-          const invoice = JSON.parse(event.data.invoice)
-          this.setInvoiceChannel(invoice)
-        }
-      }
+      this.$echo.private('invoice-details').listen(`.NewInvoiceDetails_${this.userSession.id}`, async (event) => {
+        console.log(event)
+        this.setInvoiceChannel(event.invoice)
+      })
+      // this.channel.onmessage = (event) => {
+      //   if (event.data.tipo === 'invoiceChanel') {
+      //     const invoice = JSON.parse(event.data.invoice)
+      //     this.setInvoiceChannel(invoice)
+      //   }
+      // }
     },
     ...mapActions(useCommandStore, ['setInvoice'])
   }

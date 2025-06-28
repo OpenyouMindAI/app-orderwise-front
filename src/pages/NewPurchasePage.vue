@@ -606,7 +606,6 @@ import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, notify } from 'src/const/mixins'
-import { printInvoice, printTicket } from 'src/const/invoice'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 export default {
   name: 'BillingPage',
@@ -1282,33 +1281,32 @@ export default {
      * Get all products
      * @param {Object} params params to search
      */
-    getAllProducts (params) {
+    async getAllProducts (params) {
       this.loadingProducts = true
-      this.$api.get('products', {
-        params: {
-          ...params,
-          branch_office_id: this.branchOffice?.id,
-          stock: true,
-          withStock: true,
-          mostSold: true,
-          dataEqualFilter: {
-            category_id: this.category ? this.category.id : null
+      try {
+        const { data } = await this.$api.get('products', {
+          params: {
+            ...params,
+            branch_office_id: this.branchOffice?.id,
+            stock: true,
+            sortOrder: 'desc',
+            sortBy: 'sold',
+            dataEqualFilter: {
+              category_id: this.category ? this.category.id : null
+            }
           }
-        }
-      })
-        .then(({ data }) => {
-          this.allProducts = data.data
-          this.pagination.rowsNumber = data.total
-          this.loadingProducts = false
         })
-        .catch(err => {
-          this.loadingProducts = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+        this.allProducts = data.data
+        this.pagination.rowsNumber = data.total
+      } catch (err) {
+        Notify.create({
+          message: err.message,
+          icon: 'warning',
+          color: 'negative'
         })
+      } finally {
+        this.loadingProducts = false
+      }
     },
     /**
      * Set payments
@@ -1412,7 +1410,6 @@ export default {
      * @param {Object} data purchase saved
      */
     async printBill (data) {
-      let doc = null
       const purchase = await this.getInvoiceOneRequest(data.id)
 
       if (!purchase) {
@@ -1425,15 +1422,6 @@ export default {
         this.withoutPrint = false
         return
       }
-
-      if (this.invoicePrinter) {
-        doc = await printInvoice(purchase, this.userSession)
-      } else {
-        doc = await printTicket(purchase, this.userSession)
-      }
-
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
       this.clear()
     },
     /**

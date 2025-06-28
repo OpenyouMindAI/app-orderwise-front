@@ -60,8 +60,9 @@ const loading = ref(true)
  */
 const params = ref({
   branch_office_id: store.branchOffice.id,
-  mostSold: true,
   paginated: true,
+  sortBy: 'sold',
+  sortOrder: 'desc',
   perPage: 10
 })
 
@@ -140,7 +141,7 @@ const chartProductOptions = ref({
     {
       name: 'Ventas',
       type: 'bar',
-      data: computed(() => topProductsData.value.map((item) => Number(item.invoices_count)))
+      data: computed(() => topProductsData.value.map((item) => Number(item.sold)))
     }
   ]
 })

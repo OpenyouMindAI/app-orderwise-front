@@ -15,7 +15,10 @@ export default boot(async ({ app }) => {
     broadcaster: 'pusher',
     key: import.meta.env.VITE_APP_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_APP_PUSHER_APP_CLUSTER,
-    forceTLS: true,
+    forceTLS: false,
+    encrypted: false,
+    disableStats: true,
+    enabledTransports: ['ws'],
     authEndpoint: import.meta.env.VITE_APP_API_URL + 'broadcasting/auth',
     auth: {
       headers: {

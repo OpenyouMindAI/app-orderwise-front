@@ -15,7 +15,7 @@
                   style="border-radius: 10px;"
                   v-ripple
                   clickable
-                  @click="downloadInvoiceExcel"
+                  @click="downloadPurchaseExcel"
                 >
                   <q-item-section thumbnail>
                     <q-icon name="archive" class="q-ml-sm"/>
@@ -54,7 +54,7 @@
         :visible-columns="visibleColumns"
         binary-state-sort
         v-model:pagination="paginationConfig"
-        @row-click="editInvoice"
+        @row-click="editPurchase"
         @request="setPagination"
         no-data-label="Registro no encontrado"
       >
@@ -84,34 +84,37 @@
             </template>
           </q-input>
         </template>
-        <template v-slot:body-cell-status="props">
-          <q-td :props="props" v-if="props.value">
-            <q-badge
-              :color="status[props.value].color"
-              :label="status[props.value].label"
-              class="q-pa-sm"
-            />
-          </q-td>
-          <q-td :props="props" v-else>
-            -
-          </q-td>
-        </template>
       </q-table>
     </div>
-    <q-dialog v-model="openEditInvoice" :maximized="$q.screen.lt.sm">
+    <q-dialog v-model="openEditPurchase" :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 900px; max-width: 85vw;'}`"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 1000px; max-width: 85vw;'}`"
         >
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
-          <q-btn icon="close" flat round dense @click="openEditInvoice = false" />
+          <q-btn icon="close" flat round dense @click="openEditPurchase = false" />
         </q-card-section>
         <q-card-section class="scroll col" style="max-height: 90vh">
           <div class="row q-col-gutter-md">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 row q-col-gutter-sm">
+            <div class="col-xl-7 col-lg-7 col-md-7 col-sm-7 col-xs-12 row q-col-gutter-sm">
               <div class="col-6">
-                <q-input label="Código" filled v-model="purchase.purchase_code" readonly dense/>
+                <q-input
+                  label="Código de factura"
+                  filled
+                  v-model="purchase.purchase_code"
+                  readonly
+                  dense
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  label="Código de comprobante"
+                  filled
+                  v-model="purchase.purchase_number"
+                  readonly
+                  dense
+                />
               </div>
               <div class="col-6">
                 <q-select
@@ -122,33 +125,44 @@
                   input-debounce="0"
                   option-label="name"
                   option-value="id"
+                  readonly
                   v-model="purchase.invoice_type"
-                  :options="invoiceTypes"
                   :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filterInvoiceTypes"
                 />
               </div>
               <div class="col-6">
-                <q-input label="Proveedor" filled v-model="purchase.provider.name" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Moneda" filled :model-value="purchase?.coin?.name" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Fecha" filled :model-value="formatDate(purchase.created_at)" readonly dense/>
-              </div>
-              <div class="col-6">
-                <q-input label="Hora" filled :model-value="formatDate(purchase.created_at, 'HH:mm:ss')" readonly dense/>
-              </div>
-              <div class="col-12">
                 <q-input
-                  label="Descripción"
+                  label="Proveedor"
                   filled
-                  v-model="purchase.description"
+                  v-model="purchase.provider.name"
                   readonly
                   dense
-                  type="textarea"
-                  autogrow
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Moneda"
+                  filled
+                  :model-value="purchase?.coin?.name"
+                  readonly
+                  dense
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Fecha"
+                  filled
+                  :model-value="formatDate(purchase.created_at)"
+                  readonly dense
+                />
+              </div>
+              <div class="col-4">
+                <q-input
+                  label="Hora"
+                  filled
+                  :model-value="formatDate(purchase.created_at, 'HH:mm:ss')"
+                  readonly
+                  dense
                 />
               </div>
               <div class="col-12">
@@ -184,7 +198,7 @@
                               {{ formatNumber(product.pivot.quantity) }}
                             </td>
                             <td class="text-right">
-                              {{ formatNumber(product.pivot.quantity *  product.pivot.price) }}
+                              {{ formatNumber(product.pivot.quantity *  product.pivot.cost) }}
                             </td>
                           </tr>
                         </tbody>
@@ -194,7 +208,7 @@
                 </q-expansion-item>
               </div>
             </div>
-            <!-- <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+            <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
@@ -210,15 +224,19 @@
                           <tr>
                             <th class="text-left">Método de pago</th>
                             <th class="text-right">Monto</th>
+                            <th class="text-right">Fecha de pago</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="(payment) in purchase.purchase_payments" :key="payment.id">
+                          <tr v-for="(payment) in purchase.payments" :key="payment.id">
                             <td class="text-left">
                               {{ payment.payment_method.name }}
                             </td>
                             <td class="text-right">
                               {{ formatNumber(payment.amount) }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatDate(payment.created_at) }}
                             </td>
                           </tr>
                         </tbody>
@@ -232,12 +250,12 @@
                   class="full-width"
                   icon="check_circle"
                   color="primary"
-                  label="Guardar"
-                  v-if="purchase.status !== 'cancelled'"
-                  @click="saveEdit"
+                  label="Pagar"
+                  v-if="purchase.balance > 0"
+                  @click="addPaymentDialog = true"
                 />
               </div>
-            </div> -->
+            </div>
           </div>
         </q-card-section>
       </q-card>
@@ -261,8 +279,7 @@
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, notify, formatDate } from 'src/const/mixins'
-import { printInvoice, status, generarFacturaPDF } from 'src/const/invoice'
+import { formatNumber, formatDate } from 'src/const/mixins'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
@@ -275,7 +292,7 @@ export default {
        */
       dialogFilter: false,
       /**
-       * Loading client status
+       * Loading provider status
        * @type {Boolean}
        */
       loadingProvider: false,
@@ -283,19 +300,14 @@ export default {
        * Visible columns
        * @type {Array}
        */
-      visibleColumns: ['purchase_code', 'invoice_type', 'client', 'seller', 'created_at', 'status', 'total'],
-      /**
-       * Status purchase
-       * @type {Object}
-       */
-      status,
+      visibleColumns: ['purchase_code', 'invoice_type', 'provider', 'seller', 'created_at', 'total'],
       /**
        * Format number
        * @type {Function}
        */
       formatNumber,
       /**
-       * Dialog client status
+       * Dialog provider status
        * @type {Boolean}
        */
       openAddProvider: false,
@@ -310,19 +322,19 @@ export default {
        * Provider form data
        * @type {Object}
        */
-      client: {},
+      provider: {},
       /**
        * Edit tab
        * @type {String}
        */
       editTab: 'details',
       /**
-       * Invoices list table
+       * Purchases list table
        * @type {Array}
        */
       purchases: [],
       /**
-       * Invoice data selected
+       * Purchase data selected
        * @type {Object}
        */
       purchase: null,
@@ -354,7 +366,7 @@ export default {
           id: '',
           created_at: '',
           'coin.name': '',
-          'invoiceType.name': '',
+          'PurchaseType.name': '',
           'provider.name': ''
         }
       },
@@ -367,23 +379,31 @@ export default {
        * Open add purchase dialog
        * @type {Boolean}
        */
-      openAddInvoice: false,
+      openAddPurchase: false,
       /**
        * Open edit purchase dialog
        * @type {Object}
        */
-      openEditInvoice: null,
+      openEditPurchase: null,
       /**
        * Table columns
        * @type {Array}
        */
       columns: [
         {
+          name: 'purchase_number',
+          align: 'left',
+          label: 'Número de comprobante',
+          field: 'purchase_number',
+          format: row => row || '-',
+          sortable: true
+        },
+        {
           name: 'purchase_code',
           align: 'left',
-          label: 'Código',
+          label: 'Código de factura',
           field: 'purchase_code',
-          format: row => row?.purchase_code || '-',
+          format: row => row || '-',
           sortable: true
         },
         {
@@ -433,13 +453,6 @@ export default {
         //   sortable: true
         // },
         {
-          name: 'status',
-          align: 'center',
-          label: 'Estado',
-          field: 'status',
-          sortable: true
-        },
-        {
           name: 'total',
           align: 'right',
           label: 'Total',
@@ -459,10 +472,10 @@ export default {
         sortOrder: 'desc'
       },
       /**
-       * Invoice types
+       * Purchase types
        * @type {Array}
        */
-      invoiceTypes: []
+      PurchaseTypes: []
     }
   },
   computed: {
@@ -491,7 +504,7 @@ export default {
     }
   },
   methods: {
-    downloadInvoiceExcel () {
+    downloadPurchaseExcel () {
       getDownload(
         'excel/purchases',
         {
@@ -502,7 +515,6 @@ export default {
           }
         },
         (percentCompleted) => {
-          console.log(percentCompleted)
           this.loadingDownload = percentCompleted
           if (percentCompleted === 100) {
             this.loadingDownload = 0
@@ -511,7 +523,7 @@ export default {
         (link) => {
           link.setAttribute(
             'download',
-            'Invoices.xlsx'
+            'Purchases.xlsx'
             // `Recibos de cobro: Desde ${proxyDate.value.from} Hasta ${proxyDate.value.to}.xlsx`
           )
           document.body.appendChild(link)
@@ -536,8 +548,8 @@ export default {
      * @param {String} value Value filter
      * @param {Callback} update update options
      */
-    filterInvoiceTypes (value, update) {
-      this.$api.get('invoice-types', {
+    filterPurchaseTypes (value, update) {
+      this.$api.get('Purchase-types', {
         params: {
           dataSearch: {
             name: value
@@ -546,7 +558,7 @@ export default {
       })
         .then(({ data }) => {
           update(() => {
-            this.invoiceTypes = data
+            this.PurchaseTypes = data
           })
         })
         .catch(err => {
@@ -558,26 +570,11 @@ export default {
         })
     },
     /**
-     * Print purchase
-     * @param {Object} data purchase saved
-     */
-    async print (ticket) {
-      let doc = null
-      if (!ticket && this.purchase.billing) {
-        doc = await generarFacturaPDF(this.purchase, this.userSession)
-      } else if (ticket) {
-        doc = await printInvoice(this.purchase, this.userSession)
-      }
-      console.log(doc)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
-    },
-    /**
      * Close all modals
      */
     closeModal () {
-      this.openAddInvoice = false
-      this.openEditInvoice = false
+      this.openAddPurchase = false
+      this.openEditPurchase = false
       this.coin = {}
     },
     /**
@@ -633,12 +630,12 @@ export default {
     /**
      * Save purchases
      */
-    saveInvoice () {
+    savePurchase () {
       this.visible = true
       this.$api.post('purchases', this.purchase)
         .then(({ data }) => {
           this.getPurchases()
-          this.openAddInvoice = false
+          this.openAddPurchase = false
           this.visible = false
           this.purchase = {}
           Notify.create({
@@ -662,8 +659,8 @@ export default {
      * @param {Object} row row
      * @param {Number} index index
      */
-    editInvoice (event, row, index) {
-      this.openEditInvoice = true
+    editPurchase (event, row, index) {
+      this.openEditPurchase = true
       this.purchase = row
     },
     /**
@@ -682,23 +679,6 @@ export default {
       return data
     },
     /**
-     * Save providers
-     */
-    saveProvider () {
-      this.loadingProvider = true
-      this.$api.put(`providers/${this.purchase.client.id}`, this.client)
-        .then(({ data }) => {
-          this.openAddProvider = false
-          this.loadingProvider = false
-          this.purchase.client = data
-          notify('Proveedor guardado exitosamente', 'positive', 'check_circle')
-        })
-        .catch(err => {
-          this.loadingProvider = false
-          notify(err.message, 'negative', 'warning')
-        })
-    },
-    /**
      * Edit purchase
      */
     saveEdit () {
@@ -706,7 +686,7 @@ export default {
       this.$api.put(`purchases/${this.purchase.id}`, this.modelData(this.purchase))
         .then(({ data }) => {
           this.getPurchases()
-          this.openEditInvoice = false
+          this.openEditPurchase = false
           this.visible = false
           this.purchase = null
           Notify.create({
@@ -727,12 +707,12 @@ export default {
     /**
      * Delete purchase
      */
-    deleteInvoice () {
+    deletePurchase () {
       this.visible = true
       this.$api.delete(`purchases/${this.purchase.id}`)
         .then(({ data }) => {
           this.getPurchases()
-          this.openEditInvoice = false
+          this.openEditPurchase = false
           this.visible = false
           this.purchase = null
           Notify.create({
@@ -749,24 +729,6 @@ export default {
             color: 'negative'
           })
         })
-    },
-    /**
-     * Change status
-     * @param {Object} data purchase
-     * @param {Number} index index status
-     */
-    async cancelInvoice  () {
-      try {
-        this.cancelLoading = true
-        await this.$api.put(`purchase-status-command/${this.purchase.id}`, { status: 'cancelled' })
-        this.getPurchases()
-        notify('Factura anulada exitosamente', 'positive', 'check_circle')
-        this.openEditInvoice = false
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        this.cancelLoading = false
-      }
     }
   }
 }

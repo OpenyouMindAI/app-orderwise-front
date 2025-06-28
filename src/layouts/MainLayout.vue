@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh Lpr lff" class="shadow-2 rounded-borders">
+  <q-layout view="hHh Lpr lff" class="shadow-2 rounded-borders q-pa-safe">
     <q-header elevated>
       <q-toolbar class="bg-primary">
         <q-btn
@@ -27,7 +27,16 @@
           </q-img>
         </div>
         <q-space />
-        <q-btn flat icon="apps" round>
+        <q-btn
+          flat
+          dense
+          icon="cast_connected"
+          round
+          class="q-mr-sm"
+          @click="screen"
+          v-if="$q.platform.is.nativeMobile"
+        />
+        <q-btn flat dense icon="apps" round class="q-mr-sm">
           <q-tooltip class="text-body2">
             Herramientas
           </q-tooltip>
@@ -39,7 +48,7 @@
                 </span>
               </div>
               <q-separator />
-              <div class="q-mt-xs">
+              <div class="q-mt-sm">
                 <q-btn
                   icon="sync_alt"
                   round
@@ -84,7 +93,6 @@
                   round
                   :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
                   aria-label="dark_mode"
-                  class="q-mr-sm"
                   @click="setTheme"
                 >
                   <q-tooltip :offset="[10, 10]">
@@ -140,7 +148,7 @@
             </q-banner>
           </q-popup-proxy>
         </q-btn>
-        <q-btn dense flat round icon="notifications" color="white">
+        <q-btn dense flat round icon="notifications" color="white" class="q-mr-sm">
           <q-tooltip>
             Notificaciones {{ numberOfNotifications.length }}
           </q-tooltip>
@@ -325,7 +333,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-page-container>
+    <q-page-container style="padding-bottom: env(safe-area-inset-bottom);">
       <router-view />
     </q-page-container>
     <q-inner-loading :showing="visibleLoading">
@@ -341,6 +349,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
+import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',
@@ -375,7 +384,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice']),
+    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice', 'access_token', 'refresh_token', 'expires_In', 'token_type']),
     ...mapState(darkModeStore, ['darkMode'])
   },
   watch: {
@@ -403,6 +412,28 @@ export default {
     this.getDataNotification()
   },
   methods: {
+    async screen () {
+      try {
+        loading(true)
+        const url = `${import.meta.env.VITE_APP_URL}/verifying/${this.access_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+        await MultiDisplayManager.showOnSecondScreen({
+          url
+        })
+      } catch (error) {
+        alert(error.message)
+      } finally {
+        loading(false)
+      }
+    },
+    async closeScreen () {
+      // Obtener estado
+      const status = await MultiDisplayManager.getSecondScreenStatus()
+      alert(status.message, status.isShowing)
+      if (status.isShowing) {
+        // Cerrar pantalla
+        await MultiDisplayManager.closeSecondScreen()
+      }
+    },
     ucwords (data) {
       return data
     },
@@ -532,7 +563,7 @@ export default {
         })
         this.download = data
       } catch (error) {
-        notify(error.message, 'negative', 'warning')
+        notify(error?.response.data?.message || error.message, 'negative', 'warning')
       } finally {
         loading(false)
       }

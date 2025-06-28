@@ -1,0 +1,883 @@
+<template>
+  <q-page padding>
+    <!-- Vista de Listado de Transferencias -->
+    <div v-if="currentView === 'list'">
+      <div class="row q-mb-md">
+        <div class="col-12">
+          <div class="text-h5 q-mb-md">Transferencias de stock</div>
+          <q-card flat bordered>
+            <q-card-section>
+              <div class="row q-col-gutter-md">
+                <div class="col-12 col-md-3">
+                  <q-input
+                    v-model="filters.search"
+                    label="Buscar"
+                    dense
+                    outlined
+                    clearable
+                    placeholder="Nº documento o palabra clave"
+                    debounce="500"
+                  >
+                    <template v-slot:append>
+                      <q-icon name="search" />
+                    </template>
+                  </q-input>
+                </div>
+                <div class="col-12 col-md-3">
+                  <q-select
+                    v-model="filters.dateRange"
+                    label="Rango de fechas"
+                    dense
+                    outlined
+                    clearable
+                    emit-value
+                    map-options
+                    :options="dateRangeOptions"
+                  />
+                </div>
+                <div class="col-12 col-md-3">
+                  <q-select
+                    v-model="filters.originBranch"
+                    label="Sucursal origen"
+                    dense
+                    outlined
+                    clearable
+                    emit-value
+                    map-options
+                    option-label="name"
+                    option-value="id"
+                    :options="branchOptions"
+                    @filter="getBranchOffice"
+                  />
+                </div>
+                <div class="col-12 col-md-3">
+                  <q-select
+                    v-model="filters.destinationBranch"
+                    label="Sucursal destino"
+                    dense
+                    outlined
+                    clearable
+                    emit-value
+                    map-options
+                    option-label="name"
+                    option-value="id"
+                    :options="branchOptions"
+                    @filter="getBranchOffice"
+                  />
+                </div>
+                <!-- <div class="col-12 col-md-3">
+                  <q-select
+                    v-model="filters.status"
+                    label="Estado"
+                    dense
+                    outlined
+                    clearable
+                    emit-value
+                    map-options
+                    :options="statusOptions"
+                  />
+                </div> -->
+                <div class="col-12 col-md-12 flex justify-end items-center">
+                  <q-btn
+                    color="primary"
+                    icon="add"
+                    label="Nueva Transferencia"
+                    @click="createNewTransfer"
+                    class="q-ml-sm"
+                  />
+                  <q-btn
+                    color="secondary"
+                    icon="file_download"
+                    label="Exportar"
+                    class="q-ml-sm"
+                    disabled
+                  >
+                    <q-menu>
+                      <q-list style="min-width: 100px">
+                        <q-item clickable v-close-popup @click="exportData('excel')">
+                          <q-item-section>Excel</q-item-section>
+                        </q-item>
+                        <q-item clickable v-close-popup @click="exportData('pdf')">
+                          <q-item-section>PDF</q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                    <q-tooltip class="text-body2">
+                      No disponible en este momento
+                    </q-tooltip>
+                  </q-btn>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <q-table
+        :rows="transfers"
+        :columns="columns"
+        row-key="id"
+        :filter="filters.search"
+        binary-state-sort
+        flat
+        bordered
+        v-model:pagination="pagination"
+        @request="setPagination"
+      >
+        <template v-slot:body-cell-actions="props">
+          <q-td :props="props">
+            <div class="row no-wrap q-gutter-xs justify-center">
+              <q-btn
+                flat
+                round
+                dense
+                color="primary"
+                icon="visibility"
+                @click="viewTransfer(props.row)"
+                size="sm"
+              >
+                <q-tooltip>Ver detalles</q-tooltip>
+              </q-btn>
+              <q-btn
+                flat
+                round
+                dense
+                color="amber"
+                icon="edit"
+                @click="editTransfer(props.row)"
+                size="sm"
+              >
+                <q-tooltip>Editar</q-tooltip>
+              </q-btn>
+              <q-btn
+                flat
+                round
+                dense
+                color="negative"
+                icon="delete"
+                @click="confirmDelete(props.row)"
+                size="sm"
+              >
+                <q-tooltip>Eliminar</q-tooltip>
+              </q-btn>
+            </div>
+          </q-td>
+        </template>
+        <!-- <template v-slot:body-cell-status="props">
+          <q-td :props="props">
+            <q-badge :color="getStatusColor(props.row.status)">
+              {{ props.row.status }}
+            </q-badge>
+          </q-td>
+        </template> -->
+        <template v-slot:no-data>
+          <div class="full-width row flex-center q-pa-md text-grey-8">
+            No hay transferencias que coincidan con los filtros aplicados
+          </div>
+        </template>
+      </q-table>
+    </div>
+
+    <!-- Vista de Formulario de Transferencia -->
+    <div v-else-if="currentView === 'form'">
+      <div class="row">
+        <div class="col-12 flex q-gutter-sm items-center">
+          <q-btn
+            icon="arrow_back"
+            flat
+            color="primary"
+            @click="currentView = 'list'"
+            class="q-mb-md"
+            round
+          />
+          <div class="text-h5 q-mb-md">
+            {{ editMode ? 'Editar Transferencia #' + currentTransfer.id : 'Nueva Transferencia' }}
+          </div>
+        </div>
+      </div>
+
+      <q-form @submit.prevent="saveTransfer" class="q-gutter-md">
+        <q-card flat bordered>
+          <q-card-section>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-md-6">
+                <q-select
+                  v-model="currentTransfer.origin_branch_office"
+                  :options="branchOptions"
+                  label="Sucursal de origen *"
+                  outlined
+                  option-label="name"
+                  option-value="id"
+                  :rules="[val => !!val || 'Este campo es obligatorio']"
+                  @filter="getBranchOffice"
+                />
+              </div>
+              <div class="col-12 col-md-6">
+                <q-select
+                  v-model="currentTransfer.destination_branch_office"
+                  :options="branchOptions"
+                  label="Sucursal de destino *"
+                  outlined
+                  option-label="name"
+                  option-value="id"
+                  :rules="[
+                    val => !!val || 'Este campo es obligatorio',
+                    val => val.id !== currentTransfer?.origin_branch_office?.id || 'La sucursal de destino debe ser diferente a la de origen'
+                  ]"
+                  @filter="getBranchOffice"
+                />
+              </div>
+              <div class="col-12">
+                <q-input
+                  v-model="currentTransfer.observations"
+                  label="Observaciones"
+                  type="textarea"
+                  outlined
+                  autogrow
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered>
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">Productos a transferir</div>
+
+            <div class="q-mb-md">
+              <q-table
+                :rows="currentTransfer.products"
+                :columns="productColumns"
+                row-key="id"
+                hide-pagination
+                :rows-per-page-options="[0]"
+                flat
+                bordered
+              >
+                <template v-slot:body="props">
+                  <q-tr :props="props">
+                    <q-td key="product" :props="props">
+                      <q-select
+                        v-model="props.row.product"
+                        :options="productOptions"
+                        label="Producto"
+                        outlined
+                        dense
+                        use-input
+                        hide-selected
+                        fill-input
+                        option-label="name"
+                        option-value="id"
+                        input-debounce="500"
+                        @filter="getProducts"
+                        :rules="[val => !!val || 'Seleccione un producto']"
+                        @update:model-value="(value) => setProducts(value, props.row)"
+                      >
+                        <template v-slot:no-option>
+                          <q-item>
+                            <q-item-section class="text-grey">
+                              No hay resultados
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </q-td>
+                    <q-td key="quantity" :props="props">
+                      <q-input
+                        v-model.number="props.row.quantity"
+                        type="number"
+                        outlined
+                        dense
+                        min="1"
+                        :rules="[
+                          val => val > 0 || 'La cantidad debe ser mayor a 0'
+                        ]"
+                        @update:model-value="updateTotals"
+                      />
+                    </q-td>
+                    <q-td key="cost" :props="props">
+                      <q-input
+                        v-model.number="props.row.cost"
+                        type="number"
+                        outlined
+                        dense
+                        min="0"
+                        prefix="$"
+                        :rules="[
+                          val => val >= 0 || 'El costo no puede ser negativo'
+                        ]"
+                        @update:model-value="updateTotals"
+                      />
+                    </q-td>
+                    <q-td key="stock" :props="props">
+                      {{ props.row.stock || '-' }}
+                    </q-td>
+                    <q-td key="subtotal" :props="props">
+                      {{ formatCurrency(props.row.quantity * props.row.cost) }}
+                    </q-td>
+                    <q-td key="actions" :props="props">
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        color="negative"
+                        icon="delete"
+                        @click="removeProduct(props.rowIndex)"
+                        size="sm"
+                      />
+                    </q-td>
+                  </q-tr>
+                </template>
+              </q-table>
+            </div>
+
+            <div class="row justify-between q-mb-md">
+              <q-btn
+                color="primary"
+                icon="add"
+                label="Agregar producto"
+                @click="addProduct"
+                outline
+              />
+
+              <div class="text-subtitle1">
+                <div class="row q-gutter-md">
+                  <div>
+                    <strong>Total productos:</strong> {{ getTotalProducts() }}
+                  </div>
+                  <div>
+                    <strong>Valor total:</strong> {{ formatCurrency(getTotalValue()) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn
+              label="Confirmar envío"
+              color="primary"
+              type="submit"
+              :disable="currentTransfer.products.length === 0"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-form>
+    </div>
+  </q-page>
+</template>
+
+<script>
+import { notify, loading, formatDate } from 'src/const/mixins'
+import { api } from 'src/boot/axios'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
+import { date } from 'quasar'
+export default {
+  name: 'TransferenciasApp',
+
+  data () {
+    return {
+      /**
+       * Format date
+       * @type {Function}
+       */
+      formatDate,
+      /**
+       * Current view
+       * @type {String}
+       */
+      currentView: 'list',
+      /**
+       * Edit mode
+       * @type {Boolean}
+       */
+      editMode: false,
+      /**
+       * Filters data
+       * @type {Object}
+       */
+      filters: {
+        search: '',
+        dateRange: null,
+        originBranch: null,
+        destinationBranch: null,
+        status: null
+      },
+
+      /**
+       * Date range options
+       * @type {Array}
+       */
+      dateRangeOptions: [
+        { label: 'Hoy', value: 'today' },
+        { label: 'Última semana', value: 'lastWeek' },
+        { label: 'Último mes', value: 'lastMonth' },
+        { label: 'Último trimestre', value: 'lastQuarter' }
+      ],
+      /**
+       * Params search
+       * @type {Object}
+       */
+      params: {
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc',
+        perPage: 1,
+        dataSearch: {
+          transfer_number: '',
+          created_at: '',
+          status: ''
+        }
+      },
+      /**
+       * Branch office options
+       * @type {Array}
+       */
+      branchOptions: [],
+      /**
+       * Status options
+       * @type {Array}
+       */
+      statusOptions: [
+        { label: 'Borrador', value: 'Borrador' },
+        { label: 'Pendiente', value: 'Pendiente' },
+        { label: 'Enviado', value: 'Enviado' },
+        { label: 'Recibido', value: 'Recibido' },
+        { label: 'Cancelado', value: 'Cancelado' }
+      ],
+
+      /**
+       * Transfers data (simulated)
+       * @type {Array}
+       */
+      transfers: [],
+      /**
+       * Columns for transfers table
+       * @type {Array}
+       */
+      columns: [
+        { name: 'id', align: 'left', label: 'Nº Documento', field: 'id', sortable: true },
+        { name: 'created_at', align: 'left', label: 'Fecha', field: 'created_at', sortable: true, format: v => formatDate(v) },
+        { name: 'origin_branch_office', align: 'left', label: 'Origen', field: 'origin_branch_office', sortable: true, format: v => v.name },
+        { name: 'destination_branch_office', align: 'left', label: 'Destino', field: 'destination_branch_office', sortable: true, format: v => v.name },
+        // { name: 'status', align: 'left', label: 'Estado', field: 'status', sortable: true },
+        { name: 'actions', align: 'center', label: 'Acciones', field: 'actions', sortable: false }
+      ],
+      /**
+       * ColumnS for products table
+       * @type {Array}
+       */
+      productColumns: [
+        { name: 'product', align: 'left', label: 'Producto', field: 'product' },
+        { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity' },
+        { name: 'cost', align: 'right', label: 'Costo Unitario', field: 'cost' },
+        { name: 'stock', align: 'right', label: 'Stock', field: 'stock' },
+        { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal' },
+        { name: 'actions', align: 'center', label: 'Acciones', field: 'actions' }
+      ],
+      /**
+       * Pagination data
+       * @type {Object}
+       */
+      pagination: {
+        rowsPerPage: 20,
+        rowsNumber: 20,
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc'
+      },
+      /**
+       * Current transfer data (for edition/creation)
+       * @type {Object}
+       */
+      currentTransfer: {
+        id: '',
+        date: formatDate(new Date(), 'YYYY-MM-DD'),
+        origin_branch_office: null,
+        destination_branch_office: null,
+        // status: 'Borrador',
+        observations: '',
+        products: []
+      },
+      /**
+       * Product options
+       * @type {Array}
+       */
+      productOptions: []
+    }
+  },
+  watch: {
+    /**
+     * Set search filter
+     * @param {String} value search value
+     */
+    'filters.search': function (value) {
+      for (const key in this.params.dataSearch) {
+        this.params.dataSearch[key] = value
+      }
+      this.getTransfers(this.params)
+    },
+    /**
+     * Set date filter
+     * @param {String} value date range
+     */
+    'filters.dateRange': function (value) {
+      const dateFilter = this.setFormatDateFilter(value)
+      this.params.dateFilter = {
+        field: 'created_at',
+        ...dateFilter
+      }
+      this.getTransfers(this.params)
+    },
+    'filters.originBranch': function (value) {
+      this.params.dataEqualFilter = {
+        ...this.params.dataEqualFilter,
+        origin_branch_office_id: value
+      }
+      this.getTransfers(this.params)
+    },
+    'filters.destinationBranch': function (value) {
+      this.params.dataEqualFilter = {
+        ...this.params.dataEqualFilter,
+        destination_branch_office_id: value
+      }
+      this.getTransfers(this.params)
+    }
+    // 'filters.status': function (value) {
+    //   this.params.dataEqualFilter = {
+    //     ...this.params.dataEqualFilter,
+    //     status: value
+    //   }
+    //   this.getTransfers(this.params)
+    // }
+  },
+  computed: {
+    ...mapState(authentication, ['branchOffice'])
+  },
+
+  created () {
+    /**
+     * Set pagination
+     * @param {Object} data pagination data
+     */
+    this.setPagination({
+      pagination: this.pagination,
+      filter: undefined
+    })
+  },
+
+  methods: {
+    /**
+     * Set format date filter
+     * @param {String} type type of date
+     * @returns {Object} date filter
+     */
+    setFormatDateFilter (type) {
+      const today = new Date()
+      const todayFormat = date.formatDate(today, 'YYYY-MM-DD')
+      const subtractFromDate = (options) => formatDate(date.subtractFromDate(today, options), 'YYYY-MM-DD')
+      switch (type) {
+        case 'today':
+          return { from: date.formatDate(today, 'YYYY-MM-DD'), to: todayFormat }
+        case 'lastWeek':
+          return { from: subtractFromDate({ days: 7 }), to: todayFormat }
+        case 'lastMonth':
+          return { from: subtractFromDate({ months: 1 }), to: todayFormat }
+        case 'lastQuarter':
+          return { from: subtractFromDate({ months: 3 }), to: todayFormat }
+        default:
+          return null
+      }
+    },
+    /**
+     * Set pagination
+     * @param {Object} data pagination data
+     */
+    setPagination (data) {
+      this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
+      this.params.page = data.pagination.page
+      this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
+      this.params.perPage = data.pagination.rowsPerPage
+      this.pagination = data.pagination
+      this.getTransfers(this.params)
+    },
+    /**
+     * Clear form
+     */
+    clearForm () {
+      this.currentTransfer = {
+        origin_branch_office: this.branchOffice,
+        destination_branch_office: null,
+        // status: 'Borrador',
+        observations: '',
+        products: []
+      }
+    },
+    /**
+     * Create new transfer
+     */
+    createNewTransfer () {
+      this.editMode = false
+      this.currentView = 'form'
+      this.clearForm()
+      this.addProduct()
+    },
+    /**
+     * Edit transfer
+     * @param {Object} transfer transfer data
+     */
+    editTransfer (transfer) {
+      this.editMode = true
+      this.currentTransfer = { ...transfer }
+      this.currentTransfer.products = transfer.products.map(p => ({
+        product: p,
+        quantity: p.pivot?.quantity,
+        cost: p.pivot?.cost
+      }))
+      this.currentView = 'form'
+    },
+    /**
+     * View transfer
+     * @param {Object} transfer transfer data
+     */
+    viewTransfer (transfer) {
+      this.editMode = true
+      this.currentTransfer = transfer
+      this.currentTransfer.products = transfer.products.map(p => ({
+        product: p,
+        quantity: p.pivot?.quantity,
+        cost: p.pivot?.cost
+      }))
+      this.currentView = 'form'
+    },
+    /**
+     * Set model data for transfer
+     * @param {Object} data transfer data
+     * @returns {Object} model data
+     */
+    transferModel (data) {
+      return {
+        origin_branch_office_id: data.origin_branch_office.id,
+        destination_branch_office_id: data.destination_branch_office.id,
+        observations: data.observations,
+        status: 'Enviado',
+        products: data.products.map(p => ({
+          product_id: p.product.id,
+          quantity: p.quantity,
+          cost: p.cost
+        }))
+      }
+    },
+    /**
+     * Save transfer
+     */
+    async saveTransfer () {
+      try {
+        loading(true)
+        if (this.currentTransfer.products.length === 0) return
+        if (this.editMode) {
+          await api.put(`transfer-stocks/${this.currentTransfer.id}`, this.transferModel(this.currentTransfer))
+          notify('Transferencia modificada exitosamente', 'positive', 'info')
+        } else {
+          await api.post('transfer-stocks', this.transferModel(this.currentTransfer))
+          notify('Transferencia guardada exitosamente', 'positive', 'info')
+        }
+        this.clearForm()
+        this.getTransfers(this.params)
+        this.currentView = 'list'
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+    /**
+     * Delete transfer
+     * @param {Object} transfer transfer data
+     */
+    async confirmDelete (transfer) {
+      try {
+        loading(true)
+        await api.delete(`transfer-stocks/${transfer.id}`)
+        this.getTransfers(this.params)
+        notify('Transferencia eliminada exitosamente', 'positive', 'info')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+
+    /**
+     * Add product
+     */
+    addProduct () {
+      this.currentTransfer.products.push({
+        id: Date.now(), // ID temporal
+        product: null,
+        quantity: 1,
+        cost: 0
+      })
+    },
+    /**
+     * Remove product
+     * @param {Number} index index of product
+     */
+    removeProduct (index) {
+      this.currentTransfer.products.splice(index, 1)
+      this.updateTotals()
+    },
+
+    updateTotals () {
+      // Este método se llama cuando cambian las cantidades o costos
+      // No hace nada directamente, pero los totales se recalculan en tiempo real
+    },
+
+    /**
+     * Get total products
+     * @returns {Number} total products
+     */
+    getTotalProducts () {
+      return this.currentTransfer.products.reduce((sum, product) => sum + (product.quantity || 0), 0)
+    },
+    /**
+     * Get total value
+     * @returns {Number} total value
+     */
+    getTotalValue () {
+      return this.currentTransfer.products.reduce((sum, product) => {
+        return sum + ((product.quantity || 0) * (product.cost || 0))
+      }, 0)
+    },
+    /**
+     * Format currency
+     * @param {Number} value value
+     * @returns {String} formatted value
+     */
+    formatCurrency (value) {
+      return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS'
+      }).format(value)
+    },
+    /**
+     * Get status color
+     * @param {String} status status
+     * @returns {String} status color
+     */
+    getStatusColor (status) {
+      switch (status) {
+        case 'Borrador': return 'grey'
+        case 'Pendiente': return 'orange'
+        case 'Enviado': return 'blue'
+        case 'Recibido': return 'green'
+        case 'Cancelado': return 'red'
+        default: return 'grey'
+      }
+    },
+    /**
+     * Generate transfer id
+     * @returns {String} transfer id
+     */
+    exportData (format) {
+      // Simulación de exportación
+      console.log(`Exportando datos en formato ${format}...`)
+      // En una aplicación real, aquí iría la lógica de exportación
+    },
+    /**
+     * Get branch office
+     * @param {String} value branch office name
+     * @param {Function} update update function
+     */
+    async getBranchOffice (value, update) {
+      try {
+        const { data } = await api.get('branch-offices', {
+          params: {
+            dataSearch: {
+              name: value
+            }
+          }
+        })
+        update(() => {
+          this.branchOptions = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Get products
+     * @param {String} value product name
+     * @param {Function} update update function
+     */
+    async getProducts (value, update) {
+      try {
+        const { data } = await api.get('products', {
+          params: {
+            stock: true,
+            branch_office_id: this.currentTransfer?.origin_branch_office?.id,
+            dataSearch: {
+              name: value,
+              barcode: value
+            }
+          }
+        })
+        update(() => {
+          this.productOptions = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Set products
+     * @param {Object} value product
+     * @param {Object} row transfer stock
+     */
+    setProducts (value, row) {
+      row.cost = value.cost
+      row.stock = value.normal_stock || value.bundle_stock
+      row.product_id = value.id
+      this.updateTotals()
+    },
+    /**
+     * Get transfers
+     * @param {Object} params params
+     */
+    async getTransfers (params = this.params) {
+      try {
+        const { data } = await api.get('transfer-stocks', { params })
+        this.transfers = data.data
+        this.pagination.rowsNumber = data.total
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    }
+  }
+}
+</script>
+
+<style>
+.q-table__card {
+  border-radius: 8px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.q-table thead tr th {
+  font-weight: 600;
+}
+
+.q-table tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+@media (max-width: 600px) {
+  .q-table th:nth-child(3),
+  .q-table th:nth-child(4),
+  .q-table td:nth-child(3),
+  .q-table td:nth-child(4) {
+    display: none;
+  }
+}
+</style>

@@ -3,18 +3,11 @@
     <div class="column q-gutter-md" style="max-width: 600px;">
       <div class="flex full-width justify-center items-center">
         <q-img
-          :src="company?.catalog?.banner || company?.url"
-          style="max-height: 150px; max-width: 200px;"
+          :src="company?.company_config.other?.menu?.banner_url || company?.url"
+          style="max-height: 250px; max-width: 500px; min-width: 45vw;"
         />
       </div>
-      <span class="text-h6 text-center">
-        {{ company?.name }}
-      </span>
-      <!-- <div class="text-center"> -->
-        <!-- <div class="col-3">
-          <q-img :src="company?.url" style="max-height: 60px; max-width: 70px;" />
-        </div> -->
-      <!-- </div> -->
+      <div class="text-subtitle1 text-center q-mt-md" v-html="company?.company_config.other?.menu?.description"/>
     </div>
     <div style="max-width: 600px;" class="full-width text-subtitle1 flex justify-between items-center" v-if="tab === 'orders'">
       <span class="text-h6">Ordenes</span>
@@ -290,17 +283,24 @@
         </template>
       </q-table>
     </div>
-    <q-page-sticky v-if="totalBill > 0" position="bottom-right" :offset="[15, 10]">
-      <q-btn
-        rounded
-        stack
-        color="primary"
-        class="button-baseline"
-        :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
-        :label="formatNumber(totalBill)"
-        :loading="billLoading"
-        @click="saveBill"
-      />
+    <q-page-sticky position="bottom-right" :offset="[15, 10]">
+      <div class="flex q-gutter-sm">
+        <q-btn
+          v-if="isCurrentlyOpen && totalBill > 0"
+          rounded
+          stack
+          color="primary"
+          class="button-baseline"
+          :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
+          :label="formatNumber(totalBill)"
+          :loading="billLoading"
+          @click="saveBill"
+        />
+        <schedule-status
+          :schedule="company?.company_config.other?.menu?.schedule"
+          @update:isCurrentlyOpen="(data) => isCurrentlyOpen = data"
+        />
+      </div>
     </q-page-sticky>
     <q-dialog v-model="detailProduct">
       <q-card
@@ -691,11 +691,13 @@ import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import { status } from 'src/const/invoice'
+import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
 export default {
   name: 'CatalogPage',
   components: {
     SkeletonCard,
     SlideComponent,
+    ScheduleStatus,
     FileButtonComponent
   },
   data () {
@@ -712,6 +714,7 @@ export default {
       paymentMethod: null,
       openAddClient: false,
       dialogPayment: false,
+      isCurrentlyOpen: false,
       openLoginDialog: false,
       paymentMethods: [],
       temporalProducts: [],
@@ -1198,7 +1201,8 @@ export default {
           params: {
             stock: true,
             withStock: true,
-            mostSold: true,
+            sortOrder: 'desc',
+            sortBy: 'sold',
             branch_office_id: this.$route.params.branch_office_id,
             dataEqualFilter: {
               category_id: this.category === 'all' ? null : this.category,

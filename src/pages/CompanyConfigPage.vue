@@ -96,10 +96,55 @@
         </q-card>
       </q-step>
       <q-step
+        title="Configurar impresora"
+        icon="printer"
+        clickable
         :name="2"
+        :done="step > 2"
+      >
+      <q-card>
+        <q-form @submit="onSubmitConfig">
+          <q-card-section>
+            <div class="text-h6">Configuración de impresora</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="row q-col-gutter-sm items-center full-width">
+              <div class="col-xs-12 col-sm-12 col-md-2">
+                <q-checkbox
+                  label="Impresión directa"
+                  v-model="companyConfig.other.directPrint"
+                />
+              </div>
+              <div class="col-xs-12 col-sm-12 col-md-10">
+                <q-select
+                  label="Impresora por defecto"
+                  option-label="name"
+                  option-value="id"
+                  v-model="companyConfig.printer"
+                  :options="printers"
+                  @filter="filterPrinters"
+                />
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn
+              color="primary"
+              label="Guardar"
+              icon="save"
+              type="submit"
+              :loading="loading"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+      </q-step>
+      <q-step
+        :name="3"
         title="Valores por defecto"
         icon="settings"
         clickable
+        :done="step > 3"
       >
         <q-card>
           <q-form @submit="onSubmitConfig">
@@ -248,6 +293,105 @@
           </q-form>
         </q-card>
       </q-step>
+      <q-step
+        :name="4"
+        title="Configurar menu"
+        icon="menu_book"
+        clickable
+        :done="step > 4"
+      >
+        <q-card class="store-hours-manager q-mb-lg">
+          <q-card-section>
+            <div class="row items-center q-mb-md">
+              <div class="col-12 col-sm-6">
+                <div class="text-h6 text-weight-bold">
+                  <q-icon name="panorama" color="primary" size="sm" class="q-mr-xs" />
+                  Banner del menu
+                </div>
+                <div class="text-caption text-grey">
+                  Configura el banner del menu de la empresa
+                </div>
+              </div>
+            </div>
+            <q-img
+              :src="fileBanner?.url || logo.white"
+              spinner-color="white"
+              class="rounded-borders"
+              style="max-width: 100%; max-height: 200px;"
+              fit="contain"
+            >
+              <div class="absolute-bottom text-subtitle1 text-center">
+                <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUploadBanner" />
+              </div>
+              <template v-slot:error>
+                <div class="absolute-bottom text-subtitle1 text-center">
+                  <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUploadBanner" />
+                </div>
+              </template>
+            </q-img>
+          </q-card-section>
+        </q-card>
+        <q-card class="store-hours-manager q-mb-lg">
+          <q-card-section>
+            <div class="row items-center q-mb-md">
+              <div class="col-12 col-sm-6">
+                <div class="text-h6 text-weight-bold">
+                  <q-icon name="edit" color="primary" size="sm" class="q-mr-xs" />
+                  Descripción de la empresa
+                </div>
+                <div class="text-caption text-grey">
+                  Configura la descripción de la empresa que aparece en el menu de la empresa
+                </div>
+              </div>
+            </div>
+            <q-editor v-model="menuConfig.description" />
+          </q-card-section>
+        </q-card>
+        <schedule-company
+          :schedule="menuConfig.schedule"
+          @update:schedule="($event) => menuConfig.schedule = $event"
+        />
+        <div class="full-width text-right">
+          <q-btn
+            color="primary"
+            label="Guardar"
+            icon="check_circle"
+            type="button"
+            @click="saveMenuConfig"
+            :loading="loading"
+          />
+        </div>
+      </q-step>
+      <q-step
+        :name="5"
+        title="Configurar pantalla de cliente"
+        icon="img"
+        clickable
+        :done="step > 5"
+      >
+        <q-card>
+          <q-form @submit="onSubmitImages">
+            <q-card-section>
+              <span class="text-h6">Guardar imágenes de de la pantalla de cliente</span>
+            </q-card-section>
+            <q-card-section>
+              <div class="flex justify-between items-center full-width text-center">
+                <file-button-component color="primary" @upload="changeFiles" />
+              </div>
+              <file-component :files="configFiles" @delete:files="deleteFile" />
+            </q-card-section>
+            <q-card-actions align="right">
+              <q-btn
+                color="primary"
+                label="Guardar"
+                icon="check_circle"
+                type="submit"
+                :loading="loading"
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card>
+    </q-step>
     </q-stepper>
   </q-page>
 </template>
@@ -255,9 +399,11 @@
 <script setup>
 import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
+import ScheduleCompany from 'src/components/Company/ScheduleCompany.vue'
 import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
 import { ref } from 'vue'
+import FileComponent from 'src/components/FileComponent.vue'
 
 /**
  * Coins
@@ -304,6 +450,8 @@ const clients = ref([])
  * @type {Array}
  */
 const paymentMethods = ref([])
+
+const printers = ref([])
 /**
  * Store module authentication
  * @type {Object}
@@ -327,14 +475,27 @@ const company = ref(userSession.company_session)
  * @type {Object}
  */
 const companyConfig = ref({
+  id: company.value?.company_config?.id,
   paymentMethod: company.value?.company_config?.payment_method,
   invoiceType: company.value?.company_config?.invoice_type,
   typeOfService: company.value?.company_config?.type_of_service,
   coin: company.value?.company_config?.coin,
   client: company.value?.company_config?.client,
+  printer: company.value?.company_config?.printer,
   other: company.value?.company_config?.other || {},
-  point_of_sale: company.value?.company_config?.point_of_sale
+  point_of_sale: company.value?.company_config?.point_of_sale,
+  files: company.value?.company_config?.files || []
 })
+
+const menuConfig = ref({
+  ...companyConfig.value?.other?.menu
+})
+
+const fileBanner = ref({
+  url: menuConfig.value?.banner_url
+})
+
+const configFiles = ref([...companyConfig?.value?.files])
 
 /**
  * File
@@ -358,7 +519,37 @@ const onUpload = async (files) => {
   const filesSelected = await setFiles(files)
   file.value = filesSelected[0]
 }
+/**
+ * On upload
+ * @param {Array} files
+ */
+const onUploadBanner = async (files) => {
+  const filesSelected = await setFiles(files)
+  fileBanner.value = filesSelected[0]
+}
+/**
+ * On upload
+ * @param {Array} files
+ */
+const changeFiles = async (files) => {
+  const filesSelected = await setFiles(files)
+  configFiles.value = [...configFiles.value, ...filesSelected]
+}
 
+const deleteFile = async (file) => {
+  try {
+    const id = file[file.length - 1]
+    await api.delete(`files/${id}`)
+    const { data } = await api.get('company-configs')
+    store.setCompanySession({
+      ...company.value,
+      company_config: data.data
+    })
+    notify('Archivo eliminado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
 /**
  * Form data
  * @param {Object} data
@@ -410,6 +601,30 @@ const filterOptions = async (value, service, update) => {
     update(data)
   } catch (err) {
     notify(err.message, 'negative', 'warning')
+  }
+}
+const onSubmitImages = async () => {
+  if (!configFiles.value.length) {
+    notify('Debe seleccionar al menos un archivo', 'negative', 'warning')
+    return
+  }
+  try {
+    loading.value = true
+    const formData = new FormData()
+    configFiles.value.forEach((file, index) => {
+      formData.append(`files[${index}]`, file.file)
+    })
+    const { data } = await api.post(`company-configs/${companyConfig.value.id}/images`, formData)
+    console.log(data)
+    store.setCompanySession({
+      ...company.value,
+      company_config: data
+    })
+    notify('Guardado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loading.value = false
   }
 }
 /**
@@ -519,6 +734,18 @@ const filterCoins = async (value, update) => {
  * @param {String} value Value filter
  * @param {Callback} update update options
  */
+const filterPrinters = async (value, update) => {
+  filterOptions(value, 'printers', (data) => {
+    update(() => {
+      printers.value = data
+    })
+  })
+}
+/**
+ * Select category
+ * @param {String} value Value filter
+ * @param {Callback} update update options
+ */
 const filterClients = async (value, update) => {
   filterOptions(value, 'clients', (data) => {
     update(() => {
@@ -539,6 +766,27 @@ const filterTypeOfServices = async (value, update) => {
   })
 }
 
+const saveMenuConfig = async () => {
+  try {
+    loading.value = true
+    const formData = new FormData()
+    formData.append('file', fileBanner.value.file)
+    formData.append('other', JSON.stringify({
+      ...companyConfig.value.other,
+      menu: menuConfig.value
+    }))
+    const { data } = await api.post(`session/company-other-configs/${company.value.id}`, formData)
+    store.setCompanySession({
+      ...company.value,
+      company_config: data
+    })
+    notify('Guardado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  } finally {
+    loading.value = false
+  }
+}
 /**
  * Save company config
  * @param {Object} data
@@ -553,6 +801,7 @@ const onSubmitConfig = async () => {
       invoice_type_id: companyConfig.value?.invoiceType?.id,
       payment_method_id: companyConfig.value?.paymentMethod?.id,
       client_id: companyConfig.value?.client?.id,
+      printer_id: companyConfig.value?.printer?.id,
       other: companyConfig.value?.other,
       point_of_sale: companyConfig.value?.point_of_sale
     })
