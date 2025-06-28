@@ -275,6 +275,7 @@ public class PrinterPlugin extends Plugin {
             call.reject("Error in print method: " + e.getMessage());
         }
     }
+    
     private void setAlignment(String align) throws IOException {
         byte[] command;
         switch (align) {

@@ -2,7 +2,7 @@ import { Device } from '@capacitor/device'
 import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { boot } from 'quasar/wrappers'
-import { getPrintersB } from 'src/const/printInvoiceAndroid'
+import { commandPrint } from 'src/const/printers'
 import { authentication } from 'src/stores/module-authentication'
 import { echo } from './pusher'
 
@@ -99,14 +99,15 @@ const reconnectEcho = async (userSession) => {
     if (echo.connector.pusher.connection.state !== 'connected') {
       throw new Error('Socket desconectado')
     }
-
+    console.log(docNumber)
     socketChannel = echo.private(CHANNEL_NAME).listen(`.NewOrderComanda_${docNumber}`, async (event) => {
       const printerName = event?.printer?.device?.toLowerCase().trim()
+      console.log(printerName, deviceName)
       if (printerName === deviceName) {
         if (!(await App.getState()).isActive) {
           showNotification('Nuevo pedido recibido', 'Preparando comanda...')
         }
-        await getPrintersB(event.invoice, event.type === 'ticket' ? 1 : 0, event.type)
+        await commandPrint(event.invoice)
       }
     })
 
@@ -152,6 +153,7 @@ const verifyConnection = async (userSession) => {
   try {
     const pusher = echo?.connector?.pusher
     const channel = pusher?.channel(`private-${CHANNEL_NAME}`)
+    console.log(channel)
 
     if (!pusher || pusher.connection.state !== 'connected' || !channel?.subscribed) {
       console.warn('⚠️ Verificación fallida, reconectando...')
