@@ -38,7 +38,7 @@ export const previewTicket = async (data, userSession) => {
     doc.text(fields?.voucher_type?.Desc, centrarTexto(fields?.voucher_type?.Desc?.toUpperCase(), true), y)
     doc.setFontSize(10)
     y += 5
-    doc.text(`Código: ${fields.voucher_type.Id}`, centrarTexto(`Código: ${fields.voucher_type.Id}`, true), y)
+    doc.text(`Código: ${fields.voucher_type.Id}`, centrarTexto(`Código: ${fields?.voucher_type?.Id}`, true), y)
     y += 7
   }
   if (data.billing) {

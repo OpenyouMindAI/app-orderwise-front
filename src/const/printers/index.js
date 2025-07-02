@@ -64,6 +64,7 @@ export const ticketPrint = async (data, printer = null) => {
       directTicketPrintBluetooth(printerSelected, data, device)
     }
   } catch (error) {
+    console.error(error)
     notify(error.message, 'negative', 'warning')
   }
 }
