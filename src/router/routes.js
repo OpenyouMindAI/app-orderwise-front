@@ -190,6 +190,12 @@ const routes = [
         component: () => import('pages/TransferProductPage.vue')
       },
       {
+        path: 'inventory-count',
+        name: 'InventoryCount',
+        meta: { requiresAuth: true },
+        component: () => import('pages/InventoryCountPage.vue')
+      },
+      {
         path: 'sessions-manager',
         name: 'SessionsManager',
         meta: { requiresAuth: true },
