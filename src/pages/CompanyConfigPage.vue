@@ -262,6 +262,14 @@
                   />
                 </div>
                 <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
+                  <q-checkbox
+                    filled
+                    label="Fact. Parcial"
+                    dense
+                    v-model="companyConfig.other.partial_billing"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
                   <q-input
                     filled
                     label="Punto de venta"
@@ -484,7 +492,8 @@ const companyConfig = ref({
   printer: company.value?.company_config?.printer,
   other: company.value?.company_config?.other || {},
   point_of_sale: company.value?.company_config?.point_of_sale,
-  files: company.value?.company_config?.files || []
+  files: company.value?.company_config?.files || [],
+  partial_billing: company.value?.company_config?.partial_billing || false
 })
 
 const menuConfig = ref({
@@ -615,7 +624,6 @@ const onSubmitImages = async () => {
       formData.append(`files[${index}]`, file.file)
     })
     const { data } = await api.post(`company-configs/${companyConfig.value.id}/images`, formData)
-    console.log(data)
     store.setCompanySession({
       ...company.value,
       company_config: data

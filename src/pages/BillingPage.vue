@@ -569,6 +569,7 @@
               <q-markup-table>
                 <thead>
                   <tr>
+                    <th class="text-left" v-if="partialBilling">✅</th>
                     <th class="text-left">Método de pago</th>
                     <th class="text-left">Referencia</th>
                     <th class="text-right">Monto</th>
@@ -577,6 +578,9 @@
                 </thead>
                 <tbody>
                   <tr v-for="(payment, index) in payments" :key="payment.id">
+                    <td class="text-left" v-if="partialBilling">
+                      <q-checkbox v-model="payment.checked" color="primary"/>
+                    </td>
                     <td class="text-left">{{ payment.name }}</td>
                     <td class="text-left">
                       <span v-if="payment.reference"> {{ payment.reference }}</span>
@@ -978,6 +982,7 @@ export default {
   },
   data () {
     return {
+      partialBilling: false,
       selectedPriceList: null,
       priceInputType: 'list',
       waitingPayment: false,
@@ -2268,6 +2273,7 @@ export default {
       this.coin = companySession?.company_config?.coin
       this.companyConfig = companySession?.company_config
       this.voucherType = companySession?.company_config?.other?.voucher_type
+      this.partialBilling = companySession?.company_config?.other?.partial_billing || false
       this.calculateTotal()
     },
     /**
