@@ -33,7 +33,7 @@ export default configure(function (/* ctx */) {
       'authorization',
       'VueHtmlToPaper',
       'pusher',
-      'background-mode',
+      // 'background-mode',
       'statusbar',
       'company-config'
     ],

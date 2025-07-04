@@ -1153,16 +1153,6 @@ const loadUsers = async () => {
   }
 }
 
-const getStartCountButtonLabel = () => {
-  if (!currentCount.value.id) {
-    return 'Iniciar Primer Conteo'
-  }
-  if (currentCount.value.status === 'active') {
-    return 'Conteo Activo'
-  }
-  return 'Nuevo Conteo'
-}
-
 const handleStartCount = () => {
   if (currentCount.value.status === 'active') {
     notify('Ya tienes un conteo activo', 'warning', 'warning')
@@ -1206,9 +1196,13 @@ const openCountDialog = () => {
     notify('No hay un conteo activo', 'negative', 'warning')
     return
   }
-
-  showCountDialog.value = true
   manualBarcode.value = ''
+
+  if ($q.platform.is.nativeMobile) {
+    openScanner()
+  } else {
+    showCountDialog.value = true
+  }
 }
 
 const confirmCloseCount = () => {
