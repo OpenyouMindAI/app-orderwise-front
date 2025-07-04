@@ -997,11 +997,11 @@ const detailFilters = ref({
   barcode: ''
 })
 
-const deviationOptions = [
-  { label: 'Desviaciones Positivas', value: 'positive' },
-  { label: 'Desviaciones Negativas', value: 'negative' },
-  { label: 'Sin Desviaciones', value: 'none' }
-]
+// const deviationOptions = [
+//   { label: 'Desviaciones Positivas', value: 'positive' },
+//   { label: 'Desviaciones Negativas', value: 'negative' },
+//   { label: 'Sin Desviaciones', value: 'none' }
+// ]
 
 // Computed properties
 const totalProducts = computed(() => scannedProducts.value.length)
@@ -1066,6 +1066,9 @@ const initializeComponent = async () => {
     if (currentCount.value.id && currentCount.value.status === 'active') {
       await getCountProducts()
     }
+
+    userSession.is_root = userSession.is_root || setPermissionsByUser(['SAM'])
+
     if (userSession.is_root) {
       await loadUsers()
     }
@@ -1074,6 +1077,10 @@ const initializeComponent = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+const setPermissionsByUser = (data) => {
+  return userSession.roles.some(role => data.includes(role.acronym))
 }
 
 const loadCurrentCount = async () => {
