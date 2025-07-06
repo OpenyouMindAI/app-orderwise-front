@@ -1091,7 +1091,7 @@ const loadCurrentCount = async () => {
     const { data } = await api.get('counts', {
       params: {
         dataEqualFilter: {
-          user_id: userSession.id,
+          user_id: userSession.is_root ? null : userSession.id,
           branch_office_id: branchOffice?.id,
           status: 'active'
         },
