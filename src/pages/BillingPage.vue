@@ -88,7 +88,7 @@
                 label="Código"
                 ref="barcode"
                 :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
-                @keyup.enter="getOneProduct(barcode)"
+                @keyup.enter="processBarcode(barcode)"
               />
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
@@ -960,7 +960,7 @@
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatDate, formatNumber, loading, notify } from 'src/const/mixins'
+import { formatDate, formatNumber, loading, notify, BALANZA_PREFIXES } from 'src/const/mixins'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
@@ -1016,6 +1016,7 @@ export default {
        * @type {Number}
        */
       currentAmount: 0,
+      balanceCode: 0,
       /**
        * Panel
        * @type {String}
@@ -1519,7 +1520,7 @@ export default {
             scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING
           }
         })
-        await this.getOneProduct(result.ScanResult)
+        await this.processBarcode(result.ScanResult)
         this.startScanner()
       } catch (error) {
         if (error instanceof Error) {
@@ -1614,6 +1615,96 @@ export default {
     roundToFourDecimals (number) {
       const factor = Math.pow(10, 3)
       return Math.floor(number * factor) / factor
+    },
+    /**
+     * Get one product
+     * @param {Number} barcode barcode product
+     * @returns {Promise<void>}
+     */
+    async processBarcode (barcode) {
+      try {
+        if (!barcode || typeof barcode !== 'string' || barcode.length < 13) {
+          this.getOneProduct(barcode)
+          return
+        }
+
+        // Si tienes prefijo configurado:
+        const balancePrefix = (typeof this.balanceCode === 'string' && this.balanceCode.length > 0)
+          ? this.balanceCode
+          : null
+
+        let prefixLength = 2
+        let prefixes = []
+
+        if (balancePrefix) {
+          prefixLength = balancePrefix.length
+          prefixes.push(balancePrefix)
+        } else {
+          prefixes = BALANZA_PREFIXES
+        }
+
+        const prefix = barcode.substring(0, prefixLength)
+
+        if (prefixes.includes(prefix)) {
+          // Posiciones dinámicas
+          const pluStart = prefixLength
+          const pluEnd = pluStart + 4
+          const variableStart = pluEnd
+          const variableEnd = variableStart + 6
+          const checkDigitIndex = variableEnd
+
+          const pluRaw = barcode.substring(pluStart, pluEnd)
+          const variablePart = barcode.substring(variableStart, 12)
+          const checkDigit = barcode.substring(checkDigitIndex, checkDigitIndex + 1)
+
+          const plu = parseInt(pluRaw, 10).toString() // quita ceros a la izquierda
+
+          console.log('Prefijo:', prefix)
+          console.log('PLU (raw):', pluRaw)
+          console.log('PLU real:', plu)
+          console.log('Variable Part:', variablePart)
+          console.log('Check digit:', checkDigit)
+
+          if (!/^\d+$/.test(variablePart)) {
+            notify('Formato inválido en importe/peso', 'negative', 'warning')
+            this.getOneProduct(barcode)
+            return
+          }
+
+          // Buscar producto por PLU real
+          const product = await this.getProduct(plu)
+          if (!product) {
+            notify('Producto no encontrado', 'negative', 'warning')
+            this.getOneProduct(barcode)
+            return
+          }
+
+          const importe = parseInt(variablePart, 10) / 1000
+
+          if (isNaN(importe) || importe <= 0) {
+            notify('Importe inválido', 'negative', 'warning')
+            this.getOneProduct(barcode)
+            return
+          }
+
+          this.quantity = importe
+          console.log('✅ Código balanza procesado:')
+          console.log('Producto:', product)
+          console.log('Importe:', importe.toFixed(3))
+
+          this.validateProduct(product, false)
+
+          this.barcode = null
+          return
+        }
+
+        // No es balanza
+        this.getOneProduct(barcode)
+      } catch (error) {
+        console.error('Error procesando código de balanza:', error)
+        notify('Error procesando producto', 'negative', 'warning')
+        this.getOneProduct(barcode)
+      }
     },
     /**
      * Set data pagination emit event
@@ -2273,6 +2364,7 @@ export default {
       this.coin = companySession?.company_config?.coin
       this.companyConfig = companySession?.company_config
       this.voucherType = companySession?.company_config?.other?.voucher_type
+      this.balanceCode = companySession?.company_config?.other?.balance_code
       this.partialBilling = companySession?.company_config?.other?.partial_billing || false
       this.calculateTotal()
     },
@@ -2337,7 +2429,6 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
-      console.log(product)
       this.products = [
         ...this.products,
         {
@@ -2409,11 +2500,8 @@ export default {
       this.currentAmount = 0
       this.quantityDialog = false
     },
-    /**
-     * Get one product
-     * @param {Number} barcode barcode product
-     */
-    async getOneProduct (barcode) {
+
+    async getProduct (barcode) {
       try {
         const { data } = await this.$api.get('products', {
           params: {
@@ -2422,15 +2510,22 @@ export default {
             stock: true
           }
         })
-        const product = data[0]
-        if (product) {
-          this.validateProduct(product, true)
-          this.barcode = null
-        } else {
-          notify('Producto no encontrado', 'negative', 'warning')
-        }
+        return data[0]
       } catch (error) {
         notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Get one product
+     * @param {Number} barcode barcode product
+     */
+    async getOneProduct (barcode) {
+      const product = await this.getProduct(barcode)
+      if (product) {
+        this.validateProduct(product, true)
+        this.barcode = null
+      } else {
+        notify('Producto no encontrado', 'negative', 'warning')
       }
     }
   }

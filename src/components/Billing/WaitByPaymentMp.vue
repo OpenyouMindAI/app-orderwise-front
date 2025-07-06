@@ -172,11 +172,11 @@ const setBillModel = (model) => {
     externalPosId: '1',
     description: model.description || model.title,
     products: model.products.map(product => {
-      const conversion = convertToMinimalUnit(product.quantity, product.price, product.unit_of_measure?.acronym)
+      // const conversion = convertToMinimalUnit(product.quantity, product.price, product.unit_of_measure?.acronym)
       return {
         ...product,
-        price: conversion.pricePerMinimalUnit,
-        quantity: conversion.minimalAmount,
+        price: product.subtotal,
+        quantity: 1,
         category: product?.category?.name || 'Sin categoría',
         unit_measure: product?.unit_of_measure?.name,
         currency_id: product.currency_id

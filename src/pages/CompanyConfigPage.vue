@@ -96,7 +96,7 @@
         </q-card>
       </q-step>
       <q-step
-        title="Configurar impresora"
+        title="Configurar impresora y balanza"
         icon="printer"
         clickable
         :name="2"
@@ -105,7 +105,18 @@
       <q-card>
         <q-form @submit="onSubmitConfig">
           <q-card-section>
-            <div class="text-h6">Configuración de impresora</div>
+            <div class="text-h6">Configuración de impresora y balanza</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="row q-col-gutter-sm items-center full-width">
+              <div class="col-xs-12 col-sm-12 col-md-12">
+                <q-input
+                  label="Código de identificación de la balanza"
+                  filled
+                  v-model="companyConfig.other.balance_code"
+                />
+              </div>
+            </div>
           </q-card-section>
           <q-card-section>
             <div class="row q-col-gutter-sm items-center full-width">
@@ -120,6 +131,7 @@
                   label="Impresora por defecto"
                   option-label="name"
                   option-value="id"
+                  filled
                   v-model="companyConfig.printer"
                   :options="printers"
                   @filter="filterPrinters"
