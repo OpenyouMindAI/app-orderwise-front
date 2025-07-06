@@ -109,7 +109,12 @@
                             autofocus
                             label="Código de barra"
                             dense
-                          />
+                            @blur="getOneProduct(product.barcode)"
+                        >
+                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                          </template>
+                        </q-input>
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-input
@@ -445,7 +450,7 @@
           <q-space />
           <q-btn icon="close" flat round dense @click="closeModal" />
         </q-card-section>
-        <q-form @submit="saveProduct">
+        <q-form @submit="saveProduct" ref="formAddProduct">
           <q-card-section class="scroll " style="height: calc(100vh - 200px);">
             <div class="row q-col-gutter-sm">
               <div class="row col-md-7 col-xs-12 col-sm-12">
@@ -464,7 +469,12 @@
                           autofocus
                           label="Código de barra"
                           dense
-                        />
+                          @blur="getOneProduct(product.barcode)"
+                        >
+                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                          </template>
+                        </q-input>
                       </div>
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                         <q-input
@@ -834,6 +844,13 @@ import PackProduct from 'src/components/Product/PackProduct.vue'
 import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerAndroidScanningLibrary,
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint
+} from '@capacitor/barcode-scanner'
 export default {
   components: { StockProduct, PackProduct, BulkPriceDialog },
   data () {
@@ -991,6 +1008,31 @@ export default {
     }
   },
   methods: {
+    /**
+     * Start scanner
+     */
+    async startScanner () {
+      try {
+        const result = await CapacitorBarcodeScanner.scanBarcode({
+          hint: CapacitorBarcodeScannerTypeHint.ALL,
+          scanInstructions: 'Escanear código',
+          scanButton: false,
+          scanText: 'Scan',
+          cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+          scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE,
+          android: {
+            scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING
+          }
+        })
+        this.getOneProduct(result.ScanResult)
+      } catch (error) {
+        if (error instanceof Error) {
+          // notify(error.message, 'negative', 'warning')
+        } else {
+          notify('Error al escanear el código', 'negative', 'warning')
+        }
+      }
+    },
     addPriceList () {
       this.priceLists.push({
         name: `Lista ${this.priceLists.length + 1}`,
@@ -1048,6 +1090,38 @@ export default {
     openCompaniesDialog () {
       this.companiesDialog = true
       this.getAllCompanies()
+    },
+    /**
+     * Get one product
+     * @param {Number} barcode barcode product
+     * @returns {Promise<void>}
+     */
+    async getOneProduct (barcode) {
+      try {
+        const { data } = await this.$api.get('products', {
+          params: {
+            dataEqualFilter: { barcode }
+          }
+        })
+        if (data[0]) {
+          this.product = data[0]
+          notify('Producto ya se encuentra registrado', 'positive', 'check_circle')
+        } else {
+          this.product = {
+            barcode,
+            images: [],
+            is_bundle: 0,
+            show_catalog: 0,
+            is_addons: 0,
+            skip_stock: 0
+          }
+          setTimeout(() => {
+            this.$refs.formAddProduct.resetValidation()
+          }, 500)
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
     /**
      * Get all companies
