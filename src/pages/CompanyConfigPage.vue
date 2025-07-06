@@ -411,7 +411,16 @@
             </q-card-actions>
           </q-form>
         </q-card>
-    </q-step>
+      </q-step>
+      <q-step
+        title="Configurar impresora y balanza"
+        icon="printer"
+        clickable
+        :name="6"
+        :done="step > 6"
+      >
+        <IntegrationComponent />
+      </q-step>
     </q-stepper>
   </q-page>
 </template>
@@ -424,6 +433,7 @@ import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
 import { ref } from 'vue'
 import FileComponent from 'src/components/FileComponent.vue'
+import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
 
 /**
  * Coins
