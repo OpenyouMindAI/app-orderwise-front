@@ -99,7 +99,6 @@ const reconnectEcho = async (userSession) => {
     if (echo.connector.pusher.connection.state !== 'connected') {
       throw new Error('Socket desconectado')
     }
-    console.log(docNumber)
     socketChannel = echo.private(CHANNEL_NAME).listen(`.NewOrderComanda_${docNumber}`, async (event) => {
       const printerName = event?.printer?.device?.toLowerCase().trim()
       console.log(printerName, deviceName)

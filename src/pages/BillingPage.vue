@@ -973,6 +973,7 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { commandPrint, ticketPrint } from 'src/const/printers'
+import { echoPay } from 'src/boot/pusher'
 
 export default {
   name: 'BillingPage',
@@ -1417,6 +1418,12 @@ export default {
       if (data && companySession?.company_config?.payment_method) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
+      if (data) {
+        const channel = echoPay.channel('mercado-pago-payment')
+        channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`, (data) => {
+          notify('Pago recibido', 'positive', 'check_circle')
+        })
+      }
     },
     branchOffice (data) {
       if (data) {
@@ -1650,20 +1657,11 @@ export default {
           const pluStart = prefixLength
           const pluEnd = pluStart + 4
           const variableStart = pluEnd
-          const variableEnd = variableStart + 6
-          const checkDigitIndex = variableEnd
 
           const pluRaw = barcode.substring(pluStart, pluEnd)
           const variablePart = barcode.substring(variableStart, 12)
-          const checkDigit = barcode.substring(checkDigitIndex, checkDigitIndex + 1)
 
           const plu = parseInt(pluRaw, 10).toString() // quita ceros a la izquierda
-
-          console.log('Prefijo:', prefix)
-          console.log('PLU (raw):', pluRaw)
-          console.log('PLU real:', plu)
-          console.log('Variable Part:', variablePart)
-          console.log('Check digit:', checkDigit)
 
           if (!/^\d+$/.test(variablePart)) {
             notify('Formato inválido en importe/peso', 'negative', 'warning')
@@ -1688,9 +1686,6 @@ export default {
           }
 
           this.quantity = importe
-          console.log('✅ Código balanza procesado:')
-          console.log('Producto:', product)
-          console.log('Importe:', importe.toFixed(3))
 
           this.validateProduct(product, false)
 
