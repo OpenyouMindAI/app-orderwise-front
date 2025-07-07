@@ -1,427 +1,555 @@
 <template>
-  <q-page padding>
-    <q-stepper
-      v-model="step"
-      vertical
-      color="primary"
-      animated
-      header-nav
-    >
-      <q-step
-        :name="1"
-        title="Información de la empresa"
-        icon="settings"
-        :done="step > 1"
-      >
-        <q-card>
-          <q-form @submit="onSubmit">
-            <q-card-section>
-              <span class="text-h6">Cambiar logo de la empresa</span>
-            </q-card-section>
-            <q-card-section class="flex justify-center q-pt-none">
-              <q-img
-                :src="file.url || logo.white"
-                spinner-color="white"
-                style="height: 200px;"
-                class="rounded-borders"
-                fit="contain"
-              >
-                <div class="absolute-bottom text-subtitle1 text-center">
-                  <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUpload" />
-                </div>
-                <template v-slot:error>
-                  <div class="absolute-bottom text-subtitle1 text-center">
-                    <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUpload" />
+  <q-page class="minimalist-config">
+    <div class="config-container">
+      <!-- Progress Header -->
+      <div class="progress-header">
+        <div class="progress-content">
+          <h1 class="main-title">Configuración</h1>
+          <p class="main-subtitle">Configura tu empresa en {{ totalSteps }} pasos simples</p>
+
+          <div class="progress-bar-container">
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :style="{ width: `${(step / totalSteps) * 100}%` }"
+              ></div>
+            </div>
+            <span class="progress-text">{{ step }} de {{ totalSteps }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Steps Navigation -->
+      <div class="steps-nav">
+        <div
+          v-for="stepItem in steps"
+          :key="stepItem.number"
+          class="step-nav-item"
+          :class="{
+            'active': step === stepItem.number,
+            'completed': step > stepItem.number
+          }"
+          @click="step = stepItem.number"
+        >
+          <div class="step-nav-icon">
+            <q-icon
+              :name="step > stepItem.number ? 'check' : stepItem.icon"
+              size="16px"
+            />
+          </div>
+          <span class="step-nav-label">{{ stepItem.title }}</span>
+        </div>
+      </div>
+
+      <!-- Step Content -->
+      <div class="step-content">
+        <!-- Step 1: Company Information -->
+        <div v-if="step === 1" class="step-card">
+          <div class="step-header">
+            <h2>Información básica</h2>
+            <p>Los datos esenciales de tu empresa</p>
+          </div>
+
+          <q-form @submit="onSubmit" class="step-form">
+            <!-- Logo Upload -->
+            <div class="logo-section">
+              <div class="upload-label">Logo de la empresa</div>
+              <div class="logo-preview" @click="triggerLogoUpload">
+                <q-img
+                  :src="file.url || logo.white"
+                  class="logo-image"
+                  fit="contain"
+                >
+                  <div class="logo-overlay">
+                    <q-icon name="photo_camera" size="18px" />
+                    <span>Cambiar logo</span>
                   </div>
-                </template>
-              </q-img>
-            </q-card-section>
-            <q-card-section class="q-pb-none">
-              <span class="text-h6">Datos de perfil de la empresa</span>
-            </q-card-section>
-            <q-card-section class="q-pb-sm">
-              <div class="row q-col-gutter-x-md">
-                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-                  <q-input
-                    v-model="company.name"
-                    filled
-                    label="Nombre de la empresa"
-                    lazy-rules
-                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-                  />
-                </div>
-                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-                  <q-input
-                    v-model="company.document_number"
-                    filled
-                    label="Número de documento"
-                    lazy-rules
-                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-                  />
-                </div>
-                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-                  <q-input
-                    v-model="company.email"
-                    filled
-                    label="Correo electrónico"
-                    lazy-rules
-                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-                  />
-                </div>
-                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
-                  <q-input
-                    v-model="company.phone_number"
-                    filled
-                    label="Número de teléfono"
-                    lazy-rules
-                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-                  />
-                </div>
-                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                  <q-input
-                    v-model="company.address"
-                    filled
-                    label="Dirección"
-                    lazy-rules
-                    type="textarea"
-                    :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
-                  />
-                </div>
+                </q-img>
               </div>
-            </q-card-section>
-            <q-card-actions align="right" class="q-pt-xs">
-              <q-btn color="primary" label="Guardar" icon="save" type="submit" :loading="loading"/>
-            </q-card-actions>
-          </q-form>
-        </q-card>
-      </q-step>
-      <q-step
-        title="Configurar impresora y balanza"
-        icon="printer"
-        clickable
-        :name="2"
-        :done="step > 2"
-      >
-      <q-card>
-        <q-form @submit="onSubmitConfig">
-          <q-card-section>
-            <div class="text-h6">Configuración de impresora y balanza</div>
-          </q-card-section>
-          <q-card-section>
-            <div class="row q-col-gutter-sm items-center full-width">
-              <div class="col-xs-12 col-sm-12 col-md-12">
+              <file-button-component
+                ref="logoUploader"
+                @upload="onUpload"
+                style="display: none"
+              />
+            </div>
+
+            <!-- Form Fields -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="field-label">Nombre de la empresa</label>
                 <q-input
-                  label="Código de identificación de la balanza"
-                  filled
-                  v-model="companyConfig.other.balance_code"
+                  v-model="company.name"
+                  outlined
+                  dense
+                  class="custom-input"
+                  :rules="[val => val && val.length > 0 || 'Requerido']"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Documento</label>
+                <q-input
+                  v-model="company.document_number"
+                  outlined
+                  dense
+                  class="custom-input"
+                  :rules="[val => val && val.length > 0 || 'Requerido']"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Email</label>
+                <q-input
+                  v-model="company.email"
+                  outlined
+                  dense
+                  type="email"
+                  class="custom-input"
+                  :rules="[val => val && val.length > 0 || 'Requerido']"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Teléfono</label>
+                <q-input
+                  v-model="company.phone_number"
+                  outlined
+                  dense
+                  class="custom-input"
+                  :rules="[val => val && val.length > 0 || 'Requerido']"
+                />
+              </div>
+
+              <div class="form-group full-width">
+                <label class="field-label">Dirección</label>
+                <q-input
+                  v-model="company.address"
+                  outlined
+                  dense
+                  type="textarea"
+                  rows="2"
+                  class="custom-input"
+                  :rules="[val => val && val.length > 0 || 'Requerido']"
                 />
               </div>
             </div>
-          </q-card-section>
-          <q-card-section>
-            <div class="row q-col-gutter-sm items-center full-width">
-              <div class="col-xs-12 col-sm-12 col-md-2">
-                <q-checkbox
-                  label="Impresión directa"
-                  v-model="companyConfig.other.directPrint"
+
+            <div class="step-actions">
+              <div></div>
+              <q-btn
+                type="submit"
+                color="primary"
+                label="Continuar"
+                :loading="loading"
+                unelevated
+                class="action-btn"
+              />
+            </div>
+          </q-form>
+        </div>
+
+        <!-- Step 2: Printer Configuration -->
+        <div v-if="step === 2" class="step-card">
+          <div class="step-header">
+            <h2>Dispositivos</h2>
+            <p>Configura tu impresora y balanza</p>
+          </div>
+
+          <q-form @submit="onSubmitConfig" class="step-form">
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label class="field-label">Código de balanza</label>
+                <q-input
+                  v-model="companyConfig.other.balance_code"
+                  outlined
+                  dense
+                  class="custom-input"
                 />
               </div>
-              <div class="col-xs-12 col-sm-12 col-md-10">
+
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <q-checkbox
+                    v-model="companyConfig.other.directPrint"
+                    label="Impresión directa"
+                    color="primary"
+                  />
+                  <p class="checkbox-description">Activar impresión automática</p>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Impresora</label>
                 <q-select
-                  label="Impresora por defecto"
-                  option-label="name"
-                  option-value="id"
-                  filled
                   v-model="companyConfig.printer"
                   :options="printers"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  class="custom-input"
                   @filter="filterPrinters"
                 />
               </div>
             </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn
-              color="primary"
-              label="Guardar"
-              icon="save"
-              type="submit"
-              :loading="loading"
-            />
-          </q-card-actions>
-        </q-form>
-      </q-card>
-      </q-step>
-      <q-step
-        :name="3"
-        title="Valores por defecto"
-        icon="settings"
-        clickable
-        :done="step > 3"
-      >
-        <q-card>
-          <q-form @submit="onSubmitConfig">
-            <q-card-section>
-              <span class="text-h6">Valores por defecto para la facturación</span>
-            </q-card-section>
-            <q-card-section class="q-pb-none">
-              <div class="row q-col-gutter-sm">
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    label="Cliente"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="companyConfig.client"
-                    :options="clients"
-                    @filter="filterClients"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    label="Tipo de factura"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="companyConfig.invoiceType"
-                    :options="invoiceTypes"
-                    @filter="filterInvoiceTypes"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    label="Tipo de servicio"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="companyConfig.typeOfService"
-                    :options="typeOfServices"
-                    @filter="filterTypeOfServices"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    filled
-                    dense
-                    label="Método de pago"
-                    option-label="name"
-                    option-value="id"
-                    v-model="companyConfig.paymentMethod"
-                    :options="paymentMethods"
-                    @filter="filtersPaymentMethods"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    filled
-                    dense
-                    label="Moneda"
-                    option-label="name"
-                    option-value="id"
-                    v-model="companyConfig.coin"
-                    :options="coins"
-                    @filter="filterCoins"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    label="Tipo de concepto"
-                    input-debounce="0"
-                    option-label="Desc"
-                    option-value="id"
-                    v-model="companyConfig.other.concept_type"
-                    :options="conceptTypes"
-                    @filter="getConceptTypes"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    label="Tipo de factura (Arca)"
-                    input-debounce="0"
-                    option-label="Desc"
-                    option-value="id"
-                    v-model="companyConfig.other.voucher_type"
-                    :options="voucherTypes"
-                    @filter="getVoucherTypes"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    label="Iva (%)"
-                    input-debounce="0"
-                    option-label="Desc"
-                    option-value="id"
-                    v-model="companyConfig.other.aliquot_type"
-                    :options="aliquotTypes"
-                    @filter="getAliquotTypes"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-checkbox
-                    filled
-                    label="Fact. Parcial"
-                    dense
-                    v-model="companyConfig.other.partial_billing"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-input
-                    filled
-                    label="Punto de venta"
-                    dense
-                    v-model="companyConfig.point_of_sale"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-input
-                    filled
-                    label="Inicio de actividades"
-                    dense
-                    type="date"
-                    v-model="companyConfig.other.activity_start_date"
-                  />
-                </div>
-                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-12 col-xs-12">
-                  <q-input
-                    filled
-                    label="Ingresos brutos"
-                    dense v-model="companyConfig.other.income_brut"
-                  />
-                </div>
-              </div>
-            </q-card-section>
-            <q-card-actions align="right">
-              <q-btn color="primary" label="Guardar" icon="save" type="submit" :loading="loading"/>
-            </q-card-actions>
+
+            <div class="step-actions">
+              <q-btn
+                flat
+                label="Anterior"
+                @click="step = 1"
+                class="action-btn-secondary"
+              />
+              <q-btn
+                type="submit"
+                color="primary"
+                label="Continuar"
+                :loading="loading"
+                unelevated
+                class="action-btn"
+              />
+            </div>
           </q-form>
-        </q-card>
-      </q-step>
-      <q-step
-        :name="4"
-        title="Configurar menu"
-        icon="menu_book"
-        clickable
-        :done="step > 4"
-      >
-        <q-card class="store-hours-manager q-mb-lg">
-          <q-card-section>
-            <div class="row items-center q-mb-md">
-              <div class="col-12 col-sm-6">
-                <div class="text-h6 text-weight-bold">
-                  <q-icon name="panorama" color="primary" size="sm" class="q-mr-xs" />
-                  Banner del menu
-                </div>
-                <div class="text-caption text-grey">
-                  Configura el banner del menu de la empresa
-                </div>
-              </div>
-            </div>
-            <q-img
-              :src="fileBanner?.url || logo.white"
-              spinner-color="white"
-              class="rounded-borders"
-              style="max-width: 100%; max-height: 200px;"
-              fit="contain"
-            >
-              <div class="absolute-bottom text-subtitle1 text-center">
-                <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUploadBanner" />
-              </div>
-              <template v-slot:error>
-                <div class="absolute-bottom text-subtitle1 text-center">
-                  <file-button-component icon="photo_camera" label="Subir imagen" @upload="onUploadBanner" />
-                </div>
-              </template>
-            </q-img>
-          </q-card-section>
-        </q-card>
-        <q-card class="store-hours-manager q-mb-lg">
-          <q-card-section>
-            <div class="row items-center q-mb-md">
-              <div class="col-12 col-sm-6">
-                <div class="text-h6 text-weight-bold">
-                  <q-icon name="edit" color="primary" size="sm" class="q-mr-xs" />
-                  Descripción de la empresa
-                </div>
-                <div class="text-caption text-grey">
-                  Configura la descripción de la empresa que aparece en el menu de la empresa
-                </div>
-              </div>
-            </div>
-            <q-editor v-model="menuConfig.description" />
-          </q-card-section>
-        </q-card>
-        <schedule-company
-          :schedule="menuConfig.schedule"
-          @update:schedule="($event) => menuConfig.schedule = $event"
-        />
-        <div class="full-width text-right">
-          <q-btn
-            color="primary"
-            label="Guardar"
-            icon="check_circle"
-            type="button"
-            @click="saveMenuConfig"
-            :loading="loading"
-          />
         </div>
-      </q-step>
-      <q-step
-        :name="5"
-        title="Configurar pantalla de cliente"
-        icon="img"
-        clickable
-        :done="step > 5"
-      >
-        <q-card>
-          <q-form @submit="onSubmitImages">
-            <q-card-section>
-              <span class="text-h6">Guardar imágenes de de la pantalla de cliente</span>
-            </q-card-section>
-            <q-card-section>
-              <div class="flex justify-between items-center full-width text-center">
-                <file-button-component color="primary" @upload="changeFiles" />
+
+        <!-- Step 3: Default Values -->
+        <div v-if="step === 3" class="step-card">
+          <div class="step-header">
+            <h2>Valores por defecto</h2>
+            <p>Configuración para facturación</p>
+          </div>
+
+          <q-form @submit="onSubmitConfig" class="step-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="field-label">Cliente</label>
+                <q-select
+                  v-model="companyConfig.client"
+                  :options="clients"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="filterClients"
+                />
               </div>
-              <file-component :files="configFiles" @delete:files="deleteFile" />
-            </q-card-section>
-            <q-card-actions align="right">
+
+              <div class="form-group">
+                <label class="field-label">Tipo de factura</label>
+                <q-select
+                  v-model="companyConfig.invoiceType"
+                  :options="invoiceTypes"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="filterInvoiceTypes"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Tipo de servicio</label>
+                <q-select
+                  v-model="companyConfig.typeOfService"
+                  :options="typeOfServices"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="filterTypeOfServices"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Método de pago</label>
+                <q-select
+                  v-model="companyConfig.paymentMethod"
+                  :options="paymentMethods"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  class="custom-input"
+                  @filter="filtersPaymentMethods"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Moneda</label>
+                <q-select
+                  v-model="companyConfig.coin"
+                  :options="coins"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  class="custom-input"
+                  @filter="filterCoins"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Tipo de concepto</label>
+                <q-select
+                  v-model="companyConfig.other.concept_type"
+                  :options="conceptTypes"
+                  option-label="Desc"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="getConceptTypes"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Tipo de factura (Arca)</label>
+                <q-select
+                  v-model="companyConfig.other.voucher_type"
+                  :options="voucherTypes"
+                  option-label="Desc"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="getVoucherTypes"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">IVA (%)</label>
+                <q-select
+                  v-model="companyConfig.other.aliquot_type"
+                  :options="aliquotTypes"
+                  option-label="Desc"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="getAliquotTypes"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Punto de venta</label>
+                <q-input
+                  v-model="companyConfig.point_of_sale"
+                  outlined
+                  dense
+                  class="custom-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Inicio de actividades</label>
+                <q-input
+                  v-model="companyConfig.other.activity_start_date"
+                  outlined
+                  dense
+                  type="date"
+                  class="custom-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Ingresos brutos</label>
+                <q-input
+                  v-model="companyConfig.other.income_brut"
+                  outlined
+                  dense
+                  class="custom-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <q-checkbox
+                    v-model="companyConfig.other.partial_billing"
+                    label="Facturación parcial"
+                    color="primary"
+                  />
+                  <p class="checkbox-description">Permitir facturación parcial</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <q-btn
+                flat
+                label="Anterior"
+                @click="step = 2"
+                class="action-btn-secondary"
+              />
+              <q-btn
+                type="submit"
+                color="primary"
+                label="Continuar"
+                :loading="loading"
+                unelevated
+                class="action-btn"
+              />
+            </div>
+          </q-form>
+        </div>
+
+        <!-- Step 4: Menu Configuration -->
+        <div v-if="step === 4" class="step-card">
+          <div class="step-header">
+            <h2>Menú</h2>
+            <p>Personaliza tu menú digital</p>
+          </div>
+
+          <div class="step-form">
+            <!-- Banner Upload -->
+            <div class="banner-section">
+              <div class="upload-label">Banner del menú</div>
+              <div class="banner-preview" @click="triggerBannerUpload">
+                <q-img
+                  :src="fileBanner?.url || logo.white"
+                  class="banner-image"
+                  fit="contain"
+                >
+                  <div class="banner-overlay">
+                    <q-icon name="photo_camera" size="18px" />
+                    <span>Cambiar banner</span>
+                  </div>
+                </q-img>
+              </div>
+              <file-button-component
+                ref="bannerUploader"
+                @upload="onUploadBanner"
+                style="display: none"
+              />
+            </div>
+
+            <!-- Description -->
+            <div class="form-group full-width">
+              <label class="field-label">Descripción</label>
+              <q-editor
+                v-model="menuConfig.description"
+                min-height="100px"
+                toolbar-color="grey-1"
+                toolbar-text-color="grey-8"
+                content-style="font-size: 14px"
+                class="custom-editor"
+              />
+            </div>
+
+            <!-- Schedule Component -->
+            <div class="schedule-section">
+              <div class="upload-label">Horarios de atención</div>
+              <div class="schedule-wrapper">
+                <schedule-company
+                  :schedule="menuConfig.schedule"
+                  @update:schedule="($event) => menuConfig.schedule = $event"
+                />
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <q-btn
+                flat
+                label="Anterior"
+                @click="step = 3"
+                class="action-btn-secondary"
+              />
               <q-btn
                 color="primary"
-                label="Guardar"
-                icon="check_circle"
-                type="submit"
+                label="Continuar"
+                @click="saveMenuConfig"
                 :loading="loading"
+                unelevated
+                class="action-btn"
               />
-            </q-card-actions>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Client Screen -->
+        <div v-if="step === 5" class="step-card">
+          <div class="step-header">
+            <h2>Pantalla de cliente</h2>
+            <p>Imágenes para mostrar a tus clientes</p>
+          </div>
+
+          <q-form @submit="onSubmitImages" class="step-form">
+            <div class="upload-section">
+              <div class="upload-label">Subir imágenes</div>
+              <div class="upload-area" @click="triggerFileUpload">
+                <q-icon name="cloud_upload" size="32px" color="grey-5" />
+                <h3>Arrastra archivos aquí</h3>
+                <p>o haz clic para seleccionar</p>
+              </div>
+              <file-button-component
+                ref="fileUploader"
+                @upload="changeFiles"
+                style="display: none"
+              />
+            </div>
+
+            <div class="files-section">
+              <file-component :files="configFiles" @delete:files="deleteFile" />
+            </div>
+
+            <div class="step-actions">
+              <q-btn
+                flat
+                label="Anterior"
+                @click="step = 4"
+                class="action-btn-secondary"
+              />
+              <q-btn
+                type="submit"
+                color="primary"
+                label="Continuar"
+                :loading="loading"
+                unelevated
+                class="action-btn"
+              />
+            </div>
           </q-form>
-        </q-card>
-      </q-step>
-      <q-step
-        title="Configurar impresora y balanza"
-        icon="printer"
-        clickable
-        :name="6"
-        :done="step > 6"
-      >
-        <IntegrationComponent />
-      </q-step>
-    </q-stepper>
+        </div>
+
+        <!-- Step 6: Integrations -->
+        <div v-if="step === 6" class="step-card">
+          <div class="step-header">
+            <h2>Integraciones</h2>
+            <p>Conecta con servicios externos</p>
+          </div>
+
+          <div class="step-form">
+            <div class="integration-wrapper">
+              <IntegrationComponent />
+            </div>
+
+            <div class="step-actions">
+              <q-btn
+                flat
+                label="Anterior"
+                @click="step = 5"
+                class="action-btn-secondary"
+              />
+              <q-btn
+                color="positive"
+                label="Finalizar"
+                icon="check_circle"
+                unelevated
+                class="action-btn"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </q-page>
 </template>
 
@@ -431,79 +559,29 @@ import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import ScheduleCompany from 'src/components/Company/ScheduleCompany.vue'
 import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
-import { ref } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
 
-/**
- * Coins
- * @type {Array}
- */
+// Reactive data
 const coins = ref([])
-/**
- * Coins
- * @type {Array}
- */
 const conceptTypes = ref([])
-/**
- * Coins
- * @type {Array}
- */
 const voucherTypes = ref([])
-/**
- * Type of service
- * @type {Array}
- */
 const typeOfServices = ref([])
-/**
- * Step
- * @type {Number}
- */
 const step = ref(1)
-/**
- * Invoice types
- * @type {Array}
- */
 const invoiceTypes = ref([])
-/**
- * Invoice types
- * @type {Array}
- */
 const aliquotTypes = ref([])
-/**
- * Invoice types
- * @type {Array}
- */
 const clients = ref([])
-/**
- * Payment methods
- * @type {Array}
- */
 const paymentMethods = ref([])
-
 const printers = ref([])
-/**
- * Store module authentication
- * @type {Object}
- */
+const loading = ref(false)
+
+// Store and session
 const store = authentication()
-
-/**
- * User session
- * @type {Object}
- */
 const userSession = store.userSession
-
-/**
- * Company session
- * @type {Object}
- */
 const company = ref(userSession.company_session)
 
-/**
- * Company config
- * @type {Object}
- */
+// Company config
 const companyConfig = ref({
   id: company.value?.company_config?.id,
   paymentMethod: company.value?.company_config?.payment_method,
@@ -528,40 +606,68 @@ const fileBanner = ref({
 
 const configFiles = ref([...companyConfig?.value?.files])
 
-/**
- * File
- * @type {Object}
- */
 const file = ref({
   url: userSession.company_session.url
 })
 
-/**
- * Loading
- * @type {Boolean}
- */
-const loading = ref(false)
+// Computed
+const totalSteps = computed(() => 6)
 
-/**
- * On upload
- * @param {Array} files
- */
+const steps = computed(() => [
+  { number: 1, title: 'Empresa', icon: 'business' },
+  { number: 2, title: 'Dispositivos', icon: 'print' },
+  { number: 3, title: 'Facturación', icon: 'receipt' },
+  { number: 4, title: 'Menú', icon: 'restaurant_menu' },
+  { number: 5, title: 'Pantalla', icon: 'tv' },
+  { number: 6, title: 'Integraciones', icon: 'hub' }
+])
+
+// Refs for file uploaders
+const logoUploader = ref(null)
+const bannerUploader = ref(null)
+const fileUploader = ref(null)
+
+// Methods
+const triggerLogoUpload = async () => {
+  await nextTick()
+  if (logoUploader.value && logoUploader.value.$el) {
+    const input = logoUploader.value.$el.querySelector('input[type="file"]')
+    if (input) {
+      input.click()
+    }
+  }
+}
+
+const triggerBannerUpload = async () => {
+  await nextTick()
+  if (bannerUploader.value && bannerUploader.value.$el) {
+    const input = bannerUploader.value.$el.querySelector('input[type="file"]')
+    if (input) {
+      input.click()
+    }
+  }
+}
+
+const triggerFileUpload = async () => {
+  await nextTick()
+  if (fileUploader.value && fileUploader.value.$el) {
+    const input = fileUploader.value.$el.querySelector('input[type="file"]')
+    if (input) {
+      input.click()
+    }
+  }
+}
+
 const onUpload = async (files) => {
   const filesSelected = await setFiles(files)
   file.value = filesSelected[0]
 }
-/**
- * On upload
- * @param {Array} files
- */
+
 const onUploadBanner = async (files) => {
   const filesSelected = await setFiles(files)
   fileBanner.value = filesSelected[0]
 }
-/**
- * On upload
- * @param {Array} files
- */
+
 const changeFiles = async (files) => {
   const filesSelected = await setFiles(files)
   configFiles.value = [...configFiles.value, ...filesSelected]
@@ -581,10 +687,7 @@ const deleteFile = async (file) => {
     notify(error.message, 'negative', 'warning')
   }
 }
-/**
- * Form data
- * @param {Object} data
- */
+
 const formDate = (data) => {
   const formData = new FormData()
   formData.append('file', file.value.file)
@@ -596,9 +699,6 @@ const formDate = (data) => {
   return formData
 }
 
-/**
- * Save company config
- */
 const onSubmit = async () => {
   try {
     loading.value = true
@@ -608,6 +708,7 @@ const onSubmit = async () => {
       ...data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+    step.value = 2
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -615,11 +716,6 @@ const onSubmit = async () => {
   }
 }
 
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
 const filterOptions = async (value, service, update) => {
   try {
     const { data } = await api.get(service, {
@@ -634,6 +730,7 @@ const filterOptions = async (value, service, update) => {
     notify(err.message, 'negative', 'warning')
   }
 }
+
 const onSubmitImages = async () => {
   if (!configFiles.value.length) {
     notify('Debe seleccionar al menos un archivo', 'negative', 'warning')
@@ -651,17 +748,14 @@ const onSubmitImages = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+    step.value = 6
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
     loading.value = false
   }
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const getConceptTypes = async (value, update) => {
   try {
     const { data } = await apiArca.get('metadata/concept-types', {
@@ -679,11 +773,7 @@ const getConceptTypes = async (value, update) => {
     notify(err.message, 'negative', 'warning')
   }
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const getAliquotTypes = async (value, update) => {
   try {
     const { data } = await apiArca.get('metadata/aliquot-types', {
@@ -701,11 +791,7 @@ const getAliquotTypes = async (value, update) => {
     notify(err.message, 'negative', 'warning')
   }
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const getVoucherTypes = async (value, update) => {
   try {
     const { data } = await apiArca.get('metadata/voucher-types', {
@@ -723,11 +809,7 @@ const getVoucherTypes = async (value, update) => {
     notify(err.message, 'negative', 'warning')
   }
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const filterInvoiceTypes = async (value, update) => {
   filterOptions(value, 'invoice-types', (data) => {
     update(() => {
@@ -735,11 +817,7 @@ const filterInvoiceTypes = async (value, update) => {
     })
   })
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const filtersPaymentMethods = async (value, update) => {
   filterOptions(value, 'payment-methods', (data) => {
     update(() => {
@@ -747,11 +825,7 @@ const filtersPaymentMethods = async (value, update) => {
     })
   })
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const filterCoins = async (value, update) => {
   filterOptions(value, 'coins', (data) => {
     update(() => {
@@ -759,11 +833,7 @@ const filterCoins = async (value, update) => {
     })
   })
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const filterPrinters = async (value, update) => {
   filterOptions(value, 'printers', (data) => {
     update(() => {
@@ -771,11 +841,7 @@ const filterPrinters = async (value, update) => {
     })
   })
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const filterClients = async (value, update) => {
   filterOptions(value, 'clients', (data) => {
     update(() => {
@@ -783,11 +849,7 @@ const filterClients = async (value, update) => {
     })
   })
 }
-/**
- * Select category
- * @param {String} value Value filter
- * @param {Callback} update update options
- */
+
 const filterTypeOfServices = async (value, update) => {
   filterOptions(value, 'type-of-services', (data) => {
     update(() => {
@@ -811,16 +873,13 @@ const saveMenuConfig = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+    step.value = 5
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
     loading.value = false
   }
 }
-/**
- * Save company config
- * @param {Object} data
- */
 
 const onSubmitConfig = async () => {
   try {
@@ -840,6 +899,7 @@ const onSubmitConfig = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+    step.value = step.value + 1
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -847,3 +907,455 @@ const onSubmitConfig = async () => {
   }
 }
 </script>
+
+<style scoped>
+.minimalist-config {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  min-height: 100vh;
+  padding: 0;
+}
+
+.config-container {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+/* Progress Header */
+.progress-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.main-title {
+  font-size: 2.25rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.main-subtitle {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0 0 1.5rem 0;
+  font-weight: 400;
+}
+
+.progress-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.progress-bar {
+  width: 200px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--q-primary) 0%, #3b82f6 100%);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+  min-width: 50px;
+}
+
+/* Steps Navigation */
+.steps-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.step-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 50px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.8rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.step-nav-item:hover {
+  border-color: var(--q-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.step-nav-item.active {
+  background: var(--q-primary);
+  color: white;
+  border-color: var(--q-primary);
+  box-shadow: 0 2px 8px rgba(var(--q-primary-rgb), 0.3);
+}
+
+.step-nav-item.completed {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.step-nav-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-nav-label {
+  font-weight: 500;
+}
+
+/* Step Content */
+.step-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f1f5f9;
+}
+
+.step-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.step-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+}
+
+.step-header p {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Form Styles */
+.step-form {
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.field-label, .upload-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.upload-label {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.custom-input {
+  border-radius: 8px;
+}
+
+.custom-input :deep(.q-field__control) {
+  border-radius: 8px;
+}
+
+.custom-editor {
+  border-radius: 8px;
+}
+
+.custom-editor :deep(.q-editor__content) {
+  border-radius: 0 0 8px 8px;
+}
+
+.checkbox-group {
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.checkbox-description {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Logo Section */
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.logo-preview {
+  position: relative;
+  width: 180px;
+  height: 100px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px dashed #e2e8f0;
+  transition: all 0.2s ease;
+  margin-top: 0.5rem;
+}
+
+.logo-preview:hover {
+  border-color: var(--q-primary);
+  transform: scale(1.02);
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+}
+
+.logo-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  color: white;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+/* Banner Section */
+.banner-section {
+  margin-bottom: 1.5rem;
+}
+
+.banner-preview {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px dashed #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.banner-preview:hover {
+  border-color: var(--q-primary);
+  transform: scale(1.01);
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+}
+
+.banner-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  color: white;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+/* Upload Section */
+.upload-section {
+  margin-bottom: 1.5rem;
+}
+
+.upload-area {
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-area:hover {
+  border-color: var(--q-primary);
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.upload-area h3 {
+  margin: 1rem 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.upload-area p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* Files Section */
+.files-section {
+  margin-bottom: 1rem;
+}
+
+/* Schedule Section */
+.schedule-section {
+  margin-bottom: 1.5rem;
+}
+
+/* Integration Section */
+.integration-wrapper {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1rem;
+}
+
+/* Actions */
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.action-btn {
+  min-width: 100px;
+  height: 36px;
+  border-radius: 8px;
+  font-weight: 500;
+  text-transform: none;
+  font-size: 0.8rem;
+  box-shadow: 0 1px 4px rgba(var(--q-primary-rgb), 0.2);
+}
+
+.action-btn-secondary {
+  color: #64748b;
+  font-weight: 500;
+  text-transform: none;
+  font-size: 0.8rem;
+}
+
+.action-btn-secondary:hover {
+  color: var(--q-primary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .config-container {
+    padding: 1rem 0.75rem;
+  }
+
+  .main-title {
+    font-size: 1.75rem;
+  }
+
+  .step-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .steps-nav {
+    gap: 0.25rem;
+  }
+
+  .step-nav-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .step-nav-label {
+    display: none;
+  }
+
+  .step-actions {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
+
+  .logo-preview {
+    width: 160px;
+    height: 90px;
+  }
+
+  .upload-area {
+    padding: 2rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-bar-container {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .progress-bar {
+    width: 180px;
+  }
+}
+</style>

@@ -1,209 +1,193 @@
 <template>
-  <q-card class="store-hours-manager q-mb-lg">
-    <q-card-section>
-      <div class="row items-center q-mb-md">
-        <div class="col-12 col-sm-6">
-          <div class="text-h6 text-weight-bold">
-            <q-icon name="schedule" color="primary" size="sm" class="q-mr-xs" />
-            Horarios de Apertura
+  <div class="schedule-manager">
+    <!-- Header -->
+    <div class="schedule-header">
+      <h3 class="schedule-title">Horarios de atención</h3>
+      <p class="schedule-subtitle">Configura los días y horarios de apertura</p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <q-btn
+        flat
+        dense
+        color="primary"
+        label="L-V 9-18h"
+        @click="applyWeekdays"
+        class="action-chip"
+      />
+      <q-btn
+        flat
+        dense
+        color="secondary"
+        label="S-D 10-16h"
+        @click="applyWeekends"
+        class="action-chip"
+      />
+      <q-btn
+        flat
+        dense
+        color="negative"
+        label="Cerrar todo"
+        @click="closeAllDays"
+        class="action-chip"
+      />
+    </div>
+
+    <!-- Days Grid -->
+    <div class="days-grid">
+      <div
+        v-for="day in daysOfWeek"
+        :key="day.value"
+        class="day-card"
+        :class="{ 'day-closed': !storeHours[day.value].isOpen }"
+      >
+        <!-- Day Header -->
+        <div class="day-header">
+          <q-checkbox
+            v-model="storeHours[day.value].isOpen"
+            :label="day.shortLabel"
+            color="primary"
+            dense
+            @update:model-value="updateDayStatus(day.value)"
+            class="day-checkbox"
+          />
+          <q-badge
+            v-if="storeHours[day.value].isOpen"
+            color="positive"
+            label="Abierto"
+            class="day-badge"
+          />
+          <q-badge
+            v-else
+            color="grey-5"
+            label="Cerrado"
+            class="day-badge"
+          />
+        </div>
+
+        <!-- Time Selectors -->
+        <div v-if="storeHours[day.value].isOpen" class="time-selectors">
+          <div class="time-group">
+            <label class="time-label">Apertura</label>
+            <q-select
+              v-model="storeHours[day.value].from"
+              :options="timeOptions"
+              outlined
+              dense
+              emit-value
+              map-options
+              class="time-select"
+              @update:model-value="validateHours(day.value)"
+            />
           </div>
-          <div class="text-caption text-grey">
-            Configure los horarios de apertura y cierre para cada día de la semana
+          <div class="time-separator">-</div>
+          <div class="time-group">
+            <label class="time-label">Cierre</label>
+            <q-select
+              v-model="storeHours[day.value].to"
+              :options="timeOptions"
+              outlined
+              dense
+              emit-value
+              map-options
+              class="time-select"
+              :error="storeHours[day.value].hasError"
+              @update:model-value="validateHours(day.value)"
+            />
           </div>
+        </div>
+
+        <!-- Closed State -->
+        <div v-else class="closed-state">
+          <q-icon name="event_busy" color="grey-5" size="sm" />
+          <span class="closed-text">Cerrado</span>
+        </div>
+
+        <!-- Duration -->
+        <div v-if="storeHours[day.value].isOpen && !storeHours[day.value].hasError" class="duration">
+          <q-icon name="schedule" size="xs" color="grey-6" />
+          <span class="duration-text">{{ calculateDuration(day.value) }}</span>
         </div>
       </div>
+    </div>
 
-      <!-- Acciones rápidas -->
-      <div class="row q-mb-md q-col-gutter-md">
-        <div class="col-12 col-md-6 q-pr-md-md">
-          <q-card class="bulk-actions" >
-            <q-card-section>
-              <div class="text-subtitle2 q-mb-sm">Aplicar horario a múltiples días</div>
-              <div class="row q-col-gutter-md">
-                <div class="col-12 col-sm-6">
-                  <q-select
-                    v-model="bulkFrom"
-                    :options="timeOptions"
-                    label="Hora de apertura"
-                    outlined
-                    dense
-                    emit-value
-                    map-options
-                    class="q-mb-sm"
-                  />
-                  <q-select
-                    v-model="bulkTo"
-                    :options="timeOptions"
-                    label="Hora de cierre"
-                    outlined
-                    dense
-                    emit-value
-                    map-options
-                    :error="bulkError"
-                    :error-message="bulkErrorMessage"
-                  />
-                </div>
-                <div class="col-12 col-sm-6">
-                  <div class="text-caption q-mb-xs">Seleccionar días:</div>
-                  <div class="row q-gutter-xs">
-                    <q-checkbox
-                      v-for="day in daysOfWeek"
-                      :key="day.value"
-                      v-model="bulkSelectedDays"
-                      :val="day.value"
-                      :label="day.shortLabel"
-                      dense
-                    />
-                  </div>
-                  <div class="q-mt-sm">
-                    <q-btn
-                      color="secondary"
-                      label="Aplicar"
-                      size="sm"
-                      :disable="!canApplyBulk"
-                      @click="applyBulkHours"
-                    />
-                    <q-btn
-                      flat
-                      color="grey"
-                      label="Limpiar"
-                      size="sm"
-                      class="q-ml-sm"
-                      @click="clearBulkSelection"
-                    />
-                  </div>
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-12 col-md-6">
-          <q-card class="quick-actions" style="height: 170px;">
-            <q-card-section>
-              <div class="text-subtitle2 q-mb-sm">Acciones rápidas</div>
-              <div class="row q-col-gutter-sm">
-                <div class="col-6">
-                  <q-btn
-                    outline
-                    color="primary"
-                    class="full-width"
-                    label="Horario estándar"
-                    icon="work"
-                    @click="applyStandardHours"
-                  />
-                </div>
-                <div class="col-6">
-                  <q-btn
-                    outline
-                    color="negative"
-                    class="full-width"
-                    label="Cerrar todos"
-                    icon="event_busy"
-                    @click="closeAllDays"
-                  />
-                </div>
-                <div class="col-6 q-mt-sm">
-                  <q-btn
-                    outline
-                    color="secondary"
-                    class="full-width"
-                    label="Abrir L-V"
-                    icon="event_available"
-                    @click="openWeekdays"
-                  />
-                </div>
-                <div class="col-6 q-mt-sm">
-                  <q-btn
-                    outline
-                    color="secondary"
-                    class="full-width"
-                    label="Abrir S-D"
-                    icon="weekend"
-                    @click="openWeekends"
-                  />
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
-
-      <!-- Tabla de horarios -->
-      <q-card>
-        <q-table
-          :rows="hoursTableData"
-          :columns="columns"
-          row-key="day"
-          :pagination="{ rowsPerPage: 7 }"
-          hide-pagination
-          flat
-          class="hours-table"
-        >
-          <template v-slot:body="props">
-            <q-tr :props="props" :class="{ 'closed-day': !props.row.isOpen }">
-              <q-td key="day" :props="props">
-                <div class="row items-center">
-                  <q-checkbox
-                    v-model="storeHours[props.row.day].isOpen"
-                    :label="props.row.dayName"
-                    @update:model-value="updateDayStatus(props.row.day)"
-                  />
-                </div>
-              </q-td>
-              <q-td key="hours" :props="props">
-                <div v-if="storeHours[props.row.day].isOpen" class="row q-col-gutter-x-sm items-center">
-                  <div class="col-12 col-sm-5">
-                    <q-select
-                      v-model="storeHours[props.row.day].from"
-                      :options="timeOptions"
-                      label="Apertura"
-                      outlined
-                      dense
-                      emit-value
-                      map-options
-                      :disable="!storeHours[props.row.day].isOpen"
-                      @update:model-value="validateHours(props.row.day)"
-                    />
-                  </div>
-                  <div class="col-12 col-sm-5">
-                    <q-select
-                      v-model="storeHours[props.row.day].to"
-                      :options="timeOptions"
-                      label="Cierre"
-                      outlined
-                      dense
-                      emit-value
-                      map-options
-                      :disable="!storeHours[props.row.day].isOpen"
-                      @update:model-value="validateHours(props.row.day)"
-                    />
-                  </div>
-                </div>
-                <div v-else class="text-grey">
-                  Cerrado
-                </div>
-              </q-td>
-              <q-td key="status" :props="props" class="text-center">
-                <q-badge
-                  :color="storeHours[props.row.day].isOpen ? 'positive' : 'negative'"
-                  :label="storeHours[props.row.day].isOpen ? 'Abierto' : 'Cerrado'"
-                  class="q-px-sm"
+    <!-- Bulk Actions (Collapsible) -->
+    <q-expansion-item
+      icon="tune"
+      label="Configuración avanzada"
+      class="bulk-section"
+      header-class="bulk-header"
+    >
+      <div class="bulk-content">
+        <div class="bulk-form">
+          <div class="bulk-times">
+            <div class="bulk-time-group">
+              <label class="bulk-label">Horario</label>
+              <div class="bulk-time-inputs">
+                <q-select
+                  v-model="bulkFrom"
+                  :options="timeOptions"
+                  outlined
+                  dense
+                  emit-value
+                  map-options
+                  class="bulk-time-select"
                 />
-              </q-td>
-              <q-td key="duration" :props="props" class="text-center">
-                <div v-if="storeHours[props.row.day].isOpen && !storeHours[props.row.day].hasError">
-                  {{ calculateDuration(props.row.day) }}
-                </div>
-                <div v-else class="text-grey">
-                  --
-                </div>
-              </q-td>
-            </q-tr>
-          </template>
-        </q-table>
-      </q-card>
-    </q-card-section>
-  </q-card>
+                <span class="bulk-separator">a</span>
+                <q-select
+                  v-model="bulkTo"
+                  :options="timeOptions"
+                  outlined
+                  dense
+                  emit-value
+                  map-options
+                  class="bulk-time-select"
+                  :error="bulkError"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="bulk-days">
+            <label class="bulk-label">Aplicar a:</label>
+            <div class="bulk-checkboxes">
+              <q-checkbox
+                v-for="day in daysOfWeek"
+                :key="day.value"
+                v-model="bulkSelectedDays"
+                :val="day.value"
+                :label="day.shortLabel"
+                color="primary"
+                dense
+                class="bulk-checkbox"
+              />
+            </div>
+          </div>
+
+          <div class="bulk-actions-row">
+            <q-btn
+              flat
+              color="grey-6"
+              label="Limpiar"
+              size="sm"
+              @click="clearBulkSelection"
+              class="bulk-btn"
+            />
+            <q-btn
+              color="primary"
+              label="Aplicar"
+              size="sm"
+              :disable="!canApplyBulk"
+              @click="applyBulkHours"
+              unelevated
+              class="bulk-btn"
+            />
+          </div>
+        </div>
+      </div>
+    </q-expansion-item>
+  </div>
 </template>
 
 <script setup>
@@ -221,10 +205,6 @@ const props = defineProps({
   }
 })
 
-/**
- * Days of the week
- * @type {Array}
- */
 const daysOfWeek = [
   { value: 'monday', label: 'Lunes', shortLabel: 'Lun' },
   { value: 'tuesday', label: 'Martes', shortLabel: 'Mar' },
@@ -235,10 +215,6 @@ const daysOfWeek = [
   { value: 'sunday', label: 'Domingo', shortLabel: 'Dom' }
 ]
 
-/**
- * Generates time options (every 30 minutes)
- * @returns {Array}
- */
 const generateTimeOptions = () => {
   const options = []
   for (let hour = 0; hour < 24; hour++) {
@@ -255,16 +231,8 @@ const generateTimeOptions = () => {
   return options
 }
 
-/**
- * Time options
- * @type {Array}
- */
 const timeOptions = generateTimeOptions()
 
-/**
- * Default store hours
- * @returns {Object} Object with the store hours
- */
 const createDefaultStoreHours = () => {
   const hours = {}
   daysOfWeek.forEach(day => {
@@ -279,42 +247,14 @@ const createDefaultStoreHours = () => {
   return hours
 }
 
-/**
- * Store hours
- * @type {Object}
- */
 const storeHours = reactive(props.schedule || createDefaultStoreHours())
 
-/**
- * Bulk variables
- */
 const bulkFrom = ref('09:00')
-/**
- * Bulk variables
- * @type {Ref}
- */
 const bulkTo = ref('18:00')
-/**
- * Bulk variables
- * @type {Ref}
- */
 const bulkSelectedDays = ref([])
-/**
- * Bulk variables
- * @type {Ref}
- */
 const bulkError = ref(false)
-/**
- * Bulk variables
- * @type {Ref}
- */
 const bulkErrorMessage = ref('')
 
-/**
- * Validates that the closing time is after the opening time
- * @param {String} day
- * @returns {Boolean}
- */
 const validateHours = (day) => {
   const { from, to } = storeHours[day]
 
@@ -331,12 +271,8 @@ const validateHours = (day) => {
 
 watch(storeHours, (data) => {
   emit('update:schedule', data)
-})
+}, { deep: true })
 
-/**
- * Validates bulk hours
- * @returns {Boolean}
- */
 const validateBulkHours = () => {
   if (bulkFrom.value >= bulkTo.value) {
     bulkError.value = true
@@ -349,10 +285,6 @@ const validateBulkHours = () => {
   return true
 }
 
-/**
- * Update day status (open/closed)
- * @param {String} day
- */
 const updateDayStatus = (day) => {
   if (storeHours[day].isOpen) {
     validateHours(day)
@@ -362,11 +294,6 @@ const updateDayStatus = (day) => {
   }
 }
 
-/**
- * Calculate duration of the time
- * @param {String} day
- * @returns {Number}
- */
 const calculateDuration = (day) => {
   const { from, to } = storeHours[day]
 
@@ -381,9 +308,6 @@ const calculateDuration = (day) => {
   return `${hours}h ${minutes}m`
 }
 
-/**
- * Apply bulk hours
- */
 const applyBulkHours = () => {
   if (!validateBulkHours()) return
 
@@ -397,48 +321,53 @@ const applyBulkHours = () => {
   $q.notify({
     color: 'positive',
     message: `Horario aplicado a ${bulkSelectedDays.value.length} días`,
-    icon: 'done'
+    icon: 'done',
+    timeout: 2000
   })
 }
 
-/**
- * Clear bulk selection
- */
 const clearBulkSelection = () => {
   bulkSelectedDays.value = []
   bulkError.value = false
   bulkErrorMessage.value = ''
 }
 
-/**
- * Apply standard hours
- */
-const applyStandardHours = () => {
+const applyWeekdays = () => {
   daysOfWeek.forEach(day => {
-    if (day.value === 'saturday') {
-      storeHours[day.value].isOpen = true
-      storeHours[day.value].from = '10:00'
-      storeHours[day.value].to = '14:00'
-    } else if (day.value === 'sunday') {
-      storeHours[day.value].isOpen = false
-    } else {
+    if (['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(day.value)) {
       storeHours[day.value].isOpen = true
       storeHours[day.value].from = '09:00'
       storeHours[day.value].to = '18:00'
+      validateHours(day.value)
     }
-    validateHours(day.value)
   })
 
   $q.notify({
     color: 'positive',
-    message: 'Horario estándar aplicado',
-    icon: 'done'
+    message: 'Horario L-V aplicado',
+    icon: 'event_available',
+    timeout: 2000
   })
 }
 
-/**
- * Close all days
- */
+const applyWeekends = () => {
+  daysOfWeek.forEach(day => {
+    if (['saturday', 'sunday'].includes(day.value)) {
+      storeHours[day.value].isOpen = true
+      storeHours[day.value].from = '10:00'
+      storeHours[day.value].to = '16:00'
+      validateHours(day.value)
+    }
+  })
+
+  $q.notify({
+    color: 'positive',
+    message: 'Horario S-D aplicado',
+    icon: 'weekend',
+    timeout: 2000
+  })
+}
+
 const closeAllDays = () => {
   daysOfWeek.forEach(day => {
     storeHours[day.value].isOpen = false
@@ -447,186 +376,318 @@ const closeAllDays = () => {
   $q.notify({
     color: 'negative',
     message: 'Todos los días cerrados',
-    icon: 'event_busy'
+    icon: 'event_busy',
+    timeout: 2000
   })
 }
 
-/**
- * Open weekdays
- */
-const openWeekdays = () => {
-  daysOfWeek.forEach(day => {
-    if (['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(day.value)) {
-      storeHours[day.value].isOpen = true
-      storeHours[day.value].from = '09:00'
-      storeHours[day.value].to = '18:00'
-      validateHours(day.value)
-    } else {
-      storeHours[day.value].isOpen = false
-    }
-  })
-
-  $q.notify({
-    color: 'positive',
-    message: 'Horario de lunes a viernes aplicado',
-    icon: 'event_available'
-  })
-}
-
-/**
- * Open weekends
- */
-const openWeekends = () => {
-  daysOfWeek.forEach(day => {
-    if (['saturday', 'sunday'].includes(day.value)) {
-      storeHours[day.value].isOpen = true
-      storeHours[day.value].from = '10:00'
-      storeHours[day.value].to = '16:00'
-      validateHours(day.value)
-    } else {
-      storeHours[day.value].isOpen = false
-    }
-  })
-
-  $q.notify({
-    color: 'positive',
-    message: 'Horario de fin de semana aplicado',
-    icon: 'weekend'
-  })
-}
-
-/**
- * Verify if bulk hours can be applied
- * @returns {Boolean}
- */
 const canApplyBulk = computed(() => {
   return bulkSelectedDays.value.length > 0 && !bulkError.value
 })
 
-/**
- * Hours table data
- * @returns {Array}
- */
-const hoursTableData = computed(() => {
-  return daysOfWeek.map(day => ({
-    day: day.value,
-    dayName: day.label,
-    isOpen: storeHours[day.value].isOpen
-  }))
-})
-
-/**
- * Columns for the table
- * @type {Array}
- */
-const columns = [
-  { name: 'day', align: 'left', label: 'Día', field: 'dayName' },
-  { name: 'hours', align: 'left', label: 'Horario', field: 'hours' },
-  { name: 'status', align: 'center', label: 'Estado', field: 'status' },
-  { name: 'duration', align: 'center', label: 'Duración', field: 'duration' }
-]
-
-onMounted(() => {
+const initializeStoreHours = () => {
   daysOfWeek.forEach(day => {
     if (storeHours[day.value].isOpen) {
       validateHours(day.value)
     }
   })
-})
+}
 
+onMounted(() => {
+  initializeStoreHours()
+})
 </script>
 
-<style>
-.store-hours-manager {
+<style scoped>
+.schedule-manager {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #f1f5f9;
+}
+
+/* Header */
+.schedule-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.schedule-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.25rem 0;
+}
+
+.schedule-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Quick Actions */
+.quick-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.action-chip {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  text-transform: none;
+  font-weight: 500;
+}
+
+/* Days Grid */
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.day-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.day-card:hover {
+  border-color: var(--q-primary);
+}
+
+.day-closed {
+  background: #f1f5f9;
+  opacity: 0.7;
+}
+
+/* Day Header */
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.day-checkbox {
+  font-weight: 500;
+}
+
+.day-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+}
+
+/* Time Selectors */
+.time-selectors {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.time-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.time-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.time-select {
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+.time-select :deep(.q-field__control) {
+  min-height: 32px;
+}
+
+.time-separator {
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* Closed State */
+.closed-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  color: #64748b;
+}
+
+.closed-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Duration */
+.duration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.duration-text {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Bulk Section */
+.bulk-section {
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   overflow: hidden;
 }
 
-.hours-table {
-  border-radius: 4px;
+.bulk-header {
+  background: #f8fafc;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
 }
 
-.closed-day {
-  background-color: rgba(0, 0, 0, 0.03);
+.bulk-content {
+  padding: 1rem;
+  background: white;
 }
 
-.body--dark .closed-day {
-  background-color: rgba(255, 255, 255, 0.05);
+.bulk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-/* Vista previa de horarios */
-.hours-preview {
+.bulk-times {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bulk-time-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bulk-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.bulk-time-inputs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bulk-time-select {
+  flex: 1;
+  max-width: 100px;
+}
+
+.bulk-time-select :deep(.q-field__control) {
+  min-height: 32px;
+}
+
+.bulk-separator {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.bulk-days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bulk-checkboxes {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 0.5rem;
 }
 
-.hours-preview-day {
-  flex: 1;
-  min-width: 100px;
-  border-radius: 4px;
-  padding: 8px;
-  text-align: center;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  transition: all 0.3s ease;
+.bulk-checkbox {
+  font-size: 0.8rem;
 }
 
-.hours-preview-day-label {
-  font-weight: 500;
-  margin-bottom: 4px;
+.bulk-actions-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 
-.hours-preview-day-hours {
-  font-size: 0.9rem;
-}
-
-.hours-preview-day-open {
-  background-color: rgba(76, 175, 80, 0.1);
-  border-color: rgba(76, 175, 80, 0.3);
-}
-
-.hours-preview-day-closed {
-  background-color: rgba(244, 67, 54, 0.05);
-  border-color: rgba(244, 67, 54, 0.2);
-  color: rgba(0, 0, 0, 0.6);
-}
-
-.hours-preview-day-error {
-  background-color: rgba(244, 67, 54, 0.1);
-  border-color: rgba(244, 67, 54, 0.4);
-}
-
-/* Estilos para modo oscuro */
-.body--dark .hours-preview-day {
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.body--dark .hours-preview-day-open {
-  background-color: rgba(76, 175, 80, 0.15);
-  border-color: rgba(76, 175, 80, 0.3);
-}
-
-.body--dark .hours-preview-day-closed {
-  background-color: rgba(244, 67, 54, 0.1);
-  border-color: rgba(244, 67, 54, 0.2);
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.body--dark .hours-preview-day-error {
-  background-color: rgba(244, 67, 54, 0.15);
-  border-color: rgba(244, 67, 54, 0.4);
+.bulk-btn {
+  font-size: 0.8rem;
+  padding: 0.25rem 1rem;
 }
 
 /* Responsive */
-@media (max-width: 599px) {
-  .hours-preview-day {
-    min-width: 80px;
-    padding: 6px;
+@media (max-width: 768px) {
+  .schedule-manager {
+    padding: 1rem;
   }
 
-  .hours-preview-day-hours {
-    font-size: 0.8rem;
+  .days-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .day-card {
+    padding: 0.75rem;
+  }
+
+  .bulk-time-inputs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bulk-time-select {
+    max-width: none;
+  }
+
+  .bulk-checkboxes {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .action-chip {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .time-selectors {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .time-separator {
+    display: none;
   }
 }
 </style>
