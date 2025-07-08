@@ -15,7 +15,7 @@
            </p>
          </div>
 
-         <div>
+         <div v-if="userSession.is_root">
            <q-btn
              v-if="currentCount.id && currentCount.status === 'active'"
              unelevated
@@ -598,8 +598,11 @@
     <q-dialog v-model="showScanner" persistent>
       <q-card style="min-width: 350px; max-width: 450px; width: 90vw;" class="ios-dialog">
         <q-card-section class="q-pa-xl">
-          <div class="text-h5 text-center q-mb-lg" :class="isEditing ? 'text-warning' : 'text-positive'">
-            {{ isEditing ? 'Editando Producto' : 'Producto Detectado' }}
+          <div class="text-h5 q-mb-lg flex items-center justify-between" :class="isEditing ? 'text-warning' : 'text-positive'">
+            <span>
+              {{ isEditing ? 'Editando Producto' : 'Producto Detectado' }}
+            </span>
+            <q-btn icon="close" flat round dense v-close-popup />
           </div>
 
           <div class="ios-product-info q-mb-md">
@@ -1205,11 +1208,7 @@ const openCountDialog = () => {
   }
   manualBarcode.value = ''
 
-  if ($q.platform.is.nativeMobile) {
-    openScanner()
-  } else {
-    showCountDialog.value = true
-  }
+  showCountDialog.value = true
 }
 
 const confirmCloseCount = () => {
