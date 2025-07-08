@@ -1419,8 +1419,10 @@ export default {
         this.addPayment(companySession?.company_config?.payment_method)
       }
       if (data) {
-        const channel = echoPay.channel('mercado-pago-payment')
+        console.log('hola', this.$echoPay, companySession.company_config.other.qpay_id)
+        const channel = this.$echoPay.channel('mercado-pago-payment')
         channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`, (data) => {
+          console.log(data)
           notify('Pago recibido', 'positive', 'check_circle')
         })
       }
