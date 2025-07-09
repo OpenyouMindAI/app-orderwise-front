@@ -620,7 +620,7 @@
             label="Cantidad"
             outlined
             min="1"
-            :rules="[val => val >= 1 || 'La cantidad debe ser mayor a 0']"
+            :rules="[val => val >= 0 || 'La cantidad debe ser mayor a 0']"
             class="ios-input"
           />
 
@@ -1043,8 +1043,8 @@ const filteredReportProducts = computed(() => {
 
 // Watchers
 watch(currentQuantity, (val) => {
-  if (val < 1) {
-    currentQuantity.value = 1
+  if (val < 0) {
+    currentQuantity.value = 0
   }
 })
 
@@ -1377,7 +1377,7 @@ const selectProduct = (product) => {
   if (existingProductCount.value && !isEditing.value) {
     currentQuantity.value = existingProductCount.value.quantity
   } else {
-    currentQuantity.value = 1
+    currentQuantity.value = 0
   }
 
   showScanner.value = true
@@ -1450,7 +1450,7 @@ const confirmProduct = async () => {
 
 const clearCurrentScan = () => {
   currentProduct.value = {}
-  currentQuantity.value = 1
+  currentQuantity.value = 0
   isEditing.value = false
   editingProductId.value = null
   existingProductCount.value = null
