@@ -899,6 +899,7 @@ export default {
         show_catalog: 0,
         is_addons: 0,
         skip_stock: 0,
+        profit_percentage: 0,
         images: []
       },
       categories: [],
@@ -1398,7 +1399,8 @@ export default {
         is_bundle: 0,
         show_catalog: 0,
         is_addons: 0,
-        skip_stock: 0
+        skip_stock: 0,
+        profit_percentage: 0
       }
       this.getUnitOfMeasures()
     },
