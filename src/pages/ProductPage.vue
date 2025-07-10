@@ -179,18 +179,22 @@
                             label="Costo"
                             type="number"
                             dense
+                            @update:model-value="updateCost"
                           />
                         </div>
                         <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
                           <q-input
                             :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                             filled
-                            v-model="product.profit_percentage"
+                            v-model.number="product.profit_percentage"
+                            :model-value="Number(product?.profit_percentage).toFixed(2)"
                             label="Margen %"
-                            type="number"
                             min="0"
+                            type="number"
+                            step="0.01"
                             max="100"
                             dense
+                            @update:model-value="updateProfitPercentage"
                           />
                         </div>
                         <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -202,6 +206,7 @@
                             type="number"
                             step=".01"
                             dense
+                            @update:model-value="updatePrice"
                           />
                         </div>
                         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -549,18 +554,20 @@
                           label="Costo"
                           type="number"
                           dense
+                          @update:model-value="updateCost"
                         />
                       </div>
                       <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
                         <q-input
                           :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                           filled
-                          v-model="product.profit_percentage"
+                          v-model.number="product.profit_percentage"
+                          :model-value="Number(product?.profit_percentage).toFixed(2)"
                           label="Margen %"
-                          type="number"
                           min="0"
                           max="100"
                           dense
+                          @update:model-value="updateProfitPercentage"
                         />
                       </div>
                       <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -572,6 +579,7 @@
                           type="number"
                           step=".01"
                           dense
+                          @update:model-value="updatePrice"
                         />
                       </div>
                       <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -897,6 +905,7 @@ export default {
         show_catalog: 0,
         is_addons: 0,
         skip_stock: 0,
+        profit_percentage: 0,
         images: []
       },
       categories: [],
@@ -998,24 +1007,6 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
-    'product.profit_percentage' (newVal) {
-      if (newVal && this.product.cost > 0) {
-        const price = this.product.cost * (1 + newVal / 100)
-        this.product.price = Number(price.toFixed(2))
-      }
-    },
-    'product.price' (newVal) {
-      if (newVal && this.product.cost > 0) {
-        const margin = ((newVal - this.product.cost) / this.product.cost) * 100
-        this.product.profit_percentage = Number(margin.toFixed(2))
-      }
-    },
-    'product.cost' (newVal) {
-      if (newVal && this.product.profit_percentage != null) {
-        const price = newVal * (1 + this.product.profit_percentage / 100)
-        this.product.price = Number(price.toFixed(2))
-      }
-    },
     /**
      * Set pagination when branch office changes
      * @param {Object} value branch office
@@ -1048,6 +1039,24 @@ export default {
     }
   },
   methods: {
+    updateProfitPercentage (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const price = this.product.cost * (1 + newVal / 100)
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
+    updatePrice (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const margin = ((newVal - this.product.cost) / this.product.cost) * 100
+        this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
+      }
+    },
+    updateCost (newVal) {
+      if (newVal && this.product.profit_percentage != null) {
+        const price = newVal * (1 + this.product.profit_percentage / 100)
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
     /**
      * Start scanner
      */
@@ -1396,7 +1405,8 @@ export default {
         is_bundle: 0,
         show_catalog: 0,
         is_addons: 0,
-        skip_stock: 0
+        skip_stock: 0,
+        profit_percentage: 0
       }
       this.getUnitOfMeasures()
     },
