@@ -185,9 +185,8 @@
                           <q-input
                             :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                             filled
-                            v-model="product.profit_percentage"
+                            v-model.number="product.profit_percentage"
                             label="Margen %"
-                            type="number"
                             min="0"
                             max="100"
                             dense
