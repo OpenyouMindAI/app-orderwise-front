@@ -102,54 +102,54 @@
         :name="2"
         :done="step > 2"
       >
-      <q-card>
-        <q-form @submit="onSubmitConfig">
-          <q-card-section>
-            <div class="text-h6">Configuración de impresora y balanza</div>
-          </q-card-section>
-          <q-card-section>
-            <div class="row q-col-gutter-sm items-center full-width">
-              <div class="col-xs-12 col-sm-12 col-md-12">
-                <q-input
-                  label="Código de identificación de la balanza"
-                  filled
-                  v-model="companyConfig.other.balance_code"
-                />
+        <q-card>
+          <q-form @submit="onSubmitConfig">
+            <q-card-section>
+              <div class="text-h6">Configuración de impresora y balanza</div>
+            </q-card-section>
+            <q-card-section>
+              <div class="row q-col-gutter-sm items-center full-width">
+                <div class="col-xs-12 col-sm-12 col-md-12">
+                  <q-input
+                    label="Código de identificación de la balanza"
+                    filled
+                    v-model="companyConfig.other.balance_code"
+                  />
+                </div>
               </div>
-            </div>
-          </q-card-section>
-          <q-card-section>
-            <div class="row q-col-gutter-sm items-center full-width">
-              <div class="col-xs-12 col-sm-12 col-md-2">
-                <q-checkbox
-                  label="Impresión directa"
-                  v-model="companyConfig.other.directPrint"
-                />
+            </q-card-section>
+            <q-card-section>
+              <div class="row q-col-gutter-sm items-center full-width">
+                <div class="col-xs-12 col-sm-12 col-md-2">
+                  <q-checkbox
+                    label="Impresión directa"
+                    v-model="companyConfig.other.directPrint"
+                  />
+                </div>
+                <div class="col-xs-12 col-sm-12 col-md-10">
+                  <q-select
+                    label="Impresora por defecto"
+                    option-label="name"
+                    option-value="id"
+                    filled
+                    v-model="companyConfig.printer"
+                    :options="printers"
+                    @filter="filterPrinters"
+                  />
+                </div>
               </div>
-              <div class="col-xs-12 col-sm-12 col-md-10">
-                <q-select
-                  label="Impresora por defecto"
-                  option-label="name"
-                  option-value="id"
-                  filled
-                  v-model="companyConfig.printer"
-                  :options="printers"
-                  @filter="filterPrinters"
-                />
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn
-              color="primary"
-              label="Guardar"
-              icon="save"
-              type="submit"
-              :loading="loading"
-            />
-          </q-card-actions>
-        </q-form>
-      </q-card>
+            </q-card-section>
+            <q-card-actions align="right">
+              <q-btn
+                color="primary"
+                label="Guardar"
+                icon="save"
+                type="submit"
+                :loading="loading"
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card>
       </q-step>
       <q-step
         :name="3"
@@ -411,7 +411,7 @@
             </q-card-actions>
           </q-form>
         </q-card>
-    </q-step>
+      </q-step>
     </q-stepper>
   </q-page>
 </template>

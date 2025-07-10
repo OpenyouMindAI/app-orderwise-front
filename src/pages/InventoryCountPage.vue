@@ -172,6 +172,9 @@
                     <span :class="getDeviationTextClass(product)" class="text-weight-medium">
                       ({{ getDeviationText(product) }})
                     </span>
+                    <span class="text-weight-medium">
+                      • Vendidos durante el conteo: {{ product.sales_during_count || 0 }}
+                    </span>
                   </q-item-label>
                 </q-item-section>
                 <q-item-section side>
@@ -232,6 +235,9 @@
                     Stock: {{ product.current_stock }} • Contado: {{ product.quantity }}
                     <span :class="getDeviationTextClass(product)" class="text-weight-medium">
                       ({{ getDeviationText(product) }})
+                    </span>
+                    <span class="text-weight-medium">
+                      • Vendidos durante el conteo: {{ product.sales_during_count || 0 }}
                     </span>
                   </q-item-label>
                 </q-item-section>
@@ -435,7 +441,7 @@
                     {{ report.user?.name || 'Usuario' }}
                   </q-item-label>
                   <q-item-label caption class="text-body2 text-grey-6">
-                    {{ formatDate(report.created_at) }}
+                    {{ formatDate(report.created_at, 'DD/MM/YYYY HH:mm:ss') }}
                   </q-item-label>
                   <q-item-label caption v-if="userSession.is_root">
                     <div class="row q-gutter-sm">
@@ -757,8 +763,8 @@
             >
               <q-separator />
               <q-card-section class="q-pa-md">
-                <div class="row q-gutter-y-md">
-                  <!-- <div class="col-12 col-md-4">
+                <div class="row q-col-gutter-md">
+                  <div class="col-12 col-md-4">
                     <q-select
                       v-model="detailFilters.deviationType"
                       :options="deviationOptions"
@@ -768,7 +774,7 @@
                       clearable
                       color="primary"
                     />
-                  </div> -->
+                  </div>
                   <div class="col-12 col-md-4">
                     <q-input
                       v-model="detailFilters.productName"
@@ -845,6 +851,8 @@
                       <span :class="getDeviationTextClass(product)" class="text-weight-medium">
                         {{ getDeviationText(product) }}
                       </span>
+                      <span class="q-mx-xs">•</span>
+                      <span class="text-grey-7">Vendidos durante el conteo: {{ product.sales_during_count || 0 }}</span>
                     </q-item-label>
                   </q-item-section>
 
@@ -936,11 +944,6 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { useQuasar } from 'quasar'
-import { notify } from 'src/const/mixins'
-import { api } from 'src/boot/axios'
-import { authentication } from 'src/stores/module-authentication'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -948,6 +951,11 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { useQuasar } from 'quasar'
+import { formatDate, notify } from 'src/const/mixins'
+import { api } from 'src/boot/axios'
+import { authentication } from 'src/stores/module-authentication'
 
 const $q = useQuasar()
 
@@ -989,8 +997,8 @@ const currentCount = ref({})
 
 // Filters
 const reportFilters = ref({
-  startDate: new Date().toISOString().split('T')[0], // Today's date
-  endDate: new Date().toISOString().split('T')[0], // Today's date
+  startDate: formatDate(new Date(), 'YYYY-MM-DD'), // Today's date
+  endDate: formatDate(new Date(), 'YYYY-MM-DD'), // Today's date
   userId: null
 })
 
@@ -1000,11 +1008,11 @@ const detailFilters = ref({
   barcode: ''
 })
 
-// const deviationOptions = [
-//   { label: 'Desviaciones Positivas', value: 'positive' },
-//   { label: 'Desviaciones Negativas', value: 'negative' },
-//   { label: 'Sin Desviaciones', value: 'none' }
-// ]
+const deviationOptions = [
+  { label: 'Desviaciones Positivas', value: 'positive' },
+  { label: 'Desviaciones Negativas', value: 'negative' },
+  { label: 'Sin Desviaciones', value: 'none' }
+]
 
 // Computed properties
 const totalProducts = computed(() => scannedProducts.value.length)
@@ -1017,11 +1025,12 @@ const filteredReportProducts = computed(() => {
   let filtered = reportProducts.value
 
   if (detailFilters.value.deviationType) {
+    console.log(detailFilters.value.deviationType)
     filtered = filtered.filter(product => {
       const deviation = product.quantity - product.current_stock
-      if (detailFilters.value.deviationType === 'positive') return deviation > 0
-      if (detailFilters.value.deviationType === 'negative') return deviation < 0
-      if (detailFilters.value.deviationType === 'none') return deviation === 0
+      if (detailFilters.value?.deviationType?.value === 'positive') return deviation > 0
+      if (detailFilters.value?.deviationType?.value === 'negative') return deviation < 0
+      if (detailFilters.value?.deviationType?.value === 'none') return deviation === 0
       return true
     })
   }
@@ -1056,6 +1065,11 @@ watch(showCountDialog, (val) => {
   }
 })
 
+watch(activeTab, (val) => {
+  if (val === 'reports') {
+    loadReports()
+  }
+})
 // Lifecycle hooks
 onMounted(() => {
   initializeComponent()
@@ -1141,8 +1155,7 @@ const getLastCountProductsCount = async (countId) => {
   try {
     const { data } = await api.get('product-counts', {
       params: {
-        dataEqualFilter: { count_id: countId },
-        count: true
+        dataEqualFilter: { count_id: countId }
       }
     })
     lastCountProductsCount.value = data.length || 0
@@ -1461,7 +1474,9 @@ const loadReports = async () => {
     startLoading('loadReports')
 
     const params = {
-      dataEqualFilter: {}
+      dataEqualFilter: {},
+      orderBy: 'id',
+      sortOrder: 'desc'
     }
 
     if (!userSession.is_root && reportFilters.value.userId) {
@@ -1473,12 +1488,12 @@ const loadReports = async () => {
       params.dataEqualFilter.user_id = reportFilters.value.userId
     }
 
-    if (reportFilters.value.startDate) {
-      params.startDate = reportFilters.value.startDate
-    }
-
-    if (reportFilters.value.endDate) {
-      params.endDate = reportFilters.value.endDate
+    if (reportFilters.value.endDate && reportFilters.value.startDate) {
+      params.dateFilter = {
+        from: reportFilters.value.startDate,
+        to: reportFilters.value.endDate,
+        field: 'created_at'
+      }
     }
 
     const { data } = await api.get('counts', { params })
@@ -1514,7 +1529,7 @@ const loadReports = async () => {
 }
 
 const resetReportFilters = () => {
-  const today = new Date().toISOString().split('T')[0]
+  const today = formatDate(new Date(), 'YYYY-MM-DD')
   reportFilters.value = {
     startDate: today,
     endDate: today,
@@ -1569,17 +1584,6 @@ const getDeviationTextClass = (product) => {
   if (deviation > 0) return 'text-positive'
   if (deviation < 0) return 'text-negative'
   return 'text-grey'
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
 const startLoading = (action) => {
