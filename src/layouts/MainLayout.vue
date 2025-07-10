@@ -349,7 +349,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
-// import { MultiDisplayManager } from 'multi-display-manager'
+import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',
