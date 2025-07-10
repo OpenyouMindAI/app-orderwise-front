@@ -186,8 +186,11 @@
                             :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                             filled
                             v-model.number="product.profit_percentage"
+                            :model-value="product?.profit_percentage?.toFixed(2)"
                             label="Margen %"
                             min="0"
+                            type="number"
+                            step="0.01"
                             max="100"
                             dense
                           />
@@ -555,6 +558,7 @@
                           :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                           filled
                           v-model.number="product.profit_percentage"
+                          :model-value="product?.profit_percentage?.toFixed(2)"
                           label="Margen %"
                           min="0"
                           max="100"
@@ -999,19 +1003,19 @@ export default {
     'product.profit_percentage' (newVal) {
       if (newVal && this.product.cost > 0) {
         const price = this.product.cost * (1 + newVal / 100)
-        this.product.price = Math.floor(price * 100) / 100
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
       }
     },
     'product.price' (newVal) {
       if (newVal && this.product.cost > 0) {
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
-        this.product.profit_percentage = Math.floor(margin * 100) / 100
+        this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
       }
     },
     'product.cost' (newVal) {
       if (newVal && this.product.profit_percentage != null) {
         const price = newVal * (1 + this.product.profit_percentage / 100)
-        this.product.price = Math.floor(price * 100) / 100
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
       }
     },
     /**
