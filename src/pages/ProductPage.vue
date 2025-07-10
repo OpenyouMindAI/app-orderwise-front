@@ -554,9 +554,8 @@
                         <q-input
                           :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                           filled
-                          v-model="product.profit_percentage"
+                          v-model.number="product.profit_percentage"
                           label="Margen %"
-                          type="number"
                           min="0"
                           max="100"
                           dense
@@ -1000,19 +999,19 @@ export default {
     'product.profit_percentage' (newVal) {
       if (newVal && this.product.cost > 0) {
         const price = this.product.cost * (1 + newVal / 100)
-        this.product.price = Number(price.toFixed(2))
+        this.product.price = Math.floor(price * 100) / 100
       }
     },
     'product.price' (newVal) {
       if (newVal && this.product.cost > 0) {
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
-        this.product.profit_percentage = Number(margin.toFixed(2))
+        this.product.profit_percentage = Math.floor(margin * 100) / 100
       }
     },
     'product.cost' (newVal) {
       if (newVal && this.product.profit_percentage != null) {
         const price = newVal * (1 + this.product.profit_percentage / 100)
-        this.product.price = Number(price.toFixed(2))
+        this.product.price = Math.floor(price * 100) / 100
       }
     },
     /**
