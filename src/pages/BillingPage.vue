@@ -965,6 +965,7 @@ import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
+import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -973,7 +974,6 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { commandPrint, ticketPrint } from 'src/const/printers'
-import { echoPay } from 'src/boot/pusher'
 
 export default {
   name: 'BillingPage',
@@ -1419,11 +1419,13 @@ export default {
         this.addPayment(companySession?.company_config?.payment_method)
       }
       if (data) {
-        console.log('hola', this.$echoPay, companySession.company_config.other.qpay_id)
+        console.log('hola', this.$echoPay, companySession.company_config.other)
         const channel = this.$echoPay.channel('mercado-pago-payment')
+        console.log('.mercado-pago-payment.c5c4bb6f-e7cc-4287-99d4-0a82ddec4da6')
+        console.log(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`)
         channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`, (data) => {
-          console.log(data)
-          notify('Pago recibido', 'positive', 'check_circle')
+          const { showPaymentNotification } = usePaymentNotifier()
+          showPaymentNotification(data)
         })
       }
     },

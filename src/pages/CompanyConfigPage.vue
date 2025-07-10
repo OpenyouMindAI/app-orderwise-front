@@ -4,7 +4,7 @@
       <!-- Progress Header -->
       <div class="progress-header">
         <div class="progress-content">
-          <h1 class="main-title">Configuración</h1>
+          <span class="main-title text-h6">Configuración</span>
           <p class="main-subtitle">Configura tu empresa en {{ totalSteps }} pasos simples</p>
 
           <div class="progress-bar-container">
@@ -910,7 +910,6 @@ const onSubmitConfig = async () => {
 
 <style scoped>
 .minimalist-config {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   min-height: 100vh;
   padding: 0;
 }
@@ -934,7 +933,6 @@ const onSubmitConfig = async () => {
 
 .main-subtitle {
   font-size: 1rem;
-  color: #64748b;
   margin: 0 0 1.5rem 0;
   font-weight: 400;
 }
@@ -949,7 +947,6 @@ const onSubmitConfig = async () => {
 .progress-bar {
   width: 200px;
   height: 4px;
-  background: #e2e8f0;
   border-radius: 2px;
   overflow: hidden;
 }
@@ -962,7 +959,6 @@ const onSubmitConfig = async () => {
 
 .progress-text {
   font-size: 0.8rem;
-  color: #64748b;
   font-weight: 500;
   min-width: 50px;
 }
@@ -982,7 +978,6 @@ const onSubmitConfig = async () => {
   gap: 0.5rem;
   padding: 0.6rem 1rem;
   border-radius: 50px;
-  background: white;
   border: 1px solid #e2e8f0;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1033,7 +1028,6 @@ const onSubmitConfig = async () => {
 }
 
 .step-card {
-  background: white;
   border-radius: 16px;
   padding: 2rem;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
@@ -1048,13 +1042,11 @@ const onSubmitConfig = async () => {
 .step-header h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1e293b;
   margin: 0 0 0.5rem 0;
 }
 
 .step-header p {
   font-size: 0.95rem;
-  color: #64748b;
   margin: 0;
 }
 
@@ -1084,7 +1076,6 @@ const onSubmitConfig = async () => {
 .field-label, .upload-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #374151;
   margin-bottom: 0.25rem;
 }
 
@@ -1112,7 +1103,6 @@ const onSubmitConfig = async () => {
 
 .checkbox-group {
   padding: 1rem;
-  background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
@@ -1120,7 +1110,6 @@ const onSubmitConfig = async () => {
 .checkbox-description {
   margin: 0.25rem 0 0 0;
   font-size: 0.75rem;
-  color: #64748b;
 }
 
 /* Logo Section */
@@ -1159,7 +1148,6 @@ const onSubmitConfig = async () => {
   left: 0;
   right: 0;
   background: linear-gradient(transparent, rgba(0,0,0,0.8));
-  color: white;
   padding: 0.75rem;
   text-align: center;
   font-size: 0.8rem;
@@ -1201,7 +1189,6 @@ const onSubmitConfig = async () => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(transparent, rgba(0,0,0,0.8));
   color: white;
   padding: 0.75rem;
   text-align: center;
@@ -1229,7 +1216,6 @@ const onSubmitConfig = async () => {
 
 .upload-area:hover {
   border-color: var(--q-primary);
-  background: #f8fafc;
   transform: translateY(-1px);
 }
 
@@ -1237,12 +1223,10 @@ const onSubmitConfig = async () => {
   margin: 1rem 0 0.5rem 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #374151;
 }
 
 .upload-area p {
   margin: 0;
-  color: #64748b;
   font-size: 0.8rem;
 }
 
@@ -1258,7 +1242,6 @@ const onSubmitConfig = async () => {
 
 /* Integration Section */
 .integration-wrapper {
-  background: #f8fafc;
   border-radius: 8px;
   padding: 1.5rem;
   border: 1px solid #e2e8f0;

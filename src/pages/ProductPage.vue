@@ -109,7 +109,7 @@
                             autofocus
                             label="Código de barra"
                             dense
-                            @blur="getOneProduct(product.barcode)"
+                            @keyup.enter="getOneProduct(product.barcode)"
                         >
                           <template v-slot:append v-if="$q.platform.is.nativeMobile">
                             <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
@@ -181,7 +181,19 @@
                             dense
                           />
                         </div>
-                        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                        <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                          <q-input
+                            :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                            filled
+                            v-model="product.profit_percentage"
+                            label="Margen %"
+                            type="number"
+                            min="0"
+                            max="100"
+                            dense
+                          />
+                        </div>
+                        <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
                           <q-input
                             :rules="[val => !!val || 'El campo es requerido.']"
                             filled
@@ -226,13 +238,11 @@
                         <q-card
                           v-for="(priceList, index) in priceLists"
                           :key="index"
-                          flat
-                          bordered
-                          class="q-mb-sm"
+                          class="q-mb-sm q-pa-none"
                         >
-                          <q-card-section class="q-pa-sm">
+                          <q-card-section class="q-pa-none">
                             <div class="row q-col-gutter-sm items-center">
-                              <div class="col-5">
+                              <div class="col-4">
                                 <q-input
                                   v-model="priceList.name"
                                   label="Nombre de la lista"
@@ -241,7 +251,7 @@
                                   :rules="[val => !!val || 'El precio mínimo es 3']"
                                 />
                               </div>
-                              <div class="col-5">
+                              <div class="col-5 flex justify-between items-center">
                                 <q-input
                                   v-model="priceList.price"
                                   label="Precio"
@@ -251,18 +261,18 @@
                                   filled
                                   dense
                                 />
-                              </div>
-                              <div class="col-2 text-right">
-                                <q-btn
-                                  icon="delete"
-                                  color="negative"
-                                  size="sm"
-                                  round
-                                  flat
-                                  @click="removePriceList(index)"
-                                >
-                                  <q-tooltip>Eliminar lista</q-tooltip>
-                                </q-btn>
+                                <div>
+                                  <q-btn
+                                    icon="delete"
+                                    color="negative"
+                                    size="sm"
+                                    round
+                                    flat
+                                    @click="removePriceList(index)"
+                                  >
+                                    <q-tooltip>Eliminar lista</q-tooltip>
+                                  </q-btn>
+                                </div>
                               </div>
                             </div>
                           </q-card-section>
@@ -469,7 +479,7 @@
                           autofocus
                           label="Código de barra"
                           dense
-                          @blur="getOneProduct(product.barcode)"
+                          @keyup.enter="getOneProduct(product.barcode)"
                         >
                           <template v-slot:append v-if="$q.platform.is.nativeMobile">
                             <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
@@ -541,7 +551,19 @@
                           dense
                         />
                       </div>
-                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                      <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                        <q-input
+                          :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                          filled
+                          v-model="product.profit_percentage"
+                          label="Margen %"
+                          type="number"
+                          min="0"
+                          max="100"
+                          dense
+                        />
+                      </div>
+                      <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
                         <q-input
                           :rules="[val => !!val || 'El campo es requerido.']"
                           filled
@@ -976,6 +998,24 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
+    'product.profit_percentage' (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const price = this.product.cost * (1 + newVal / 100)
+        this.product.price = Number(price.toFixed(2))
+      }
+    },
+    'product.price' (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const margin = ((newVal - this.product.cost) / this.product.cost) * 100
+        this.product.profit_percentage = Number(margin.toFixed(2))
+      }
+    },
+    'product.cost' (newVal) {
+      if (newVal && this.product.profit_percentage != null) {
+        const price = newVal * (1 + this.product.profit_percentage / 100)
+        this.product.price = Number(price.toFixed(2))
+      }
+    },
     /**
      * Set pagination when branch office changes
      * @param {Object} value branch office
@@ -1325,6 +1365,7 @@ export default {
           })
         })
     },
+
     handleFileSelect (event) {
       const files = Array.from(event.target.files)
       this.processFiles(files)
