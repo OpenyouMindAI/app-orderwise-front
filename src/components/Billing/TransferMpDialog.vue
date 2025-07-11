@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="showModal" maximized transition-show="slide-up" transition-hide="slide-down">
+  <q-dialog :model-value="showModal" @update:model-value="$emit('update:showModal', $event)" maximized transition-show="slide-up" transition-hide="slide-down">
     <q-card>
       <q-bar class="bg-primary text-white">
         <q-space />
@@ -101,6 +101,7 @@ export default {
       required: true
     }
   },
+  emits: ['update:showModal'],
 
   setup (props) {
     const formattedAmount = computed(() => {

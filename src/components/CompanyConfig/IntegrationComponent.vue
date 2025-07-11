@@ -127,24 +127,94 @@
 
         <q-card-actions v-if="!download" class="arca-actions">
           <q-btn flat label="Cerrar" v-close-popup class="action-btn-secondary" />
-          <q-btn 
-            color="primary" 
-            label="Conectar" 
-            @click="generateCertificate" 
+          <q-btn
+            color="primary"
+            label="Conectar"
+            @click="generateCertificate"
             unelevated
             class="action-btn"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="mercadoPagoDialog" class="arca-dialog">
+      <q-card class="arca-card">
+          <q-form @submit="generateCredentialMp">
+            <q-card-section class="arca-header relative">
+              <div class="arca-logo-container">
+                <img src="/images/mercado-pago.png" alt="Mercado pago" class="arca-logo" />
+              </div>
+              <q-space />
+              <q-btn
+                icon="close"
+                class="absolute-top-right text-white"
+                style="top: 4px; right: 4px"
+                flat
+                round
+                dense
+                @click="mercadoPagoDialog = false"
+              />
+            </q-card-section>
+
+            <q-card-section class="arca-form">
+              <h3 class="arca-title">Conectar con Mercado Pago</h3>
+              <div class="form-fields">
+                <q-input
+                  v-model="mercadoPago.wallet_address"
+                  label="Access Token"
+                  filled
+                  class="form-field"
+                  :type="walletAddress ? 'text' : 'password'"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="walletAddress ? 'visibility' : 'visibility_off'"
+                      class="cursor-pointer"
+                      @click="walletAddress = !walletAddress"
+                    />
+                  </template>
+                </q-input>
+                <q-input
+                  v-model="mercadoPago.key_master"
+                  label="User id"
+                  :type="showKeyMaster ? 'text' : 'password'"
+                  filled
+                  class="form-field"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="showKeyMaster ? 'visibility' : 'visibility_off'"
+                      class="cursor-pointer"
+                      @click="showKeyMaster = !showKeyMaster"
+                    />
+                  </template>
+              </q-input>
+              </div>
+            </q-card-section>
+
+            <q-card-actions class="arca-actions">
+              <q-btn
+                color="blue-8"
+                label="Conectar"
+                type="submit"
+                unelevated
+                class="action-btn"
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useQuasar } from 'quasar'
-import { apiArca } from 'src/boot/axios'
+import { apiArca, apiQPay } from 'src/boot/axios'
 import { authentication } from 'src/stores/module-authentication'
+import { notify } from 'src/const/mixins'
 
 const $q = useQuasar()
 
@@ -157,7 +227,7 @@ const integrations = ref([
     description: 'Procesa pagos online',
     logo: '/images/mercado-pago.png',
     logoClass: 'logo-mercadopago',
-    connected: true,
+    connected: false,
     loading: false,
     enabled: true
   },
@@ -169,7 +239,8 @@ const integrations = ref([
     logo: '/images/mercado-libre.png',
     logoClass: 'logo-mercadolibre',
     connected: false,
-    loading: false
+    loading: false,
+    enabled: false
   },
   {
     id: 3,
@@ -179,7 +250,8 @@ const integrations = ref([
     logo: 'images/arca.svg',
     logoClass: 'logo-arca',
     connected: false,
-    loading: false
+    loading: false,
+    enabled: true
   },
   {
     id: 4,
@@ -189,12 +261,17 @@ const integrations = ref([
     logo: 'images/pedidos-ya.svg',
     logoClass: 'logo-pedidosya',
     connected: false,
-    loading: false
+    loading: false,
+    enabled: false
   }
 ])
 
 // Dialog data
 const arcaDialog = ref(false)
+const mercadoPagoDialog = ref(false)
+const mercadoPago = reactive({})
+const showKeyMaster = ref(false)
+const walletAddress = ref(false)
 const cuit = ref('')
 const password = ref('')
 const download = ref({})
@@ -216,10 +293,35 @@ const pendingServices = computed(() =>
   integrations.value.filter(i => i.loading).length
 )
 
+const generateCredentialMp = async () => {
+  try {
+    await apiQPay.post('bank-companies', {
+      bank: 'MP',
+      company: userSession.company_session,
+      credentials: mercadoPago.value
+    })
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
 // Methods
 const handleIntegrationClick = (integration) => {
-  if (integration.name === 'arca') {
-    openDialogArca()
+  switch (integration.name) {
+    case 'arca':
+      openDialogArca()
+      break
+    case 'mercadopago':
+      mercadoPagoDialog.value = true
+      break
+    // case 'mercadolibre':
+    //   openDialogMercadoLibre()
+    //   break
+    // case 'pedidosya':
+    //   openDialogPedidosYa()
+    default:
+      notify('No se ha implementado la integración', 'negative', 'warning')
+      break
   }
 }
 
@@ -251,46 +353,32 @@ const openDialogArca = async () => {
 }
 
 const handleAction = async (integration) => {
-  if (integration.name === 'arca') {
-    openDialogArca()
-    return
+  switch (integration.name) {
+    case 'arca':
+      openDialogArca()
+      break
+    case 'mercadopago':
+      mercadoPagoDialog.value = true
+      break
+    // case 'mercadolibre':
+    //   openDialogMercadoLibre()
+    //   break
+    // case 'pedidosya':
+    //   openDialogPedidosYa()
+    default:
+      notify('No se ha implementado la integración', 'negative', 'warning')
+      break
   }
-
-  integration.loading = true
-
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1500))
-
-  if (integration.connected) {
-    $q.notify({
-      message: `Configurando ${integration.displayName}...`,
-      color: 'primary',
-      icon: 'settings',
-      timeout: 2000
-    })
-  } else {
-    integration.connected = true
-    $q.notify({
-      message: `${integration.displayName} conectado exitosamente`,
-      color: 'positive',
-      icon: 'check_circle',
-      timeout: 2000
-    })
-  }
-
-  integration.loading = false
 }
 
 const generateCertificate = async () => {
   try {
     // Simulate certificate generation
     await new Promise(resolve => setTimeout(resolve, 2000))
-    
     download.value = {
       certificate_url: '#',
       key_url: '#'
     }
-    
     $q.notify({
       message: 'Certificado generado exitosamente',
       color: 'positive',
@@ -505,8 +593,8 @@ const generateCertificate = async () => {
 }
 
 .arca-logo {
-  height: 40px;
-  filter: brightness(0) invert(1);
+  height: 50px;
+  width: 200px;
 }
 
 .arca-form {
@@ -514,11 +602,9 @@ const generateCertificate = async () => {
 }
 
 .arca-title {
-  font-size: 1.25rem;
+  font-size: 1.50rem;
   font-weight: 600;
-  color: #1e293b;
   text-align: center;
-  margin: 0 0 1.5rem 0;
 }
 
 .form-fields {
@@ -578,6 +664,7 @@ const generateCertificate = async () => {
 }
 
 .action-btn-secondary {
+  border-radius: 8px;
   color: #64748b;
   font-size: 0.8rem;
   text-transform: none;
@@ -589,21 +676,21 @@ const generateCertificate = async () => {
   .integration-manager {
     padding: 1rem;
   }
-  
+
   .integration-grid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 0.75rem;
   }
-  
+
   .integration-card {
     padding: 1rem;
   }
-  
+
   .stats-row {
     gap: 1rem;
     padding: 0.75rem;
   }
-  
+
   .stat-number {
     font-size: 1.25rem;
   }
@@ -614,12 +701,12 @@ const generateCertificate = async () => {
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .stat-divider {
     width: 30px;
     height: 1px;
   }
-  
+
   .integration-grid {
     grid-template-columns: 1fr;
   }

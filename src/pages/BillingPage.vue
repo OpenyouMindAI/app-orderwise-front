@@ -953,6 +953,11 @@
       :invoice="setModelInvoice()"
       @paymentSuccess="paymentSuccess"
     />
+    <TransferMpDialog
+      v-if="currentPayment"
+      :payment="currentPayment"
+      :show-modal="showDetailsModal"
+    />
   </q-page>
 </template>
 
@@ -966,6 +971,8 @@ import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
 import { usePaymentNotifier } from 'src/boot/payment-notifier'
+import { commandPrint, ticketPrint } from 'src/const/printers'
+import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -973,24 +980,70 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
-import { commandPrint, ticketPrint } from 'src/const/printers'
 
 export default {
   name: 'BillingPage',
   components: {
     DrawerTable,
-    WaitByPaymentMp
+    WaitByPaymentMp,
+    TransferMpDialog
   },
   data () {
     return {
+      /**
+       * Show payment details modal
+       * @type {Boolean}
+       */
+      showDetailsModal: false,
+      /**
+       * Current payment
+       * @type {Object}
+       */
+      currentPayment: {},
+      /**
+       * Partial billing
+       * @type {Boolean}
+       */
       partialBilling: false,
+      /**
+       * Selected price list
+       * @type {Object}
+       */
       selectedPriceList: null,
+      /**
+       * Price input type
+       * @type {String}
+       */
       priceInputType: 'list',
+      /**
+       * Waiting payment
+       * @type {Boolean}
+       */
       waitingPayment: false,
+      /**
+       * Loading billing
+       * @type {Boolean}
+       */
       loadingBilling: false,
+      /**
+       * Payment method cash flow
+       * @type {Object}
+       */
       paymentMethodCashFlow: null,
+      /**
+       * Loading search
+       * @type {Boolean}
+       */
       loadingSearch: false,
+      /**
+       * Invoice share
+       * @type {Object}
+       */
       invoiceShare: {},
+      /**
+       * Document types
+       * @type {Array}
+       */
       documentTypes: [],
       /**
        * Invoice printer
@@ -1310,6 +1363,10 @@ export default {
         }
       ],
       voucherTypes: [],
+      /**
+       * Voucher type
+       * @type {Object}
+       */
       voucherType: null,
       /**
        * Products columns
@@ -1418,16 +1475,6 @@ export default {
       if (data && companySession?.company_config?.payment_method) {
         this.addPayment(companySession?.company_config?.payment_method)
       }
-      if (data) {
-        console.log('hola', this.$echoPay, companySession.company_config.other)
-        const channel = this.$echoPay.channel('mercado-pago-payment')
-        console.log('.mercado-pago-payment.c5c4bb6f-e7cc-4287-99d4-0a82ddec4da6')
-        console.log(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`)
-        channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`, (data) => {
-          const { showPaymentNotification } = usePaymentNotifier()
-          showPaymentNotification(data)
-        })
-      }
     },
     branchOffice (data) {
       if (data) {
@@ -1494,10 +1541,23 @@ export default {
   created () {
     this.getLocalStorage()
     this.getPaymentMethods()
+    this.listenPayments()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    listenPayments () {
+      const { company_session: companySession } = this.userSession
+      if (companySession?.company_config?.other?.qpay_id) {
+        const channel = this.$echoPay.channel('mercado-pago-payment')
+        channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`, (data) => {
+          const { showPaymentNotification, showDetailsModal, currentPayment } = usePaymentNotifier()
+          showPaymentNotification(data.payment)
+          this.showDetailsModal = showDetailsModal
+          this.currentPayment = currentPayment
+        })
+      }
+    },
     handleClick (event) {
       const clickedElement = event.target
 

@@ -1059,14 +1059,12 @@ const onSubmitConfig = async () => {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  gap: 5px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
 .form-group.full-width {
@@ -1122,8 +1120,8 @@ const onSubmitConfig = async () => {
 
 .logo-preview {
   position: relative;
-  width: 180px;
-  height: 100px;
+  width: 480px;
+  height: 200px;
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
@@ -1254,8 +1252,6 @@ const onSubmitConfig = async () => {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
   border-top: 1px solid #f1f5f9;
 }
 
