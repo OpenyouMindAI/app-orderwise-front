@@ -711,7 +711,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
+    <q-dialog v-model="dialogTable">
       <drawer-table
         ref="drawerTable"
         :tablesSelected="tableSelected"
@@ -719,11 +719,9 @@
         @update:invoice="selectInvoice"
         @update:freeTable="freeTable"
       >
-        <template v-slot:footer>
-          <q-card-actions align="right">
-            <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
-            <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          </q-card-actions>
+        <template v-slot:header>
+          <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
+          <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
         </template>
       </drawer-table>
     </q-dialog>
