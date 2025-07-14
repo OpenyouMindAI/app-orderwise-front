@@ -15,7 +15,7 @@
            </p>
          </div>
 
-         <div v-if="userSession.is_root">
+         <div>
            <q-btn
              v-if="currentCount.id && currentCount.status === 'active'"
              unelevated
