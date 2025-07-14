@@ -218,6 +218,12 @@ const routes = [
         name: 'ProductSales',
         meta: { requiresAuth: true },
         component: () => import('pages/ProductSalesPage.vue')
+      },
+      {
+        path: 'table-control',
+        name: 'TableControl',
+        meta: { requiresAuth: true },
+        component: () => import('pages/TableControlPage.vue')
       }
     ]
   },

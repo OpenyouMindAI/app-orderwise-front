@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="luxury-restaurant-designer waiter-dashboard"
-    :style="`width: ${(selectedRoom?.width || 120) * 37}px; height: ${(selectedRoom?.height || 120) * 47}px; max-width: 95vw;`"
-  >
+  <div class="luxury-restaurant-designer">
     <!-- Elevated Header -->
     <header class="luxury-header">
       <div class="header-content-wrapper">
@@ -35,15 +32,14 @@
             </q-select>
           </div>
 
-          <div class="action-buttons-group full-width">
+          <div class="action-buttons-group">
             <q-btn
               icon="refresh"
-              label="Actualizar Mesas"
+              label="Actualizar"
               @click="refreshTables"
               class="action-button secondary-action-button"
               flat
             />
-            <slot name="header"></slot>
           </div>
         </div>
       </div>
@@ -65,7 +61,6 @@
               v-model:y="table.y"
               v-model:h="table.height"
               v-model:w="table.width"
-              :class="getTableWrapperClass(table)"
               :handles-size="8"
               :draggable="false"
               :resizable="false"
@@ -101,15 +96,6 @@
                   round
                   class="fixed-top-right q-ma-xs"
                   @click.stop="$emit('update:invoice', table)"
-                />
-                <q-btn
-                  icon="close"
-                  color="negative"
-                  size="sm"
-                  round
-                  class="fixed-bottom-right q-ma-xs"
-                  @click.stop="$emit('update:freeTable', table)"
-                  v-if="freeTable"
                 />
               </template>
             </draggable-resizable-vue>
@@ -154,19 +140,9 @@ export default {
     DraggableResizableContainer,
     DraggableResizableVue
   },
-  props: {
-    tablesSelected: {
-      type: Array,
-      required: true
-    },
-    freeTable: {
-      type: Boolean,
-      default: false
-    }
-  },
-  emits: ['update:tableSelected', 'update:invoice', 'update:freeTable'],
   data () {
     return {
+      tablesSelected: [],
       selectedRoom: null,
       currentTables: [],
       livingRooms: [],
@@ -175,9 +151,6 @@ export default {
       canvasWidth: 20, // Default width in meters
       canvasHeight: 15, // Default height in meters
       zoomLevel: 1,
-
-      // Internal state for table selection (synced with prop)
-      tableSelected: [...this.tablesSelected],
 
       // Status mapping for display
       statusMap: {
@@ -206,22 +179,6 @@ export default {
       }
     }
   },
-
-  watch: {
-    tablesSelected: {
-      handler (newVal) {
-        this.tableSelected = [...newVal]
-      },
-      deep: true
-    },
-    tableSelected: {
-      handler (newVal) {
-        this.$emit('update:tableSelected', newVal)
-      },
-      deep: true
-    }
-  },
-
   created () {
     this.getLivingRooms()
   },
@@ -298,14 +255,6 @@ export default {
       }
     },
 
-    // Utility methods
-    getTableWrapperClass (table) {
-      const baseClass = 'table-draggable-wrapper'
-      // Add 'is-selected' class if table is selected (for visual feedback)
-      const selectedClass = this.tableSelected.includes(table.id) ? 'is-selected' : ''
-      return `${baseClass} ${selectedClass}`
-    },
-
     getTableDesignClass (table) {
       const baseClass = `luxury-table table-shape-${table.shape || 'round'}`
       const busyClass = table.status === 'busy' ? 'table-is-busy' : ''
@@ -365,9 +314,8 @@ body.body--dark {
 
 /* --- Base Page Styling --- */
 .luxury-restaurant-designer {
-  background-color: var(--color-background);
-  font-family: var(--font-family-primary);
   color: var(--color-text);
+  height: calc(100vh - 50px);
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
@@ -386,7 +334,6 @@ body.body--dark {
 
 .header-content-wrapper {
   display: flex;
-  flex-direction: column;
   gap: calc(var(--spacing-unit) * 1.5);
 }
 
@@ -394,6 +341,7 @@ body.body--dark {
   display: flex;
   align-items: center;
   gap: var(--spacing-unit);
+  width: 76vw;
 }
 
 .brand-logo-circle {
@@ -839,7 +787,6 @@ body.body--dark {
 /* --- Responsive Design --- */
 @media (max-width: 1200px) {
   .header-content-wrapper {
-    flex-direction: column;
     gap: var(--spacing-unit);
     align-items: flex-start;
   }
@@ -856,13 +803,11 @@ body.body--dark {
   }
 
   .brand-identity {
-    flex-direction: column;
     gap: 0.4rem;
-    text-align: center;
+    width: 95vw;
   }
 
   .header-controls-group {
-    flex-direction: column;
     gap: 0.8rem;
   }
 
@@ -872,6 +817,7 @@ body.body--dark {
 
   .luxury-select {
     flex: 1;
+    max-width: 200px;
     min-width: auto;
   }
 

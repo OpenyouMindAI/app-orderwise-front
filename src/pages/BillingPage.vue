@@ -720,6 +720,7 @@
         @update:freeTable="freeTable"
       >
         <template v-slot:header>
+          <q-space />
           <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
           <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
         </template>

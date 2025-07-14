@@ -7,8 +7,8 @@
           <div class="brand-logo-circle">
             <q-icon name="restaurant" class="brand-icon" />
           </div>
-          <div class="brand-text-group">
-            <h1 class="app-title">Diseñador de Mesas</h1>
+          <div class="brand-text-group column">
+            <span class="text-h5">Diseñador de mesas</span>
             <span class="app-subtitle">Configuración de Espacios Premium</span>
           </div>
         </div>
@@ -59,7 +59,7 @@
     <section class="stats-overview-bar" v-if="selectedRoom">
       <div class="stats-content-wrapper">
         <div class="room-details-section">
-          <h2 class="room-name-display">{{ selectedRoom.name }}</h2>
+          <span class="room-name-display">{{ selectedRoom.name }}</span>
           <q-btn
             flat
             round
@@ -952,7 +952,6 @@ export default {
 }
 
 .brand-text-group .app-title {
-  font-family: var(--font-family-secondary);
   font-size: 1.6rem; /* Slightly smaller */
   font-weight: 700;
   margin: 0;
@@ -1088,7 +1087,6 @@ export default {
 }
 
 .room-name-display {
-  font-family: var(--font-family-secondary);
   font-size: 1.8rem; /* Slightly smaller */
   font-weight: 700;
   margin: 0;
@@ -1416,7 +1414,6 @@ export default {
 }
 
 .empty-state-content .empty-state-title {
-  font-family: var(--font-family-secondary);
   font-size: 2.2rem; /* Smaller */
   font-weight: 700;
   margin-bottom: 0.8rem; /* Reduced margin */
@@ -1496,7 +1493,6 @@ export default {
 }
 
 .table-meta-info .inspector-table-name {
-  font-family: var(--font-family-secondary);
   font-size: 1.15rem; /* Smaller */
   font-weight: 700;
   margin: 0 0 0.2rem 0;
