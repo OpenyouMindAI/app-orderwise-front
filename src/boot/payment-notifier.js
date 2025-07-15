@@ -1,4 +1,4 @@
-import { Notify } from 'quasar'
+import { Dialog, Notify } from 'quasar'
 import { formatNumber } from 'src/const/mixins'
 import { ref } from 'vue'
 
@@ -14,22 +14,35 @@ export function usePaymentNotifier () {
     const payerInfo = getPayerInfo(paymentData.payer)
 
     // Mostrar notificación
-    Notify.create({
-      type: paymentData.status === 'approved' ? 'positive' : 'warning',
+    Dialog.create({
+      message: `
+        <div style="background-color: #00B1EA; padding: 20px; border-radius: 8px; color: white;">
+          <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.18.9/mercadopago/logo__small@2x.png" 
+                style="height: 30px; margin-right: 10px;" alt="Mercado Pago">
+            <div>
+              <div style="font-size: 1.2em; font-weight: bold;">$${amount}</div>
+              <div>De: ${payerInfo}</div>
+            </div>
+          </div>
+        </div>
+      `,
+      html: true,
       position: 'top-right',
-      timeout: 10000,
-      message: `Pago recibido: ${amount}`,
-      caption: `De: ${payerInfo}`,
-      icon: 'payments',
-      actions: [
-        {
-          label: 'Detalles',
-          color: 'white',
-          handler: () => {
-            showDetailsModal.value = true
-          }
-        }
-      ]
+      seamless: true,
+      ok: {
+        label: 'Detalles',
+        color: 'primary',
+        flat: true
+      },
+      cancel: {
+        label: 'Cerrar',
+        color: 'white',
+        textColor: 'black',
+        flat: true
+      }
+    }).onOk(() => {
+      showDetailsModal.value = true
     })
   }
 
