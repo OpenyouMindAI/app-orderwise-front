@@ -928,8 +928,7 @@ export default {
           id: '',
           barcode: '',
           name: '',
-          'category.name': '',
-          price: ''
+          'category.name': ''
         }
       },
       visible: false,
