@@ -44,6 +44,7 @@
         </div>
       </div>
     </header>
+
     <!-- Main Canvas Area -->
     <main class="canvas-main-area" v-if="selectedRoom">
       <div class="canvas-viewport-container">
@@ -79,25 +80,6 @@
                   <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
                 </div>
               </div>
-              <!-- Checkbox for unoccupied tables -->
-              <q-checkbox
-                v-if="table.status === 'unoccupied'"
-                v-model="tableSelected"
-                :val="table.id"
-                color="teal"
-                class="fixed-top-right q-ma-xs"
-              />
-              <!-- Buttons for busy tables -->
-              <template v-else-if="table.status === 'busy'">
-                <q-btn
-                  icon="receipt"
-                  color="secondary"
-                  size="sm"
-                  round
-                  class="fixed-top-right q-ma-xs"
-                  @click.stop="$emit('update:invoice', table)"
-                />
-              </template>
             </draggable-resizable-vue>
           </draggable-resizable-container>
         </div>
@@ -124,8 +106,332 @@
       </div>
     </div>
 
-    <!-- Invoice Detail Dialog (Managed by parent component via emits) -->
-    <!-- This dialog is not directly in this component, but triggered by emits -->
+    <!-- Invoice Edit Modal -->
+    <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal">
+      <q-card class="invoice-card">
+        <!-- Header -->
+        <q-card-section class="invoice-header bg-primary text-white">
+          <div class="invoice-header-content">
+            <div class="invoice-title-group">
+              <q-icon name="receipt_long" class="invoice-icon" />
+              <div>
+                <div class="invoice-title">{{ selectedInvoice?.code || 'Nueva Comanda' }}</div>
+                <div class="invoice-subtitle">Mesa {{ selectedTable?.name }}</div>
+              </div>
+            </div>
+            <q-btn
+              icon="close"
+              flat
+              round
+              dense
+              @click="closeInvoiceModal"
+              class="close-btn"
+            />
+          </div>
+        </q-card-section>
+
+        <!-- Navigation Tabs -->
+        <q-tabs
+          v-model="activeTab"
+          class="invoice-tabs"
+          indicator-color="primary"
+          active-color="primary"
+          align="justify"
+        >
+          <q-tab name="order" label="Pedido" icon="restaurant" />
+          <q-tab name="products" label="Productos" icon="add_shopping_cart" />
+        </q-tabs>
+
+        <q-separator />
+
+        <!-- Tab Panels -->
+        <q-tab-panels v-model="activeTab" class="invoice-body">
+          <!-- Order Panel -->
+          <q-tab-panel name="order">
+            <!-- Customer Info -->
+            <div v-if="selectedInvoice?.client" class="customer-section">
+              <div class="customer-info">
+                <span class="customer-name">Cliente: {{ selectedInvoice.client.name }}</span>
+              </div>
+            </div>
+
+            <!-- Products List -->
+            <div class="products-section column q-gutter-y-sm">
+              <span class="text-h6">
+                <q-icon name="restaurant" />
+                Productos ({{ invoiceProducts.length }})
+              </span>
+
+              <div v-if="invoiceProducts.length === 0" class="empty-products">
+                <q-icon name="shopping_cart" size="3rem" class="empty-icon" />
+                <p>No hay productos en esta comanda</p>
+                <q-btn
+                  label="Agregar Producto"
+                  icon="add"
+                  color="primary"
+                  @click="activeTab = 'products'"
+                  unelevated
+                />
+              </div>
+
+              <div v-else class="products-list">
+                <div
+                  v-for="(product, index) in invoiceProducts"
+                  :key="product.id"
+                  class="product-item"
+                >
+                  <div class="product-image">
+                    <img
+                      v-if="product.images && product.images.length > 0"
+                      :src="product.images[0].url"
+                      :alt="product.name"
+                      class="product-img"
+                    />
+                    <q-icon v-else name="fastfood" size="2rem" class="product-placeholder" />
+                  </div>
+
+                  <div class="product-details">
+                    <div class="product-name">{{ product.name }}</div>
+                    <div class="product-description">{{ product.description }}</div>
+                    <div v-if="product.pivot.observation" class="product-observation">
+                      <q-icon name="note" size="sm" />
+                      {{ product.pivot.observation }}
+                    </div>
+                    <div class="product-price">${{ formatPrice(product.pivot.price) }}</div>
+                  </div>
+
+                  <div class="product-actions">
+                    <div class="quantity-controls">
+                      <q-btn
+                        icon="remove"
+                        size="sm"
+                        round
+                        flat
+                        @click="decreaseQuantity(index)"
+                        :disable="product.pivot.amount <= 1"
+                        class="quantity-btn"
+                      />
+                      <q-input
+                        v-model.number="product.pivot.amount"
+                        type="number"
+                        min="1"
+                        dense
+                        outlined
+                        class="quantity-input"
+                        @update:model-value="updateQuantity(index, $event)"
+                      />
+                      <q-btn
+                        icon="add"
+                        size="sm"
+                        round
+                        flat
+                        @click="increaseQuantity(index)"
+                        class="quantity-btn"
+                      />
+                    </div>
+
+                    <div class="product-total">
+                      ${{ formatPrice(product.pivot.price * product.pivot.amount) }}
+                    </div>
+
+                    <div class="product-item-actions">
+                      <q-btn
+                        icon="edit_note"
+                        size="sm"
+                        round
+                        flat
+                        color="primary"
+                        @click="editProductNote(index)"
+                        class="edit-note-btn"
+                      >
+                        <q-tooltip>Agregar nota</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        icon="delete"
+                        size="sm"
+                        round
+                        flat
+                        color="negative"
+                        @click="removeProduct(index)"
+                        class="remove-btn"
+                      >
+                        <q-tooltip>Eliminar producto</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div v-if="invoiceProducts.length > 0">
+              <div class="summary-content">
+                <div class="summary-row total-row">
+                  <span>Total:</span>
+                  <span>${{ formatPrice(calculateTotal()) }}</span>
+                </div>
+              </div>
+            </div>
+          </q-tab-panel>
+
+          <!-- Products Panel -->
+          <q-tab-panel name="products" class="products-panel">
+            <!-- Search and Filter -->
+            <div class="search-section">
+              <q-input
+                v-model="productSearch"
+                placeholder="Buscar productos..."
+                outlined
+                dense
+                class="search-input"
+                @update:model-value="filterProducts"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+
+              <q-select
+                v-model="selectedCategory"
+                :options="categoryOptions"
+                label="Categoría"
+                outlined
+                dense
+                class="category-select"
+                @update:model-value="filterByCategory"
+                clearable
+              />
+            </div>
+
+            <!-- Products Grid -->
+            <q-infinite-scroll class="products-grid"  @load="loadProducts" debounce="700" :offset="1000">
+              <div
+                v-for="product in filteredProducts"
+                :key="product.id"
+                class="product-card q-mt-sm"
+              >
+                <div class="product-card-image">
+                  <img
+                    v-if="product.images && product.images.length > 0"
+                    :src="product.images[0].url"
+                    :alt="product.name"
+                    class="product-card-img"
+                  />
+                  <q-icon v-else name="fastfood" size="2rem" class="product-card-placeholder" />
+                </div>
+
+                <div class="product-card-info">
+                  <div class="product-card-name">{{ product.name }}</div>
+                  <div class="product-card-price">${{ formatPrice(product.price) }}</div>
+                </div>
+
+                <div class="product-card-actions">
+                  <q-btn
+                    icon="add"
+                    color="primary"
+                    round
+                    size="sm"
+                    @click="quickAddProduct(product)"
+                    class="quick-add-btn"
+                  >
+                    <q-tooltip>Agregar rápido</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="note_add"
+                    color="secondary"
+                    round
+                    size="sm"
+                    @click="addProductWithNote(product)"
+                    class="add-with-note-btn"
+                  >
+                    <q-tooltip>Agregar con nota</q-tooltip>
+                  </q-btn>
+                </div>
+
+                <!-- Quick quantity indicator -->
+                <div
+                  v-if="getProductQuantityInOrder(product.id) > 0"
+                  class="quantity-badge"
+                >
+                  {{ getProductQuantityInOrder(product.id) }}
+                </div>
+              </div>
+            </q-infinite-scroll>
+
+            <!-- Loading State -->
+            <div v-if="loadingProducts" class="loading-products">
+              <q-spinner color="primary" size="2rem" />
+              <p>Cargando productos...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="!loadingProducts && filteredProducts.length === 0" class="empty-products-search">
+              <q-icon name="search_off" size="3rem" class="empty-search-icon" />
+              <p>No se encontraron productos</p>
+            </div>
+          </q-tab-panel>
+        </q-tab-panels>
+
+        <q-separator />
+
+        <!-- Actions -->
+        <q-card-actions class="invoice-actions">
+          <q-btn
+            label="Cancelar"
+            flat
+            @click="closeInvoiceModal"
+            class="cancel-btn"
+          />
+          <q-space />
+          <q-btn
+            label="Guardar"
+            color="primary"
+            @click="saveInvoice"
+            :loading="saving"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Product Note Dialog -->
+    <q-dialog v-model="showNoteDialog" class="note-dialog">
+      <q-card class="note-card">
+        <q-card-section class="note-header">
+          <div class="note-title">
+            <q-icon name="note_add" />
+            Agregar Nota
+          </div>
+          <div class="note-product-name">{{ noteProduct?.name }}</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-input
+            v-model="productNote"
+            type="textarea"
+            placeholder="Ej: Sin cebolla, extra queso, bien cocido..."
+            outlined
+            rows="3"
+            class="note-input"
+            autofocus
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            label="Cancelar"
+            flat
+            @click="cancelNote"
+          />
+          <q-btn
+            label="Agregar"
+            color="primary"
+            @click="confirmNote"
+            unelevated
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -134,6 +440,7 @@ import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
+import { loading } from 'src/const/mixins'
 
 export default {
   components: {
@@ -148,9 +455,31 @@ export default {
       livingRooms: [],
       showGrid: true,
       gridSize: 20,
-      canvasWidth: 20, // Default width in meters
-      canvasHeight: 15, // Default height in meters
+      canvasWidth: 20,
+      canvasHeight: 15,
       zoomLevel: 1,
+
+      // Modal state
+      showInvoiceModal: false,
+      selectedTable: null,
+      selectedInvoice: null,
+      invoiceProducts: [],
+      saving: false,
+      activeTab: 'order',
+
+      // Product selector state
+      productSearch: '',
+      selectedCategory: null,
+      availableProducts: [],
+      filteredProducts: [],
+      loadingProducts: false,
+
+      // Note dialog state
+      showNoteDialog: false,
+      noteProduct: null,
+      productNote: '',
+      noteAction: null, // 'add' or 'edit'
+      noteProductIndex: null,
 
       // Status mapping for display
       statusMap: {
@@ -172,13 +501,25 @@ export default {
     },
 
     canvasStyle () {
-      // 1 meter = 30 pixels (adjust as needed for visual scale)
       return {
         width: `${this.canvasWidth * 30}px`,
         height: `${this.canvasHeight * 30}px`
       }
+    },
+
+    categoryOptions () {
+      const categories = []
+
+      // Extract unique categories from products
+      const uniqueCategories = [...new Set(this.availableProducts.map(p => p.category?.name).filter(Boolean))]
+      uniqueCategories.forEach(cat => {
+        categories.push({ label: cat, value: cat })
+      })
+
+      return categories
     }
   },
+
   created () {
     this.getLivingRooms()
   },
@@ -187,11 +528,10 @@ export default {
     async getLivingRooms () {
       try {
         const { data } = await this.$api.get('living-rooms')
-        this.livingRooms = data // Assuming data.data contains the array of rooms
+        this.livingRooms = data
         if (this.livingRooms.length > 0 && !this.selectedRoom) {
           this.selectedRoom = this.livingRooms[0]
           this.onRoomChange(this.selectedRoom)
-          console.log(this.selectedRoom)
         }
       } catch (err) {
         Notify.create({
@@ -212,6 +552,7 @@ export default {
 
     async getTablesForRoom (roomId) {
       try {
+        loading(true)
         const { data } = await this.$api.get('tables', {
           params: {
             dataEqualFilter: {
@@ -226,6 +567,8 @@ export default {
           icon: 'warning',
           color: 'negative'
         })
+      } finally {
+        loading(false)
       }
     },
 
@@ -242,16 +585,216 @@ export default {
 
     onTableClick (table) {
       if (table.status === 'busy') {
-        // If busy, emit to parent to open invoice dialog
-        this.$emit('update:invoice', table)
+        this.openInvoiceModal(table)
       } else {
-        // If unoccupied, toggle selection in tableSelected array
-        const index = this.tableSelected.indexOf(table.id)
-        if (index > -1) {
-          this.tableSelected.splice(index, 1)
-        } else {
-          this.tableSelected.push(table.id)
+        this.createNewOrder(table)
+      }
+    },
+
+    openInvoiceModal (table) {
+      this.selectedTable = table
+      this.selectedInvoice = table.invoices && table.invoices.length > 0 ? table.invoices[0] : null
+      this.invoiceProducts = this.selectedInvoice ? [...this.selectedInvoice.products] : []
+      this.showInvoiceModal = true
+      this.activeTab = 'order'
+    },
+
+    createNewOrder (table) {
+      this.selectedTable = table
+      this.selectedInvoice = null
+      this.invoiceProducts = []
+      this.showInvoiceModal = true
+      this.activeTab = 'products'
+    },
+
+    closeInvoiceModal () {
+      this.showInvoiceModal = false
+      this.selectedTable = null
+      this.selectedInvoice = null
+      this.invoiceProducts = []
+      this.activeTab = 'order'
+      this.productSearch = ''
+      this.selectedCategory = null
+    },
+
+    increaseQuantity (index) {
+      this.invoiceProducts[index].pivot.amount++
+    },
+
+    decreaseQuantity (index) {
+      if (this.invoiceProducts[index].pivot.amount > 1) {
+        this.invoiceProducts[index].pivot.amount--
+      }
+    },
+
+    updateQuantity (index, newQuantity) {
+      if (newQuantity >= 1) {
+        this.invoiceProducts[index].pivot.amount = newQuantity
+      }
+    },
+
+    removeProduct (index) {
+      this.invoiceProducts.splice(index, 1)
+    },
+
+    // Product management methods
+    async loadProducts (page, done, dataSearch = {}) {
+      try {
+        this.loadingProducts = true
+        const { data, last_page: lastPage } = await this.$api.get('products', {
+          params: {
+            dataEqualFilter: {
+              show_catalog: 1
+            },
+            dataSearch,
+            orderBy: 'sold',
+            sortOrder: 'desc',
+            paginate: true,
+            perPage: 50,
+            page
+          }
+        })
+        this.availableProducts = [...this.availableProducts, ...data.data]
+        this.filteredProducts = [...this.filteredProducts, ...data.data]
+        done(lastPage === page)
+      } catch (err) {
+        console.log(err.message)
+        Notify.create({
+          message: 'Error al cargar productos',
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        this.loadingProducts = false
+      }
+    },
+
+    searchProducts () {
+      this.filterProducts()
+    },
+
+    filterByCategory () {
+      this.filterProducts()
+    },
+
+    filterProducts () {
+      this.loadProducts(1, () => {}, {
+        barcode: this.productSearch,
+        name: this.productSearch
+      })
+    },
+
+    quickAddProduct (product) {
+      this.addProductToInvoice(product, '')
+    },
+
+    addProductWithNote (product) {
+      this.noteProduct = product
+      this.productNote = ''
+      this.noteAction = 'add'
+      this.showNoteDialog = true
+    },
+
+    editProductNote (index) {
+      this.noteProduct = this.invoiceProducts[index]
+      this.productNote = this.invoiceProducts[index].pivot.observation || ''
+      this.noteAction = 'edit'
+      this.noteProductIndex = index
+      this.showNoteDialog = true
+    },
+
+    cancelNote () {
+      this.showNoteDialog = false
+      this.noteProduct = null
+      this.productNote = ''
+      this.noteAction = null
+      this.noteProductIndex = null
+    },
+
+    confirmNote () {
+      if (this.noteAction === 'add') {
+        this.addProductToInvoice(this.noteProduct, this.productNote)
+      } else if (this.noteAction === 'edit') {
+        this.invoiceProducts[this.noteProductIndex].pivot.observation = this.productNote
+      }
+      this.cancelNote()
+    },
+
+    addProductToInvoice (product, note = '') {
+      // Check if product already exists in invoice
+      const existingIndex = this.invoiceProducts.findIndex(p => p.id === product.id)
+
+      if (existingIndex >= 0) {
+        // If exists, increase quantity
+        this.invoiceProducts[existingIndex].pivot.amount++
+        if (note) {
+          this.invoiceProducts[existingIndex].pivot.observation = note
         }
+      } else {
+        // If doesn't exist, add new product
+        const newProduct = {
+          ...product,
+          pivot: {
+            amount: 1,
+            price: product.price,
+            taxe: 21,
+            observation: note || null
+          }
+        }
+        this.invoiceProducts.push(newProduct)
+      }
+
+      // Show success notification with quantity badge
+      const totalQuantity = this.getProductQuantityInOrder(product.id)
+      Notify.create({
+        message: `${product.name} (${totalQuantity})`,
+        icon: 'check_circle',
+        color: 'positive',
+        timeout: 800,
+        position: 'top'
+      })
+    },
+
+    getProductQuantityInOrder (productId) {
+      const product = this.invoiceProducts.find(p => p.id === productId)
+      return product ? product.pivot.amount : 0
+    },
+
+    calculateTotal () {
+      return this.invoiceProducts.reduce((sum, product) => {
+        return sum + (product.pivot.price * product.pivot.amount)
+      }, 0)
+    },
+
+    async saveInvoice () {
+      this.saving = true
+      try {
+        await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
+          ...this.selectedInvoice,
+          products: this.invoiceProducts.map(product => {
+            return {
+              ...product,
+              amount: product.pivot.amount
+            }
+          })
+        })
+
+        Notify.create({
+          message: 'Pedido guardado exitosamente',
+          icon: 'check_circle',
+          color: 'positive'
+        })
+
+        this.closeInvoiceModal()
+        this.refreshTables()
+      } catch (err) {
+        Notify.create({
+          message: 'Error al guardar el pedido',
+          icon: 'error',
+          color: 'negative'
+        })
+      } finally {
+        this.saving = false
       }
     },
 
@@ -263,12 +806,17 @@ export default {
 
     getTableStatusLabel (status) {
       return this.statusMap[status] || status
+    },
+
+    formatPrice (price) {
+      return (price / 100).toFixed(2)
     }
   }
 }
 </script>
 
 <style>
+/* --- Existing base styles remain the same --- */
 /* --- Global Variables for Luxury Theme (Quasar Dark Mode Compatible) --- */
 :root {
   /* Light Mode Defaults */
@@ -292,9 +840,6 @@ export default {
   --table-square-bg: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%); /* Sapphire Blue */
   --table-rectangle-bg: linear-gradient(135deg, #16A34A 0%, #15803D 100%); /* Emerald Green */
   --table-oval-bg: linear-gradient(135deg, #DC2626 0%, #991B1B 100%); /* Ruby Red */
-
-  --font-family-primary: 'Inter', sans-serif;
-  --font-family-secondary: 'Playfair Display', serif;
 
   --border-radius-sm: 6px;
   --border-radius-md: 10px;
@@ -690,156 +1235,500 @@ body.body--dark {
   line-height: 1.5;
 }
 
-/* --- Dialog Styling (General, for consistency) --- */
-.luxury-dialog {
-  width: 500px;
-  max-width: 90vw;
-  border-radius: var(--border-radius-lg);
-  overflow: hidden;
-  background-color: var(--color-surface);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--color-border);
+/* --- Invoice Modal Styling --- */
+.invoice-modal :deep(.q-dialog__inner) {
+  padding: 0;
+  justify-content: flex-end;
 }
 
-.dialog-header-section {
+.invoice-card {
+  width: 600px;
+  max-width: 90vw;
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 0;
+  background-color: var(--color-surface);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.invoice-header {
+  color: white;
+  flex-shrink: 0;
+}
+
+.invoice-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: calc(var(--spacing-unit) * 1.5);
-  background: linear-gradient(135deg, var(--color-accent-gold-dark) 0%, var(--color-accent-gold) 100%);
-  color: var(--color-background);
 }
 
-.dialog-title-group {
+.invoice-title-group {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 1rem;
 }
 
-.dialog-icon {
-  font-size: 1.3rem;
+.invoice-icon {
+  font-size: 2rem;
 }
 
-.dialog-title-text {
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+.invoice-title {
+  font-size: 1.4rem;
+  font-weight: 700;
 }
 
-.dialog-close-button {
-  color: rgba(var(--color-background), 0.7);
+.invoice-subtitle {
+  font-size: 1rem;
+  opacity: 0.9;
 }
 
-.dialog-close-button:hover {
-  color: var(--color-background);
+.close-btn {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.close-btn:hover {
+  color: white;
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-.dialog-body-content {
-  padding: calc(var(--spacing-unit) * 1.5);
+/* --- Tabs Styling --- */
+.invoice-tabs {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
-.dialog-action-buttons {
-  padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 1.5);
+.invoice-body {
+  flex: 1;
+  overflow: hidden;
+}
+
+.invoice-body :deep(.q-tab-panel) {
+  padding: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.section-title {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 1rem;
 }
 
-.dialog-cancel-button {
-  color: var(--color-text-muted);
-  border-radius: var(--border-radius-md);
-  transition: all 0.2s ease-in-out;
-}
-
-.dialog-cancel-button:hover {
+.customer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem;
   background-color: var(--color-card);
+  border-radius: var(--border-radius-md);
+}
+
+.customer-name {
+  font-weight: 600;
   color: var(--color-text);
 }
 
-.luxury-input :deep(.q-field__control) {
+.customer-details {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.empty-products {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+}
+
+.empty-icon {
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+.products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.product-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--color-card);
   border-radius: var(--border-radius-md);
   border: 1px solid var(--color-border);
-  background-color: var(--color-card);
-  color: var(--color-text);
-  min-height: 40px;
-  padding: 0 12px;
 }
 
-.luxury-input :deep(.q-field__label) {
+.product-image {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-background);
+  flex-shrink: 0;
+}
+
+.product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-placeholder {
   color: var(--color-text-muted);
-  top: 10px;
 }
 
-.luxury-input :deep(.q-field__native) {
-  padding-top: 8px;
+.product-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
 }
 
-.luxury-input :deep(.q-field__control):hover:before {
-  border-color: var(--color-accent-gold) !important;
+.product-name {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.2;
 }
 
-.luxury-input :deep(.q-field--focused .q-field__control) {
-  border-color: var(--color-accent-gold) !important;
-  box-shadow: 0 0 0 2px rgba(var(--color-accent-gold), 0.3);
+.product-description {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.2;
+}
+
+.product-observation {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--color-accent-gold-dark);
+  font-style: italic;
+  background-color: rgba(212, 175, 55, 0.1);
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  margin-top: 0.2rem;
+}
+
+.product-price {
+  font-weight: 600;
+  color: var(--color-accent-gold-dark);
+  font-size: 0.9rem;
+}
+
+.product-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.quantity-btn {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+
+.quantity-input {
+  width: 60px;
+}
+
+.quantity-input :deep(.q-field__control) {
+  height: 38px;
+  min-height: 38px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.quantity-input :deep(.q-field__native) {
+  text-align: center;
+  padding: 0;
+}
+
+.product-total {
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.product-item-actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.edit-note-btn, .remove-btn {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+
+.summary-section {
+  margin-top: 2rem;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.total-row {
+  font-weight: 700;
+  font-size: 1.1rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* --- Products Panel --- */
+.products-panel {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.search-section {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.search-input {
+  flex: 2;
+}
+
+.category-select {
+  flex: 1;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  flex: 1;
+}
+
+.product-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  padding: 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-accent-gold);
+}
+
+.product-card-image {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-background);
+  margin-bottom: 0.8rem;
+}
+
+.product-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-card-placeholder {
+  color: var(--color-text-muted);
+}
+
+.product-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.8rem;
+}
+
+.product-card-name {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.product-card-price {
+  font-weight: 700;
+  color: var(--color-accent-gold-dark);
+  font-size: 0.9rem;
+}
+
+.product-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.quick-add-btn, .add-with-note-btn {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+}
+
+.quantity-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: var(--color-accent-gold);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.loading-products, .empty-products-search {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.empty-search-icon {
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+/* --- Actions --- */
+.invoice-actions {
+  padding: 1rem 1.5rem;
+  background-color: var(--color-card);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.cancel-btn {
+  color: var(--color-text-muted);
+}
+
+/* --- Note Dialog --- */
+.note-dialog :deep(.q-dialog__inner) {
+  padding: 16px;
+}
+
+.note-card {
+  width: 400px;
+  max-width: 90vw;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius-lg);
+}
+
+.note-header {
+  background-color: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.note-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 1.1rem;
+}
+
+.note-product-name {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+}
+
+.note-input {
+  width: 100%;
 }
 
 /* --- Responsive Design --- */
-@media (max-width: 1200px) {
-  .header-content-wrapper {
-    gap: var(--spacing-unit);
-    align-items: flex-start;
-  }
-
-  .header-controls-group {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
 @media (max-width: 768px) {
-  .luxury-header {
-    padding: 0.8rem;
+  .invoice-card {
+    width: 100vw;
+    max-width: 100vw;
   }
 
-  .brand-identity {
-    gap: 0.4rem;
-    width: 95vw;
-  }
-
-  .header-controls-group {
+  .search-section {
+    flex-direction: column;
     gap: 0.8rem;
   }
 
-  .room-selection-area {
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.8rem;
+  }
+
+  .product-item {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .product-actions {
+    align-items: center;
     width: 100%;
-  }
-
-  .luxury-select {
-    flex: 1;
-    max-width: 200px;
-    min-width: auto;
-  }
-
-  .action-buttons-group {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .canvas-main-area {
-    padding: 0.8rem;
   }
 }
 
 @media (max-width: 480px) {
-  .luxury-dialog {
-    width: 95vw;
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 
-  .dialog-header-section,
-  .dialog-body-content,
-  .dialog-action-buttons {
-    padding: var(--spacing-unit);
+  .product-card-actions {
+    flex-direction: column;
+    gap: 0.3rem;
   }
 }
 </style>
