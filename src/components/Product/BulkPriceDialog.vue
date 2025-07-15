@@ -22,11 +22,11 @@
         </div>
       </q-card-section>
       <q-card-section v-show="alertProductAll">
-        <q-banner inline-actions rounded class="bg-negative text-white" dense>
+        <q-banner inline-actions rounded class="bg-negative text-white" dense v-if="typeof products === 'string' && products === 'all'">
           <template v-slot:avatar>
             <q-icon name="warning" />
           </template>
-          <span v-if="typeof products === 'string' && products === 'all'">
+          <span>
             Esta acción afectara a todos los productos
           </span>
           <template v-slot:action>
@@ -159,6 +159,25 @@
 
             <div class="prices-content scroll q-pt-sm" style="max-height: calc(100vh - 320px);">
               <transition-group name="price-item" tag="div" class="prices-list">
+                <q-input
+                  v-model.number="form.profit_percentage"
+                  type="number"
+                  outlined
+                  label="Margen del precio base"
+                  class="q-mb-md"
+                  min="0"
+                  step="0.01"
+                >
+                  <template v-slot:prepend>
+                    <q-icon
+                      :name="form.updateType === 'increase' ? 'add' : 'remove'"
+                      :color="form.updateType === 'increase' ? 'positive' : 'warning'"
+                    />
+                  </template>
+                  <template v-slot:append>
+                    <span class="q-mr-xs">%</span>
+                  </template>
+                </q-input>
                 <div
                   v-for="(percentage, index) in form.percentage"
                   :key="`price-${index}`"
@@ -278,7 +297,8 @@ export default {
         updateType: 'increase',
         percentage: [0, 0, 0, 0],
         field: 'price',
-        create: false
+        create: true,
+        profit_percentage: null
       },
       branchOffices: []
     }
@@ -294,8 +314,10 @@ export default {
       }
     },
     hasValidPercentages () {
-      return Array.isArray(this.form.percentage) &&
-        this.form.percentage.some(p => Number(p) > 0)
+      console.log(this.form.profit_percentage)
+      return (Array.isArray(this.form.percentage) &&
+        this.form.percentage.some(p => Number(p) > 0)) ||
+        this.form.profit_percentage > 0
     }
   },
   watch: {
@@ -365,7 +387,8 @@ export default {
           field: this.form.field,
           branch_office_ids: this.form.branchOffice.map(bo => bo.id),
           product_ids: typeof this.products === 'string' ? this.products : this.products.map(p => p.id),
-          create: this.form.create
+          create: this.form.create,
+          profit_percentage: this.form.profit_percentage
         }
 
         const { data } = await this.$api.post('bulk-price-update', payload)

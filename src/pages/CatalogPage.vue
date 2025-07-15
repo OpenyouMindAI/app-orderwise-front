@@ -1111,7 +1111,7 @@ export default {
         this.dialogPayment = true
         this.user = {}
       } catch (error) {
-        notify(error?.response?.data?.message || error.message, 'negative', 'warning')
+        notify(error?.message || error.message, 'negative', 'warning')
       } finally {
         loading(false)
       }

@@ -109,7 +109,12 @@
                             autofocus
                             label="Código de barra"
                             dense
-                          />
+                            @keyup.enter="getOneProduct(product.barcode)"
+                        >
+                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                          </template>
+                        </q-input>
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-input
@@ -174,9 +179,25 @@
                             label="Costo"
                             type="number"
                             dense
+                            @update:model-value="updateCost"
                           />
                         </div>
-                        <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                        <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                          <q-input
+                            :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                            filled
+                            v-model.number="product.profit_percentage"
+                            :model-value="Number(product?.profit_percentage).toFixed(2)"
+                            label="Margen %"
+                            min="0"
+                            type="number"
+                            step="0.01"
+                            max="100"
+                            dense
+                            @update:model-value="updateProfitPercentage"
+                          />
+                        </div>
+                        <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
                           <q-input
                             :rules="[val => !!val || 'El campo es requerido.']"
                             filled
@@ -185,6 +206,7 @@
                             type="number"
                             step=".01"
                             dense
+                            @update:model-value="updatePrice"
                           />
                         </div>
                         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -221,13 +243,11 @@
                         <q-card
                           v-for="(priceList, index) in priceLists"
                           :key="index"
-                          flat
-                          bordered
-                          class="q-mb-sm"
+                          class="q-mb-sm q-pa-none"
                         >
-                          <q-card-section class="q-pa-sm">
+                          <q-card-section class="q-pa-none">
                             <div class="row q-col-gutter-sm items-center">
-                              <div class="col-5">
+                              <div class="col-4">
                                 <q-input
                                   v-model="priceList.name"
                                   label="Nombre de la lista"
@@ -236,7 +256,7 @@
                                   :rules="[val => !!val || 'El precio mínimo es 3']"
                                 />
                               </div>
-                              <div class="col-5">
+                              <div class="col-5 flex justify-between items-center">
                                 <q-input
                                   v-model="priceList.price"
                                   label="Precio"
@@ -246,18 +266,18 @@
                                   filled
                                   dense
                                 />
-                              </div>
-                              <div class="col-2 text-right">
-                                <q-btn
-                                  icon="delete"
-                                  color="negative"
-                                  size="sm"
-                                  round
-                                  flat
-                                  @click="removePriceList(index)"
-                                >
-                                  <q-tooltip>Eliminar lista</q-tooltip>
-                                </q-btn>
+                                <div>
+                                  <q-btn
+                                    icon="delete"
+                                    color="negative"
+                                    size="sm"
+                                    round
+                                    flat
+                                    @click="removePriceList(index)"
+                                  >
+                                    <q-tooltip>Eliminar lista</q-tooltip>
+                                  </q-btn>
+                                </div>
                               </div>
                             </div>
                           </q-card-section>
@@ -445,7 +465,7 @@
           <q-space />
           <q-btn icon="close" flat round dense @click="closeModal" />
         </q-card-section>
-        <q-form @submit="saveProduct">
+        <q-form @submit="saveProduct" ref="formAddProduct">
           <q-card-section class="scroll " style="height: calc(100vh - 200px);">
             <div class="row q-col-gutter-sm">
               <div class="row col-md-7 col-xs-12 col-sm-12">
@@ -464,7 +484,12 @@
                           autofocus
                           label="Código de barra"
                           dense
-                        />
+                          @keyup.enter="getOneProduct(product.barcode)"
+                        >
+                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                          </template>
+                        </q-input>
                       </div>
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                         <q-input
@@ -529,9 +554,23 @@
                           label="Costo"
                           type="number"
                           dense
+                          @update:model-value="updateCost"
                         />
                       </div>
-                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                      <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                        <q-input
+                          :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                          filled
+                          v-model.number="product.profit_percentage"
+                          :model-value="Number(product?.profit_percentage).toFixed(2)"
+                          label="Margen %"
+                          min="0"
+                          max="100"
+                          dense
+                          @update:model-value="updateProfitPercentage"
+                        />
+                      </div>
+                      <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
                         <q-input
                           :rules="[val => !!val || 'El campo es requerido.']"
                           filled
@@ -540,6 +579,7 @@
                           type="number"
                           step=".01"
                           dense
+                          @update:model-value="updatePrice"
                         />
                       </div>
                       <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -834,6 +874,13 @@ import PackProduct from 'src/components/Product/PackProduct.vue'
 import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerAndroidScanningLibrary,
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint
+} from '@capacitor/barcode-scanner'
 export default {
   components: { StockProduct, PackProduct, BulkPriceDialog },
   data () {
@@ -858,6 +905,7 @@ export default {
         show_catalog: 0,
         is_addons: 0,
         skip_stock: 0,
+        profit_percentage: 0,
         images: []
       },
       categories: [],
@@ -991,6 +1039,49 @@ export default {
     }
   },
   methods: {
+    updateProfitPercentage (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const price = this.product.cost * (1 + newVal / 100)
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
+    updatePrice (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const margin = ((newVal - this.product.cost) / this.product.cost) * 100
+        this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
+      }
+    },
+    updateCost (newVal) {
+      if (newVal && this.product.profit_percentage != null) {
+        const price = newVal * (1 + this.product.profit_percentage / 100)
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
+    /**
+     * Start scanner
+     */
+    async startScanner () {
+      try {
+        const result = await CapacitorBarcodeScanner.scanBarcode({
+          hint: CapacitorBarcodeScannerTypeHint.ALL,
+          scanInstructions: 'Escanear código',
+          scanButton: false,
+          scanText: 'Scan',
+          cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+          scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE,
+          android: {
+            scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING
+          }
+        })
+        this.getOneProduct(result.ScanResult)
+      } catch (error) {
+        if (error instanceof Error) {
+          // notify(error.message, 'negative', 'warning')
+        } else {
+          notify('Error al escanear el código', 'negative', 'warning')
+        }
+      }
+    },
     addPriceList () {
       this.priceLists.push({
         name: `Lista ${this.priceLists.length + 1}`,
@@ -1048,6 +1139,38 @@ export default {
     openCompaniesDialog () {
       this.companiesDialog = true
       this.getAllCompanies()
+    },
+    /**
+     * Get one product
+     * @param {Number} barcode barcode product
+     * @returns {Promise<void>}
+     */
+    async getOneProduct (barcode) {
+      try {
+        const { data } = await this.$api.get('products', {
+          params: {
+            dataEqualFilter: { barcode }
+          }
+        })
+        if (data[0]) {
+          this.product = data[0]
+          notify('Producto ya se encuentra registrado', 'positive', 'check_circle')
+        } else {
+          this.product = {
+            barcode,
+            images: [],
+            is_bundle: 0,
+            show_catalog: 0,
+            is_addons: 0,
+            skip_stock: 0
+          }
+          setTimeout(() => {
+            this.$refs.formAddProduct.resetValidation()
+          }, 500)
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
     },
     /**
      * Get all companies
@@ -1251,6 +1374,7 @@ export default {
           })
         })
     },
+
     handleFileSelect (event) {
       const files = Array.from(event.target.files)
       this.processFiles(files)
@@ -1281,7 +1405,8 @@ export default {
         is_bundle: 0,
         show_catalog: 0,
         is_addons: 0,
-        skip_stock: 0
+        skip_stock: 0,
+        profit_percentage: 0
       }
       this.getUnitOfMeasures()
     },

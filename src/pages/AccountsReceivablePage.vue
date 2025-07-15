@@ -93,7 +93,33 @@
                 {{ client.document_number }} {{ client.name }}
               </span>
             </div>
-            <div class="col-6 text-right">
+            <div class="col-6 text-right q-gutter-xs">
+              <q-btn
+                color="secondary"
+                icon="picture_as_pdf"
+                label="Exportar PDF"
+                @click="
+                  downloadPDF({
+                    client_id: client?.id,
+                    date_from: from,
+                    date_to: to,
+                    branch_office_id: branchOffice?.id,
+                  })
+                "
+              />
+              <q-btn
+                color="accent"
+                icon="download"
+                label="Exportar Excel"
+                @click="
+                  downloadExcel({
+                    client_id: client?.id,
+                    date_from: from,
+                    date_to: to,
+                    branch_office_id: branchOffice?.id,
+                  })
+                "
+              />
               <q-btn
                 icon="add_circle"
                 color="primary"
@@ -710,6 +736,46 @@ export default {
         notify(error.message, 'negative', 'warning')
       } finally {
         loading(false)
+      }
+    },
+    async downloadPDF (params) {
+      await this.downloadFile('pdf', params)
+    },
+    async downloadExcel (params) {
+      await this.downloadFile('excel', params)
+    },
+    /**
+     * Download file
+     * @param {String} type file type ('excel' or 'pdf')
+     * @param {Object} params query parameters to send (e.g., filters)
+     */
+    async downloadFile (type = 'excel', params = {}) {
+      const isPDF = type === 'pdf'
+      const fileName = isPDF ? 'cuentas_por_cobrar.pdf' : 'cuentas_por_cobrar.xlsx'
+      const url = isPDF ? 'receivable-export-pdf' : 'receivable-export-excel'
+
+      try {
+        const response = await this.$api.get(`reports/${url}`, {
+          params,
+          responseType: 'blob',
+          headers: {
+            Accept: isPDF ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          }
+        })
+
+        const blob = new Blob([response.data], {
+          type: response.headers['content-type']
+        })
+        const downloadUrl = URL.createObjectURL(blob)
+
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = fileName
+        link.click()
+
+        URL.revokeObjectURL(downloadUrl)
+      } catch (error) {
+        console.error('❌ Error al descargar el archivo:', error)
       }
     },
     /**
