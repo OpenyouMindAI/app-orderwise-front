@@ -19,6 +19,7 @@
     "@capacitor-community/barcode-scanner": "^2.1.1",
     "@quasar/extras": "^1.0.0",
     "axios": "^0.21.1",
+    "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",
     "draggable-resizable-vue3": "^1.0.94-beta",
     "firebase": "^9.9.3",
