@@ -618,8 +618,8 @@ const steps = computed(() => [
   { number: 2, title: 'Dispositivos', icon: 'print' },
   { number: 3, title: 'Facturación', icon: 'receipt' },
   { number: 4, title: 'Menú', icon: 'restaurant_menu' },
-  { number: 5, title: 'Pantalla', icon: 'tv' },
-  { number: 6, title: 'Integraciones', icon: 'hub' }
+  { number: 5, title: 'Pantalla', icon: 'tv' }
+  // { number: 6, title: 'Integraciones', icon: 'hub' }
 ])
 
 // Refs for file uploaders
