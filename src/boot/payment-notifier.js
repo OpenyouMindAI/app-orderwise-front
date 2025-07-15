@@ -1,4 +1,4 @@
-import { Dialog, Notify } from 'quasar'
+import { Notify } from 'quasar'
 import { formatNumber } from 'src/const/mixins'
 import { ref } from 'vue'
 
@@ -14,35 +14,37 @@ export function usePaymentNotifier () {
     const payerInfo = getPayerInfo(paymentData.payer)
 
     // Mostrar notificación
-    Dialog.create({
+    Notify.create({
+      type: paymentData.status === 'approved' ? 'positive' : 'warning',
+      position: 'top-right',
       message: `
-        <div style="background-color: #00B1EA; padding: 20px; border-radius: 8px; color: white;">
-          <div style="display: flex; align-items: center; margin-bottom: 15px;">
-            <img src="https://http2.mlstatic.com/frontend-assets/ui-navigation/5.18.9/mercadopago/logo__small@2x.png" 
-                style="height: 30px; margin-right: 10px;" alt="Mercado Pago">
-            <div>
-              <div style="font-size: 1.2em; font-weight: bold;">$${amount}</div>
-              <div>De: ${payerInfo}</div>
-            </div>
-          </div>
+        <div style="display: flex; align-items: center; padding: 8px;">
+            <div style="font-weight: bold; font-size: 14px;">$${amount}</div>
+            <div style="font-size: 13px;">De: ${payerInfo}</div>
         </div>
       `,
       html: true,
-      position: 'top-right',
-      seamless: true,
-      ok: {
-        label: 'Detalles',
-        color: 'primary',
-        flat: true
-      },
-      cancel: {
-        label: 'Cerrar',
-        color: 'white',
-        textColor: 'black',
-        flat: true
-      }
-    }).onOk(() => {
-      showDetailsModal.value = true
+      color: '#00B1EA',
+      textColor: 'white',
+      avatar: 'https://http2.mlstatic.com/frontend-assets/ui-navigation/5.18.9/mercadopago/logo__small@2x.png',
+      timeout: 0,
+      actions: [
+        // {
+        //   label: 'Detalles',
+        //   color: 'white',
+        //   handler: () => {
+        //     showDetailsModal.value = true
+        //   }
+        // },
+        {
+          icon: 'close',
+          color: 'white',
+          flat: true,
+          round: true,
+          handler: () => {}
+        }
+      ],
+      classes: 'my-mercadopago-notify' // Clase adicional para estilos personalizados
     })
   }
 
