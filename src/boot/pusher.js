@@ -29,9 +29,9 @@ export default boot(async ({ app }) => {
 
   echoPay = new Echo({
     broadcaster: 'pusher',
-    key: import.meta.env.VITE_APP_PUSHER_APP_KEY,
-    cluster: import.meta.env.VITE_APP_PUSHER_APP_CLUSTER,
-    forceTLS: true,
+    key: import.meta.env.VITE_APP_PUSHER_QPAY_KEY,
+    cluster: import.meta.env.VITE_APP_PUSHER_QPAY_CLUSTER,
+    forceTLS: false,
     authEndpoint: import.meta.env.VITE_APP_API_QPAY_URL + 'broadcasting/auth',
     auth: {
       headers: {

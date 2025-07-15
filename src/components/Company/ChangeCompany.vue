@@ -136,7 +136,7 @@ async function updateSession () {
     setTimeout(() => window.location.reload(), 2000)
   } catch (error) {
     $q.notify({
-      message: error?.response?.data?.message || error.message,
+      message: error?.message || error.message,
       color: 'negative',
       progress: true,
       timeout: 1500

@@ -952,6 +952,11 @@
       :invoice="setModelInvoice()"
       @paymentSuccess="paymentSuccess"
     />
+    <TransferMpDialog
+      v-if="currentPayment"
+      :payment="currentPayment"
+      :show-modal="showDetailsModal"
+    />
   </q-page>
 </template>
 
@@ -964,6 +969,9 @@ import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
+import { usePaymentNotifier } from 'src/boot/payment-notifier'
+import { commandPrint, ticketPrint } from 'src/const/printers'
+import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -971,24 +979,70 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
-import { commandPrint, ticketPrint } from 'src/const/printers'
 
 export default {
   name: 'BillingPage',
   components: {
     DrawerTable,
-    WaitByPaymentMp
+    WaitByPaymentMp,
+    TransferMpDialog
   },
   data () {
     return {
+      /**
+       * Show payment details modal
+       * @type {Boolean}
+       */
+      showDetailsModal: false,
+      /**
+       * Current payment
+       * @type {Object}
+       */
+      currentPayment: {},
+      /**
+       * Partial billing
+       * @type {Boolean}
+       */
       partialBilling: false,
+      /**
+       * Selected price list
+       * @type {Object}
+       */
       selectedPriceList: null,
+      /**
+       * Price input type
+       * @type {String}
+       */
       priceInputType: 'list',
+      /**
+       * Waiting payment
+       * @type {Boolean}
+       */
       waitingPayment: false,
+      /**
+       * Loading billing
+       * @type {Boolean}
+       */
       loadingBilling: false,
+      /**
+       * Payment method cash flow
+       * @type {Object}
+       */
       paymentMethodCashFlow: null,
+      /**
+       * Loading search
+       * @type {Boolean}
+       */
       loadingSearch: false,
+      /**
+       * Invoice share
+       * @type {Object}
+       */
       invoiceShare: {},
+      /**
+       * Document types
+       * @type {Array}
+       */
       documentTypes: [],
       /**
        * Invoice printer
@@ -1308,6 +1362,10 @@ export default {
         }
       ],
       voucherTypes: [],
+      /**
+       * Voucher type
+       * @type {Object}
+       */
       voucherType: null,
       /**
        * Products columns
@@ -1482,10 +1540,23 @@ export default {
   created () {
     this.getLocalStorage()
     this.getPaymentMethods()
+    this.listenPayments()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    listenPayments () {
+      const { company_session: companySession } = this.userSession
+      if (companySession?.company_config?.other?.qpay_id) {
+        const channel = this.$echoPay.channel('mercado-pago-payment')
+        channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`, (data) => {
+          const { showPaymentNotification, showDetailsModal, currentPayment } = usePaymentNotifier()
+          showPaymentNotification(data.payment)
+          this.showDetailsModal = showDetailsModal
+          this.currentPayment = currentPayment
+        })
+      }
+    },
     handleClick (event) {
       const clickedElement = event.target
 
@@ -1649,20 +1720,11 @@ export default {
           const pluStart = prefixLength
           const pluEnd = pluStart + 4
           const variableStart = pluEnd
-          const variableEnd = variableStart + 6
-          const checkDigitIndex = variableEnd
 
           const pluRaw = barcode.substring(pluStart, pluEnd)
           const variablePart = barcode.substring(variableStart, 12)
-          const checkDigit = barcode.substring(checkDigitIndex, checkDigitIndex + 1)
 
           const plu = parseInt(pluRaw, 10).toString() // quita ceros a la izquierda
-
-          console.log('Prefijo:', prefix)
-          console.log('PLU (raw):', pluRaw)
-          console.log('PLU real:', plu)
-          console.log('Variable Part:', variablePart)
-          console.log('Check digit:', checkDigit)
 
           if (!/^\d+$/.test(variablePart)) {
             notify('Formato inválido en importe/peso', 'negative', 'warning')
@@ -1687,9 +1749,6 @@ export default {
           }
 
           this.quantity = importe
-          console.log('✅ Código balanza procesado:')
-          console.log('Producto:', product)
-          console.log('Importe:', importe.toFixed(3))
 
           this.validateProduct(product, false)
 
