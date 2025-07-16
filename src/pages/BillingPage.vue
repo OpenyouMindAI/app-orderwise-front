@@ -1550,7 +1550,7 @@ export default {
       const { company_session: companySession } = this.userSession
       if (companySession?.company_config?.other?.qpay_id) {
         const channel = this.$echoPay.channel('mercado-pago-payment')
-        channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}`, (data) => {
+        channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}.${this.branchOffice.id}`, (data) => {
           const { showPaymentNotification, showDetailsModal, currentPayment } = usePaymentNotifier()
           showPaymentNotification(data.payment)
           this.showDetailsModal = showDetailsModal
