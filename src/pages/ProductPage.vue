@@ -190,9 +190,6 @@
                             :model-value="Number(product?.profit_percentage).toFixed(2)"
                             label="Margen %"
                             min="0"
-                            type="number"
-                            step="0.01"
-                            max="100"
                             dense
                             @update:model-value="updateProfitPercentage"
                           />
@@ -565,7 +562,6 @@
                           :model-value="Number(product?.profit_percentage).toFixed(2)"
                           label="Margen %"
                           min="0"
-                          max="100"
                           dense
                           @update:model-value="updateProfitPercentage"
                         />
