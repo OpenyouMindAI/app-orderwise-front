@@ -22,6 +22,9 @@
       <div class="col-xl-7 col-lg-7 col-md-12 col-sm-12 col-xs-12">
         <product-ranking-graph :filters="filter" />
       </div>
+      <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+        <minimum-stock :filters="filter" />
+      </div>
     </div>
     <q-dialog
       v-model="dialogFilter"
@@ -91,6 +94,7 @@ import { ref, watch } from 'vue'
 import { authentication } from 'src/stores/module-authentication'
 import { notify } from 'src/const/mixins'
 import { api } from 'src/boot/axios'
+import MinimumStock from 'src/components/Dashboard/MinimumStock.vue'
 
 /**
  * Dialog filter

@@ -93,7 +93,33 @@
                 {{ client.document_number }} {{ client.name }}
               </span>
             </div>
-            <div class="col-6 text-right">
+            <div class="col-6 text-right q-gutter-xs">
+              <q-btn
+                color="secondary"
+                icon="picture_as_pdf"
+                label="Exportar PDF"
+                @click="
+                  downloadPDF({
+                    client_id: client?.id,
+                    date_from: from,
+                    date_to: to,
+                    branch_office_id: branchOffice?.id,
+                  })
+                "
+              />
+              <q-btn
+                color="accent"
+                icon="download"
+                label="Exportar Excel"
+                @click="
+                  downloadExcel({
+                    client_id: client?.id,
+                    date_from: from,
+                    date_to: to,
+                    branch_office_id: branchOffice?.id,
+                  })
+                "
+              />
               <q-btn
                 icon="add_circle"
                 color="primary"
@@ -259,7 +285,7 @@
     <q-dialog v-model="openBillDetails" :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 900px; max-width: 85vw;'}`"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 1000px; max-width: 85vw;'}`"
         >
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">Detalles de la factura</span>
@@ -381,6 +407,7 @@
                           <tr>
                             <th class="text-left">Método de pago</th>
                             <th class="text-right">Monto</th>
+                            <th class="text-right">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -390,6 +417,16 @@
                             </td>
                             <td class="text-right">
                               {{ formatNumber(payment.amount) }}
+                            </td>
+                            <td class="text-right">
+                              <q-btn
+                                icon="delete"
+                                size="sm"
+                                dense
+                                round
+                                color="negative"
+                                @click="removePayment(payment)"
+                              />
                             </td>
                           </tr>
                         </tbody>
@@ -455,9 +492,9 @@ import { mapState } from 'pinia'
 import { date, Notify } from 'quasar'
 import { formatNumber, formatDate, notify, loading } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import { printInvoice, printTicket } from 'src/const/invoice'
+import { commandPrint, ticketPrint } from 'src/const/printers'
 export default {
-  name: 'AccountPayablePage',
+  name: 'AccountsReceivablePage',
   data () {
     return {
       formatNumber,
@@ -506,7 +543,7 @@ export default {
         sortOrder: 'desc',
         perPage: 1,
         whereIn: {
-          status: ['pending', 'delivered', 'finished']
+          status: ['pending', 'delivered', 'finished', 'on_process']
         },
         dataSearch: {
           id: ''
@@ -568,6 +605,22 @@ export default {
           label: 'Fecha del documento',
           field: 'created_at',
           format: row => formatDate(row),
+          sortable: true
+        },
+        {
+          name: 'delivery_date',
+          align: 'left',
+          label: 'Fecha del entrega',
+          field: 'delivery_date',
+          format: row => row ? formatDate(row) : '-',
+          sortable: true
+        },
+        {
+          name: 'delivery_date',
+          align: 'left',
+          label: 'Hora del entrega',
+          field: 'delivery_date',
+          format: row => row ? formatDate(row, 'HH:mm') : '-',
           sortable: true
         },
         {
@@ -644,10 +697,11 @@ export default {
      * @param {Object} data invoice saved
      */
     async print (ticket) {
-      let doc = await printInvoice(this.billDetails, this.userSession)
-      if (ticket) doc = printTicket(this.billDetails, this.userSession)
-      const pdfUrl = doc.output('bloburl')
-      window.open(pdfUrl, '_blank')
+      if (ticket) {
+        await commandPrint(this.billDetails)
+      } else {
+        await ticketPrint(this.billDetails)
+      }
     },
     /**
      * Change status
@@ -665,6 +719,63 @@ export default {
         notify(error.message, 'negative', 'warning')
       } finally {
         this.cancelLoading = false
+      }
+    },
+    /**
+     * Remove payment
+     * @param {Object} payment payment
+     */
+    async removePayment (payment) {
+      try {
+        loading(true)
+        await this.$api.delete(`invoice-payments/${payment.id}`)
+        await this.getInvoice(payment.invoice_id)
+        this.filterDate()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+    async downloadPDF (params) {
+      await this.downloadFile('pdf', params)
+    },
+    async downloadExcel (params) {
+      await this.downloadFile('excel', params)
+    },
+    /**
+     * Download file
+     * @param {String} type file type ('excel' or 'pdf')
+     * @param {Object} params query parameters to send (e.g., filters)
+     */
+    async downloadFile (type = 'excel', params = {}) {
+      const isPDF = type === 'pdf'
+      const fileName = isPDF ? 'cuentas_por_cobrar.pdf' : 'cuentas_por_cobrar.xlsx'
+      const url = isPDF ? 'receivable-export-pdf' : 'receivable-export-excel'
+
+      try {
+        const response = await this.$api.get(`reports/${url}`, {
+          params,
+          responseType: 'blob',
+          headers: {
+            Accept: isPDF ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          }
+        })
+
+        const blob = new Blob([response.data], {
+          type: response.headers['content-type']
+        })
+        const downloadUrl = URL.createObjectURL(blob)
+
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = fileName
+        link.click()
+
+        URL.revokeObjectURL(downloadUrl)
+      } catch (error) {
+        console.error('❌ Error al descargar el archivo:', error)
       }
     },
     /**
@@ -914,7 +1025,9 @@ export default {
         notify(error.message, 'negative', 'warning')
       }
     },
-
+    /**
+     * Save payment
+     */
     async savePayment () {
       try {
         loading(true)
@@ -925,12 +1038,26 @@ export default {
           client_id: this.client?.id,
           reference: this.reference
         })
+        await this.getInvoice(this.billDetails?.id)
         this.filterDate()
         this.reference = null
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
         loading(false)
+      }
+    },
+    /**
+     * Get invoice
+     * @param {Number} invoiceId invoice id
+     */
+    async getInvoice (invoiceId) {
+      try {
+        const { data } = await this.$api.get(`invoices/${invoiceId}`)
+        this.billDetails = data.data
+        this.billDetails.balance = data.total - data.total_payments
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
       }
     }
   }

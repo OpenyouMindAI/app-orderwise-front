@@ -16,7 +16,7 @@ const validModule = ($store, to, next) => {
 
 const modeleExcept = ['Profile', 'ChangeCompany']
 
-export default boot(({ router, store }) => {
+export default boot(async ({ router, store }) => {
   router.beforeEach(async (to, from, next) => {
     const $store = authentication()
     try {

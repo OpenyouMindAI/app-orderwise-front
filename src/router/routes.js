@@ -142,6 +142,12 @@ const routes = [
         component: () => import('pages/AccountsReceivablePage.vue')
       },
       {
+        path: 'accounts-payable',
+        name: 'AccountsPayable',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AccountsPayablePage.vue')
+      },
+      {
         path: 'dashboard',
         name: 'Dashboard',
         meta: { requiresAuth: true },
@@ -182,6 +188,42 @@ const routes = [
         name: 'TypeOfService',
         meta: { requiresAuth: true },
         component: () => import('pages/TypeOfServicePage.vue')
+      },
+      {
+        path: 'transfer-products',
+        name: 'TransferProduct',
+        meta: { requiresAuth: true },
+        component: () => import('pages/TransferProductPage.vue')
+      },
+      {
+        path: 'inventory-count',
+        name: 'InventoryCount',
+        meta: { requiresAuth: true },
+        component: () => import('pages/InventoryCountPage.vue')
+      },
+      {
+        path: 'sessions-manager',
+        name: 'SessionsManager',
+        meta: { requiresAuth: true },
+        component: () => import('pages/SessionsManagerPage.vue')
+      },
+      {
+        path: 'dashboard-manager',
+        name: 'DashboardManager',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DashboardManagerPage.vue')
+      },
+      {
+        path: 'printers',
+        name: 'Printer',
+        meta: { requiresAuth: true },
+        component: () => import('pages/PrinterPage.vue')
+      },
+      {
+        path: 'product-sales',
+        name: 'ProductSales',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ProductSalesPage.vue')
       }
     ]
   },
@@ -212,14 +254,18 @@ const routes = [
     name: 'Login',
     component: () => import('pages/LoginPage.vue')
   },
-
+  {
+    path: '/verifying/:access_token/:expires_in/:token_type/:redirect',
+    name: 'VerifySession',
+    meta: { requiresAuth: false },
+    component: () => import('pages/VerifySessionPage.vue')
+  },
   {
     path: '/invoice-details',
     name: 'InvoiceDetails',
     meta: { requiresAuth: false },
     component: () => import('pages/InvoiceDetailsPage.vue')
   },
-
   // Always leave this as last one,
   // but you can also remove it
   {

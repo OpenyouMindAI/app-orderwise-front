@@ -1,5 +1,7 @@
 import { Loading, Notify, copyToClipboard, date } from 'quasar'
 
+export const BALANZA_PREFIXES = ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29']
+
 export const notify = (message, color, icon, position = 'top') => {
   Notify.create({
     message,

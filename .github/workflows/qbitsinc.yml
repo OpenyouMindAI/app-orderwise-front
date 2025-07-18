@@ -14,7 +14,21 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "18.20.3"
+          node-version: "22.15.0"
+      - name: Build custom plugin
+        run: |
+          cd ./plugin/multi-display-manager
+          npm install
+          npm run build
+          cd ../..
+          npm install ./plugin/multi-display-manager
+      - name: Build printers
+        run: |
+          cd ./plugin/printers
+          npm install
+          npm run build
+          cd ../..
+          npm install ./plugin/printers
       - name: Install npm dependencies
         run: npm install
       - name: Get branch name
