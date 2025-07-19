@@ -1483,9 +1483,7 @@ const loadReports = async () => {
       return
     }
 
-    if (reportFilters.value.userId) {
-      params.dataEqualFilter.user_id = reportFilters.value.userId
-    }
+    params.dataEqualFilter.user_id = userSession.is_root ? reportFilters.value.userId : userSession.id
 
     if (reportFilters.value.endDate && reportFilters.value.startDate) {
       params.dateFilter = {
