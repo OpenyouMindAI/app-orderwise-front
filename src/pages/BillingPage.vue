@@ -2500,10 +2500,10 @@ export default {
       ]
     },
     /**
- * Valida y agrega productos al carrito con cálculos precisos
- * @param {Object} data - Producto seleccionado
- * @param {Boolean} validUnitMeasurement - Indica si debe validar unidad de medida
- */
+     * Valida y agrega productos al carrito con cálculos precisos
+     * @param {Object} data - Producto seleccionado
+     * @param {Boolean} validUnitMeasurement - Indica si debe validar unidad de medida
+     */
     validateProduct (data, validUnitMeasurement = false) {
       // Validación inicial
       if (!data || !data.id) {
@@ -2543,16 +2543,17 @@ export default {
     },
 
     /**
- * Actualiza un producto existente en el carrito (VERSIÓN CORREGIDA)
- */
+     * Actualiza un producto existente en el carrito (VERSIÓN CORREGIDA)
+     */
     updateExistingProduct (index, data, isWeightProduct, quantity) {
       const product = this.products[index]
 
+      console.log(product.amount, this.currentAmount)
       if (isWeightProduct && this.currentAmount) {
         // Para productos por peso con monto específico
         const weightQuantity = this.currentAmount / data.price
         product.quantity += weightQuantity
-        product.amount += this.currentAmount
+        product.amount += weightQuantity
         product.subtotal = product.price * product.quantity
       } else {
         // Para productos normales (por unidad)
@@ -2570,8 +2571,8 @@ export default {
     },
 
     /**
- * Agrega un nuevo producto al carrito
- */
+     * Agrega un nuevo producto al carrito
+     */
     addNewProduct (data, isWeightProduct, quantity) {
       const newProduct = {
         ...data,
