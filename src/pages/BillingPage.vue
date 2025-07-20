@@ -291,6 +291,7 @@
                           label="Cantidad"
                           type="number"
                           v-model.number="scope.value"
+                          :model-value="Number(scope.value).toFixed(3)"
                           autofocus
                           @keyup.enter="scope.set"
                         />
@@ -364,11 +365,13 @@
                               v-model.number="product.quantity"
                               auto-save
                               v-slot="scope"
+                              :model-value="Number(product.quantity).toFixed(2)"
                               @update:model-value="calculate(product)"
                             >
                               <q-input
                                 label="Cantidad"
                                 type="number"
+                                :model-value="Number(scope.value).toFixed(2)"
                                 v-model.number="scope.value"
                                 autofocus
                                 @keyup.enter="scope.set"
@@ -917,6 +920,7 @@
             <q-input
               filled
               v-model.number="quantity"
+              :model-value="Number(quantity).toFixed(3)"
               autofocus
               label="Cantidad"
               type="number"
@@ -926,6 +930,7 @@
             <q-input
               filled
               v-model.number="currentAmount"
+              :model-value="Number(currentAmount).toFixed(2)"
               label="Importe"
               type="number"
               style="width: 50%;"
@@ -958,6 +963,7 @@
       :payment="currentPayment"
       :show-modal="showDetailsModal"
     />
+    <BarcodeScanner @barcode-scanned="processBarcode" />
   </q-page>
 </template>
 
@@ -973,6 +979,7 @@ import { useCommandStore } from 'src/stores/command'
 import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
+import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -986,6 +993,7 @@ export default {
   components: {
     DrawerTable,
     WaitByPaymentMp,
+    BarcodeScanner,
     TransferMpDialog
   },
   data () {
@@ -1684,7 +1692,7 @@ export default {
      * @returns {Number}
      */
     roundToFourDecimals (number) {
-      const factor = Math.pow(10, 3)
+      const factor = Math.pow(10, 10)
       return Math.floor(number * factor) / factor
     },
     /**
@@ -2465,25 +2473,6 @@ export default {
       return true
     },
     /**
-     * Calculate the total and subtotal
-     * @param {Object} data props products
-     */
-    calculate (data) {
-      if (this.validStockProduct(data, data.quantity)) {
-        data.amount = data.quantity
-        data.subtotal = data.price * data.quantity
-        this.calculateTotal()
-      } else {
-        notify(
-          `No hay stock suficiente para ${data.name} cantidad de stock: ${data.stock}`,
-          'negative',
-          'warning'
-        )
-        data.amount = data.stock
-        data.quantity = data.stock
-      }
-    },
-    /**
      * Push product
      * @param {Object} product product
      */
@@ -2511,50 +2500,126 @@ export default {
       ]
     },
     /**
-     * Validate products
-     * @param {*} data product selected
-     */
+ * Valida y agrega productos al carrito con cálculos precisos
+ * @param {Object} data - Producto seleccionado
+ * @param {Boolean} validUnitMeasurement - Indica si debe validar unidad de medida
+ */
     validateProduct (data, validUnitMeasurement = false) {
-      const findProduct = this.products.find(product => product.id === data.id)
-      const unitMeasurement = data?.unit_of_measure?.acronym === 'KG'
-
-      if (validUnitMeasurement && unitMeasurement) {
-        this.quantityDialog = true
-        this.currentAmount = data.price
-        this.productQuantity = data
-        return
-      }
-      if (!this.validStockProduct(data, this.quantity)) {
-        notify(
-          `No hay stock suficiente para ${data.name}`,
-          'negative',
-          'warning'
-        )
+      // Validación inicial
+      if (!data || !data.id) {
+        this.$q.notify({
+          message: 'Producto inválido',
+          color: 'negative'
+        })
         return
       }
 
-      if (findProduct) {
-        const quantity = unitMeasurement ? this.quantity : findProduct?.quantity + 1
-        findProduct.quantity = quantity
-        findProduct.amount = quantity
-        findProduct.product_id = findProduct.id
-        this.calculate(findProduct)
+      const isWeightProduct = data?.unit_of_measure?.acronym === 'KG'
+      const quantity = this.quantity || 1
+
+      // Manejo especial para productos por peso
+      if (validUnitMeasurement && isWeightProduct) {
+        this.handleWeightProduct(data)
+        return
+      }
+
+      // Validación de stock
+      if (!this.validStockProduct(data, quantity)) {
+        this.showStockError(data)
+        return
+      }
+
+      // Buscar producto existente
+      const existingIndex = this.products.findIndex(p => p.id === data.id)
+
+      if (existingIndex >= 0) {
+        this.updateExistingProduct(existingIndex, data, isWeightProduct, quantity)
       } else {
-        data.product_id = data.id
-        data.quantity = this.quantity
-        if (this.currentAmount) {
-          data.amount = this.currentAmount / this.productQuantity.price
-          data.subtotal = this.currentAmount
-          this.pushProduct(data)
-          this.calculateTotal()
-        } else {
-          data.amount = this.quantity
-          this.calculate(data)
-          this.pushProduct(data)
-          this.calculateTotal()
-        }
+        this.addNewProduct(data, isWeightProduct, quantity)
       }
 
+      // Resetear valores
+      this.resetQuantities()
+    },
+
+    /**
+ * Actualiza un producto existente en el carrito (VERSIÓN CORREGIDA)
+ */
+    updateExistingProduct (index, data, isWeightProduct, quantity) {
+      const product = this.products[index]
+
+      if (isWeightProduct && this.currentAmount) {
+        // Para productos por peso con monto específico
+        const weightQuantity = this.currentAmount / data.price
+        product.quantity += weightQuantity
+        product.amount += this.currentAmount
+        product.subtotal = product.price * product.quantity
+      } else {
+        // Para productos normales (por unidad)
+        product.quantity += quantity
+        product.amount += quantity
+        product.subtotal = product.price * product.quantity
+      }
+
+      // Asegurar que los cálculos sean precisos
+      product.subtotal = Math.round((product.price * product.quantity) * 100) / 100
+
+      // Actualizar el producto en el array
+      this.products.splice(index, 1, product)
+      this.calculateTotal()
+    },
+
+    /**
+ * Agrega un nuevo producto al carrito
+ */
+    addNewProduct (data, isWeightProduct, quantity) {
+      const newProduct = {
+        ...data,
+        product_id: data.id,
+        quantity: isWeightProduct && this.currentAmount
+          ? this.currentAmount / data.price
+          : quantity,
+        amount: isWeightProduct && this.currentAmount
+          ? this.currentAmount
+          : quantity,
+        subtotal: isWeightProduct && this.currentAmount
+          ? this.currentAmount
+          : data.price * quantity
+      }
+
+      // Asegurar precisión en decimales
+      newProduct.subtotal = Math.round(newProduct.subtotal * 100) / 100
+
+      this.pushProduct(newProduct)
+      this.calculateTotal()
+    },
+
+    /**
+     * Maneja productos vendidos por peso
+     */
+    handleWeightProduct (data) {
+      this.quantityDialog = true
+      this.currentAmount = data.price // Precio por KG
+      this.productQuantity = data
+    },
+
+    /**
+     * Muestra error de stock
+     */
+    showStockError (data) {
+      this.$q.notify({
+        message: `Stock insuficiente para ${data.name}`,
+        caption: `Disponible: ${data.stock || 0}`,
+        color: 'negative',
+        icon: 'warning',
+        timeout: 2000
+      })
+    },
+
+    /**
+     * Resetea cantidades temporales
+     */
+    resetQuantities () {
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
