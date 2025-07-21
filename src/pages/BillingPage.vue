@@ -89,6 +89,8 @@
                 ref="barcode"
                 :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
                 @keyup.enter="processBarcode(barcode)"
+                @focus="scanner = false"
+                @blur="scanner = true"
               />
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
@@ -963,7 +965,7 @@
       :payment="currentPayment"
       :show-modal="showDetailsModal"
     />
-    <BarcodeScanner @barcode-scanned="processBarcode" />
+    <BarcodeScanner @barcode-scanned="processBarcode" v-if="scanner" />
   </q-page>
 </template>
 
