@@ -998,6 +998,7 @@ export default {
   },
   data () {
     return {
+      scanner: false,
       /**
        * Show payment details modal
        * @type {Boolean}
@@ -2547,8 +2548,6 @@ export default {
      */
     updateExistingProduct (index, data, isWeightProduct, quantity) {
       const product = this.products[index]
-
-      console.log(product.amount, this.currentAmount)
       if (isWeightProduct && this.currentAmount) {
         // Para productos por peso con monto específico
         const weightQuantity = this.currentAmount / data.price
@@ -2569,7 +2568,28 @@ export default {
       this.products.splice(index, 1, product)
       this.calculateTotal()
     },
+    /**
+     * Calcula subtotal con validación de stock
+     */
+    calculate (data) {
+      // Validación final de stock
+      if (!this.validStockProduct(data, data.quantity)) {
+        const availableStock = data.stock || 0
+        data.quantity = Math.min(data.quantity, availableStock)
+        data.amount = data.quantity
+        data.subtotal = data.price * data.quantity
 
+        this.$q.notify({
+          message: `Stock ajustado a ${availableStock} unidades`,
+          color: 'warning',
+          timeout: 1500
+        })
+      }
+
+      // Cálculo preciso con redondeo a 2 decimales
+      data.subtotal = Math.round((data.price * data.quantity) * 100) / 100
+      this.calculateTotal()
+    },
     /**
      * Agrega un nuevo producto al carrito
      */
