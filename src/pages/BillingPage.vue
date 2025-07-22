@@ -777,6 +777,8 @@
     <cash-box-dialog
       v-model="showCashBoxDialog"
       :cashier-id="userSession.id"
+      :is-box-already-open="isUserBoxOpen"
+      :available-cash-boxes="availableCashBoxes"
       @box-opened="handleBoxOpened"
       @box-closed="handleBoxClosed"
     />
@@ -1153,6 +1155,11 @@ export default {
        * @type {Boolean}
        */
       showCashBoxDialog: false,
+      /**
+       * Indicates if the user has an open cash box
+       * @type {Boolean}
+       */
+      isUserBoxOpen: false,
       /**
        * List of available cash boxes for the user
        * @type {Array}
@@ -1584,6 +1591,7 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     this.listenPayments()
+    this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
   },
@@ -2708,6 +2716,49 @@ export default {
     },
 
     /**
+     * Checks the current cash box status for the user
+     * and updates the isUserBoxOpen state accordingly.
+     */
+    async checkCashBoxStatus () {
+      // --- MODO DE PRUEBA ---
+      // Comentar esta sección y descomentar la de abajo para usar API real
+      // Simulando el mismo escenario que está activo en CashBoxDialog.vue
+      // Escenario 3: Caja ya abierta
+      this.isUserBoxOpen = true
+      this.availableCashBoxes = [] // No hay cajas disponibles porque ya tiene una abierta
+      console.log('Estado inicial de caja (MOCK):', this.isUserBoxOpen ? 'Abierta' : 'Cerrada')
+      // --- API REAL (comentado para pruebas) ---
+      /*
+      try {
+        const response = await this.$api.get('init-cashbox', {
+          params: {
+            dataEqualFilter: {
+              cashier_id: this.userSession.id,
+              status: 'open'
+            },
+            perPage: 1
+          }
+        })
+        const openBox = Array.isArray(response.data.data) ? response.data.data[0] : response.data
+        if (openBox && openBox.cash_box_id) {
+          this.isUserBoxOpen = true
+          this.availableCashBoxes = []
+        } else {
+          this.isUserBoxOpen = false
+          // Cargar cajas disponibles
+          const { data: boxes } = await this.$api.get('cashboxs')
+          this.availableCashBoxes = boxes.data || boxes
+        }
+        console.log('Estado inicial de caja:', this.isUserBoxOpen ? 'Abierta' : 'Cerrada')
+      } catch (error) {
+        console.error('Error al verificar estado de caja:', error)
+        this.isUserBoxOpen = false
+        this.availableCashBoxes = []
+      }
+      */
+    },
+
+    /**
      * Handles the 'open-box' event from the CashBoxDialog component.
      * @param {object} data - The data emitted from the dialog, containing the box and amount.
      */
@@ -2717,12 +2768,29 @@ export default {
      */
     handleBoxOpened () {
       this.isUserBoxOpen = true
+      this.availableCashBoxes = [] // Ya no hay cajas disponibles porque tiene una abierta
       console.log('La caja se ha abierto, actualizando UI.')
     },
 
-    handleBoxClosed () {
+    async handleBoxClosed () {
       this.isUserBoxOpen = false
+      // Recargar cajas disponibles cuando se cierra una caja
+      // En modo de prueba, simular cajas disponibles
+      this.availableCashBoxes = [
+        { id: 1, name: 'Caja Principal' },
+        { id: 2, name: 'Caja Secundaria' }
+      ]
       console.log('La caja se ha cerrado, actualizando UI.')
+      // Para API real, descomentar esto:
+      /*
+      try {
+        const { data: boxes } = await this.$api.get('cashboxs')
+        this.availableCashBoxes = boxes.data || boxes
+      } catch (error) {
+        console.error('Error al cargar cajas disponibles:', error)
+        this.availableCashBoxes = []
+      }
+      */
     }
   }
 }

@@ -87,67 +87,50 @@ export default {
     cashierId: {
       type: Number,
       required: true
+    },
+    isBoxAlreadyOpen: {
+      type: Boolean,
+      default: false
+    },
+    availableCashBoxes: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['update:modelValue', 'box-opened', 'box-closed'],
   data () {
     return {
-
       isReady: false,
       isSubmitting: false,
-      isBoxAlreadyOpen: false,
-      availableCashBoxes: [],
       selectedBox: null,
-      initialAmount: 0
+      initialAmount: null
     }
   },
   mounted () {
-    this.fetchInitialData()
+    this.initializeModal()
   },
   methods: {
-    resetForm () {
-      this.selectedBox = null
-      this.initialAmount = 0
-      this.availableCashBoxes = []
-    },
-
-    // --- Métodos Reales (Comentados para Testeo) ---
-    /*
-    async fetchInitialData () {
-      this.isLoadingInitialData = true
-      try {
-        const response = await this.$api.get('init-cashbox', {
-          params: {
-            dataEqualFilter: {
-              cashier_id: this.cashierId,
-              status: 'open'
-            },
-            perPage: 1
-          }
-        })
-
-        const openBox = Array.isArray(response.data.data) ? response.data.data[0] : response.data
-
-        if (openBox && openBox.cash_box_id) {
-          this.isBoxAlreadyOpen = true
-        } else {
-          this.isBoxAlreadyOpen = false
-          const { data: boxes } = await this.$api.get('cashboxs')
-          this.availableCashBoxes = boxes.data
-
-          if (this.availableCashBoxes.length === 1) {
-            this.selectedBox = this.availableCashBoxes[0]
-          }
-        }
-      } catch (error) {
-        Notify.create({
-          type: 'negative',
-          message: 'No se pudo cargar la información de las cajas.'
-        })
-        this.$emit('update:modelValue', false)
-      } finally {
-        this.isLoadingInitialData = false
+    /**
+     * Initializes the modal with the data received from props.
+     * Sets up the selected box if there's only one available.
+     */
+    initializeModal () {
+      // Auto-select if there's only one available cash box
+      if (!this.isBoxAlreadyOpen && this.availableCashBoxes.length === 1) {
+        this.selectedBox = this.availableCashBoxes[0]
       }
+      // Mark as ready to show content
+      this.isReady = true
+      // Set focus on appropriate element
+      this.$nextTick(() => {
+        if (this.isBoxAlreadyOpen || this.availableCashBoxes.length === 0) {
+          this.$refs.closeButton?.focus()
+        } else if (this.availableCashBoxes.length > 1) {
+          this.$refs.cashBoxSelect?.focus()
+        } else {
+          this.$refs.initialAmountInput?.focus()
+        }
+      })
     },
 
     async submitOpenBox () {
@@ -160,11 +143,13 @@ export default {
           status: 'open'
         }
 
-        await this.$api.post('init-cashboxs', payload)
+        // Simulación de envío (para testing)
+        console.log('Payload que se enviaría a la API:', payload)
+        // Aquí iría la llamada real a la API: await this.$api.post('init-cashbox', payload)
 
         Notify.create({
           type: 'positive',
-          message: `Caja "${this.selectedBox.name}" abierta con éxito.`
+          message: `Caja "${this.selectedBox.name}" abierta con éxito (Simulación).`
         })
 
         this.$emit('box-opened')
@@ -177,69 +162,6 @@ export default {
       } finally {
         this.isSubmitting = false
       }
-    }
-    */
-
-    // --- Métodos con Mock Data para Testeo ---
-    async fetchInitialData () {
-      console.log('Fetching mock data...')
-
-      setTimeout(() => {
-        // --- Descomenta el escenario que quieres probar ---
-
-        // Escenario 1: Múltiples cajas disponibles
-        // this.isBoxAlreadyOpen = false
-        // this.availableCashBoxes = [
-        //   { id: 1, name: 'Caja Principal' },
-        //   { id: 2, name: 'Caja Secundaria' },
-        //   { id: 3, name: 'Caja Rápida' }
-        // ]
-
-        // // Escenario 2: Una sola caja disponible
-        // this.isBoxAlreadyOpen = false
-        // this.availableCashBoxes = [{ id: 1, name: 'Caja Única' }]
-        // this.selectedBox = this.availableCashBoxes[0]
-
-        // Escenario 3: Caja ya abierta
-        this.isBoxAlreadyOpen = true
-        this.availableCashBoxes = []
-
-        // Escenario 4: No hay cajas disponibles
-        // this.isBoxAlreadyOpen = false
-        // this.availableCashBoxes = []
-
-        // Finally, mark component as ready to show content
-        this.isReady = true
-
-        console.log('Mock data loaded.')
-
-        this.$nextTick(() => {
-          if (this.isBoxAlreadyOpen || this.availableCashBoxes.length === 0) {
-            this.$refs.closeButton?.focus()
-          } else if (this.availableCashBoxes.length > 1) {
-            this.$refs.boxSelect?.focus()
-          } else {
-            this.$refs.amountInput?.focus()
-          }
-        })
-      }, 500) // Simula retardo de red
-    },
-
-    async submitOpenBox () {
-      this.isSubmitting = true
-      console.log('Submitting mock data:', { box: this.selectedBox, amount: this.initialAmount })
-
-      setTimeout(() => {
-        Notify.create({
-          type: 'positive',
-          message: `Caja "${this.selectedBox.name}" abierta con éxito (Simulación).`
-        })
-
-        this.$emit('box-opened')
-        this.$emit('update:modelValue', false)
-        this.isSubmitting = false
-        console.log('Mock submission successful.')
-      }, 500) // Simula retardo de red
     },
 
     confirmCloseBox () {
