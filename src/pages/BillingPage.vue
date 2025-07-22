@@ -197,6 +197,19 @@
 
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
+                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                :color="isUserBoxOpen ? 'negative' : 'primary'"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? (isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja') : ''"
+                @click="showCashBoxDialog = true"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+                </q-tooltip>
+              </q-btn>
+
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
                 color="negative"
                 dense
@@ -761,6 +774,12 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <cash-box-dialog
+      v-model="showCashBoxDialog"
+      :cashier-id="userSession.id"
+      @box-opened="handleBoxOpened"
+      @box-closed="handleBoxClosed"
+    />
     <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
         <q-form @submit="saveCashflow" class="column full-height">
@@ -982,6 +1001,7 @@ import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
+import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -996,6 +1016,7 @@ export default {
     DrawerTable,
     WaitByPaymentMp,
     BarcodeScanner,
+    CashBoxDialog,
     TransferMpDialog
   },
   data () {
@@ -1127,6 +1148,16 @@ export default {
        * @type {Boolean}
        */
       searchInvoice: false,
+      /**
+       * Cash box dialog
+       * @type {Boolean}
+       */
+      showCashBoxDialog: false,
+      /**
+       * List of available cash boxes for the user
+       * @type {Array}
+       */
+      availableCashBoxes: [],
       /**
        * Search
        * @type {String}
@@ -2674,6 +2705,24 @@ export default {
       } else {
         notify('Producto no encontrado', 'negative', 'warning')
       }
+    },
+
+    /**
+     * Handles the 'open-box' event from the CashBoxDialog component.
+     * @param {object} data - The data emitted from the dialog, containing the box and amount.
+     */
+    /**
+     * Handles the 'box-opened' event from the dialog.
+     * Updates the local state to reflect that a box is now open.
+     */
+    handleBoxOpened () {
+      this.isUserBoxOpen = true
+      console.log('La caja se ha abierto, actualizando UI.')
+    },
+
+    handleBoxClosed () {
+      this.isUserBoxOpen = false
+      console.log('La caja se ha cerrado, actualizando UI.')
     }
   }
 }
