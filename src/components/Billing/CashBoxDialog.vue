@@ -43,7 +43,6 @@
           <q-form @submit.prevent="submitOpenBox">
             <q-select
               ref="boxSelect"
-              v-if="availableCashBoxes.length > 1"
               v-model="selectedBox"
               :options="availableCashBoxes"
               label="Selecciona una caja"
@@ -53,6 +52,7 @@
               lazy-rules
               :rules="[val => !!val || 'Debes seleccionar una caja']"
               class="q-mb-md"
+              :disable="availableCashBoxes.length === 1"
             />
 
             <q-input
@@ -106,29 +106,52 @@ export default {
       initialAmount: null
     }
   },
+  watch: {
+    modelValue (newValue) {
+      if (newValue) {
+        this.resetForm()
+        this.initializeModal()
+      }
+    },
+    // Watch for changes in availableCashBoxes to auto-select if only one is available
+    availableCashBoxes: {
+      handler (newVal) {
+        if (newVal && newVal.length === 1) {
+          this.selectedBox = newVal[0]
+        }
+      },
+      immediate: true // Run the handler immediately on component mount
+    }
+  },
   mounted () {
-    this.initializeModal()
+    // The watcher for modelValue will handle initialization on open.
   },
   methods: {
     /**
      * Initializes the modal with the data received from props.
      * Sets up the selected box if there's only one available.
      */
-    initializeModal () {
-      // Auto-select if there's only one available cash box
-      if (!this.isBoxAlreadyOpen && this.availableCashBoxes.length === 1) {
-        this.selectedBox = this.availableCashBoxes[0]
+    resetForm () {
+      this.initialAmount = null
+      // Do not reset selectedBox if there is only one, as it's auto-selected
+      if (this.availableCashBoxes.length !== 1) {
+        this.selectedBox = null
       }
+    },
+
+    initializeModal () {
       // Mark as ready to show content
       this.isReady = true
       // Set focus on appropriate element
       this.$nextTick(() => {
         if (this.isBoxAlreadyOpen || this.availableCashBoxes.length === 0) {
           this.$refs.closeButton?.focus()
-        } else if (this.availableCashBoxes.length > 1) {
-          this.$refs.cashBoxSelect?.focus()
+        } else if (this.availableCashBoxes.length === 1) {
+          // If one box is auto-selected, focus the amount input
+          this.$refs.amountInput?.focus()
         } else {
-          this.$refs.initialAmountInput?.focus()
+          // Otherwise, focus the box selection
+          this.$refs.boxSelect?.focus()
         }
       })
     },

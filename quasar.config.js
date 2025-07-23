@@ -36,7 +36,8 @@ export default configure(function (/* ctx */) {
       'payment-notifier',
       // 'background-mode',
       'statusbar',
-      'company-config'
+      'company-config',
+      'msw'
     ],
 
     css: [

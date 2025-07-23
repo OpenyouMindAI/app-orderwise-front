@@ -2720,26 +2720,18 @@ export default {
      * and updates the isUserBoxOpen state accordingly.
      */
     async checkCashBoxStatus () {
-      // --- MODO DE PRUEBA ---
-      // Comentar esta sección y descomentar la de abajo para usar API real
-      // Simulando el mismo escenario que está activo en CashBoxDialog.vue
-      // Escenario 3: Caja ya abierta
-      this.isUserBoxOpen = true
-      this.availableCashBoxes = [] // No hay cajas disponibles porque ya tiene una abierta
-      console.log('Estado inicial de caja (MOCK):', this.isUserBoxOpen ? 'Abierta' : 'Cerrada')
-      // --- API REAL (comentado para pruebas) ---
-      /*
       try {
+        console.log('Verificando estado de caja con API (MSW)...')
         const response = await this.$api.get('init-cashbox', {
           params: {
             dataEqualFilter: {
               cashier_id: this.userSession.id,
               status: 'open'
-            },
-            perPage: 1
+            }
           }
         })
-        const openBox = Array.isArray(response.data.data) ? response.data.data[0] : response.data
+        const openBox = response.data.data[0]
+
         if (openBox && openBox.cash_box_id) {
           this.isUserBoxOpen = true
           this.availableCashBoxes = []
@@ -2749,13 +2741,12 @@ export default {
           const { data: boxes } = await this.$api.get('cashboxs')
           this.availableCashBoxes = boxes.data || boxes
         }
-        console.log('Estado inicial de caja:', this.isUserBoxOpen ? 'Abierta' : 'Cerrada')
+        console.log('Estado inicial de caja (desde MSW):', this.isUserBoxOpen ? 'Abierta' : 'Cerrada')
       } catch (error) {
         console.error('Error al verificar estado de caja:', error)
         this.isUserBoxOpen = false
         this.availableCashBoxes = []
       }
-      */
     },
 
     /**
@@ -2774,15 +2765,7 @@ export default {
 
     async handleBoxClosed () {
       this.isUserBoxOpen = false
-      // Recargar cajas disponibles cuando se cierra una caja
-      // En modo de prueba, simular cajas disponibles
-      this.availableCashBoxes = [
-        { id: 1, name: 'Caja Principal' },
-        { id: 2, name: 'Caja Secundaria' }
-      ]
-      console.log('La caja se ha cerrado, actualizando UI.')
-      // Para API real, descomentar esto:
-      /*
+      console.log('La caja se ha cerrado, actualizando UI y recargando cajas disponibles...')
       try {
         const { data: boxes } = await this.$api.get('cashboxs')
         this.availableCashBoxes = boxes.data || boxes
@@ -2790,7 +2773,6 @@ export default {
         console.error('Error al cargar cajas disponibles:', error)
         this.availableCashBoxes = []
       }
-      */
     }
   }
 }
