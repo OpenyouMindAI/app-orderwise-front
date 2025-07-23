@@ -32,11 +32,22 @@
           </q-card-actions>
         </q-card-section>
 
-        <q-card-section v-else-if="availableCashBoxes.length === 0" class="q-pt-lg">
-          <p class="text-info text-center">No hay cajas disponibles para abrir.</p>
-           <q-card-actions align="right" class="q-mt-md">
-            <q-btn ref="closeButton" flat label="Cerrar" color="primary" v-close-popup />
-          </q-card-actions>
+        <q-card-section v-else-if="availableCashBoxes.length === 0" class="q-pt-md">
+          <p class="text-subtitle1 text-center q-mb-md">No hay cajas registradas. Crea la primera.</p>
+          <q-form @submit.prevent="submitNewBox">
+            <q-input
+              ref="newBoxNameInput"
+              v-model="newBoxName"
+              label="Nombre de la caja"
+              filled
+              lazy-rules
+              :rules="[val => !!val && val.trim().length > 0 || 'El nombre es requerido']"
+            />
+            <q-card-actions align="right" class="q-mt-md">
+              <q-btn flat label="Cancelar" color="primary" v-close-popup :disable="isSubmitting" />
+              <q-btn type="submit" label="Crear y Abrir" color="primary" :loading="isSubmitting" />
+            </q-card-actions>
+          </q-form>
         </q-card-section>
 
         <q-card-section v-else class="q-pt-md">
@@ -79,6 +90,7 @@
 
 <script>
 import { Notify, Dialog } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 
 export default {
   name: 'CashBoxDialog',
@@ -97,13 +109,22 @@ export default {
       default: () => []
     }
   },
-  emits: ['update:modelValue', 'box-opened', 'box-closed'],
+  emits: ['update:modelValue', 'box-opened', 'box-closed', 'box-created'],
   data () {
     return {
       isReady: false,
       isSubmitting: false,
       selectedBox: null,
-      initialAmount: null
+      initialAmount: null,
+      newBoxName: ''
+    }
+  },
+  computed: {
+    authStore () {
+      return authentication()
+    },
+    branchOffice () {
+      return this.authStore.branchOffice
     }
   },
   watch: {
@@ -133,6 +154,7 @@ export default {
      */
     resetForm () {
       this.initialAmount = null
+      this.newBoxName = ''
       // Do not reset selectedBox if there is only one, as it's auto-selected
       if (this.availableCashBoxes.length !== 1) {
         this.selectedBox = null
@@ -204,6 +226,37 @@ export default {
       }).onOk(() => {
         this.closeBox()
       })
+    },
+
+    async submitNewBox () {
+      if (!this.newBoxName || this.newBoxName.trim() === '') {
+        return
+      }
+      this.isSubmitting = true
+      try {
+        const payload = {
+          name: this.newBoxName,
+          disabled: false,
+          branch_office_id: this.branchOffice.id
+        }
+        // Llamada a la API (interceptada por MSW)
+        await this.$api.post('cashboxs', payload)
+
+        Notify.create({
+          type: 'positive',
+          message: `Caja "${this.newBoxName}" creada con éxito.`
+        })
+
+        this.$emit('box-created')
+        // No cerramos el diálogo, BillingPage se encargará de recargar y mostrar el flujo de apertura
+      } catch (error) {
+        Notify.create({
+          type: 'negative',
+          message: error.message || 'Error al crear la caja.'
+        })
+      } finally {
+        this.isSubmitting = false
+      }
     },
 
     async closeBox () {

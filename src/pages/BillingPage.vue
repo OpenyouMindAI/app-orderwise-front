@@ -781,6 +781,7 @@
       :available-cash-boxes="availableCashBoxes"
       @box-opened="handleBoxOpened"
       @box-closed="handleBoxClosed"
+      @box-created="checkCashBoxStatus"
     />
     <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">

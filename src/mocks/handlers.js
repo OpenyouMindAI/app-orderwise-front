@@ -2,9 +2,9 @@ import { http, HttpResponse } from 'msw'
 
 // Mock data para cajas
 const mockCashBoxes = [
-  { id: 1, name: 'Caja Principal', location: 'Planta Baja', status: 'available' },
-  { id: 2, name: 'Caja Secundaria', location: 'Primer Piso', status: 'available' },
-  { id: 3, name: 'Caja Rápida', location: 'Entrada', status: 'available' }
+  // { id: 1, name: 'Caja Principal', location: 'Planta Baja', status: 'available' },
+  // { id: 2, name: 'Caja Secundaria', location: 'Primer Piso', status: 'available' },
+  // { id: 3, name: 'Caja Rápida', location: 'Entrada', status: 'available' }
 ]
 
 // Mock data para cajas abiertas
@@ -96,6 +96,34 @@ export const handlers = [
     return HttpResponse.json({
       data: newOpenBox,
       message: `Caja "${cashBox.name}" abierta con éxito`
+    })
+  }),
+
+  // POST /cashboxs - Crear una nueva caja
+  http.post(/.*\/api\/cashboxs$/, async ({ request }) => {
+    const body = await request.json()
+    console.log('MSW: Creando nueva caja con payload:', body)
+
+    if (!body.name) {
+      return HttpResponse.json(
+        { message: 'El nombre es requerido' },
+        { status: 400 }
+      )
+    }
+
+    const newCashBox = {
+      id: `mock-${Date.now()}`,
+      name: body.name,
+      disabled: false,
+      branch_office_id: body.branch_office_id, // Añadir el ID de la sucursal
+      status: 'available' // Asumimos que una caja nueva está disponible
+    }
+
+    mockCashBoxes.push(newCashBox)
+
+    return HttpResponse.json({
+      data: newCashBox,
+      message: `Caja "${newCashBox.name}" creada con éxito`
     })
   }),
 
