@@ -1025,7 +1025,6 @@ const filteredReportProducts = computed(() => {
   let filtered = reportProducts.value
 
   if (detailFilters.value.deviationType) {
-    console.log(detailFilters.value.deviationType)
     filtered = filtered.filter(product => {
       const deviation = product.quantity - product.current_stock
       if (detailFilters.value?.deviationType?.value === 'positive') return deviation > 0
@@ -1484,14 +1483,13 @@ const loadReports = async () => {
       return
     }
 
-    if (reportFilters.value.userId) {
-      params.dataEqualFilter.user_id = reportFilters.value.userId
-    }
+    params.dataEqualFilter.user_id = userSession.is_root ? reportFilters.value.userId : userSession.id
 
     if (reportFilters.value.endDate && reportFilters.value.startDate) {
       params.dateFilter = {
         from: reportFilters.value.startDate,
         to: reportFilters.value.endDate,
+        branch_office_id: branchOffice?.id,
         field: 'created_at'
       }
     }
