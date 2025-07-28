@@ -171,31 +171,25 @@
                     </div>
                   </div>
 
-                  <!-- Compact Cash Flow Display -->
-                  <div class="cash-flow-compact q-pa-xs rounded-borders q-mt-xs">
+                  <!-- Compact Transaction Display -->
+                  <div class="cash-flow-compact q-pa-xs rounded-borders q-mt-xs cursor-pointer" @click="openPaymentDetailsDialog(method)">
                     <div class="row q-gutter-xs text-center">
                       <div class="col">
-                        <div class="text-caption text-grey-7">Ventas</div>
-                        <div class="text-body2 text-weight-bold text-positive">
-                          {{ formatNumberCompact(method.sales) }}
+                        <div class="text-caption text-grey-7">Nº Transacciones</div>
+                        <div class="text-body2 text-weight-bold">
+                          {{ method.transactions_count }}
                         </div>
                       </div>
                       <div class="col">
-                        <div class="text-caption text-grey-7">Flujo</div>
-                        <div class="text-body2 text-weight-bold text-primary">
-                          {{ formatNumberCompact(method.flow) }}
-                        </div>
-                      </div>
-                      <div class="col">
-                        <div class="text-caption text-grey-7">Saldo</div>
-                        <div class="text-body2 text-weight-bold" :class="getBalanceColor(method.balance)">
-                          {{ formatNumberCompact(method.balance) }}
+                        <div class="text-caption text-grey-7">Saldo Total</div>
+                        <div class="text-body2 text-weight-bold" :class="getBalanceColor(method.total_balance)">
+                          {{ formatNumberCompact(method.total_balance) }}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <q-separator v-if="method !== paymentMethodTotals.payment_method_totals[paymentMethodTotals.payment_method_totals.length - 1]" class="q-my-sm"/>
+                  <!-- <q-separator v-if="method !== paymentMethodTotals.payment_method_totals[paymentMethodTotals.payment_method_totals.length - 1]" class="q-my-sm"/> -->
                 </div>
               </div>
               <div v-else class="text-center q-pa-md text-grey-6">
@@ -786,6 +780,16 @@
       </q-card>
     </q-dialog>
 
+    <!-- Payment Details Dialog -->
+    <payment-details-dialog
+      v-model="isPaymentDetailsDialogOpen"
+      :title="modalTitle"
+      :payments="paymentDetails"
+      :loading="modalLoading"
+      v-model:pagination="paymentDetailsPagination"
+      @request="handlePaymentDetailsRequest"
+    />
+
     <!-- Loading -->
     <q-inner-loading :showing="loading" color="primary"/>
   </q-page>
@@ -797,10 +801,11 @@ import { date } from 'quasar'
 import { formatDate, formatNumber } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { notify } from '../const/mixins'
+import PaymentDetailsDialog from 'src/components/PaymentDetailsDialog.vue'
 import { printReportTaxes } from 'src/const/report'
 
 export default {
-  name: 'OptimizedDenseReport',
+  name: 'BoxReportPage',
 
   data () {
     return {
@@ -842,6 +847,18 @@ export default {
       seller: null,
       validate: null,
       permissions: ['SAM'],
+      isPaymentDetailsDialogOpen: false,
+      paymentDetails: [],
+      modalTitle: '',
+      modalLoading: false,
+      paymentDetailsPagination: {
+        sortBy: 'date',
+        descending: true,
+        page: 1,
+        rowsPerPage: 10,
+        rowsNumber: 0,
+        filter: ''
+      },
 
       // Expansion state management
       expandedCards: {
@@ -856,6 +873,16 @@ export default {
   },
 
   watch: {
+    isPaymentDetailsDialogOpen (newValue) {
+      if (!newValue) {
+        // Reset details when dialog is closed
+        this.paymentDetails = []
+        this.paymentDetailsPagination.filter = ''
+        this.paymentDetailsPagination.page = 1
+        this.paymentDetailsPagination.rowsNumber = 0
+        this.selectedPaymentMethod = null
+      }
+    },
     branchOffice (data) {
       if (data) {
         this.filterDate()
@@ -871,6 +898,10 @@ export default {
 
   created () {
     this.setPermissions()
+  },
+
+  components: {
+    PaymentDetailsDialog
   },
 
   computed: {
@@ -1133,6 +1164,46 @@ export default {
       }
     },
 
+    async openPaymentDetailsDialog (method) {
+      this.modalTitle = method?.payment_method_name || 'Todos los Pagos'
+      this.isPaymentDetailsDialogOpen = true
+      // Store selected method to use in pagination requests
+      this.selectedPaymentMethod = method
+      this.handlePaymentDetailsRequest({ pagination: this.paymentDetailsPagination })
+    },
+
+    async handlePaymentDetailsRequest (props) {
+      const { page, rowsPerPage, sortBy, descending } = props.pagination
+      const filter = props.filter
+      this.modalLoading = true
+
+      const params = {
+        page,
+        rowsPerPage,
+        sortBy,
+        descending,
+        filter
+      }
+
+      if (this.selectedPaymentMethod) {
+        params.payment_method_id = this.selectedPaymentMethod.id
+      }
+
+      try {
+        const { data } = await this.$api.get('reports/payment-details', { params })
+        this.paymentDetails = data.rows
+        this.paymentDetailsPagination = {
+          ...props.pagination,
+          rowsNumber: data.rowsNumber,
+          filter: props.filter
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.modalLoading = false
+      }
+    },
+
     async getCategoryTotals (params) {
       try {
         const { data } = await this.$api.get('reports/category-totals', { params })
@@ -1185,7 +1256,6 @@ export default {
 }
 
 .payment-method-compact {
-  border-left: 3px solid #4CAF50;
   padding-left: 8px;
   background: rgba(76, 175, 80, 0.03);
   border-radius: 6px;
