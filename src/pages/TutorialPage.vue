@@ -487,8 +487,7 @@ async function saveVideo () {
   try {
     loading(true)
     const formData = new FormData()
-    formData.append('title', videoForm.value.title)
-    formData.append('description', videoForm.value.description)
+    formData.append('title', videoForm.value.title) =    formData.append('description', videoForm.value.description)
     formData.append('status', videoForm.value.status)
     if (videoForm.value.miniature) {
       formData.append('miniature', videoForm.value.miniature)
