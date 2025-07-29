@@ -235,7 +235,7 @@
                     <q-td key="price" :props="props">
                       {{ formatNumber(props.row.price) }}
                       <q-popup-edit
-                        v-if="userSession.is_root || userSession.is_super_admin"
+                        v-if="userSession.is_root || !setPermissionsByUser(['CJ'])"
                         v-model.number="props.row.price"
                         auto-save
                         v-slot="scope"
@@ -329,15 +329,14 @@
                           <div>
                             {{ formatNumber(product.price) }}
                             <q-icon
-                              v-if="userSession.is_root || userSession.is_super_admin"
+                              v-if="userSession.is_root || !setPermissionsByUser(['CJ'])"
                               name="edit"
                               size="xs"
                               color="primary"
                               class="q-ml-xs cursor-pointer"
-                              @click="openPriceEdit(product)"
                             />
                             <q-popup-edit
-                              v-if="userSession.is_root || userSession.is_super_admin"
+                              v-if="userSession.is_root || !setPermissionsByUser(['CJ'])"
                               v-model.number="product.price"
                               auto-save
                               v-slot="scope"
@@ -1557,6 +1556,10 @@ export default {
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
+
+    setPermissionsByUser (data) {
+      return this.userSession.roles.some(role => data.includes(role.acronym))
+    },
     listenPayments () {
       const { company_session: companySession } = this.userSession
       if (companySession?.company_config?.other?.qpay_id) {
