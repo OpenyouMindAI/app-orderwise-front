@@ -10,20 +10,26 @@ export const handlers = [
         {
           id: 1,
           payment_method_name: 'Efectivo',
-          transactions_count: 15,
-          total_balance: 1150000
+          transactions_count: 30,
+          sales: 5200000,
+          flow: 4800000,
+          balance: 4500000
         },
         {
           id: 2,
           payment_method_name: 'Tarjeta de Crédito/Débito',
-          transactions_count: 8,
-          total_balance: 850000
+          transactions_count: 30,
+          sales: 6300000,
+          flow: 6150000,
+          balance: 6000000
         },
         {
           id: 3,
           payment_method_name: 'Transferencia Bancaria',
-          transactions_count: 5,
-          total_balance: 500000
+          transactions_count: 30,
+          sales: 5800000,
+          flow: 5750000,
+          balance: 5500000
         }
       ]
     })

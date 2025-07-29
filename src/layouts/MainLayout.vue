@@ -349,7 +349,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
-// import { MultiDisplayManager } from 'multi-display-manager'
+import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',
@@ -412,28 +412,28 @@ export default {
     this.getDataNotification()
   },
   methods: {
-    // async screen () {
-    //   try {
-    //     loading(true)
-    //     const url = `${import.meta.env.VITE_APP_URL}/verifying/${this.access_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
-    //     await MultiDisplayManager.showOnSecondScreen({
-    //       url
-    //     })
-    //   } catch (error) {
-    //     alert(error.message)
-    //   } finally {
-    //     loading(false)
-    //   }
-    // },
-    // async closeScreen () {
-    //   // Obtener estado
-    //   const status = await MultiDisplayManager.getSecondScreenStatus()
-    //   alert(status.message, status.isShowing)
-    //   if (status.isShowing) {
-    //     // Cerrar pantalla
-    //     await MultiDisplayManager.closeSecondScreen()
-    //   }
-    // },
+    async screen () {
+      try {
+        loading(true)
+        const url = `${import.meta.env.VITE_APP_URL}/verifying/${this.access_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+        await MultiDisplayManager.showOnSecondScreen({
+          url
+        })
+      } catch (error) {
+        alert(error.message)
+      } finally {
+        loading(false)
+      }
+    },
+    async closeScreen () {
+      // Obtener estado
+      const status = await MultiDisplayManager.getSecondScreenStatus()
+      alert(status.message, status.isShowing)
+      if (status.isShowing) {
+        // Cerrar pantalla
+        await MultiDisplayManager.closeSecondScreen()
+      }
+    },
     ucwords (data) {
       return data
     },

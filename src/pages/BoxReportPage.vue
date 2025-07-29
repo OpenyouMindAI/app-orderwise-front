@@ -171,19 +171,25 @@
                     </div>
                   </div>
 
-                  <!-- Compact Transaction Display -->
+                  <!-- Compact Cash Flow Display -->
                   <div class="cash-flow-compact q-pa-xs rounded-borders q-mt-xs cursor-pointer" @click="openPaymentDetailsDialog(method)">
                     <div class="row q-gutter-xs text-center">
                       <div class="col">
-                        <div class="text-caption text-grey-7">Nº Transacciones</div>
-                        <div class="text-body2 text-weight-bold">
-                          {{ method.transactions_count }}
+                        <div class="text-caption text-grey-7">Ventas</div>
+                        <div class="text-body2 text-weight-bold text-positive">
+                          {{ formatNumberCompact(method.sales) }}
                         </div>
                       </div>
                       <div class="col">
-                        <div class="text-caption text-grey-7">Saldo Total</div>
-                        <div class="text-body2 text-weight-bold" :class="getBalanceColor(method.total_balance)">
-                          {{ formatNumberCompact(method.total_balance) }}
+                        <div class="text-caption text-grey-7">Flujo</div>
+                        <div class="text-body2 text-weight-bold text-primary">
+                          {{ formatNumberCompact(method.flow) }}
+                        </div>
+                      </div>
+                      <div class="col">
+                        <div class="text-caption text-grey-7">Saldo</div>
+                        <div class="text-body2 text-weight-bold" :class="getBalanceColor(method.balance)">
+                          {{ formatNumberCompact(method.balance) }}
                         </div>
                       </div>
                     </div>
