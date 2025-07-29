@@ -2324,14 +2324,6 @@ export default {
       } else {
         await commandPrint(invoice)
       }
-      // if (this.$q.platform.is.nativeMobile) {
-      //   const type = this.invoicePrinter ? 'ticket' : 'command'
-      //   const quantity = this.invoicePrinter ? 1 : null
-      //   await getPrintersB(invoice, quantity, type)
-      // } else {
-      //   const pdfUrl = doc.output('bloburl')
-      //   window.open(pdfUrl, '_blank')
-      // }
       this.clear()
     },
     /**
@@ -2495,8 +2487,8 @@ export default {
           product_id: product.id,
           cost: product.cost,
           barcode: product.barcode,
-          normal_stock: product.normal_stock,
-          bundle_stock: product.bundle_stock,
+          normal_stock: product.normal_stock || 0,
+          bundle_stock: product.bundle_stock || 0,
           skip_stock: product.skip_stock,
           is_bundle: product.is_bundle,
           aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
@@ -2592,6 +2584,7 @@ export default {
       }
 
       // Cálculo preciso con redondeo a 2 decimales
+      data.amount = data.quantity
       data.subtotal = Math.round((data.price * data.quantity) * 100) / 100
       this.calculateTotal()
     },
