@@ -334,7 +334,6 @@
                               size="xs"
                               color="primary"
                               class="q-ml-xs cursor-pointer"
-                              @click="openPriceEdit(product)"
                             />
                             <q-popup-edit
                               v-if="userSession.is_root || userSession.is_super_admin"
