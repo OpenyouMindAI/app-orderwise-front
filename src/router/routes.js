@@ -1,5 +1,12 @@
 const routes = [
   {
+    path: '/demo',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: '', component: () => import('pages/DemoPage.vue') }
+    ]
+  },
+  {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     children: [
@@ -218,6 +225,12 @@ const routes = [
         name: 'ProductSales',
         meta: { requiresAuth: true },
         component: () => import('pages/ProductSalesPage.vue')
+      },
+      {
+        path: 'demo-page',
+        name: 'DemoPage',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DemoPage.vue')
       }
     ]
   },
