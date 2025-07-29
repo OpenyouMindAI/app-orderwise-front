@@ -37,14 +37,14 @@
           color="primary"
           @click="openAddProduct = true"
           icon="add_circle"
+          label="Agregar Producto"
         />
         <q-btn
-            round
-            class="text-right"
-            icon="filter_alt"
-            color="primary"
-            @click="dialogFilter = true"
-          />
+          color="primary"
+          @click="dialogFilter = true"
+          icon="filter_alt"
+          label="Filtrar Productos"
+        />
       </div>
       <div class="col-12">
         <q-table
