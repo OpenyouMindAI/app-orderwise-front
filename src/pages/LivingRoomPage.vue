@@ -436,6 +436,7 @@ export default {
       this.loadingSave = true
       this.$api.post('living-rooms', {
         user_created_id: this.userSession?.id,
+        branch_office_id: this.branchOffice?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {
@@ -474,6 +475,7 @@ export default {
       this.loadingEdit = true
       this.$api.put(`living-rooms/${this.livingRoom.id}`, {
         user_created_id: this.userSession?.id,
+        branch_office_id: this.branchOffice?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {

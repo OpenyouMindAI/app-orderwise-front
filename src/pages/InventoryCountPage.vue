@@ -455,7 +455,14 @@
                   </q-item-label>
                 </q-item-section>
                 <q-item-section side>
-                  <q-icon name="chevron_right" color="grey-5" size="md" />
+                  <div class="flex items-center justify-end q-gutter-sm">
+                    <q-badge :color="report.status === 'active' ? 'primary' : 'negative'">
+                      {{ report.status === 'active' ? 'En Curso' : 'Cerrado' }}
+                    </q-badge>
+                    <span>
+                      <q-icon name="chevron_right" color="grey-5" size="md" />
+                    </span>
+                  </div>
                 </q-item-section>
               </q-item>
             </q-list>
@@ -990,7 +997,7 @@ const searchResults = ref([])
 const searchType = ref('barcode') // 'barcode' or 'name'
 
 const store = authentication()
-const branchOffice = store.branchOffice
+const branchOffice = computed(() => store.branchOffice)
 const userSession = store.userSession
 const currentProduct = ref({})
 const currentCount = ref({})
@@ -1069,6 +1076,16 @@ watch(activeTab, (val) => {
     loadReports()
   }
 })
+
+watch(branchOffice, () => {
+  lastCountProducts.value = []
+  reports.value = []
+  if (activeTab.value === 'reports') {
+    loadReports()
+  }
+  initializeComponent()
+})
+
 // Lifecycle hooks
 onMounted(() => {
   initializeComponent()
@@ -1108,39 +1125,19 @@ const loadCurrentCount = async () => {
       params: {
         dataEqualFilter: {
           user_id: userSession.is_root ? null : userSession.id,
-          branch_office_id: branchOffice?.id,
+          branch_office_id: branchOffice.value?.id,
           status: 'active'
         },
-        orderBy: 'id',
-        sortOrder: 'desc',
-        limit: 1
+        sortBy: 'id',
+        sortOrder: 'desc'
       }
     })
 
-    if (data && data.length > 0) {
-      const serverCount = data[0]
-      currentCount.value = serverCount
+    currentCount.value = data[0] || {}
 
-      // Update localStorage with server data
-      localStorage.setItem('currentCount', JSON.stringify(serverCount))
-
-      // If it's a closed count, get the products count
-      if (serverCount.status === 'closed') {
-        await getLastCountProductsCount(serverCount.id)
-      }
-    } else {
-      // No count found on server, check localStorage
-      const localCount = localStorage.getItem('currentCount')
-      if (localCount) {
-        currentCount.value = JSON.parse(localCount)
-        // Verify this count still exists on server
-        try {
-          await api.get(`counts/${currentCount.value.id}`)
-        } catch (error) {
-          // Count doesn't exist on server, clear localStorage
-          localStorage.removeItem('currentCount')
-          currentCount.value = {}
-        }
+    if (currentCount.value) {
+      if (currentCount.value.status === 'closed') {
+        await getLastCountProductsCount(currentCount.value.id)
       }
     }
   } catch (error) {
@@ -1194,13 +1191,12 @@ const createNewCount = async () => {
     showNewCountDialog.value = false
 
     const { data } = await api.post('counts', {
-      branch_office_id: branchOffice?.id,
+      branch_office_id: branchOffice.value?.id,
       user_id: userSession.id,
       status: 'active'
     })
 
     currentCount.value = data
-    localStorage.setItem('currentCount', JSON.stringify(data))
     scannedProducts.value = []
     showingLastCount.value = false
 
@@ -1238,7 +1234,6 @@ const closeCount = async () => {
     })
 
     currentCount.value = { ...currentCount.value, ...data, status: 'closed' }
-    localStorage.setItem('currentCount', JSON.stringify(currentCount.value))
     await getLastCountProductsCount(currentCount.value.id)
 
     notify('Conteo cerrado exitosamente', 'positive', 'check')
@@ -1351,7 +1346,7 @@ const searchProducts = async (searchTerm) => {
     const { data } = await api.get('products', {
       params: {
         ...params,
-        branch_office_id: branchOffice?.id,
+        branch_office_id: branchOffice.value?.id,
         stock: true
       }
     })
@@ -1474,7 +1469,7 @@ const loadReports = async () => {
 
     const params = {
       dataEqualFilter: {},
-      orderBy: 'id',
+      sortBy: 'id',
       sortOrder: 'desc'
     }
 
@@ -1484,12 +1479,12 @@ const loadReports = async () => {
     }
 
     params.dataEqualFilter.user_id = userSession.is_root ? reportFilters.value.userId : userSession.id
+    params.dataEqualFilter.branch_office_id = branchOffice.value?.id
 
     if (reportFilters.value.endDate && reportFilters.value.startDate) {
       params.dateFilter = {
         from: reportFilters.value.startDate,
         to: reportFilters.value.endDate,
-        branch_office_id: branchOffice?.id,
         field: 'created_at'
       }
     }
@@ -1500,7 +1495,9 @@ const loadReports = async () => {
       for (const report of data) {
         const { data: products } = await api.get('product-counts', {
           params: {
-            dataEqualFilter: { count_id: report.id }
+            dataEqualFilter: {
+              count_id: report.id
+            }
           }
         })
 
