@@ -1,487 +1,358 @@
 <template>
-  <q-page class="flex column bg-white" style="height: calc(100vh - 120px); overflow: hidden">
-    <!-- All views are wrapped in a single transition component to ensure correct v-if/v-else-if chaining -->
-    <transition :name="transitionName" mode="out-in">
-      <!-- Keypad View -->
-      <div
-        v-if="currentView === 'keypad'"
-        key="keypad"
-        :class="[
-          'keypad-view-container',
-          $q.screen.width < 800 ? 'column' : 'row no-wrap',
-          'full-width',
-        ]"
-      >
-        <!-- Numeric Keypad -->
+  <q-page class="flex items-center column bg-white" style="height: calc(100vh - 120px); overflow: hidden;">
+    <div style="max-width: 600px;">
+      <!-- All views are wrapped in a single transition component to ensure correct v-if/v-else-if chaining -->
+      <transition :name="transitionName" mode="out-in">
+        <!-- Keypad View -->
         <div
-          :class="[
-            'keypad-section',
-            'q-pa-md',
-            'flex',
-            'column',
-            'items-center',
-            'justify-center',
-            $q.screen.width < 800 ? 'col-12' : 'col-6',
-          ]"
+          v-if="currentView === 'keypad'"
+          key="keypad"
+          class="keypad-view-container column full-width"
         >
-          <div class="display-container">
-            <div class="display-text">{{ formattedValue }}</div>
-            <q-btn
-              flat
-              round
-              dense
-              color="primary"
-              icon="backspace"
-              @click="backspace"
-              class="backspace-btn"
-            />
-          </div>
-          <div class="keypad q-mt-md">
-            <q-btn
-              v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
-              :key="n"
-              :label="n.toString()"
-              round
-              unelevated
-              class="keypad-btn"
-              @click="inputDigit(n.toString())"
-            />
-            <q-btn
-              label="00"
-              round
-              unelevated
-              class="keypad-btn"
-              @click="inputDigit('00')"
-            />
-            <q-btn
-              label="0"
-              round
-              unelevated
-              class="keypad-btn"
-              @click="inputDigit('0')"
-            />
-            <q-btn
-              v-if="$q.screen.width < 800 && inputValue.length > 0"
-              icon="send"
-              round
-              unelevated
-              color="primary"
-              class="keypad-btn send-btn"
-              @click="navigate('SHOW_PAYMENT_METHODS')"
-            />
-          </div>
-        </div>
-
-        <q-separator
-          :vertical="!($q.screen.width < 800)"
-          :horizontal="$q.screen.width < 800"
-          class="separator"
-        />
-
-        <!-- Desktop Payment Methods -->
-        <div
-          v-if="!($q.screen.width < 800)"
-          :class="[
-            'payment-section',
-            'q-pa-lg',
-            'flex',
-            'column',
-            'items-center',
-            'justify-start',
-            'col-6',
-          ]"
-        >
-          <transition name="fade" mode="out-in">
-            <div v-if="inputValue.length > 0" key="methods" class="full-width">
-              <div class="text-h6 q-mb-md text-center">
-                Métodos de Pago
-              </div>
-              <div class="payment-methods-container payment-methods-grid q-mb-lg">
-                <q-btn
-                  style="border-radius: 10px; padding: 5px 15px"
-                  v-for="method in paymentMethods"
-                  :key="method.id"
-                  :label="method.name"
-                  unelevated
-                  rounded
-                  class="payment-btn no-wrap"
-                  align="left"
-                  :color="
-                    selectedPaymentMethod && selectedPaymentMethod.id === method.id
-                      ? 'primary'
-                      : 'grey-3'
-                  "
-                  :text-color="
-                    selectedPaymentMethod && selectedPaymentMethod.id === method.id
-                      ? 'white'
-                      : 'black'
-                  "
-                  @click="selectedPaymentMethod = method"
-                />
-              </div>
-              <div class="text-h6 q-mb-md text-center">
-                Tipo de Factura
-              </div>
-              <div class="payment-methods-container q-mb-lg">
-                <q-btn
-                  style="border-radius: 10px; padding: 5px 15px"
-                  v-for="invType in invoiceTypes"
-                  :key="invType.id"
-                  :label="invType.name"
-                  :icon="invType.icon"
-                  unelevated
-                  rounded
-                  align="left"
-                  class="payment-btn q-mb-md no-wrap"
-                  :color="
-                    selectedInvoiceType && selectedInvoiceType.id === invType.id
-                      ? 'blue-6'
-                      : 'grey-3'
-                  "
-                  :text-color="
-                    selectedInvoiceType && selectedInvoiceType.id === invType.id
-                      ? 'white'
-                      : 'black'
-                  "
-                  @click="selectedInvoiceType = invType"
-                />
-              </div>
-
-              <div class="full-width q-mt-auto q-pt-md">
-                <q-btn
-                  style="border-radius: 10px; padding: 5px 15px"
-                  label="Siguiente"
-                  color="primary"
-                  icon-right="arrow_forward"
-                  class="full-width"
-                  :disable="!canProceedFromPaymentMethods()"
-                  @click="navigate('NEXT_STEP')"
-                />
-              </div>
-            </div>
-            <div v-else key="prompt" class="full-height column flex-center text-grey-6">
-              <q-icon name="keyboard" size="3em" class="q-mb-sm" />
-              <div class="text-subtitle1">Ingrese importe de la venta</div>
-            </div>
-          </transition>
-        </div>
-      </div>
-
-      <!-- Mobile Payment Methods View -->
-      <div
-        v-else-if="currentView === 'payment-methods'"
-        key="payment-methods"
-        class="flex column items-center q-pa-lg mobile-payment-container"
-      >
-        <div class="payment-content flex-grow">
-          <div class="text-h4 text-weight-bold q-mb-md text-center">
-            {{ formattedValue }}
-          </div>
-          <div class="text-h6 q-mb-md text-center">
-            Métodos de Pago
-          </div>
-          <div class="payment-methods-container payment-methods-grid q-mb-lg">
-            <q-btn
-              style="border-radius: 10px; padding: 5px 15px"
-              v-for="method in paymentMethods"
-              :key="method.id"
-              :label="method.name"
-              unelevated
-              rounded
-              class="payment-btn no-wrap"
-              align="left"
-              :color="
-                selectedPaymentMethod && selectedPaymentMethod.id === method.id
-                  ? 'primary'
-                  : 'grey-3'
-              "
-              :text-color="
-                selectedPaymentMethod && selectedPaymentMethod.id === method.id
-                  ? 'white'
-                  : 'black'
-              "
-              @click="selectedPaymentMethod = method"
-            />
-          </div>
-          <div class="text-h6 q-mb-md text-center">
-            Tipo de Factura
-          </div>
-          <div class="payment-methods-container">
-            <q-btn
-              style="border-radius: 10px; padding: 5px 15px"
-              v-for="invType in invoiceTypes"
-              :key="invType.id"
-              :label="invType.name"
-              :icon="invType.icon"
-              unelevated
-              rounded
-              align="left"
-              class="payment-btn q-mb-md no-wrap"
-              :color="
-                selectedInvoiceType && selectedInvoiceType.id === invType.id
-                  ? 'blue-6'
-                  : 'grey-3'
-              "
-              :text-color="
-                selectedInvoiceType && selectedInvoiceType.id === invType.id
-                  ? 'white'
-                  : 'black'
-              "
-              @click="selectedInvoiceType = invType"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Client Selection View -->
-      <div
-        v-else-if="currentView === 'client-selection'"
-        key="client-selection"
-        class="flex column items-center q-pa-lg mobile-payment-container"
-      >
-        <div class="payment-content flex-grow column full-width">
-          <div class="text-h4 text-weight-bold q-mb-md text-center">
-            {{ formattedValue }}
-          </div>
-          <div class="text-h6 q-mb-md text-center">
-            Seleccionar Cliente
-          </div>
-
-          <div class="column full-width" style="max-height: 100%">
-            <!-- Search input -->
-            <q-input
-              v-model="clientSearch"
-              placeholder="Buscar cliente..."
-              outlined
-              class="q-mb-md full-width"
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-
-            <!-- Add new client button -->
-            <q-btn
-              style="border-radius: 10px; padding: px 15px"
-              label="Agregar Nuevo Cliente"
-              icon="person_add"
-              unelevated
-              rounded
-              class="full-width q-mb-md"
-              color="green-6"
-              text-color="white"
-              @click="navigate('TOGGLE_CLIENT_DIALOG', { show: true })"
-            />
-
-            <!-- Client list container -->
-            <div class="client-list-container flex-grow full-width" style="min-height: 0">
+          <!-- Numeric Keypad -->
+          <div class="keypad-section q-pa-md flex column items-center justify-center col-12">
+            <div class="display-container">
+              <div class="display-text">{{ formattedValue }}</div>
               <q-btn
-                v-for="client in filteredClients"
-                :key="client.id"
-                style="border-radius: 10px; padding: px 15px"
-                :label="`${client.name} - ${client.email}`"
+                flat
+                round
+                dense
+                color="primary"
+                icon="backspace"
+                v-ripple @click="backspace" @touchend.prevent="backspace"
+                class="backspace-btn"
+              />
+            </div>
+            <div class="keypad q-mt-md">
+              <q-btn
+                v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
+                :key="n"
+                :label="n.toString()"
+                round
                 unelevated
-                rounded
-                align="left"
-                class="client-btn q-mb-md full-width"
-                :color="selectedClient && selectedClient.id === client.id ? 'primary' : 'grey-3'"
-                :text-color="selectedClient && selectedClient.id === client.id ? 'white' : 'black'"
-                @click="selectedClient = client"
+                class="keypad-btn"
+                v-ripple @click="inputDigit(n.toString())" @touchend.prevent="inputDigit(n.toString())"
+              />
+              <q-btn
+                label="00"
+                round
+                unelevated
+                class="keypad-btn"
+                v-ripple @click="inputDigit('00')" @touchend.prevent="inputDigit('00')"
+              />
+              <q-btn
+                label="0"
+                round
+                unelevated
+                class="keypad-btn"
+                v-ripple @click="inputDigit('0')" @touchend.prevent="inputDigit('0')"
+              />
+              <q-btn
+                v-if="inputValue.length > 0"
+                icon="send"
+                round
+                unelevated
+                color="primary"
+                class="keypad-btn send-btn"
+                v-ripple @click="navigate('SHOW_PAYMENT_METHODS')" @touchend.prevent="navigate('SHOW_PAYMENT_METHODS')"
               />
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Invoice A/B Options View -->
-      <div
-        v-else-if="currentView === 'invoice-options'"
-        key="invoice-options"
-        class="flex column items-center q-pa-lg mobile-payment-container"
-      >
-        <div class="payment-content flex-grow">
-          <div class="text-h4 text-weight-bold q-mb-md text-center">
-            {{ formattedValue }}
-          </div>
-          <div class="text-h6 q-mb-md text-center">
-            Factura A / B - Seleccionar Opción
-          </div>
-
-          <div class="invoice-options-container">
-            <q-btn
-              v-for="option in invoiceOptions"
-              :key="option.id"
-              style="border-radius: 10px; padding: 15px 20px"
-              :label="option.name"
-              :icon="option.icon"
-              unelevated
-              rounded
-              align="left"
-              class="invoice-option-btn q-mb-md full-width"
-              :color="selectedInvoiceOption && selectedInvoiceOption.id === option.id ? 'blue-6' : 'grey-3'"
-              :text-color="selectedInvoiceOption && selectedInvoiceOption.id === option.id ? 'white' : 'black'"
-              @click="selectedInvoiceOption = option"
-            />
+        <!-- Mobile Payment Methods View -->
+        <div
+          v-else-if="currentView === 'payment-methods'"
+          key="payment-methods"
+          class="flex column items-center q-pa-lg mobile-payment-container"
+        >
+          <div class="payment-content flex-grow">
+            <div class="text-h4 text-weight-bold q-mb-md text-center">
+              {{ formattedValue }}
+            </div>
+            <div class="text-h6 q-mb-md text-center">
+              Métodos de Pago
+            </div>
+            <div class="payment-methods-container payment-methods-grid q-mb-lg">
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                v-for="method in paymentMethods"
+                :key="method.id"
+                :label="method.name"
+                unelevated
+                rounded
+                class="payment-btn no-wrap"
+                align="left"
+                :color="
+                  selectedPaymentMethod && selectedPaymentMethod.id === method.id
+                    ? 'primary'
+                    : 'grey-3'
+                "
+                :text-color="
+                  selectedPaymentMethod && selectedPaymentMethod.id === method.id
+                    ? 'white'
+                    : 'black'
+                "
+                @click="selectedPaymentMethod = method"
+              />
+            </div>
+            <div class="text-h6 q-mb-md text-center">
+              Tipo de Factura
+            </div>
+            <div class="payment-methods-container">
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                v-for="invType in invoiceTypes"
+                :key="invType.id"
+                :label="invType.name"
+                :icon="invType.icon"
+                unelevated
+                rounded
+                align="left"
+                class="payment-btn q-mb-md no-wrap"
+                :color="
+                  selectedInvoiceType && selectedInvoiceType.id === invType.id
+                    ? 'blue-6'
+                    : 'grey-3'
+                "
+                :text-color="
+                  selectedInvoiceType && selectedInvoiceType.id === invType.id
+                    ? 'white'
+                    : 'black'
+                "
+                @click="selectedInvoiceType = invType"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Cash Payment View -->
-      <div v-else-if="currentView === 27" class="payment-view-container desktop-payment-view column items-center justify-center q-pa-md">
-        <q-icon name="payments" size="80px" color="primary" class="q-mb-md" />
-        <div class="text-h5 q-mb-sm">Pago en Efectivo</div>
-        <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-      </div>
+        <!-- Client Selection View -->
+        <div
+          v-else-if="currentView === 'client-selection'"
+          key="client-selection"
+        >
+          <div class="payment-content flex q-pa-lg">
+            <div class="text-h4 text-weight-bold q-mb-md text-center full-width">
+              {{ formattedValue }}
+            </div>
+            <div class="text-h6 q-mb-md text-center full-width">
+              Seleccionar Cliente
+            </div>
 
-      <!-- Transfer Payment View -->
-      <div v-else-if="currentView === 28" class="payment-view-container desktop-payment-view column items-center justify-center q-pa-md">
-        <q-icon name="sync_alt" size="80px" color="primary" class="q-mb-md" />
-        <div class="text-h5 q-mb-sm">Esperando Transferencia</div>
-        <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-        <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-      </div>
+            <div class="column full-width" style="max-height: 100%">
+              <!-- Search input -->
+              <q-input
+                v-model="clientSearch"
+                placeholder="Buscar cliente..."
+                outlined
+                class="q-mb-md full-width"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
 
-      <!-- Debit Card Payment View -->
-      <div v-else-if="currentView === 29" class="payment-view-container desktop-payment-view column items-center justify-center q-pa-md">
-        <q-icon name="credit_card" size="80px" color="primary" class="q-mb-md" />
-        <div class="text-h5 q-mb-sm">Procesando Débito</div>
-        <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-        <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-      </div>
+              <!-- Add new client button -->
+              <q-btn
+                style="border-radius: 10px; padding: px 15px"
+                label="Agregar Nuevo Cliente"
+                icon="person_add"
+                unelevated
+                rounded
+                class="full-width q-mb-md"
+                color="green-6"
+                text-color="white"
+                @click="navigate('TOGGLE_CLIENT_DIALOG', { show: true })"
+              />
 
-      <!-- Credit Card Payment View -->
-      <div v-else-if="currentView === 30" class="payment-view-container desktop-payment-view column items-center justify-center q-pa-md">
-        <q-icon name="credit_card" size="80px" color="primary" class="q-mb-md" />
-        <div class="text-h5 q-mb-sm">Procesando Crédito</div>
-        <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-        <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-      </div>
+              <!-- Client list container -->
+              <div class="client-list-container flex-grow full-width" style="min-height: 0">
+                <q-btn
+                  v-for="client in filteredClients"
+                  :key="client.id"
+                  style="border-radius: 10px; padding: px 15px"
+                  :label="`${client.name} - ${client.email}`"
+                  unelevated
+                  rounded
+                  align="left"
+                  class="client-btn q-mb-md full-width"
+                  :color="selectedClient && selectedClient.id === client.id ? 'primary' : 'grey-3'"
+                  :text-color="selectedClient && selectedClient.id === client.id ? 'white' : 'black'"
+                  @click="selectedClient = client"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <!-- QR Mercado Pago View -->
-      <div v-else-if="currentView === 99" class="payment-view-container desktop-payment-view column items-center justify-center q-pa-md">
-        <q-icon name="qr_code_2" size="80px" color="primary" class="q-mb-md" />
-        <div class="text-h5 q-mb-sm">Escanee el QR de Mercado Pago</div>
-        <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-        <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-      </div>
+        <!-- Invoice A/B Options View -->
+        <div
+          v-else-if="currentView === 'invoice-options'"
+          key="invoice-options"
+          class="flex column items-center q-pa-lg mobile-payment-container"
+        >
+          <div class="payment-content flex-grow">
+            <div class="text-h4 text-weight-bold q-mb-md text-center">
+              {{ formattedValue }}
+            </div>
+            <div class="text-h6 q-mb-md text-center">
+              Factura A / B - Seleccionar Opción
+            </div>
 
-      <!-- Operation Completed View -->
-      <div
-        v-else-if="currentView === 'operation-completed'"
-        key="completed"
-        class="desktop-payment-view column items-center justify-center q-pa-lg text-center"
-      >
-        <q-icon
-          name="check_circle"
-          color="positive"
-          size="100px"
-          class="q-mb-md"
-        />
-        <div class="text-h4 text-weight-bold q-mb-sm">¡Operación Completada!</div>
-        <div class="text-h5 q-mb-lg text-grey-8">{{ formattedValue }}</div>
-        <q-btn
-          style="border-radius: 10px; padding: 5px 15px"
-          label="Nueva Operación"
-          color="primary"
-          size="lg"
-          unelevated
-          rounded
-          @click="navigate('RESET')"
-        />
-      </div>
-    </transition>
+            <div class="invoice-options-container">
+              <q-btn
+                v-for="option in invoiceOptions"
+                :key="option.id"
+                style="border-radius: 10px; padding: 15px 20px"
+                :label="option.name"
+                :icon="option.icon"
+                unelevated
+                rounded
+                align="left"
+                class="invoice-option-btn q-mb-md full-width"
+                :color="selectedInvoiceOption && selectedInvoiceOption.id === option.id ? 'blue-6' : 'grey-3'"
+                :text-color="selectedInvoiceOption && selectedInvoiceOption.id === option.id ? 'white' : 'black'"
+                @click="selectedInvoiceOption = option"
+              />
+            </div>
+          </div>
+        </div>
 
-    <!-- Action Buttons -->
-    <transition name="slide-up">
-      <q-footer v-if="$q.screen.lt.md && shouldShowNavButtons" class="bg-white q-pa-md" style="box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">
-        <q-btn
-          style="border-radius: 10px; padding: 5px 15px"
-          label="Volver"
-          flat
-          @click="navigate('GO_BACK')"
-          icon="arrow_back"
-        />
-        <q-btn
-          style="border-radius: 10px; padding: 5px 15px"
-          :label="getNextButtonLabel()"
-          color="primary"
-          :icon-right="shouldShowArrow() ? 'arrow_forward' : ''"
-          :disable="isNextButtonDisabled()"
-          @click="handleNextAction"
-        />
-      </q-footer>
-    </transition>
+        <!-- Cash Payment View -->
+        <div v-else-if="currentView === 27" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
+          <q-icon name="payments" size="80px" color="primary" class="q-mb-md" />
+          <div class="text-h5 q-mb-sm">Pago en Efectivo</div>
+          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
+        </div>
 
-    <!-- Desktop Action Buttons -->
-    <div v-if="$q.screen.gt.sm && shouldShowNavButtons" class="desktop-action-buttons q-pa-md bg-white" style="border-top: 1px solid #eee;">
-      <div class="row items-center justify-end q-gutter-md">
-        <q-btn
-          style="border-radius: 10px;"
-          label="Volver"
-          color="grey-8"
-          flat
-          @click="navigate('GO_BACK')"
-        />
-        <q-btn
-          style="border-radius: 10px; padding: 5px 15px"
-          :label="getNextButtonLabel()"
-          unelevated
-          rounded
-          color="primary"
-          :icon-right="shouldShowArrow() ? 'arrow_forward' : ''"
-          :disable="isNextButtonDisabled()"
-          @click="handleNextAction"
-        />
-      </div>
-    </div>
+        <!-- Transfer Payment View -->
+        <div v-else-if="currentView === 28" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
+          <q-icon name="sync_alt" size="80px" color="primary" class="q-mb-md" />
+          <div class="text-h5 q-mb-sm">Esperando Transferencia</div>
+          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
+          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
+        </div>
 
-    <!-- Add Client Dialog -->
-    <q-dialog v-model="showAddClientDialog">
-      <q-card style="min-width: 350px; border-radius: 10px;">
-        <q-card-section>
-          <div class="text-h6">Agregar Nuevo Cliente</div>
-        </q-card-section>
+        <!-- Debit Card Payment View -->
+        <div v-else-if="currentView === 29" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
+          <q-icon name="credit_card" size="80px" color="primary" class="q-mb-md" />
+          <div class="text-h5 q-mb-sm">Procesando Débito</div>
+          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
+          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
+        </div>
 
-        <q-card-section class="q-pt-none">
-          <q-input
-            v-model="newClient.name"
-            label="Nombre completo"
-            outlined
+        <!-- Credit Card Payment View -->
+        <div v-else-if="currentView === 30" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
+          <q-icon name="credit_card" size="80px" color="primary" class="q-mb-md" />
+          <div class="text-h5 q-mb-sm">Procesando Crédito</div>
+          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
+          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
+        </div>
+
+        <!-- QR Mercado Pago View -->
+        <div v-else-if="currentView === 99" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
+          <q-icon name="qr_code_2" size="80px" color="primary" class="q-mb-md" />
+          <div class="text-h5 q-mb-sm">Escanee el QR de Mercado Pago</div>
+          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
+          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
+        </div>
+
+        <!-- Operation Completed View -->
+        <div
+          v-else-if="currentView === 'operation-completed'"
+          key="completed"
+          class="full-height flex column items-center justify-center q-pa-lg text-center"
+        >
+          <q-icon
+            name="check_circle"
+            color="positive"
+            size="100px"
             class="q-mb-md"
-            style="border-radius: 10px;"
           />
-          <q-input
-            v-model="newClient.email"
-            label="Email"
-            type="email"
-            outlined
-            class="q-mb-md"
-            style="border-radius: 10px;"
-          />
-          <q-input
-            v-model="newClient.phone"
-            label="Teléfono"
-            outlined
-            style="border-radius: 10px;"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right" class="text-primary">
-          <q-btn flat label="Cancelar" @click="navigate('TOGGLE_CLIENT_DIALOG', { show: false })" />
+          <div class="text-h4 text-weight-bold q-mb-sm">¡Operación Completada!</div>
+          <div class="text-h5 q-mb-lg text-grey-8">{{ formattedValue }}</div>
           <q-btn
-            flat
-            label="Agregar"
-            @click="addNewClient"
-            :disable="!newClient.name || !newClient.email"
+            style="border-radius: 10px; padding: 5px 15px"
+            label="Nueva Operación"
+            color="primary"
+            size="lg"
+            unelevated
+            rounded
+            @click="navigate('RESET')"
           />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+        </div>
+      </transition>
+
+      <!-- Action Buttons -->
+      <transition name="slide-up">
+        <div v-if="shouldShowNavButtons" class="action-buttons-fixed" style="max-width: 600px; margin: auto">
+          <q-btn
+            style="border-radius: 10px; padding: 5px 15px"
+            label="Volver"
+            flat
+            @click="navigate('GO_BACK')"
+            icon="arrow_back"
+          />
+          <q-btn
+            style="border-radius: 10px; padding: 5px 15px"
+            :label="getNextButtonLabel()"
+            color="primary"
+            :icon-right="shouldShowArrow() ? 'arrow_forward' : ''"
+            :disable="isNextButtonDisabled()"
+            @click="handleNextAction()"
+          />
+        </div>
+      </transition>
+
+      <!-- Add Client Dialog -->
+      <q-dialog v-model="showAddClientDialog">
+        <q-card style="min-width: 350px; border-radius: 10px;">
+          <q-card-section>
+            <div class="text-h6">Agregar Nuevo Cliente</div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-none">
+            <q-input
+              v-model="newClient.name"
+              label="Nombre completo"
+              outlined
+              class="q-mb-md"
+              style="border-radius: 10px;"
+            />
+            <q-input
+              v-model="newClient.email"
+              label="Email"
+              type="email"
+              outlined
+              class="q-mb-md"
+              style="border-radius: 10px;"
+            />
+            <q-input
+              v-model="newClient.phone"
+              label="Teléfono"
+              outlined
+              style="border-radius: 10px;"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right" class="text-primary">
+            <q-btn flat label="Cancelar" @click="navigate('TOGGLE_CLIENT_DIALOG', { show: false })" />
+            <q-btn
+              flat
+              label="Agregar"
+              @click="addNewClient"
+              :disable="!newClient.name || !newClient.email"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+    </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, getCurrentInstance } from 'vue'
+import { useStore } from 'vuex'
 import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
 
@@ -491,6 +362,10 @@ const $q = useQuasar()
 const transitionName = ref('slide-forward')
 const inputValue = ref('')
 const currentView = ref('keypad')
+const store = useStore()
+const instance = getCurrentInstance()
+const echoPay = instance.appContext.config.globalProperties.$echoPay
+
 const paymentMethods = ref([])
 const selectedPaymentMethod = ref(null)
 const invoiceTypes = ref([])
@@ -505,12 +380,7 @@ const newClient = ref({
   email: '',
   phone: ''
 })
-const clients = ref([
-  { id: 1, name: 'Juan Pérez', email: 'juan@email.com', phone: '123456789' },
-  { id: 2, name: 'María García', email: 'maria@email.com', phone: '987654321' },
-  { id: 3, name: 'Carlos López', email: 'carlos@email.com', phone: '456789123' },
-  { id: 4, name: 'Ana Martínez', email: 'ana@email.com', phone: '789123456' }
-])
+const clients = ref([])
 
 // Invoice A/B options
 const selectedInvoiceOption = ref(null)
@@ -622,6 +492,51 @@ const addClientToList = (clientData) => {
 }
 
 // UNIFIED NAVIGATION FUNCTION
+const listenForTransfers = () => {
+  const userSession = store.state.session.userSession
+  const branchOffice = store.state.session.branchOffice
+
+  if (userSession?.company_session?.company_config?.other?.qpay_id && branchOffice?.id) {
+    const channelName = 'mercado-pago-payment'
+    const eventName = `.mercado-pago-payment.${userSession.company_session.company_config.other.qpay_id}.${branchOffice.id}`
+
+    if (echoPay) {
+      const channel = echoPay.channel(channelName)
+      channel.listen(eventName, (data) => {
+        console.log('Payment received:', data)
+        if (data.payment) {
+          navigate('COMPLETE_OPERATION')
+        }
+      })
+    } else {
+      console.error('$echoPay is not available.')
+    }
+  } else {
+    console.log('QPay ID or Branch Office ID not found, skipping listener.')
+  }
+}
+
+const stopListeningForTransfers = () => {
+  const userSession = store.state.session.userSession
+  const branchOffice = store.state.session.branchOffice
+
+  if (userSession?.company_session?.company_config?.other?.qpay_id && branchOffice?.id) {
+    const channelName = 'mercado-pago-payment'
+    if (echoPay) {
+      echoPay.leave(channelName)
+      console.log('Stopped listening on channel:', channelName)
+    }
+  }
+}
+
+watch(currentView, (newView, oldView) => {
+  if (newView === 28) {
+    listenForTransfers()
+  } else if (oldView === 28) {
+    stopListeningForTransfers()
+  }
+})
+
 const navigate = (action, options = {}) => {
   switch (action) {
     // Navegación hacia adelante
@@ -763,17 +678,28 @@ const handleKeyPress = (e) => {
       inputDigit(e.key)
     } else if (e.key === 'Backspace') {
       backspace()
-    } else if (
-      e.key === 'Enter' &&
-        $q.screen.width < 800 &&
-        inputValue.value.length > 0
-    ) {
+    } else if (e.key === 'Enter' && inputValue.value.length > 0) {
       navigate('SHOW_PAYMENT_METHODS')
     }
   }
 }
 
 // Data fetching
+const getClients = async () => {
+  try {
+    const { data } = await api.get('clients')
+    console.log('Clients from API:', data)
+    clients.value = data
+  } catch (error) {
+    console.error('Error fetching clients:', error)
+    // Fallback to mock data or show an error message
+    clients.value = [
+      { id: 1, name: 'Juan Pérez (Error)', email: 'juan@email.com', phone: '123456789' },
+      { id: 2, name: 'María García (Error)', email: 'maria@email.com', phone: '987654321' }
+    ]
+  }
+}
+
 const getPaymentMethods = async () => {
   try {
     const { data } = await api.get('payment-methods')
@@ -813,23 +739,32 @@ const getInvoiceTypes = async () => {
 const initializeViews = () => {
   getInvoiceTypes()
   getPaymentMethods()
+  getClients()
 }
 
 // Lifecycle hooks
-onMounted(() => {
+const onMountedHook = () => {
   window.addEventListener('keydown', handleKeyPress)
   initializeViews()
-})
+}
 
-onUnmounted(() => {
+const onUnmountedHook = () => {
   window.removeEventListener('keydown', handleKeyPress)
+}
+
+onMounted(onMountedHook)
+onUnmounted(() => {
+  onUnmountedHook()
+  // Ensure we stop listening when the component is unmounted
+  if (currentView.value === 28) {
+    stopListeningForTransfers()
+  }
 })
 </script>
 
 <style scoped>
 .pos-card {
   transition: all 0.3s ease;
-  max-width: 800px;
   max-width: 90vw;
   border-radius: 16px;
   overflow: hidden;
@@ -837,12 +772,10 @@ onUnmounted(() => {
 
 .keypad-view-container {
   width: 100%;
-  max-width: 1200px;
   min-height: 600px;
 }
 
-.keypad-section,
-.payment-section {
+.keypad-section {
   min-height: 500px;
 }
 
@@ -882,6 +815,7 @@ onUnmounted(() => {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   width: 280px;
+  grid-template-rows: repeat(4, 1fr);
 }
 
 .keypad-btn {
@@ -900,6 +834,8 @@ onUnmounted(() => {
 .send-btn {
   background-color: var(--q-primary) !important;
   color: white !important;
+  grid-column: 3;
+  grid-row: 4;
 }
 
 .send-btn:hover {
@@ -931,23 +867,12 @@ onUnmounted(() => {
 
 .payment-methods-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 1rem;
-}
-
-.desktop-payment-view {
-  height: 100%;
-}
-
-@media (max-width: 799px) {
-  .desktop-payment-view {
-    height: 100vh; /* Full screen on mobile */
-    padding-top: 50px; /* Adjust for header or other elements */
-  }
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
 }
 
 .client-list {
-  max-height: 250px; /* Altura fija más pequeña */
+  max-height: 250px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #ccc transparent;
@@ -975,33 +900,33 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding-bottom: 70px;
-  overflow-y: auto; /* Add vertical scroll when content overflows */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .payment-content {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   width: 100%;
-  /* height: calc(100vh - 120px); */
 }
 
 .payment-content::-webkit-scrollbar {
-  display: none; /* Chrome/Safari/Opera */
+  display: none;
 }
 
 .client-list-container {
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   width: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 200px;
+  max-height: 300px;
 }
 
 .action-buttons-fixed {
@@ -1011,7 +936,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   background: white;
-  padding: 16px;
+  padding: 1rem 1.5rem;
   border-top: 1px solid #e0e0e0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1019,66 +944,34 @@ onUnmounted(() => {
   z-index: 1000;
 }
 
+@media (max-width: 600px) {
+  .action-buttons-fixed {
+    padding: 0.75rem 1rem;
+    gap: 8px;
+  }
+}
+
 .q-btn:hover {
   box-shadow: none !important;
 }
 
-.separator {
-  margin: 16px 0;
+.pos-card {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-@media (max-width: 850px) {
-  .pos-card {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .q-page {
-    padding: 0 !important;
-  }
-
-  .keypad-view-container {
-    height: 100%;
-  }
-
-  .keypad-section {
-    margin: auto;
-  }
-
-  .separator {
-    display: none;
-  }
-
-  .keypad {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(4, 1fr);
-  }
-
-  .keypad .keypad-btn:nth-child(12) {
-    grid-column: 3;
-    grid-row: 4;
-  }
+.q-page {
+  padding: 0 !important;
 }
 
-@media (min-width: 851px) {
-  .keypad-section,
-  .payment-section {
-    flex: 1;
-    max-width: 50%;
-  }
+.keypad-view-container {
+  height: 100%;
+}
 
-  .action-buttons-fixed {
-    position: static;
-    background: transparent;
-    border-top: none;
-    margin-top: 24px;
-  }
-
-  .payment-content {
-    padding-bottom: 0;
-  }
+.keypad-section {
+  margin: auto;
 }
 
 .slide-up-enter-active,
@@ -1104,7 +997,7 @@ onUnmounted(() => {
 .slide-forward-enter-active,
 .slide-forward-leave-active {
   transition: all 0.3s ease-out;
-  overflow: hidden; /* Ocultar scroll durante transiciones */
+  overflow: hidden;
 }
 
 .slide-forward-enter-from {
@@ -1120,7 +1013,7 @@ onUnmounted(() => {
 .slide-backward-enter-active,
 .slide-backward-leave-active {
   transition: all 0.3s ease-out;
-  overflow: hidden; /* Ocultar scroll durante transiciones */
+  overflow: hidden;
 }
 
 .slide-backward-enter-from {
@@ -1131,10 +1024,5 @@ onUnmounted(() => {
 .slide-backward-leave-to {
   transform: translateX(20px);
   opacity: 0;
-}
-
-.client-list-container {
-  min-height: 200px; /* Altura mínima para evitar cambios bruscos */
-  max-height: 300px;
 }
 </style>
