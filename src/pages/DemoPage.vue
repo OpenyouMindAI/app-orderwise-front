@@ -352,9 +352,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, getCurrentInstance } from 'vue'
-import { useStore } from 'vuex'
 import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 
 const $q = useQuasar()
 
@@ -362,7 +362,8 @@ const $q = useQuasar()
 const transitionName = ref('slide-forward')
 const inputValue = ref('')
 const currentView = ref('keypad')
-const store = useStore()
+const transferTimeout = ref(null)
+const authStore = authentication()
 const instance = getCurrentInstance()
 const echoPay = instance.appContext.config.globalProperties.$echoPay
 
@@ -493,39 +494,71 @@ const addClientToList = (clientData) => {
 
 // UNIFIED NAVIGATION FUNCTION
 const listenForTransfers = () => {
-  const userSession = store.state.session.userSession
-  const branchOffice = store.state.session.branchOffice
-
-  if (userSession?.company_session?.company_config?.other?.qpay_id && branchOffice?.id) {
+  try {
+    // Limpiar timeout anterior si existe
+    if (transferTimeout.value) {
+      clearTimeout(transferTimeout.value)
+      transferTimeout.value = null
+    }
+    // Verificar si echoPay está disponible
+    if (!echoPay) {
+      console.warn('EchoPay not available, skipping transfer listener.')
+      return
+    }
+    // Obtener datos de sesión desde Pinia store
+    const userSession = authStore.userSession
+    const branchOffice = authStore.branchOffice
+    if (!userSession || !branchOffice) {
+      console.warn('User session or branch office not available, skipping transfer listener.')
+      return
+    }
+    // Obtener qpay_id desde la configuración de la compañía
+    const qpayId = userSession?.company_session?.company_config?.other?.qpay_id
+    const branchOfficeId = branchOffice?.id
+    if (!qpayId || !branchOfficeId) {
+      console.warn('QPay ID or Branch Office ID not found, skipping transfer listener.')
+      return
+    }
+    // Configurar el listener de Mercado Pago
     const channelName = 'mercado-pago-payment'
-    const eventName = `.mercado-pago-payment.${userSession.company_session.company_config.other.qpay_id}.${branchOffice.id}`
-
-    if (echoPay) {
+    const eventName = `.mercado-pago-payment.${qpayId}.${branchOfficeId}`
+    try {
       const channel = echoPay.channel(channelName)
       channel.listen(eventName, (data) => {
-        console.log('Payment received:', data)
-        if (data.payment) {
+        console.log('Transfer payment received:', data)
+        if (data?.payment) {
+          // Pago exitoso recibido, navegar a operación completada
           navigate('COMPLETE_OPERATION')
         }
       })
-    } else {
-      console.error('$echoPay is not available.')
+      console.log('Listening for transfers on channel:', channelName, 'for event:', eventName)
+    } catch (channelError) {
+      console.error('Error setting up channel listener:', channelError)
     }
-  } else {
-    console.log('QPay ID or Branch Office ID not found, skipping listener.')
+  } catch (error) {
+    console.error('Error in listenForTransfers:', error)
   }
 }
 
 const stopListeningForTransfers = () => {
-  const userSession = store.state.session.userSession
-  const branchOffice = store.state.session.branchOffice
-
-  if (userSession?.company_session?.company_config?.other?.qpay_id && branchOffice?.id) {
-    const channelName = 'mercado-pago-payment'
-    if (echoPay) {
-      echoPay.leave(channelName)
-      console.log('Stopped listening on channel:', channelName)
+  try {
+    // Limpiar timeout si existe
+    if (transferTimeout.value) {
+      clearTimeout(transferTimeout.value)
+      transferTimeout.value = null
     }
+    // Obtener datos de sesión desde Pinia store
+    const userSession = authStore.userSession
+    const branchOffice = authStore.branchOffice
+    if (userSession?.company_session?.company_config?.other?.qpay_id && branchOffice?.id) {
+      const channelName = 'mercado-pago-payment'
+      if (echoPay) {
+        echoPay.leave(channelName)
+        console.log('Stopped listening on channel:', channelName)
+      }
+    }
+  } catch (error) {
+    console.error('Error in stopListeningForTransfers:', error)
   }
 }
 
@@ -736,6 +769,84 @@ const getInvoiceTypes = async () => {
   }
 }
 
+const initializeSessionData = () => {
+  // Inicializar datos de sesión para desarrollo/pruebas
+  const sessionData = {
+    access_token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiM2FhYTUwZDE3OTZjZGRiMDdkMWQ3YjBjMjhiOGQwOTY1ZWZhYWRlNWZhZWFkYTUzNjEwMzIyZDhiZGVhMGQ2YTE1NTZiMzgzMTgxODZkYmMiLCJpYXQiOjE3NTMxOTMzMzQuODIzOTUyLCJuYmYiOjE3NTMxOTMzMzQuODIzOTU1LCJleHAiOjE3ODQ3MjkzMzQuODE4NjIsInN1YiI6IjExNDgiLCJzY29wZXMiOltdfQ.k1j_gkuPTl1R7iar6O7eyf1whiWkrUEM1i-jULpAHvr2nEI4CNJ5At9L8pxZgDsYVnfykd2zaIinizUIXy9ZNKa5h4q48UvKjeOCUvwVq3Ne3SYeQ3qYXoZU69rgEVqwrsavGNfVqZdehAgZt40pBosR6YzvdQe-QHbAUJ90_IDvqlYO1rFaXsn8LhEDqOyNfNsXTkupL-REdRxy8d6CjozF9jUuDkMyg6XCroyqDsrIz-QKu4lEdp1TjfeOUQBbDqAtYwvaup_wrL_zFZr8yrmZQTQytNqO_l_06LFj9KLeK4-URA8QRcg6oAl1D9ZdKlZ6uSAbrBGklN4YbnwDUNIYII8nLLSRi-bwrQbWn5bHX06PjaZNOMA2lhK6JXisE7o9d62V_qkmeZHzLdBAUA8VGiWHJyj9hvnZdPanLr0pH_QvJ_HvnvzI6VsOdKnm8ferzcuDb06ZGMw5h4EEbPfSmFh8M6LtSkamTvktjpxYmeOV1PhP01y-FQrdBdIOVP8yD7Iuc6o9-QCKsKj8yTOQCuQSwxcUGhtpbQDJkwLLz7ZzJmbBQ4yPkaFM8Wdr9fCFnt30Y1jcK3aYwIIz27mUh3FVZ-iZQBMceauk4xzvADqcAxE0DIyH0sk-bXn42GdcN0DvwUP8B_jNLIZvWUmd3r_8Bxj4I6GG1nD-7Rw',
+    refresh_token: 'def502005daf95f10de8b07aed36b329b9dbf49361a61555cec5be9d28b1b933994a35868b7c38820292567565ae8e872e1c1fd7090752844d34195c92a7e6cf68f18c979eb3f37b47b292cbcf73542c2919edce7f9acef1642f482eafb4a98e69995cc6aef7c3b1f1da5c89f11669e7ba10918b839a00dbad733555bd935f5f469756e4c530ef4350aa95fa1aa0feb786bae605445e09b43a314cf3749df01ff138d3db049f459fa21ed30cbb160722fd490b413ab06382671dbf2c134d46e0aa0858cd00c22b82fc1c2159e067a56e623665212cc2371b35890bcdd0217537937e27d5f9a2c74b579d5c253827fccd3ea250aef671f131906bf6ce7a9fa435e9c7b637d8a17870680942f80b54f742e6c81d9ba22d2c656c55cc5292244cc8f59dc796919acc90af4b7ad6cbfdae31ff8b2bb78d94243f80388e7a7f1af44a0796b392a19895cc1f3f60fe058b88337a188fa8b5ca611e9e917f9d2c51fcd9efbdfe15',
+    userSession: {
+      id: 1148,
+      name: 'Jesus Rodriguez',
+      url_image: null,
+      username: 'jerodriguez',
+      document_number: null,
+      email: 'jerodriguez@gmail.com',
+      address: null,
+      timezone: 'America/Phoenix',
+      phone_number: null,
+      email_verified_at: null,
+      role_id: null,
+      company_session_id: 12,
+      is_root: 0,
+      is_active: 0,
+      document_type: null,
+      condition_iva_receptor: null,
+      created_at: '2025-07-22T13:58:01.000000Z',
+      updated_at: '2025-07-22T13:59:43.000000Z',
+      deleted_at: null,
+      is_super_admin: true,
+      company_session: {
+        id: 12,
+        name: 'LO MEJOR PARA TU RESTAURANTE! QBITS SOLICITA TU DEMO.',
+        company_config: {
+          id: 10,
+          company_id: 12,
+          client_id: 70,
+          point_of_sale: 1,
+          coin_id: 2,
+          type_of_service_id: 2,
+          invoice_type_id: 2,
+          printer_id: null,
+          payment_method_id: null,
+          other: {
+            qpay_id: '12345' // ID de ejemplo para QPay
+          }
+        }
+      }
+    },
+    expires_In: 31536000,
+    token_type: 'Bearer',
+    setTimeOut: 0,
+    branchOffice: {
+      id: 15,
+      name: 'Principal',
+      address: 'Beiro 1447 grand bourg',
+      company_id: 12,
+      user_created_id: 35,
+      user_updated_id: null,
+      created_at: '2025-02-14T19:36:56.000000Z',
+      updated_at: '2025-02-14T19:36:56.000000Z',
+      deleted_at: null
+    }
+  }
+
+  // Establecer datos en el store de autenticación
+  authStore.setSessionData({
+    user: sessionData.userSession,
+    access_token: sessionData.access_token,
+    token_type: sessionData.token_type,
+    expires_in: sessionData.expires_In,
+    refresh_token: sessionData.refresh_token
+  })
+
+  authStore.setBranchOffice(sessionData.branchOffice)
+
+  console.log('Session data initialized:', {
+    userSession: authStore.userSession,
+    branchOffice: authStore.branchOffice
+  })
+}
+
 const initializeViews = () => {
   getInvoiceTypes()
   getPaymentMethods()
@@ -745,6 +856,7 @@ const initializeViews = () => {
 // Lifecycle hooks
 const onMountedHook = () => {
   window.addEventListener('keydown', handleKeyPress)
+  initializeSessionData()
   initializeViews()
 }
 
