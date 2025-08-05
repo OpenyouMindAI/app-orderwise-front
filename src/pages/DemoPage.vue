@@ -1,7 +1,7 @@
 <template>
   <q-page class="flex items-center column bg-white" style="height: calc(100vh - 120px); overflow: hidden;">
     <div style="max-width: 600px;">
-      <!-- All views are wrapped in a single transition component to ensure correct v-if/v-else-if chaining -->
+      <!-- Main View Transition Container -->
       <transition :name="transitionName" mode="out-in">
         <!-- Keypad View -->
         <div
@@ -9,8 +9,8 @@
           key="keypad"
           class="keypad-view-container column full-width"
         >
-          <!-- Numeric Keypad -->
           <div class="keypad-section q-pa-md flex column items-center justify-center col-12">
+            <!-- Display Container -->
             <div class="display-container">
               <div class="display-text">{{ formattedValue }}</div>
               <q-btn
@@ -19,48 +19,55 @@
                 dense
                 color="primary"
                 icon="backspace"
-                v-ripple @click="backspace" @touchend.prevent="backspace"
+                v-ripple
+                @click="handleBackspace"
                 class="backspace-btn"
               />
             </div>
+
+            <!-- Numeric Keypad -->
             <div class="keypad q-mt-md">
               <q-btn
-                v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
+                v-for="n in keypadNumbers"
                 :key="n"
                 :label="n.toString()"
                 round
                 unelevated
                 class="keypad-btn"
-                v-ripple @click="inputDigit(n.toString())" @touchend.prevent="inputDigit(n.toString())"
+                v-ripple
+                @click="handleDigitInput(n.toString())"
               />
               <q-btn
                 label="00"
                 round
                 unelevated
                 class="keypad-btn"
-                v-ripple @click="inputDigit('00')" @touchend.prevent="inputDigit('00')"
+                v-ripple
+                @click="handleDigitInput('00')"
               />
               <q-btn
                 label="0"
                 round
                 unelevated
                 class="keypad-btn"
-                v-ripple @click="inputDigit('0')" @touchend.prevent="inputDigit('0')"
+                v-ripple
+                @click="handleDigitInput('0')"
               />
               <q-btn
-                v-if="inputValue.length > 0"
+                v-if="canProceedFromKeypad"
                 icon="send"
                 round
                 unelevated
                 color="primary"
                 class="keypad-btn send-btn"
-                v-ripple @click="navigate('SHOW_PAYMENT_METHODS')" @touchend.prevent="navigate('SHOW_PAYMENT_METHODS')"
+                v-ripple
+                @click="proceedToPaymentMethods"
               />
             </div>
           </div>
         </div>
 
-        <!-- Mobile Payment Methods View -->
+        <!-- Payment Methods View -->
         <div
           v-else-if="currentView === 'payment-methods'"
           key="payment-methods"
@@ -70,38 +77,27 @@
             <div class="text-h4 text-weight-bold q-mb-md text-center">
               {{ formattedValue }}
             </div>
-            <div class="text-h6 q-mb-md text-center">
-              Métodos de Pago
-            </div>
+
+            <!-- Payment Methods Section -->
+            <div class="text-h6 q-mb-md text-center">Métodos de Pago</div>
             <div class="payment-methods-container payment-methods-grid q-mb-lg">
               <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                v-for="method in paymentMethods"
+                v-for="method in validPaymentMethods"
                 :key="method.id"
                 :label="method.name"
                 unelevated
                 rounded
-                class="payment-btn no-wrap"
+                class="payment-btn button-style no-wrap"
                 align="left"
-                :color="
-                  selectedPaymentMethod && selectedPaymentMethod.id === method.id
-                    ? 'primary'
-                    : 'grey-3'
-                "
-                :text-color="
-                  selectedPaymentMethod && selectedPaymentMethod.id === method.id
-                    ? 'white'
-                    : 'black'
-                "
-                @click="selectedPaymentMethod = method"
+                :class="getPaymentMethodButtonClass(method)"
+                @click="selectPaymentMethod(method)"
               />
             </div>
-            <div class="text-h6 q-mb-md text-center">
-              Tipo de Factura
-            </div>
+
+            <!-- Invoice Types Section -->
+            <div class="text-h6 q-mb-md text-center">Tipo de Factura</div>
             <div class="payment-methods-container">
               <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
                 v-for="invType in invoiceTypes"
                 :key="invType.id"
                 :label="invType.name"
@@ -109,18 +105,9 @@
                 unelevated
                 rounded
                 align="left"
-                class="payment-btn q-mb-md no-wrap"
-                :color="
-                  selectedInvoiceType && selectedInvoiceType.id === invType.id
-                    ? 'blue-6'
-                    : 'grey-3'
-                "
-                :text-color="
-                  selectedInvoiceType && selectedInvoiceType.id === invType.id
-                    ? 'white'
-                    : 'black'
-                "
-                @click="selectedInvoiceType = invType"
+                class="payment-btn button-style q-mb-md no-wrap"
+                :class="getInvoiceTypeButtonClass(invType)"
+                @click="selectInvoiceType(invType)"
               />
             </div>
           </div>
@@ -140,7 +127,7 @@
             </div>
 
             <div class="column full-width" style="max-height: 100%">
-              <!-- Search input -->
+              <!-- Search Input -->
               <q-input
                 v-model="clientSearch"
                 placeholder="Buscar cliente..."
@@ -152,33 +139,30 @@
                 </template>
               </q-input>
 
-              <!-- Add new client button -->
+              <!-- Add New Client Button -->
               <q-btn
-                style="border-radius: 10px; padding: px 15px"
                 label="Agregar Nuevo Cliente"
                 icon="person_add"
                 unelevated
                 rounded
-                class="full-width q-mb-md"
+                class="full-width q-mb-md button-style"
                 color="green-6"
                 text-color="white"
-                @click="navigate('TOGGLE_CLIENT_DIALOG', { show: true })"
+                @click="toggleClientDialog(true)"
               />
 
-              <!-- Client list container -->
-              <div class="client-list-container flex-grow full-width" style="min-height: 0">
+              <!-- Client List -->
+              <div class="client-list-container flex-grow full-width">
                 <q-btn
                   v-for="client in filteredClients"
                   :key="client.id"
-                  style="border-radius: 10px; padding: px 15px"
                   :label="`${client.name} - ${client.email}`"
                   unelevated
                   rounded
                   align="left"
-                  class="client-btn q-mb-md full-width"
-                  :color="selectedClient && selectedClient.id === client.id ? 'primary' : 'grey-3'"
-                  :text-color="selectedClient && selectedClient.id === client.id ? 'white' : 'black'"
-                  @click="selectedClient = client"
+                  class="client-btn q-mb-md full-width button-style"
+                  :class="getClientButtonClass(client)"
+                  @click="selectClient(client)"
                 />
               </div>
             </div>
@@ -203,59 +187,36 @@
               <q-btn
                 v-for="option in invoiceOptions"
                 :key="option.id"
-                style="border-radius: 10px; padding: 15px 20px"
                 :label="option.name"
                 :icon="option.icon"
                 unelevated
                 rounded
                 align="left"
-                class="invoice-option-btn q-mb-md full-width"
-                :color="selectedInvoiceOption && selectedInvoiceOption.id === option.id ? 'blue-6' : 'grey-3'"
-                :text-color="selectedInvoiceOption && selectedInvoiceOption.id === option.id ? 'white' : 'black'"
-                @click="selectedInvoiceOption = option"
+                class="invoice-option-btn q-mb-md full-width button-style"
+                :class="getInvoiceOptionButtonClass(option)"
+                @click="selectInvoiceOption(option)"
               />
             </div>
           </div>
         </div>
 
-        <!-- Cash Payment View -->
-        <div v-else-if="currentView === 27" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
-          <q-icon name="payments" size="80px" color="primary" class="q-mb-md" />
-          <div class="text-h5 q-mb-sm">Pago en Efectivo</div>
+        <!-- Payment Processing Views -->
+        <component
+          v-else-if="isPaymentView(currentView)"
+          :is="'div'"
+          class="payment-view-container column items-center justify-center q-pa-md"
+          style="height: 100vh"
+        >
+          <q-icon :name="getPaymentViewIcon(currentView)" size="80px" color="primary" class="q-mb-md" />
+          <div class="text-h5 q-mb-sm">{{ getPaymentViewTitle(currentView) }}</div>
           <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-        </div>
-
-        <!-- Transfer Payment View -->
-        <div v-else-if="currentView === 28" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
-          <q-icon name="sync_alt" size="80px" color="primary" class="q-mb-md" />
-          <div class="text-h5 q-mb-sm">Esperando Transferencia</div>
-          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-        </div>
-
-        <!-- Debit Card Payment View -->
-        <div v-else-if="currentView === 29" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
-          <q-icon name="credit_card" size="80px" color="primary" class="q-mb-md" />
-          <div class="text-h5 q-mb-sm">Procesando Débito</div>
-          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-        </div>
-
-        <!-- Credit Card Payment View -->
-        <div v-else-if="currentView === 30" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
-          <q-icon name="credit_card" size="80px" color="primary" class="q-mb-md" />
-          <div class="text-h5 q-mb-sm">Procesando Crédito</div>
-          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-        </div>
-
-        <!-- QR Mercado Pago View -->
-        <div v-else-if="currentView === 99" class="payment-view-container column items-center justify-center q-pa-md" style="height: 100vh">
-          <q-icon name="qr_code_2" size="80px" color="primary" class="q-mb-md" />
-          <div class="text-h5 q-mb-sm">Escanee el QR de Mercado Pago</div>
-          <div class="text-h4 text-weight-bold">{{ formattedValue }}</div>
-          <q-spinner-dots color="primary" size="40px" class="q-mt-md" />
-        </div>
+          <q-spinner-dots
+            v-if="shouldShowSpinner(currentView)"
+            color="primary"
+            size="40px"
+            class="q-mt-md"
+          />
+        </component>
 
         <!-- Operation Completed View -->
         <div
@@ -272,41 +233,41 @@
           <div class="text-h4 text-weight-bold q-mb-sm">¡Operación Completada!</div>
           <div class="text-h5 q-mb-lg text-grey-8">{{ formattedValue }}</div>
           <q-btn
-            style="border-radius: 10px; padding: 5px 15px"
             label="Nueva Operación"
             color="primary"
             size="lg"
             unelevated
             rounded
-            @click="navigate('RESET')"
+            class="button-style"
+            @click="resetToInitialState"
           />
         </div>
       </transition>
 
-      <!-- Action Buttons -->
+      <!-- Navigation Buttons -->
       <transition name="slide-up">
-        <div v-if="shouldShowNavButtons" class="action-buttons-fixed" style="max-width: 600px; margin: auto">
+        <div v-if="shouldShowNavButtons" class="action-buttons-fixed">
           <q-btn
-            style="border-radius: 10px; padding: 5px 15px"
             label="Volver"
             flat
-            @click="navigate('GO_BACK')"
             icon="arrow_back"
+            class="button-style"
+            @click="goBack"
           />
           <q-btn
-            style="border-radius: 10px; padding: 5px 15px"
-            :label="getNextButtonLabel()"
+            :label="nextButtonLabel"
             color="primary"
-            :icon-right="shouldShowArrow() ? 'arrow_forward' : ''"
-            :disable="isNextButtonDisabled()"
-            @click="handleNextAction()"
+            :icon-right="shouldShowArrow ? 'arrow_forward' : ''"
+            :disable="isNextButtonDisabled"
+            class="button-style"
+            @click="handleNextAction"
           />
         </div>
       </transition>
 
       <!-- Add Client Dialog -->
       <q-dialog v-model="showAddClientDialog">
-        <q-card style="min-width: 350px; border-radius: 10px;">
+        <q-card style="min-width: 350px;" class="dialog-card">
           <q-card-section>
             <div class="text-h6">Agregar Nuevo Cliente</div>
           </q-card-section>
@@ -316,32 +277,30 @@
               v-model="newClient.name"
               label="Nombre completo"
               outlined
-              class="q-mb-md"
-              style="border-radius: 10px;"
+              class="q-mb-md input-style"
             />
             <q-input
               v-model="newClient.email"
               label="Email"
               type="email"
               outlined
-              class="q-mb-md"
-              style="border-radius: 10px;"
+              class="q-mb-md input-style"
             />
             <q-input
               v-model="newClient.phone"
               label="Teléfono"
               outlined
-              style="border-radius: 10px;"
+              class="input-style"
             />
           </q-card-section>
 
           <q-card-actions align="right" class="text-primary">
-            <q-btn flat label="Cancelar" @click="navigate('TOGGLE_CLIENT_DIALOG', { show: false })" />
+            <q-btn flat label="Cancelar" @click="toggleClientDialog(false)" />
             <q-btn
               flat
               label="Agregar"
+              :disable="!isNewClientValid"
               @click="addNewClient"
-              :disable="!newClient.name || !newClient.email"
             />
           </q-card-actions>
         </q-card>
@@ -356,337 +315,375 @@ import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 
-const $q = useQuasar()
+// =============================================
+// CONSTANTS & CONFIGURATION
+// =============================================
+const KEYPAD_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+const MAX_INPUT_LENGTH = 9
 
-// State variables
-const transitionName = ref('slide-forward')
-const inputValue = ref('')
-const currentView = ref('keypad')
-const transferTimeout = ref(null)
+const PAYMENT_VIEW_CONFIG = {
+  EFE: { icon: 'payments', title: 'Pago en Efectivo', spinner: false },
+  MPTR: { icon: 'sync_alt', title: 'Esperando Transferencia', spinner: true },
+  DEB: { icon: 'credit_card', title: 'Procesando Débito', spinner: true },
+  CRE: { icon: 'credit_card', title: 'Procesando Crédito', spinner: true },
+  MPAQR: { icon: 'qr_code_2', title: 'Escanee el QR de Mercado Pago', spinner: true }
+}
+
+const INVOICE_TYPES_CONFIG = [
+  { id: 1, name: 'Consumidor Final', icon: 'person' },
+  { id: 2, name: 'Facturar a un Cliente', icon: 'people_alt' },
+  { id: 3, name: 'Factura A / B', icon: 'receipt_long' }
+]
+
+const INVOICE_OPTIONS_CONFIG = [
+  { id: 1, name: 'Opción 1 - Factura A', icon: 'receipt' },
+  { id: 2, name: 'Opción 2 - Factura B', icon: 'description' },
+  { id: 3, name: 'Opción 3 - Nota de Crédito', icon: 'note_add' }
+]
+
+// =============================================
+// COMPOSABLES & STORES
+// =============================================
+const $q = useQuasar()
 const authStore = authentication()
 const instance = getCurrentInstance()
 const echoPay = instance.appContext.config.globalProperties.$echoPay
 
-const paymentMethods = ref([])
-const selectedPaymentMethod = ref(null)
-const invoiceTypes = ref([])
-const selectedInvoiceType = ref(null)
+// =============================================
+// REACTIVE STATE
+// =============================================
 
-// Client selection data
-const clientSearch = ref('')
-const selectedClient = ref(null)
+// UI State
+const transitionName = ref('slide-forward')
+const currentView = ref('keypad')
 const showAddClientDialog = ref(false)
+
+// Input State
+const inputValue = ref('')
+
+// Selection State
+const selectedPaymentMethod = ref(null)
+const selectedInvoiceType = ref(null)
+const selectedClient = ref(null)
+const selectedInvoiceOption = ref(null)
+
+// Data State
+const paymentMethods = ref([])
+const validPaymentMethods = ref([]) // Solo métodos con acrónimo válido
+const invoiceTypes = ref(INVOICE_TYPES_CONFIG)
+const clients = ref([])
+
+// Client Management State
+const clientSearch = ref('')
 const newClient = ref({
   name: '',
   email: '',
   phone: ''
 })
-const clients = ref([])
 
-// Invoice A/B options
-const selectedInvoiceOption = ref(null)
-const invoiceOptions = ref([
-  { id: 1, name: 'Opción 1 - Factura A', icon: 'receipt' },
-  { id: 2, name: 'Opción 2 - Factura B', icon: 'description' },
-  { id: 3, name: 'Opción 3 - Nota de Crédito', icon: 'note_add' }
-])
+// Transfer State
+const isWaitingForTransfer = ref(false)
+const transferTimeout = ref(null)
 
-// Computed properties
+// =============================================
+// COMPUTED PROPERTIES
+// =============================================
+
+// UI Computed
 const formattedValue = computed(() => {
-  if (!inputValue.value) {
-    return '$0.00'
-  }
+  if (!inputValue.value) return '$0.00'
   const number = parseInt(inputValue.value, 10) / 100
   return `$${number.toFixed(2)}`
 })
 
-const filteredClients = computed(() => {
-  if (!clientSearch.value) {
-    return clients.value
+const keypadNumbers = computed(() => KEYPAD_NUMBERS)
+const invoiceOptions = computed(() => INVOICE_OPTIONS_CONFIG)
+
+// Navigation Computed
+const canProceedFromKeypad = computed(() => inputValue.value.length > 0)
+
+const shouldShowNavButtons = computed(() => {
+  const paymentAcronyms = getPaymentMethodAcronyms()
+  const viewsWithButtons = ['payment-methods', 'client-selection', 'invoice-options']
+  return viewsWithButtons.includes(currentView.value) || paymentAcronyms.includes(currentView.value)
+})
+
+const nextButtonLabel = computed(() => {
+  if (isWaitingForTransfer.value) return 'Procesando...'
+  if (isPaymentView(currentView.value)) return 'Finalizar'
+  return 'Siguiente'
+})
+
+const shouldShowArrow = computed(() => !isPaymentView(currentView.value))
+
+const isNextButtonDisabled = computed(() => {
+  if (isWaitingForTransfer.value) return true
+
+  switch (currentView.value) {
+    case 'payment-methods':
+      return !canProceedFromPaymentMethods()
+    case 'client-selection':
+      return !selectedClient.value
+    case 'invoice-options':
+      return !selectedInvoiceOption.value
+    case 'MPTR':
+      return isWaitingForTransfer.value
+    default:
+      return false
   }
+})
+
+// Client Management Computed
+const filteredClients = computed(() => {
+  if (!clientSearch.value) return clients.value
+  const searchTerm = clientSearch.value.toLowerCase()
   return clients.value.filter(client =>
-    client.name.toLowerCase().includes(clientSearch.value.toLowerCase()) ||
-    client.email.toLowerCase().includes(clientSearch.value.toLowerCase())
+    client.name.toLowerCase().includes(searchTerm) ||
+    client.email.toLowerCase().includes(searchTerm)
   )
 })
 
-const shouldShowNavButtons = computed(() => {
-  const paymentMethodIds = paymentMethods.value.map(p => p.id)
-  const viewsWithButtons = ['payment-methods', 'client-selection', 'invoice-options']
-  return viewsWithButtons.includes(currentView.value) || paymentMethodIds.includes(currentView.value)
-})
+const isNewClientValid = computed(() =>
+  newClient.value.name.trim() && newClient.value.email.trim()
+)
 
-// Auxiliary functions for better readability
-const setTransition = (transition) => {
-  transitionName.value = transition
+// =============================================
+// HELPER FUNCTIONS
+// =============================================
+
+// Payment Method Helpers
+const getPaymentMethodAcronyms = () =>
+  validPaymentMethods.value.map(p => p.acronym)
+
+const isPaymentView = (view) =>
+  Object.keys(PAYMENT_VIEW_CONFIG).includes(view)
+
+const getPaymentViewIcon = (view) =>
+  PAYMENT_VIEW_CONFIG[view]?.icon || 'help'
+
+const getPaymentViewTitle = (view) =>
+  PAYMENT_VIEW_CONFIG[view]?.title || 'Procesando...'
+
+const shouldShowSpinner = (view) =>
+  PAYMENT_VIEW_CONFIG[view]?.spinner || false
+
+// Payment Method Validation
+const validatePaymentMethod = (method) => {
+  // Verificar que tenga acrónimo y que no esté vacío
+  return method.acronym &&
+         typeof method.acronym === 'string' &&
+         method.acronym.trim().length > 0
 }
 
-const canProceedFromPaymentMethods = () => {
-  return selectedPaymentMethod.value && selectedInvoiceType.value
+const filterValidPaymentMethods = (methods) => {
+  return methods.filter(method => {
+    const isValid = validatePaymentMethod(method)
+    if (!isValid) {
+      console.warn(`Payment method "${method.name}" (ID: ${method.id}) filtered out: missing or invalid acronym`)
+    }
+    return isValid
+  })
 }
+
+// Navigation Helpers
+const canProceedFromPaymentMethods = () =>
+  selectedPaymentMethod.value && selectedInvoiceType.value
 
 const getNextViewAfterPaymentMethods = () => {
+  if (!selectedInvoiceType.value) return 'payment-methods'
+
   switch (selectedInvoiceType.value.id) {
     case 2: return 'client-selection'
     case 3: return 'invoice-options'
-    default: return selectedPaymentMethod.value.id
+    default: return selectedPaymentMethod.value?.acronym || 'payment-methods'
   }
 }
 
 const getPreviousView = () => {
-  const paymentMethodIds = paymentMethods.value.map(p => p.id)
+  const paymentAcronyms = getPaymentMethodAcronyms()
 
   switch (currentView.value) {
     case 'payment-methods':
       return 'keypad'
-
     case 'client-selection':
     case 'invoice-options':
       return 'payment-methods'
-
     case 'operation-completed':
-      // En lugar de volver, resetear
-      resetAllState()
-      return currentView.value // Mantenemos la vista actual después del reset
-
+      return currentView.value // Handled separately
     default:
-      // Para vistas de métodos de pago
-      if (paymentMethodIds.includes(currentView.value)) {
-        if (selectedInvoiceType.value?.id === 2) {
-          return 'client-selection'
-        } else if (selectedInvoiceType.value?.id === 3) {
-          return 'invoice-options'
-        }
+      if (paymentAcronyms.includes(currentView.value)) {
+        if (selectedInvoiceType.value?.id === 2) return 'client-selection'
+        if (selectedInvoiceType.value?.id === 3) return 'invoice-options'
         return 'payment-methods'
       }
       return 'keypad'
   }
 }
 
+// Style Helpers
+const getPaymentMethodButtonClass = (method) => ({
+  'bg-primary text-white': selectedPaymentMethod.value?.id === method.id,
+  'bg-grey-3 text-black': selectedPaymentMethod.value?.id !== method.id
+})
+
+const getInvoiceTypeButtonClass = (invType) => ({
+  'bg-blue-6 text-white': selectedInvoiceType.value?.id === invType.id,
+  'bg-grey-3 text-black': selectedInvoiceType.value?.id !== invType.id
+})
+
+const getClientButtonClass = (client) => ({
+  'bg-primary text-white': selectedClient.value?.id === client.id,
+  'bg-grey-3 text-black': selectedClient.value?.id !== client.id
+})
+
+const getInvoiceOptionButtonClass = (option) => ({
+  'bg-blue-6 text-white': selectedInvoiceOption.value?.id === option.id,
+  'bg-grey-3 text-black': selectedInvoiceOption.value?.id !== option.id
+})
+
+// =============================================
+// STATE MANAGEMENT FUNCTIONS
+// =============================================
+
+const setTransition = (transition) => {
+  transitionName.value = transition
+}
+
 const resetAllState = () => {
   setTransition('fade')
   currentView.value = 'keypad'
   inputValue.value = ''
-  selectedPaymentMethod.value = paymentMethods.value.length > 0 ? paymentMethods.value[0] : null
-  selectedInvoiceType.value = invoiceTypes.value.length > 0 ? invoiceTypes.value[0] : null
+  selectedPaymentMethod.value = validPaymentMethods.value[0] || null
+  selectedInvoiceType.value = invoiceTypes.value[0] || null
   selectedClient.value = null
   selectedInvoiceOption.value = null
   clientSearch.value = ''
   showAddClientDialog.value = false
-}
+  isWaitingForTransfer.value = false
 
-const addClientToList = (clientData) => {
-  const newId = Math.max(...clients.value.map(c => c.id)) + 1
-  const newClient = {
-    id: newId,
-    ...clientData
-  }
-
-  clients.value.push(newClient)
-  selectedClient.value = newClient
-
-  $q.notify({
-    type: 'positive',
-    message: 'Cliente agregado exitosamente',
-    position: 'top'
-  })
-}
-
-// UNIFIED NAVIGATION FUNCTION
-const listenForTransfers = () => {
-  try {
-    // Limpiar timeout anterior si existe
-    if (transferTimeout.value) {
-      clearTimeout(transferTimeout.value)
-      transferTimeout.value = null
-    }
-    // Verificar si echoPay está disponible
-    if (!echoPay) {
-      console.warn('EchoPay not available, skipping transfer listener.')
-      return
-    }
-    // Obtener datos de sesión desde Pinia store
-    const userSession = authStore.userSession
-    const branchOffice = authStore.branchOffice
-    if (!userSession || !branchOffice) {
-      console.warn('User session or branch office not available, skipping transfer listener.')
-      return
-    }
-    // Obtener qpay_id desde la configuración de la compañía
-    const qpayId = userSession?.company_session?.company_config?.other?.qpay_id
-    const branchOfficeId = branchOffice?.id
-    if (!qpayId || !branchOfficeId) {
-      console.warn('QPay ID or Branch Office ID not found, skipping transfer listener.')
-      return
-    }
-    // Configurar el listener de Mercado Pago
-    const channelName = 'mercado-pago-payment'
-    const eventName = `.mercado-pago-payment.${qpayId}.${branchOfficeId}`
-    try {
-      const channel = echoPay.channel(channelName)
-      channel.listen(eventName, (data) => {
-        console.log('Transfer payment received:', data)
-        if (data?.payment) {
-          // Pago exitoso recibido, navegar a operación completada
-          navigate('COMPLETE_OPERATION')
-        }
-      })
-      console.log('Listening for transfers on channel:', channelName, 'for event:', eventName)
-    } catch (channelError) {
-      console.error('Error setting up channel listener:', channelError)
-    }
-  } catch (error) {
-    console.error('Error in listenForTransfers:', error)
+  if (transferTimeout.value) {
+    clearTimeout(transferTimeout.value)
+    transferTimeout.value = null
   }
 }
 
-const stopListeningForTransfers = () => {
-  try {
-    // Limpiar timeout si existe
-    if (transferTimeout.value) {
-      clearTimeout(transferTimeout.value)
-      transferTimeout.value = null
-    }
-    // Obtener datos de sesión desde Pinia store
-    const userSession = authStore.userSession
-    const branchOffice = authStore.branchOffice
-    if (userSession?.company_session?.company_config?.other?.qpay_id && branchOffice?.id) {
-      const channelName = 'mercado-pago-payment'
-      if (echoPay) {
-        echoPay.leave(channelName)
-        console.log('Stopped listening on channel:', channelName)
-      }
-    }
-  } catch (error) {
-    console.error('Error in stopListeningForTransfers:', error)
-  }
-}
+// =============================================
+// INPUT HANDLING
+// =============================================
 
-watch(currentView, (newView, oldView) => {
-  if (newView === 28) {
-    listenForTransfers()
-  } else if (oldView === 28) {
-    stopListeningForTransfers()
-  }
-})
-
-const navigate = (action, options = {}) => {
-  switch (action) {
-    // Navegación hacia adelante
-    case 'SHOW_PAYMENT_METHODS':
-      if (inputValue.value.length > 0) {
-        setTransition('slide-forward')
-        currentView.value = 'payment-methods'
-      }
-      break
-
-    case 'NEXT_STEP':
-      if (!canProceedFromPaymentMethods()) return
-
-      setTransition('slide-forward')
-      currentView.value = getNextViewAfterPaymentMethods()
-      break
-
-    case 'TO_PAYMENT_VIEW':
-      if (!selectedPaymentMethod.value) return
-
-      setTransition('slide-forward')
-      currentView.value = selectedPaymentMethod.value.id
-      break
-
-    case 'COMPLETE_OPERATION':
-      setTransition('slide-forward')
-      currentView.value = 'operation-completed'
-      break
-
-    // Navegación hacia atrás
-    case 'GO_BACK':
-      setTransition('slide-backward')
-      currentView.value = getPreviousView()
-      break
-
-    // Acciones especiales
-    case 'RESET':
-      resetAllState()
-      break
-
-    case 'TOGGLE_CLIENT_DIALOG':
-      showAddClientDialog.value = options.show ?? !showAddClientDialog.value
-      break
-
-    case 'ADD_CLIENT':
-      if (options.clientData) {
-        addClientToList(options.clientData)
-      }
-      break
-
-    // Navegación directa a vistas específicas
-    case 'GO_TO_VIEW':
-      if (options.view) {
-        setTransition(options.transition || 'slide-forward')
-        currentView.value = options.view
-      }
-      break
-
-    default:
-      console.warn(`Acción de navegación desconocida: ${action}`)
-      break
-  }
-}
-
-// Input handling functions
-const inputDigit = (digit) => {
-  if (inputValue.value.length < 9) {
+const handleDigitInput = (digit) => {
+  if (inputValue.value.length < MAX_INPUT_LENGTH) {
     inputValue.value += digit
   }
 }
 
-const backspace = () => {
+const handleBackspace = () => {
   if (inputValue.value.length > 0) {
     inputValue.value = inputValue.value.slice(0, -1)
   }
 }
 
-// Button behavior functions
-const getNextButtonLabel = () => {
-  const paymentMethodIds = paymentMethods.value.map(p => p.id)
-  if (paymentMethodIds.includes(currentView.value)) {
-    return 'Finalizar'
+const handleKeyPress = (e) => {
+  if (currentView.value !== 'keypad') return
+
+  if (e.key >= '0' && e.key <= '9') {
+    handleDigitInput(e.key)
+  } else if (e.key === 'Backspace') {
+    handleBackspace()
+  } else if (e.key === 'Enter' && canProceedFromKeypad.value) {
+    proceedToPaymentMethods()
   }
-  return 'Siguiente'
 }
 
-const shouldShowArrow = () => {
-  const paymentMethodIds = paymentMethods.value.map(p => p.id)
-  return !paymentMethodIds.includes(currentView.value)
+// =============================================
+// SELECTION HANDLERS
+// =============================================
+
+const selectPaymentMethod = (method) => {
+  selectedPaymentMethod.value = method
 }
 
-const isNextButtonDisabled = () => {
-  if (currentView.value === 'payment-methods') {
-    return !canProceedFromPaymentMethods()
-  } else if (currentView.value === 'client-selection') {
-    return !selectedClient.value
+const selectInvoiceType = (invType) => {
+  selectedInvoiceType.value = invType
+}
+
+const selectClient = (client) => {
+  selectedClient.value = client
+}
+
+const selectInvoiceOption = (option) => {
+  selectedInvoiceOption.value = option
+}
+
+// =============================================
+// NAVIGATION FUNCTIONS
+// =============================================
+
+const proceedToPaymentMethods = () => {
+  if (!canProceedFromKeypad.value) return
+  setTransition('slide-forward')
+  currentView.value = 'payment-methods'
+}
+
+const proceedToNextStep = () => {
+  if (!canProceedFromPaymentMethods()) return
+  setTransition('slide-forward')
+  currentView.value = getNextViewAfterPaymentMethods()
+}
+
+const proceedToPaymentView = () => {
+  if (!selectedPaymentMethod.value?.acronym) return
+  setTransition('slide-forward')
+  currentView.value = selectedPaymentMethod.value.acronym
+}
+
+const completeOperation = () => {
+  setTransition('slide-forward')
+  currentView.value = 'operation-completed'
+}
+
+const goBack = () => {
+  if (currentView.value === 'operation-completed') {
+    resetAllState()
+    return
+  }
+
+  // Limpiar selecciones al regresar de ciertas vistas
+  if (currentView.value === 'client-selection') {
+    selectedClient.value = null
+    clientSearch.value = ''
   } else if (currentView.value === 'invoice-options') {
-    return !selectedInvoiceOption.value
+    selectedInvoiceOption.value = null
   }
-  return false
+
+  setTransition('slide-backward')
+  currentView.value = getPreviousView()
+}
+
+const resetToInitialState = () => {
+  resetAllState()
 }
 
 const handleNextAction = () => {
-  const paymentMethodIds = paymentMethods.value.map(p => p.id)
-
-  if (paymentMethodIds.includes(currentView.value)) {
-    navigate('COMPLETE_OPERATION')
+  if (isPaymentView(currentView.value)) {
+    completeOperation()
   } else if (currentView.value === 'payment-methods') {
-    navigate('NEXT_STEP')
+    proceedToNextStep()
   } else if (['client-selection', 'invoice-options'].includes(currentView.value)) {
-    navigate('TO_PAYMENT_VIEW')
+    proceedToPaymentView()
   }
 }
 
-// Client management
+// =============================================
+// CLIENT MANAGEMENT
+// =============================================
+
+const toggleClientDialog = (show) => {
+  showAddClientDialog.value = show
+}
+
 const addNewClient = () => {
-  if (!newClient.value.name || !newClient.value.email) {
+  if (!isNewClientValid.value) {
     $q.notify({
       type: 'negative',
       message: 'Nombre y email son obligatorios',
@@ -695,186 +692,209 @@ const addNewClient = () => {
     return
   }
 
-  navigate('ADD_CLIENT', {
-    clientData: { ...newClient.value }
-  })
+  const newId = Math.max(0, ...clients.value.map(c => c.id)) + 1
+  const clientData = {
+    id: newId,
+    name: newClient.value.name.trim(),
+    email: newClient.value.email.trim(),
+    phone: newClient.value.phone.trim()
+  }
 
-  // Limpiar formulario
+  clients.value.push(clientData)
+  selectedClient.value = clientData
+
+  // Reset form
   newClient.value = { name: '', email: '', phone: '' }
-  navigate('TOGGLE_CLIENT_DIALOG', { show: false })
+  toggleClientDialog(false)
+
+  $q.notify({
+    type: 'positive',
+    message: 'Cliente agregado exitosamente',
+    position: 'top'
+  })
 }
 
-// Keyboard handling
-const handleKeyPress = (e) => {
-  if (currentView.value === 'keypad') {
-    if (e.key >= '0' && e.key <= '9') {
-      inputDigit(e.key)
-    } else if (e.key === 'Backspace') {
-      backspace()
-    } else if (e.key === 'Enter' && inputValue.value.length > 0) {
-      navigate('SHOW_PAYMENT_METHODS')
+// =============================================
+// TRANSFER HANDLING
+// =============================================
+
+const listenForTransfers = () => {
+  try {
+    // Clear existing timeout
+    if (transferTimeout.value) {
+      clearTimeout(transferTimeout.value)
+      transferTimeout.value = null
     }
+
+    if (!echoPay) {
+      console.warn('EchoPay not available, skipping transfer listener.')
+      return
+    }
+
+    const userSession = authStore.userSession
+    const branchOffice = authStore.branchOffice
+
+    if (!userSession || !branchOffice) {
+      console.warn('User session or branch office not available, skipping transfer listener.')
+      return
+    }
+
+    const qpayId = userSession.company_session?.company_config?.other?.qpay_id
+    const branchOfficeId = branchOffice.id
+
+    if (!qpayId || !branchOfficeId) {
+      console.warn('QPay ID or Branch Office ID not found, skipping transfer listener.')
+      return
+    }
+
+    isWaitingForTransfer.value = true
+
+    const channelName = 'mercado-pago-payment'
+    const eventName = `.mercado-pago-payment.${qpayId}.${branchOfficeId}`
+
+    const channel = echoPay.channel(channelName)
+    channel.listen(eventName, (data) => {
+      console.log('Transfer payment received:', data)
+      if (data?.payment) {
+        isWaitingForTransfer.value = false
+        console.log('Transfer successful! Auto-navigating to completion...')
+        completeOperation()
+      }
+    })
+
+    console.log('Listening for transfers on channel:', channelName, 'for event:', eventName)
+  } catch (error) {
+    console.error('Error in listenForTransfers:', error)
+    isWaitingForTransfer.value = false
   }
 }
 
-// Data fetching
-const getClients = async () => {
+const stopListeningForTransfers = () => {
+  try {
+    if (transferTimeout.value) {
+      clearTimeout(transferTimeout.value)
+      transferTimeout.value = null
+    }
+
+    isWaitingForTransfer.value = false
+
+    const userSession = authStore.userSession
+    const branchOffice = authStore.branchOffice
+    const qpayId = userSession?.company_session?.company_config?.other?.qpay_id
+
+    if (qpayId && branchOffice?.id && echoPay) {
+      const channelName = 'mercado-pago-payment'
+      echoPay.leave(channelName)
+      console.log('Stopped listening on channel:', channelName)
+    }
+  } catch (error) {
+    console.error('Error in stopListeningForTransfers:', error)
+  }
+}
+
+// =============================================
+// API FUNCTIONS
+// =============================================
+
+const fetchClients = async () => {
   try {
     const { data } = await api.get('clients')
     console.log('Clients from API:', data)
     clients.value = data
   } catch (error) {
     console.error('Error fetching clients:', error)
-    // Fallback to mock data or show an error message
+    // Fallback data
     clients.value = [
-      { id: 1, name: 'Juan Pérez (Error)', email: 'juan@email.com', phone: '123456789' },
-      { id: 2, name: 'María García (Error)', email: 'maria@email.com', phone: '987654321' }
+      { id: 1, name: 'Juan Pérez', email: 'juan@email.com', phone: '123456789' },
+      { id: 2, name: 'María García', email: 'maria@email.com', phone: '987654321' }
     ]
   }
 }
 
-const getPaymentMethods = async () => {
+const fetchPaymentMethods = async () => {
   try {
     const { data } = await api.get('payment-methods')
     console.log('Payment Methods from API:', data)
-    paymentMethods.value = data
-    if (paymentMethods.value.length > 0) {
-      selectedPaymentMethod.value = paymentMethods.value[0]
+
+    // Filtrar solo métodos con acrónimo válido
+    const validMethods = filterValidPaymentMethods(data)
+    console.log('Valid Payment Methods (with acronym):', validMethods)
+
+    paymentMethods.value = data // Guardar todos los métodos (para referencia)
+    validPaymentMethods.value = validMethods // Solo los válidos para mostrar
+
+    if (validMethods.length > 0) {
+      selectedPaymentMethod.value = validMethods[0]
+    } else {
+      console.warn('No valid payment methods found with acronyms')
+      selectedPaymentMethod.value = null
     }
   } catch (error) {
     console.error('Error fetching payment methods:', error)
-    // Fallback to mock data in case of an error
+    // Fallback data - todos tienen acrónimo válido
     const mockPaymentMethods = [
-      { id: 27, name: 'Efectivo' },
-      { id: 28, name: 'Transferencia' },
-      { id: 29, name: 'Débito' },
-      { id: 30, name: 'Crédito' },
-      { id: 99, name: 'QR Mercado Pago' }
+      { id: 27, name: 'Efectivo', acronym: 'EFE' },
+      { id: 28, name: 'Transferencia', acronym: 'MPTR' },
+      { id: 29, name: 'Débito', acronym: 'DEB' },
+      { id: 30, name: 'Crédito', acronym: 'CRE' },
+      { id: 99, name: 'QR Mercado Pago', acronym: 'MPAQR' }
     ]
+
     paymentMethods.value = mockPaymentMethods
-    if (paymentMethods.value.length > 0) {
-      selectedPaymentMethod.value = paymentMethods.value[0]
+    validPaymentMethods.value = mockPaymentMethods // Todos son válidos
+
+    if (mockPaymentMethods.length > 0) {
+      selectedPaymentMethod.value = mockPaymentMethods[0]
     }
   }
 }
 
-const getInvoiceTypes = async () => {
-  invoiceTypes.value = [
-    { id: 1, name: 'Consumidor Final', icon: 'person' },
-    { id: 2, name: 'Facturar a un Cliente', icon: 'people_alt' },
-    { id: 3, name: 'Factura A / B', icon: 'receipt_long' }
-  ]
+const initializeData = async () => {
+  // Set default selections
   if (invoiceTypes.value.length > 0) {
     selectedInvoiceType.value = invoiceTypes.value[0]
   }
+
+  // Fetch data
+  await Promise.all([
+    fetchPaymentMethods(),
+    fetchClients()
+  ])
 }
 
-const initializeSessionData = () => {
-  // Inicializar datos de sesión para desarrollo/pruebas
-  const sessionData = {
-    access_token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiM2FhYTUwZDE3OTZjZGRiMDdkMWQ3YjBjMjhiOGQwOTY1ZWZhYWRlNWZhZWFkYTUzNjEwMzIyZDhiZGVhMGQ2YTE1NTZiMzgzMTgxODZkYmMiLCJpYXQiOjE3NTMxOTMzMzQuODIzOTUyLCJuYmYiOjE3NTMxOTMzMzQuODIzOTU1LCJleHAiOjE3ODQ3MjkzMzQuODE4NjIsInN1YiI6IjExNDgiLCJzY29wZXMiOltdfQ.k1j_gkuPTl1R7iar6O7eyf1whiWkrUEM1i-jULpAHvr2nEI4CNJ5At9L8pxZgDsYVnfykd2zaIinizUIXy9ZNKa5h4q48UvKjeOCUvwVq3Ne3SYeQ3qYXoZU69rgEVqwrsavGNfVqZdehAgZt40pBosR6YzvdQe-QHbAUJ90_IDvqlYO1rFaXsn8LhEDqOyNfNsXTkupL-REdRxy8d6CjozF9jUuDkMyg6XCroyqDsrIz-QKu4lEdp1TjfeOUQBbDqAtYwvaup_wrL_zFZr8yrmZQTQytNqO_l_06LFj9KLeK4-URA8QRcg6oAl1D9ZdKlZ6uSAbrBGklN4YbnwDUNIYII8nLLSRi-bwrQbWn5bHX06PjaZNOMA2lhK6JXisE7o9d62V_qkmeZHzLdBAUA8VGiWHJyj9hvnZdPanLr0pH_QvJ_HvnvzI6VsOdKnm8ferzcuDb06ZGMw5h4EEbPfSmFh8M6LtSkamTvktjpxYmeOV1PhP01y-FQrdBdIOVP8yD7Iuc6o9-QCKsKj8yTOQCuQSwxcUGhtpbQDJkwLLz7ZzJmbBQ4yPkaFM8Wdr9fCFnt30Y1jcK3aYwIIz27mUh3FVZ-iZQBMceauk4xzvADqcAxE0DIyH0sk-bXn42GdcN0DvwUP8B_jNLIZvWUmd3r_8Bxj4I6GG1nD-7Rw',
-    refresh_token: 'def502005daf95f10de8b07aed36b329b9dbf49361a61555cec5be9d28b1b933994a35868b7c38820292567565ae8e872e1c1fd7090752844d34195c92a7e6cf68f18c979eb3f37b47b292cbcf73542c2919edce7f9acef1642f482eafb4a98e69995cc6aef7c3b1f1da5c89f11669e7ba10918b839a00dbad733555bd935f5f469756e4c530ef4350aa95fa1aa0feb786bae605445e09b43a314cf3749df01ff138d3db049f459fa21ed30cbb160722fd490b413ab06382671dbf2c134d46e0aa0858cd00c22b82fc1c2159e067a56e623665212cc2371b35890bcdd0217537937e27d5f9a2c74b579d5c253827fccd3ea250aef671f131906bf6ce7a9fa435e9c7b637d8a17870680942f80b54f742e6c81d9ba22d2c656c55cc5292244cc8f59dc796919acc90af4b7ad6cbfdae31ff8b2bb78d94243f80388e7a7f1af44a0796b392a19895cc1f3f60fe058b88337a188fa8b5ca611e9e917f9d2c51fcd9efbdfe15',
-    userSession: {
-      id: 1148,
-      name: 'Jesus Rodriguez',
-      url_image: null,
-      username: 'jerodriguez',
-      document_number: null,
-      email: 'jerodriguez@gmail.com',
-      address: null,
-      timezone: 'America/Phoenix',
-      phone_number: null,
-      email_verified_at: null,
-      role_id: null,
-      company_session_id: 12,
-      is_root: 0,
-      is_active: 0,
-      document_type: null,
-      condition_iva_receptor: null,
-      created_at: '2025-07-22T13:58:01.000000Z',
-      updated_at: '2025-07-22T13:59:43.000000Z',
-      deleted_at: null,
-      is_super_admin: true,
-      company_session: {
-        id: 12,
-        name: 'LO MEJOR PARA TU RESTAURANTE! QBITS SOLICITA TU DEMO.',
-        company_config: {
-          id: 10,
-          company_id: 12,
-          client_id: 70,
-          point_of_sale: 1,
-          coin_id: 2,
-          type_of_service_id: 2,
-          invoice_type_id: 2,
-          printer_id: null,
-          payment_method_id: null,
-          other: {
-            qpay_id: '12345' // ID de ejemplo para QPay
-          }
-        }
-      }
-    },
-    expires_In: 31536000,
-    token_type: 'Bearer',
-    setTimeOut: 0,
-    branchOffice: {
-      id: 15,
-      name: 'Principal',
-      address: 'Beiro 1447 grand bourg',
-      company_id: 12,
-      user_created_id: 35,
-      user_updated_id: null,
-      created_at: '2025-02-14T19:36:56.000000Z',
-      updated_at: '2025-02-14T19:36:56.000000Z',
-      deleted_at: null
-    }
+// =============================================
+// WATCHERS
+// =============================================
+
+watch(currentView, (newView, oldView) => {
+  if (newView === 'MPTR') {
+    listenForTransfers()
+  } else if (oldView === 'MPTR') {
+    stopListeningForTransfers()
   }
+})
 
-  // Establecer datos en el store de autenticación
-  authStore.setSessionData({
-    user: sessionData.userSession,
-    access_token: sessionData.access_token,
-    token_type: sessionData.token_type,
-    expires_in: sessionData.expires_In,
-    refresh_token: sessionData.refresh_token
-  })
+// =============================================
+// LIFECYCLE HOOKS
+// =============================================
 
-  authStore.setBranchOffice(sessionData.branchOffice)
-
-  console.log('Session data initialized:', {
-    userSession: authStore.userSession,
-    branchOffice: authStore.branchOffice
-  })
-}
-
-const initializeViews = () => {
-  getInvoiceTypes()
-  getPaymentMethods()
-  getClients()
-}
-
-// Lifecycle hooks
-const onMountedHook = () => {
+onMounted(() => {
   window.addEventListener('keydown', handleKeyPress)
-  initializeSessionData()
-  initializeViews()
-}
+  initializeData()
+})
 
-const onUnmountedHook = () => {
-  window.removeEventListener('keydown', handleKeyPress)
-}
-
-onMounted(onMountedHook)
 onUnmounted(() => {
-  onUnmountedHook()
-  // Ensure we stop listening when the component is unmounted
-  if (currentView.value === 28) {
+  window.removeEventListener('keydown', handleKeyPress)
+  if (currentView.value === 'MPTR') {
     stopListeningForTransfers()
   }
 })
 </script>
 
 <style scoped>
+/* =============================================
+   GLOBAL STYLES
+   ============================================= */
 .pos-card {
   transition: all 0.3s ease;
   max-width: 90vw;
@@ -882,6 +902,26 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.full-width {
+  width: 100%;
+}
+
+.button-style {
+  border-radius: 10px;
+  padding: 5px 15px;
+}
+
+.input-style {
+  border-radius: 10px;
+}
+
+.dialog-card {
+  border-radius: 10px;
+}
+
+/* =============================================
+   KEYPAD STYLES
+   ============================================= */
 .keypad-view-container {
   width: 100%;
   min-height: 600px;
@@ -889,10 +929,6 @@ onUnmounted(() => {
 
 .keypad-section {
   min-height: 500px;
-}
-
-.full-width {
-  width: 100%;
 }
 
 .display-container {
@@ -955,6 +991,9 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
+/* =============================================
+   PAYMENT & CLIENT SELECTION STYLES
+   ============================================= */
 .payment-btn {
   width: 100%;
   font-size: 1.1rem;
@@ -983,30 +1022,13 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-.client-list {
-  max-height: 250px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
-}
-
-.client-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.client-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.client-list::-webkit-scrollbar-thumb {
-  background-color: #ccc;
-  border-radius: 2px;
-}
-
 .invoice-options-container {
   width: 100%;
 }
 
+/* =============================================
+   MOBILE CONTAINER STYLES
+   ============================================= */
 .mobile-payment-container {
   position: relative;
   display: flex;
@@ -1041,6 +1063,13 @@ onUnmounted(() => {
   max-height: 300px;
 }
 
+.client-list-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* =============================================
+   NAVIGATION STYLES
+   ============================================= */
 .action-buttons-fixed {
   width: 100%;
   position: fixed;
@@ -1063,10 +1092,9 @@ onUnmounted(() => {
   }
 }
 
-.q-btn:hover {
-  box-shadow: none !important;
-}
-
+/* =============================================
+   RESPONSIVE STYLES
+   ============================================= */
 .pos-card {
   width: 100vw;
   height: 100vh;
@@ -1086,6 +1114,9 @@ onUnmounted(() => {
   margin: auto;
 }
 
+/* =============================================
+   TRANSITION ANIMATIONS
+   ============================================= */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: transform 0.3s ease-out;
@@ -1136,5 +1167,20 @@ onUnmounted(() => {
 .slide-backward-leave-to {
   transform: translateX(20px);
   opacity: 0;
+}
+
+/* =============================================
+   UTILITY STYLES
+   ============================================= */
+.q-btn:hover {
+  box-shadow: none !important;
+}
+
+.full-height {
+  height: 100%;
+}
+
+.payment-view-container {
+  height: 100vh;
 }
 </style>
