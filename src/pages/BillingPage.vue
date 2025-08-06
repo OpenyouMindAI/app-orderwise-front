@@ -2719,29 +2719,25 @@ export default {
     /**
      * Checks the current cash box status for the user
      * and updates the isUserBoxOpen state accordingly.
-     * Also verifies the state stored in company_config for consistency.
      */
     async checkCashBoxStatus () {
       try {
         // Verificar estado guardado en localStorage
         const savedState = this.getCashBoxState()
-        console.log('Estado guardado en localStorage:', savedState)
+        console.log('🔍 Verificando estado de caja...')
 
         // Si no hay datos en localStorage, omitir consulta al backend
         if (!savedState) {
           console.log('✅ No hay datos de caja en localStorage, omitiendo consulta al backend')
           this.isUserBoxOpen = false
           await this.loadAvailableCashBoxes()
-          console.log('Cajas disponibles cargadas para nueva apertura')
           return
         }
 
-        console.log('Verificando estado de caja con API real...')
+        console.log('📊 Estado guardado encontrado, verificando con API...')
 
         // Verificar si el usuario tiene una sesión de caja activa
         const response = await this.$api.get(`cashier-init?user_id=${this.userSession.id}`)
-        console.log('📡 ENDPOINT: GET /cashier-init')
-        console.log('📥 RESPONSE:', JSON.stringify(response.data, null, 2))
         const cashierSession = response.data
 
         // Verificar si la sesión está abierta
@@ -2749,58 +2745,41 @@ export default {
                              cashierSession.status === 'open' &&
                              !cashierSession.close_date
 
-        // Verificar consistencia entre API y company_config
-        const hasConfigStateOpen = this.hasCashBoxStateOpen()
-        console.log('Verificación de consistencia:')
-        console.log('- API isSessionOpen:', isSessionOpen)
-        console.log('- Config hasConfigStateOpen:', hasConfigStateOpen)
-        console.log('- Estado guardado completo:', savedState)
-        if (isSessionOpen !== hasConfigStateOpen) {
-          console.warn('Inconsistencia detectada entre API y company_config:')
-          console.warn('API indica:', isSessionOpen ? 'Abierta' : 'Cerrada')
-          console.warn('company_config indica:', hasConfigStateOpen ? 'Abierta' : 'Cerrada')
-          // Sincronizar el estado en company_config con la API
-          if (isSessionOpen && !hasConfigStateOpen) {
-            await this.updateCashBoxState({
-              isOpen: true,
-              openedAt: cashierSession.init_date || new Date().toISOString(),
-              cashboxId: cashierSession.cashbox_id,
-              userId: this.userSession.id,
-              initialBalance: cashierSession.init_balance || 0
-            })
-          } else if (!isSessionOpen && hasConfigStateOpen) {
-            await this.updateCashBoxState({
-              isOpen: false,
-              closedAt: new Date().toISOString(),
-              cashboxId: null,
-              userId: this.userSession.id
-            })
-          }
-        }
-
         if (isSessionOpen) {
-          // Usuario tiene una caja abierta
+          // Usuario tiene una caja abierta - sincronizar datos
+          console.log('✅ Usuario tiene sesión de caja abierta')
           this.isUserBoxOpen = true
           this.availableCashBoxes = []
-          console.log('Usuario tiene sesión de caja abierta:', cashierSession)
+
+          // Actualizar localStorage con datos más recientes de la API
+          await this.updateCashBoxState({
+            isOpen: true,
+            openedAt: cashierSession.init_date || savedState.openedAt,
+            cashboxId: cashierSession.cashbox_id,
+            userId: this.userSession.id,
+            initialBalance: parseFloat(cashierSession.init_balance) || savedState.initialBalance || 0,
+            sessionId: cashierSession.id
+          })
         } else {
-          // Usuario no tiene caja abierta, cargar cajas disponibles
+          // Usuario no tiene caja abierta - limpiar localStorage
+          console.log('✅ No hay sesión activa, limpiando localStorage')
+          localStorage.removeItem('cashbox_state')
           this.isUserBoxOpen = false
           await this.loadAvailableCashBoxes()
-          console.log('Usuario no tiene sesión activa, estado:', cashierSession?.status || 'sin sesión')
         }
 
-        console.log('Estado de caja:', this.isUserBoxOpen ? 'Abierta' : 'Cerrada')
-        console.log('Cajas disponibles:', this.availableCashBoxes.length)
+        console.log('📋 Estado final - Caja:', this.isUserBoxOpen ? 'Abierta' : 'Cerrada')
+        console.log('📋 Cajas disponibles:', this.availableCashBoxes.length)
       } catch (error) {
         // Error 404 es esperado cuando no hay sesión de caja activa
         if (error.response?.status === 404) {
           console.log('✅ No hay sesión de caja activa (404 - esperado)')
+          // Limpiar localStorage si hay datos obsoletos
+          localStorage.removeItem('cashbox_state')
           this.isUserBoxOpen = false
           await this.loadAvailableCashBoxes()
-          console.log('Cajas disponibles cargadas para nueva apertura')
         } else {
-          console.error('Error al verificar estado de caja:', error)
+          console.error('❌ Error al verificar estado de caja:', error)
           this.isUserBoxOpen = false
           this.availableCashBoxes = []
 
@@ -2867,12 +2846,6 @@ export default {
       } catch (error) {
         console.error('Error al guardar estado de apertura de caja:', error)
       }
-
-      this.$q.notify({
-        type: 'positive',
-        message: 'Caja abierta correctamente',
-        caption: 'Ya puedes comenzar a procesar ventas'
-      })
     },
 
     async handleBoxClosed (closeData = {}) {
@@ -2886,12 +2859,6 @@ export default {
 
         // Recargar las cajas disponibles después del cierre
         await this.loadAvailableCashBoxes()
-
-        this.$q.notify({
-          type: 'positive',
-          message: 'Caja cerrada correctamente',
-          caption: 'Puedes abrir una nueva caja cuando lo necesites'
-        })
       } catch (error) {
         console.error('Error al cargar cajas disponibles después del cierre:', error)
         this.availableCashBoxes = []
@@ -2914,14 +2881,16 @@ export default {
         lastUpdated: new Date().toISOString()
       }
 
-      console.log('Actualizando estado de caja:', stateWithTimestamp)
-
-      // Guardar en localStorage
       try {
         localStorage.setItem('cashbox_state', JSON.stringify(stateWithTimestamp))
-        console.log('✅ Estado de caja guardado en localStorage')
+        console.log(`💾 Estado de caja ${cashBoxState.isOpen ? 'abierta' : 'cerrada'} guardado en localStorage`)
       } catch (error) {
         console.error('❌ Error al guardar en localStorage:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al guardar estado de caja',
+          caption: 'Los cambios podrían no persistir'
+        })
       }
     },
 
@@ -2933,9 +2902,7 @@ export default {
       try {
         const localState = localStorage.getItem('cashbox_state')
         if (localState) {
-          const cashBoxState = JSON.parse(localState)
-          console.log('Estado de caja obtenido desde localStorage:', cashBoxState)
-          return cashBoxState
+          return JSON.parse(localState)
         }
       } catch (error) {
         console.error('Error al leer estado desde localStorage:', error)

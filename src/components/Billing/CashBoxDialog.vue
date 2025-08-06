@@ -6,43 +6,50 @@
     transition-show="scale"
     transition-hide="scale"
   >
-        <q-card style="width: 500px; max-width: 80vw; min-height: 250px;">
+    <q-card style="width: 500px; max-width: 80vw; min-height: 250px;">
+      <!-- Header Section -->
       <q-card-section class="q-py-sm bg-primary text-white flex justify-between items-center">
         <span class="text-h6">Abrir Caja</span>
         <q-btn flat icon="close" round size="md" v-close-popup />
       </q-card-section>
 
+      <!-- Loading State -->
       <q-inner-loading :showing="!isReady">
         <q-spinner-gears size="50px" color="primary" />
       </q-inner-loading>
 
+      <!-- Content when ready -->
       <div v-if="isReady">
-        <q-card-section v-if="internalBoxAlreadyOpen" class="q-pt-lg text-center">
+        <!-- State 1: Cash box already open -->
+        <q-card-section v-if="boxAlreadyOpen" class="q-pt-lg text-center">
           <q-icon name="info" color="primary" size="48px" />
           <p class="q-mt-md">Ya tienes una caja abierta en este turno.</p>
           <p>¿Deseas cerrarla ahora?</p>
-           <q-card-actions align="center" class="q-mt-md">
+          <q-card-actions align="center" class="q-mt-md">
             <q-btn
               label="Cerrar Caja"
               color="negative"
               unelevated
-              @click="confirmCloseBox"
+              @click="handleCloseBox"
               :loading="isSubmitting"
             />
           </q-card-actions>
         </q-card-section>
 
-        <q-card-section v-else-if="internalAvailableCashBoxes.length === 0" class="q-pt-md">
+        <!-- State 2: No cash boxes available - create first one -->
+        <q-card-section v-else-if="availableCashBoxes.length === 0" class="q-pt-md">
           <p class="text-subtitle1 text-center q-mb-md">No hay cajas registradas. Crea la primera.</p>
-          <q-form @submit.prevent="submitNewBox">
+
+          <q-form @submit.prevent="handleCreateAndOpenBox">
             <q-input
               ref="newBoxNameInput"
               v-model="newBoxName"
               label="Nombre de la caja"
               filled
               lazy-rules
-              :rules="[val => !!val && val.trim().length > 0 || 'El nombre es requerido']"
+              :rules="nameValidationRules"
             />
+
             <q-card-actions align="right" class="q-mt-md">
               <q-btn flat label="Cancelar" color="primary" v-close-popup :disable="isSubmitting" />
               <q-btn type="submit" label="Crear y Abrir" color="primary" :loading="isSubmitting" />
@@ -50,20 +57,21 @@
           </q-form>
         </q-card-section>
 
+        <!-- State 3: Cash boxes available - select and open -->
         <q-card-section v-else class="q-pt-md">
-          <q-form @submit.prevent="submitOpenBox">
+          <q-form @submit.prevent="handleOpenBox">
             <q-select
               ref="boxSelect"
               v-model="selectedBox"
-              :options="internalAvailableCashBoxes"
+              :options="availableCashBoxes"
               label="Selecciona una caja"
               option-value="id"
               option-label="name"
               filled
               lazy-rules
-              :rules="[val => !!val || 'Debes seleccionar una caja']"
+              :rules="boxSelectionRules"
               class="q-mb-md"
-              :disable="internalAvailableCashBoxes.length === 1"
+              :disable="availableCashBoxes.length === 1"
             />
 
             <q-input
@@ -73,7 +81,7 @@
               label="Monto inicial"
               filled
               lazy-rules
-              :rules="[val => val !== null && val !== '' && val >= 0 || 'El monto inicial es requerido']"
+              :rules="amountValidationRules"
               prefix="$"
             />
 
@@ -94,6 +102,10 @@ import { authentication } from 'src/stores/module-authentication'
 
 export default {
   name: 'CashBoxDialog',
+
+  // ==========================================
+  // COMPONENT CONFIGURATION
+  // ==========================================
   props: {
     modelValue: Boolean,
     cashierId: {
@@ -109,52 +121,393 @@ export default {
       default: () => []
     }
   },
+
   emits: ['update:modelValue', 'box-opened', 'box-closed', 'box-created'],
+
+  // ==========================================
+  // REACTIVE DATA
+  // ==========================================
   data () {
     return {
+      // Loading and submission states
       isReady: false,
       isSubmitting: false,
+
+      // Form data
       selectedBox: null,
       initialAmount: null,
       newBoxName: '',
-      // Estados internos del modal
-      internalBoxAlreadyOpen: false,
-      internalAvailableCashBoxes: [],
+
+      // Internal component state
+      boxAlreadyOpen: false,
       cashierSession: null
     }
   },
+
+  // ==========================================
+  // COMPUTED PROPERTIES
+  // ==========================================
   computed: {
     authStore () {
       return authentication()
     },
+
     branchOffice () {
       return this.authStore.branchOffice
+    },
+
+    // Validation rules
+    nameValidationRules () {
+      return [val => (!!val && val.trim().length > 0) || 'El nombre es requerido']
+    },
+
+    boxSelectionRules () {
+      return [val => !!val || 'Debes seleccionar una caja']
+    },
+
+    amountValidationRules () {
+      return [val => (val !== null && val !== '' && val >= 0) || 'El monto inicial es requerido']
     }
   },
+
+  // ==========================================
+  // WATCHERS
+  // ==========================================
   watch: {
+    // Initialize when dialog opens
     modelValue (newValue) {
       if (newValue) {
-        this.resetForm()
-        this.checkCashBoxStatusAndInitialize()
+        this.initializeDialog()
       }
     },
-    // Watch for changes in internalAvailableCashBoxes to auto-select if only one is available
-    internalAvailableCashBoxes: {
+
+    // Auto-select box if only one is available
+    availableCashBoxes: {
       handler (newVal) {
         if (newVal && newVal.length === 1) {
           this.selectedBox = newVal[0]
         }
       },
-      immediate: true // Run the handler immediately on component mount
+      immediate: true
     }
   },
+
+  // ==========================================
+  // LIFECYCLE HOOKS
+  // ==========================================
   mounted () {
-    // The watcher for modelValue will handle initialization on open.
+    // The watcher for modelValue will handle initialization on open
   },
+
+  // ==========================================
+  // METHODS
+  // ==========================================
   methods: {
+    // ------------------------------------------
+    // Initialization Methods
+    // ------------------------------------------
+
     /**
-     * Solicita al usuario el saldo final para cerrar la caja
-     * @returns {Promise<number|null>} El saldo final o null si se cancela
+     * Initialize dialog when opened
+     */
+    async initializeDialog () {
+      this.resetForm()
+      await this.checkCashBoxStatus()
+      this.setInitialFocus()
+    },
+
+    /**
+     * Reset form to initial state
+     */
+    resetForm () {
+      this.initialAmount = null
+      this.newBoxName = ''
+      this.isReady = false
+      this.boxAlreadyOpen = false
+      this.cashierSession = null
+
+      // Don't reset selectedBox if there's only one available
+      if (this.availableCashBoxes.length !== 1) {
+        this.selectedBox = null
+      }
+    },
+
+    /**
+     * Set focus on the appropriate input element
+     */
+    setInitialFocus () {
+      this.isReady = true
+
+      this.$nextTick(() => {
+        if (this.boxAlreadyOpen || this.availableCashBoxes.length === 0) {
+          // No specific focus needed for these states
+
+        } else if (this.availableCashBoxes.length === 1) {
+          // Focus amount input if box is auto-selected
+          this.$refs.amountInput?.focus()
+        } else {
+          // Focus box selection
+          this.$refs.boxSelect?.focus()
+        }
+      })
+    },
+
+    // ------------------------------------------
+    // Cash Box Status Methods
+    // ------------------------------------------
+
+    /**
+     * Check current cash box status from localStorage and backend
+     */
+    async checkCashBoxStatus () {
+      try {
+        const savedState = this.getCashBoxStateFromStorage()
+        console.log('🔍 Verificando estado de caja al abrir modal:', savedState)
+
+        // If no localStorage data, skip backend check
+        if (!savedState) {
+          console.log('✅ No hay datos de caja en localStorage')
+          this.boxAlreadyOpen = false
+          return
+        }
+
+        // Verify with backend if localStorage has data
+        console.log('📡 Verificando con backend...')
+        const response = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
+        console.log('📥 Estado de caja desde backend:', response.data)
+
+        this.cashierSession = response.data
+        this.boxAlreadyOpen = this.isSessionOpen(response.data)
+      } catch (error) {
+        this.handleCashBoxStatusError(error)
+      }
+    },
+
+    /**
+     * Get cash box state from localStorage
+     * @returns {Object|null} Cash box state or null
+     */
+    getCashBoxStateFromStorage () {
+      try {
+        const localState = localStorage.getItem('cashbox_state')
+        return localState ? JSON.parse(localState) : null
+      } catch (error) {
+        console.error('Error reading localStorage:', error)
+        return null
+      }
+    },
+
+    /**
+     * Check if cashier session is open
+     * @param {Object} session - Cashier session data
+     * @returns {boolean} True if session is open
+     */
+    isSessionOpen (session) {
+      return session &&
+             session.status === 'open' &&
+             !session.close_date
+    },
+
+    /**
+     * Handle errors when checking cash box status
+     * @param {Error} error - The error object
+     */
+    handleCashBoxStatusError (error) {
+      // 404 is expected when no active session exists
+      if (error.response?.status === 404) {
+        console.log('✅ No hay sesión activa (404 - esperado)')
+        this.boxAlreadyOpen = false
+      } else {
+        console.error('Error verificando estado de caja:', error)
+        this.boxAlreadyOpen = false
+      }
+    },
+
+    // ------------------------------------------
+    // Form Submission Handlers
+    // ------------------------------------------
+
+    /**
+     * Handle opening an existing cash box
+     */
+    async handleOpenBox () {
+      if (!this.validateOpenBoxForm()) return
+
+      this.isSubmitting = true
+
+      try {
+        const payload = {
+          cashbox_id: this.selectedBox.id,
+          user_id: this.cashierId,
+          init_balance: parseFloat(this.initialAmount),
+          init_date: new Date().toISOString().split('T')[0],
+          status: 'open'
+        }
+
+        console.log('📡 POST /cashier-open', payload)
+        const response = await this.$api.post('cashier-open', payload)
+        console.log('📥 Response:', response.data)
+
+        this.showSuccessNotification(`Caja "${this.selectedBox.name}" abierta con éxito`, `Monto inicial: $${this.initialAmount}`)
+
+        this.$emit('box-opened', {
+          cashboxId: this.selectedBox.id,
+          initialBalance: this.initialAmount,
+          boxName: this.selectedBox.name
+        })
+
+        this.closeDialog()
+      } catch (error) {
+        this.handleApiError(error, 'Error al abrir caja')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
+    /**
+     * Handle creating and opening a new cash box
+     */
+    async handleCreateAndOpenBox () {
+      if (!this.validateNewBoxForm()) return
+
+      this.isSubmitting = true
+
+      try {
+        const payload = {
+          name: this.newBoxName.trim(),
+          status: 'active',
+          branch_office_id: this.branchOffice.id
+        }
+
+        console.log('📡 POST /cashboxes', payload)
+        const response = await this.$api.post('cashboxes', payload)
+        console.log('📥 Response:', response.data)
+
+        this.showSuccessNotification(`Caja "${this.newBoxName}" creada con éxito`, 'Ahora puedes proceder a abrirla')
+
+        this.$emit('box-created', response.data)
+
+        // Wait a moment for parent to update available boxes, then reinitialize
+        await this.$nextTick()
+        setTimeout(() => {
+          this.initializeDialog()
+        }, 100)
+      } catch (error) {
+        this.handleApiError(error, 'Error al crear caja', 'Verifica que el nombre no esté duplicado')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
+    /**
+     * Handle closing the current cash box
+     */
+    async handleCloseBox () {
+      const confirmed = await this.confirmCloseBox()
+      if (!confirmed) return
+
+      const endBalance = await this.promptForEndBalance()
+      if (endBalance === null) return
+
+      this.isSubmitting = true
+
+      try {
+        // Get current session to ensure we have the correct ID
+        const sessionResponse = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
+        const cashierSession = sessionResponse.data
+
+        if (!this.isSessionOpen(cashierSession)) {
+          throw new Error('No se encontró una sesión de caja abierta para cerrar')
+        }
+
+        const payload = { end_balance: parseFloat(endBalance) }
+
+        console.log(`📡 PUT /cashier-close/${cashierSession.id}`, payload)
+        const response = await this.$api.put(`cashier-close/${cashierSession.id}`, payload)
+        console.log('📥 Response:', response.data)
+
+        this.showSuccessNotification('La caja ha sido cerrada con éxito', `Saldo final: $${endBalance}`)
+
+        this.$emit('box-closed', {
+          cashboxId: cashierSession.cashbox_id,
+          endBalance: parseFloat(endBalance),
+          sessionId: cashierSession.id
+        })
+
+        this.closeDialog()
+      } catch (error) {
+        this.handleApiError(error, 'Error al cerrar caja')
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+
+    // ------------------------------------------
+    // Validation Methods
+    // ------------------------------------------
+
+    /**
+     * Validate open box form
+     * @returns {boolean} True if valid
+     */
+    validateOpenBoxForm () {
+      if (!this.selectedBox?.id) {
+        this.showErrorNotification('Debes seleccionar una caja válida')
+        return false
+      }
+
+      if (this.initialAmount === null || this.initialAmount === '' || this.initialAmount < 0) {
+        this.showErrorNotification('El monto inicial debe ser mayor o igual a cero')
+        return false
+      }
+
+      return true
+    },
+
+    /**
+     * Validate new box form
+     * @returns {boolean} True if valid
+     */
+    validateNewBoxForm () {
+      if (!this.newBoxName?.trim()) {
+        this.showErrorNotification('El nombre de la caja es requerido')
+        return false
+      }
+
+      return true
+    },
+
+    // ------------------------------------------
+    // Dialog Interaction Methods
+    // ------------------------------------------
+
+    /**
+     * Show confirmation dialog for closing cash box
+     * @returns {Promise<boolean>} True if confirmed
+     */
+    confirmCloseBox () {
+      return new Promise((resolve) => {
+        Dialog.create({
+          title: 'Confirmar Cierre',
+          message: '¿Estás seguro de que quieres cerrar la caja? Esta acción no se puede deshacer.',
+          persistent: true,
+          ok: {
+            label: 'Sí, Cerrar Caja',
+            color: 'negative',
+            unelevated: true
+          },
+          cancel: {
+            label: 'Cancelar',
+            flat: true
+          }
+        }).onOk(() => resolve(true))
+          .onCancel(() => resolve(false))
+      })
+    },
+
+    /**
+     * Prompt user for end balance when closing cash box
+     * @returns {Promise<number|null>} End balance or null if cancelled
      */
     promptForEndBalance () {
       return new Promise((resolve) => {
@@ -178,332 +531,69 @@ export default {
           }
         }).onOk((endBalance) => {
           const numericBalance = parseFloat(endBalance)
-          if (isNaN(numericBalance)) {
-            Notify.create({
-              type: 'negative',
-              message: 'Debes ingresar un valor numérico válido'
-            })
+          if (isNaN(numericBalance) || numericBalance < 0) {
+            this.showErrorNotification('Debes ingresar un valor numérico válido mayor o igual a cero')
             resolve(null)
           } else {
             resolve(numericBalance)
           }
-        }).onCancel(() => {
-          resolve(null)
-        })
+        }).onCancel(() => resolve(null))
       })
     },
+
+    // ------------------------------------------
+    // Utility Methods
+    // ------------------------------------------
+
     /**
-     * Initializes the modal with the data received from props.
-     * Sets up the selected box if there's only one available.
+     * Close the dialog
      */
-    resetForm () {
-      this.initialAmount = null
-      this.newBoxName = ''
-      // Do not reset selectedBox if there is only one, as it's auto-selected
-      if (this.internalAvailableCashBoxes.length !== 1) {
-        this.selectedBox = null
-      }
-      // Reset internal states
-      this.isReady = false
-      this.internalBoxAlreadyOpen = false
-      this.internalAvailableCashBoxes = []
-      this.cashierSession = null
+    closeDialog () {
+      this.$emit('update:modelValue', false)
     },
 
     /**
-     * Obtiene el estado de la caja desde localStorage
-     * @returns {Object|null} El estado de la caja o null
+     * Show success notification
+     * @param {string} message - Main message
+     * @param {string} caption - Optional caption
      */
-    getCashBoxStateFromLocalStorage () {
-      try {
-        const localState = localStorage.getItem('cashbox_state')
-        if (localState) {
-          return JSON.parse(localState)
-        }
-      } catch (error) {
-        console.error('Error al leer estado desde localStorage en modal:', error)
-      }
-      return null
-    },
-
-    async checkCashBoxStatusAndInitialize () {
-      try {
-        // Verificar estado guardado en localStorage primero
-        const savedState = this.getCashBoxStateFromLocalStorage()
-        console.log('🔍 Verificando estado de caja al abrir modal...')
-        console.log('Estado guardado en localStorage:', savedState)
-
-        // Si no hay datos en localStorage, omitir consulta al backend
-        if (!savedState) {
-          console.log('✅ No hay datos de caja en localStorage, omitiendo consulta al backend (modal)')
-          this.internalBoxAlreadyOpen = false
-          await this.loadAvailableCashBoxes()
-          this.initializeModal()
-          return
-        }
-
-        // Si hay datos en localStorage, verificar con el backend
-        console.log('Hay datos en localStorage, verificando con backend...')
-        const response = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
-        console.log('📡 ENDPOINT: GET /cashier-init (validación modal)')
-        console.log('📥 RESPONSE:', JSON.stringify(response.data, null, 2))
-        const cashierSession = response.data
-        this.cashierSession = cashierSession
-
-        // Verificar si la sesión está abierta
-        const isSessionOpen = cashierSession &&
-                             cashierSession.status === 'open' &&
-                             !cashierSession.close_date
-        if (isSessionOpen) {
-          // Usuario tiene una caja abierta
-          this.internalBoxAlreadyOpen = true
-          this.internalAvailableCashBoxes = []
-          console.log('✅ Usuario tiene sesión de caja abierta')
-        } else {
-          // Usuario no tiene caja abierta, cargar cajas disponibles
-          this.internalBoxAlreadyOpen = false
-          await this.loadAvailableCashBoxes()
-          console.log('❌ Usuario no tiene sesión activa')
-        }
-        this.initializeModal()
-      } catch (error) {
-        // Error 404 es esperado cuando no hay sesión de caja activa
-        if (error.response?.status === 404) {
-          console.log('✅ No hay sesión de caja activa en modal (404 - esperado)')
-          this.internalBoxAlreadyOpen = false
-          await this.loadAvailableCashBoxes()
-          this.initializeModal()
-        } else {
-          console.error('Error al verificar estado de caja en modal:', error)
-          // En caso de error real, asumir que no hay caja abierta y cargar cajas disponibles
-          this.internalBoxAlreadyOpen = false
-          await this.loadAvailableCashBoxes()
-          this.initializeModal()
-        }
-      }
-    },
-
-    async loadAvailableCashBoxes () {
-      try {
-        console.log('📦 Cargando cajas disponibles en modal...')
-        // Obtener todas las cajas del sistema
-        const response = await this.$api.get('cashboxes')
-        console.log('📡 ENDPOINT: GET /cashboxes (modal)')
-        console.log('📥 RESPONSE:', JSON.stringify(response.data, null, 2))
-        const allBoxes = response.data.data || response.data || []
-        // Filtrar solo las cajas activas
-        this.internalAvailableCashBoxes = allBoxes.filter(box =>
-          box.status === 'active' && !box.disabled
-        )
-        console.log(`📊 Cajas disponibles cargadas: ${this.internalAvailableCashBoxes.length}`)
-      } catch (error) {
-        console.error('Error al cargar cajas disponibles en modal:', error)
-        this.internalAvailableCashBoxes = []
-      }
-    },
-
-    initializeModal () {
-      // Mark as ready to show content
-      this.isReady = true
-      // Set focus on appropriate element
-      this.$nextTick(() => {
-        if (this.internalBoxAlreadyOpen || this.internalAvailableCashBoxes.length === 0) {
-          this.$refs.closeButton?.focus()
-        } else if (this.internalAvailableCashBoxes.length === 1) {
-          // If one box is auto-selected, focus the amount input
-          this.$refs.amountInput?.focus()
-        } else {
-          // Otherwise, focus the box selection
-          this.$refs.boxSelect?.focus()
-        }
+    showSuccessNotification (message, caption = '') {
+      Notify.create({
+        type: 'positive',
+        message,
+        caption
       })
     },
 
-    async submitOpenBox () {
-      this.isSubmitting = true
-      try {
-        // Validación de datos antes de enviar
-        if (!this.selectedBox || !this.selectedBox.id) {
-          throw new Error('Debes seleccionar una caja válida')
-        }
-        if (this.initialAmount === null || this.initialAmount === '' || this.initialAmount < 0) {
-          throw new Error('El monto inicial debe ser mayor o igual a cero')
-        }
-
-        // Preparar payload según especificación de la API
-        const payload = {
-          cashbox_id: this.selectedBox.id,
-          user_id: this.cashierId,
-          init_balance: parseFloat(this.initialAmount),
-          init_date: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
-          status: 'open'
-        }
-
-        console.log('📡 ENDPOINT: POST /cashier-open')
-        console.log('📤 PAYLOAD:', JSON.stringify(payload, null, 2))
-        // Llamada real a la API para registrar apertura de caja
-        const openResponse = await this.$api.post('cashier-open', payload)
-        console.log('📥 RESPONSE:', JSON.stringify(openResponse.data, null, 2))
-
-        Notify.create({
-          type: 'positive',
-          message: `Caja "${this.selectedBox.name}" abierta con éxito.`,
-          caption: `Monto inicial: $${this.initialAmount}`
-        })
-
-        // Emitir evento con datos de la caja abierta
-        this.$emit('box-opened', {
-          cashboxId: this.selectedBox.id,
-          initialBalance: this.initialAmount,
-          boxName: this.selectedBox.name
-        })
-        this.$emit('update:modelValue', false)
-      } catch (error) {
-        console.error('Error al abrir caja:', error)
-        Notify.create({
-          type: 'negative',
-          message: error.response?.data?.message || error.message || 'Hubo un error al intentar abrir la caja.',
-          caption: 'Verifica los datos e intenta nuevamente'
-        })
-      } finally {
-        this.isSubmitting = false
-      }
-    },
-
-    confirmCloseBox () {
-      Dialog.create({
-        title: 'Confirmar Cierre',
-        message: '¿Estás seguro de que quieres cerrar la caja? Esta acción no se puede deshacer.',
-        persistent: true,
-        ok: {
-          label: 'Sí, Cerrar Caja',
-          color: 'negative',
-          unelevated: true
-        },
-        cancel: {
-          label: 'Cancelar',
-          flat: true
-        }
-      }).onOk(() => {
-        this.closeBox()
+    /**
+     * Show error notification
+     * @param {string} message - Error message
+     */
+    showErrorNotification (message) {
+      Notify.create({
+        type: 'negative',
+        message
       })
     },
 
-    async submitNewBox () {
-      // Validación del nombre de la caja
-      if (!this.newBoxName || this.newBoxName.trim() === '') {
-        Notify.create({
-          type: 'negative',
-          message: 'El nombre de la caja es requerido'
-        })
-        return
-      }
+    /**
+     * Handle API errors and show appropriate notifications
+     * @param {Error} error - The error object
+     * @param {string} defaultMessage - Default error message
+     * @param {string} caption - Optional caption
+     */
+    handleApiError (error, defaultMessage, caption = 'Intenta nuevamente') {
+      console.error(defaultMessage, error)
 
-      this.isSubmitting = true
-      try {
-        // Preparar payload según especificación de la API
-        const payload = {
-          name: this.newBoxName.trim(),
-          status: 'active',
-          branch_office_id: this.branchOffice.id
-        }
+      const message = error.response?.data?.message ||
+                     error.message ||
+                     defaultMessage
 
-        console.log('📡 ENDPOINT: POST /cashboxs')
-        console.log('📤 PAYLOAD:', JSON.stringify(payload, null, 2))
-
-        // Llamada real a la API para crear caja
-        const response = await this.$api.post('cashboxs', payload)
-        console.log('📥 RESPONSE:', JSON.stringify(response.data, null, 2))
-
-        Notify.create({
-          type: 'positive',
-          message: `Caja "${this.newBoxName}" creada con éxito.`,
-          caption: 'Ahora puedes proceder a abrirla'
-        })
-
-        // Emitir evento para que BillingPage recargue las cajas y muestre el flujo de apertura
-        this.$emit('box-created', response.data)
-
-        // Resetear el formulario pero mantener el diálogo abierto
-        this.newBoxName = ''
-      } catch (error) {
-        console.error('Error al crear caja:', error)
-        Notify.create({
-          type: 'negative',
-          message: error.response?.data?.message || error.message || 'Error al crear la caja.',
-          caption: 'Verifica que el nombre no esté duplicado'
-        })
-      } finally {
-        this.isSubmitting = false
-      }
-    },
-
-    async closeBox () {
-      this.isSubmitting = true
-
-      try {
-        // Solicitar el saldo final al usuario
-        const endBalance = await this.promptForEndBalance()
-
-        if (endBalance === null) {
-          // Usuario canceló
-          this.isSubmitting = false
-          return
-        }
-
-        // Validar que el saldo final sea válido
-        if (endBalance < 0) {
-          throw new Error('El saldo final debe ser mayor o igual a cero')
-        }
-
-        // Obtener la sesión de caja abierta actualmente
-        const sessionResponse = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
-        console.log('📡 ENDPOINT: GET /cashier-init (para cierre)')
-        console.log('📥 RESPONSE:', JSON.stringify(sessionResponse.data, null, 2))
-        const cashierSession = sessionResponse.data
-
-        // Verificar que existe una sesión abierta
-        if (!cashierSession ||
-            cashierSession.status !== 'open' ||
-            cashierSession.close_date) {
-          throw new Error('No se encontró una sesión de caja abierta para cerrar')
-        }
-
-        // Preparar payload para el cierre
-        const payload = {
-          end_balance: parseFloat(endBalance)
-        }
-
-        console.log('📡 ENDPOINT: PUT /cashier-close/' + cashierSession.id)
-        console.log('📤 PAYLOAD:', JSON.stringify(payload, null, 2))
-
-        // Llamada real a la API para cerrar caja (usar PUT y el ID de la sesión)
-        const closeResponse = await this.$api.put(`cashier-close/${cashierSession.id}`, payload)
-        console.log('📥 RESPONSE:', JSON.stringify(closeResponse.data, null, 2))
-
-        Notify.create({
-          type: 'positive',
-          message: 'La caja ha sido cerrada con éxito.',
-          caption: `Saldo final: $${endBalance}`
-        })
-
-        // Emitir evento con datos del cierre
-        this.$emit('box-closed', {
-          cashboxId: cashierSession.cashbox_id,
-          endBalance: parseFloat(endBalance),
-          sessionId: cashierSession.id
-        })
-        this.$emit('update:modelValue', false)
-      } catch (error) {
-        console.error('Error al cerrar caja:', error)
-        Notify.create({
-          type: 'negative',
-          message: error.response?.data?.message || error.message || 'Error al cerrar la caja.',
-          caption: 'Intenta nuevamente o contacta al administrador'
-        })
-      } finally {
-        this.isSubmitting = false
-      }
+      Notify.create({
+        type: 'negative',
+        message,
+        caption
+      })
     }
   }
 }
