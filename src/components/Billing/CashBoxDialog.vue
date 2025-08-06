@@ -262,19 +262,15 @@ export default {
     async checkCashBoxStatus () {
       try {
         const savedState = this.getCashBoxStateFromStorage()
-        console.log('🔍 Verificando estado de caja al abrir modal:', savedState)
 
         // If no localStorage data, skip backend check
         if (!savedState) {
-          console.log('✅ No hay datos de caja en localStorage')
           this.boxAlreadyOpen = false
           return
         }
 
         // Verify with backend if localStorage has data
-        console.log('📡 Verificando con backend...')
         const response = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
-        console.log('📥 Estado de caja desde backend:', response.data)
 
         this.cashierSession = response.data
         this.boxAlreadyOpen = this.isSessionOpen(response.data)
@@ -315,7 +311,6 @@ export default {
     handleCashBoxStatusError (error) {
       // 404 is expected when no active session exists
       if (error.response?.status === 404) {
-        console.log('✅ No hay sesión activa (404 - esperado)')
         this.boxAlreadyOpen = false
       } else {
         console.error('Error verificando estado de caja:', error)
@@ -344,9 +339,7 @@ export default {
           status: 'open'
         }
 
-        console.log('📡 POST /cashier-open', payload)
-        const response = await this.$api.post('cashier-open', payload)
-        console.log('📥 Response:', response.data)
+        await this.$api.post('cashier-open', payload)
 
         this.showSuccessNotification(`Caja "${this.selectedBox.name}" abierta con éxito`, `Monto inicial: $${this.initialAmount}`)
 
@@ -379,9 +372,7 @@ export default {
           branch_office_id: this.branchOffice.id
         }
 
-        console.log('📡 POST /cashboxes', payload)
         const response = await this.$api.post('cashboxes', payload)
-        console.log('📥 Response:', response.data)
 
         this.showSuccessNotification(`Caja "${this.newBoxName}" creada con éxito`, 'Ahora puedes proceder a abrirla')
 
@@ -422,9 +413,7 @@ export default {
 
         const payload = { end_balance: parseFloat(endBalance) }
 
-        console.log(`📡 PUT /cashier-close/${cashierSession.id}`, payload)
-        const response = await this.$api.put(`cashier-close/${cashierSession.id}`, payload)
-        console.log('📥 Response:', response.data)
+        await this.$api.put(`cashier-close/${cashierSession.id}`, payload)
 
         this.showSuccessNotification('La caja ha sido cerrada con éxito', `Saldo final: $${endBalance}`)
 
