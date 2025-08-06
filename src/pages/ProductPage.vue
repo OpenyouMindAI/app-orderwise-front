@@ -37,6 +37,13 @@
           color="primary"
           @click="openAddProduct = true"
           icon="add_circle"
+          label="Agregar Producto"
+        />
+        <q-btn
+          color="primary"
+          @click="dialogFilter = true"
+          icon="filter_alt"
+          label="Filtrar Productos"
         />
       </div>
       <div class="col-12">
@@ -852,6 +859,129 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog
+      v-model="dialogFilter"
+      position="right"
+      seamless
+    >
+      <q-card style="width: 500px; max-width: 80vw;">
+        <q-card-section class="bg-primary text-white row items-center justify-between">
+          <div class="text-h6">
+            Filtros
+          </div>
+          <q-btn
+            icon="close"
+            flat
+            round
+            dense
+            @click="dialogFilter = false"
+          />
+        </q-card-section>
+
+        <q-card-section class="q-pt-sm scroll" style="max-height: calc(100vh - 200px);">
+          <div class="column q-gutter-y-md">
+
+            <q-input
+              v-model="filters.name"
+              label="Nombre"
+              filled
+              dense
+              clearable
+            />
+
+            <q-input
+              v-model="filters.description"
+              label="Descripción"
+              filled
+              dense
+              clearable
+            />
+
+            <q-input
+              v-model="filters.barcode"
+              label="Código de Barra"
+              filled
+              dense
+              clearable
+            />
+
+            <q-select
+              dense
+              use-input
+              filled
+              label="Categoría"
+              input-debounce="0"
+              option-value="id"
+              option-label="name"
+              clearable
+              v-model="filters.category_id"
+              :options="categories"
+              @filter="filterCategories"
+            />
+
+            <q-select
+              dense
+              use-input
+              filled
+              label="Unidad de Medida"
+              input-debounce="0"
+              option-value="id"
+              option-label="name"
+              clearable
+              v-model="filters.measurement_unit_id"
+              :options="measurementUnits"
+              @filter="filterMeasurementUnits"
+            />
+
+            <q-select
+              dense
+              filled
+              label="¿Es pack?"
+              clearable
+              v-model="filters.is_pack"
+              :options="[{label: 'Sí', value: 1}, {label: 'No', value: 0}]"
+            />
+
+            <q-select
+              dense
+              filled
+              label="¿Es adicional?"
+              clearable
+              v-model="filters.is_addon"
+              :options="[{label: 'Sí', value: 1}, {label: 'No', value: 0}]"
+            />
+
+            <q-select
+              dense
+              filled
+              label="¿Se muestra en catálogo?"
+              clearable
+              v-model="filters.show_in_catalog"
+              :options="[{label: 'Sí', value: 1}, {label: 'No', value: 0}]"
+            />
+
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            color="secondary"
+            label="Limpiar"
+            @click="clearFilter"
+          />
+          <q-btn
+            color="negative"
+            label="Cerrar"
+            @click="dialogFilter = false"
+          />
+          <q-btn
+            color="primary"
+            label="Aplicar"
+            @click="filterProducts"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <bulk-price-dialog
       :modelValue="listPriceDialog"
       :products="selection.length > 0 ? selection : 'all'"
@@ -882,6 +1012,17 @@ export default {
   data () {
     return {
       listPriceDialog: false,
+      dialogFilter: false,
+      filters: {
+        name: null,
+        description: null,
+        barcode: null,
+        category_id: null,
+        measurement_unit_id: null,
+        is_pack: null,
+        is_addon: null,
+        show_in_catalog: null
+      },
       priceLists: [],
       productImage: null,
       companiesDialog: false,
@@ -1006,6 +1147,7 @@ export default {
      * Set pagination when branch office changes
      * @param {Object} value branch office
      */
+
     branchOffice (value) {
       this.setPagination({
         pagination: this.paginationConfig,
@@ -1032,6 +1174,10 @@ export default {
     unitOfMeasure (data) {
       this.product.unit_of_measure_id = data
     }
+  },
+  created () {
+    this.getCategories()
+    this.getMeasurementUnits()
   },
   methods: {
     updateProfitPercentage (newVal) {
@@ -1081,6 +1227,103 @@ export default {
       this.priceLists.push({
         name: `Lista ${this.priceLists.length + 1}`,
         price: null
+      })
+    },
+
+    filterProducts () {
+      // Reiniciar los parámetros de búsqueda para evitar conflictos
+      this.params.dataSearch = {}
+
+      const dataEqualFilter = {}
+      const dataSearch = {}
+
+      // Filtros de texto (búsqueda parcial)
+      if (this.filters.name) dataSearch.name = this.filters.name
+      if (this.filters.description) dataSearch.description = this.filters.description
+      if (this.filters.barcode) dataSearch.barcode = this.filters.barcode
+
+      // Filtros de selección (coincidencia exacta)
+      if (this.filters.category_id) dataEqualFilter.category_id = this.filters.category_id.id
+      if (this.filters.measurement_unit_id) dataEqualFilter.unit_of_measure_id = this.filters.measurement_unit_id.id
+      if (this.filters.is_pack !== null) dataEqualFilter.is_bundle = this.filters.is_pack.value
+      if (this.filters.is_addon !== null) dataEqualFilter.is_addons = this.filters.is_addon.value
+      if (this.filters.show_in_catalog !== null) {
+        // Convertir a string para asegurar que el backend procese el valor '0'
+        dataEqualFilter.show_catalog = this.filters.show_in_catalog.value === 1
+      }
+
+      this.params.dataEqualFilter = dataEqualFilter
+      this.params.dataSearch = dataSearch
+
+      this.getProducts(this.params)
+      this.dialogFilter = false
+    },
+
+    clearFilter () {
+      this.filters = {
+        name: null,
+        description: null,
+        barcode: null,
+        category_id: null,
+        measurement_unit_id: null,
+        is_pack: null,
+        is_addon: null,
+        show_in_catalog: null
+      }
+
+      // Limpiar completamente los parámetros de filtro antes de recargar
+      this.params.dataSearch = {}
+      this.params.dataEqualFilter = {}
+
+      this.getProducts(this.params)
+      this.dialogFilter = false
+    },
+
+    filterCategories (value, update) {
+      this.$api.get('categories', {
+        params: {
+          paginate: false,
+          dataSearch: { name: value }
+        }
+      }).then(({ data }) => {
+        update(() => {
+          this.categories = data
+        })
+      })
+    },
+
+    getCategories (value = '') {
+      this.$api.get('categories', {
+        params: {
+          paginate: false,
+          dataSearch: { name: value }
+        }
+      }).then(({ data }) => {
+        this.categories = data
+      })
+    },
+
+    getMeasurementUnits (value = '') {
+      this.$api.get('unit-of-measures', {
+        params: {
+          paginate: false,
+          dataSearch: { name: value }
+        }
+      }).then(({ data }) => {
+        this.measurementUnits = data
+      })
+    },
+
+    filterMeasurementUnits (value, update) {
+      this.$api.get('unit-of-measures', {
+        params: {
+          paginate: false,
+          dataSearch: { name: value }
+        }
+      }).then(({ data }) => {
+        update(() => {
+          this.measurementUnits = data
+        })
       })
     },
 
@@ -1343,32 +1586,6 @@ export default {
       })
       this.productImage = null
     },
-    /**
-     * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
-     */
-    filterCategories (value, update) {
-      this.$api.get('categories', {
-        params: {
-          dataSearch: {
-            name: value
-          }
-        }
-      })
-        .then(({ data }) => {
-          update(() => {
-            this.categories = data
-          })
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
 
     handleFileSelect (event) {
       const files = Array.from(event.target.files)
@@ -1450,6 +1667,7 @@ export default {
         }
       })
         .then(({ data }) => {
+          console.log('Respuesta de la API al obtener productos:', data)
           this.products = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
