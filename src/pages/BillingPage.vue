@@ -2786,12 +2786,24 @@ export default {
      * Filters only active cash boxes
      */
     async loadAvailableCashBoxes () {
+      if (!this.branchOffice?.id) {
+        console.error('Error: branchOffice.id no está disponible. No se pueden cargar cajas.')
+        this.availableCashBoxes = []
+        return
+      }
+
       try {
-        // Obtener todas las cajas del sistema
-        const response = await this.$api.get('cashboxes')
+        const params = {
+          dataEqualFilter: {
+            branch_office_id: this.branchOffice.id
+          }
+        }
+
+        // Obtener todas las cajas del sistema para la sucursal actual
+        const response = await this.$api.get('cashboxes', { params })
         const allBoxes = response.data.data || response.data || []
 
-        // Filtrar solo las cajas activas
+        // Filtrar solo las cajas activas (el backend ya debería hacer esto, pero es una buena práctica)
         this.availableCashBoxes = allBoxes.filter(box =>
           box.status === 'active' && !box.disabled
         )

@@ -21,19 +21,24 @@
       <!-- Content when ready -->
       <div v-if="isReady">
         <!-- State 1: Cash box already open -->
-        <q-card-section v-if="boxAlreadyOpen" class="q-pt-lg text-center">
-          <q-icon name="info" color="primary" size="48px" />
-          <p class="q-mt-md">Ya tienes una caja abierta en este turno.</p>
-          <p>¿Deseas cerrarla ahora?</p>
-          <q-card-actions align="center" class="q-mt-md">
-            <q-btn
-              label="Cerrar Caja"
-              color="negative"
-              unelevated
-              @click="handleCloseBox"
-              :loading="isSubmitting"
+        <q-card-section v-if="boxAlreadyOpen" class="q-pt-lg">
+          <q-form @submit.prevent="handleCloseBox">
+            <p class="text-subtitle1 text-center q-mb-md">Ingresa el saldo final para cerrar la caja.</p>
+            <q-input
+              ref="endBalanceInput"
+              v-model.number="endBalanceAmount"
+              type="number"
+              label="Monto final"
+              filled
+              lazy-rules
+              :rules="amountValidationRules"
+              prefix="$"
             />
-          </q-card-actions>
+            <q-card-actions align="right" class="q-mt-sm">
+              <q-btn flat label="Cancelar" color="primary" v-close-popup :disable="isSubmitting" />
+              <q-btn type="submit" label="Confirmar Cierre" color="negative" :loading="isSubmitting" />
+            </q-card-actions>
+          </q-form>
         </q-card-section>
 
         <!-- State 2: No cash boxes available - create first one -->
@@ -97,7 +102,7 @@
 </template>
 
 <script>
-import { Notify, Dialog } from 'quasar'
+import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 
 export default {
@@ -137,6 +142,7 @@ export default {
       selectedBox: null,
       initialAmount: null,
       newBoxName: '',
+      endBalanceAmount: null,
 
       // Internal component state
       boxAlreadyOpen: false,
@@ -166,7 +172,7 @@ export default {
     },
 
     amountValidationRules () {
-      return [val => (val !== null && val !== '' && val >= 0) || 'El monto inicial es requerido']
+      return [val => (val !== null && val !== '' && val >= 0) || 'El monto es requerido y debe ser mayor o igual a cero']
     }
   },
 
@@ -222,6 +228,7 @@ export default {
     resetForm () {
       this.initialAmount = null
       this.newBoxName = ''
+      this.endBalanceAmount = null
       this.isReady = false
       this.boxAlreadyOpen = false
       this.cashierSession = null
@@ -239,9 +246,10 @@ export default {
       this.isReady = true
 
       this.$nextTick(() => {
-        if (this.boxAlreadyOpen || this.availableCashBoxes.length === 0) {
-          // No specific focus needed for these states
-
+        if (this.availableCashBoxes.length === 0) {
+          this.$refs.newBoxNameInput?.focus()
+        } else if (this.boxAlreadyOpen) {
+          this.$refs.endBalanceInput?.focus()
         } else if (this.availableCashBoxes.length === 1) {
           // Focus amount input if box is auto-selected
           this.$refs.amountInput?.focus()
@@ -394,11 +402,12 @@ export default {
      * Handle closing the current cash box
      */
     async handleCloseBox () {
-      const confirmed = await this.confirmCloseBox()
-      if (!confirmed) return
-
-      const endBalance = await this.promptForEndBalance()
-      if (endBalance === null) return
+      // Validate the end balance amount
+      const endBalance = this.endBalanceAmount
+      if (endBalance === null || endBalance === '' || endBalance < 0) {
+        this.showErrorNotification('El monto final es requerido y debe ser mayor o igual a cero')
+        return
+      }
 
       this.isSubmitting = true
 
@@ -464,70 +473,6 @@ export default {
       }
 
       return true
-    },
-
-    // ------------------------------------------
-    // Dialog Interaction Methods
-    // ------------------------------------------
-
-    /**
-     * Show confirmation dialog for closing cash box
-     * @returns {Promise<boolean>} True if confirmed
-     */
-    confirmCloseBox () {
-      return new Promise((resolve) => {
-        Dialog.create({
-          title: 'Confirmar Cierre',
-          message: '¿Estás seguro de que quieres cerrar la caja? Esta acción no se puede deshacer.',
-          persistent: true,
-          ok: {
-            label: 'Sí, Cerrar Caja',
-            color: 'negative',
-            unelevated: true
-          },
-          cancel: {
-            label: 'Cancelar',
-            flat: true
-          }
-        }).onOk(() => resolve(true))
-          .onCancel(() => resolve(false))
-      })
-    },
-
-    /**
-     * Prompt user for end balance when closing cash box
-     * @returns {Promise<number|null>} End balance or null if cancelled
-     */
-    promptForEndBalance () {
-      return new Promise((resolve) => {
-        Dialog.create({
-          title: 'Cerrar Caja',
-          message: 'Ingresa el saldo final de la caja:',
-          prompt: {
-            model: '',
-            type: 'number',
-            placeholder: '0.00',
-            suffix: '$'
-          },
-          cancel: {
-            label: 'Cancelar',
-            flat: true
-          },
-          persistent: true,
-          ok: {
-            label: 'Cerrar Caja',
-            color: 'negative'
-          }
-        }).onOk((endBalance) => {
-          const numericBalance = parseFloat(endBalance)
-          if (isNaN(numericBalance) || numericBalance < 0) {
-            this.showErrorNotification('Debes ingresar un valor numérico válido mayor o igual a cero')
-            resolve(null)
-          } else {
-            resolve(numericBalance)
-          }
-        }).onCancel(() => resolve(null))
-      })
     },
 
     // ------------------------------------------
