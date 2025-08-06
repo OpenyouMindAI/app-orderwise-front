@@ -1,6 +1,6 @@
 <template>
   <q-page class="flex items-center column bg-white" style="height: calc(100vh - 120px); overflow: hidden;">
-    <div style="max-width: 600px;">
+    <div style="max-width: 600px;" class="full-height">
       <!-- Main View Transition Container -->
       <transition :name="transitionName" mode="out-in">
         <!-- Keypad View -->
@@ -230,15 +230,46 @@
             size="100px"
             class="q-mb-md"
           />
-          <div class="text-h4 text-weight-bold q-mb-sm">¡Operación Completada!</div>
-          <div class="text-h5 q-mb-lg text-grey-8">{{ formattedValue }}</div>
+          <div class="text-h5 text-weight-bold q-mb-sm">¡Operación Completada!</div>
+
+          <!-- Vista para Transferencia -->
+          <div
+            v-if="selectedPaymentMethod?.acronym === 'MPTR' && transferPaymentDetails"
+            class="transfer-details q-mt-md"
+          >
+            <q-card flat bordered class="q-pa-md" style="max-width: 500px;">
+              <q-card-section class="q-pb-sm">
+                <div class="text-subtitle1 text-weight-bold text-primary">
+                  Detalles de la Transferencia
+                </div>
+              </q-card-section>
+
+              <q-separator />
+
+              <q-list>
+                <q-item v-for="(item, index) in transferDetailsList" :key="index">
+                  <q-item-section class="text-left">
+                    <q-item-label caption class="text-grey-7">{{ item.label }}</q-item-label>
+                    <q-item-label class="text-weight-medium text-body1">
+                      {{ item.value }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card>
+          </div>
+
+        <!-- Vista para otros métodos de pago -->
+        <div v-else class="text-h5 q-mb-lg text-grey-8">
+          {{ formattedValue }}
+        </div>
+
           <q-btn
             label="Nueva Operación"
             color="primary"
-            size="lg"
             unelevated
             rounded
-            class="button-style"
+            class="button-style q-mt-lg"
             @click="resetToInitialState"
           />
         </div>
@@ -384,6 +415,20 @@ const newClient = ref({
 // Transfer State
 const isWaitingForTransfer = ref(false)
 const transferTimeout = ref(null)
+const transferPaymentDetails = ref(null)
+
+const transferDetailsList = computed(() => {
+  if (!transferPaymentDetails.value) return []
+
+  const details = [
+    { label: 'Monto', value: `$${transferPaymentDetails.value.transaction_amount}` },
+    { label: 'Email del Pagador', value: transferPaymentDetails.value.payer.email },
+    { label: 'ID del Comprador', value: transferPaymentDetails.value.payer.id },
+    { label: 'Código de Identificación', value: transferPaymentDetails.value.id }
+  ]
+
+  return details.filter(item => item.value)
+})
 
 // =============================================
 // COMPUTED PROPERTIES
@@ -417,7 +462,7 @@ const nextButtonLabel = computed(() => {
 const shouldShowArrow = computed(() => !isPaymentView(currentView.value))
 
 const isNextButtonDisabled = computed(() => {
-  if (isWaitingForTransfer.value) return true
+  // if (isWaitingForTransfer.value) return true // Deshabilitado temporalmente para visualización
 
   switch (currentView.value) {
     case 'payment-methods':
@@ -427,7 +472,8 @@ const isNextButtonDisabled = computed(() => {
     case 'invoice-options':
       return !selectedInvoiceOption.value
     case 'MPTR':
-      return isWaitingForTransfer.value
+      // return isWaitingForTransfer.value // Deshabilitado temporalmente para visualización
+      return false
     default:
       return false
   }
@@ -560,6 +606,7 @@ const resetAllState = () => {
   clientSearch.value = ''
   showAddClientDialog.value = false
   isWaitingForTransfer.value = false
+  transferPaymentDetails.value = null
 
   if (transferTimeout.value) {
     clearTimeout(transferTimeout.value)
@@ -638,6 +685,21 @@ const proceedToPaymentView = () => {
 }
 
 const completeOperation = () => {
+  // --- MOCK DATA FOR VISUALIZATION ---
+  if (selectedPaymentMethod.value?.acronym === 'MPTR' && !transferPaymentDetails.value) {
+    const amount = (parseInt(inputValue.value, 10) / 100) || 500.75
+    transferPaymentDetails.value = {
+      transaction_amount: amount.toFixed(2),
+      payer: {
+        email: 'comprador.test@email.com',
+        id: '1234567890'
+      },
+      id: '9876543210'
+    }
+    console.log('Cargando datos falsos para visualización:', transferPaymentDetails.value)
+  }
+  // ------------------------------------
+
   setTransition('slide-forward')
   currentView.value = 'operation-completed'
 }
@@ -755,10 +817,40 @@ const listenForTransfers = () => {
     const channel = echoPay.channel(channelName)
     channel.listen(eventName, (data) => {
       console.log('Transfer payment received:', data)
+
       if (data?.payment) {
-        isWaitingForTransfer.value = false
-        console.log('Transfer successful! Auto-navigating to completion...')
-        completeOperation()
+        // Obtener el monto solicitado (en centavos)
+        const requestedAmountCents = parseInt(inputValue.value, 10)
+        const requestedAmount = requestedAmountCents / 100
+
+        // Obtener el monto recibido
+        const receivedAmount = parseFloat(data.payment.amount || 0)
+
+        console.log('💰 Validación de monto:')
+        console.log(`   Solicitado: $${requestedAmount.toFixed(2)} (${requestedAmountCents} centavos)`)
+        console.log(`   Recibido: $${receivedAmount.toFixed(2)}`)
+
+        // Validar que los montos coincidan (tolerancia de 1 centavo)
+        const tolerance = 0.01
+        const amountDifference = Math.abs(receivedAmount - requestedAmount)
+
+        if (amountDifference <= tolerance) {
+          transferPaymentDetails.value = data.payment // Guardar detalles del pago
+          isWaitingForTransfer.value = false
+          console.log('✅ Transfer successful! Amounts match.')
+          $q.notify({
+            type: 'positive',
+            message: `Pago recibido: $${receivedAmount.toFixed(2)}`,
+            position: 'top'
+          })
+          completeOperation()
+        } else {
+          console.warn('❌ Transfer amount mismatch!')
+          console.warn(`   Diferencia: $${amountDifference.toFixed(2)}`)
+          // Opcional: Continuar esperando o rechazar
+          // Por ahora, seguimos esperando el monto correcto
+          console.log('🔄 Continuando esperando el monto correcto...')
+        }
       }
     })
 
