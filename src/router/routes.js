@@ -1,12 +1,5 @@
 const routes = [
   {
-    path: '/demo',
-    component: () => import('layouts/MainLayout.vue'),
-    children: [
-      { path: '', component: () => import('pages/DemoPage.vue') }
-    ]
-  },
-  {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     children: [
@@ -191,6 +184,12 @@ const routes = [
         component: () => import('pages/ProductKardexPage.vue')
       },
       {
+        path: 'type-of-services',
+        name: 'TypeOfService',
+        meta: { requiresAuth: true },
+        component: () => import('pages/TypeOfServicePage.vue')
+      },
+      {
         path: 'transfer-products',
         name: 'TransferProduct',
         meta: { requiresAuth: true },
@@ -227,10 +226,10 @@ const routes = [
         component: () => import('pages/ProductSalesPage.vue')
       },
       {
-        path: 'demo-page',
-        name: 'DemoPage',
+        path: 'point-of-sales',
+        name: 'PointOfSales',
         meta: { requiresAuth: true },
-        component: () => import('pages/DemoPage.vue')
+        component: () => import('src/pages/PointOfSales.vue')
       }
     ]
   },

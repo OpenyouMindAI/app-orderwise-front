@@ -891,7 +891,9 @@ const onSubmitConfig = async () => {
       payment_method_id: companyConfig.value?.paymentMethod?.id,
       client_id: companyConfig.value?.client?.id,
       printer_id: companyConfig.value?.printer?.id,
-      other: companyConfig.value?.other,
+      other: {
+        ...companyConfig.value?.other
+      },
       point_of_sale: companyConfig.value?.point_of_sale
     })
     store.setCompanySession({

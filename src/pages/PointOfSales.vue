@@ -153,15 +153,14 @@
 
               <!-- Client List -->
               <div class="client-list-container flex-grow full-width">
-                <!-- TODO: -->
                 <q-btn
                   v-for="client in filteredClients"
                   :key="client.id"
-                  :label="`${client.name} - ${client.email}`"
+                  :label="`${client.name + (client.document_number ? ' - ' + client.document_number : '')}`"
                   unelevated
                   rounded
                   align="left"
-                  class="client-btn q-mb-md full-width button-style"
+                  class="client-btn q-mb-md button-style"
                   :class="getClientButtonClass(client)"
                   @click="selectClient(client)"
                 />
@@ -912,8 +911,8 @@ const listenForTransfers = () => {
         const receivedAmount = parseFloat(data.payment.transaction_amount || 0)
 
         console.log('💰 Validación de monto:')
-        console.log(`   Solicitado: $${requestedAmount.toFixed(2)} (${requestedAmountCents} centavos)`)
-        console.log(`   Recibido: $${receivedAmount.toFixed(2)}`)
+        console.log(`   Solicitado: ${requestedAmount.toFixed(2)} (${requestedAmountCents} centavos)`)
+        console.log(`   Recibido: ${receivedAmount.toFixed(2)}`)
 
         // Validar que los montos sean exactamente idénticos
         if (receivedAmount === requestedAmount) {
@@ -922,13 +921,13 @@ const listenForTransfers = () => {
           console.log('✅ Transfer successful! Amounts match.')
           $q.notify({
             type: 'positive',
-            message: `Pago recibido: $${receivedAmount.toFixed(2)}`,
+            message: `Pago recibido: ${receivedAmount.toFixed(2)}`,
             position: 'top'
           })
           completeOperation()
         } else {
           console.warn('❌ Transfer amount mismatch!')
-          console.warn(`   Diferencia: $${Math.abs(receivedAmount - requestedAmount).toFixed(2)}`)
+          console.warn(`   Diferencia: ${Math.abs(receivedAmount - requestedAmount).toFixed(2)}`)
           // Los montos deben ser exactamente idénticos
           console.log('🔄 Continuando esperando el monto exacto...')
         }
