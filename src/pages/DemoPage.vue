@@ -89,7 +89,7 @@
                 rounded
                 class="payment-btn button-style no-wrap"
                 align="left"
-                :class="getPaymentMethodButtonClass(method)"
+                :class="[getPaymentMethodButtonClass(method)]"
                 @click="selectPaymentMethod(method)"
               />
             </div>
@@ -100,7 +100,7 @@
               <q-btn
                 v-for="invType in invoiceTypes"
                 :key="invType.id"
-                :label="invType.name"
+                :label="getInvoiceTypeLabel(invType)"
                 :icon="invType.icon"
                 unelevated
                 rounded
@@ -153,6 +153,7 @@
 
               <!-- Client List -->
               <div class="client-list-container flex-grow full-width">
+                <!-- TODO: -->
                 <q-btn
                   v-for="client in filteredClients"
                   :key="client.id"
@@ -237,7 +238,7 @@
             v-if="selectedPaymentMethod?.acronym === 'MPTR' && transferPaymentDetails"
             class="transfer-details q-mt-md"
           >
-            <q-card flat bordered class="q-pa-md" style="max-width: 500px;">
+            <q-card flat bordered class="q-pa-md" style="max-width: 500px; border-radius: 10px !important;">
               <q-card-section class="q-pb-sm">
                 <div class="text-subtitle1 text-weight-bold text-primary">
                   Detalles de la Transferencia
@@ -462,7 +463,7 @@ const nextButtonLabel = computed(() => {
 const shouldShowArrow = computed(() => !isPaymentView(currentView.value))
 
 const isNextButtonDisabled = computed(() => {
-  // if (isWaitingForTransfer.value) return true // Deshabilitado temporalmente para visualización
+  if (isWaitingForTransfer.value) return true
 
   switch (currentView.value) {
     case 'payment-methods':
@@ -472,8 +473,7 @@ const isNextButtonDisabled = computed(() => {
     case 'invoice-options':
       return !selectedInvoiceOption.value
     case 'MPTR':
-      // return isWaitingForTransfer.value // Deshabilitado temporalmente para visualización
-      return false
+      return isWaitingForTransfer.value
     default:
       return false
   }
@@ -492,6 +492,14 @@ const filteredClients = computed(() => {
 const isNewClientValid = computed(() =>
   newClient.value.name.trim() && newClient.value.email.trim()
 )
+
+// Etiquetas dinámicas para tipos de factura
+const getInvoiceTypeLabel = (invType) => {
+  if (invType.id === 2 && selectedClient.value) {
+    return `Cliente: ${selectedClient.value.name}`
+  }
+  return invType.name
+}
 
 // =============================================
 // HELPER FUNCTIONS
@@ -539,9 +547,15 @@ const getNextViewAfterPaymentMethods = () => {
   if (!selectedInvoiceType.value) return 'payment-methods'
 
   switch (selectedInvoiceType.value.id) {
-    case 2: return 'client-selection'
-    case 3: return 'invoice-options'
-    default: return selectedPaymentMethod.value?.acronym || 'payment-methods'
+    // case 2: // Facturar a un Cliente
+    //   // Si ya hay un cliente, ir al pago. Si no, a seleccionar cliente.
+    //   return selectedClient.value
+    //     ? (selectedPaymentMethod.value?.acronym || 'payment-methods')
+    //     : 'client-selection'
+    case 3: // Factura A / B
+      return 'invoice-options'
+    default: // Consumidor Final
+      return selectedPaymentMethod.value?.acronym || 'payment-methods'
   }
 }
 
@@ -558,7 +572,7 @@ const getPreviousView = () => {
       return currentView.value // Handled separately
     default:
       if (paymentAcronyms.includes(currentView.value)) {
-        if (selectedInvoiceType.value?.id === 2) return 'client-selection'
+        // if (selectedInvoiceType.value?.id === 2) return 'client-selection'
         if (selectedInvoiceType.value?.id === 3) return 'invoice-options'
         return 'payment-methods'
       }
@@ -569,7 +583,8 @@ const getPreviousView = () => {
 // Style Helpers
 const getPaymentMethodButtonClass = (method) => ({
   'bg-primary text-white': selectedPaymentMethod.value?.id === method.id,
-  'bg-grey-3 text-black': selectedPaymentMethod.value?.id !== method.id
+  'bg-grey-3 text-black': selectedPaymentMethod.value?.id !== method.id,
+  'full-span': method.name.length > 14
 })
 
 const getInvoiceTypeButtonClass = (invType) => ({
@@ -652,10 +667,21 @@ const selectPaymentMethod = (method) => {
 
 const selectInvoiceType = (invType) => {
   selectedInvoiceType.value = invType
+
+  // Si se presiona "Facturar a un Cliente" (ID 2), siempre ir a la selección de cliente
+  // para permitir elegir uno nuevo o cambiar el existente.
+  if (invType.id === 2) {
+    setTransition('slide-forward')
+    currentView.value = 'client-selection'
+  }
 }
 
 const selectClient = (client) => {
   selectedClient.value = client
+
+  // Después de seleccionar cliente, regresar a métodos de pago
+  setTransition('slide-backward')
+  currentView.value = 'payment-methods'
 }
 
 const selectInvoiceOption = (option) => {
@@ -684,22 +710,81 @@ const proceedToPaymentView = () => {
   currentView.value = selectedPaymentMethod.value.acronym
 }
 
-const completeOperation = () => {
-  // --- MOCK DATA FOR VISUALIZATION ---
-  if (selectedPaymentMethod.value?.acronym === 'MPTR' && !transferPaymentDetails.value) {
-    const amount = (parseInt(inputValue.value, 10) / 100) || 500.75
-    transferPaymentDetails.value = {
-      transaction_amount: amount.toFixed(2),
-      payer: {
-        email: 'comprador.test@email.com',
-        id: '1234567890'
-      },
-      id: '9876543210'
-    }
-    console.log('Cargando datos falsos para visualización:', transferPaymentDetails.value)
-  }
-  // ------------------------------------
+const createInvoice = async () => {
+  try {
+    const userSession = authStore.userSession
+    const branchOffice = authStore.branchOffice
+    const coin = userSession?.company_session?.company_config?.coin
+    const typeOfService = userSession?.company_session?.company_config?.type_of_service
 
+    if (!userSession || !branchOffice || !coin || !typeOfService) {
+      console.error('❌ Datos de sesión insuficientes para crear la factura.')
+      $q.notify({
+        type: 'negative',
+        message: 'No se pudo crear la factura. Faltan datos de sesión.',
+        position: 'top'
+      })
+      return
+    }
+
+    const totalAmount = parseInt(inputValue.value, 10) / 100
+
+    const paymentData = {
+      payment_method_id: selectedPaymentMethod.value?.id,
+      amount: totalAmount,
+      reference: transferPaymentDetails.value?.id || null,
+      name: selectedPaymentMethod.value?.name,
+      acronym: selectedPaymentMethod.value?.acronym,
+      coin_id: coin.id,
+      user_created_id: userSession.id
+    }
+
+    const payments = []
+    if (paymentData.amount > 0) {
+      payments.push(paymentData)
+    }
+
+    const payload = {
+      title: 'Ticket',
+      client_id: selectedInvoiceType.value?.id === 1 && clients.value.length > 0
+        ? clients.value[0].id
+        : selectedInvoiceType.value?.id === 2
+          ? selectedClient.value?.id
+          : null,
+      seller_id: userSession.id,
+      coin_id: coin.id,
+      description: '',
+      type_of_service_id: typeOfService.id,
+      invoice_type_id: 2, // ID para 'Ticket'
+      user_created_id: userSession.id,
+      branch_office_id: branchOffice.id,
+      exchange_rate: 0,
+      total_amount: totalAmount,
+      delivery_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      status: 'delivered',
+      electronic_invoice: null,
+      payments,
+      voucherType: null
+    }
+
+    console.log('📄 Payload de factura a enviar:', payload)
+    await api.post('/invoices', payload)
+    console.log('✅ Factura creada exitosamente.')
+  } catch (error) {
+    console.error('❌ Error al crear la factura:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Hubo un error al registrar la factura.',
+      position: 'top'
+    })
+  }
+}
+
+const completeOperation = async () => {
+  // Solo crear factura si el pago fue exitoso
+  if (!isWaitingForTransfer.value || transferPaymentDetails.value) {
+    await createInvoice()
+  }
   setTransition('slide-forward')
   currentView.value = 'operation-completed'
 }
@@ -824,17 +909,14 @@ const listenForTransfers = () => {
         const requestedAmount = requestedAmountCents / 100
 
         // Obtener el monto recibido
-        const receivedAmount = parseFloat(data.payment.amount || 0)
+        const receivedAmount = parseFloat(data.payment.transaction_amount || 0)
 
         console.log('💰 Validación de monto:')
         console.log(`   Solicitado: $${requestedAmount.toFixed(2)} (${requestedAmountCents} centavos)`)
         console.log(`   Recibido: $${receivedAmount.toFixed(2)}`)
 
-        // Validar que los montos coincidan (tolerancia de 1 centavo)
-        const tolerance = 0.01
-        const amountDifference = Math.abs(receivedAmount - requestedAmount)
-
-        if (amountDifference <= tolerance) {
+        // Validar que los montos sean exactamente idénticos
+        if (receivedAmount === requestedAmount) {
           transferPaymentDetails.value = data.payment // Guardar detalles del pago
           isWaitingForTransfer.value = false
           console.log('✅ Transfer successful! Amounts match.')
@@ -846,10 +928,9 @@ const listenForTransfers = () => {
           completeOperation()
         } else {
           console.warn('❌ Transfer amount mismatch!')
-          console.warn(`   Diferencia: $${amountDifference.toFixed(2)}`)
-          // Opcional: Continuar esperando o rechazar
-          // Por ahora, seguimos esperando el monto correcto
-          console.log('🔄 Continuando esperando el monto correcto...')
+          console.warn(`   Diferencia: $${Math.abs(receivedAmount - requestedAmount).toFixed(2)}`)
+          // Los montos deben ser exactamente idénticos
+          console.log('🔄 Continuando esperando el monto exacto...')
         }
       }
     })
@@ -1086,6 +1167,10 @@ onUnmounted(() => {
 /* =============================================
    PAYMENT & CLIENT SELECTION STYLES
    ============================================= */
+.payment-methods-grid .payment-btn.full-span {
+  grid-column: span 2;
+}
+
 .payment-btn {
   width: 100%;
   font-size: 1.1rem;
