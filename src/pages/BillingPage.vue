@@ -577,6 +577,7 @@
                     <th class="text-left">Método de pago</th>
                     <th class="text-left">Referencia</th>
                     <th class="text-right">Monto</th>
+                    <th class="text-right">% Descuento</th>
                     <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -615,6 +616,7 @@
                         />
                       </q-popup-edit>
                     </td>
+                    <td>{{ payment.percentage }}</td>
                     <q-td class="text-center q-gutter-x-xs">
                       <q-btn
                         icon="delete"
@@ -637,24 +639,59 @@
               </q-markup-table>
             </div>
             <div class="col-12">
+              <q-item style="border: none !important">
+                  <q-item-section v-if="pendingPayment >= 0">
+                    RESTANTE POR COBRAR
+                  </q-item-section>
+                  <q-item-section v-else>
+                    VUELTO
+                  </q-item-section>
+                  <q-item-section side v-if="coin" class="text-bold text-black">
+                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                  </q-item-section>
+                </q-item>
               <q-list separator bordered style="border-radius: 10px;">
-                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+
+                <q-item class="bg-positive text-white text-h6" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
                   <q-item-section>
-                    TOTAL
+                    SUBTOTAL
                   </q-item-section>
                   <q-item-section side v-if="coin" class="text-white">
                     {{ coin.symbol }} {{ formatNumber(totalBill) }}
                   </q-item-section>
                 </q-item>
-                <q-item>
-                  <q-item-section v-if="pendingPayment >= 0">
-                    TOTAL POR COBRAR
+
+                <template v-if="selectedPaymentMethods.length > 0">
+                  <q-item v-for="paymentMethod in selectedPaymentMethods" :key="paymentMethod.name">
+                    <q-item-section>
+                      {{ paymentMethod.name }}
+                      <span v-if="paymentMethod.percentage > 0" class="text-caption text-positive">
+                        ({{ paymentMethod.percentage }}% descuento)
+                      </span>
+                    </q-item-section>
+                    <q-item-section side v-if="coin">
+                      <q-item-label>Monto cubierto: {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}</q-item-label>
+                      <q-item-label v-if="paymentMethod.discountAmount > 0" caption class="text-positive">
+                        Monto pagado: {{ coin.symbol }} {{ formatNumber(paymentMethod.amount_paid) }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+                <!-- Total de descuento -->
+                <q-item v-if="discountAmount > 0" class="bg-positive text-white text-h6" style="border-top: none !important">
+                  <q-item-section>
+                    DESCUENTO TOTAL
                   </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
+                  <q-item-section side v-if="coin" class="text-white">
+                    {{ coin.symbol }} {{ formatNumber(discountAmount) }}
                   </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                </q-item>
+                <q-item v-if="discountAmount > 0" class="bg-positive text-white text-h6 text-bold" style="border-radius: 0px 0px 10px 10px;  border-top: none !important">
+                  <q-item-section>
+                    <q-item-label>TOTAL</q-item-label>
+                  </q-item-section>
+                  <q-item-section side v-if="coin" class="text-white">
+                    {{ coin.symbol }} {{ formatNumber(totalWithDiscount) }}
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -1418,6 +1455,43 @@ export default {
       })
       return totalPayment
     },
+    /**
+     * Discount amount - Calcula el descuento total aplicado
+     * @returns {Number}
+     */
+    discountAmount () {
+      return this.payments.reduce((total, payment) => {
+        const discount = payment.amount - payment.amount_paid
+        return total + discount
+      }, 0)
+    },
+    /**
+     * Selected payment methods - Obtiene los métodos de pago seleccionados
+     * @returns {Array}
+     */
+    selectedPaymentMethods () {
+      return this.payments.map(payment => ({
+        name: payment.name,
+        amount: payment.amount, // Monto cubierto
+        amount_paid: payment.amount_paid, // Monto pagado
+        percentage: payment.percentage || 0,
+        discountAmount: payment.amount - payment.amount_paid
+      }))
+    },
+    /**
+     * Total after discount - Total después de aplicar descuentos
+     * @returns {Number}
+     */
+    totalAfterDiscount () {
+      return this.totalBill - this.discountAmount
+    },
+    /**
+     * Total with discount - Total con descuento (visual)
+     * @returns {Number}
+     */
+    totalWithDiscount () {
+      return this.totalBill - this.discountAmount
+    },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice'])
   },
@@ -1445,8 +1519,19 @@ export default {
         products
       }
     },
-    payments (payments) {
-      this.invoiceShare = { ...this.invoiceShare, payments }
+    payments: {
+      handler (payments) {
+        payments.forEach(payment => {
+          if (payment.percentage > 0) {
+            const expectedAmountPaid = payment.amount - (payment.amount * payment.percentage / 100)
+            if (payment.amount_paid !== expectedAmountPaid) {
+              payment.amount_paid = expectedAmountPaid
+            }
+          }
+        })
+        this.invoiceShare = { ...this.invoiceShare, payments }
+      },
+      deep: true
     },
     async invoiceShare (data) {
       try {
@@ -1903,15 +1988,12 @@ export default {
     addPayment (data) {
       if (!this.hasPendingPayment()) return
 
-      if (data.acronym !== 'EFE') {
-        const payment = this.createPayment(data, this.pendingPayment)
-        this.appendPayment(payment)
-        return
-      }
-
-      this.promptCashAmount(data).then(amount => {
-        const payment = this.createPayment(data, amount)
-        this.appendPayment(payment)
+      // Siempre preguntar el monto para permitir pagos parciales y aplicar descuentos correctamente
+      this.promptPaymentAmount(data).then(amount => {
+        if (amount !== null) {
+          const payment = this.createPayment(data, amount)
+          this.appendPayment(payment)
+        }
       })
     },
     /**
@@ -1924,18 +2006,24 @@ export default {
     /**
      * Create payment
      * @param {Object} data data payment
-     * @param {Number} amount amount
+     * @param {Number} amountToCover amount
      * @returns {Object}
      */
-    createPayment (data, amount) {
+    createPayment (data, amountToCover) {
+      const percentage = data.discount_percentage || 0
+      const discount = (amountToCover * percentage) / 100
+      const amountPaid = amountToCover - discount
+
       return {
         name: data.name,
         acronym: data.acronym,
-        amount: parseFloat(amount) || this.pendingPayment,
+        amount: parseFloat(amountToCover) || this.pendingPayment, // Monto que se abona a la factura
+        amount_paid: parseFloat(amountPaid), // Monto real que paga el cliente
         reference: null,
         coin_id: this.coin?.id ?? null,
         payment_method_id: data.id,
-        user_created_id: this.userSession?.id ?? null
+        user_created_id: this.userSession?.id ?? null,
+        percentage
       }
     },
     /**
@@ -1975,13 +2063,60 @@ export default {
           .onDismiss(() => resolve(this.pendingPayment))
       })
     },
+    /**
+     * Prompt payment amount - Pregunta el monto para cualquier método de pago
+     * @param {Object} data data payment
+     * @returns {Promise}
+     */
+    promptPaymentAmount (data) {
+      return new Promise((resolve) => {
+        const hasDiscount = data.discount_percentage > 0
+        let message = 'Ingrese el monto de la deuda que desea cubrir.'
+        if (hasDiscount) {
+          message = `Este método tiene un <b>${data.discount_percentage}% de descuento</b>. Ingrese el monto a cubrir y el descuento se aplicará automáticamente.`
+        }
 
+        this.$q.dialog({
+          title: `Pago con ${data.name}`,
+          color: 'primary',
+          message,
+          html: true,
+          persistent: true,
+          prompt: {
+            model: '', // Limpiar el input
+            type: 'number',
+            min: 0,
+            filled: true,
+            label: 'Monto a cubrir'
+          },
+          ok: {
+            label: 'Aceptar',
+            color: 'primary'
+          },
+          cancel: {
+            label: 'Cancelar',
+            color: 'negative'
+          }
+        }).onOk(amountToCoverInput => {
+          const amountToCover = parseFloat(amountToCoverInput)
+          if (!isNaN(amountToCover) && amountToCover > 0) {
+            resolve(amountToCover)
+          } else {
+            resolve(null) // Resuelve null si no se ingresa un monto válido
+          }
+        }).onCancel(() => resolve(null))
+      })
+    },
     /**
      * Get all payment-methods
      */
     getPaymentMethods () {
       this.$api.get('payment-methods')
         .then(({ data }) => {
+          const cash = data.find((d) => d.name.toLowerCase() === 'efectivo')
+          if (cash) {
+            cash.discount_percentage = 10
+          }
           this.paymentMethods = data
         })
         .catch(err => {
@@ -2347,6 +2482,25 @@ export default {
       return payments.filter(payment => payment.amount > 0)
     },
     /**
+     * Generate percentage discounts array - Genera array de descuentos por método de pago
+     * @returns {Array}
+     */
+    generatePercentageDiscounts () {
+      return this.payments
+        .filter(payment => payment.percentage && payment.percentage > 0)
+        .map(payment => ({
+          payment_method_id: payment.payment_method_id,
+          discount: (payment.amount * payment.percentage) / 100,
+          percentage: payment.percentage,
+          discount_calculation: {
+            original_amount: payment.amount,
+            discount_percentage: payment.percentage,
+            discount_amount: (payment.amount * payment.percentage) / 100,
+            final_amount: payment.amount - ((payment.amount * payment.percentage) / 100)
+          }
+        }))
+    },
+    /**
      * Set invoice model
      * @returns {Object}
      */
@@ -2371,7 +2525,8 @@ export default {
         total_amount: this.totalBill,
         tables: this.tableSelected,
         electronic_invoice: this.invoiceType?.bill,
-        voucherType: this.invoiceType?.bill ? this.voucherType : null
+        voucherType: this.invoiceType?.bill ? this.voucherType : null,
+        percentage: this.generatePercentageDiscounts()
       }
     },
     /**
@@ -2412,6 +2567,7 @@ export default {
         if (this.$route.query.id) {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
+          console.log(params)
           res = await this.$api.post('invoices', params)
         }
         this.printBill(res.data.data)
