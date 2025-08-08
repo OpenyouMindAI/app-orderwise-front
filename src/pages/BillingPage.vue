@@ -670,10 +670,10 @@
                       </span>
                     </q-item-section>
                     <q-item-section side v-if="coin">
-                      <q-item-label>Monto cubierto: {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}</q-item-label>
-                      <q-item-label v-if="paymentMethod.discountAmount > 0" caption class="text-positive">
-                        Monto pagado: {{ coin.symbol }} {{ formatNumber(paymentMethod.amount_paid) }}
-                      </q-item-label>
+                      {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}
+                      <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
+                        (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
+                      </span>
                     </q-item-section>
                   </q-item>
                 </template>
@@ -1442,7 +1442,7 @@ export default {
      * @returns {Number}
      */
     pendingPayment () {
-      return this.totalBill - this.totalPayment
+      return this.totalAfterDiscount - this.totalPayment
     },
     /**
      * Total payment
@@ -1460,10 +1460,14 @@ export default {
      * @returns {Number}
      */
     discountAmount () {
-      return this.payments.reduce((total, payment) => {
-        const discount = payment.amount - payment.amount_paid
-        return total + discount
-      }, 0)
+      let totalDiscount = 0
+      this.payments.forEach((payment) => {
+        if (payment.percentage && payment.percentage > 0) {
+          const discountAmount = (payment.amount * payment.percentage) / 100
+          totalDiscount += discountAmount
+        }
+      })
+      return totalDiscount
     },
     /**
      * Selected payment methods - Obtiene los métodos de pago seleccionados
@@ -1472,10 +1476,9 @@ export default {
     selectedPaymentMethods () {
       return this.payments.map(payment => ({
         name: payment.name,
-        amount: payment.amount, // Monto cubierto
-        amount_paid: payment.amount_paid, // Monto pagado
+        amount: payment.amount,
         percentage: payment.percentage || 0,
-        discountAmount: payment.amount - payment.amount_paid
+        discountAmount: payment.percentage ? (payment.amount * payment.percentage) / 100 : 0
       }))
     },
     /**
@@ -1521,14 +1524,8 @@ export default {
     },
     payments: {
       handler (payments) {
-        payments.forEach(payment => {
-          if (payment.percentage > 0) {
-            const expectedAmountPaid = payment.amount - (payment.amount * payment.percentage / 100)
-            if (payment.amount_paid !== expectedAmountPaid) {
-              payment.amount_paid = expectedAmountPaid
-            }
-          }
-        })
+        // Forzar reactividad cuando se modifican los montos desde la tabla
+        this.$forceUpdate()
         this.invoiceShare = { ...this.invoiceShare, payments }
       },
       deep: true
@@ -1988,13 +1985,20 @@ export default {
     addPayment (data) {
       if (!this.hasPendingPayment()) return
 
-      // Siempre preguntar el monto para permitir pagos parciales y aplicar descuentos correctamente
-      this.promptPaymentAmount(data).then(amount => {
-        if (amount !== null) {
-          const payment = this.createPayment(data, amount)
-          this.appendPayment(payment)
-        }
-      })
+      if (data.name.toLowerCase() === 'efectivo') {
+        // Para efectivo, mostrar el diálogo con el input vacío
+        this.promptPaymentAmount(data, true).then(amount => {
+          if (amount !== null) {
+            const payment = this.createPayment(data, amount)
+            this.appendPayment(payment)
+          }
+        })
+      } else {
+        // Para otros métodos, agregar el pago por el monto pendiente automáticamente
+        const amount = this.pendingPayment
+        const payment = this.createPayment(data, amount)
+        this.appendPayment(payment)
+      }
     },
     /**
      * Has pending payment
@@ -2009,21 +2013,16 @@ export default {
      * @param {Number} amountToCover amount
      * @returns {Object}
      */
-    createPayment (data, amountToCover) {
-      const percentage = data.discount_percentage || 0
-      const discount = (amountToCover * percentage) / 100
-      const amountPaid = amountToCover - discount
-
+    createPayment (data, amount) {
       return {
         name: data.name,
         acronym: data.acronym,
-        amount: parseFloat(amountToCover) || this.pendingPayment, // Monto que se abona a la factura
-        amount_paid: parseFloat(amountPaid), // Monto real que paga el cliente
+        amount: parseFloat(amount) || this.pendingPayment,
         reference: null,
         coin_id: this.coin?.id ?? null,
         payment_method_id: data.id,
         user_created_id: this.userSession?.id ?? null,
-        percentage
+        percentage: data.discount_percentage || 0
       }
     },
     /**
@@ -2068,43 +2067,35 @@ export default {
      * @param {Object} data data payment
      * @returns {Promise}
      */
-    promptPaymentAmount (data) {
+    promptPaymentAmount (data, emptyInput = false) {
       return new Promise((resolve) => {
-        const hasDiscount = data.discount_percentage > 0
-        let message = 'Ingrese el monto de la deuda que desea cubrir.'
-        if (hasDiscount) {
-          message = `Este método tiene un <b>${data.discount_percentage}% de descuento</b>. Ingrese el monto a cubrir y el descuento se aplicará automáticamente.`
-        }
+        const discountText = data.discount_percentage > 0
+          ? ` (${data.discount_percentage}% de descuento)`
+          : ''
 
         this.$q.dialog({
-          title: `Pago con ${data.name}`,
+          title: `Pago con ${data.name} ${discountText}`,
           color: 'primary',
-          message,
-          html: true,
+          message: `Ingrese el monto a pagar con ${data.name}.`,
           persistent: true,
           prompt: {
-            model: '', // Limpiar el input
+            model: emptyInput ? '' : this.pendingPayment.toString(),
             type: 'number',
             min: 0,
             filled: true,
-            label: 'Monto a cubrir'
+            label: 'Monto a pagar'
           },
-          ok: {
-            label: 'Aceptar',
-            color: 'primary'
-          },
-          cancel: {
-            label: 'Cancelar',
-            color: 'negative'
-          }
-        }).onOk(amountToCoverInput => {
-          const amountToCover = parseFloat(amountToCoverInput)
-          if (!isNaN(amountToCover) && amountToCover > 0) {
-            resolve(amountToCover)
+          ok: { label: 'Aceptar', color: 'primary' },
+          cancel: { label: 'Cancelar', color: 'negative' }
+        }).onOk(val => {
+          const amount = parseFloat(val)
+          if (!isNaN(amount) && amount > 0) {
+            resolve(amount)
           } else {
-            resolve(null) // Resuelve null si no se ingresa un monto válido
+            resolve(null)
           }
         }).onCancel(() => resolve(null))
+          .onDismiss(() => resolve(null))
       })
     },
     /**
