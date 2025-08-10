@@ -608,6 +608,7 @@
                         v-model.number="payment.amount"
                         auto-save
                         v-slot="scope"
+                        @update:model-value="appendPayment(payment)"
                       >
                         <q-input
                           v-model="scope.value"
@@ -616,7 +617,7 @@
                         />
                       </q-popup-edit>
                     </td>
-                    <td>{{ payment.percentage }}</td>
+                    <td class="text-right">{{ payment.discount_percentage }}</td>
                     <q-td class="text-center q-gutter-x-xs">
                       <q-btn
                         icon="delete"
@@ -650,9 +651,9 @@
                     {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
                   </q-item-section>
                 </q-item>
-              <q-list separator bordered style="border-radius: 10px;">
+              <q-list separator bordered style="border-radius: 10px;" dense>
 
-                <q-item class="bg-positive text-white text-h6" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
+                <q-item class="bg-positive text-white text-subtitle1" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
                   <q-item-section>
                     SUBTOTAL
                   </q-item-section>
@@ -660,29 +661,26 @@
                     {{ coin.symbol }} {{ formatNumber(totalBill) }}
                   </q-item-section>
                 </q-item>
-
-                <template v-if="selectedPaymentMethods.length > 0">
-                  <q-item v-for="paymentMethod in selectedPaymentMethods" :key="paymentMethod.name">
-                    <q-item-section>
-                      {{ paymentMethod.name }}
-                      <span v-if="paymentMethod.percentage > 0" class="text-caption text-positive">
-                        ({{ paymentMethod.percentage }}% descuento)
-                      </span>
-                    </q-item-section>
-                    <q-item-section side v-if="coin">
-                      {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}
-                      <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
-                        (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
-                      </span>
-                    </q-item-section>
-                  </q-item>
-                </template>
+                <q-item v-for="paymentMethod in selectedPaymentMethods" :key="paymentMethod.name" v-show="selectedPaymentMethods.length > 0">
+                  <q-item-section>
+                    {{ paymentMethod.name }}
+                    <span v-if="paymentMethod.discount_percentage > 0" class="text-caption text-positive">
+                      ({{ paymentMethod.discount_percentage }}% descuento)
+                    </span>
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}
+                    <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
+                      (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
+                    </span>
+                  </q-item-section>
+                </q-item>
                 <!-- Total de descuento -->
-                <q-item v-if="discountAmount > 0" class="bg-positive text-white text-h6" style="border-top: none !important">
+                <q-item v-if="discountAmount > 0" class="text-subtitle1">
                   <q-item-section>
                     DESCUENTO TOTAL
                   </q-item-section>
-                  <q-item-section side v-if="coin" class="text-white">
+                  <q-item-section side v-if="coin">
                     {{ coin.symbol }} {{ formatNumber(discountAmount) }}
                   </q-item-section>
                 </q-item>
@@ -1442,7 +1440,22 @@ export default {
      * @returns {Number}
      */
     pendingPayment () {
-      return this.totalAfterDiscount - this.totalPayment
+      const totalWithDiscount = this.totalWithDiscount - this.totalPaymentWithDiscount
+
+      if (totalWithDiscount > 0) return this.totalWithDiscount - this.totalPayment
+
+      return totalWithDiscount
+    },
+    /**
+     * Total payment
+     * @returns {Number}
+     */
+    totalPaymentWithDiscount () {
+      let totalPayment = 0
+      this.payments.forEach((payment) => {
+        totalPayment = totalPayment + (payment.amount - payment.discount_amount) || 0
+      })
+      return totalPayment
     },
     /**
      * Total payment
@@ -1462,8 +1475,8 @@ export default {
     discountAmount () {
       let totalDiscount = 0
       this.payments.forEach((payment) => {
-        if (payment.percentage && payment.percentage > 0) {
-          const discountAmount = (payment.amount * payment.percentage) / 100
+        if (payment.discount_percentage && payment.discount_percentage > 0) {
+          const discountAmount = (payment.amount * payment.discount_percentage) / 100
           totalDiscount += discountAmount
         }
       })
@@ -1477,16 +1490,9 @@ export default {
       return this.payments.map(payment => ({
         name: payment.name,
         amount: payment.amount,
-        percentage: payment.percentage || 0,
-        discountAmount: payment.percentage ? (payment.amount * payment.percentage) / 100 : 0
+        discount_percentage: payment.discount_percentage || 0,
+        discountAmount: payment.discount_percentage ? (payment.amount * payment.discount_percentage) / 100 : 0
       }))
-    },
-    /**
-     * Total after discount - Total después de aplicar descuentos
-     * @returns {Number}
-     */
-    totalAfterDiscount () {
-      return this.totalBill - this.discountAmount
     },
     /**
      * Total with discount - Total con descuento (visual)
@@ -1524,7 +1530,6 @@ export default {
     },
     payments: {
       handler (payments) {
-        // Forzar reactividad cuando se modifican los montos desde la tabla
         this.$forceUpdate()
         this.invoiceShare = { ...this.invoiceShare, payments }
       },
@@ -1638,7 +1643,6 @@ export default {
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
-
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
     },
@@ -1984,9 +1988,7 @@ export default {
      */
     addPayment (data) {
       if (!this.hasPendingPayment()) return
-
-      if (data.name.toLowerCase() === 'efectivo') {
-        // Para efectivo, mostrar el diálogo con el input vacío
+      if (data.acronym && data.acronym.toLowerCase() === 'efe') {
         this.promptPaymentAmount(data, true).then(amount => {
           if (amount !== null) {
             const payment = this.createPayment(data, amount)
@@ -1994,7 +1996,6 @@ export default {
           }
         })
       } else {
-        // Para otros métodos, agregar el pago por el monto pendiente automáticamente
         const amount = this.pendingPayment
         const payment = this.createPayment(data, amount)
         this.appendPayment(payment)
@@ -2022,7 +2023,10 @@ export default {
         coin_id: this.coin?.id ?? null,
         payment_method_id: data.id,
         user_created_id: this.userSession?.id ?? null,
-        percentage: data.discount_percentage || 0
+        discount_percentage: data.percentage || 0,
+        discount_amount: data.percentage
+          ? ((parseFloat(amount) || this.pendingPayment) * data.percentage) / 100
+          : 0
       }
     },
     /**
@@ -2030,7 +2034,13 @@ export default {
      * @param {Object} payment payment
      */
     appendPayment (payment) {
-      this.payments = [...this.payments, payment]
+      const paymentFund = this.payments.find(p => p.payment_method_id === payment.payment_method_id)
+      if (paymentFund) {
+        paymentFund.amount = payment.amount
+        paymentFund.discount_amount = payment.amount * (payment.discount_percentage / 100)
+      } else {
+        this.payments = [...this.payments, payment]
+      }
     },
     /**
      * Prompt cash amount
@@ -2092,10 +2102,10 @@ export default {
           if (!isNaN(amount) && amount > 0) {
             resolve(amount)
           } else {
-            resolve(null)
+            resolve(this.pendingPayment)
           }
-        }).onCancel(() => resolve(null))
-          .onDismiss(() => resolve(null))
+        }).onCancel(() => resolve(this.pendingPayment))
+          .onDismiss(() => resolve(this.pendingPayment))
       })
     },
     /**
@@ -2104,10 +2114,6 @@ export default {
     getPaymentMethods () {
       this.$api.get('payment-methods')
         .then(({ data }) => {
-          const cash = data.find((d) => d.name.toLowerCase() === 'efectivo')
-          if (cash) {
-            cash.discount_percentage = 10
-          }
           this.paymentMethods = data
         })
         .catch(err => {
@@ -2343,6 +2349,7 @@ export default {
           payment_method_id: payment.payment_method_id,
           name: payment.payment_method.name,
           amount: payment.amount,
+          discount_percentage: payment.discount_percentage,
           reference: payment.reference,
           coin_id: payment.coin_id
         })
@@ -2473,25 +2480,6 @@ export default {
       return payments.filter(payment => payment.amount > 0)
     },
     /**
-     * Generate percentage discounts array - Genera array de descuentos por método de pago
-     * @returns {Array}
-     */
-    generatePercentageDiscounts () {
-      return this.payments
-        .filter(payment => payment.percentage && payment.percentage > 0)
-        .map(payment => ({
-          payment_method_id: payment.payment_method_id,
-          discount: (payment.amount * payment.percentage) / 100,
-          percentage: payment.percentage,
-          discount_calculation: {
-            original_amount: payment.amount,
-            discount_percentage: payment.percentage,
-            discount_amount: (payment.amount * payment.percentage) / 100,
-            final_amount: payment.amount - ((payment.amount * payment.percentage) / 100)
-          }
-        }))
-    },
-    /**
      * Set invoice model
      * @returns {Object}
      */
@@ -2516,8 +2504,7 @@ export default {
         total_amount: this.totalBill,
         tables: this.tableSelected,
         electronic_invoice: this.invoiceType?.bill,
-        voucherType: this.invoiceType?.bill ? this.voucherType : null,
-        percentage: this.generatePercentageDiscounts()
+        voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
     },
     /**
@@ -2568,6 +2555,7 @@ export default {
           filter: undefined
         })
       } catch (error) {
+        console.log(error)
         notify(error.message, 'negative', 'warning')
       } finally {
         this.loadingBilling = false
