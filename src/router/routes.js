@@ -184,6 +184,12 @@ const routes = [
         component: () => import('pages/ProductKardexPage.vue')
       },
       {
+        path: 'type-of-services',
+        name: 'TypeOfService',
+        meta: { requiresAuth: true },
+        component: () => import('pages/TypeOfServicePage.vue')
+      },
+      {
         path: 'transfer-products',
         name: 'TransferProduct',
         meta: { requiresAuth: true },

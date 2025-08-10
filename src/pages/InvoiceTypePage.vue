@@ -14,8 +14,7 @@
           :filter="filter"
           binary-state-sort
           v-model:pagination="paginationConfig"
-          @row-click="editInvoiceType"
-          @request="setPagination"
+           @request="setPagination"
           no-data-label="Registro no encontrado"
         >
           <template v-slot:loading>
@@ -85,7 +84,7 @@
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveInvoiceType">
           <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Agregar tipo de factura</div>
+            <div class="text-h6">Agregar tipo de Factura</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>

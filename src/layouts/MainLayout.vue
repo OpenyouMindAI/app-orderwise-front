@@ -416,6 +416,7 @@ export default {
       try {
         loading(true)
         const url = `${import.meta.env.VITE_APP_URL}/verifying/${this.access_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+        console.log(url)
         await MultiDisplayManager.showOnSecondScreen({
           url
         })
@@ -428,9 +429,8 @@ export default {
     async closeScreen () {
       // Obtener estado
       const status = await MultiDisplayManager.getSecondScreenStatus()
-      alert(status.message, status.isShowing)
       if (status.isShowing) {
-        // Cerrar pantalla
+        //  Cerrar pantalla
         await MultiDisplayManager.closeSecondScreen()
       }
     },
@@ -462,8 +462,8 @@ export default {
 
           function createNotification (title, options) {
             notify('Hay una nueva comanda', 'primary', 'notifications', 'bottom-right')
-            const audio = new Audio('audios/notify.mp3')
-            audio.play()
+            // const audio = new Audio('audios/notify.mp3')
+            // audio.play()
             return new Notification(title, options)
           }
         }

@@ -868,14 +868,145 @@ export default {
           company_id: this.userSession?.company_session_id
         }
         const encoded = btoa(JSON.stringify(docQr))
-        const urlQr = `${window.location.origin}/#/menu/?tab=menu&category=all&p=${encoded}`
+        const urlQr = `${window.location.origin}/menu/?tab=menu&category=all&p=${encoded}`
         nextTick(() => {
           QRCode.toDataURL(urlQr, opts, function (error, url) {
             if (error) throw error
             const img = document.getElementById(table.id)
-            if (img) img.src = url
+            img.src = url
           })
         })
+      })
+    },
+    onActivated (data, index) {
+      this.tableSelected = data
+      this.tableSelected.index = index
+    },
+    /**
+     * Search beneficiary
+     * @param  {Object}
+     */
+    searchData (data) {
+      for (const dataSearch in this.params.dataSearch) {
+        this.params.dataSearch[dataSearch] = data
+      }
+      this.params.page = 1
+      this.getLivingRooms(this.params)
+    },
+    /**
+     * Add table in living room
+     */
+    addTable () {
+      this.livingRoom.tables.push({
+        name: this.tableName,
+        width: 50,
+        height: 50
+      })
+      this.tableName = null
+      this.openAddTable = false
+    },
+    /**
+     * Set data pagination emit event
+     * @param  {Object} data value pagination
+     */
+    setPagination (data) {
+      this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
+      this.params.page = data.pagination.page
+      this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
+      this.params.perPage = data.pagination.rowsPerPage
+      this.paginationConfig = data.pagination
+      this.getLivingRooms(this.params)
+    },
+    /**
+     * Change data table
+     * @param {Object} data table
+     * @param {Number} i index table
+     */
+    onDeactivated (data, i) {
+      this.livingRoom.tables.map((table, index) => {
+        if (i === index) {
+          return data
+        }
+        return table
+      })
+      this.openEditTable = false
+    },
+    /**
+     * Close all modals
+     */
+    closeModal () {
+      this.openAddLivingRoom = false
+      this.openEditLivingRoom = false
+      this.livingRoom = { tables: [] }
+    },
+    /**
+     * Get all livingRooms
+     * @param {Object} params search params
+     */
+    getLivingRooms (params = this.params) {
+      this.visible = true
+      this.$api.get('living-rooms', { params })
+        .then(({ data }) => {
+          this.livingRooms = data.data
+          this.visible = false
+        })
+        .catch(err => {
+          this.visible = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Save livingRooms
+     */
+    saveLivingRoom () {
+      this.loadingSave = true
+      this.$api.post('living-rooms', {
+        user_created_id: this.userSession?.id,
+        branch_office_id: this.branchOffice?.id,
+        ...this.livingRoom
+      })
+        .then(({ data }) => {
+          this.getLivingRooms()
+          this.openAddLivingRoom = false
+          this.loadingSave = false
+          this.livingRoom = {
+            tables: []
+          }
+          Notify.create({
+            message: 'Sala de estar creada exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.loadingSave = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * View livingRoom
+     */
+    editLivingRoom (event, row, index) {
+      this.openEditLivingRoom = true
+      this.livingRoom = row
+    },
+    /**
+     * Save edit
+     */
+    saveEditLivingRoom () {
+      this.loadingEdit = true
+      this.$api.put(`living-rooms/${this.livingRoom.id}`, {
+        user_created_id: this.userSession?.id,
+        branch_office_id: this.branchOffice?.id,
+        ...this.livingRoom
       })
     }
   }
