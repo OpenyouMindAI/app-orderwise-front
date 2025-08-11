@@ -533,7 +533,7 @@
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
+                    <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center">
                       {{ props.row.name.slice(0, 20) }}
                       <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
