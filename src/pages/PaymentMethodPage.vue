@@ -39,6 +39,7 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
+          <!-- TODO: -->
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
@@ -49,6 +50,16 @@
                 v-model="paymentMethod.name"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                autofocus
+                label="Porcentaje de descuento"
+                type="number"
+                v-model.number="paymentMethod.percentage"
+              />
+            </div>
+
             <div class="row col-12 q-gutter-y-sm">
               <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-h6">
                 Datos de pago
@@ -114,6 +125,15 @@
                 label="Nombre"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                autofocus
+                label="Porcentaje de descuento"
+                type="number"
+                v-model.number="paymentMethod.percentage"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-h6">
               Datos de validación de pago
             </div>
@@ -167,7 +187,9 @@ export default {
   data () {
     return {
       paymentMethods: [],
-      paymentMethod: {},
+      paymentMethod: {
+        attributes: [{}]
+      },
       deleteLoading: {},
       filter: '',
       /**
@@ -200,6 +222,13 @@ export default {
           align: 'left',
           label: 'Nombre',
           field: 'name',
+          sortable: true
+        },
+        {
+          name: 'percentage',
+          align: 'left',
+          label: 'Porcentaje',
+          field: 'percentage',
           sortable: true
         }
       ],
@@ -309,8 +338,10 @@ export default {
      */
     savePaymentMethod () {
       this.visible = true
+      console.log('Data send:', this.paymentMethod)
       this.$api.post('payment-methods', this.paymentMethod)
         .then(({ data }) => {
+          console.log('Server response on create:', data)
           this.getPaymentMethods()
           this.openAddPaymentMethod = false
           this.visible = false
@@ -345,8 +376,15 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`payment-methods/${this.paymentMethod.id}`, this.paymentMethod)
+      const payload = {
+        name: this.paymentMethod.name,
+        attributes: this.paymentMethod.attributes,
+        percentage: this.paymentMethod.percentage
+      }
+      console.log('Data send:', payload)
+      this.$api.put(`payment-methods/${this.paymentMethod.id}`, payload)
         .then(({ data }) => {
+          console.log('Server response on edit:', data)
           this.getPaymentMethods()
           this.openEditPaymentMethod = false
           this.visible = false
