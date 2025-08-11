@@ -128,7 +128,7 @@ const filterDate = async (params) => {
     paymentMethodData.value = data.payment_method_totals.map((item) => {
       return {
         name: item.payment_method_name,
-        y: item.payment_total
+        y: item.sales
       }
     })
   } catch (error) {

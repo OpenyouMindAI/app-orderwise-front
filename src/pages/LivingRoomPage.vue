@@ -338,7 +338,7 @@ export default {
           company_id: this.userSession?.company_session_id
         }
         const encoded = btoa(JSON.stringify(docQr))
-        const urlQr = `${window.location.origin}/#/menu/?tab=menu&category=all&p=${encoded}`
+        const urlQr = `${window.location.origin}/menu/?tab=menu&category=all&p=${encoded}`
         nextTick(() => {
           QRCode.toDataURL(urlQr, opts, function (error, url) {
             if (error) throw error
@@ -436,6 +436,7 @@ export default {
       this.loadingSave = true
       this.$api.post('living-rooms', {
         user_created_id: this.userSession?.id,
+        branch_office_id: this.branchOffice?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {
@@ -474,6 +475,7 @@ export default {
       this.loadingEdit = true
       this.$api.put(`living-rooms/${this.livingRoom.id}`, {
         user_created_id: this.userSession?.id,
+        branch_office_id: this.branchOffice?.id,
         ...this.livingRoom
       })
         .then(({ data }) => {
