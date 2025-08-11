@@ -1,51 +1,49 @@
 <template>
   <div class="luxury-restaurant-designer">
-    <!-- Elevated Header -->
     <header class="luxury-header">
       <div class="header-content-wrapper">
-        <div class="brand-identity">
-          <div class="brand-logo-circle">
-            <q-icon name="restaurant" class="brand-icon" />
+        <div class="brand-identity flex justify-between items-center">
+          <div class="brand-text-group flex q-gutter-sm items-center">
+            <div class="brand-logo-circle">
+              <q-icon name="restaurant" class="brand-icon" />
+            </div>
+            <div class="column">
+              <span class="app-title">Mesas</span>
+              <span class="app-subtitle">Gestión de Mesas y Pedidos</span>
+            </div>
           </div>
-          <div class="brand-text-group column">
-            <span class="app-title">Mesas</span>
-            <span class="app-subtitle">Gestión de Mesas y Pedidos</span>
-          </div>
-        </div>
+          <div class="header-controls-group">
+            <div class="room-selection-area">
+              <q-select
+                v-model="selectedRoom"
+                :options="roomOptions"
+                option-label="name"
+                option-value="id"
+                label="Seleccionar Sala"
+                outlined
+                dense
+                class="luxury-select"
+                @update:model-value="onRoomChange"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="meeting_room" class="select-icon" />
+                </template>
+              </q-select>
+            </div>
 
-        <div class="header-controls-group">
-          <div class="room-selection-area">
-            <q-select
-              v-model="selectedRoom"
-              :options="roomOptions"
-              option-label="name"
-              option-value="id"
-              label="Seleccionar Sala"
-              outlined
-              dense
-              class="luxury-select"
-              @update:model-value="onRoomChange"
-            >
-              <template v-slot:prepend>
-                <q-icon name="meeting_room" class="select-icon" />
-              </template>
-            </q-select>
-          </div>
-
-          <div class="action-buttons-group">
-            <q-btn
-              icon="refresh"
-              label="Actualizar"
-              @click="refreshTables"
-              class="action-button secondary-action-button"
-              flat
-            />
+            <div class="action-buttons-group">
+              <q-btn
+                icon="refresh"
+                label="Actualizar"
+                @click="refreshTables"
+                class="action-button secondary-action-button"
+                flat
+              />
+            </div>
           </div>
         </div>
       </div>
     </header>
-
-    <!-- Main Canvas Area -->
     <main class="canvas-main-area" v-if="selectedRoom">
       <div class="canvas-viewport-container">
         <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
@@ -70,7 +68,7 @@
               <div :class="getTableDesignClass(table)">
                 <div class="table-visual-surface">
                   <div class="table-gloss-effect"></div>
-                  <div class="table-info-overlay">
+                  <div class="table-info-overlay q-mt-md">
                     <span class="table-name-text">{{ table.name }}</span>
                     <span class="table-capacity-text">
                       <q-icon name="person" class="capacity-icon" />
@@ -78,6 +76,30 @@
                     </span>
                   </div>
                   <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
+                  <div v-if="table.status === 'busy'" class="table-quick-actions">
+                    <q-btn
+                      icon="swap_horiz"
+                      size="xs"
+                      round
+                      color="white"
+                      text-color="primary"
+                      @click.stop="quickTransfer(table)"
+                      class="quick-action-btn"
+                    >
+                      <q-tooltip>Cambiar Mesa</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      icon="print"
+                      size="xs"
+                      round
+                      color="white"
+                      text-color="primary"
+                      @click.stop="quickPrint(table.invoices[0], 'comanda')"
+                      class="quick-action-btn"
+                    >
+                      <q-tooltip>Imprimir Comanda</q-tooltip>
+                    </q-btn>
+                  </div>
                 </div>
               </div>
             </draggable-resizable-vue>
@@ -85,8 +107,6 @@
         </div>
       </div>
     </main>
-
-    <!-- Elegant Empty State -->
     <div v-else class="empty-state-container">
       <div class="empty-state-illustration">
         <div class="illustration-circle-bg">
@@ -105,11 +125,8 @@
         />
       </div>
     </div>
-
-    <!-- Invoice Edit Modal -->
     <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal">
       <q-card class="invoice-card">
-        <!-- Header -->
         <q-card-section class="invoice-header bg-primary text-white">
           <div class="invoice-header-content">
             <div class="invoice-title-group">
@@ -119,18 +136,55 @@
                 <div class="invoice-subtitle">Mesa {{ selectedTable?.name }}</div>
               </div>
             </div>
-            <q-btn
-              icon="close"
-              flat
-              round
-              dense
-              @click="closeInvoiceModal"
-              class="close-btn"
-            />
+            <div class="header-actions">
+              <!-- Print Actions -->
+              <div v-if="selectedInvoice" class="print-actions">
+                <q-btn
+                  icon="receipt"
+                  flat
+                  round
+                  dense
+                  @click="quickPrint(selectedInvoice, 'comanda')"
+                  :loading="printing"
+                  class="print-btn"
+                >
+                  <q-tooltip>Imprimir Comanda</q-tooltip>
+                </q-btn>
+                <q-btn
+                  icon="receipt_long"
+                  flat
+                  round
+                  dense
+                  @click="quickPrint(selectedInvoice, 'ticket')"
+                  :loading="printing"
+                  class="print-btn"
+                >
+                  <q-tooltip>Imprimir Ticket</q-tooltip>
+                </q-btn>
+              </div>
+              <!-- Transfer Order Button -->
+              <q-btn
+                v-if="selectedInvoice"
+                icon="swap_horiz"
+                flat
+                round
+                dense
+                @click="openTransferDialog"
+                class="transfer-btn"
+              >
+                <q-tooltip>Cambiar Mesa</q-tooltip>
+              </q-btn>
+              <q-btn
+                icon="close"
+                flat
+                round
+                dense
+                @click="closeInvoiceModal"
+                class="close-btn"
+              />
+            </div>
           </div>
         </q-card-section>
-
-        <!-- Navigation Tabs -->
         <q-tabs
           v-model="activeTab"
           class="invoice-tabs"
@@ -143,20 +197,14 @@
         </q-tabs>
 
         <q-separator />
-
-        <!-- Tab Panels -->
         <q-tab-panels v-model="activeTab" class="invoice-body">
-          <!-- Order Panel -->
           <q-tab-panel name="order">
-            <!-- Customer Info -->
             <div v-if="selectedInvoice?.client" class="customer-section">
               <div class="customer-info">
                 <span class="customer-name">Cliente: {{ selectedInvoice.client.name }}</span>
               </div>
             </div>
-
-            <!-- Products List -->
-            <div class="products-section column q-gutter-y-sm">
+            <div class="products-section column q-gutter-y-sm q-pb-sm">
               <span class="text-h6">
                 <q-icon name="restaurant" />
                 Productos ({{ invoiceProducts.length }})
@@ -229,12 +277,10 @@
                         class="quantity-btn"
                       />
                     </div>
-
-                    <div class="product-total">
-                      ${{ formatPrice(product.pivot.price * product.pivot.amount) }}
-                    </div>
-
-                    <div class="product-item-actions">
+                    <div class="product-item-actions items-center q-gutter-x-sm">
+                      <div class="product-total">
+                        ${{ formatPrice(product.pivot.price * product.pivot.amount) }}
+                      </div>
                       <q-btn
                         icon="edit_note"
                         size="sm"
@@ -262,21 +308,8 @@
                 </div>
               </div>
             </div>
-
-            <!-- Order Summary -->
-            <div v-if="invoiceProducts.length > 0">
-              <div class="summary-content">
-                <div class="summary-row total-row">
-                  <span>Total:</span>
-                  <span>${{ formatPrice(calculateTotal()) }}</span>
-                </div>
-              </div>
-            </div>
           </q-tab-panel>
-
-          <!-- Products Panel -->
           <q-tab-panel name="products" class="products-panel">
-            <!-- Search and Filter -->
             <div class="search-section">
               <q-input
                 v-model="productSearch"
@@ -298,13 +331,14 @@
                 label="Categoría"
                 outlined
                 dense
+                option-label="name"
+                option-value="id"
                 class="category-select"
                 @update:model-value="filterByCategory"
                 clearable
+                @filter="getCategories"
               />
             </div>
-
-            <!-- Products Grid -->
             <q-infinite-scroll class="products-grid"  @load="loadProducts" debounce="700" :offset="1000">
               <div
                 v-for="product in filteredProducts"
@@ -348,8 +382,6 @@
                     <q-tooltip>Agregar con nota</q-tooltip>
                   </q-btn>
                 </div>
-
-                <!-- Quick quantity indicator -->
                 <div
                   v-if="getProductQuantityInOrder(product.id) > 0"
                   class="quantity-badge"
@@ -359,13 +391,10 @@
               </div>
             </q-infinite-scroll>
 
-            <!-- Loading State -->
             <div v-if="loadingProducts" class="loading-products">
               <q-spinner color="primary" size="2rem" />
               <p>Cargando productos...</p>
             </div>
-
-            <!-- Empty State -->
             <div v-if="!loadingProducts && filteredProducts.length === 0" class="empty-products-search">
               <q-icon name="search_off" size="3rem" class="empty-search-icon" />
               <p>No se encontraron productos</p>
@@ -375,7 +404,6 @@
 
         <q-separator />
 
-        <!-- Actions -->
         <q-card-actions class="invoice-actions">
           <q-btn
             label="Cancelar"
@@ -384,6 +412,12 @@
             class="cancel-btn"
           />
           <q-space />
+          <div v-if="invoiceProducts.length > 0" class="q-mr-sm">
+            <div class="flex justify-between items-center q-gutter-x-sm text-h6 text-bold">
+              <span>Total:</span>
+              <span>${{ formatPrice(calculateTotal()) }}</span>
+            </div>
+          </div>
           <q-btn
             label="Guardar"
             color="primary"
@@ -393,8 +427,124 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="showTransferDialog" class="transfer-dialog">
+      <q-card class="transfer-card">
+        <q-card-section class="transfer-header">
+          <div class="transfer-title">
+            <q-icon name="swap_horiz" />
+            Cambiar Mesa del Pedido
+          </div>
+          <div class="transfer-subtitle">
+            Pedido: {{ selectedInvoice?.code }} - Mesa Actual: {{ selectedTable?.name }}
+          </div>
+        </q-card-section>
 
-    <!-- Product Note Dialog -->
+        <q-card-section>
+          <div class="transfer-content">
+            <p class="transfer-description">
+              Selecciona la sala y mesa de destino para transferir este pedido:
+            </p>
+            <q-select
+              v-model="targetRoom"
+              :options="roomOptionsForTransfer"
+              option-label="name"
+              option-value="id"
+              label="Sala de Destino"
+              outlined
+              class="room-select"
+              @update:model-value="onTargetRoomChange"
+              :rules="[val => !!val || 'Debes seleccionar una sala']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="meeting_room" />
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon name="meeting_room" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ scope.opt.width }}x{{ scope.opt.height }} - {{ scope.opt.tables?.length || 0 }} mesas
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+            <!-- Table Selection -->
+            <q-select
+              v-model="targetTable"
+              :options="availableTablesForTransfer"
+              option-label="name"
+              option-value="id"
+              label="Mesa de Destino"
+              outlined
+              class="table-select"
+              :disable="!targetRoom"
+              :rules="[val => !!val || 'Debes seleccionar una mesa']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="table_restaurant" />
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon
+                      :name="scope.opt.status === 'busy' ? 'table_restaurant' : 'table_restaurant'" 
+                      :color="scope.opt.status === 'busy' ? 'negative' : 'positive'"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ scope.opt.capacity }} personas - {{ getTableStatusLabel(scope.opt.status) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <!-- Transfer Confirmation -->
+            <div v-if="targetTable && targetRoom" class="transfer-confirmation">
+              <q-icon name="info" color="primary" />
+              <div class="confirmation-text">
+                <div>
+                  <strong>Origen:</strong> {{ selectedRoom?.name }} - Mesa {{ selectedTable?.name }}
+                </div>
+                <div>
+                  <strong>Destino:</strong> {{ targetRoom.name }} - Mesa {{ targetTable.name }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Warning for occupied table -->
+            <div v-if="targetTable?.status === 'busy'" class="transfer-warning">
+              <q-icon name="warning" color="warning" />
+              <span>
+                ⚠️ La mesa de destino está ocupada. El pedido se combinará con el pedido existente.
+              </span>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            label="Cancelar"
+            flat
+            @click="cancelTransfer"
+          />
+          <q-btn
+            label="Transferir Pedido"
+            color="primary"
+            @click="confirmTransfer"
+            :loading="transferring"
+            :disable="!targetTable || !targetRoom"
+            unelevated
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-dialog v-model="showNoteDialog" class="note-dialog">
       <q-card class="note-card">
         <q-card-section class="note-header">
@@ -441,6 +591,7 @@ import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-re
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import { loading } from 'src/const/mixins'
+import { commandPrint, ticketPrint } from 'src/const/printers'
 
 export default {
   components: {
@@ -449,6 +600,7 @@ export default {
   },
   data () {
     return {
+      categoryOptions: [],
       tablesSelected: [],
       selectedRoom: null,
       currentTables: [],
@@ -466,11 +618,11 @@ export default {
       invoiceProducts: [],
       saving: false,
       activeTab: 'order',
+      lastPageRequest: 0,
 
       // Product selector state
       productSearch: '',
       selectedCategory: null,
-      availableProducts: [],
       filteredProducts: [],
       loadingProducts: false,
 
@@ -480,6 +632,17 @@ export default {
       productNote: '',
       noteAction: null, // 'add' or 'edit'
       noteProductIndex: null,
+
+      // Transfer dialog state
+      showTransferDialog: false,
+      targetTable: null,
+      targetRoom: null,
+      transferring: false,
+      availableRooms: [],
+      availableTablesForTransfer: [],
+
+      // Print state
+      printing: false,
 
       // Status mapping for display
       statusMap: {
@@ -507,16 +670,18 @@ export default {
       }
     },
 
-    categoryOptions () {
-      const categories = []
+    roomOptionsForTransfer () {
+      return this.livingRooms.map(room => ({
+        ...room,
+        label: room.name,
+        value: room.id
+      }))
+    }
+  },
 
-      // Extract unique categories from products
-      const uniqueCategories = [...new Set(this.availableProducts.map(p => p.category?.name).filter(Boolean))]
-      uniqueCategories.forEach(cat => {
-        categories.push({ label: cat, value: cat })
-      })
-
-      return categories
+  watch: {
+    selectedCategory (val) {
+      this.filteredProducts = []
     }
   },
 
@@ -525,6 +690,26 @@ export default {
   },
 
   methods: {
+    async getCategories (val, update) {
+      try {
+        const { data } = await this.$api.get('categories', {
+          params: {
+            dataSearch: {
+              name: val
+            }
+          }
+        })
+        update(() => {
+          this.categoryOptions = data
+        })
+      } catch (err) {
+        Notify.create({
+          message: err.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
+    },
     async getLivingRooms () {
       try {
         const { data } = await this.$api.get('living-rooms')
@@ -617,6 +802,150 @@ export default {
       this.selectedCategory = null
     },
 
+    // Quick actions from table view
+    quickTransfer (table) {
+      this.selectedTable = table
+      this.selectedInvoice = table.invoices && table.invoices.length > 0 ? table.invoices[0] : null
+      if (this.selectedInvoice) {
+        this.openTransferDialog()
+      }
+    },
+
+    async quickPrint (invoice, type) {
+      this.selectedInvoice = invoice
+      loading(true)
+      if (this.selectedInvoice) {
+        if (type === 'comanda') {
+          await commandPrint(this.selectedInvoice)
+        } else {
+          await ticketPrint(this.selectedInvoice)
+        }
+      }
+      loading(false)
+    },
+
+    // Enhanced transfer methods
+    async onTargetRoomChange (room) {
+      this.targetTable = null
+      try {
+        loading(true)
+        const { data } = await this.$api.get('tables', {
+          params: {
+            dataEqualFilter: {
+              living_room_id: room.id
+            }
+          }
+        })
+        console.log(data)
+        this.availableTablesForTransfer = data
+      } catch (err) {
+        Notify.create({
+          message: 'Error al cargar mesas de la sala',
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        loading(false)
+      }
+    },
+
+    async confirmTransfer () {
+      if (!this.targetTable || !this.targetRoom || !this.selectedInvoice) return
+
+      this.transferring = true
+      try {
+        // Update the invoice with the new table and room
+        await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
+          ...this.selectedInvoice,
+          tables: [this.targetTable.id],
+          living_room_id: this.targetRoom.id,
+          products: this.invoiceProducts.map(product => ({
+            ...product,
+            amount: product.pivot.amount
+          }))
+        })
+
+        const message = this.targetRoom.id === this.selectedRoom?.id 
+          ? `Pedido transferido a Mesa ${this.targetTable.name}`
+          : `Pedido transferido a ${this.targetRoom.name} - Mesa ${this.targetTable.name}`
+
+        Notify.create({
+          message,
+          icon: 'check_circle',
+          color: 'positive',
+          timeout: 3000
+        })
+
+        // Close dialogs and refresh
+        this.cancelTransfer()
+        this.closeInvoiceModal()
+        this.refreshTables()
+      } catch (err) {
+        Notify.create({
+          message: 'Error al transferir el pedido',
+          icon: 'error',
+          color: 'negative'
+        })
+      } finally {
+        this.transferring = false
+      }
+    },
+
+    cancelTransfer () {
+      this.showTransferDialog = false
+      this.targetTable = null
+      this.targetRoom = null
+      this.transferring = false
+    },
+
+    openTransferDialog () {
+      this.targetTable = null
+      this.showTransferDialog = true
+    },
+
+    cancelTransferOld () {
+      this.showTransferDialog = false
+      this.targetTable = null
+      this.transferring = false
+    },
+
+    async confirmTransferOld () {
+      if (!this.targetTable || !this.selectedInvoice) return
+
+      this.transferring = true
+      try {
+        // Update the invoice with the new table
+        await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
+          ...this.selectedInvoice,
+          tables: [this.targetTable.id],
+          products: this.invoiceProducts.map(product => ({
+            ...product,
+            amount: product.pivot.amount
+          }))
+        })
+
+        Notify.create({
+          message: `Pedido transferido exitosamente de Mesa ${this.selectedTable.name} a Mesa ${this.targetTable.name}`,
+          icon: 'check_circle',
+          color: 'positive',
+          timeout: 3000
+        })
+
+        // Close dialogs and refresh
+        this.cancelTransfer()
+        this.closeInvoiceModal()
+        this.refreshTables()
+      } catch (err) {
+        Notify.create({
+          message: 'Error al transferir el pedido',
+          icon: 'error',
+          color: 'negative'
+        })
+      } finally {
+        this.transferring = false
+      }
+    },
+
     increaseQuantity (index) {
       this.invoiceProducts[index].pivot.amount++
     },
@@ -641,10 +970,11 @@ export default {
     async loadProducts (page, done, dataSearch = {}) {
       try {
         this.loadingProducts = true
-        const { data, last_page: lastPage } = await this.$api.get('products', {
+        const { data } = await this.$api.get('products', {
           params: {
             dataEqualFilter: {
-              show_catalog: 1
+              show_catalog: 1,
+              category_id: this.selectedCategory ? this.selectedCategory.id : null
             },
             dataSearch,
             orderBy: 'sold',
@@ -654,11 +984,10 @@ export default {
             page
           }
         })
-        this.availableProducts = [...this.availableProducts, ...data.data]
         this.filteredProducts = [...this.filteredProducts, ...data.data]
-        done(lastPage === page)
+        done((this.lastPageRequest || data.last_page) <= page)
+        this.lastPageRequest = data.last_page
       } catch (err) {
-        console.log(err.message)
         Notify.create({
           message: 'Error al cargar productos',
           icon: 'warning',
@@ -771,6 +1100,7 @@ export default {
       try {
         await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
           ...this.selectedInvoice,
+          tables: [this.selectedTable.id],
           products: this.invoiceProducts.map(product => {
             return {
               ...product,
@@ -1000,6 +1330,24 @@ body.body--dark {
 .large-button {
   padding: 0.9rem 1.8rem;
   font-size: 1rem;
+}
+
+/* --- Header Actions (Transfer Button) --- */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.transfer-btn {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.transfer-btn:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
 }
 
 /* --- Main Canvas Area --- */
@@ -1291,6 +1639,122 @@ body.body--dark {
 .close-btn:hover {
   color: white;
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* --- Transfer Dialog Styling --- */
+.transfer-dialog :deep(.q-dialog__inner) {
+  padding: 16px;
+}
+
+.transfer-card {
+  width: 500px;
+  max-width: 90vw;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.transfer-header {
+  background: linear-gradient(135deg, var(--color-accent-gold) 0%, var(--color-accent-gold-dark) 100%);
+  color: white;
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.transfer-title {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-weight: 700;
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.transfer-subtitle {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.transfer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.room-select, .table-select {
+  width: 100%;
+}
+
+.room-select :deep(.q-field__control),
+.table-select :deep(.q-field__control) {
+  border-radius: var(--border-radius-md);
+  border: 2px solid var(--color-border);
+  transition: border-color 0.2s ease;
+}
+
+.room-select :deep(.q-field__control):focus-within,
+.table-select :deep(.q-field__control):focus-within {
+  border-color: var(--color-accent-gold);
+}
+
+.confirmation-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.transfer-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem;
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.transfer-description {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.table-select {
+  width: 100%;
+}
+
+.table-select :deep(.q-field__control) {
+  border-radius: var(--border-radius-md);
+  border: 2px solid var(--color-border);
+  transition: border-color 0.2s ease;
+}
+
+.table-select :deep(.q-field__control):focus-within {
+  border-color: var(--color-accent-gold);
+}
+
+.transfer-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  background-color: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.transfer-confirmation strong {
+  color: var(--color-accent-gold-dark);
+  font-weight: 600;
 }
 
 /* --- Tabs Styling --- */
@@ -1692,43 +2156,128 @@ body.body--dark {
   width: 100%;
 }
 
-/* --- Responsive Design --- */
+/* --- Table Quick Actions --- */
+.table-quick-actions {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 6px;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.quick-action-btn {
+  width: 25px !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  font-size: 0.7rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Print Actions in Header --- */
+.print-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-right: 0.5rem;
+  padding-right: 0.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.print-btn {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.print-btn:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+/* --- Enhanced Transfer Dialog --- */
+.transfer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.room-select, .table-select {
+  width: 100%;
+}
+
+.room-select :deep(.q-field__control),
+.table-select :deep(.q-field__control) {
+  border-radius: var(--border-radius-md);
+  border: 2px solid var(--color-border);
+  transition: border-color 0.2s ease;
+}
+
+.room-select :deep(.q-field__control):focus-within,
+.table-select :deep(.q-field__control):focus-within {
+  border-color: var(--color-accent-gold);
+}
+
+.confirmation-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.transfer-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem;
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* --- Responsive Improvements --- */
 @media (max-width: 768px) {
-  .invoice-card {
-    width: 100vw;
-    max-width: 100vw;
+  .table-quick-actions {
+    opacity: 1; /* Always visible on mobile */
   }
 
-  .search-section {
-    flex-direction: column;
-    gap: 0.8rem;
+  .quick-action-btn {
+    width: 24px !important;
+    height: 24px !important;
+    min-height: 24px !important;
   }
 
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 0.8rem;
+  .print-actions {
+    gap: 0.2rem;
+    margin-right: 0.3rem;
+    padding-right: 0.3rem;
   }
 
-  .product-item {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+  .transfer-card {
+    width: 95vw;
+    max-height: 90vh;
   }
 
-  .product-actions {
-    align-items: center;
-    width: 100%;
+  .confirmation-text {
+    font-size: 0.85rem;
   }
 }
 
 @media (max-width: 480px) {
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  .header-actions {
+    gap: 0.2rem;
   }
-
-  .product-card-actions {
+  
+  .transfer-warning {
     flex-direction: column;
-    gap: 0.3rem;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 }
 </style>
