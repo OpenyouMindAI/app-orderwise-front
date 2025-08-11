@@ -422,6 +422,15 @@
                             color="positive"
                           />
                         </div>
+                        <div class="col-6">
+                          <q-toggle
+                            v-model="product.is_default"
+                            label="Predeterminado"
+                            :true-value="1"
+                            :false-value="0"
+                            color="positive"
+                          />
+                        </div>
                       </div>
                       <div
                         class="q-mt-md"
@@ -796,6 +805,15 @@
                           color="positive"
                         />
                       </div>
+                      <div class="col-6">
+                          <q-toggle
+                            v-model="product.is_default"
+                            label="Predeterminado"
+                            :true-value="1"
+                            :false-value="0"
+                            color="positive"
+                          />
+                        </div>
                     </div>
                     <div
                       class="q-mt-md"
@@ -1043,6 +1061,7 @@ export default {
         is_addons: 0,
         skip_stock: 0,
         profit_percentage: 0,
+        is_default: 0,
         images: []
       },
       categories: [],
@@ -1748,6 +1767,9 @@ export default {
     editProduct (event, row, index) {
       this.openEditProduct = true
       this.product = row
+      if (this.product.is_default === null || this.product.is_default === undefined) {
+        this.product.is_default = 0
+      }
       this.unitOfMeasure = row.unit_of_measure_id
       this.addonsProducts = row.addons
       this.priceLists = row.product_price_lists

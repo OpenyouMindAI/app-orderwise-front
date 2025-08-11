@@ -669,7 +669,21 @@ const selectInvoiceType = (invType) => {
 
   // Si se presiona "Facturar a un Cliente" (ID 2), siempre ir a la selección de cliente
   // para permitir elegir uno nuevo o cambiar el existente.
+  // Caso 1: Consumidor Final (ID 1) -> Limpiar cliente
+  if (invType.id === 1) {
+    selectedClient.value = null
+    return
+  }
+
+  // Caso 2: Facturar a un Cliente (ID 2) -> Siempre ir a selección
   if (invType.id === 2) {
+    setTransition('slide-forward')
+    currentView.value = 'client-selection'
+    return
+  }
+
+  // Caso 3: Otros tipos de factura (A/B, etc.) -> Ir a selección solo si no hay cliente
+  if (!selectedClient.value) {
     setTransition('slide-forward')
     currentView.value = 'client-selection'
   }
@@ -745,11 +759,9 @@ const createInvoice = async () => {
 
     const payload = {
       title: 'Ticket',
-      client_id: selectedInvoiceType.value?.id === 1 && clients.value.length > 0
-        ? clients.value[0].id
-        : selectedInvoiceType.value?.id === 2
-          ? selectedClient.value?.id
-          : null,
+      client_id: selectedInvoiceType.value?.id === 1
+        ? (clients.value.find(c => c.name.toLowerCase() === 'consumidor final')?.id || clients.value[0]?.id)
+        : selectedClient.value?.id,
       seller_id: userSession.id,
       coin_id: coin.id,
       description: '',
