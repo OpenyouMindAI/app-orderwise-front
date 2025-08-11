@@ -227,9 +227,9 @@ const routes = [
       },
       {
         path: 'point-of-sales',
-        name: 'PointOfSales',
+        name: 'PointOfSale',
         meta: { requiresAuth: true },
-        component: () => import('src/pages/PointOfSales.vue')
+        component: () => import('src/pages/PointOfSalePage.vue')
       }
     ]
   },
