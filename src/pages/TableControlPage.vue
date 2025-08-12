@@ -337,6 +337,8 @@
                 @update:model-value="filterByCategory"
                 clearable
                 @filter="getCategories"
+                use-input
+                hide-bottom-space
               />
             </div>
             <q-infinite-scroll class="products-grid"  @load="loadProducts" debounce="700" :offset="1000">
@@ -491,7 +493,7 @@
                 <q-item v-bind="scope.itemProps">
                   <q-item-section avatar>
                     <q-icon
-                      :name="scope.opt.status === 'busy' ? 'table_restaurant' : 'table_restaurant'" 
+                      :name="scope.opt.status === 'busy' ? 'table_restaurant' : 'table_restaurant'"
                       :color="scope.opt.status === 'busy' ? 'negative' : 'positive'"
                     />
                   </q-item-section>
@@ -586,7 +588,7 @@
 </template>
 
 <script>
-import { Notify } from 'quasar'
+import { Notify, date } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
@@ -600,6 +602,10 @@ export default {
   },
   data () {
     return {
+      invoiceTypes: [],
+      typeOfServices: [],
+      users: [],
+      clients: [],
       categoryOptions: [],
       tablesSelected: [],
       selectedRoom: null,
@@ -685,8 +691,12 @@ export default {
     }
   },
 
-  created () {
-    this.getLivingRooms()
+  async created () {
+    await this.getLivingRooms()
+    await this.getInvoiceTypes()
+    await this.getTypeOfServices()
+    await this.getUsers()
+    await this.getClients()
   },
 
   methods: {
@@ -865,7 +875,7 @@ export default {
           }))
         })
 
-        const message = this.targetRoom.id === this.selectedRoom?.id 
+        const message = this.targetRoom.id === this.selectedRoom?.id
           ? `Pedido transferido a Mesa ${this.targetTable.name}`
           : `Pedido transferido a ${this.targetRoom.name} - Mesa ${this.targetTable.name}`
 
@@ -1095,19 +1105,102 @@ export default {
       }, 0)
     },
 
+    async getInvoiceTypes () {
+      try {
+        const { data } = await this.$api.get('invoice-types')
+        this.invoiceTypes = data
+      } catch (error) {
+        console.error('Error fetching invoice types:', error)
+      }
+    },
+
+    async getTypeOfServices () {
+      try {
+        const { data } = await this.$api.get('type-of-services')
+        this.typeOfServices = data
+      } catch (error) {
+        console.error('Error fetching type of services:', error)
+      }
+    },
+
+    async getUsers () {
+      try {
+        const { data } = await this.$api.get('users')
+        this.users = data
+      } catch (error) {
+        console.error('Error fetching users:', error)
+      }
+    },
+
+    async getClients () {
+      try {
+        const { data } = await this.$api.get('clients')
+        const clientList = Array.isArray(data) ? data : data?.data
+        this.clients = clientList || []
+      } catch (error) {
+        console.error('Error fetching clients:', error)
+      }
+    },
+
     async saveInvoice () {
       this.saving = true
       try {
-        await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
-          ...this.selectedInvoice,
-          tables: [this.selectedTable.id],
-          products: this.invoiceProducts.map(product => {
-            return {
-              ...product,
-              amount: product.pivot.amount
-            }
+        // Update existing invoice
+        if (this.selectedInvoice) {
+          await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
+            ...this.selectedInvoice,
+            products: this.invoiceProducts.map(product => {
+              return {
+                id: product.id,
+                amount: product.pivot.amount,
+                price: product.pivot.price,
+                observation: product.pivot.observation
+              }
+            })
           })
-        })
+        } else {
+          // Create new invoice
+          const invoiceType = this.invoiceTypes.find(it => it.acronym_serie === 'T')
+          const typeOfService = this.typeOfServices.find(ts => ts.code === 2)
+
+          if (!invoiceType || !typeOfService) {
+            Notify.create({ message: 'No se pudieron encontrar los tipos de factura o servicio necesarios.', color: 'negative' })
+            this.saving = false
+            return
+          }
+
+          const sellerId = this.users[0]?.id || this.userSession.id
+          const finalConsumerClient = this.clients.find(c => c.name.toUpperCase() === 'CONSUMIDOR FINAL')
+          const clientId = finalConsumerClient?.id || this.clients[0]?.id || null
+
+          const params = {
+            tableClose: false,
+            title: invoiceType.name,
+            client_id: clientId,
+            seller_id: sellerId,
+            coin_id: 2,
+            description: '',
+            type_of_service_id: typeOfService.id,
+            invoice_type_id: invoiceType.id,
+            user_created_id: this.userSession.id,
+            exchange_rate: 0,
+            delivery_date: date.formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
+            branch_office_id: this.branchOffice?.id,
+            products: this.invoiceProducts.map(p => ({
+              ...p,
+              quantity: p.pivot.amount,
+              amount: p.pivot.amount
+            })),
+            status: 'delivered',
+            payments: [],
+            total_amount: this.calculateTotal(),
+            tables: [this.selectedTable.id],
+            electronic_invoice: invoiceType.bill,
+            voucherType: null
+          }
+
+          await this.$api.post('invoices', params)
+        }
 
         Notify.create({
           message: 'Pedido guardado exitosamente',
@@ -1119,7 +1212,7 @@ export default {
         this.refreshTables()
       } catch (err) {
         Notify.create({
-          message: 'Error al guardar el pedido',
+          message: 'Error al guardar el pedido: ' + (err.response?.data?.message || err.message),
           icon: 'error',
           color: 'negative'
         })
@@ -2273,7 +2366,7 @@ body.body--dark {
   .header-actions {
     gap: 0.2rem;
   }
-  
+
   .transfer-warning {
     flex-direction: column;
     align-items: flex-start;
