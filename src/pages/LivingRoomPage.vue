@@ -13,7 +13,7 @@
           </div>
         </div>
 
-        <div class="header-controls-group">
+        <div class="header-controls-group" style="min-width: 450px;">
           <div class="room-selection-area">
             <q-select
               v-model="selectedRoom"
