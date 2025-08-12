@@ -1149,6 +1149,7 @@ export default {
         if (this.selectedInvoice) {
           await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
             ...this.selectedInvoice,
+            tables: this.selectedInvoice.tables.map(table => table.id),
             products: this.invoiceProducts.map(product => {
               return {
                 id: product.id,
@@ -1191,12 +1192,10 @@ export default {
               quantity: p.pivot.amount,
               amount: p.pivot.amount
             })),
-            status: 'delivered',
+            status: 'pending',
             payments: [],
             total_amount: this.calculateTotal(),
             tables: [this.selectedTable.id],
-            electronic_invoice: invoiceType.bill,
-            voucherType: null
           }
 
           await this.$api.post('invoices', params)
