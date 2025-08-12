@@ -177,7 +177,7 @@ export default {
       zoomLevel: 1,
 
       // Internal state for table selection (synced with prop)
-      tableSelected: [...this.tablesSelected],
+      tableSelected: [],
 
       // Status mapping for display
       statusMap: {
@@ -208,12 +208,6 @@ export default {
   },
 
   watch: {
-    tablesSelected: {
-      handler (newVal) {
-        this.tableSelected = [...newVal]
-      },
-      deep: true
-    },
     tableSelected: {
       handler (newVal) {
         this.$emit('update:tableSelected', newVal)

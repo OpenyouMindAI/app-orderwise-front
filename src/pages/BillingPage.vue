@@ -2493,7 +2493,7 @@ export default {
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.paymentModel(this.payments),
         total_amount: this.totalBill,
-        tables: this.tableSelected,
+        tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
