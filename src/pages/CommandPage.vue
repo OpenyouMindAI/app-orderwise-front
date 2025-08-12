@@ -1516,6 +1516,9 @@ export default {
         params: {
           sortOrder: 'desc',
           sortBy: 'sold',
+          stock: true,
+          withStock: true,
+          branch_office_id: this.branchOffice?.id,
           dataEqualFilter: {
             category_id: this.category === 'all' ? null : this.category,
             show_catalog: 1,
