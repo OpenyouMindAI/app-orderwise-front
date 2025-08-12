@@ -245,7 +245,7 @@
                       <q-icon name="note" size="sm" />
                       {{ product.pivot.observation }}
                     </div>
-                    <div class="product-price">${{ formatPrice(product.pivot.price) }}</div>
+                    <div class="product-price">${{ formatNumber(product.pivot.price) }}</div>
                   </div>
 
                   <div class="product-actions">
@@ -279,7 +279,7 @@
                     </div>
                     <div class="product-item-actions items-center q-gutter-x-sm">
                       <div class="product-total">
-                        ${{ formatPrice(product.pivot.price * product.pivot.amount) }}
+                        ${{ formatNumber(product.pivot.price * product.pivot.amount) }}
                       </div>
                       <q-btn
                         icon="edit_note"
@@ -359,7 +359,7 @@
 
                 <div class="product-card-info">
                   <div class="product-card-name">{{ product.name }}</div>
-                  <div class="product-card-price">${{ formatPrice(product.price) }}</div>
+                  <div class="product-card-price">${{ formatNumber(product.price) }}</div>
                 </div>
 
                 <div class="product-card-actions">
@@ -417,7 +417,7 @@
           <div v-if="invoiceProducts.length > 0" class="q-mr-sm">
             <div class="flex justify-between items-center q-gutter-x-sm text-h6 text-bold">
               <span>Total:</span>
-              <span>${{ formatPrice(calculateTotal()) }}</span>
+              <span>${{ formatNumber(calculateTotal()) }}</span>
             </div>
           </div>
           <q-btn
@@ -594,6 +594,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import { loading } from 'src/const/mixins'
 import { commandPrint, ticketPrint } from 'src/const/printers'
+import { formatNumber } from 'src/const/mixins'
 
 export default {
   components: {
@@ -602,6 +603,7 @@ export default {
   },
   data () {
     return {
+      formatNumber,
       invoiceTypes: [],
       typeOfServices: [],
       users: [],
@@ -1228,10 +1230,6 @@ export default {
 
     getTableStatusLabel (status) {
       return this.statusMap[status] || status
-    },
-
-    formatPrice (price) {
-      return (price / 100).toFixed(2)
     }
   }
 }
