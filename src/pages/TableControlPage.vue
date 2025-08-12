@@ -1195,7 +1195,7 @@ export default {
             status: 'pending',
             payments: [],
             total_amount: this.calculateTotal(),
-            tables: [this.selectedTable.id],
+            tables: [this.selectedTable.id]
           }
 
           await this.$api.post('invoices', params)
