@@ -13,7 +13,7 @@
           </div>
         </div>
 
-        <div class="header-controls-group" style="min-width: 450px;">
+        <div class="header-controls-group">
           <div class="room-selection-area">
             <q-select
               v-model="selectedRoom"
@@ -168,7 +168,7 @@
     </section>
 
     <!-- Main Canvas Area -->
-    <main class="canvas-main-area" v-if="selectedRoom">
+    <main class="canvas-main-area" v-show="selectedRoom">
       <div class="canvas-viewport-container">
         <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
           <draggable-resizable-container
@@ -189,18 +189,17 @@
               @deactivated="onTableDeactivated(table, index)"
               @dblclick="onTableActivated(table, index)"
             >
-              <div :class="getTableDesignClass(table)">
-                <div class="table-visual-surface">
-                  <div class="table-gloss-effect"></div>
-                  <div class="table-info-overlay">
-                    <span class="table-name-text">{{ table.name }}</span>
-                    <span class="table-capacity-text">
-                      <q-icon name="person" class="capacity-icon" />
-                      {{ table.capacity || 4 }}
-                    </span>
-                  </div>
-                  <div class="table-status-indicator" :class="table.status || 'available'"></div>
+              <div class="table-visual-surface">
+                <div class="table-info-overlay">
+                  <span class="table-name-text">{{ table.name }}</span>
+                  <span class="table-capacity-text">
+                    <q-icon name="person" class="capacity-icon" />
+                    {{ table.capacity || 4 }}
+                  </span>
                 </div>
+                <div class="table-status-indicator" :class="table.status || 'available'"></div>
+              </div>
+              <div :class="getTableDesignClass(table)">
               </div>
             </draggable-resizable-vue>
           </draggable-resizable-container>
@@ -209,7 +208,7 @@
     </main>
 
     <!-- Elegant Empty State -->
-    <div v-else class="empty-state-container">
+    <div v-show="!selectedRoom" class="empty-state-container">
       <div class="empty-state-illustration">
         <div class="illustration-circle-bg">
           <q-icon name="restaurant_menu" />
@@ -1433,7 +1432,8 @@ export default {
 .luxury-table {
   width: 100%;
   height: 100%;
-  position: relative;
+  position: absolute;
+  top: 0;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.15); /* Subtle inner border */
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3); /* Inner shadow for depth */
@@ -2018,6 +2018,7 @@ export default {
   }
 
   .brand-identity {
+    width: 100%;
     flex-direction: column;
     gap: 0.4rem; /* Reduced gap */
     text-align: center;
@@ -2043,6 +2044,7 @@ export default {
   }
 
   .metrics-display-grid {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -2060,14 +2062,6 @@ export default {
 }
 
 @media (max-width: 480px) {
-  .metrics-display-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-card {
-    justify-content: center;
-  }
-
   .canvas-toolbar-group {
     flex-direction: column;
     gap: 0.4rem; /* Reduced gap */
