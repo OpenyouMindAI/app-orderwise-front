@@ -236,6 +236,7 @@
             <div :class="['preview-shape-demo', `shape-demo-${selectedTable.shape}`]"></div>
           </div>
           <div class="table-meta-info">
+
             <h4 class="inspector-table-name">{{ selectedTable.name }}</h4>
             <span class="inspector-table-shape">{{ getShapeLabel(selectedTable.shape) }}</span>
           </div>
@@ -650,7 +651,8 @@ export default {
 
   methods: {
     // Room management
-    async getLivingRooms () {
+    async getLivingRooms (params = this.params) {
+      this.visible = true
       try {
         const { data } = await this.$api.get('living-rooms', { params: this.params })
         this.livingRooms = data.data
@@ -658,7 +660,9 @@ export default {
           this.selectedRoom = this.livingRooms[0]
           this.onRoomChange(this.selectedRoom)
         }
+        this.visible = false
       } catch (err) {
+        this.visible = false
         Notify.create({
           message: err.message,
           icon: 'warning',
@@ -724,7 +728,13 @@ export default {
           tables: this.currentTables
         })
 
+        const currentRoomId = this.selectedRoom.id
         await this.getLivingRooms()
+        const updatedRoom = this.livingRooms.find(room => room.id === currentRoomId)
+        if (updatedRoom) {
+          this.selectedRoom = updatedRoom
+          this.onRoomChange(updatedRoom)
+        }
 
         Notify.create({
           message: 'Cambios guardados exitosamente',
@@ -744,6 +754,7 @@ export default {
     // Table management
     addNewTable () {
       const newTable = {
+        isNew: true,
         id: Date.now(),
         name: this.newTable.name,
         shape: this.newTable.shape,
@@ -772,13 +783,47 @@ export default {
     },
 
     confirmDeleteTable () {
-      if (this.selectedTable) {
+      if (!this.selectedTable) return
+
+      // If the table is new and not saved, delete it locally without an API call.
+      if (this.selectedTable.isNew) {
         const index = this.currentTables.findIndex(t => t.id === this.selectedTable.id)
         if (index > -1) {
           this.currentTables.splice(index, 1)
           this.selectedTable = null
+          this.$q.notify({
+            color: 'info',
+            message: 'Mesa eliminada del diseño actual. Guarda los cambios para confirmar.',
+            icon: 'delete'
+          })
         }
+        return
       }
+
+      (async () => {
+        try {
+          await this.$api.delete(`tables/${this.selectedTable.id}`)
+          this.$q.notify({
+            color: 'positive',
+            message: 'Mesa eliminada correctamente',
+            icon: 'check'
+          })
+          const currentRoomId = this.selectedRoom.id
+          await this.getLivingRooms()
+          const updatedRoom = this.livingRooms.find(room => room.id === currentRoomId)
+          if (updatedRoom) {
+            this.selectedRoom = updatedRoom
+            this.onRoomChange(updatedRoom)
+          }
+          this.selectedTable = null
+        } catch (error) {
+          this.$q.notify({
+            color: 'negative',
+            message: 'Error al eliminar la mesa: ' + (error.message || 'Error desconocido'),
+            icon: 'warning'
+          })
+        }
+      })()
     },
 
     // Table interactions
@@ -939,26 +984,7 @@ export default {
       this.openEditLivingRoom = false
       this.livingRoom = { tables: [] }
     },
-    /**
-     * Get all livingRooms
-     * @param {Object} params search params
-     */
-    getLivingRooms (params = this.params) {
-      this.visible = true
-      this.$api.get('living-rooms', { params })
-        .then(({ data }) => {
-          this.livingRooms = data.data
-          this.visible = false
-        })
-        .catch(err => {
-          this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
+
     /**
      * Save livingRooms
      */
