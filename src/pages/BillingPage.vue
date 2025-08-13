@@ -2387,6 +2387,7 @@ export default {
           return {
             ...product,
             ...product.pivot,
+            id: product.id,
             quantity: product.pivot.amount,
             subtotal: product.pivot.price * product.pivot.amount,
             product_price_lists: product.product_price_lists
