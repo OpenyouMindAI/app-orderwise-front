@@ -262,7 +262,7 @@
                             v-model="selectedPriceList"
                             :options="props.row.product_price_lists"
                             option-label="name"
-                            option-value="price"
+                            option-value="id"
                             label="Seleccionar lista de precios"
                             emit-value
                             map-options
