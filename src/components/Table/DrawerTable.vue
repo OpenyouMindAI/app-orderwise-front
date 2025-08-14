@@ -50,22 +50,8 @@
     </header>
     <!-- Main Canvas Area -->
     <main class="canvas-main-area" v-if="selectedRoom">
-      <div class="canvas-controls">
-        <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
-        <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
-        <q-btn icon="zoom_out" @click="zoomOut" dense round flat class="control-btn"></q-btn>
-      </div>
-      <div
-        class="canvas-viewport-container"
-        @mousedown="startPan"
-        @mousemove="onPan"
-        @mouseup="endPan"
-        @mouseleave="endPan"
-        @touchstart="startPan"
-        @touchmove="onPan"
-        @touchend="endPan"
-      >
-        <div class="canvas-transform-wrapper" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }">
+      <div class="canvas-viewport-container">
+        <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
           <draggable-resizable-container
             :grid="[gridSize, gridSize]"
             :show-grid="showGrid"
