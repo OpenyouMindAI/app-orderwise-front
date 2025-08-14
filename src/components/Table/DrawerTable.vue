@@ -50,8 +50,22 @@
     </header>
     <!-- Main Canvas Area -->
     <main class="canvas-main-area" v-if="selectedRoom">
-      <div class="canvas-viewport-container">
-        <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
+      <div class="canvas-controls">
+        <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
+        <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
+        <q-btn icon="zoom_out" @click="zoomOut" dense round flat class="control-btn"></q-btn>
+      </div>
+      <div
+        class="canvas-viewport-container"
+        @mousedown="startPan"
+        @mousemove="onPan"
+        @mouseup="endPan"
+        @mouseleave="endPan"
+        @touchstart="startPan"
+        @touchmove="onPan"
+        @touchend="endPan"
+      >
+        <div class="canvas-transform-wrapper" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }">
           <draggable-resizable-container
             :grid="[gridSize, gridSize]"
             :show-grid="showGrid"
@@ -65,66 +79,68 @@
               v-model:y="table.y"
               v-model:h="table.height"
               v-model:w="table.width"
-              :class="getTableWrapperClass(table)"
               :handles-size="8"
               :draggable="false"
               :resizable="false"
               @click="onTableClick(table)"
+              :class="getTableWrapperClass(table)"
             >
-              <div :class="getTableDesignClass(table)">
-                <div class="table-visual-surface">
-                  <div class="table-gloss-effect"></div>
-                  <div class="table-info-overlay">
-                    <span class="table-name-text">{{ table.name }}</span>
-                    <span class="table-capacity-text">
-                      <q-icon name="person" class="capacity-icon" />
-                      {{ table.capacity || 4 }}
-                    </span>
-                  </div>
-                  <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
-                  <div v-if="table.status === 'busy'" class="table-quick-actions">
-                    <q-btn
-                      icon="swap_horiz"
-                      size="xs"
-                      round
-                      color="white"
-                      text-color="primary"
-                      @click.stop="openTransferDialog(table)"
-                      class="quick-action-btn"
-                    >
-                      <q-tooltip>Cambiar Mesa</q-tooltip>
-                    </q-btn>
-                  </div>
+              <div class="table-visual-surface">
+                <div class="table-gloss-effect"></div>
+                <div class="table-info-overlay">
+                  <span class="table-name-text">{{ table.name }}</span>
+                  <span class="table-capacity-text">
+                    <q-icon name="person" class="capacity-icon" />
+                    {{ table.capacity || 4 }}
+                  </span>
+                </div>
+                <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
+
+                <!-- Acciones para mesas ocupadas -->
+                <div v-if="table.status === 'busy'" class="table-quick-actions">
+                  <q-btn
+                    icon="swap_horiz"
+                    size="xs"
+                    round
+                    color="white"
+                    text-color="primary"
+                    @click.stop="openTransferDialog(table)"
+                    @touchstart.stop
+                    class="quick-action-btn"
+                  >
+                    <q-tooltip>Cambiar Mesa</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="receipt"
+                    size="xs"
+                    round
+                    color="white"
+                    text-color="secondary"
+                    @click.stop="$emit('update:invoice', table)"
+                    @touchstart.stop
+                    class="quick-action-btn"
+                  >
+                    <q-tooltip>Facturar</q-tooltip>
+                  </q-btn>
+                </div>
+
+                <!-- Botón de selección para mesas vacías -->
+                <div v-else-if="table.status === 'unoccupied'" class="table-selection-action">
+                  <q-btn
+                    :icon="tableSelected.includes(table.id) ? 'check_circle' : 'add_circle'"
+                    size="sm"
+                    round
+                    :color="tableSelected.includes(table.id) ? 'positive' : 'primary'"
+                    @click.stop="onTableClick(table)"
+                    @touchstart.stop
+                    class="selection-btn"
+                  >
+                    <q-tooltip>{{ tableSelected.includes(table.id) ? 'Mesa Seleccionada' : 'Seleccionar Mesa' }}</q-tooltip>
+                  </q-btn>
                 </div>
               </div>
-              <!-- Checkbox for unoccupied tables -->
-              <q-checkbox
-                v-if="table.status === 'unoccupied'"
-                v-model="tableSelected"
-                :val="table.id"
-                color="teal"
-                class="fixed-top-right q-ma-xs"
-              />
-              <!-- Buttons for busy tables -->
-              <template v-else-if="table.status === 'busy'">
-                <q-btn
-                  icon="receipt"
-                  color="secondary"
-                  size="sm"
-                  round
-                  class="fixed-top-right q-ma-xs"
-                  @click.stop="$emit('update:invoice', table)"
-                />
-                <q-btn
-                  icon="close"
-                  color="negative"
-                  size="sm"
-                  round
-                  class="fixed-bottom-right q-ma-xs"
-                  @click.stop="$emit('update:freeTable', table)"
-                  v-if="freeTable"
-                />
-              </template>
+              <div :class="getTableDesignClass(table)">
+              </div>
             </draggable-resizable-vue>
           </draggable-resizable-container>
         </div>
@@ -152,7 +168,7 @@
     </div>
 
     <!-- Transfer Dialog -->
-    <q-dialog v-model="showTransferDialog" class="transfer-dialog">
+    <q-dialog v-model="showTransferDialog" class="transfer-dialog" @before-show="storeActiveElement" @hide="restoreFocus">
       <q-card class="transfer-card">
         <q-card-section class="transfer-header">
           <div class="transfer-title">
@@ -192,38 +208,6 @@
                     <q-item-label>{{ scope.opt.name }}</q-item-label>
                     <q-item-label caption>
                       {{ scope.opt.width }}x{{ scope.opt.height }} - {{ scope.opt.tables?.length || 0 }} mesas
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-            <!-- Table Selection -->
-            <q-select
-              v-model="targetTable"
-              :options="availableTablesForTransfer"
-              option-label="name"
-              option-value="id"
-              label="Mesa de Destino"
-              outlined
-              class="table-select"
-              :disable="!targetRoom"
-              :rules="[val => !!val || 'Debes seleccionar una mesa']"
-            >
-              <template v-slot:prepend>
-                <q-icon name="table_restaurant" />
-              </template>
-              <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section avatar>
-                    <q-icon
-                      :name="scope.opt.status === 'busy' ? 'table_restaurant' : 'table_restaurant'"
-                      :color="scope.opt.status === 'busy' ? 'negative' : 'positive'"
-                    />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.name }}</q-item-label>
-                    <q-item-label caption>
-                      {{ scope.opt.capacity }} personas - {{ getTableStatusLabel(scope.opt.status) }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -306,6 +290,12 @@ export default {
       canvasWidth: 20, // Default width in meters
       canvasHeight: 15, // Default height in meters
       zoomLevel: 1,
+      panX: 0,
+      panY: 0,
+      isPanning: false,
+      startPanX: 0,
+      startPanY: 0,
+      previousFocus: null,
 
       // Internal state for table selection (synced with prop)
       tableSelected: [...this.tablesSelected],
@@ -484,6 +474,87 @@ export default {
       } finally {
         loading(false)
       }
+    },
+
+    storeActiveElement () {
+      this.previousFocus = document.activeElement
+    },
+
+    restoreFocus () {
+      this.$nextTick(() => {
+        if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+          this.previousFocus.focus()
+        }
+        this.previousFocus = null
+      })
+    },
+
+    startPan (event) {
+      // Si el evento se origina en una mesa o sus elementos internos, no iniciar el paneo.
+      // Esto permite que los eventos de clic en las mesas y sus botones funcionen correctamente.
+      if (event.target.closest('.draggable-resizable-vue')) {
+        return
+      }
+
+      // NO llamamos a preventDefault aquí para permitir que los eventos táctiles
+      // se conviertan en clics cuando sea necesario
+
+      this.isPanning = true
+      const touch = event.touches ? event.touches[0] : event
+      this.startPanX = touch.clientX - this.panX
+      this.startPanY = touch.clientY - this.panY
+      event.currentTarget.style.cursor = 'grabbing'
+    },
+
+    onPan (event) {
+      if (!this.isPanning) return
+
+      const touch = event.touches ? event.touches[0] : event
+      this.panX = touch.clientX - this.startPanX
+      this.panY = touch.clientY - this.startPanY
+
+      // Solo prevenir el comportamiento por defecto cuando realmente estamos paneando
+      // Esto evita el scroll del navegador pero permite los clics normales
+      event.preventDefault()
+    },
+
+    endPan (event) {
+      if (!this.isPanning) return
+
+      this.isPanning = false
+      event.currentTarget.style.cursor = 'grab'
+    },
+
+    zoomIn () {
+      const newZoom = Math.min(this.zoomLevel + 0.2, 2)
+      this.smoothZoom(newZoom)
+    },
+
+    zoomOut () {
+      const newZoom = Math.max(this.zoomLevel - 0.2, 0.5)
+      this.smoothZoom(newZoom)
+    },
+
+    smoothZoom (targetZoom) {
+      const startZoom = this.zoomLevel
+      const duration = 200 // milliseconds
+      const startTime = Date.now()
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+
+        // Easing function (ease-out)
+        const easeOut = 1 - Math.pow(1 - progress, 3)
+
+        this.zoomLevel = startZoom + (targetZoom - startZoom) * easeOut
+
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        }
+      }
+
+      requestAnimationFrame(animate)
     },
 
     async confirmTransfer () {
@@ -766,23 +837,54 @@ body.body--dark {
 /* --- Main Canvas Area --- */
 .canvas-main-area {
   flex: 1;
-  padding: calc(var(--spacing-unit) * 1.5);
   background:
     radial-gradient(circle at 25px 25px, rgba(var(--color-border), 0.5) 1px, transparent 1px),
     var(--color-background);
   background-size: 50px 50px;
-  /* Removed min-height to allow canvas to adapt fully */
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
 .canvas-viewport-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100%; /* Ensure it takes full height of parent */
+  min-height: 100%;
   width: 100%;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--color-surface-light);
+  border-radius: var(--border-radius-lg);
+  cursor: grab;
+  user-select: none;
+}
+
+.canvas-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.control-btn {
+  color: var(--color-primary);
+}
+
+.zoom-level-display {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 40px;
+  text-align: center;
 }
 
 .canvas-transform-wrapper {
@@ -835,7 +937,8 @@ body.body--dark {
 .luxury-table {
   width: 100%;
   height: 100%;
-  position: relative;
+  position: absolute;
+  top: 0;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.15);
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
@@ -916,9 +1019,10 @@ body.body--dark {
 /* --- Table Quick Actions --- */
 .table-quick-actions {
   position: absolute;
-  top: 15%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: 0;
+  width: 100%;
+  justify-content: space-between;
+  transform: translate(0, 30%);
   display: flex;
   gap: 6px;
   transition: opacity 0.2s ease;
@@ -931,6 +1035,24 @@ body.body--dark {
   min-height: 25px !important;
   font-size: 0.7rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Table Selection Action --- */
+.table-selection-action {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  transform: translate(0, 30%);
+  z-index: 10;
+}
+
+.selection-btn {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.selection-btn:hover {
+  transform: scale(1.1);
 }
 
 /* --- Specific Table Shapes (Vibrant & Elegant) --- */
@@ -958,13 +1080,23 @@ body.body--dark {
 /* --- Busy Table Background (More prominent) --- */
 .luxury-table.table-is-busy {
   background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
-  box-shadow: 0 0 15px rgba(var(--color-danger), 0.6);
-  animation: pulse-red 1.5s infinite alternate; /* Optional: subtle pulse */
 }
 
-@keyframes pulse-red {
-  from { box-shadow: 0 0 15px rgba(var(--color-danger), 0.6); }
-  to { box-shadow: 0 0 25px rgba(var(--color-danger), 0.8); }
+.table-is-busy .luxury-table {
+  animation: occupied-pulse 3s ease-in-out infinite;
+}
+
+@keyframes occupied-pulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 8px rgba(0, 0, 0, 0.3),
+      0 0 15px rgba(255, 193, 7, 0.2);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 8px rgba(0, 0, 0, 0.3),
+      0 0 25px rgba(255, 193, 7, 0.4);
+  }
 }
 
 /* --- Empty State Styling --- */

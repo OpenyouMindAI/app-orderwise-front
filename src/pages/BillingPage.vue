@@ -2395,7 +2395,7 @@ export default {
         this.client = invoice.client
         this.invoiceType = invoice.invoice_type
         this.typeOfService = invoice.type_of_service
-        this.tableSelected = invoice.tables.map(table => table.id)
+
         this.searchInvoice = false
         this.setPayments(invoice.invoice_payments)
         this.$router.push({
