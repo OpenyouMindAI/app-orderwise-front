@@ -50,8 +50,22 @@
     </header>
     <!-- Main Canvas Area -->
     <main class="canvas-main-area" v-if="selectedRoom">
-      <div class="canvas-viewport-container">
-        <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
+      <div class="canvas-controls">
+        <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
+        <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
+        <q-btn icon="zoom_out" @click="zoomOut" dense round flat class="control-btn"></q-btn>
+      </div>
+      <div
+        class="canvas-viewport-container"
+        @mousedown="startPan"
+        @mousemove="onPan"
+        @mouseup="endPan"
+        @mouseleave="endPan"
+        @touchstart="startPan"
+        @touchmove="onPan"
+        @touchend="endPan"
+      >
+        <div class="canvas-transform-wrapper" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }">
           <draggable-resizable-container
             :grid="[gridSize, gridSize]"
             :show-grid="showGrid"
@@ -65,53 +79,68 @@
               v-model:y="table.y"
               v-model:h="table.height"
               v-model:w="table.width"
-              :class="getTableWrapperClass(table)"
               :handles-size="8"
               :draggable="false"
               :resizable="false"
               @click="onTableClick(table)"
+              :class="getTableWrapperClass(table)"
             >
-              <div :class="getTableDesignClass(table)">
-                <div class="table-visual-surface">
-                  <div class="table-gloss-effect"></div>
-                  <div class="table-info-overlay">
-                    <span class="table-name-text">{{ table.name }}</span>
-                    <span class="table-capacity-text">
-                      <q-icon name="person" class="capacity-icon" />
-                      {{ table.capacity || 4 }}
-                    </span>
-                  </div>
-                  <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
+              <div class="table-visual-surface">
+                <div class="table-gloss-effect"></div>
+                <div class="table-info-overlay">
+                  <span class="table-name-text">{{ table.name }}</span>
+                  <span class="table-capacity-text">
+                    <q-icon name="person" class="capacity-icon" />
+                    {{ table.capacity || 4 }}
+                  </span>
+                </div>
+                <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
+
+                <!-- Acciones para mesas ocupadas -->
+                <div v-if="table.status === 'busy'" class="table-quick-actions">
+                  <q-btn
+                    icon="swap_horiz"
+                    size="xs"
+                    round
+                    color="white"
+                    text-color="primary"
+                    @click.stop="openTransferDialog(table)"
+                    @touchstart.stop
+                    class="quick-action-btn"
+                  >
+                    <q-tooltip>Cambiar Mesa</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="receipt"
+                    size="xs"
+                    round
+                    color="white"
+                    text-color="secondary"
+                    @click.stop="$emit('update:invoice', table)"
+                    @touchstart.stop
+                    class="quick-action-btn"
+                  >
+                    <q-tooltip>Facturar</q-tooltip>
+                  </q-btn>
+                </div>
+
+                <!-- Botón de selección para mesas vacías -->
+                <div v-else-if="table.status === 'unoccupied'" class="table-selection-action">
+                  <q-btn
+                    :icon="tableSelected.includes(table.id) ? 'check_circle' : 'add_circle'"
+                    size="sm"
+                    round
+                    :color="tableSelected.includes(table.id) ? 'positive' : 'primary'"
+                    @click.stop="onTableClick(table)"
+                    @touchstart.stop
+                    class="selection-btn"
+                  >
+                    <q-tooltip>{{ tableSelected.includes(table.id) ? 'Mesa Seleccionada' : 'Seleccionar Mesa' }}</q-tooltip>
+                  </q-btn>
                 </div>
               </div>
-              <!-- Checkbox for unoccupied tables -->
-              <q-checkbox
-                v-if="table.status === 'unoccupied'"
-                v-model="tableSelected"
-                :val="table.id"
-                color="teal"
-                class="fixed-top-right q-ma-xs"
-              />
-              <!-- Buttons for busy tables -->
-              <template v-else-if="table.status === 'busy'">
-                <q-btn
-                  icon="receipt"
-                  color="secondary"
-                  size="sm"
-                  round
-                  class="fixed-top-right q-ma-xs"
-                  @click.stop="$emit('update:invoice', table)"
-                />
-                <q-btn
-                  icon="close"
-                  color="negative"
-                  size="sm"
-                  round
-                  class="fixed-bottom-right q-ma-xs"
-                  @click.stop="$emit('update:freeTable', table)"
-                  v-if="freeTable"
-                />
-              </template>
+              <div :class="getTableDesignClass(table)">
+              </div>
             </draggable-resizable-vue>
           </draggable-resizable-container>
         </div>
@@ -138,8 +167,93 @@
       </div>
     </div>
 
-    <!-- Invoice Detail Dialog (Managed by parent component via emits) -->
-    <!-- This dialog is not directly in this component, but triggered by emits -->
+    <!-- Transfer Dialog -->
+    <q-dialog v-model="showTransferDialog" class="transfer-dialog" @before-show="storeActiveElement" @hide="restoreFocus">
+      <q-card class="transfer-card">
+        <q-card-section class="transfer-header">
+          <div class="transfer-title">
+            <q-icon name="swap_horiz" />
+            Cambiar Mesa del Pedido
+          </div>
+          <div class="transfer-subtitle">
+            Pedido: {{ selectedInvoice?.code }} - Mesa Actual: {{ selectedTableForTransfer?.name }}
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="transfer-content">
+            <p class="transfer-description">
+              Selecciona la sala y mesa de destino para transferir este pedido:
+            </p>
+            <q-select
+              v-model="targetRoom"
+              :options="roomOptionsForTransfer"
+              option-label="name"
+              option-value="id"
+              label="Sala de Destino"
+              outlined
+              class="room-select"
+              @update:model-value="onTargetRoomChange"
+              :rules="[val => !!val || 'Debes seleccionar una sala']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="meeting_room" />
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon name="meeting_room" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ scope.opt.width }}x{{ scope.opt.height }} - {{ scope.opt.tables?.length || 0 }} mesas
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <!-- Transfer Confirmation -->
+            <div v-if="targetTable && targetRoom" class="transfer-confirmation">
+              <q-icon name="info" color="primary" />
+              <div class="confirmation-text">
+                <div>
+                  <strong>Origen:</strong> {{ selectedRoom?.name }} - Mesa {{ selectedTableForTransfer?.name }}
+                </div>
+                <div>
+                  <strong>Destino:</strong> {{ targetRoom.name }} - Mesa {{ targetTable.name }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Warning for occupied table -->
+            <div v-if="targetTable?.status === 'busy'" class="transfer-warning">
+              <q-icon name="warning" color="warning" />
+              <span>
+                ⚠️ La mesa de destino está ocupada. El pedido se combinará con el pedido existente.
+              </span>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            label="Cancelar"
+            flat
+            @click="cancelTransfer"
+          />
+          <q-btn
+            label="Transferir Pedido"
+            color="primary"
+            @click="confirmTransfer"
+            :loading="transferring"
+            :disable="!targetTable || !targetRoom"
+            unelevated
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -148,6 +262,7 @@ import { Notify } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
+import { loading } from 'src/const/mixins'
 
 export default {
   components: {
@@ -164,7 +279,7 @@ export default {
       default: false
     }
   },
-  emits: ['update:tableSelected', 'update:invoice', 'update:freeTable'],
+  emits: ['update:tableSelected', 'update:invoice', 'update:freeTable', 'tableTransferred'],
   data () {
     return {
       selectedRoom: null,
@@ -175,9 +290,24 @@ export default {
       canvasWidth: 20, // Default width in meters
       canvasHeight: 15, // Default height in meters
       zoomLevel: 1,
+      panX: 0,
+      panY: 0,
+      isPanning: false,
+      startPanX: 0,
+      startPanY: 0,
+      previousFocus: null,
 
       // Internal state for table selection (synced with prop)
       tableSelected: [],
+
+      // Transfer dialog state
+      showTransferDialog: false,
+      selectedTableForTransfer: null,
+      selectedInvoice: null,
+      targetTable: null,
+      targetRoom: null,
+      transferring: false,
+      availableTablesForTransfer: [],
 
       // Status mapping for display
       statusMap: {
@@ -191,6 +321,14 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice']),
 
     roomOptions () {
+      return this.livingRooms.map(room => ({
+        ...room,
+        label: room.name,
+        value: room.id
+      }))
+    },
+
+    roomOptionsForTransfer () {
       return this.livingRooms.map(room => ({
         ...room,
         label: room.name,
@@ -290,6 +428,193 @@ export default {
           this.tableSelected.push(table.id)
         }
       }
+    },
+
+    // Transfer functionality
+    openTransferDialog (table) {
+      this.selectedTableForTransfer = table
+      this.selectedInvoice = table.invoices && table.invoices.length > 0 ? table.invoices[0] : null
+      if (this.selectedInvoice) {
+        this.targetTable = null
+        this.targetRoom = null
+        this.showTransferDialog = true
+      } else {
+        Notify.create({
+          message: 'No se encontró un pedido para transferir en esta mesa',
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
+    },
+
+    async onTargetRoomChange (room) {
+      this.targetTable = null
+      try {
+        loading(true)
+        const { data } = await this.$api.get('tables', {
+          params: {
+            dataEqualFilter: {
+              living_room_id: room.id
+            }
+          }
+        })
+        this.availableTablesForTransfer = data
+      } catch (err) {
+        Notify.create({
+          message: 'Error al cargar mesas de la sala',
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        loading(false)
+      }
+    },
+
+    storeActiveElement () {
+      this.previousFocus = document.activeElement
+    },
+
+    restoreFocus () {
+      this.$nextTick(() => {
+        if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+          this.previousFocus.focus()
+        }
+        this.previousFocus = null
+      })
+    },
+
+    startPan (event) {
+      // Si el evento se origina en una mesa o sus elementos internos, no iniciar el paneo.
+      // Esto permite que los eventos de clic en las mesas y sus botones funcionen correctamente.
+      if (event.target.closest('.draggable-resizable-vue')) {
+        return
+      }
+
+      // NO llamamos a preventDefault aquí para permitir que los eventos táctiles
+      // se conviertan en clics cuando sea necesario
+
+      this.isPanning = true
+      const touch = event.touches ? event.touches[0] : event
+      this.startPanX = touch.clientX - this.panX
+      this.startPanY = touch.clientY - this.panY
+      event.currentTarget.style.cursor = 'grabbing'
+    },
+
+    onPan (event) {
+      if (!this.isPanning) return
+
+      const touch = event.touches ? event.touches[0] : event
+      this.panX = touch.clientX - this.startPanX
+      this.panY = touch.clientY - this.startPanY
+
+      // Solo prevenir el comportamiento por defecto cuando realmente estamos paneando
+      // Esto evita el scroll del navegador pero permite los clics normales
+      event.preventDefault()
+    },
+
+    endPan (event) {
+      if (!this.isPanning) return
+
+      this.isPanning = false
+      event.currentTarget.style.cursor = 'grab'
+    },
+
+    zoomIn () {
+      const newZoom = Math.min(this.zoomLevel + 0.2, 2)
+      this.smoothZoom(newZoom)
+    },
+
+    zoomOut () {
+      const newZoom = Math.max(this.zoomLevel - 0.2, 0.5)
+      this.smoothZoom(newZoom)
+    },
+
+    smoothZoom (targetZoom) {
+      const startZoom = this.zoomLevel
+      const duration = 200 // milliseconds
+      const startTime = Date.now()
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+
+        // Easing function (ease-out)
+        const easeOut = 1 - Math.pow(1 - progress, 3)
+
+        this.zoomLevel = startZoom + (targetZoom - startZoom) * easeOut
+
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        }
+      }
+
+      requestAnimationFrame(animate)
+    },
+
+    async confirmTransfer () {
+      if (!this.targetTable || !this.targetRoom || !this.selectedInvoice) return
+
+      this.transferring = true
+      try {
+        // Update the invoice with the new table and room
+        const updatedInvoice = {
+          ...this.selectedInvoice,
+          // Ensure we send an array of IDs, not objects
+          tables: [this.targetTable.id],
+          living_room_id: this.targetRoom.id
+        }
+
+        // If the invoice has products, make sure to include them
+        if (this.selectedInvoice.products) {
+          updatedInvoice.products = this.selectedInvoice.products.map(product => ({
+            ...product,
+            amount: product.pivot ? product.pivot.amount : product.amount || 1
+          }))
+        }
+
+        await this.$api.put(`invoices/${this.selectedInvoice.id}`, updatedInvoice)
+
+        const message = this.targetRoom.id === this.selectedRoom?.id
+          ? `Pedido transferido a Mesa ${this.targetTable.name}`
+          : `Pedido transferido a ${this.targetRoom.name} - Mesa ${this.targetTable.name}`
+
+        Notify.create({
+          message,
+          icon: 'check_circle',
+          color: 'positive',
+          timeout: 3000
+        })
+
+        // Emit event to parent component
+        this.$emit('tableTransferred', {
+          fromTable: this.selectedTableForTransfer,
+          toTable: this.targetTable,
+          toRoom: this.targetRoom,
+          invoice: this.selectedInvoice
+        })
+
+        // Close dialog and refresh
+        this.cancelTransfer()
+        this.refreshTables()
+      } catch (err) {
+        Notify.create({
+          message: 'Error al transferir el pedido: ' + (err.response?.data?.message || err.message),
+          icon: 'error',
+          color: 'negative'
+        })
+      } finally {
+        this.transferring = false
+      }
+    },
+
+    cancelTransfer () {
+      this.showTransferDialog = false
+      this.selectedTableForTransfer = null
+      this.selectedInvoice = null
+      this.targetTable = null
+      this.targetRoom = null
+      this.transferring = false
+      this.availableTablesForTransfer = []
     },
 
     // Utility methods
@@ -506,23 +831,54 @@ body.body--dark {
 /* --- Main Canvas Area --- */
 .canvas-main-area {
   flex: 1;
-  padding: calc(var(--spacing-unit) * 1.5);
   background:
     radial-gradient(circle at 25px 25px, rgba(var(--color-border), 0.5) 1px, transparent 1px),
     var(--color-background);
   background-size: 50px 50px;
-  /* Removed min-height to allow canvas to adapt fully */
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
 .canvas-viewport-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100%; /* Ensure it takes full height of parent */
+  min-height: 100%;
   width: 100%;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--color-surface-light);
+  border-radius: var(--border-radius-lg);
+  cursor: grab;
+  user-select: none;
+}
+
+.canvas-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.control-btn {
+  color: var(--color-primary);
+}
+
+.zoom-level-display {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 40px;
+  text-align: center;
 }
 
 .canvas-transform-wrapper {
@@ -575,7 +931,8 @@ body.body--dark {
 .luxury-table {
   width: 100%;
   height: 100%;
-  position: relative;
+  position: absolute;
+  top: 0;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.15);
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
@@ -653,6 +1010,45 @@ body.body--dark {
   background-color: var(--color-danger); /* Red for busy */
 }
 
+/* --- Table Quick Actions --- */
+.table-quick-actions {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  justify-content: space-between;
+  transform: translate(0, 30%);
+  display: flex;
+  gap: 6px;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.quick-action-btn {
+  width: 25px !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  font-size: 0.7rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* --- Table Selection Action --- */
+.table-selection-action {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  transform: translate(0, 30%);
+  z-index: 10;
+}
+
+.selection-btn {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.selection-btn:hover {
+  transform: scale(1.1);
+}
+
 /* --- Specific Table Shapes (Vibrant & Elegant) --- */
 .table-shape-round {
   background: var(--table-round-bg);
@@ -678,13 +1074,23 @@ body.body--dark {
 /* --- Busy Table Background (More prominent) --- */
 .luxury-table.table-is-busy {
   background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
-  box-shadow: 0 0 15px rgba(var(--color-danger), 0.6);
-  animation: pulse-red 1.5s infinite alternate; /* Optional: subtle pulse */
 }
 
-@keyframes pulse-red {
-  from { box-shadow: 0 0 15px rgba(var(--color-danger), 0.6); }
-  to { box-shadow: 0 0 25px rgba(var(--color-danger), 0.8); }
+.table-is-busy .luxury-table {
+  animation: occupied-pulse 3s ease-in-out infinite;
+}
+
+@keyframes occupied-pulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 8px rgba(0, 0, 0, 0.3),
+      0 0 15px rgba(255, 193, 7, 0.2);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 8px rgba(0, 0, 0, 0.3),
+      0 0 25px rgba(255, 193, 7, 0.4);
+  }
 }
 
 /* --- Empty State Styling --- */
@@ -734,6 +1140,108 @@ body.body--dark {
   margin-bottom: calc(var(--spacing-unit) * 2);
   max-width: 500px;
   line-height: 1.5;
+}
+
+/* --- Transfer Dialog Styling --- */
+.transfer-dialog :deep(.q-dialog__inner) {
+  padding: 16px;
+}
+
+.transfer-card {
+  width: 500px;
+  max-width: 90vw;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.transfer-header {
+  background: linear-gradient(135deg, var(--color-accent-gold) 0%, var(--color-accent-gold-dark) 100%);
+  color: white;
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.transfer-title {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-weight: 700;
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.transfer-subtitle {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.transfer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.transfer-description {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.room-select, .table-select {
+  width: 100%;
+}
+
+.room-select :deep(.q-field__control),
+.table-select :deep(.q-field__control) {
+  border-radius: var(--border-radius-md);
+  border: 2px solid var(--color-border);
+  transition: border-color 0.2s ease;
+}
+
+.room-select :deep(.q-field__control):focus-within,
+.table-select :deep(.q-field__control):focus-within {
+  border-color: var(--color-accent-gold);
+}
+
+.transfer-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  background-color: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.confirmation-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.confirmation-text strong {
+  color: var(--color-accent-gold-dark);
+  font-weight: 600;
+}
+
+.transfer-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem;
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 /* --- Dialog Styling (General, for consistency) --- */
@@ -877,6 +1385,25 @@ body.body--dark {
   .canvas-main-area {
     padding: 0.8rem;
   }
+
+  .table-quick-actions {
+    opacity: 1; /* Always visible on mobile */
+  }
+
+  .quick-action-btn {
+    width: 24px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+  }
+
+  .transfer-card {
+    width: 95vw;
+    max-height: 90vh;
+  }
+
+  .confirmation-text {
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -888,6 +1415,12 @@ body.body--dark {
   .dialog-body-content,
   .dialog-action-buttons {
     padding: var(--spacing-unit);
+  }
+
+  .transfer-warning {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 }
 </style>

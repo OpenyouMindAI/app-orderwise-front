@@ -13,7 +13,7 @@
           </div>
         </div>
 
-        <div class="header-controls-group" style="min-width: 450px;">
+        <div class="header-controls-group">
           <div class="room-selection-area">
             <q-select
               v-model="selectedRoom"
@@ -168,7 +168,7 @@
     </section>
 
     <!-- Main Canvas Area -->
-    <main class="canvas-main-area" v-if="selectedRoom">
+    <main class="canvas-main-area" v-show="selectedRoom">
       <div class="canvas-viewport-container">
         <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
           <draggable-resizable-container
@@ -189,18 +189,17 @@
               @deactivated="onTableDeactivated(table, index)"
               @dblclick="onTableActivated(table, index)"
             >
-              <div :class="getTableDesignClass(table)">
-                <div class="table-visual-surface">
-                  <div class="table-gloss-effect"></div>
-                  <div class="table-info-overlay">
-                    <span class="table-name-text">{{ table.name }}</span>
-                    <span class="table-capacity-text">
-                      <q-icon name="person" class="capacity-icon" />
-                      {{ table.capacity || 4 }}
-                    </span>
-                  </div>
-                  <div class="table-status-indicator" :class="table.status || 'available'"></div>
+              <div class="table-visual-surface">
+                <div class="table-info-overlay">
+                  <span class="table-name-text">{{ table.name }}</span>
+                  <span class="table-capacity-text">
+                    <q-icon name="person" class="capacity-icon" />
+                    {{ table.capacity || 4 }}
+                  </span>
                 </div>
+                <div class="table-status-indicator" :class="table.status || 'available'"></div>
+              </div>
+              <div :class="getTableDesignClass(table)">
               </div>
             </draggable-resizable-vue>
           </draggable-resizable-container>
@@ -209,7 +208,7 @@
     </main>
 
     <!-- Elegant Empty State -->
-    <div v-else class="empty-state-container">
+    <div v-show="!selectedRoom" class="empty-state-container">
       <div class="empty-state-illustration">
         <div class="illustration-circle-bg">
           <q-icon name="restaurant_menu" />
@@ -236,6 +235,7 @@
             <div :class="['preview-shape-demo', `shape-demo-${selectedTable.shape}`]"></div>
           </div>
           <div class="table-meta-info">
+
             <h4 class="inspector-table-name">{{ selectedTable.name }}</h4>
             <span class="inspector-table-shape">{{ getShapeLabel(selectedTable.shape) }}</span>
           </div>
@@ -650,7 +650,8 @@ export default {
 
   methods: {
     // Room management
-    async getLivingRooms () {
+    async getLivingRooms (params = this.params) {
+      this.visible = true
       try {
         const { data } = await this.$api.get('living-rooms', { params: this.params })
         this.livingRooms = data.data
@@ -658,7 +659,9 @@ export default {
           this.selectedRoom = this.livingRooms[0]
           this.onRoomChange(this.selectedRoom)
         }
+        this.visible = false
       } catch (err) {
+        this.visible = false
         Notify.create({
           message: err.message,
           icon: 'warning',
@@ -724,7 +727,13 @@ export default {
           tables: this.currentTables
         })
 
+        const currentRoomId = this.selectedRoom.id
         await this.getLivingRooms()
+        const updatedRoom = this.livingRooms.find(room => room.id === currentRoomId)
+        if (updatedRoom) {
+          this.selectedRoom = updatedRoom
+          this.onRoomChange(updatedRoom)
+        }
 
         Notify.create({
           message: 'Cambios guardados exitosamente',
@@ -744,6 +753,7 @@ export default {
     // Table management
     addNewTable () {
       const newTable = {
+        isNew: true,
         id: Date.now(),
         name: this.newTable.name,
         shape: this.newTable.shape,
@@ -772,13 +782,47 @@ export default {
     },
 
     confirmDeleteTable () {
-      if (this.selectedTable) {
+      if (!this.selectedTable) return
+
+      // If the table is new and not saved, delete it locally without an API call.
+      if (this.selectedTable.isNew) {
         const index = this.currentTables.findIndex(t => t.id === this.selectedTable.id)
         if (index > -1) {
           this.currentTables.splice(index, 1)
           this.selectedTable = null
+          this.$q.notify({
+            color: 'info',
+            message: 'Mesa eliminada del diseño actual. Guarda los cambios para confirmar.',
+            icon: 'delete'
+          })
         }
+        return
       }
+
+      (async () => {
+        try {
+          await this.$api.delete(`tables/${this.selectedTable.id}`)
+          this.$q.notify({
+            color: 'positive',
+            message: 'Mesa eliminada correctamente',
+            icon: 'check'
+          })
+          const currentRoomId = this.selectedRoom.id
+          await this.getLivingRooms()
+          const updatedRoom = this.livingRooms.find(room => room.id === currentRoomId)
+          if (updatedRoom) {
+            this.selectedRoom = updatedRoom
+            this.onRoomChange(updatedRoom)
+          }
+          this.selectedTable = null
+        } catch (error) {
+          this.$q.notify({
+            color: 'negative',
+            message: 'Error al eliminar la mesa: ' + (error.message || 'Error desconocido'),
+            icon: 'warning'
+          })
+        }
+      })()
     },
 
     // Table interactions
@@ -939,26 +983,7 @@ export default {
       this.openEditLivingRoom = false
       this.livingRoom = { tables: [] }
     },
-    /**
-     * Get all livingRooms
-     * @param {Object} params search params
-     */
-    getLivingRooms (params = this.params) {
-      this.visible = true
-      this.$api.get('living-rooms', { params })
-        .then(({ data }) => {
-          this.livingRooms = data.data
-          this.visible = false
-        })
-        .catch(err => {
-          this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
+
     /**
      * Save livingRooms
      */
@@ -1407,7 +1432,8 @@ export default {
 .luxury-table {
   width: 100%;
   height: 100%;
-  position: relative;
+  position: absolute;
+  top: 0;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.15); /* Subtle inner border */
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3); /* Inner shadow for depth */
@@ -1992,6 +2018,7 @@ export default {
   }
 
   .brand-identity {
+    width: 100%;
     flex-direction: column;
     gap: 0.4rem; /* Reduced gap */
     text-align: center;
@@ -2017,6 +2044,7 @@ export default {
   }
 
   .metrics-display-grid {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
   }
 
@@ -2034,14 +2062,6 @@ export default {
 }
 
 @media (max-width: 480px) {
-  .metrics-display-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-card {
-    justify-content: center;
-  }
-
   .canvas-toolbar-group {
     flex-direction: column;
     gap: 0.4rem; /* Reduced gap */

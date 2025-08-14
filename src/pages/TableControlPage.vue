@@ -45,8 +45,22 @@
       </div>
     </header>
     <main class="canvas-main-area" v-if="selectedRoom">
-      <div class="canvas-viewport-container">
-        <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
+      <div class="canvas-controls">
+        <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
+        <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
+        <q-btn icon="zoom_out" @click="zoomOut" dense round flat class="control-btn"></q-btn>
+      </div>
+      <div
+        class="canvas-viewport-container"
+        @mousedown="startPan"
+        @mousemove="onPan"
+        @mouseup="endPan"
+        @mouseleave="endPan"
+        @touchstart="startPan"
+        @touchmove="onPan"
+        @touchend="endPan"
+      >
+        <div class="canvas-transform-wrapper" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }">
           <draggable-resizable-container
             :grid="[gridSize, gridSize]"
             :show-grid="showGrid"
@@ -65,42 +79,44 @@
               :resizable="false"
               @click="onTableClick(table)"
             >
-              <div :class="getTableDesignClass(table)">
-                <div class="table-visual-surface">
-                  <div class="table-gloss-effect"></div>
-                  <div class="table-info-overlay q-mt-md">
-                    <span class="table-name-text">{{ table.name }}</span>
-                    <span class="table-capacity-text">
-                      <q-icon name="person" class="capacity-icon" />
-                      {{ table.capacity || 4 }}
-                    </span>
-                  </div>
-                  <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
-                  <div v-if="table.status === 'busy'" class="table-quick-actions">
-                    <q-btn
-                      icon="swap_horiz"
-                      size="xs"
-                      round
-                      color="white"
-                      text-color="primary"
-                      @click.stop="quickTransfer(table)"
-                      class="quick-action-btn"
-                    >
-                      <q-tooltip>Cambiar Mesa</q-tooltip>
-                    </q-btn>
-                    <q-btn
-                      icon="print"
-                      size="xs"
-                      round
-                      color="white"
-                      text-color="primary"
-                      @click.stop="quickPrint(table.invoices[0], 'comanda')"
-                      class="quick-action-btn"
-                    >
-                      <q-tooltip>Imprimir Comanda</q-tooltip>
-                    </q-btn>
-                  </div>
+              <div class="table-visual-surface">
+                <div class="table-gloss-effect"></div>
+                <div class="table-info-overlay">
+                  <span class="table-name-text">{{ table.name }}</span>
+                  <span class="table-capacity-text">
+                    <q-icon name="person" class="capacity-icon" />
+                    {{ table.capacity || 4 }}
+                  </span>
                 </div>
+                <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
+                <div v-if="table.status === 'busy'" class="table-quick-actions">
+                  <q-btn
+                    icon="swap_horiz"
+                    size="xs"
+                    round
+                    color="white"
+                    text-color="primary"
+                    @click.stop="quickTransfer(table)"
+                    @touchstart.stop
+                    class="quick-action-btn"
+                  >
+                    <q-tooltip>Cambiar Mesa</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="print"
+                    size="xs"
+                    round
+                    color="white"
+                    text-color="primary"
+                    @click.stop="quickPrint(table.invoices[0], 'comanda')"
+                    @touchstart.stop
+                    class="quick-action-btn"
+                  >
+                    <q-tooltip>Imprimir Comanda</q-tooltip>
+                  </q-btn>
+                </div>
+              </div>
+              <div :class="getTableDesignClass(table)">
               </div>
             </draggable-resizable-vue>
           </draggable-resizable-container>
@@ -125,7 +141,7 @@
         />
       </div>
     </div>
-    <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal">
+    <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal" @before-show="storeActiveElement" @hide="restoreFocus">
       <q-card class="invoice-card">
         <q-card-section class="invoice-header bg-primary text-white">
           <div class="invoice-header-content">
@@ -429,7 +445,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="showTransferDialog" class="transfer-dialog">
+    <q-dialog v-model="showTransferDialog" class="transfer-dialog" @before-show="storeActiveElement" @hide="restoreFocus">
       <q-card class="transfer-card">
         <q-card-section class="transfer-header">
           <div class="transfer-title">
@@ -547,7 +563,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="showNoteDialog" class="note-dialog">
+    <q-dialog v-model="showNoteDialog" class="note-dialog" @before-show="storeActiveElement" @hide="restoreFocus">
       <q-card class="note-card">
         <q-card-section class="note-header">
           <div class="note-title">
@@ -617,7 +633,13 @@ export default {
       gridSize: 20,
       canvasWidth: 20,
       canvasHeight: 15,
+
       zoomLevel: 1,
+      panX: 0,
+      panY: 0,
+      isPanning: false,
+      startPanX: 0,
+      startPanY: 0,
 
       // Modal state
       showInvoiceModal: false,
@@ -637,6 +659,7 @@ export default {
       // Note dialog state
       showNoteDialog: false,
       noteProduct: null,
+      previousFocus: null,
       productNote: '',
       noteAction: null, // 'add' or 'edit'
       noteProductIndex: null,
@@ -915,49 +938,6 @@ export default {
       this.showTransferDialog = true
     },
 
-    cancelTransferOld () {
-      this.showTransferDialog = false
-      this.targetTable = null
-      this.transferring = false
-    },
-
-    async confirmTransferOld () {
-      if (!this.targetTable || !this.selectedInvoice) return
-
-      this.transferring = true
-      try {
-        // Update the invoice with the new table
-        await this.$api.put(`invoices/${this.selectedInvoice.id}`, {
-          ...this.selectedInvoice,
-          tables: [this.targetTable.id],
-          products: this.invoiceProducts.map(product => ({
-            ...product,
-            amount: product.pivot.amount
-          }))
-        })
-
-        Notify.create({
-          message: `Pedido transferido exitosamente de Mesa ${this.selectedTable.name} a Mesa ${this.targetTable.name}`,
-          icon: 'check_circle',
-          color: 'positive',
-          timeout: 3000
-        })
-
-        // Close dialogs and refresh
-        this.cancelTransfer()
-        this.closeInvoiceModal()
-        this.refreshTables()
-      } catch (err) {
-        Notify.create({
-          message: 'Error al transferir el pedido',
-          icon: 'error',
-          color: 'negative'
-        })
-      } finally {
-        this.transferring = false
-      }
-    },
-
     increaseQuantity (index) {
       this.invoiceProducts[index].pivot.amount++
     },
@@ -1197,7 +1177,7 @@ export default {
             status: 'pending',
             payments: [],
             total_amount: this.calculateTotal(),
-            tables: [this.selectedTable.id],
+            tables: [this.selectedTable.id]
           }
 
           await this.$api.post('invoices', params)
@@ -1230,6 +1210,91 @@ export default {
 
     getTableStatusLabel (status) {
       return this.statusMap[status] || status
+    },
+
+    storeActiveElement () {
+      this.previousFocus = document.activeElement
+    },
+
+    restoreFocus () {
+      this.$nextTick(() => {
+        if (this.previousFocus && typeof this.previousFocus.focus === 'function') {
+          this.previousFocus.focus()
+        }
+        this.previousFocus = null
+      })
+    },
+
+    formatPrice (price) {
+      return (price / 100).toFixed(2)
+    },
+
+    startPan (event) {
+      // Si el evento se origina en una mesa o sus elementos internos, no iniciar el paneo.
+      // Esto permite que los eventos de clic en las mesas y sus botones funcionen correctamente.
+      if (event.target.closest('.draggable-resizable-vue')) {
+        return
+      }
+
+      // NO llamamos a preventDefault aquí para permitir que los eventos táctiles
+      // se conviertan en clics cuando sea necesario
+
+      this.isPanning = true
+      const touch = event.touches ? event.touches[0] : event
+      this.startPanX = touch.clientX - this.panX
+      this.startPanY = touch.clientY - this.panY
+      event.currentTarget.style.cursor = 'grabbing'
+    },
+
+    onPan (event) {
+      if (!this.isPanning) return
+
+      const touch = event.touches ? event.touches[0] : event
+      this.panX = touch.clientX - this.startPanX
+      this.panY = touch.clientY - this.startPanY
+
+      // Solo prevenir el comportamiento por defecto cuando realmente estamos paneando
+      // Esto evita el scroll del navegador pero permite los clics normales
+      event.preventDefault()
+    },
+
+    endPan (event) {
+      if (!this.isPanning) return
+
+      this.isPanning = false
+      event.currentTarget.style.cursor = 'grab'
+    },
+
+    zoomIn () {
+      const newZoom = Math.min(this.zoomLevel + 0.2, 2)
+      this.smoothZoom(newZoom)
+    },
+
+    zoomOut () {
+      const newZoom = Math.max(this.zoomLevel - 0.2, 0.5)
+      this.smoothZoom(newZoom)
+    },
+
+    smoothZoom (targetZoom) {
+      const startZoom = this.zoomLevel
+      const duration = 200 // milliseconds
+      const startTime = Date.now()
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+
+        // Easing function (ease-out)
+        const easeOut = 1 - Math.pow(1 - progress, 3)
+
+        this.zoomLevel = startZoom + (targetZoom - startZoom) * easeOut
+
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        }
+      }
+
+      requestAnimationFrame(animate)
     }
   }
 }
@@ -1443,7 +1508,6 @@ body.body--dark {
 /* --- Main Canvas Area --- */
 .canvas-main-area {
   flex: 1;
-  padding: calc(var(--spacing-unit) * 1.5);
   background:
     radial-gradient(circle at 25px 25px, rgba(var(--color-border), 0.5) 1px, transparent 1px),
     var(--color-background);
@@ -1460,6 +1524,38 @@ body.body--dark {
   align-items: center;
   min-height: 100%; /* Ensure it takes full height of parent */
   width: 100%;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--color-surface-light);
+  border-radius: var(--border-radius-lg);
+  cursor: grab;
+  user-select: none; /* Prevent text selection while panning */
+}
+
+.canvas-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.control-btn {
+  color: var(--color-primary);
+}
+
+.zoom-level-display {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 40px;
+  text-align: center;
 }
 
 .canvas-transform-wrapper {
@@ -1512,7 +1608,8 @@ body.body--dark {
 .luxury-table {
   width: 100%;
   height: 100%;
-  position: relative;
+  position: absolute;
+  top: 0;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.15);
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
@@ -2249,9 +2346,10 @@ body.body--dark {
 /* --- Table Quick Actions --- */
 .table-quick-actions {
   position: absolute;
-  top: 15%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  width: 100%;
+  bottom: 0;
+  justify-content: space-between;
+  transform: translate(0, 25%);
   display: flex;
   gap: 6px;
   transition: opacity 0.2s ease;
