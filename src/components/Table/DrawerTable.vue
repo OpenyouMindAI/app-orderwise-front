@@ -214,6 +214,48 @@
               </template>
             </q-select>
 
+            <!-- Selector de Mesa de Destino -->
+            <q-select
+              v-if="targetRoom"
+              v-model="targetTable"
+              :options="availableTablesForTransfer"
+              option-label="name"
+              option-value="id"
+              label="Mesa de Destino"
+              outlined
+              class="table-select q-mt-md"
+              :rules="[val => !!val || 'Debes seleccionar una mesa']"
+              :loading="loadingTables"
+              :disable="loadingTables || !availableTablesForTransfer.length"
+            >
+              <template v-slot:prepend>
+                <q-icon name="table_restaurant" />
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon
+                      name="table_restaurant"
+                      :color="scope.opt.status === 'busy' ? 'negative' : 'positive'"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ scope.opt.capacity }} personas - {{ getTableStatusLabel(scope.opt.status) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No hay mesas disponibles en esta sala.
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
             <!-- Transfer Confirmation -->
             <div v-if="targetTable && targetRoom" class="transfer-confirmation">
               <q-icon name="info" color="primary" />
@@ -308,6 +350,7 @@ export default {
       targetRoom: null,
       transferring: false,
       availableTablesForTransfer: [],
+      loadingTables: false,
 
       // Status mapping for display
       statusMap: {
@@ -455,6 +498,7 @@ export default {
 
     async onTargetRoomChange (room) {
       this.targetTable = null
+      this.loadingTables = true
       try {
         loading(true)
         const { data } = await this.$api.get('tables', {
@@ -472,6 +516,7 @@ export default {
           color: 'negative'
         })
       } finally {
+        this.loadingTables = false
         loading(false)
       }
     },
