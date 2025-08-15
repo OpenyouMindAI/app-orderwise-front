@@ -193,12 +193,13 @@
                           <q-input
                             :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                             filled
-                            v-model.number="product.profit_percentage"
-                            :model-value="Number(product?.profit_percentage).toFixed(2)"
+                            v-model="profitPercentageDisplay"
                             label="Margen %"
-                            min="0"
                             dense
-                            @update:model-value="updateProfitPercentage"
+                            readonly
+                            class="profit-percentage-input"
+                            @keydown="handleProfitPercentageKeydown"
+                            @focus="initializeProfitPercentage"
                           />
                         </div>
                         <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -208,7 +209,7 @@
                             v-model="product.price"
                             label="Precio base"
                             type="number"
-                            step=".01"
+                            step=".00"
                             dense
                             @update:model-value="updatePrice"
                           />
@@ -219,7 +220,7 @@
                             v-model="product.minimum_stock"
                             label="Stock mínimo"
                             type="number"
-                            step=".01"
+                            step=".00"
                             dense
                           />
                         </div>
@@ -574,12 +575,13 @@
                         <q-input
                           :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                           filled
-                          v-model.number="product.profit_percentage"
-                          :model-value="Number(product?.profit_percentage).toFixed(2)"
+                          v-model="profitPercentageDisplay"
                           label="Margen %"
-                          min="0"
                           dense
-                          @update:model-value="updateProfitPercentage"
+                          readonly
+                          class="profit-percentage-input"
+                          @keydown="handleProfitPercentageKeydown"
+                          @focus="initializeProfitPercentage"
                         />
                       </div>
                       <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -589,7 +591,7 @@
                           v-model="product.price"
                           label="Precio base"
                           type="number"
-                          step=".01"
+                          step=".00"
                           dense
                           @update:model-value="updatePrice"
                         />
@@ -600,7 +602,7 @@
                           v-model="product.minimum_stock"
                           label="Stock mínimo"
                           type="number"
-                          step=".01"
+                          step=".00"
                           dense
                         />
                       </div>
@@ -1063,6 +1065,9 @@ export default {
         profit_percentage: 0,
         images: []
       },
+      // Decimal input formatting for profit percentage
+      profitPercentageValue: 0, // Internal value in centésimas (0.01 = 1)
+      profitPercentageDisplay: '0',
       categories: [],
       imageUrl: null,
       aliquotTypes: [],
@@ -1181,6 +1186,15 @@ export default {
     filter (data) {
       this.searchData(data)
     },
+    'product.profit_percentage': {
+      handler (newVal) {
+        if (newVal !== undefined && newVal !== null) {
+          this.profitPercentageValue = Math.max(0, Math.round(newVal * 100))
+          this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
+        }
+      },
+      immediate: true
+    },
     category (data) {
       if (data) {
         this.product.category_id = data.id
@@ -1203,6 +1217,26 @@ export default {
         const price = this.product.cost * (1 + newVal / 100)
         this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
       }
+    },
+    formatProfitPercentage () {
+      this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
+      this.product.profit_percentage = this.profitPercentageValue / 100
+      if (this.product.cost > 0) {
+        this.product.price = parseFloat((this.product.cost * (1 + this.product.profit_percentage / 100)).toFixed(2))
+      }
+    },
+    handleProfitPercentageKeydown (e) {
+      e.preventDefault()
+      if (e.key >= '0' && e.key <= '9') {
+        this.profitPercentageValue = this.profitPercentageValue * 10 + parseInt(e.key)
+      } else if (e.key === 'Backspace') {
+        this.profitPercentageValue = Math.max(0, Math.floor(this.profitPercentageValue / 10))
+      }
+      this.formatProfitPercentage()
+    },
+    initializeProfitPercentage () {
+      this.profitPercentageValue = Math.max(0, Math.round((this.product.profit_percentage || 0) * 100))
+      this.formatProfitPercentage()
     },
     updatePrice (newVal) {
       if (newVal && this.product.cost > 0) {
@@ -1831,6 +1865,10 @@ export default {
   border: 2px dashed #e0e0e0;
   transition: all 0.3s ease;
   cursor: pointer;
+}
+
+.profit-percentage-input input {
+  text-align: right !important;
 }
 
 .dropzone-card:hover,
