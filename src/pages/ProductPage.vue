@@ -270,6 +270,15 @@
                                   filled
                                   dense
                                 />
+                                <q-input
+                                  v-model="priceList.profit_percentage"
+                                  label="Margen"
+                                  type="number"
+                                  step=".01"
+                                  :rules="[val => val >= 1 || 'El margen mínimo es 1']"
+                                  filled
+                                  dense
+                                />
                                 <div>
                                   <q-btn
                                     icon="delete"
@@ -641,6 +650,15 @@
                                 type="number"
                                 step=".01"
                                 :rules="[val => val >= 1 || 'El precio mínimo es 3']"
+                                filled
+                                dense
+                              />
+                              <q-input
+                                v-model="priceList.profit_percentage"
+                                label="Margen %"
+                                type="number"
+                                step=".01"
+                                :rules="[val => val >= 1 || 'El margen mínimo es 1']"
                                 filled
                                 dense
                               />
