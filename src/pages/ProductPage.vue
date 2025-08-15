@@ -250,9 +250,9 @@
                           :key="index"
                           class="q-mb-sm q-pa-none"
                         >
-                          <q-card-section class="q-pa-none">
-                            <div class="row q-col-gutter-sm items-center">
-                              <div class="col-4">
+                          <q-card-section class="q-pa-md">
+                            <div class="row q-gutter-x-md items-star">
+                              <div class="col">
                                 <q-input
                                   v-model="priceList.name"
                                   label="Nombre de la lista"
@@ -261,16 +261,7 @@
                                   :rules="[val => !!val || 'El precio mínimo es 3']"
                                 />
                               </div>
-                              <div class="col-5 flex justify-between items-center">
-                                <q-input
-                                  v-model="priceList.price"
-                                  label="Precio"
-                                  type="number"
-                                  step=".01"
-                                  :rules="[val => val >= 1 || 'El precio mínimo es 3']"
-                                  filled
-                                  dense
-                                />
+                              <div class="col">
                                 <q-input
                                   v-model="priceList.profit_percentage"
                                   label="Margen"
@@ -280,18 +271,28 @@
                                   filled
                                   dense
                                 />
-                                <div>
-                                  <q-btn
-                                    icon="delete"
-                                    color="negative"
-                                    size="sm"
-                                    round
-                                    flat
-                                    @click="removePriceList(index)"
-                                  >
-                                    <q-tooltip>Eliminar lista</q-tooltip>
-                                  </q-btn>
-                                </div>
+                              </div>
+                              <div class="col">
+                                <q-input
+                                  v-model="priceList.price"
+                                  label="Precio"
+                                  type="number"
+                                  step=".01"
+                                  :rules="[val => val >= 1 || 'El precio mínimo es 3']"
+                                  filled
+                                  dense
+                                />
+                              </div>
+                              <div class="col-auto q-pb-xs">
+                                <q-btn
+                                  icon="delete"
+                                  color="negative"
+                                  round
+                                  flat
+                                  @click="removePriceList(index)"
+                                >
+                                  <q-tooltip>Eliminar lista</q-tooltip>
+                                </q-btn>
                               </div>
                             </div>
                           </q-card-section>
