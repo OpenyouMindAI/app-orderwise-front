@@ -263,13 +263,14 @@
                               </div>
                               <div class="col">
                                 <q-input
-                                  v-model="priceList.profit_percentage"
-                                  label="Margen"
-                                  type="number"
-                                  step=".01"
-                                  :rules="[val => val >= 1 || 'El margen mínimo es 1']"
-                                  filled
-                                  dense
+                                v-model="priceList.profitPercentageDisplay"
+                                label="Margen"
+                                filled
+                                dense
+                                readonly
+                                class="profit-percentage-input"
+                                @keydown="event => handlePriceListMarginKeydown(event, priceList)"
+                                @focus="initializePriceListMargin(priceList)"
                                 />
                               </div>
                               <div class="col">
@@ -281,6 +282,7 @@
                                   :rules="[val => val >= 1 || 'El precio mínimo es 3']"
                                   filled
                                   dense
+                                  @update:model-value="calculatePriceListMargin(priceList)"
                                 />
                               </div>
                               <div class="col-auto q-pb-xs">
@@ -655,15 +657,17 @@
                                 :rules="[val => val >= 1 || 'El precio mínimo es 3']"
                                 filled
                                 dense
+                                @update:model-value="calculatePriceListMargin(priceList)"
                               />
                               <q-input
-                                v-model="priceList.profit_percentage"
+                                v-model="priceList.profitPercentageDisplay"
                                 label="Margen %"
-                                type="number"
-                                step=".01"
-                                :rules="[val => val >= 1 || 'El margen mínimo es 1']"
                                 filled
                                 dense
+                                readonly
+                                class="profit-percentage-input"
+                                @keydown="event => handlePriceListMarginKeydown(event, priceList)"
+                                @focus="initializePriceListMargin(priceList)"
                               />
                             </div>
                             <div class="col-2 text-right">
@@ -1167,6 +1171,13 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
+    'product.price' (newPrice) {
+      if (this.priceLists && this.priceLists.length > 0) {
+        this.priceLists.forEach(priceList => {
+          this.calculatePriceListPrice(priceList)
+        })
+      }
+    },
     /**
      * Set pagination when branch office changes
      * @param {Object} value branch office
@@ -1239,6 +1250,28 @@ export default {
       this.profitPercentageValue = Math.max(0, Math.round((this.product.profit_percentage || 0) * 100))
       this.formatProfitPercentage()
     },
+
+    initializePriceListMargin (priceList) {
+      priceList.profitPercentageValue = 0
+      this.formatPriceListMargin(priceList)
+    },
+
+    handlePriceListMarginKeydown (e, priceList) {
+      e.preventDefault()
+      if (e.key >= '0' && e.key <= '9') {
+        priceList.profitPercentageValue = (priceList.profitPercentageValue || 0) * 10 + parseInt(e.key)
+      } else if (e.key === 'Backspace') {
+        priceList.profitPercentageValue = Math.max(0, Math.floor((priceList.profitPercentageValue || 0) / 10))
+      }
+      this.formatPriceListMargin(priceList)
+    },
+
+    formatPriceListMargin (priceList) {
+      const displayValue = ((priceList.profitPercentageValue || 0) / 100).toFixed(2)
+      priceList.profitPercentageDisplay = displayValue
+      priceList.profit_percentage = parseFloat(displayValue)
+      this.calculatePriceListPrice(priceList)
+    },
     updatePrice (newVal) {
       if (newVal && this.product.cost > 0) {
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
@@ -1249,6 +1282,34 @@ export default {
       if (newVal && this.product.profit_percentage != null) {
         const price = newVal * (1 + this.product.profit_percentage / 100)
         this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
+
+    calculatePriceListMargin (priceList) {
+      const basePrice = parseFloat(this.product.price)
+      const listPrice = parseFloat(priceList.price)
+
+      if (!isNaN(basePrice) && !isNaN(listPrice) && basePrice > 0) {
+        const margin = ((listPrice - basePrice) / basePrice) * 100
+        priceList.profit_percentage = parseFloat(margin.toFixed(2))
+        priceList.profitPercentageValue = Math.round(margin * 100)
+        priceList.profitPercentageDisplay = margin.toFixed(2)
+      } else {
+        priceList.profit_percentage = null
+        priceList.profitPercentageValue = 0
+        priceList.profitPercentageDisplay = '0.00'
+      }
+    },
+
+    calculatePriceListPrice (priceList) {
+      const basePrice = parseFloat(this.product.price)
+      const margin = parseFloat(priceList.profit_percentage)
+
+      if (!isNaN(basePrice) && !isNaN(margin) && basePrice > 0) {
+        const newPrice = basePrice * (1 + margin / 100)
+        priceList.price = parseFloat(newPrice.toFixed(2))
+      } else {
+        priceList.price = null
       }
     },
     /**
@@ -1279,7 +1340,10 @@ export default {
     addPriceList () {
       this.priceLists.push({
         name: `Lista ${this.priceLists.length + 1}`,
-        price: null
+        price: null,
+        profit_percentage: 0,
+        profitPercentageValue: 0,
+        profitPercentageDisplay: '0.00'
       })
     },
 
@@ -1606,6 +1670,14 @@ export default {
         }
       }
 
+      if (this.priceLists.length) {
+        const formattedPriceLists = this.priceLists.map(pl => ({
+          ...pl,
+          profit_percentage: (pl.profit_percentage || 0) * 100
+        }))
+        formData.append('price_lists', JSON.stringify(formattedPriceLists))
+      }
+
       if (data.aliquot_type) {
         formData.append('aliquot_type', JSON.stringify(data.aliquot_type))
       }
@@ -1803,7 +1875,14 @@ export default {
       this.product = row
       this.unitOfMeasure = row.unit_of_measure_id
       this.addonsProducts = row.addons
-      this.priceLists = row.product_price_lists
+      this.priceLists = this.product.product_price_lists || []
+      this.priceLists.forEach(pl => {
+        const profitPercentageFromDB = pl.profit_percentage || 0
+
+        pl.profit_percentage = parseFloat(profitPercentageFromDB)
+        pl.profitPercentageValue = Math.round(profitPercentageFromDB * 100)
+        pl.profitPercentageDisplay = Number(profitPercentageFromDB).toFixed(2)
+      })
     },
     /**
      * Save edit
