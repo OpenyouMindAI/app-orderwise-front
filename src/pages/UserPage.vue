@@ -263,6 +263,22 @@ export default {
           label: 'Correo',
           field: 'email',
           sortable: true
+        },
+        {
+          name: 'roles',
+          align: 'left',
+          label: 'Roles',
+          field: 'roles',
+          format: (value) => value.map((role) => role.name).join(', '),
+          sortable: true
+        },
+        {
+          name: 'branch_offices',
+          align: 'left',
+          label: 'Sucursal',
+          field: 'branch_offices',
+          format: (value) => value.map((branch) => branch.name).join(', '),
+          sortable: true
         }
       ],
       paginationConfig: {
