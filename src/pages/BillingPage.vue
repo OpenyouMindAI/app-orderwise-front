@@ -569,7 +569,7 @@
           </div>
           <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-md row">
             <div class="col-12">
-              <q-toggle v-if="invoices?.tables?.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
+              <q-toggle v-if="invoice?.tables?.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
               <q-markup-table>
                 <thead>
                   <tr>
