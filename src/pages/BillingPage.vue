@@ -750,7 +750,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
+    <q-dialog v-model="dialogTable">
       <drawer-table
         ref="drawerTable"
         :tablesSelected="tableSelected"
@@ -758,11 +758,10 @@
         @update:invoice="selectInvoice"
         @update:freeTable="freeTable"
       >
-        <template v-slot:footer>
-          <q-card-actions align="right">
-            <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
-            <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          </q-card-actions>
+        <template v-slot:header>
+          <q-space />
+          <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
+          <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
         </template>
       </drawer-table>
     </q-dialog>
@@ -2388,6 +2387,7 @@ export default {
           return {
             ...product,
             ...product.pivot,
+            id: product.id,
             quantity: product.pivot.amount,
             subtotal: product.pivot.price * product.pivot.amount,
             product_price_lists: product.product_price_lists
@@ -2396,7 +2396,7 @@ export default {
         this.client = invoice.client
         this.invoiceType = invoice.invoice_type
         this.typeOfService = invoice.type_of_service
-        this.tableSelected = invoice.tables.map(table => table.id)
+
         this.searchInvoice = false
         this.setPayments(invoice.invoice_payments)
         this.$router.push({
@@ -2494,7 +2494,7 @@ export default {
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.paymentModel(this.payments),
         total_amount: this.totalBill,
-        tables: this.tableSelected,
+        tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }

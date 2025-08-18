@@ -37,7 +37,12 @@ export const commandPrint = async (data, printer = null) => {
     if (printerSelected.type === 'USB') {
       printCommandUsb(data, companyConfig?.other?.printer)
     } else {
-      directCommandPrintBluetooth(printerSelected, data, device)
+      directCommandPrintBluetooth(
+        printerSelected,
+        data,
+        device,
+        companyConfig?.other?.printer
+      )
     }
   } catch (error) {
     notify(error.message, 'negative', 'warning')
