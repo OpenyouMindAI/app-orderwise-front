@@ -230,6 +230,12 @@ const routes = [
         name: 'PointOfSale',
         meta: { requiresAuth: true },
         component: () => import('src/pages/PointOfSalePage.vue')
+      },
+      {
+        path: 'demo',
+        name: 'Demo',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/DemoModalPage.vue')
       }
     ]
   },

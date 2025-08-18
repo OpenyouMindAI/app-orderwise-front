@@ -40,6 +40,7 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "laravel-echo": "^1.17.1",
+    "msw": "^1.3.5",
     "multi-display-manager": "file:plugin/multi-display-manager",
     "pinia": "^2.0.11",
     "pinia-plugin-persistedstate": "^3.2.1",
@@ -71,7 +72,6 @@
     "eslint-plugin-n": "^15.0.0",
     "eslint-plugin-promise": "^6.0.0",
     "eslint-plugin-vue": "^9.0.0",
-    "msw": "^2.10.4",
     "vite": "^6.3.5",
     "workbox-build": "^6.5.4",
     "workbox-cacheable-response": "^6.5.4",
@@ -87,8 +87,6 @@
     "yarn": ">= 1.21.1"
   },
   "msw": {
-    "workerDirectory": [
-      "public"
-    ]
+    "workerDirectory": "public"
   }
 }
