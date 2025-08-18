@@ -340,16 +340,6 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Punto de venta</label>
-                <q-input
-                  v-model="companyConfig.point_of_sale"
-                  outlined
-                  dense
-                  class="custom-input"
-                />
-              </div>
-
-              <div class="form-group">
                 <label class="field-label">Inicio de actividades</label>
                 <q-input
                   v-model="companyConfig.other.activity_start_date"
@@ -519,8 +509,58 @@
           </q-form>
         </div>
 
-        <!-- Step 6: Integrations -->
+        <!-- Step 6: Branch Configuration -->
         <div v-if="step === 6" class="step-card">
+          <div class="step-header">
+            <h2>Configuración de Sucursal</h2>
+            <p>Define los valores por defecto para esta sucursal</p>
+          </div>
+
+          <q-form @submit="onSubmitConfig" class="step-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="field-label">Punto de venta</label>
+                <q-input
+                  v-model="companyConfig.point_of_sale"
+                  outlined
+                  dense
+                  class="custom-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">Lista de precios por defecto</label>
+                <q-select
+                  v-model="companyConfig.other.default_price_list"
+                  :options="['1', '2', '3', '4', '5']"
+                  outlined
+                  dense
+                  class="custom-input"
+                />
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <q-btn
+                flat
+                label="Anterior"
+                @click="step = 5"
+                class="action-btn-secondary"
+              />
+              <q-btn
+                type="submit"
+                color="primary"
+                label="Continuar"
+                :loading="loading"
+                unelevated
+                class="action-btn"
+              />
+            </div>
+          </q-form>
+        </div>
+
+        <!-- Step 7: Integrations -->
+        <div v-if="step === 7" class="step-card">
           <div class="step-header">
             <h2>Integraciones</h2>
             <p>Conecta con servicios externos</p>
@@ -535,7 +575,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 5"
+                @click="step = 6"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -555,11 +595,12 @@
 
 <script setup>
 import { authentication } from 'src/stores/module-authentication'
+import { storeToRefs } from 'pinia'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import ScheduleCompany from 'src/components/Company/ScheduleCompany.vue'
 import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
 
@@ -578,6 +619,7 @@ const loading = ref(false)
 
 // Store and session
 const store = authentication()
+const { branchOffice } = storeToRefs(store)
 const userSession = store.userSession
 const company = ref(userSession.company_session)
 
@@ -588,7 +630,7 @@ const companyConfig = ref({
   invoiceType: company.value?.company_config?.invoice_type,
   typeOfService: company.value?.company_config?.type_of_service,
   coin: company.value?.company_config?.coin,
-  client: company.value?.company_config?.client,
+  priceList: company.value?.company_config?.price_list,
   printer: company.value?.company_config?.printer,
   other: company.value?.company_config?.other || {},
   point_of_sale: company.value?.company_config?.point_of_sale,
@@ -610,16 +652,25 @@ const file = ref({
   url: userSession.company_session.url
 })
 
+// Load branch office config into the form on component mount
+onMounted(() => {
+  if (branchOffice.value) {
+    companyConfig.value.point_of_sale = branchOffice.value.point_of_sale
+    companyConfig.value.other.default_price_list = branchOffice.value.default_price_list
+  }
+})
+
 // Computed
-const totalSteps = computed(() => 6)
+const totalSteps = computed(() => 7)
 
 const steps = computed(() => [
   { number: 1, title: 'Empresa', icon: 'business' },
   { number: 2, title: 'Dispositivos', icon: 'print' },
   { number: 3, title: 'Facturación', icon: 'receipt' },
   { number: 4, title: 'Menú', icon: 'restaurant_menu' },
-  { number: 5, title: 'Pantalla', icon: 'tv' }
-  // { number: 6, title: 'Integraciones', icon: 'hub' }
+  { number: 5, title: 'Pantalla', icon: 'tv' },
+  { number: 6, title: 'Sucursal', icon: 'store' },
+  { number: 7, title: 'Integraciones', icon: 'hub' }
 ])
 
 // Refs for file uploaders
@@ -884,22 +935,39 @@ const saveMenuConfig = async () => {
 const onSubmitConfig = async () => {
   try {
     loading.value = true
-    const { data } = await api.post('company-configs', {
-      coin_id: companyConfig.value?.coin?.id,
-      type_of_service_id: companyConfig.value?.typeOfService?.id,
-      invoice_type_id: companyConfig.value?.invoiceType?.id,
-      payment_method_id: companyConfig.value?.paymentMethod?.id,
-      client_id: companyConfig.value?.client?.id,
-      printer_id: companyConfig.value?.printer?.id,
-      other: {
-        ...companyConfig.value?.other
-      },
-      point_of_sale: companyConfig.value?.point_of_sale
-    })
-    store.setCompanySession({
-      ...company.value,
-      company_config: data
-    })
+
+    // Si estamos en el paso 6, guardamos la configuración de la sucursal
+    if (step.value === 6) {
+      const payload = {
+        branch_office_id: branchOffice.value.id,
+        point_of_sale: companyConfig.value.point_of_sale,
+        default_price_list: companyConfig.value.other.default_price_list
+      }
+      // Enviamos la configuración al nuevo endpoint
+      const { data } = await api.post('branch-office-configs', payload)
+
+      // Actualizamos el estado de la sucursal en Pinia con la respuesta
+      store.setBranchOffice(data)
+    } else {
+      // Lógica de guardado para los otros pasos (configuración general de la empresa)
+      const { data } = await api.post('company-configs', {
+        coin_id: companyConfig.value?.coin?.id,
+        type_of_service_id: companyConfig.value?.typeOfService?.id,
+        invoice_type_id: companyConfig.value?.invoiceType?.id,
+        payment_method_id: companyConfig.value?.paymentMethod?.id,
+        client_id: companyConfig.value?.client?.id,
+        printer_id: companyConfig.value?.printer?.id,
+        other: {
+          ...companyConfig.value?.other
+        },
+        point_of_sale: companyConfig.value?.point_of_sale
+      })
+      store.setCompanySession({
+        ...company.value,
+        company_config: data
+      })
+    }
+
     notify('Guardado exitosamente', 'positive', 'check_circle')
     step.value = step.value + 1
   } catch (error) {
