@@ -303,7 +303,70 @@
                       {{ formatNumber(props.row.subtotal) }}
                     </q-td>
                     <q-td key="actions" :props="props">
+                      <q-btn
+                        :icon="props.expand ? 'expand_less' : 'expand_more'"
+                        size="xs"
+                        color="primary"
+                        flat
+                        @click="props.expand = !props.expand"
+                        class="q-mr-xs"
+                      />
                       <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)" />
+                    </q-td>
+                  </q-tr>
+                  <q-tr v-show="props.expand" :props="props">
+                    <q-td colspan="100%" class="q-pa-sm">
+                      <div class="text-left">
+                        <div v-if="props.row.selectionGroups && props.row.selectionGroups.length > 0">
+                          <div class="text-weight-medium q-mb-sm">Detalles de la promoción</div>
+
+                          <div v-for="group in props.row.selectionGroups" :key="group.name" class="q-mb-sm">
+                            <div class="text-subtitle2 text-grey-8 q-mb-xs">
+                              {{ group.name }}
+                              <span class="text-caption text-grey-6">
+                                ({{ group.minSelection }}{{ group.minSelection !== group.maxSelection ? `-${group.maxSelection}` : '' }} productos)
+                              </span>
+                            </div>
+                            <div class="q-ml-sm">
+                              <div v-for="product in group.products" :key="product.productId" class="row justify-between q-py-xs">
+                                <span>{{ product.name }}</span>
+                                <span class="text-weight-medium">{{ group.minSelection }} unidad{{ group.minSelection > 1 ? 'es' : '' }}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
+                            <div class="row justify-between items-center">
+                              <span class="text-weight-medium">Total promoción:</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.finalPrice || props.row.price) }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else-if="props.row.products && props.row.products.length > 0">
+                          <div class="text-weight-medium q-mb-sm">Productos incluidos</div>
+                          <div class="q-ml-sm">
+                            <div v-for="item in props.row.products" :key="item.productId || item.id" class="row justify-between q-py-xs">
+                              <span>{{ item.name }}</span>
+                              <span class="text-weight-medium">1 unidad</span>
+                            </div>
+                          </div>
+                          <div v-if="props.row.finalPrice" class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
+                            <div class="row justify-between items-center">
+                              <span class="text-weight-medium">Total:</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.finalPrice) }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else-if="props.row.is_bundle">
+                          <div class="text-grey-6">Producto promocional sin detalles específicos</div>
+                        </div>
+
+                        <div v-else>
+                          <div class="text-grey-6">No hay detalles adicionales para este producto</div>
+                        </div>
+                      </div>
                     </q-td>
                   </q-tr>
                 </template>
@@ -2326,6 +2389,66 @@ export default {
       })
         .then(({ data }) => {
           this.allProducts = data.data
+          this.allProducts.unshift({
+            id: 'promo-1',
+            name: 'Promo 1',
+            barcode: 'PROMO1',
+            price: 8000,
+            images: [],
+            is_bundle: true,
+            bundle_stock: 100,
+            description: 'Empanadas',
+            status: 'active',
+            startDate: '',
+            endDate: '',
+            channels: 'pos',
+            isActive: true,
+            showInCatalog: true,
+            requiresStock: true,
+            selectionGroups: [
+              {
+                name: 'Sabor',
+                required: true,
+                minSelection: 6,
+                maxSelection: 6,
+                products: [
+                  {
+                    productId: 65,
+                    name: 'EMPANADAS',
+                    price: 1100
+                  }
+                ]
+              },
+              {
+                name: 'Gaseosa',
+                required: true,
+                minSelection: 1,
+                maxSelection: 1,
+                products: [
+                  {
+                    productId: 49,
+                    name: 'GASEOSAS LINEA COCACOLA 500CC',
+                    price: 1800
+                  }
+                ]
+              }
+            ],
+            finalPrice: 8000,
+            products: [
+              {
+                productId: 65,
+                name: 'EMPANADAS',
+                price: 1100,
+                groupId: 0
+              },
+              {
+                productId: 49,
+                name: 'GASEOSAS LINEA COCACOLA 500CC',
+                price: 1800,
+                groupId: 1
+              }
+            ]
+          })
           this.pagination.rowsNumber = data.total
           this.loadingProducts = false
         })
@@ -2628,7 +2751,11 @@ export default {
           is_bundle: product.is_bundle,
           aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
           unit_of_measure: product.unit_of_measure,
-          product_price_lists: product.product_price_lists
+          product_price_lists: product.product_price_lists,
+          // Preserve promo/bundle specific properties
+          selectionGroups: product.selectionGroups || [],
+          products: product.products || [],
+          finalPrice: product.finalPrice
         }
       ]
     },
@@ -2738,7 +2865,12 @@ export default {
           : quantity,
         subtotal: isWeightProduct && this.currentAmount
           ? this.currentAmount
-          : data.price * quantity
+          : data.price * quantity,
+        // Explicitly preserve bundle/promo properties
+        is_bundle: data.is_bundle || false,
+        products: data.products || [],
+        selectionGroups: data.selectionGroups || [],
+        finalPrice: data.finalPrice || data.price
       }
 
       // Asegurar precisión en decimales

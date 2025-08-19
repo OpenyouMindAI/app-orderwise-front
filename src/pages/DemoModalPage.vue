@@ -51,6 +51,7 @@
         </q-card-section>
 
         <q-form
+          ref="promotionForm"
           class="promotion-form"
           @submit="savePromotion"
         >
@@ -143,6 +144,7 @@
                         </div>
                         <div class="col-12">
                           <q-select
+                            ref="channelSelect"
                             v-model="promotion.channels"
                             :options="channelOptions"
                             label="Canal disponible"
@@ -150,7 +152,8 @@
                             dense
                             emit-value
                             map-options
-                            @update:model-value="$event.target.blur()"
+                            :rules="[val => !!val || 'Se requiere al menos un canal']"
+                            @update:model-value="() => channelSelect.blur()"
                           />
                         </div>
                       </div>
@@ -337,13 +340,13 @@
                 <q-card flat bordered class="q-mt-lg">
                   <q-card-section>
                     <div class="row justify-between items-center q-mb-md">
-                      <div class="text-subtitle1 text-grey-8">Costo de Productos (Calculado)</div>
+                      <div class="text-subtitle1 text-grey-8">Precio Estimado</div>
                       <div class="text-subtitle1 text-weight-medium">{{ formatCurrency(promotionTotalPrice) }}</div>
                     </div>
                     <q-separator />
                     <div class="row justify-between items-center q-pt-md">
                       <div class="text-h6 text-primary text-weight-bold">Precio Final</div>
-                      <div class="col-5">
+                      <div class="col-3">
                         <q-input
                           v-model="promotion.finalPrice"
                           label="Precio de la promoción"
@@ -407,9 +410,11 @@ const branchOffice = computed(() => authStore.branchOffice)
 const showCreateModal = ref(false)
 const activeTab = ref('basic')
 const saving = ref(false)
+const promotionForm = ref(null)
 const allProducts = ref([])
 const filteredProducts = ref([])
 const selectedProductForGroup = ref(null) // Para limpiar el q-select
+const channelSelect = ref(null)
 
 // Promotion data model
 const getInitialPromotionState = () => ({
@@ -448,18 +453,6 @@ const promotionTotalPrice = computed(() => {
   }, 0)
 })
 
-// Flattened products from all groups for submission
-const promotionProducts = computed(() => {
-  return promotion.value.selectionGroups.flatMap((group, groupIndex) =>
-    group.products.map(product => ({
-      productId: product.productId,
-      name: product.name,
-      price: product.price,
-      groupId: groupIndex
-    }))
-  )
-})
-
 const promotion = ref(getInitialPromotionState())
 
 // Options for selects
@@ -476,7 +469,10 @@ const channelOptions = [
 
 // Validation Rules
 const nameRules = [val => !!val || 'El nombre es requerido']
-const priceRules = [val => val >= 0 || 'El precio debe ser positivo']
+const priceRules = [
+  val => (val !== null && val !== '') || 'El precio es requerido',
+  val => val > 0 || 'El precio debe ser mayor a cero'
+]
 
 const handlePriceFocus = (event) => {
   const el = event.target
@@ -590,11 +586,33 @@ const removeProductFromGroup = (groupIndex, productIndex) => {
 }
 
 const savePromotion = async () => {
+  const formIsValid = await promotionForm.value.validate()
+
+  let customValidation = true
+  let customMessage = ''
+
+  if (promotion.value.selectionGroups.length === 0) {
+    customValidation = false
+    customMessage = 'Debe agregar al menos un grupo de selección.'
+  } else if (promotion.value.selectionGroups.some(g => g.products.length === 0)) {
+    customValidation = false
+    customMessage = 'Todos los grupos deben contener al menos un producto.'
+  }
+
+  if (!formIsValid || !customValidation) {
+    $q.notify({
+      type: 'negative',
+      message: customMessage || 'Por favor, complete todos los campos requeridos.',
+      position: 'top'
+    })
+    return
+  }
+
   saving.value = true
   try {
     const payload = {
       ...promotion.value,
-      products: promotionProducts.value
+      finalPrice: Number(promotion.value.finalPrice)
     }
     const { data } = await api.post('/promotions', payload)
     $q.notify({

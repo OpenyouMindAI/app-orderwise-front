@@ -193,12 +193,13 @@
                           <q-input
                             :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                             filled
-                            v-model.number="product.profit_percentage"
-                            :model-value="Number(product?.profit_percentage).toFixed(2)"
+                            v-model="profitPercentageDisplay"
                             label="Margen %"
-                            min="0"
                             dense
-                            @update:model-value="updateProfitPercentage"
+                            readonly
+                            class="profit-percentage-input"
+                            @keydown="handleProfitPercentageKeydown"
+                            @focus="initializeProfitPercentage"
                           />
                         </div>
                         <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -208,7 +209,7 @@
                             v-model="product.price"
                             label="Precio base"
                             type="number"
-                            step=".01"
+                            step=".00"
                             dense
                             @update:model-value="updatePrice"
                           />
@@ -219,7 +220,7 @@
                             v-model="product.minimum_stock"
                             label="Stock mínimo"
                             type="number"
-                            step=".01"
+                            step=".00"
                             dense
                           />
                         </div>
@@ -249,9 +250,9 @@
                           :key="index"
                           class="q-mb-sm q-pa-none"
                         >
-                          <q-card-section class="q-pa-none">
-                            <div class="row q-col-gutter-sm items-center">
-                              <div class="col-4">
+                          <q-card-section class="q-pa-md">
+                            <div class="row q-gutter-x-md items-star">
+                              <div class="col">
                                 <q-input
                                   v-model="priceList.name"
                                   label="Nombre de la lista"
@@ -260,7 +261,19 @@
                                   :rules="[val => !!val || 'El precio mínimo es 3']"
                                 />
                               </div>
-                              <div class="col-5 flex justify-between items-center">
+                              <div class="col">
+                                <q-input
+                                v-model="priceList.profitPercentageDisplay"
+                                label="Margen"
+                                filled
+                                dense
+                                readonly
+                                class="profit-percentage-input"
+                                @keydown="event => handlePriceListMarginKeydown(event, priceList)"
+                                @focus="initializePriceListMargin(priceList)"
+                                />
+                              </div>
+                              <div class="col">
                                 <q-input
                                   v-model="priceList.price"
                                   label="Precio"
@@ -269,19 +282,19 @@
                                   :rules="[val => val >= 1 || 'El precio mínimo es 3']"
                                   filled
                                   dense
+                                  @update:model-value="calculatePriceListMargin(priceList)"
                                 />
-                                <div>
-                                  <q-btn
-                                    icon="delete"
-                                    color="negative"
-                                    size="sm"
-                                    round
-                                    flat
-                                    @click="removePriceList(index)"
-                                  >
-                                    <q-tooltip>Eliminar lista</q-tooltip>
-                                  </q-btn>
-                                </div>
+                              </div>
+                              <div class="col-auto q-pb-xs">
+                                <q-btn
+                                  icon="delete"
+                                  color="negative"
+                                  round
+                                  flat
+                                  @click="removePriceList(index)"
+                                >
+                                  <q-tooltip>Eliminar lista</q-tooltip>
+                                </q-btn>
                               </div>
                             </div>
                           </q-card-section>
@@ -417,15 +430,6 @@
                           <q-toggle
                             v-model="product.show_catalog"
                             label="Mostrar en catálogo"
-                            :true-value="1"
-                            :false-value="0"
-                            color="positive"
-                          />
-                        </div>
-                        <div class="col-6">
-                          <q-toggle
-                            v-model="product.is_default"
-                            label="Predeterminado"
                             :true-value="1"
                             :false-value="0"
                             color="positive"
@@ -574,12 +578,13 @@
                         <q-input
                           :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
                           filled
-                          v-model.number="product.profit_percentage"
-                          :model-value="Number(product?.profit_percentage).toFixed(2)"
+                          v-model="profitPercentageDisplay"
                           label="Margen %"
-                          min="0"
                           dense
-                          @update:model-value="updateProfitPercentage"
+                          readonly
+                          class="profit-percentage-input"
+                          @keydown="handleProfitPercentageKeydown"
+                          @focus="initializeProfitPercentage"
                         />
                       </div>
                       <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -589,7 +594,7 @@
                           v-model="product.price"
                           label="Precio base"
                           type="number"
-                          step=".01"
+                          step=".00"
                           dense
                           @update:model-value="updatePrice"
                         />
@@ -600,7 +605,7 @@
                           v-model="product.minimum_stock"
                           label="Stock mínimo"
                           type="number"
-                          step=".01"
+                          step=".00"
                           dense
                         />
                       </div>
@@ -652,6 +657,17 @@
                                 :rules="[val => val >= 1 || 'El precio mínimo es 3']"
                                 filled
                                 dense
+                                @update:model-value="calculatePriceListMargin(priceList)"
+                              />
+                              <q-input
+                                v-model="priceList.profitPercentageDisplay"
+                                label="Margen %"
+                                filled
+                                dense
+                                readonly
+                                class="profit-percentage-input"
+                                @keydown="event => handlePriceListMarginKeydown(event, priceList)"
+                                @focus="initializePriceListMargin(priceList)"
                               />
                             </div>
                             <div class="col-2 text-right">
@@ -805,15 +821,6 @@
                           color="positive"
                         />
                       </div>
-                      <div class="col-6">
-                          <q-toggle
-                            v-model="product.is_default"
-                            label="Predeterminado"
-                            :true-value="1"
-                            :false-value="0"
-                            color="positive"
-                          />
-                        </div>
                     </div>
                     <div
                       class="q-mt-md"
@@ -1061,9 +1068,11 @@ export default {
         is_addons: 0,
         skip_stock: 0,
         profit_percentage: 0,
-        is_default: 0,
         images: []
       },
+      // Decimal input formatting for profit percentage
+      profitPercentageValue: 0, // Internal value in centésimas (0.01 = 1)
+      profitPercentageDisplay: '0',
       categories: [],
       imageUrl: null,
       aliquotTypes: [],
@@ -1162,6 +1171,13 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
+    'product.price' (newPrice) {
+      if (this.priceLists && this.priceLists.length > 0) {
+        this.priceLists.forEach(priceList => {
+          this.calculatePriceListPrice(priceList)
+        })
+      }
+    },
     /**
      * Set pagination when branch office changes
      * @param {Object} value branch office
@@ -1181,6 +1197,15 @@ export default {
     },
     filter (data) {
       this.searchData(data)
+    },
+    'product.profit_percentage': {
+      handler (newVal) {
+        if (newVal !== undefined && newVal !== null) {
+          this.profitPercentageValue = Math.max(0, Math.round(newVal * 100))
+          this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
+        }
+      },
+      immediate: true
     },
     category (data) {
       if (data) {
@@ -1205,6 +1230,48 @@ export default {
         this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
       }
     },
+    formatProfitPercentage () {
+      this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
+      this.product.profit_percentage = this.profitPercentageValue / 100
+      if (this.product.cost > 0) {
+        this.product.price = parseFloat((this.product.cost * (1 + this.product.profit_percentage / 100)).toFixed(2))
+      }
+    },
+    handleProfitPercentageKeydown (e) {
+      e.preventDefault()
+      if (e.key >= '0' && e.key <= '9') {
+        this.profitPercentageValue = this.profitPercentageValue * 10 + parseInt(e.key)
+      } else if (e.key === 'Backspace') {
+        this.profitPercentageValue = Math.max(0, Math.floor(this.profitPercentageValue / 10))
+      }
+      this.formatProfitPercentage()
+    },
+    initializeProfitPercentage () {
+      this.profitPercentageValue = Math.max(0, Math.round((this.product.profit_percentage || 0) * 100))
+      this.formatProfitPercentage()
+    },
+
+    initializePriceListMargin (priceList) {
+      priceList.profitPercentageValue = 0
+      this.formatPriceListMargin(priceList)
+    },
+
+    handlePriceListMarginKeydown (e, priceList) {
+      e.preventDefault()
+      if (e.key >= '0' && e.key <= '9') {
+        priceList.profitPercentageValue = (priceList.profitPercentageValue || 0) * 10 + parseInt(e.key)
+      } else if (e.key === 'Backspace') {
+        priceList.profitPercentageValue = Math.max(0, Math.floor((priceList.profitPercentageValue || 0) / 10))
+      }
+      this.formatPriceListMargin(priceList)
+    },
+
+    formatPriceListMargin (priceList) {
+      const displayValue = ((priceList.profitPercentageValue || 0) / 100).toFixed(2)
+      priceList.profitPercentageDisplay = displayValue
+      priceList.profit_percentage = parseFloat(displayValue)
+      this.calculatePriceListPrice(priceList)
+    },
     updatePrice (newVal) {
       if (newVal && this.product.cost > 0) {
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
@@ -1215,6 +1282,34 @@ export default {
       if (newVal && this.product.profit_percentage != null) {
         const price = newVal * (1 + this.product.profit_percentage / 100)
         this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
+
+    calculatePriceListMargin (priceList) {
+      const basePrice = parseFloat(this.product.price)
+      const listPrice = parseFloat(priceList.price)
+
+      if (!isNaN(basePrice) && !isNaN(listPrice) && basePrice > 0) {
+        const margin = ((listPrice - basePrice) / basePrice) * 100
+        priceList.profit_percentage = parseFloat(margin.toFixed(2))
+        priceList.profitPercentageValue = Math.round(margin * 100)
+        priceList.profitPercentageDisplay = margin.toFixed(2)
+      } else {
+        priceList.profit_percentage = null
+        priceList.profitPercentageValue = 0
+        priceList.profitPercentageDisplay = '0.00'
+      }
+    },
+
+    calculatePriceListPrice (priceList) {
+      const basePrice = parseFloat(this.product.price)
+      const margin = parseFloat(priceList.profit_percentage)
+
+      if (!isNaN(basePrice) && !isNaN(margin) && basePrice > 0) {
+        const newPrice = basePrice * (1 + margin / 100)
+        priceList.price = parseFloat(newPrice.toFixed(2))
+      } else {
+        priceList.price = null
       }
     },
     /**
@@ -1245,7 +1340,10 @@ export default {
     addPriceList () {
       this.priceLists.push({
         name: `Lista ${this.priceLists.length + 1}`,
-        price: null
+        price: null,
+        profit_percentage: 0,
+        profitPercentageValue: 0,
+        profitPercentageDisplay: '0.00'
       })
     },
 
@@ -1572,6 +1670,14 @@ export default {
         }
       }
 
+      if (this.priceLists.length) {
+        const formattedPriceLists = this.priceLists.map(pl => ({
+          ...pl,
+          profit_percentage: (pl.profit_percentage || 0) * 100
+        }))
+        formData.append('price_lists', JSON.stringify(formattedPriceLists))
+      }
+
       if (data.aliquot_type) {
         formData.append('aliquot_type', JSON.stringify(data.aliquot_type))
       }
@@ -1767,12 +1873,16 @@ export default {
     editProduct (event, row, index) {
       this.openEditProduct = true
       this.product = row
-      if (this.product.is_default === null || this.product.is_default === undefined) {
-        this.product.is_default = 0
-      }
       this.unitOfMeasure = row.unit_of_measure_id
       this.addonsProducts = row.addons
-      this.priceLists = row.product_price_lists
+      this.priceLists = this.product.product_price_lists || []
+      this.priceLists.forEach(pl => {
+        const profitPercentageFromDB = pl.profit_percentage || 0
+
+        pl.profit_percentage = parseFloat(profitPercentageFromDB)
+        pl.profitPercentageValue = Math.round(profitPercentageFromDB * 100)
+        pl.profitPercentageDisplay = Number(profitPercentageFromDB).toFixed(2)
+      })
     },
     /**
      * Save edit
@@ -1835,6 +1945,10 @@ export default {
   border: 2px dashed #e0e0e0;
   transition: all 0.3s ease;
   cursor: pointer;
+}
+
+.profit-percentage-input input {
+  text-align: right !important;
 }
 
 .dropzone-card:hover,
