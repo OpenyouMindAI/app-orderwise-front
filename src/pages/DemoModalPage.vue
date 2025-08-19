@@ -63,8 +63,7 @@
             narrow-indicator
           >
             <q-tab name="basic" label="Datos Básicos" />
-            <q-tab name="groups" label="Grupos de Selección" />
-            <q-tab name="products" label="Productos" />
+            <q-tab name="groups" label="Grupos y Productos" />
             <q-tab name="preview" label="Vista Previa" />
           </q-tabs>
           <q-separator />
@@ -113,38 +112,6 @@
                             filled
                             dense
                             autogrow
-                          />
-                        </div>
-                      </div>
-                    </q-card>
-
-                    <q-card flat bordered class="q-pa-md q-mb-md">
-                      <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                        <q-icon name="attach_money" class="q-mr-sm" />
-                        Configuración de Precio
-                      </div>
-                      <div class="row q-col-gutter-sm">
-                        <div class="col-12 col-md-6">
-                          <q-select
-                            v-model="promotion.priceMode"
-                            :options="priceModeOptions"
-                            label="Modo de precio"
-                            filled
-                            dense
-                            emit-value
-                            map-options
-                            @update:model-value="(val) => $event.target.blur()"
-                          />
-                        </div>
-                        <div class="col-12 col-md-6" v-if="promotion.priceMode === 'fixed'">
-                          <q-input
-                            v-model.number="promotion.fixedPrice"
-                            label="Precio fijo"
-                            type="number"
-                            step="0.01"
-                            filled
-                            dense
-                            :rules="priceRules"
                           />
                         </div>
                       </div>
@@ -238,16 +205,16 @@
                 </div>
 
                 <q-card
-                  v-for="(group, index) in promotion.selectionGroups"
-                  :key="`group-${index}`"
+                  v-for="(group, groupIndex) in promotion.selectionGroups"
+                  :key="`group-${groupIndex}`"
                   class="q-mb-md"
                   flat
                   bordered
                 >
                   <q-card-section>
-                    <div class="row items-center q-mb-md">
+                    <div class="row items-center q-mb-sm">
                       <div class="text-subtitle1 text-weight-medium">
-                        Grupo {{ index + 1 }}
+                        Grupo {{ groupIndex + 1 }}
                       </div>
                       <q-space />
                       <q-btn
@@ -256,12 +223,12 @@
                         size="sm"
                         round
                         flat
-                        @click="removeSelectionGroup(index)"
+                        @click="removeSelectionGroup(groupIndex)"
                       />
                     </div>
 
                     <div class="row q-col-gutter-sm">
-                      <div class="col-12 col-md-6">
+                      <div class="col-12 col-md-5">
                         <q-input
                           v-model="group.name"
                           label="Nombre del grupo"
@@ -270,14 +237,7 @@
                           :rules="nameRules"
                         />
                       </div>
-                      <div class="col-12 col-md-6">
-                        <q-toggle
-                          v-model="group.required"
-                          label="Selección obligatoria"
-                          color="positive"
-                        />
-                      </div>
-                      <div class="col-4">
+                      <div class="col-4 col-md-2">
                         <q-input
                           v-model.number="group.minSelection"
                           label="Mínimo"
@@ -287,7 +247,7 @@
                           dense
                         />
                       </div>
-                      <div class="col-4">
+                      <div class="col-4 col-md-2">
                         <q-input
                           v-model.number="group.maxSelection"
                           label="Máximo"
@@ -297,111 +257,104 @@
                           dense
                         />
                       </div>
-                      <div class="col-4">
-                        <q-input
-                          v-model.number="group.step"
-                          label="Paso"
-                          type="number"
-                          min="1"
-                          filled
-                          dense
+                      <div class="col-4 col-md-3">
+                        <q-toggle
+                          v-model="group.required"
+                          label="Obligatorio"
+                          color="positive"
                         />
                       </div>
                     </div>
                   </q-card-section>
-                </q-card>
-              </q-tab-panel>
 
-              <!-- Tab: Productos -->
-              <q-tab-panel name="products" class="q-pa-md">
-                <div class="row justify-between items-center q-mb-md">
-                  <div class="text-h6 text-primary">Productos Disponibles</div>
-                  <q-btn
-                    color="positive"
-                    icon="add"
-                    label="Agregar Producto"
-                    unelevated
-                    @click="addProduct"
-                  />
-                </div>
+                  <q-separator />
 
-                <div v-if="promotion.products.length === 0" class="text-center q-pa-xl text-grey-6">
-                  <q-icon name="inventory" size="4rem" class="q-mb-md" />
-                  <div class="text-h6 q-mb-sm">No hay productos agregados</div>
-                  <div class="text-body2">Agrega productos que estarán disponibles en esta promoción</div>
-                </div>
-
-                <q-card
-                  v-for="(product, index) in promotion.products"
-                  :key="`product-${index}`"
-                  class="q-mb-md"
-                  flat
-                  bordered
-                >
                   <q-card-section>
-                    <div class="row items-center q-mb-md">
-                      <div class="text-subtitle1 text-weight-medium">
-                        {{ product.name || `Producto ${index + 1}` }}
-                      </div>
-                      <q-space />
-                      <q-btn
-                        icon="delete"
-                        color="negative"
-                        size="sm"
-                        round
-                        flat
-                        @click="removeProduct(index)"
-                      />
+                    <div class="row justify-between items-center q-mb-md">
+                      <div class="text-subtitle2 text-primary">Productos del Grupo</div>
                     </div>
 
-                    <div class="row q-col-gutter-sm">
-                      <div class="col-12 col-md-4">
-                        <q-select
-                          v-model="product.productId"
-                          :options="filteredProducts"
-                          label="Seleccionar producto"
-                          filled
-                          dense
-                          emit-value
-                          map-options
-                          use-input
-                          @filter="filterProducts"
-                          @update:model-value="(val) => {
-                            onProductSelect(product, allProducts.find(p => p.value === val));
-                            $event.target.blur();
-                          }"
-                          :rules="[val => !!val || 'Debe seleccionar un producto']"
-                        >
-                          <template v-slot:no-option>
-                            <q-item>
-                              <q-item-section class="text-grey">
-                                No se encontraron resultados
-                              </q-item-section>
-                            </q-item>
-                          </template>
-                        </q-select>
-                      </div>
-                      <div class="col-12 col-md-4">
-                        <q-select
-                          v-model="product.groupId"
-                          :options="groupOptions"
-                          label="Grupo asignado"
-                          filled
-                          dense
-                          emit-value
-                          map-options
-                          @update:model-value="(val) => $event.target.blur()"
-                        />
-                      </div>
-                      <div class="col-12 col-md-4">
+                    <!-- Product List -->
+                    <div v-if="group.products.length === 0" class="text-center q-pa-md text-grey-6">
+                      <q-icon name="style" size="2rem" class="q-mb-sm" />
+                      <div>No hay productos en este grupo.</div>
+                    </div>
+
+                    <q-list v-else dense class="q-mb-md bordered-list">
+                      <q-item
+                        v-for="(product, productIndex) in group.products"
+                        :key="`product-${groupIndex}-${productIndex}`"
+                      >
+                        <q-item-section>
+                          <q-item-label>{{ product.name }}</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <div class="row items-center no-wrap">
+                            <div class="text-grey-8 q-mr-md">{{ formatCurrency(product.price) }}</div>
+                            <q-btn
+                              icon="delete"
+                              color="negative"
+                              size="sm"
+                              round
+                              flat
+                              @click="removeProductFromGroup(groupIndex, productIndex)"
+                            />
+                          </div>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+
+                    <q-separator spaced />
+                    <div class="row justify-end items-center q-mt-sm q-pr-sm">
+                      <div class="text-subtitle1 text-weight-medium">Total Grupo:</div>
+                      <div class="text-subtitle1 text-weight-bold q-ml-md">{{ formatCurrency(calculateGroupTotal(group)) }}</div>
+                    </div>
+                    <q-separator spaced />
+
+                    <!-- Add Product Select -->
+                    <q-select
+                      v-model="selectedProductForGroup"
+                      filled
+                      dense
+                      label="Añadir producto al grupo"
+                      :options="filteredProducts"
+                      use-input
+                      @filter="filterProducts"
+                      @update:model-value="(selected) => addProductToGroup(groupIndex, selected)"
+                    >
+                      <template v-slot:no-option>
+                        <q-item>
+                          <q-item-section class="text-grey">
+                            No se encontraron resultados
+                          </q-item-section>
+                        </q-item>
+                      </template>
+                    </q-select>
+
+                  </q-card-section>
+                </q-card>
+
+                <q-card flat bordered class="q-mt-lg">
+                  <q-card-section>
+                    <div class="row justify-between items-center q-mb-md">
+                      <div class="text-subtitle1 text-grey-8">Costo de Productos (Calculado)</div>
+                      <div class="text-subtitle1 text-weight-medium">{{ formatCurrency(promotionTotalPrice) }}</div>
+                    </div>
+                    <q-separator />
+                    <div class="row justify-between items-center q-pt-md">
+                      <div class="text-h6 text-primary text-weight-bold">Precio Final</div>
+                      <div class="col-5">
                         <q-input
-                          v-model.number="product.price"
-                          label="Precio unitario"
-                          type="number"
-                          step="0.01"
+                          v-model="promotion.finalPrice"
+                          label="Precio de la promoción"
                           filled
                           dense
+                          mask="#.##"
+                          fill-mask="0"
+                          reverse-fill-mask
+                          input-class="text-right"
                           :rules="priceRules"
+                          @focus="handlePriceFocus"
                         />
                       </div>
                     </div>
@@ -456,14 +409,13 @@ const activeTab = ref('basic')
 const saving = ref(false)
 const allProducts = ref([])
 const filteredProducts = ref([])
+const selectedProductForGroup = ref(null) // Para limpiar el q-select
 
 // Promotion data model
 const getInitialPromotionState = () => ({
   name: '',
   description: '',
   status: 'active',
-  priceMode: 'fixed',
-  fixedPrice: 0,
   startDate: '',
   endDate: '',
   channels: '',
@@ -471,7 +423,41 @@ const getInitialPromotionState = () => ({
   showInCatalog: true,
   requiresStock: true,
   selectionGroups: [],
-  products: []
+  finalPrice: 0
+})
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(value)
+}
+
+const calculateGroupTotal = (group) => {
+  if (!group || !group.products || group.products.length === 0 || !group.maxSelection) {
+    return 0
+  }
+
+  const maxPrice = Math.max(...group.products.map(p => p.price))
+  return maxPrice * group.maxSelection
+}
+
+const promotionTotalPrice = computed(() => {
+  return promotion.value.selectionGroups.reduce((total, group) => {
+    return total + calculateGroupTotal(group)
+  }, 0)
+})
+
+// Flattened products from all groups for submission
+const promotionProducts = computed(() => {
+  return promotion.value.selectionGroups.flatMap((group, groupIndex) =>
+    group.products.map(product => ({
+      productId: product.productId,
+      name: product.name,
+      price: product.price,
+      groupId: groupIndex
+    }))
+  )
 })
 
 const promotion = ref(getInitialPromotionState())
@@ -482,27 +468,24 @@ const statusOptions = [
   { label: 'Inactiva', value: 'inactive' },
   { label: 'Borrador', value: 'draft' }
 ]
-const priceModeOptions = [
-  { label: 'Precio Fijo', value: 'fixed' },
-  { label: 'Suma de productos', value: 'sum_products' }
-]
 const channelOptions = [
   { label: 'Punto de Venta', value: 'pos' },
   { label: 'App Móvil', value: 'mobile_app' },
   { label: 'Web', value: 'web' }
 ]
 
-// Computed properties
-const groupOptions = computed(() => {
-  return promotion.value.selectionGroups.map((group, index) => ({
-    label: group.name || `Grupo ${index + 1}`,
-    value: index
-  }))
-})
-
 // Validation Rules
 const nameRules = [val => !!val || 'El nombre es requerido']
 const priceRules = [val => val >= 0 || 'El precio debe ser positivo']
+
+const handlePriceFocus = (event) => {
+  const el = event.target
+  setTimeout(() => {
+    if (document.activeElement === el) {
+      el.setSelectionRange(el.value.length, el.value.length)
+    }
+  }, 0)
+}
 
 // Methods
 const openCreateModal = () => {
@@ -560,11 +543,11 @@ const filterProducts = (val, update) => {
 
 const addSelectionGroup = () => {
   promotion.value.selectionGroups.push({
-    name: '',
+    name: `Grupo ${promotion.value.selectionGroups.length + 1}`,
     required: false,
     minSelection: 1,
     maxSelection: 1,
-    step: 1
+    products: []
   })
 }
 
@@ -572,30 +555,48 @@ const removeSelectionGroup = (index) => {
   promotion.value.selectionGroups.splice(index, 1)
 }
 
-const addProduct = () => {
-  promotion.value.products.push({
-    productId: null,
-    name: '',
-    price: 0,
-    groupId: null
+const addProductToGroup = (groupIndex, selectedProduct) => {
+  if (!selectedProduct) return
+
+  const group = promotion.value.selectionGroups[groupIndex]
+  if (!group) return
+
+  // Evitar duplicados
+  const alreadyExists = group.products.some(p => p.productId === selectedProduct.value)
+  if (alreadyExists) {
+    $q.notify({
+      type: 'warning',
+      message: 'Este producto ya está en el grupo.',
+      position: 'top'
+    })
+    selectedProductForGroup.value = null // Limpiar selección
+    return
+  }
+
+  group.products.push({
+    productId: selectedProduct.value,
+    name: selectedProduct.label,
+    price: selectedProduct.price
   })
+
+  selectedProductForGroup.value = null // Limpiar selección
 }
 
-const removeProduct = (index) => {
-  promotion.value.products.splice(index, 1)
-}
-
-const onProductSelect = (product, selectedProduct) => {
-  if (selectedProduct) {
-    product.name = selectedProduct.name
-    product.price = selectedProduct.price
+const removeProductFromGroup = (groupIndex, productIndex) => {
+  const group = promotion.value.selectionGroups[groupIndex]
+  if (group) {
+    group.products.splice(productIndex, 1)
   }
 }
 
 const savePromotion = async () => {
   saving.value = true
   try {
-    const { data } = await api.post('/promotions', promotion.value)
+    const payload = {
+      ...promotion.value,
+      products: promotionProducts.value
+    }
+    const { data } = await api.post('/promotions', payload)
     $q.notify({
       type: 'positive',
       message: `Promoción "${data.name}" creada con ID: ${data.id}`,
@@ -604,9 +605,17 @@ const savePromotion = async () => {
     closeModal()
   } catch (error) {
     console.error('Error saving promotion:', error)
+    let errorMessage = 'Error al crear la promoción.'
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage = error.response.data.message
+    } else if (error.response && error.response.data && error.response.data.error) {
+      errorMessage = error.response.data.error
+    }
+
     $q.notify({
       type: 'negative',
-      message: 'Error al crear la promoción',
+      message: errorMessage,
+      caption: 'Por favor, revise los datos e intente de nuevo.',
       position: 'top'
     })
   } finally {
@@ -621,6 +630,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.bordered-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
 .promotion-modal {
   height: 85vh;
   display: flex;

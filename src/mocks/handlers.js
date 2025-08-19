@@ -1,18 +1,34 @@
 import { rest } from 'msw'
 
 export const handlers = [
-  // Handles a POST /api/promotions request
-  rest.post('https://api-orderwise.qbitsinc.com/api/promotions', (req, res, ctx) => {
-    // Log the request body to the console for debugging
-    console.log('MSW: Received promotion data:', req.body)
+  rest.post('https://api-orderwise.qbitsinc.com/api/promotions', async (req, res, ctx) => {
+    const body = await req.json()
 
-    // Respond with a 201 status code (Created)
-    // and return the posted data, adding a mock ID
+    console.log('--- MSW: Intercepted POST /api/promotions ---')
+    console.log('Received Payload:', body)
+
+    // Basic validation
+    if (!body.name || typeof body.finalPrice === 'undefined') {
+      console.error('MSW: Validation failed. Name or finalPrice missing.')
+      return res(
+        ctx.status(400),
+        ctx.json({ error: 'Bad Request: Missing required fields.' })
+      )
+    }
+
+    // Simulate a successful response
+    const response = {
+      ...body,
+      id: `promo_${Date.now()}`,
+      createdAt: new Date().toISOString()
+    }
+
+    console.log('MSW: Responding with:', response)
+    console.log('-------------------------------------------------')
+
     return res(
       ctx.status(201),
-      ctx.json({
-        ...req.body,
-        id: `promo_${Date.now()}` // Simulate a database-generated ID
-      })
+      ctx.json(response)
     )
-  })]
+  })
+]
