@@ -2054,6 +2054,42 @@ export default {
         notify(err.message, 'negative', 'warning')
       }
     },
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            this.product.images.push({
+              image: file,
+              url: e.target.result,
+              // Añadir un ID temporal para manejar mejor las imágenes
+              tempId: Date.now() + Math.random().toString(36).substring(2)
+            })
+          }
+          reader.readAsDataURL(file)
+        }
+      })
+      // Limpiar el input para permitir seleccionar las mismas imágenes otra vez
+      this.$refs.fileInput.value = ''
+    },
+
+    deleteImageadd (image, index) {
+      if (image.tempId || image.id) {
+        if (image.id) {
+          this.$api.delete(`product-images/${image.id}`)
+            .then(() => {
+              this.product.images.splice(index, 1)
+            })
+            .catch(err => {
+              notify('Error al eliminar la imagen', 'negative')
+              console.error(err)
+            })
+        } else {
+          this.product.images.splice(index, 1)
+        }
+      }
+    },
     async getUnitOfMeasures () {
       try {
         const { data } = await this.$api.get('unit-of-measures')
@@ -2069,12 +2105,13 @@ export default {
     },
     saveProduct () {
       this.visible = true
-      this.$api.post('products', this.modelData(this.product))
+      const payload = this.modelData(this.product)
+      console.log(payload)
+      this.$api.post('products', payload)
         .then(({ data }) => {
+          this.getProducts()
           this.openAddProduct = false
           this.visible = false
-          console.log(data)
-          this.pushProduct(data)
           this.closeModal()
           Notify.create({
             message: 'Producto creado exitosamente',
