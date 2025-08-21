@@ -313,14 +313,14 @@
               <div v-else>
                 <div class="text-h6 q-mb-md">Artículos</div>
                 <div class="q-gutter-y-md">
-                  <q-card v-for="(product, index) in products" :key="index" flat bordered class="product-card">
+                  <q-card v-for="(product, rowIndex) in products" :key="rowIndex" flat bordered class="product-card">
                     <q-card-section>
                       <div class="row items-center justify-between q-mb-sm q-pr-sm">
                         <div class="text-subtitle1 text-weight-bold">
                           {{ product.barcode }} - {{ product.name }}
                         </div>
                         <q-badge floating class="q-pa-none" style="background-color: transparent;">
-                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ rowIndex })" />
                         </q-badge>
                       </div>
                       <div class="row q-mb-xs">
