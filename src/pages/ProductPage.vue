@@ -1281,7 +1281,7 @@ export default {
     },
 
     calculatePriceListMargin (priceList) {
-      const basePrice = parseFloat(this.product.price)
+      const basePrice = parseFloat(this.product.cost)
       const listPrice = parseFloat(priceList.price)
 
       if (!isNaN(basePrice) && !isNaN(listPrice) && basePrice > 0) {
