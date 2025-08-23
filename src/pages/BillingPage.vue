@@ -526,19 +526,22 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+              <div class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
                 <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
-                    style="height: 120px; width: 100%; border-radius: 10px;"
+                    style="height: 150px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
-                      {{ props.row.name.slice(0, 20) }}
+                    <div class="absolute-full text-body2 flex flex-center text-bold text-center">
+                      {{ props.row.name }}
                       <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
+                    <q-tooltip class="text-body2">
+                      {{props.row.name}}
+                    </q-tooltip>
                   </q-img>
                 </q-card>
               </div>
