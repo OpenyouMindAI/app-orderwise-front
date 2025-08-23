@@ -227,7 +227,7 @@
                       {{ props.row.barcode }}
                     </q-td>
                     <q-td key="name" :props="props">
-                      {{ props.row.name.slice(0, 20) }}{{ props.row.name.length > 20 ? '...' : '' }}
+                      {{ props.row.name.slice(0, 40) }}{{ props.row.name.length > 40 ? '...' : '' }}
                       <q-tooltip class="text-body2" anchor="bottom middle">
                         {{ props.row.name }}
                       </q-tooltip>
@@ -313,14 +313,14 @@
               <div v-else>
                 <div class="text-h6 q-mb-md">Artículos</div>
                 <div class="q-gutter-y-md">
-                  <q-card v-for="(product, index) in products" :key="index" flat bordered class="product-card">
+                  <q-card v-for="(product, rowIndex) in products" :key="rowIndex" flat bordered class="product-card">
                     <q-card-section>
                       <div class="row items-center justify-between q-mb-sm q-pr-sm">
                         <div class="text-subtitle1 text-weight-bold">
                           {{ product.barcode }} - {{ product.name }}
                         </div>
                         <q-badge floating class="q-pa-none" style="background-color: transparent;">
-                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ rowIndex })" />
                         </q-badge>
                       </div>
                       <div class="row q-mb-xs">
@@ -526,19 +526,22 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+              <div class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
                 <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
-                    style="height: 120px; width: 100%; border-radius: 10px;"
+                    style="height: 150px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
-                      {{ props.row.name.slice(0, 20) }}
+                    <div class="absolute-full text-body2 flex flex-center text-bold text-center">
+                      {{ props.row.name }}
                       <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
+                    <q-tooltip class="text-body2">
+                      {{props.row.name}}
+                    </q-tooltip>
                   </q-img>
                 </q-card>
               </div>
@@ -569,7 +572,7 @@
           </div>
           <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-md row">
             <div class="col-12">
-              <q-toggle v-if="tableSelected.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
+              <q-toggle v-if="invoice?.tables?.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
               <q-markup-table>
                 <thead>
                   <tr>

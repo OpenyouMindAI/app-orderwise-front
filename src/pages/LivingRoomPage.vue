@@ -109,26 +109,6 @@
         <div class="canvas-toolbar-group">
           <div class="toolbar-button-group">
             <q-btn
-              icon="zoom_in"
-              @click="zoomIn"
-              flat
-              round
-              size="sm"
-              class="toolbar-button"
-            >
-              <q-tooltip class="luxury-tooltip">Acercar</q-tooltip>
-            </q-btn>
-            <q-btn
-              icon="zoom_out"
-              @click="zoomOut"
-              flat
-              round
-              size="sm"
-              class="toolbar-button"
-            >
-              <q-tooltip class="luxury-tooltip">Alejar</q-tooltip>
-            </q-btn>
-            <q-btn
               icon="grid_on"
               @click="showGrid = !showGrid"
               :class="['toolbar-button', { 'is-active': showGrid }]"
@@ -169,8 +149,22 @@
 
     <!-- Main Canvas Area -->
     <main class="canvas-main-area" v-show="selectedRoom">
-      <div class="canvas-viewport-container">
-        <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
+      <div class="canvas-controls">
+        <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
+        <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
+        <q-btn icon="zoom_out" @click="zoomOut" dense round flat class="control-btn"></q-btn>
+      </div>
+      <div
+        class="canvas-viewport-container"
+        @mousedown="startPan"
+        @mousemove="onPan"
+        @mouseup="endPan"
+        @mouseleave="endPan"
+        @touchstart="startPan"
+        @touchmove="onPan"
+        @touchend="endPan"
+      >
+        <div class="canvas-transform-wrapper" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }">
           <draggable-resizable-container
             :grid="[gridSize, gridSize]"
             :show-grid="showGrid"
@@ -186,8 +180,11 @@
               v-model:w="table.width"
               :class="getTableWrapperClass(table)"
               :handles-size="8"
+              :scale="zoomLevel"
               @deactivated="onTableDeactivated(table, index)"
               @dblclick="onTableActivated(table, index)"
+              @touchstart.stop
+              @mousedown.stop
             >
               <div class="table-visual-surface">
                 <div class="table-info-overlay">
@@ -575,6 +572,13 @@ export default {
       previousCanvasHeight: 15, // Added for scaling logic
       zoomLevel: 1,
 
+      // Pan control states
+      panX: 0,
+      panY: 0,
+      isPanning: false,
+      startPanX: 0,
+      startPanY: 0,
+
       // Dialog states
       showNewRoomDialog: false,
       showAddTableDialog: false,
@@ -678,6 +682,10 @@ export default {
         this.previousCanvasWidth = this.canvasWidth // Update previous dimensions
         this.previousCanvasHeight = this.canvasHeight // Update previous dimensions
         this.selectedTable = null
+        // Reset pan and zoom when changing rooms
+        this.panX = 0
+        this.panY = 0
+        this.zoomLevel = 1
         this.handlerQr(this.currentTables)
       }
     },
@@ -836,11 +844,69 @@ export default {
 
     // Canvas controls
     zoomIn () {
-      this.zoomLevel = Math.min(this.zoomLevel + 0.1, 2)
+      this.animateZoom(Math.min(this.zoomLevel + 0.2, 2))
     },
 
     zoomOut () {
-      this.zoomLevel = Math.max(this.zoomLevel - 0.1, 0.5)
+      this.animateZoom(Math.max(this.zoomLevel - 0.2, 0.5))
+    },
+
+    animateZoom (targetZoom) {
+      const startZoom = this.zoomLevel
+      const diff = targetZoom - startZoom
+      const duration = 200
+      const startTime = Date.now()
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+
+        // Ease-out animation
+        const easeOut = 1 - Math.pow(1 - progress, 3)
+        this.zoomLevel = startZoom + (diff * easeOut)
+
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        }
+      }
+
+      requestAnimationFrame(animate)
+    },
+
+    // Pan controls
+    startPan (event) {
+      // Don't start panning if clicking on a table
+      if (event.target.closest('.draggable-resizable-vue')) {
+        return
+      }
+
+      this.isPanning = true
+
+      if (event.type === 'touchstart') {
+        this.startPanX = event.touches[0].clientX - this.panX
+        this.startPanY = event.touches[0].clientY - this.panY
+      } else {
+        this.startPanX = event.clientX - this.panX
+        this.startPanY = event.clientY - this.panY
+      }
+    },
+
+    onPan (event) {
+      if (!this.isPanning) return
+
+      event.preventDefault()
+
+      if (event.type === 'touchmove') {
+        this.panX = event.touches[0].clientX - this.startPanX
+        this.panY = event.touches[0].clientY - this.startPanY
+      } else {
+        this.panX = event.clientX - this.startPanX
+        this.panY = event.clientY - this.startPanY
+      }
+    },
+
+    endPan () {
+      this.isPanning = false
     },
 
     applyCanvasSettings () {
@@ -1365,7 +1431,6 @@ export default {
 /* --- Main Canvas Area --- */
 .canvas-main-area {
   flex: 1;
-  padding: calc(var(--spacing-unit) * 0.5); /* Reduced padding */
   background:
     radial-gradient(circle at 25px 25px, rgba(var(--color-border-dark), 0.5) 1px, transparent 1px),
     var(--color-background-dark);
@@ -1380,11 +1445,51 @@ export default {
   justify-content: center;
   min-height: 100%;
   width: 100%;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+
+.canvas-viewport-container:active {
+  cursor: grabbing;
+}
+
+.canvas-controls {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(33, 33, 33, 0.95);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.canvas-controls .control-btn {
+  color: var(--color-text-light);
+  transition: all 0.2s ease;
+}
+
+.canvas-controls .control-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+.zoom-level-display {
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: center;
 }
 
 .canvas-transform-wrapper {
-  transform-origin: center;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .luxury-canvas {
@@ -2046,10 +2151,6 @@ export default {
   .metrics-display-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .canvas-main-area {
-    padding: 0.8rem; /* Reduced padding */
   }
 
   .shape-options-grid {
