@@ -594,7 +594,7 @@
                   <q-img
                     style="height: 120px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                    @click="validateProduct(props.row, true)"
+                    @click="props.row.is_bundle ? openPromoDialog(props.row) : validateProduct(props.row, true)"
                   >
                     <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center">
                       {{ props.row.name.slice(0, 20) }}
@@ -613,6 +613,145 @@
         </div>
       </div>
     </q-form>
+
+    <!-- Promo Selection Dialog -->
+    <q-dialog v-model="promoDialog" :maximized="$q.screen.lt.sm" persistent>
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <span class="text-h6">{{ currentPromo?.name }} - {{ currentGroup?.name }}</span>
+          <q-btn flat icon="close" round size="md" @click="closePromoDialog"/>
+        </q-card-section>
+
+        <q-card-section class="q-pa-md">
+          <div v-if="currentGroup">
+            <!-- Header with selection info -->
+            <div class="text-center q-mb-lg">
+              <div class="text-h6 text-weight-bold q-mb-sm">
+                {{ currentGroup.name }}
+              </div>
+              <div class="text-subtitle1 q-mb-sm">
+                Selecciona {{ currentGroup.minSelection }}{{ currentGroup.minSelection !== currentGroup.maxSelection ? ` a ${currentGroup.maxSelection}` : '' }} producto{{ currentGroup.maxSelection > 1 ? 's' : '' }}
+              </div>
+              <q-chip
+                :color="currentGroup.required ? 'orange' : 'green'"
+                :text-color="'white'"
+                size="md"
+                icon="info"
+                class="text-weight-bold"
+              >
+                {{ currentGroup.required ? 'Obligatorio' : 'Opcional' }}
+              </q-chip>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="row q-col-gutter-sm justify-center">
+              <div
+                v-for="product in currentGroup.products"
+                :key="product.productId"
+                class="col-xs-6 col-sm-4 col-md-3"
+              >
+                <div class="relative-position">
+                  <q-card
+                    class="cursor-pointer product-card"
+                    style="border-radius: 15px; overflow: hidden;"
+                    :class="{ 'selected-product': isProductSelected(product.productId) }"
+                    @click="toggleProductSelection(product)"
+                  >
+                    <q-img
+                      style="height: 140px; width: 100%;"
+                      :src="product.images && product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                      :ratio="1"
+                    >
+                      <!-- Product name overlay -->
+                      <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center text-white product-name-overlay">
+                        {{ product.name }}
+                      </div>
+
+                      <!-- Selection indicator -->
+                      <!-- <div v-if="isProductSelected(product.productId)" class="absolute-top-right q-ma-sm">
+                        <q-badge color="positive" rounded>
+                          <q-icon name="check_circle" size="md" />
+                        </q-badge>
+                      </div> -->
+                    </q-img>
+                  </q-card>
+
+                  <!-- Quantity controls -->
+                  <div v-if="isProductSelected(product.productId)" class="absolute-bottom-right q-ma-xs">
+                    <div class="row items-center q-gutter-xs bg-white rounded-borders q-pa-xs shadow-2">
+                      <q-btn
+                        icon="remove"
+                        size="sm"
+                        round
+                        color="negative"
+                        @click.stop="decreaseQuantity(product.productId)"
+                        :disable="getProductQuantity(product.productId) <= 1"
+                      />
+                      <span class="text-weight-bold q-px-sm">{{ getProductQuantity(product.productId) }}</span>
+                      <q-btn
+                        icon="add"
+                        size="sm"
+                        round
+                        color="positive"
+                        @click.stop="increaseQuantity(product.productId)"
+                        :disable="getTotalSelectedQuantity() >= currentGroup.maxSelection"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selection status -->
+            <div class="text-center q-mt-lg">
+              <q-linear-progress
+                :value="getTotalSelectedQuantity() / currentGroup.maxSelection"
+                color="primary"
+                size="8px"
+                rounded
+                class="q-mb-sm"
+              />
+              <div class="text-subtitle2 q-mb-lg text-weight-medium">
+                <q-icon name="shopping_cart" class="q-mr-xs" />
+                {{ getTotalSelectedQuantity() }} de {{ currentGroup.maxSelection }} seleccionados
+              </div>
+
+              <!-- Navigation buttons -->
+              <div class="row q-gutter-md justify-center">
+                <q-btn
+                  v-if="currentGroupIndex > 0"
+                  outline
+                  color="grey-7"
+                  label="← Anterior"
+                  @click="previousGroup"
+                  class="text-weight-bold"
+                />
+                <q-btn
+                  v-if="currentGroupIndex < currentPromo.selectionGroups.length - 1"
+                  unelevated
+                  color="primary"
+                  label="Siguiente →"
+                  @click="nextGroup"
+                  :disable="!isCurrentGroupValid()"
+                  class="text-weight-bold"
+                />
+                <q-btn
+                  v-else
+                  unelevated
+                  color="green"
+                  label="🛒 Agregar al Carrito"
+                  @click="addPromoToCart"
+                  :disable="!isCurrentGroupValid()"
+                  class="text-weight-bold"
+                  size="lg"
+                />
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
@@ -1293,6 +1432,26 @@ export default {
        */
       dialogPayment: false,
       /**
+       * Promo selection dialog
+       * @type {Boolean}
+       */
+      promoDialog: false,
+      /**
+       * Current promo being configured
+       * @type {Object}
+       */
+      currentPromo: null,
+      /**
+       * Current group index in promo selection
+       * @type {Number}
+       */
+      currentGroupIndex: 0,
+      /**
+       * Selected products for current promo
+       * @type {Array}
+       */
+      promoSelections: [],
+      /**
        * Invoice types
        * @type {Array}
        */
@@ -1508,6 +1667,13 @@ export default {
       if (totalWithDiscount > 0) return this.totalWithDiscount - this.totalPayment
 
       return totalWithDiscount
+    },
+    /**
+     * Get current selection group
+     * @returns {Object}
+     */
+    currentGroup () {
+      return this.currentPromo?.selectionGroups[this.currentGroupIndex]
     },
     /**
      * Total payment
@@ -2407,28 +2573,104 @@ export default {
             requiresStock: true,
             selectionGroups: [
               {
-                name: 'Sabor',
+                name: 'Empanadas - Elige tus sabores',
                 required: true,
-                minSelection: 6,
+                minSelection: 3,
                 maxSelection: 6,
                 products: [
                   {
                     productId: 65,
-                    name: 'EMPANADAS',
-                    price: 1100
+                    name: 'EMPANADAS DE CARNE',
+                    price: 1100,
+                    images: [{ url: 'https://images.unsplash.com/photo-1624128082323-beb6b8b508db?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }]
+                  },
+                  {
+                    productId: 66,
+                    name: 'EMPANADAS DE POLLO',
+                    price: 1200,
+                    images: [{ url: 'https://images.unsplash.com/photo-1624128082323-beb6b8b508db?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }]
+                  },
+                  {
+                    productId: 67,
+                    name: 'EMPANADAS DE JAMÓN Y QUESO',
+                    price: 1300,
+                    images: [{ url: 'https://images.unsplash.com/photo-1624128082323-beb6b8b508db?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }]
+                  },
+                  {
+                    productId: 68,
+                    name: 'EMPANADAS DE VERDURA',
+                    price: 1000,
+                    images: [{ url: 'https://images.unsplash.com/photo-1624128082323-beb6b8b508db?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }]
+                  },
+                  {
+                    productId: 69,
+                    name: 'EMPANADAS DE HUMITA',
+                    price: 1150,
+                    images: [{ url: 'https://images.unsplash.com/photo-1624128082323-beb6b8b508db?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }]
+                  },
+                  {
+                    productId: 70,
+                    name: 'EMPANADAS DE CAPRESE',
+                    price: 1400,
+                    images: [{ url: 'https://images.unsplash.com/photo-1624128082323-beb6b8b508db?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D' }]
                   }
                 ]
               },
               {
-                name: 'Gaseosa',
+                name: 'Bebidas - Selecciona tu favorita',
                 required: true,
                 minSelection: 1,
-                maxSelection: 1,
+                maxSelection: 2,
                 products: [
                   {
                     productId: 49,
-                    name: 'GASEOSAS LINEA COCACOLA 500CC',
-                    price: 1800
+                    name: 'COCA COLA 500CC',
+                    price: 1800,
+                    images: [{ url: 'https://via.placeholder.com/300x200/D63031/FFFFFF?text=Coca+Cola' }]
+                  },
+                  {
+                    productId: 50,
+                    name: 'SPRITE 500CC',
+                    price: 1800,
+                    images: [{ url: 'https://via.placeholder.com/300x200/00B894/FFFFFF?text=Sprite' }]
+                  },
+                  {
+                    productId: 51,
+                    name: 'FANTA 500CC',
+                    price: 1800,
+                    images: [{ url: 'https://via.placeholder.com/300x200/E17055/FFFFFF?text=Fanta' }]
+                  }
+                ]
+              },
+              {
+                name: 'Extras - Opcional',
+                required: false,
+                minSelection: 0,
+                maxSelection: 3,
+                products: [
+                  {
+                    productId: 80,
+                    name: 'CHIMICHURRI',
+                    price: 300,
+                    images: [{ url: 'https://via.placeholder.com/300x200/00B894/FFFFFF?text=Chimi' }]
+                  },
+                  {
+                    productId: 81,
+                    name: 'SALSA CRIOLLA',
+                    price: 300,
+                    images: [{ url: 'https://via.placeholder.com/300x200/E84393/FFFFFF?text=Criolla' }]
+                  },
+                  {
+                    productId: 82,
+                    name: 'AJÍ PICANTE',
+                    price: 250,
+                    images: [{ url: 'https://via.placeholder.com/300x200/D63031/FFFFFF?text=Ají' }]
+                  },
+                  {
+                    productId: 83,
+                    name: 'MAYONESA',
+                    price: 200,
+                    images: [{ url: 'https://via.placeholder.com/300x200/DDD/666666?text=Mayo' }]
                   }
                 ]
               }
@@ -2937,7 +3179,244 @@ export default {
       } else {
         notify('Producto no encontrado', 'negative', 'warning')
       }
+    },
+
+    /**
+     * Open promo selection dialog
+     */
+    openPromoDialog (promo) {
+      this.currentPromo = promo
+      this.currentGroupIndex = 0
+      this.promoSelections = []
+      this.promoDialog = true
+    },
+
+    /**
+     * Close promo dialog
+     */
+    closePromoDialog () {
+      this.promoDialog = false
+      this.currentPromo = null
+      this.currentGroupIndex = 0
+      this.promoSelections = []
+    },
+
+    /**
+     * Check if product is selected in current group
+     */
+    isProductSelected (productId) {
+      return this.promoSelections.some(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.productId === productId
+      )
+    },
+
+    /**
+     * Get product quantity in current group
+     */
+    getProductQuantity (productId) {
+      const selection = this.promoSelections.find(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.productId === productId
+      )
+      return selection ? selection.quantity : 0
+    },
+
+    /**
+     * Get total selected quantity for current group
+     */
+    getTotalSelectedQuantity () {
+      return this.promoSelections
+        .filter(selection => selection.groupIndex === this.currentGroupIndex)
+        .reduce((total, selection) => total + selection.quantity, 0)
+    },
+
+    /**
+     * Toggle product selection
+     */
+    toggleProductSelection (product) {
+      const existingIndex = this.promoSelections.findIndex(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.productId === product.productId
+      )
+
+      if (existingIndex >= 0) {
+        // Remove selection
+        this.promoSelections.splice(existingIndex, 1)
+      } else {
+        // Add selection if within limits
+        if (this.getTotalSelectedQuantity() < this.currentGroup.maxSelection) {
+          this.promoSelections.push({
+            groupIndex: this.currentGroupIndex,
+            productId: product.productId,
+            product,
+            quantity: 1
+          })
+        }
+      }
+    },
+
+    /**
+     * Increase product quantity
+     */
+    increaseQuantity (productId) {
+      const selection = this.promoSelections.find(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.productId === productId
+      )
+      if (selection && this.getTotalSelectedQuantity() < this.currentGroup.maxSelection) {
+        selection.quantity++
+      }
+    },
+
+    /**
+     * Decrease product quantity
+     */
+    decreaseQuantity (productId) {
+      const selection = this.promoSelections.find(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.productId === productId
+      )
+      if (selection && selection.quantity > 1) {
+        selection.quantity--
+      }
+    },
+
+    /**
+     * Check if current group selection is valid
+     */
+    isCurrentGroupValid () {
+      const totalSelected = this.getTotalSelectedQuantity()
+      return totalSelected >= this.currentGroup.minSelection &&
+             totalSelected <= this.currentGroup.maxSelection
+    },
+
+    /**
+     * Go to next group
+     */
+    nextGroup () {
+      if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.selectionGroups.length - 1) {
+        this.currentGroupIndex++
+      }
+    },
+
+    /**
+     * Go to previous group
+     */
+    previousGroup () {
+      if (this.currentGroupIndex > 0) {
+        this.currentGroupIndex--
+      }
+    },
+
+    /**
+     * Add promo to cart with selected products
+     */
+    addPromoToCart () {
+      if (!this.isCurrentGroupValid()) return
+
+      // Create promo product with selections
+      const promoProduct = {
+        ...this.currentPromo,
+        selectedProducts: this.promoSelections,
+        quantity: 1,
+        amount: 1,
+        subtotal: this.currentPromo.finalPrice || this.currentPromo.price
+      }
+
+      this.pushProduct(promoProduct)
+      this.calculateTotal()
+      this.closePromoDialog()
+
+      this.$q.notify({
+        message: `${this.currentPromo.name} agregado al carrito`,
+        color: 'positive',
+        icon: 'check_circle'
+      })
     }
   }
 }
 </script>
+
+<style scoped>
+.product-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.selected-product {
+  border: 2px solid #21BA45 !important;
+  box-shadow: 0 0 15px rgba(33, 186, 69, 0.3);
+}
+
+.product-name-overlay {
+  background: linear-gradient(45deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
+  backdrop-filter: blur(2px);
+  padding: 8px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.selected-product .product-name-overlay {
+  background: linear-gradient(45deg, rgba(33, 186, 69, 0.8) 0%, rgba(33, 186, 69, 0.6) 100%);
+}
+
+/* Smooth animations for quantity controls */
+.absolute-bottom-right {
+  animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced modal styling */
+.q-dialog .q-card {
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress bar styling */
+.q-linear-progress {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Button enhancements */
+.q-btn {
+  transition: all 0.2s ease;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Badge styling */
+.q-badge {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .col-xs-6 {
+    padding: 2px;
+  }
+
+  .product-card {
+    margin: 2px;
+  }
+
+  .text-subtitle2 {
+    font-size: 11px !important;
+  }
+}
+</style>
