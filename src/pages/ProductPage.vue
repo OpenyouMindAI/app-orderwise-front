@@ -1247,7 +1247,7 @@ export default {
     },
 
     initializePriceListMargin (priceList) {
-      priceList.profitPercentageValue = 0
+      priceList.profitPercentageValue = Math.max(0, Math.round((priceList.profit_percentage || 0) * 100))
       this.formatPriceListMargin(priceList)
     },
 
@@ -1281,7 +1281,7 @@ export default {
     },
 
     calculatePriceListMargin (priceList) {
-      const basePrice = parseFloat(this.product.price)
+      const basePrice = parseFloat(this.product.cost)
       const listPrice = parseFloat(priceList.price)
 
       if (!isNaN(basePrice) && !isNaN(listPrice) && basePrice > 0) {
