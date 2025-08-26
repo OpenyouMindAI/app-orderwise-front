@@ -9,7 +9,7 @@
     <q-card style="width: 500px; max-width: 80vw; min-height: 250px;">
       <!-- Header Section -->
       <q-card-section class="q-py-sm bg-primary text-white flex justify-between items-center">
-        <span class="text-h6">Abrir Caja</span>
+        <span class="text-h6">Turno</span>
         <q-btn flat icon="close" round size="md" v-close-popup />
       </q-card-section>
 

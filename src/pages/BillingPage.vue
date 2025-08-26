@@ -1059,6 +1059,8 @@ export default {
   },
   data () {
     return {
+      cashBoxState: null,
+
       scanner: false,
       /**
        * Show payment details modal
@@ -2520,6 +2522,7 @@ export default {
     setModelInvoice () {
       return {
         ...this.invoice,
+        cashbox_user_id: this.cashBoxState.id,
         tableClose: this.tableClose,
         title: this.invoiceType?.name,
         client_id: this.client?.id,
@@ -2866,8 +2869,8 @@ export default {
         }
 
         // Verificar si el usuario tiene una sesión de caja activa
-        const response = await this.$api.get(`cashier-init?user_id=${this.userSession.id}`)
-        const cashierSession = response.data
+        const { data } = await this.$api.get(`cashier-init?user_id=${this.userSession.id}`)
+        const cashierSession = data
 
         // Verificar si la sesión está abierta
         const isSessionOpen = cashierSession &&
@@ -2881,6 +2884,7 @@ export default {
 
           // Actualizar localStorage con datos más recientes de la API
           await this.updateCashBoxState({
+            id: cashierSession.id,
             isOpen: true,
             openedAt: cashierSession.init_date || savedState.openedAt,
             cashboxId: cashierSession.cashbox_id,
@@ -2999,14 +3003,15 @@ export default {
      * Actualiza el estado de la caja en localStorage únicamente
      * @param {Object} cashBoxState - Estado de la caja a guardar
      */
-    async updateCashBoxState (cashBoxState) {
+    async updateCashBoxState (data) {
       const stateWithTimestamp = {
-        ...cashBoxState,
+        ...data,
         lastUpdated: new Date().toISOString()
       }
 
       try {
         localStorage.setItem('cashbox_state', JSON.stringify(stateWithTimestamp))
+        this.cashBoxState = stateWithTimestamp
       } catch (error) {
         console.error('❌ Error al guardar en localStorage:', error)
         this.$q.notify({
