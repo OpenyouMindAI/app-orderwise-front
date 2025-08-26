@@ -79,7 +79,7 @@
                 @keypress.enter="getOneProduct"
               >
                 <template v-slot:append>
-                  <q-btn round color="teal" icon="add_circle" size="sm" @click="modelScan = true"/>
+                  <q-btn round color="teal" icon="add_circle" size="sm" @click="openAddProduct = true"/>
                 </template>
               </q-input>
             </div>
@@ -340,13 +340,385 @@
         </div>
       </div>
     </q-form>
-    <q-dialog v-model="modelScan">
+
+    <q-dialog v-model="openAddProduct" persistent :maximized="$q.screen.lt.sm">
+      <q-card style="width: 1200px; max-width: 95vw;">
+        <q-card-section class="row items-center q-py-sm bg-primary text-white">
+          <div class="text-h6">Agregar producto</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeModal" />
+        </q-card-section>
+        <q-form @submit="saveProduct" ref="formAddProduct">
+          <q-card-section class="scroll " style="height: calc(100vh - 200px);">
+            <div class="row q-col-gutter-sm">
+              <div class="row col-md-7 col-xs-12 col-sm-12">
+                <!-- Datos básicos -->
+                <div class="col-12">
+                  <q-card flat bordered class="q-pa-md q-mb-md">
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                      <q-icon name="info" class="q-mr-sm" />
+                      Datos básicos
+                    </div>
+                    <div class="row q-col-gutter-sm">
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          filled
+                          v-model="product.barcode"
+                          autofocus
+                          label="Código de barra"
+                          dense
+                          @keyup.enter="getOneProduct(product.barcode)"
+                        >
+                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                          </template>
+                        </q-input>
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          :rules="[val => !!val || 'El campo es requerido.']"
+                          filled
+                          v-model="product.name"
+                          label="Nombre"
+                          dense
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-select
+                          use-input
+                          filled
+                          label="Categoría"
+                          input-debounce="0"
+                          option-label="name"
+                          option-value="id"
+                          v-model="categoryAdd"
+                          :options="categories"
+                          :rules="[val => !!val || 'El campo es requerido.']"
+                          @filter="filterCategories"
+                          @update:model-value="setCategory"
+                          dense
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-start items-center">
+                        <q-option-group
+                          v-model="unitOfMeasure"
+                          :options="unitOfMeasures"
+                          color="positive"
+                          inline
+                        />
+                      </div>
+                      <div class="col-12">
+                        <q-input
+                          filled
+                          v-model="product.description"
+                          type="textarea"
+                          autogrow
+                          label="Descripción"
+                          dense
+                        />
+                      </div>
+                    </div>
+                  </q-card>
+                </div>
+
+                <!-- Precios -->
+                <div class="col-12">
+                  <q-card flat bordered class="q-pa-md q-mb-md">
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                      <q-icon name="attach_money" class="q-mr-sm" />
+                      Precios
+                    </div>
+                    <div class="row q-col-gutter-sm q-mb-md">
+                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                        <q-input
+                          :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                          filled
+                          v-model="product.cost"
+                          label="Costo"
+                          type="number"
+                          dense
+                          @update:model-value="updateCost"
+                        />
+                      </div>
+                      <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                        <q-input
+                          :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                          filled
+                          v-model.number="product.profit_percentage"
+                          :model-value="Number(product?.profit_percentage).toFixed(2)"
+                          label="Margen %"
+                          min="0"
+                          dense
+                          @update:model-value="updateProfitPercentage"
+                        />
+                      </div>
+                      <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
+                        <q-input
+                          :rules="[val => !!val || 'El campo es requerido.']"
+                          filled
+                          v-model="product.price"
+                          label="Precio base"
+                          type="number"
+                          step=".01"
+                          dense
+                          @update:model-value="updatePrice"
+                        />
+                      </div>
+                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                        <q-input
+                          filled
+                          v-model="product.minimum_stock"
+                          label="Stock mínimo"
+                          type="number"
+                          step=".01"
+                          dense
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Lista de precios adicionales -->
+                    <div class="q-mb-md">
+                      <div class="flex items-center justify-between q-mb-sm">
+                        <span class="text-body1 text-weight-medium">Listas de precios adicionales</span>
+                        <q-btn
+                          color="positive"
+                          icon="add"
+                          label="Agregar lista"
+                          size="sm"
+                          @click="addPriceLis"
+                          unelevated
+                        />
+                      </div>
+
+                      <div v-if="priceLists.length === 0" class="text-center q-pa-md text-grey-6">
+                        <q-icon name="list_alt" size="2rem" class="q-mb-sm" />
+                        <div>No hay listas de precios adicionales</div>
+                      </div>
+
+                      <q-card
+                        v-for="(priceList, index) in priceLists"
+                        :key="index"
+                        flat
+                        bordered
+                        class="q-mb-sm"
+                      >
+                        <q-card-section class="q-pa-sm">
+                          <div class="row q-col-gutter-sm items-center">
+                            <div class="col-5">
+                              <q-input
+                                v-model="priceList.name"
+                                label="Nombre de la lista"
+                                filled
+                                dense
+                                :rules="[val => !!val || 'El precio mínimo es 3']"
+                              />
+                            </div>
+                            <div class="col-5">
+                              <q-input
+                                v-model="priceList.price"
+                                label="Precio"
+                                type="number"
+                                step=".01"
+                                :rules="[val => val >= 1 || 'El precio mínimo es 3']"
+                                filled
+                                dense
+                              />
+                            </div>
+                            <div class="col-2 text-right">
+                              <q-btn
+                                icon="delete"
+                                color="negative"
+                                size="sm"
+                                round
+                                flat
+                                @click="removePriceList(index)"
+                              >
+                                <q-tooltip>Eliminar lista</q-tooltip>
+                              </q-btn>
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+
+                    <div class="row q-col-gutter-sm">
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-select
+                          use-input
+                          filled
+                          label="Iva (%)"
+                          input-debounce="0"
+                          option-label="Desc"
+                          option-value="id"
+                          v-model="product.aliquot_type"
+                          :options="aliquotTypes"
+                          @filter="getAliquotTypes"
+                          dense
+                        />
+                      </div>
+                    </div>
+                  </q-card>
+                </div>
+              </div>
+
+              <!-- Sección de imágenes -->
+              <div class="col-md-5 col-xs-12 col-sm-12">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                    <q-icon name="image" class="q-mr-sm" />
+                    Imágenes
+                  </div>
+                  <q-card
+                    flat
+                    bordered
+                    class="dropzone-card q-mb-md"
+                    :class="{ 'dropzone-active': isDragOver }"
+                    @dragover.prevent="isDragOver = true"
+                    @dragleave.prevent="isDragOver = false"
+                    @drop.prevent="handleDrop"
+                  >
+                    <q-card-section class="text-center q-pa-xl q-gutter-y-md">
+                      <!-- Image Preview Grid -->
+                      <div class="col-12" v-if="product.images.length">
+                        <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
+                        <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
+                          <div
+                            v-for="(image, index) in product.images"
+                            :key="index"
+                            class="col-6 col-sm-4 col-md-4"
+                          >
+                            <q-card flat class="image-preview-card">
+                              <q-img
+                                :src="image.url"
+                                :ratio="1"
+                                class="rounded-borders"
+                              >
+                                <div class="absolute-top-right bg-transparent">
+                                  <q-btn
+                                    size="sm"
+                                    icon="close"
+                                    color="negative"
+                                    round
+                                    dense
+                                    @click="deleteImage(image, index)"
+                                  />
+                                </div>
+                              </q-img>
+                            </q-card>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-else>
+                        <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
+                        <div class="text-h6 text-grey-7 q-mb-sm">
+                          Arrastra las imágenes aquí
+                        </div>
+                        <div class="text-body2 text-grey-5 q-mb-md">
+                          o haz clic para seleccionar archivos
+                        </div>
+                      </div>
+                      <q-btn
+                        color="primary"
+                        label="Seleccionar Imágenes"
+                        @click="$refs.fileInput.click()"
+                        unelevated
+                      />
+                      <input
+                        ref="fileInput"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        style="display: none"
+                        @change="handleFileSelect"
+                      />
+                    </q-card-section>
+                  </q-card>
+                  <q-card flat bordered class="q-pa-md q-mb-md">
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                      <q-icon name="settings" class="q-mr-sm" />
+                      Configuración
+                    </div>
+                    <div class="row q-col-gutter-md">
+                      <div class="col-6">
+                        <q-toggle
+                          v-model="product.skip_stock"
+                          label="Facturar sin stock"
+                          :true-value="1"
+                          :false-value="0"
+                          color="positive"
+                        />
+                      </div>
+                      <div class="col-6">
+                        <q-toggle
+                          v-model="product.is_bundle"
+                          label="Pack"
+                          :true-value="1"
+                          :false-value="0"
+                          color="positive"
+                        />
+                      </div>
+                      <div class="col-6">
+                        <q-toggle
+                          v-model="product.is_addons"
+                          label="Es un adicional"
+                          :true-value="1"
+                          :false-value="0"
+                          color="positive"
+                        />
+                      </div>
+                      <div class="col-6">
+                        <q-toggle
+                          v-model="product.show_catalog"
+                          label="Mostrar en catálogo"
+                          :true-value="1"
+                          :false-value="0"
+                          color="positive"
+                        />
+                      </div>
+                    </div>
+                    <div
+                      class="q-mt-md"
+                      v-if="product.is_addons"
+                    >
+                      <q-select
+                        use-input
+                        filled
+                        label="Productos a asociar"
+                        input-debounce="0"
+                        option-label="name"
+                        option-value="id"
+                        multiple
+                        v-model="addonsProducts"
+                        :options="addonsProductsOptions"
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        @filter="filterProductsAddons"
+                        dense
+                      />
+                    </div>
+                  </q-card>
+                </q-card>
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary q-pa-md">
+            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible" unelevated />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+    <!-- <q-dialog v-model="modelScan">
       <q-card>
         <q-card-section class="q-pb-none q-pt-xs q-px-xs bg-dark">
           <stream-barcode-reader @debarcode="getOneProduct"/>
         </q-card-section>
       </q-card>
+    </q-dialog> -->
+
+    <q-dialog  v-model="addPriceList">
+      <h1>HOLAA</h1>
     </q-dialog>
+
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
@@ -591,6 +963,7 @@
         </q-form>
       </q-card>
     </q-dialog>
+
     <wait-by-payment-mp
       v-if="waitingPayment"
       v-model="waitingPayment"
@@ -601,7 +974,7 @@
 </template>
 
 <script>
-import { StreamBarcodeReader } from 'vue-barcode-reader'
+// import { StreamBarcodeReader } from 'vue-barcode-reader'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -610,7 +983,7 @@ import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 export default {
   name: 'BillingPage',
   components: {
-    StreamBarcodeReader,
+    // StreamBarcodeReader,
     WaitByPaymentMp
   },
   data () {
@@ -828,6 +1201,11 @@ export default {
        */
       withoutPrint: false,
       /**
+       * @type {Array}
+       */
+      aliquotTypes: [],
+      categoryAdd: null,
+      /**
        * Loading living room
        * @type {Boolean}
        */
@@ -837,6 +1215,7 @@ export default {
        * @type {Array}
        */
       products: [],
+      visible: false,
       /**
        * Total bill
        * @type {Number}
@@ -852,6 +1231,38 @@ export default {
        * @type {Array}
        */
       categories: [],
+      /**
+       * @type {Array}
+       */
+      unitOfMeasure: null,
+      /**
+       * @type {Array}
+       */
+      unitOfMeasures: [],
+      /**
+       * @type {Object}
+       */
+      product: {
+        is_bundle: 0,
+        show_catalog: 0,
+        is_addons: 0,
+        skip_stock: 0,
+        profit_percentage: 0,
+        images: []
+      },
+      /**
+       * product price list
+       * @type {Array}
+       */
+      priceLists: [],
+      isDragOver: false,
+      addPriceList: false,
+      /**
+       * Open dialog to add products
+       * @type {Boolean}
+       */
+      openAddProduct: false,
+      addonsProducts: [],
       /**
        * Loading products
        * @type {Boolean}
@@ -941,6 +1352,17 @@ export default {
         this.currentAmount = 0
       }
     },
+    openAddProduct (data) {
+      this.tab = 'basicData'
+    },
+    unitOfMeasure (data) {
+      this.product.unit_of_measure_id = data
+    },
+    categoryAdd (data) {
+      if (data) {
+        this.product.category_id = data.id
+      }
+    },
     category () {
       this.setPagination({
         pagination: this.pagination,
@@ -1017,6 +1439,11 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
+
+    testCOSAS () {
+      this.addPriceList = true
+      console.log(this.addPriceList)
+    },
     /**
      * Update values
      * @param {String} inputName input name
@@ -1508,6 +1935,7 @@ export default {
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
       this.calculateTotal()
+      this.getUnitOfMeasures()
     },
     /**
      * Delete product in table
@@ -1550,8 +1978,8 @@ export default {
       this.products.push({
         id: product.id,
         name: product.name,
-        quantity: product.quantity,
-        subtotal: product.subtotal,
+        quantity: product.quantity || 1,
+        subtotal: product.subtotal || parseFloat(((product.quantity || 1) * (product.cost || 0)).toFixed(2)),
         product_id: product.id,
         cost: product.cost,
         barcode: product.barcode
@@ -1573,7 +2001,7 @@ export default {
       }
 
       if (findProduct) {
-        const quantity = unitMeasurement ? this.quantity : findProduct?.quantity + 1
+        const quantity = unitMeasurement ? this.quantity : findProduct?.quantity
         findProduct.quantity = quantity
         findProduct.product_id = findProduct.id
         this.calculate(findProduct)
@@ -1595,6 +2023,211 @@ export default {
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
+    },
+    closeModal () {
+      this.openAddProduct = false
+      this.priceLists = []
+      this.product = {
+        images: [],
+        is_bundle: 0,
+        show_catalog: 0,
+        is_addons: 0,
+        skip_stock: 0,
+        profit_percentage: 0
+      }
+      this.getUnitOfMeasures()
+    },
+    async getAliquotTypes (value, update) {
+      try {
+        const { data } = await this.$apiArca.get('metadata/aliquot-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.aliquotTypes = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            this.product.images.push({
+              image: file,
+              url: e.target.result,
+              // Añadir un ID temporal para manejar mejor las imágenes
+              tempId: Date.now() + Math.random().toString(36).substring(2)
+            })
+          }
+          reader.readAsDataURL(file)
+        }
+      })
+      // Limpiar el input para permitir seleccionar las mismas imágenes otra vez
+      this.$refs.fileInput.value = ''
+    },
+
+    deleteImageadd (image, index) {
+      if (image.tempId || image.id) {
+        if (image.id) {
+          this.$api.delete(`product-images/${image.id}`)
+            .then(() => {
+              this.product.images.splice(index, 1)
+            })
+            .catch(err => {
+              notify('Error al eliminar la imagen', 'negative')
+              console.error(err)
+            })
+        } else {
+          this.product.images.splice(index, 1)
+        }
+      }
+    },
+    async getUnitOfMeasures () {
+      try {
+        const { data } = await this.$api.get('unit-of-measures')
+        this.unitOfMeasures = data.map(unit => ({ label: unit.name, value: unit.id }))
+        this.unitOfMeasure = this.unitOfMeasures[0]?.value
+      } catch (error) {
+        Notify.create({
+          message: error.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
+    },
+    saveProduct () {
+      this.visible = true
+      const payload = this.modelData(this.product)
+      console.log(payload)
+      this.$api.post('products', payload)
+        .then(({ data }) => {
+          this.getProducts()
+          this.openAddProduct = false
+          this.visible = false
+          this.closeModal()
+          Notify.create({
+            message: 'Producto creado exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.visible = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    deleteImage (image, index) {
+      if (image.id) {
+        this.$api.delete(`product-images/${image.id}`)
+          .then(({ data }) => {
+            this.product.images.splice(index, 1)
+          })
+          .catch(err => {
+            this.visible = false
+            Notify.create({
+              message: err.message,
+              icon: 'warning',
+              color: 'negative'
+            })
+          })
+      } else {
+        this.product.images.splice(index, 1)
+      }
+    },
+    updateProfitPercentage (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const price = this.product.cost * (1 + newVal / 100)
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
+    updateCost (newVal) {
+      if (newVal && this.product.profit_percentage != null) {
+        const price = newVal * (1 + this.product.profit_percentage / 100)
+        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      }
+    },
+    updatePrice (newVal) {
+      if (newVal && this.product.cost > 0) {
+        const margin = ((newVal - this.product.cost) / this.product.cost) * 100
+        this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
+      }
+    },
+    addPriceLis () {
+      this.priceLists.push({
+        name: `Lista ${this.priceLists.length + 1}`,
+        price: null
+      })
+    },
+    modelData (data, put = false) {
+      const formData = new FormData()
+      if (put) {
+        formData.append('_method', 'put')
+      }
+      for (const key in data) {
+        if (Object.hasOwnProperty.call(data, key)) {
+          const element = data[key]
+          if (typeof data[key] !== 'object') {
+            formData.append(key, element)
+          }
+        }
+      }
+
+      if (data.aliquot_type) {
+        formData.append('aliquot_type', JSON.stringify(data.aliquot_type))
+      }
+
+      data.images.forEach((element, index) => {
+        formData.append(`images[${index}]`, element.image)
+      })
+
+      if (this.addonsProducts.length > 0) {
+        this.addonsProducts.forEach((element, index) => {
+          formData.append(`addons[${index}]`, element.id)
+        })
+      }
+
+      if (this.priceLists.length > 0) {
+        this.priceLists.forEach((element, index) => {
+          formData.append(`price_lists[${index}]`, JSON.stringify({ ...element, index }))
+        })
+      }
+
+      formData.append('branch_office_ids[0]', this.branchOffice?.id)
+      return formData
+    },
+    handleDrop (event) {
+      this.isDragOver = false
+      const files = Array.from(event.dataTransfer.files)
+      this.processFiles(files)
+    },
+    processFiles (files) {
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            this.product.images.push({
+              image: file,
+              url: e.target.result
+            })
+          }
+          reader.readAsDataURL(file)
+        }
+      })
+    },
+    setCategory (data) {
+      this.product.aliquot_type = data.aliquot_type
     },
     /**
      * Get one product
