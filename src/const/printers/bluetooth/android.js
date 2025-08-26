@@ -1,7 +1,6 @@
 import { CapacitorThermalPrinter } from 'capacitor-thermal-printer'
-import { formatDate, formatNumber, notify } from '../../mixins'
+import { formatDate, formatNumber } from '../../mixins'
 import { setQrImage } from '../common'
-import { api } from 'src/boot/axios'
 
 function separatorLine (length = 29) {
   return '-'.repeat(length) + '\n'
@@ -15,13 +14,11 @@ const header = (invoice, lineWidth) => {
 }
 
 export async function printCommand (invoice, config) {
-  const lineWidth = config?.size?.value || 29
+  const lineWidth = config?.size?.value || 24
   let detail = `NRO: ${invoice.code}\n` +
     `CLIENTE: ${invoice.client?.name || '-'}\n` +
-    `TELEFONO: ${invoice.client?.phone_number || '-'}\n` +
     `TIPO DE SERVICIO: ${invoice.type_of_service?.name || '-'}\n` +
-    `FECHA: ${invoice.date}\n` +
-    `HORA: ${invoice.hour}\n` +
+    `FECHA: ${invoice.date} ${invoice.hour}\n` +
     `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
     separatorLine(lineWidth) +
     'Descripcion         Cantidad\n' +
@@ -57,21 +54,27 @@ export async function printCommand (invoice, config) {
     'Gracias por tu compra!\n'
 
   // 4. Combinamos y enviamos a la impresora
-  await CapacitorThermalPrinter.begin()
-    .align('left')
-    .text(header(invoice, lineWidth))
-    .bold()
-    .text(detail)
-    .clearFormatting()
-    .align('center')
-    .text(footer)
-    .beep()
-    .cutPaper()
-    .write()
-    .then(() => console.log('Printed!'))
-    .catch(async (e) => {
-      console.log(e)
-    })
+  for (let i = 0; i < Number(config.quantityToPrint); i++) {
+    try {
+      await CapacitorThermalPrinter.begin()
+        .align('left')
+        .text(header(invoice, lineWidth))
+        .bold()
+        .text(detail)
+        .clearFormatting()
+        .align('center')
+        .text(footer)
+        .beep()
+        .cutPaper()
+        .write()
+        .then(() => console.log('Printed!'))
+        .catch(async (e) => {
+          console.log(e)
+        })
+    } catch (e) {
+      console.error(`Error printing copy ${i + 1}:`, e)
+    }
+  }
 }
 
 export async function printTicket (invoice, config) {
