@@ -14,7 +14,6 @@ const header = (invoice, lineWidth) => {
 }
 
 export async function printCommand (invoice, config) {
-  console.log(config?.size?.value)
   const lineWidth = config?.size?.value || 24
   let detail = `NRO: ${invoice.code}\n` +
     `CLIENTE: ${invoice.client?.name || '-'}\n` +

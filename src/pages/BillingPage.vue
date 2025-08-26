@@ -84,7 +84,6 @@
                 dense
                 v-model="barcode"
                 autofocus
-                type="number"
                 label="Código"
                 ref="barcode"
                 :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
