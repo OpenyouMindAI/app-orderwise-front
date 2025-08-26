@@ -240,7 +240,7 @@
                       {{ props.row.barcode }}
                     </q-td>
                     <q-td key="name" :props="props">
-                      {{ props.row.name.slice(0, 20) }}{{ props.row.name.length > 20 ? '...' : '' }}
+                      {{ props.row.name.slice(0, 40) }}{{ props.row.name.length > 40 ? '...' : '' }}
                       <q-tooltip class="text-body2" anchor="bottom middle">
                         {{ props.row.name }}
                       </q-tooltip>
@@ -326,14 +326,14 @@
               <div v-else>
                 <div class="text-h6 q-mb-md">Artículos</div>
                 <div class="q-gutter-y-md">
-                  <q-card v-for="(product, index) in products" :key="index" flat bordered class="product-card">
+                  <q-card v-for="(product, rowIndex) in products" :key="rowIndex" flat bordered class="product-card">
                     <q-card-section>
                       <div class="row items-center justify-between q-mb-sm q-pr-sm">
                         <div class="text-subtitle1 text-weight-bold">
                           {{ product.barcode }} - {{ product.name }}
                         </div>
                         <q-badge floating class="q-pa-none" style="background-color: transparent;">
-                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ rowIndex })" />
                         </q-badge>
                       </div>
                       <div class="row q-mb-xs">
@@ -539,19 +539,22 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+              <div class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
                 <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
-                    style="height: 120px; width: 100%; border-radius: 10px;"
+                    style="height: 150px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
-                      {{ props.row.name.slice(0, 20) }}
+                    <div class="absolute-full text-body2 flex flex-center text-bold text-center">
+                      {{ props.row.name }}
                       <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
+                    <q-tooltip class="text-body2">
+                      {{props.row.name}}
+                    </q-tooltip>
                   </q-img>
                 </q-card>
               </div>
@@ -582,7 +585,7 @@
           </div>
           <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-md row">
             <div class="col-12">
-              <q-toggle v-if="tableSelected.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
+              <q-toggle v-if="invoice?.tables?.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
               <q-markup-table>
                 <thead>
                   <tr>
@@ -590,6 +593,7 @@
                     <th class="text-left">Método de pago</th>
                     <th class="text-left">Referencia</th>
                     <th class="text-right">Monto</th>
+                    <th class="text-right">% Descuento</th>
                     <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -620,6 +624,7 @@
                         v-model.number="payment.amount"
                         auto-save
                         v-slot="scope"
+                        @update:model-value="appendPayment(payment)"
                       >
                         <q-input
                           v-model="scope.value"
@@ -628,6 +633,7 @@
                         />
                       </q-popup-edit>
                     </td>
+                    <td class="text-right">{{ payment.discount_percentage }}</td>
                     <q-td class="text-center q-gutter-x-xs">
                       <q-btn
                         icon="delete"
@@ -650,24 +656,56 @@
               </q-markup-table>
             </div>
             <div class="col-12">
-              <q-list separator bordered style="border-radius: 10px;">
-                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+              <q-item style="border: none !important">
+                  <q-item-section v-if="pendingPayment >= 0">
+                    RESTANTE POR COBRAR
+                  </q-item-section>
+                  <q-item-section v-else>
+                    VUELTO
+                  </q-item-section>
+                  <q-item-section side v-if="coin" class="text-bold text-black">
+                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                  </q-item-section>
+                </q-item>
+              <q-list separator bordered style="border-radius: 10px;" dense>
+
+                <q-item class="bg-positive text-white text-subtitle1" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
                   <q-item-section>
-                    TOTAL
+                    SUBTOTAL
                   </q-item-section>
                   <q-item-section side v-if="coin" class="text-white">
                     {{ coin.symbol }} {{ formatNumber(totalBill) }}
                   </q-item-section>
                 </q-item>
-                <q-item>
-                  <q-item-section v-if="pendingPayment >= 0">
-                    TOTAL POR COBRAR
-                  </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
+                <q-item v-for="paymentMethod in selectedPaymentMethods" :key="paymentMethod.name" v-show="selectedPaymentMethods.length > 0">
+                  <q-item-section>
+                    {{ paymentMethod.name }}
+                    <span v-if="paymentMethod.discount_percentage > 0" class="text-caption text-positive">
+                      ({{ paymentMethod.discount_percentage }}% descuento)
+                    </span>
                   </q-item-section>
                   <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                    {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}
+                    <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
+                      (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
+                    </span>
+                  </q-item-section>
+                </q-item>
+                <!-- Total de descuento -->
+                <q-item v-if="discountAmount > 0" class="text-subtitle1">
+                  <q-item-section>
+                    DESCUENTO TOTAL
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{ coin.symbol }} {{ formatNumber(discountAmount) }}
+                  </q-item-section>
+                </q-item>
+                <q-item v-if="discountAmount > 0" class="bg-positive text-white text-h6 text-bold" style="border-radius: 0px 0px 10px 10px;  border-top: none !important">
+                  <q-item-section>
+                    <q-item-label>TOTAL</q-item-label>
+                  </q-item-section>
+                  <q-item-section side v-if="coin" class="text-white">
+                    {{ coin.symbol }} {{ formatNumber(totalWithDiscount) }}
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -728,7 +766,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
+    <q-dialog v-model="dialogTable">
       <drawer-table
         ref="drawerTable"
         :tablesSelected="tableSelected"
@@ -736,11 +774,10 @@
         @update:invoice="selectInvoice"
         @update:freeTable="freeTable"
       >
-        <template v-slot:footer>
-          <q-card-actions align="right">
-            <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
-            <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          </q-card-actions>
+        <template v-slot:header>
+          <q-space />
+          <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
+          <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
         </template>
       </drawer-table>
     </q-dialog>
@@ -1444,7 +1481,22 @@ export default {
      * @returns {Number}
      */
     pendingPayment () {
-      return this.totalBill - this.totalPayment
+      const totalWithDiscount = this.totalWithDiscount - this.totalPaymentWithDiscount
+
+      if (totalWithDiscount > 0) return this.totalWithDiscount - this.totalPayment
+
+      return totalWithDiscount
+    },
+    /**
+     * Total payment
+     * @returns {Number}
+     */
+    totalPaymentWithDiscount () {
+      let totalPayment = 0
+      this.payments.forEach((payment) => {
+        totalPayment = totalPayment + (payment.amount - payment.discount_amount) || 0
+      })
+      return totalPayment
     },
     /**
      * Total payment
@@ -1456,6 +1508,39 @@ export default {
         totalPayment = totalPayment + payment.amount
       })
       return totalPayment
+    },
+    /**
+     * Discount amount - Calcula el descuento total aplicado
+     * @returns {Number}
+     */
+    discountAmount () {
+      let totalDiscount = 0
+      this.payments.forEach((payment) => {
+        if (payment.discount_percentage && payment.discount_percentage > 0) {
+          const discountAmount = (payment.amount * payment.discount_percentage) / 100
+          totalDiscount += discountAmount
+        }
+      })
+      return totalDiscount
+    },
+    /**
+     * Selected payment methods - Obtiene los métodos de pago seleccionados
+     * @returns {Array}
+     */
+    selectedPaymentMethods () {
+      return this.payments.map(payment => ({
+        name: payment.name,
+        amount: payment.amount,
+        discount_percentage: payment.discount_percentage || 0,
+        discountAmount: payment.discount_percentage ? (payment.amount * payment.discount_percentage) / 100 : 0
+      }))
+    },
+    /**
+     * Total with discount - Total con descuento (visual)
+     * @returns {Number}
+     */
+    totalWithDiscount () {
+      return this.totalBill - this.discountAmount
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice'])
@@ -1484,8 +1569,12 @@ export default {
         products
       }
     },
-    payments (payments) {
-      this.invoiceShare = { ...this.invoiceShare, payments }
+    payments: {
+      handler (payments) {
+        this.$forceUpdate()
+        this.invoiceShare = { ...this.invoiceShare, payments }
+      },
+      deep: true
     },
     async invoiceShare (data) {
       try {
@@ -1596,7 +1685,6 @@ export default {
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
-
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
     },
@@ -1942,17 +2030,18 @@ export default {
      */
     addPayment (data) {
       if (!this.hasPendingPayment()) return
-
-      if (data.acronym !== 'EFE') {
-        const payment = this.createPayment(data, this.pendingPayment)
-        this.appendPayment(payment)
-        return
-      }
-
-      this.promptCashAmount(data).then(amount => {
+      if (data.acronym && data.acronym.toLowerCase() === 'efe') {
+        this.promptPaymentAmount(data, true).then(amount => {
+          if (amount !== null) {
+            const payment = this.createPayment(data, amount)
+            this.appendPayment(payment)
+          }
+        })
+      } else {
+        const amount = this.pendingPayment
         const payment = this.createPayment(data, amount)
         this.appendPayment(payment)
-      })
+      }
     },
     /**
      * Has pending payment
@@ -1964,7 +2053,7 @@ export default {
     /**
      * Create payment
      * @param {Object} data data payment
-     * @param {Number} amount amount
+     * @param {Number} amountToCover amount
      * @returns {Object}
      */
     createPayment (data, amount) {
@@ -1975,7 +2064,11 @@ export default {
         reference: null,
         coin_id: this.coin?.id ?? null,
         payment_method_id: data.id,
-        user_created_id: this.userSession?.id ?? null
+        user_created_id: this.userSession?.id ?? null,
+        discount_percentage: data.percentage || 0,
+        discount_amount: data.percentage
+          ? ((parseFloat(amount) || this.pendingPayment) * data.percentage) / 100
+          : 0
       }
     },
     /**
@@ -1983,7 +2076,13 @@ export default {
      * @param {Object} payment payment
      */
     appendPayment (payment) {
-      this.payments = [...this.payments, payment]
+      const paymentFund = this.payments.find(p => p.payment_method_id === payment.payment_method_id)
+      if (paymentFund) {
+        paymentFund.amount = payment.amount
+        paymentFund.discount_amount = payment.amount * (payment.discount_percentage / 100)
+      } else {
+        this.payments = [...this.payments, payment]
+      }
     },
     /**
      * Prompt cash amount
@@ -2015,7 +2114,42 @@ export default {
           .onDismiss(() => resolve(this.pendingPayment))
       })
     },
+    /**
+     * Prompt payment amount - Pregunta el monto para cualquier método de pago
+     * @param {Object} data data payment
+     * @returns {Promise}
+     */
+    promptPaymentAmount (data, emptyInput = false) {
+      return new Promise((resolve) => {
+        const discountText = data.discount_percentage > 0
+          ? ` (${data.discount_percentage}% de descuento)`
+          : ''
 
+        this.$q.dialog({
+          title: `Pago con ${data.name} ${discountText}`,
+          color: 'primary',
+          message: `Ingrese el monto a pagar con ${data.name}.`,
+          persistent: true,
+          prompt: {
+            model: emptyInput ? '' : this.pendingPayment.toString(),
+            type: 'number',
+            min: 0,
+            filled: true,
+            label: 'Monto a pagar'
+          },
+          ok: { label: 'Aceptar', color: 'primary' },
+          cancel: { label: 'Cancelar', color: 'negative' }
+        }).onOk(val => {
+          const amount = parseFloat(val)
+          if (!isNaN(amount) && amount > 0) {
+            resolve(amount)
+          } else {
+            resolve(this.pendingPayment)
+          }
+        }).onCancel(() => resolve(this.pendingPayment))
+          .onDismiss(() => resolve(this.pendingPayment))
+      })
+    },
     /**
      * Get all payment-methods
      */
@@ -2257,6 +2391,7 @@ export default {
           payment_method_id: payment.payment_method_id,
           name: payment.payment_method.name,
           amount: payment.amount,
+          discount_percentage: payment.discount_percentage,
           reference: payment.reference,
           coin_id: payment.coin_id
         })
@@ -2295,6 +2430,7 @@ export default {
           return {
             ...product,
             ...product.pivot,
+            id: product.id,
             quantity: product.pivot.amount,
             subtotal: product.pivot.price * product.pivot.amount,
             product_price_lists: product.product_price_lists
@@ -2303,7 +2439,7 @@ export default {
         this.client = invoice.client
         this.invoiceType = invoice.invoice_type
         this.typeOfService = invoice.type_of_service
-        this.tableSelected = invoice.tables.map(table => table.id)
+
         this.searchInvoice = false
         this.setPayments(invoice.invoice_payments)
         this.$router.push({
@@ -2364,14 +2500,6 @@ export default {
       } else {
         await commandPrint(invoice)
       }
-      // if (this.$q.platform.is.nativeMobile) {
-      //   const type = this.invoicePrinter ? 'ticket' : 'command'
-      //   const quantity = this.invoicePrinter ? 1 : null
-      //   await getPrintersB(invoice, quantity, type)
-      // } else {
-      //   const pdfUrl = doc.output('bloburl')
-      //   window.open(pdfUrl, '_blank')
-      // }
       this.clear()
     },
     /**
@@ -2409,7 +2537,7 @@ export default {
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.paymentModel(this.payments),
         total_amount: this.totalBill,
-        tables: this.tableSelected,
+        tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
@@ -2452,6 +2580,7 @@ export default {
         if (this.$route.query.id) {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
+          console.log(params)
           res = await this.$api.post('invoices', params)
         }
         this.printBill(res.data.data)
@@ -2461,6 +2590,7 @@ export default {
           filter: undefined
         })
       } catch (error) {
+        console.log(error)
         notify(error.message, 'negative', 'warning')
       } finally {
         this.loadingBilling = false
@@ -2535,8 +2665,8 @@ export default {
           product_id: product.id,
           cost: product.cost,
           barcode: product.barcode,
-          normal_stock: product.normal_stock,
-          bundle_stock: product.bundle_stock,
+          normal_stock: product.normal_stock || 0,
+          bundle_stock: product.bundle_stock || 0,
           skip_stock: product.skip_stock,
           is_bundle: product.is_bundle,
           aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
@@ -2632,6 +2762,7 @@ export default {
       }
 
       // Cálculo preciso con redondeo a 2 decimales
+      data.amount = data.quantity
       data.subtotal = Math.round((data.price * data.quantity) * 100) / 100
       this.calculateTotal()
     },

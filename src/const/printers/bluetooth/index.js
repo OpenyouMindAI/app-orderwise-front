@@ -33,12 +33,11 @@ export const directTicketPrint = async (printer, data, device) => {
  * @param {Object} device device data
  */
 
-export const directCommandPrint = async (printer, data, device) => {
-  console.log(device.platform)
+export const directCommandPrint = async (printer, data, device, config) => {
   switch (device.platform) {
     case 'android':
       if (device.name === printer.device) {
-        printCommand(data, printer, device)
+        printCommand(data, config)
       } else {
         printCommandWindows(data, printer)
       }
