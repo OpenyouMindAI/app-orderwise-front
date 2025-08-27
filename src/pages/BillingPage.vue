@@ -304,6 +304,7 @@
                     </q-td>
                     <q-td key="actions" :props="props">
                       <q-btn
+                        v-if="props.row.selectionGroups && props.row.selectionGroups.length > 0"
                         :icon="props.expand ? 'expand_less' : 'expand_more'"
                         size="xs"
                         color="primary"
@@ -333,7 +334,18 @@
                                   class="row justify-between q-py-xs"
                                 >
                                   <span>{{ selection.product.name }}</span>
-                                  <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
+                                  <div class="row items-center q-gutter-xs">
+                                    <div v-if="selection.product.priceModifier && typeof selection.product.priceModifier === 'object'" class="text-caption text-orange-8">
+                                      <q-icon name="add_circle" size="xs" class="q-mr-xs" />
+                                      <template v-if="selection.product.priceModifier.type === 'FIXED'">
+                                        +${{ formatNumber(selection.product.priceModifier.value) }}
+                                      </template>
+                                      <template v-else-if="selection.product.priceModifier.type === 'PERCENTAGE'">
+                                        +{{ selection.product.priceModifier.value }}%
+                                      </template>
+                                    </div>
+                                    <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
+                                  </div>
                                 </div>
                               </div>
                               <!-- Fallback if no selected products -->
@@ -348,7 +360,7 @@
                           <div class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
                             <div class="row justify-between items-center">
                               <span class="text-weight-medium">Total promoción:</span>
-                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.finalPrice || props.row.price) }}</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.subtotal || props.row.finalPrice || props.row.price) }}</span>
                             </div>
                           </div>
                         </div>
@@ -684,7 +696,12 @@
                     >
                       <!-- Product name overlay -->
                       <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center text-white product-name-overlay">
-                        {{ product.name }}
+                        <div>
+                          {{ product.name }}
+                          <div v-if="product.priceModifier" class="text-caption text-yellow-4 q-mt-xs">
+                            {{ getModifierDisplayText(product) }}
+                          </div>
+                        </div>
                       </div>
 
                       <!-- Selection indicator -->
@@ -731,9 +748,35 @@
                 rounded
                 class="q-mb-sm"
               />
-              <div class="text-subtitle2 q-mb-lg text-weight-medium">
+              <div class="text-subtitle2 q-mb-sm text-weight-medium">
                 <q-icon name="shopping_cart" class="q-mr-xs" />
                 {{ getTotalSelectedQuantity() }} de {{ currentGroup.maxSelection }} seleccionados
+              </div>
+
+              <!-- Price calculation with modifiers -->
+              <div class="q-mb-lg">
+                <q-card flat bordered class="q-pa-md bg-grey-1">
+                  <div class="text-body1 text-weight-bold q-mb-xs">
+                    <q-icon name="attach_money" class="q-mr-xs text-green" />
+                    Total de la Promoción
+                  </div>
+                  <div class="row justify-between items-center">
+                    <div class="text-subtitle2 text-grey-7">
+                      Precio base: ${{ parseFloat(currentPromo.finalPrice || 0).toFixed(2) }}
+                    </div>
+                    <div class="text-h6 text-weight-bold text-primary">
+                      ${{ promotionTotal.toFixed(2) }}
+                    </div>
+                  </div>
+                  <div v-if="promoSelections.length > 0" class="q-mt-xs">
+                    <div class="text-caption text-grey-6">Modificadores aplicados:</div>
+                    <div v-for="selection in promoSelections" :key="`${selection.groupIndex}-${selection.productId}`" class="text-caption">
+                      <template v-if="getProductModifierInfo(selection)">
+                        {{ getProductModifierInfo(selection) }}
+                      </template>
+                    </div>
+                  </div>
+                </q-card>
               </div>
 
               <!-- Navigation buttons -->
@@ -1688,12 +1731,60 @@ export default {
 
       return totalWithDiscount
     },
-    /**
-     * Get current selection group
-     * @returns {Object}
-     */
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    branchOfficeCharged () {
+      return this.branchOffice
+    },
     currentGroup () {
-      return this.currentPromo?.selectionGroups[this.currentGroupIndex]
+      return this.currentPromo?.selectionGroups?.[this.currentGroupIndex]
+    },
+    // Reactive promotion total calculation
+    promotionTotal () {
+      if (!this.currentPromo) {
+        console.log('❌ No currentPromo available for computed')
+        return 0
+      }
+
+      let total = parseFloat(this.currentPromo.finalPrice) || 0
+      console.log('💰 Base price (computed):', total)
+      console.log('📋 Current selections (computed):', this.promoSelections)
+
+      // Add modifiers for selected products
+      this.promoSelections.forEach(selection => {
+        console.log('🔍 Processing selection (computed):', selection)
+        const group = this.currentPromo.selectionGroups[selection.groupIndex]
+        const product = group?.products?.find(p => p.productId === selection.productId)
+
+        console.log('🛍️ Found product (computed):', product)
+
+        if (product && product.priceModifier && typeof product.priceModifier === 'object') {
+          const quantity = selection.quantity || 1
+          let modifierAmount = 0
+
+          console.log('⚡ Product has modifier (computed):', {
+            type: product.priceModifier.type,
+            value: product.priceModifier.value,
+            quantity
+          })
+
+          if (product.priceModifier.type === 'FIXED') {
+            modifierAmount = parseFloat(product.priceModifier.value) || 0
+          } else if (product.priceModifier.type === 'PERCENTAGE') {
+            const basePrice = parseFloat(this.currentPromo.finalPrice) || 0
+            modifierAmount = (basePrice * (parseFloat(product.priceModifier.value) || 0)) / 100
+          }
+
+          const totalModifier = modifierAmount * quantity
+          total += totalModifier
+
+          console.log('➕ Adding modifier (computed):', totalModifier, 'New total:', total)
+        } else {
+          console.log('❌ Product has no modifier or not found (computed)')
+        }
+      })
+
+      console.log('💯 Final total (computed):', total)
+      return Math.max(0, total)
     },
     /**
      * Total payment
@@ -3122,13 +3213,83 @@ export default {
     /**
      * Open promo selection dialog
      */
-    openPromoDialog (promo) {
+    async openPromoDialog (promo) {
       console.log('🎯 PROMO MODAL OPENED:', promo.name)
       console.log('📋 Selection Groups:', promo.selectionGroups)
-      this.currentPromo = promo
+      console.log('🔍 FULL PROMO STRUCTURE:', JSON.stringify(promo, null, 2))
+
+      // Clone the promo to avoid modifying the original
+      const promoWithDetails = { ...promo }
+
+      // Fetch product details for each selection group
+      if (promoWithDetails.selectionGroups && promoWithDetails.selectionGroups.length > 0) {
+        for (const group of promoWithDetails.selectionGroups) {
+          if (group.products && group.products.length > 0) {
+            // Fetch details for each product in the group
+            for (const product of group.products) {
+              await this.fetchProductDetails(product)
+            }
+          }
+        }
+      }
+
+      this.currentPromo = promoWithDetails
       this.currentGroupIndex = 0
       this.promoSelections = []
       this.promoDialog = true
+    },
+
+    /**
+     * Fetch product details by ID
+     */
+    async fetchProductDetails (product) {
+      try {
+        if (!product.productId) {
+          console.warn('Product ID is missing:', product)
+          return
+        }
+
+        // Check if product already has name and images
+        if (product.name && product.images && product.images.length > 0) {
+          return // Already has details
+        }
+
+        console.log('🔍 Fetching details for product ID:', product.productId)
+
+        const { data } = await this.$api.get(`products/${product.productId}`)
+
+        console.log('📦 Raw API response for product:', data)
+
+        if (data) {
+          // Update product with fetched details
+          product.name = data.name || `Producto ${product.productId}`
+          product.images = data.images || []
+          product.description = data.description || ''
+          product.price = data.price || 0
+          product.barcode = data.barcode || ''
+
+          // Keep existing modifier data if it was already set in promotion structure
+          // Only update if modifier data isn't already present
+          if (!product.priceModifier && !product.modifierType && !product.modifierValue) {
+            product.priceModifier = data.priceModifier || data.price_modifier || data.modifier || null
+            product.modifierType = data.modifierType || data.modifier_type || data.type || null
+            product.modifierValue = data.modifierValue || data.modifier_value || data.value || 0
+          }
+
+          console.log('✅ Product details fetched:', {
+            id: product.productId,
+            name: product.name,
+            imagesCount: product.images.length,
+            modifier: product.priceModifier ? `${product.modifierType}: ${product.modifierValue}` : 'None from API',
+            existingModifier: product.priceModifier ? 'Had modifier from promotion' : 'No existing modifier'
+          })
+        }
+      } catch (error) {
+        console.error('❌ Error fetching product details:', error)
+        // Set fallback values if API call fails
+        product.name = product.name || `Producto ${product.productId}`
+        product.images = product.images || []
+      }
     },
 
     /**
@@ -3160,6 +3321,87 @@ export default {
         selection.productId === productId
       )
       return selection ? selection.quantity : 0
+    },
+
+    /**
+     * Calculate promotion total with modifiers
+     */
+    calculatePromotionTotal () {
+      if (!this.currentPromo) {
+        console.log('❌ No currentPromo available')
+        return 0
+      }
+
+      let total = parseFloat(this.currentPromo.finalPrice) || 0
+      console.log('💰 Base price:', total)
+      console.log('📋 Current selections:', this.promoSelections)
+
+      // Add modifiers for selected products
+      this.promoSelections.forEach(selection => {
+        console.log('🔍 Processing selection:', selection)
+        const group = this.currentPromo.selectionGroups[selection.groupIndex]
+        const product = group?.products?.find(p => p.productId === selection.productId)
+
+        console.log('🛍️ Found product:', product)
+
+        if (product && product.priceModifier) {
+          const quantity = selection.quantity || 1
+          let modifierAmount = 0
+
+          console.log('⚡ Product has modifier:', {
+            type: product.modifierType,
+            value: product.modifierValue,
+            quantity
+          })
+
+          if (product.modifierType === 'FIXED') {
+            modifierAmount = parseFloat(product.modifierValue) || 0
+          } else if (product.modifierType === 'PERCENTAGE') {
+            const basePrice = parseFloat(this.currentPromo.finalPrice) || 0
+            modifierAmount = (basePrice * (parseFloat(product.modifierValue) || 0)) / 100
+          }
+
+          const totalModifier = modifierAmount * quantity
+          total += totalModifier
+
+          console.log('➕ Adding modifier:', totalModifier, 'New total:', total)
+        } else {
+          console.log('❌ Product has no modifier or not found')
+        }
+      })
+
+      console.log('💯 Final total:', total)
+      return Math.max(0, total)
+    },
+
+    /**
+     * Get modifier text for display
+     */
+    getModifierDisplayText (product) {
+      if (!product.priceModifier) return ''
+
+      if (product.modifierType === 'FIXED') {
+        return `+$${product.modifierValue}`
+      } else if (product.modifierType === 'PERCENTAGE') {
+        return `+${product.modifierValue}%`
+      }
+
+      return ''
+    },
+
+    /**
+     * Get product modifier info for selection display
+     */
+    getProductModifierInfo (selection) {
+      const group = this.currentPromo?.selectionGroups[selection.groupIndex]
+      const product = group?.products?.find(p => p.productId === selection.productId)
+
+      if (!product || !product.priceModifier) return null
+
+      const quantity = selection.quantity || 1
+      const modifierText = this.getModifierDisplayText(product)
+
+      return `${product.name} (${quantity}x): ${modifierText}`
     },
 
     /**
@@ -3288,7 +3530,8 @@ export default {
         selectedProducts: this.promoSelections,
         quantity: 1,
         amount: 1,
-        subtotal: this.currentPromo.finalPrice || this.currentPromo.price
+        price: this.promotionTotal,
+        subtotal: this.promotionTotal
       }
 
       console.log('🛍️ FINAL PROMO PRODUCT:', promoProduct)
