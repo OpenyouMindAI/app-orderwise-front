@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12" id="select-client">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-12" id="select-client">
             <q-select
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
@@ -27,7 +27,7 @@
               </template>
             </q-select>
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-6">
             <q-select
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
@@ -43,7 +43,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div v-if="invoiceType.bill" class="col-xl-3 col-lg-3 col-md-3 col-sm-4 col-xs-6">
+          <div v-if="invoiceType.bill" class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
             <q-select
               v-model="voucherType"
               use-input
@@ -59,7 +59,7 @@
               @filter="getVoucherTypes"
             />
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
             <q-select
               use-input
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
@@ -74,6 +74,20 @@
               :rules="[val => !!val || 'El campo es requerido.']"
               @filter="filterTypeOfServices"
             />
+          </div>
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
+            <q-btn
+              style="border-radius: 10px; padding: 5px 15px"
+              dense
+              :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+              :color="isUserBoxOpen ? 'negative' : 'primary'"
+              :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+              @click="showCashBoxDialog = true"
+            >
+              <q-tooltip class="text-body2" anchor="bottom middle">
+                {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+              </q-tooltip>
+            </q-btn>
           </div>
         </div>
         <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
@@ -193,20 +207,6 @@
                   Buscar factura
                 </q-tooltip>
               </q-btn>
-
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
-                :color="isUserBoxOpen ? 'negative' : 'primary'"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? (isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja') : ''"
-                @click="showCashBoxDialog = true"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
-                </q-tooltip>
-              </q-btn>
-
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
@@ -2858,18 +2858,17 @@ export default {
      */
     async checkCashBoxStatus () {
       try {
-        // Verificar estado guardado en localStorage
         const savedState = this.getCashBoxState()
 
-        // Si no hay datos en localStorage, omitir consulta al backend
         if (!savedState) {
           this.isUserBoxOpen = false
+          this.showCashBoxDialog = true
           await this.loadAvailableCashBoxes()
           return
         }
 
-        // Verificar si el usuario tiene una sesión de caja activa
-        const { data } = await this.$api.get(`cashier-init?user_id=${this.userSession.id}`)
+        const { data } = await this.$api.get('cashier-init')
+
         const cashierSession = data
 
         // Verificar si la sesión está abierta
@@ -2896,6 +2895,7 @@ export default {
           // Usuario no tiene caja abierta - limpiar localStorage
           localStorage.removeItem('cashbox_state')
           this.isUserBoxOpen = false
+          this.showCashBoxDialog = true
           await this.loadAvailableCashBoxes()
         }
       } catch (error) {
