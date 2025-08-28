@@ -3,13 +3,7 @@
  * Based on the functional requirements for promotion creation and management
  */
 
-// Promotion status options
-export const PROMOTION_STATUS = {
-  ACTIVE: 'ACTIVE',
-  INACTIVE: 'INACTIVE',
-  DRAFT: 'DRAFT',
-  EXPIRED: 'EXPIRED'
-}
+// Removed PROMOTION_STATUS - now using boolean status
 
 // Channel options
 export const PROMOTION_CHANNELS = {
@@ -46,8 +40,8 @@ export class PromotionModel {
     this.id = data.id || null
     this.name = data.name || ''
     this.description = data.description || ''
-    this.status = data.status || PROMOTION_STATUS.DRAFT
-    this.channel = data.channel || PROMOTION_CHANNELS.BOTH
+    this.status = data.status !== undefined ? data.status : true
+    this.channels = data.channels || [PROMOTION_CHANNELS.BOTH]
 
     // Validity period
     this.startDate = data.startDate || null
@@ -129,7 +123,7 @@ export class PromotionModel {
     const start = new Date(this.startDate)
     const end = new Date(this.endDate)
 
-    return this.status === PROMOTION_STATUS.ACTIVE &&
+    return this.status === true &&
            now >= start &&
            now <= end
   }
@@ -180,7 +174,7 @@ export class PromotionModel {
       name: this.name,
       description: this.description,
       status: this.status,
-      channel: this.channel,
+      channels: this.channels,
       startDate: this.startDate,
       endDate: this.endDate,
       pricingMode: this.pricingMode,
@@ -207,11 +201,9 @@ export class SelectionGroupModel {
     this.id = data.id || null
     this.name = data.name || ''
     this.description = data.description || ''
-    this.required = data.required !== undefined ? data.required : true
 
     // Selection constraints
-    this.minSelection = data.minSelection || 0
-    this.maxSelection = data.maxSelection || 1
+    this.quantity = data.quantity || 1
     this.selectionStep = data.selectionStep || SELECTION_STEPS.RANGE
     this.stepValue = data.stepValue || 1 // For multiples or exact
 
@@ -234,16 +226,8 @@ export class SelectionGroupModel {
       errors.push('Group name is required')
     }
 
-    if (this.minSelection < 0) {
-      errors.push('Minimum selection cannot be negative')
-    }
-
-    if (this.maxSelection <= 0) {
-      errors.push('Maximum selection must be greater than 0')
-    }
-
-    if (this.minSelection > this.maxSelection) {
-      errors.push('Minimum selection cannot be greater than maximum')
+    if (this.quantity <= 0) {
+      errors.push('Quantity must be greater than 0')
     }
 
     if (this.products.length === 0) {
@@ -265,7 +249,7 @@ export class SelectionGroupModel {
    * Check if selection quantity is valid for this group
    */
   isValidSelection (quantity) {
-    if (quantity < this.minSelection || quantity > this.maxSelection) {
+    if (quantity !== this.quantity) {
       return false
     }
 
@@ -297,9 +281,7 @@ export class SelectionGroupModel {
       id: this.id,
       name: this.name,
       description: this.description,
-      required: this.required,
-      minSelection: this.minSelection,
-      maxSelection: this.maxSelection,
+      quantity: this.quantity,
       selectionStep: this.selectionStep,
       stepValue: this.stepValue,
       displayOrder: this.displayOrder,
@@ -315,23 +297,24 @@ export class SelectionGroupModel {
  */
 export class ProductOptionModel {
   constructor (data = {}) {
+    this.id = data.id || null
     this.productId = data.productId || null
     this.name = data.name || ''
     this.description = data.description || ''
     this.basePrice = data.basePrice || 0
-
-    // Price modifier for this option in the promotion
-    this.priceModifier = data.priceModifier || null // { type, value, description }
-
-    // Stock and availability
     this.stock = data.stock || 0
-    this.active = data.active !== undefined ? data.active : true
-    this.maxPerOrder = data.maxPerOrder || null // Max quantity per order (e.g., max 6)
-
-    // Display
     this.images = data.images || []
+
+    // Price modifiers
+    this.priceModifier = data.priceModifier || null
+
+    // Preselected quantity
+    this.presetQuantity = data.presetQuantity || 0
+
+    // Display configuration
     this.displayOrder = data.displayOrder || 0
 
+    this.maxPerOrder = data.maxPerOrder || null // Max quantity per order (e.g., max 6)
     // Category and grouping
     this.category = data.category || ''
     this.tags = data.tags || []
@@ -415,16 +398,17 @@ export class ProductOptionModel {
    */
   toJSON () {
     return {
+      id: this.id,
       productId: this.productId,
       name: this.name,
       description: this.description,
       basePrice: this.basePrice,
-      priceModifier: this.priceModifier,
       stock: this.stock,
-      active: this.active,
-      maxPerOrder: this.maxPerOrder,
       images: this.images,
+      priceModifier: this.priceModifier,
+      presetQuantity: this.presetQuantity,
       displayOrder: this.displayOrder,
+      maxPerOrder: this.maxPerOrder,
       category: this.category,
       tags: this.tags
     }
@@ -555,8 +539,8 @@ export const createSamplePromotion = () => {
   return new PromotionModel({
     name: 'Combo Empanadas + Bebida',
     description: 'Elige tus empanadas favoritas y acompáñalas con una bebida',
-    status: PROMOTION_STATUS.ACTIVE,
-    channel: PROMOTION_CHANNELS.BOTH,
+    status: true,
+    channels: [PROMOTION_CHANNELS.POS, PROMOTION_CHANNELS.ONLINE],
     startDate: new Date().toISOString(),
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
     pricingMode: PRICING_MODES.FIXED_WITH_MODIFIERS,
@@ -564,10 +548,8 @@ export const createSamplePromotion = () => {
     selectionGroups: [
       new SelectionGroupModel({
         name: 'Empanadas - Elige tus sabores',
-        description: 'Selecciona entre 3 y 6 empanadas',
-        required: true,
-        minSelection: 3,
-        maxSelection: 6,
+        description: 'Selecciona 4 empanadas',
+        quantity: 4,
         selectionStep: SELECTION_STEPS.RANGE,
         products: [
           new ProductOptionModel({
@@ -575,6 +557,7 @@ export const createSamplePromotion = () => {
             name: 'EMPANADA CARNE',
             basePrice: 1100,
             stock: 100,
+            presetQuantity: 3, // 3 empanadas de carne preseleccionadas
             images: [{ url: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?q=80&w=1000' }]
           }),
           new ProductOptionModel({
@@ -582,16 +565,15 @@ export const createSamplePromotion = () => {
             name: 'EMPANADA POLLO',
             basePrice: 1100,
             stock: 80,
+            presetQuantity: 1, // 1 empanada de pollo preseleccionada
             images: [{ url: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?q=80&w=1000' }]
           })
         ]
       }),
       new SelectionGroupModel({
         name: 'Bebidas - Selecciona tu favorita',
-        description: 'Elige 1 o 2 bebidas',
-        required: true,
-        minSelection: 1,
-        maxSelection: 2,
+        description: 'Elige 1 bebida',
+        quantity: 1,
         selectionStep: SELECTION_STEPS.RANGE,
         products: [
           new ProductOptionModel({
@@ -599,6 +581,7 @@ export const createSamplePromotion = () => {
             name: 'COCA-COLA 500CC',
             basePrice: 1800,
             stock: 150,
+            presetQuantity: 1, // 1 bebida preseleccionada
             images: [{ url: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?q=80&w=1000' }]
           })
         ]

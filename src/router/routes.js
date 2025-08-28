@@ -16,6 +16,12 @@ const routes = [
         component: () => import('pages/ProductPage.vue')
       },
       {
+        path: 'promotions',
+        meta: { requiresAuth: true },
+        name: 'Promotion',
+        component: () => import('pages/PromotionPage.vue')
+      },
+      {
         path: 'bills',
         meta: { requiresAuth: true },
         name: 'Bill',

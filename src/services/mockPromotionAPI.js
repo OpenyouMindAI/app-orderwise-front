@@ -150,13 +150,19 @@ class MockPromotionAPI {
     }
 
     if (filters.channel) {
-      promotions = promotions.filter(p => p.channel === filters.channel || p.channel === 'BOTH')
+      promotions = promotions.filter(p => {
+        if (Array.isArray(p.channels)) {
+          return p.channels.includes(filters.channel) || p.channels.includes('BOTH')
+        }
+        // Backward compatibility for old single channel format
+        return p.channel === filters.channel || p.channel === 'BOTH'
+      })
     }
 
     if (filters.active !== undefined) {
       const now = new Date().toISOString()
       promotions = promotions.filter(p => {
-        const isActive = p.startDate <= now && p.endDate >= now && p.status === 'ACTIVE'
+        const isActive = p.startDate <= now && p.endDate >= now && p.status === true
         return filters.active ? isActive : !isActive
       })
     }

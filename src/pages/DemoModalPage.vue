@@ -1,33 +1,8 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row justify-center">
-      <div class="col-12 col-md-8">
-        <q-card class="q-pa-lg text-center">
-          <q-card-section>
-            <div class="text-h4 text-primary q-mb-md">
-              <q-icon name="local_offer" size="2rem" class="q-mr-sm" />
-              Gestión de Promociones
-            </div>
-            <div class="text-body1 text-grey-7 q-mb-lg">
-              Crea promociones personalizadas con grupos de productos y configuraciones avanzadas
-            </div>
-            <q-btn
-              color="primary"
-              size="lg"
-              label="Crear Nueva Promoción"
-              icon="add"
-              unelevated
-              class="q-px-xl"
-              @click="openCreateModal"
-            />
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Modal de creación de promociones -->
+  <div>
+    <!-- Modal de promociones reutilizable -->
     <q-dialog
-      v-model="showCreateModal"
+      v-model="internalShowModal"
       persistent
       :maximized="$q.screen.lt.sm"
     >
@@ -38,7 +13,7 @@
         <q-card-section class="row items-center bg-primary text-white q-py-sm">
           <div class="text-h6">
             <q-icon name="local_offer" class="q-mr-sm" />
-            Crear Nueva Promoción
+            {{ isEditMode ? 'Editar Promoción' : 'Crear Nueva Promoción' }}
           </div>
           <q-space />
           <q-btn
@@ -77,7 +52,7 @@
             >
               <!-- Tab: Datos Básicos -->
               <q-tab-panel name="basic" class="q-pa-md">
-                <div class="row q-col-gutter-md">
+                <div class="row q-col-gutter-md q-pb-md">
                   <div class="col-12 col-md-8">
                     <q-card flat bordered class="q-pa-md q-mb-md">
                       <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
@@ -85,24 +60,13 @@
                         Información General
                       </div>
                       <div class="row q-col-gutter-sm">
-                        <div class="col-12 col-md-6">
+                        <div class="col-12">
                           <q-input
                             v-model="promotion.name"
                             label="Nombre de la promoción"
                             filled
                             dense
                             :rules="nameRules"
-                          />
-                        </div>
-                        <div class="col-12 col-md-6">
-                          <q-select
-                            v-model="promotion.status"
-                            :options="statusOptions"
-                            label="Estado"
-                            filled
-                            dense
-                            emit-value
-                            map-options
                           />
                         </div>
                         <div class="col-12">
@@ -144,16 +108,17 @@
                         </div>
                         <div class="col-12">
                           <q-select
-                            ref="channelSelect"
                             v-model="promotion.channels"
                             :options="channelOptions"
-                            label="Canal disponible"
+                            label="Canales disponibles"
                             filled
                             dense
+                            multiple
+                            option-label="label"
+                            option-value="value"
                             emit-value
                             map-options
-                            :rules="[val => !!val || 'Se requiere al menos un canal']"
-                            @update:model-value="() => channelSelect.blur()"
+                            use-chips
                           />
                         </div>
                       </div>
@@ -161,14 +126,86 @@
                   </div>
 
                   <div class="col-12 col-md-4">
+                    <q-card flat bordered class="q-pa-md q-mb-md">
+                      <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                        <q-icon name="image" class="q-mr-sm" />
+                        Imagen de la Promo
+                      </div>
+                      <q-card
+                        flat
+                        bordered
+                        class="dropzone-card q-mb-md"
+                        :class="{ 'dropzone-active': isDragOver }"
+                        @dragover.prevent="isDragOver = true"
+                        @dragleave.prevent="isDragOver = false"
+                        @drop.prevent="handleDrop"
+                      >
+                        <q-card-section class="text-center q-pa-xl q-gutter-y-md">
+                          <!-- Image Preview Grid -->
+                          <div class="col-12" v-if="promotion.images && promotion.images.length">
+                            <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
+                            <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
+                              <div
+                                v-for="(image, index) in promotion.images"
+                                :key="index"
+                                class="col-6 col-sm-4 col-md-4"
+                              >
+                                <q-card flat class="image-preview-card">
+                                  <q-img
+                                    :src="image.url"
+                                    :ratio="1"
+                                    class="rounded-borders"
+                                  >
+                                    <div class="absolute-top-right bg-transparent">
+                                      <q-btn
+                                        size="sm"
+                                        icon="close"
+                                        color="negative"
+                                        round
+                                        dense
+                                        @click="deleteImage(image, index)"
+                                      />
+                                    </div>
+                                  </q-img>
+                                </q-card>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else>
+                            <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
+                            <div class="text-h6 text-grey-7 q-mb-sm">
+                              Arrastra la imágen aquí
+                            </div>
+                            <div class="text-body2 text-grey-5 q-mb-md">
+                              o haz clic para seleccionar archivo
+                            </div>
+                          </div>
+                          <q-btn
+                            color="primary"
+                            label="Seleccionar imágen"
+                            @click="$refs.fileInput.click()"
+                            unelevated
+                          />
+                          <input
+                            ref="fileInput"
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            style="display: none"
+                            @change="handleFileSelect"
+                          />
+                        </q-card-section>
+                      </q-card>
+                    </q-card>
+
                     <q-card flat bordered class="q-pa-md">
                       <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
                         <q-icon name="settings" class="q-mr-sm" />
                         Configuración
                       </div>
-                      <div class="q-gutter-md">
+                      <div class="q-gutter-md column">
                         <q-toggle
-                          v-model="promotion.isActive"
+                          v-model="promotion.status"
                           label="Promoción activa"
                           color="positive"
                         />
@@ -184,284 +221,225 @@
                         />
                       </div>
                     </q-card>
-
-                    <q-card flat bordered class="q-pa-md">
-                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="image" class="q-mr-sm" />
-                    Imágenes
-                  </div>
-                  <q-card
-                    flat
-                    bordered
-                    class="dropzone-card q-mb-md"
-                    :class="{ 'dropzone-active': isDragOver }"
-                    @dragover.prevent="isDragOver = true"
-                    @dragleave.prevent="isDragOver = false"
-                    @drop.prevent="handleDrop"
-                  >
-                    <q-card-section class="text-center q-pa-xl q-gutter-y-md">
-                      <!-- Image Preview Grid -->
-                      <div class="col-12" v-if="promotion.images && promotion.images.length">
-                        <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                        <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
-                          <div
-                            v-for="(image, index) in promotion.images"
-                            :key="index"
-                            class="col-6 col-sm-4 col-md-4"
-                          >
-                            <q-card flat class="image-preview-card">
-                              <q-img
-                                :src="image.url"
-                                :ratio="1"
-                                class="rounded-borders"
-                              >
-                                <div class="absolute-top-right bg-transparent">
-                                  <q-btn
-                                    size="sm"
-                                    icon="close"
-                                    color="negative"
-                                    round
-                                    dense
-                                    @click="deleteImage(image, index)"
-                                  />
-                                </div>
-                              </q-img>
-                            </q-card>
-                          </div>
-                        </div>
-                      </div>
-                      <div v-else>
-                        <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
-                        <div class="text-h6 text-grey-7 q-mb-sm">
-                          Arrastra las imágenes aquí
-                        </div>
-                        <div class="text-body2 text-grey-5 q-mb-md">
-                          o haz clic para seleccionar archivos
-                        </div>
-                      </div>
-                      <q-btn
-                        color="primary"
-                        label="Seleccionar Imágenes"
-                        @click="$refs.fileInput.click()"
-                        unelevated
-                      />
-                      <input
-                        ref="fileInput"
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        style="display: none"
-                        @change="handleFileSelect"
-                      />
-                    </q-card-section>
-                  </q-card>
-                </q-card>
-
                   </div>
                 </div>
               </q-tab-panel>
 
               <!-- Tab: Grupos de Selección -->
               <q-tab-panel name="groups" class="q-pa-md">
-                <div class="row justify-between items-center q-mb-md">
-                  <div class="text-h6 text-primary">Grupos de Selección</div>
-                  <q-btn
-                    color="positive"
-                    icon="add"
-                    label="Agregar Grupo"
-                    unelevated
-                    @click="addSelectionGroup"
-                  />
-                </div>
+                <div class="q-pb-md">
+                  <div class="row justify-between items-center">
+                    <div class="text-h6 text-primary">Grupos de Selección</div>
+                    <q-btn
+                      color="positive"
+                      icon="add"
+                      label="Agregar Grupo"
+                      unelevated
+                      @click="addSelectionGroup"
+                    />
+                  </div>
 
-                <div v-if="promotion.selectionGroups.length === 0" class="text-center q-pa-xl text-grey-6">
-                  <q-icon name="group_work" size="4rem" class="q-mb-md" />
-                  <div class="text-h6 q-mb-sm">No hay grupos de selección</div>
-                  <div class="text-body2">Agrega grupos para organizar los productos de tu promoción</div>
-                </div>
+                  <div v-if="promotion.selectionGroups.length === 0" class="text-center q-pa-xl text-grey-6">
+                    <q-icon name="group_work" size="4rem" class="q-mb-md" />
+                    <div class="text-h6 q-mb-sm">No hay grupos de selección</div>
+                    <div class="text-body2">Agrega grupos para organizar los productos de tu promoción</div>
+                  </div>
 
-                <q-card
-                  v-for="(group, groupIndex) in promotion.selectionGroups"
-                  :key="`group-${groupIndex}`"
-                  class="q-mb-md"
-                  flat
-                  bordered
-                >
-                  <q-card-section>
-                    <div class="row items-center q-mb-sm">
-                      <div class="text-subtitle1 text-weight-medium">
-                        Grupo {{ groupIndex + 1 }}
-                      </div>
-                      <q-space />
-                      <q-btn
-                        icon="delete"
-                        color="negative"
-                        size="sm"
-                        round
-                        flat
-                        @click="removeSelectionGroup(groupIndex)"
-                      />
-                    </div>
-
-                    <div class="row q-col-gutter-sm">
-                      <div class="col-12 col-md-5">
-                        <q-input
-                          v-model="group.name"
-                          label="Nombre del grupo"
-                          filled
-                          dense
-                          :rules="nameRules"
+                  <q-card
+                    v-for="(group, groupIndex) in promotion.selectionGroups"
+                    :key="`group-${groupIndex}`"
+                    class="q-mb-md"
+                    flat
+                    bordered
+                  >
+                    <q-card-section>
+                      <div class="row items-center q-mb-sm">
+                        <div class="text-subtitle1 text-weight-medium">
+                          Grupo {{ groupIndex + 1 }}
+                        </div>
+                        <q-space />
+                        <q-btn
+                          icon="delete"
+                          color="negative"
+                          size="sm"
+                          round
+                          flat
+                          @click="removeSelectionGroup(groupIndex)"
                         />
                       </div>
-                      <div class="col-4 col-md-2">
-                        <q-input
-                          v-model.number="group.minSelection"
-                          label="Mínimo"
-                          type="number"
-                          min="0"
-                          filled
-                          dense
-                        />
+
+                      <div class="row q-col-gutter-sm">
+                        <div class="col-12 col-md-10">
+                          <q-input
+                            v-model="group.name"
+                            label="Nombre del grupo"
+                            filled
+                            dense
+                            :rules="nameRules"
+                          />
+                        </div>
+                        <div class="col-4 col-md-2">
+                          <q-input
+                            v-model.number="group.quantity"
+                            label="Cantidad"
+                            type="number"
+                            min="1"
+                            filled
+                            dense
+                          />
+                        </div>
                       </div>
-                      <div class="col-4 col-md-2">
-                        <q-input
-                          v-model.number="group.maxSelection"
-                          label="Máximo"
-                          type="number"
-                          min="1"
-                          filled
-                          dense
-                        />
+                    </q-card-section>
+
+                    <q-separator />
+
+                    <q-card-section>
+                      <div class="row justify-between items-center q-mb-md">
+                        <div class="text-subtitle2 text-primary">Productos del Grupo</div>
                       </div>
-                      <div class="col-4 col-md-3">
-                        <q-toggle
-                          v-model="group.required"
-                          label="Obligatorio"
-                          color="positive"
-                        />
+
+                      <!-- Product List -->
+                      <div v-if="group.products.length === 0" class="text-center q-pa-md text-grey-6">
+                        <q-icon name="style" size="2rem" class="q-mb-sm" />
+                        <div>No hay productos en este grupo.</div>
                       </div>
-                    </div>
-                  </q-card-section>
 
-                  <q-separator />
+                      <q-list v-else dense class="q-mb-md bordered-list">
+                        <q-item
+                          v-for="(product, productIndex) in group.products"
+                          :key="`product-${groupIndex}-${productIndex}`"
+                        >
+                          <q-item-section>
+                            <q-item-label>{{ getProductById(product.productId)?.name || getProductById(product.productId)?.label || 'Producto no encontrado' }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <div class="row items-center no-wrap q-gutter-xs">
+                              <div v-if="product.priceModifier" class="text-body2 text-weight-medium text-grey-8 q-mr-xs">
+                                {{ product.priceModifier.type === 'FIXED' ?
+                                    (product.priceModifier.value >= 0 ? '+' : '') + formatCurrency(product.priceModifier.value) :
+                                    (product.priceModifier.value >= 0 ? '+' : '') + product.priceModifier.value + '%'
+                                }}
+                              </div>
 
-                  <q-card-section>
-                    <div class="row justify-between items-center q-mb-md">
-                      <div class="text-subtitle2 text-primary">Productos del Grupo</div>
-                    </div>
+                              <!-- Preselected quantity input -->
+                              <q-input
+                                v-model.number="product.presetQuantity"
+                                type="number"
+                                min="0"
+                                :max="group.quantity"
+                                dense
+                                filled
+                                style="width: 60px;"
+                                label="N°"
+                                :title="'Cantidad preseleccionada para ' + (getProductById(product.productId)?.name || 'Producto')"
+                                @update:model-value="validatePreselectedQuantities(groupIndex)"
+                              />
 
-                    <!-- Product List -->
-                    <div v-if="group.products.length === 0" class="text-center q-pa-md text-grey-6">
-                      <q-icon name="style" size="2rem" class="q-mb-sm" />
-                      <div>No hay productos en este grupo.</div>
-                    </div>
+                              <!-- TODO: Botón de editar modificador -->
+                              <!-- <q-btn
+                                icon="tune"
+                                color="primary"
+                                size="sm"
+                                round
+                                flat
+                                @click="openProductModifierDialog(groupIndex, productIndex)"
+                                :title="'Configurar modificador para ' + (getProductById(product.productId)?.name || getProductById(product.productId)?.label || 'Producto')"
+                              /> -->
 
-                    <q-list v-else dense class="q-mb-md bordered-list">
-                      <q-item
-                        v-for="(product, productIndex) in group.products"
-                        :key="`product-${groupIndex}-${productIndex}`"
-                      >
-                        <q-item-section>
-                          <q-item-label>{{ getProductById(product.productId)?.name || getProductById(product.productId)?.label || 'Producto no encontrado' }}</q-item-label>
-                        </q-item-section>
-                        <q-item-section side>
-                          <div class="row items-center no-wrap q-gutter-xs">
-                            <div v-if="product.priceModifier" class="text-body2 text-weight-medium text-grey-8 q-mr-xs">
-                              {{ product.priceModifier.type === 'FIXED' ?
-                                  (product.priceModifier.value >= 0 ? '+' : '') + formatCurrency(product.priceModifier.value) :
-                                  (product.priceModifier.value >= 0 ? '+' : '') + product.priceModifier.value + '%'
-                              }}
+                              <q-btn
+                                icon="delete"
+                                color="negative"
+                                size="sm"
+                                round
+                                flat
+                                @click="removeProductFromGroup(groupIndex, productIndex)"
+                              />
                             </div>
-                            <q-btn
-                              icon="tune"
-                              color="primary"
-                              size="sm"
-                              round
-                              flat
-                              @click="openProductModifierDialog(groupIndex, productIndex)"
-                              :title="'Configurar modificador para ' + (getProductById(product.productId)?.name || getProductById(product.productId)?.label || 'Producto')"
-                            />
-                            <q-btn
-                              icon="delete"
-                              color="negative"
-                              size="sm"
-                              round
-                              flat
-                              @click="removeProductFromGroup(groupIndex, productIndex)"
-                            />
-                          </div>
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
-
-                    <!-- Add Product Select -->
-                    <q-select
-                      v-model="selectedProductForGroup"
-                      filled
-                      dense
-                      label="Añadir producto al grupo"
-                      :options="filteredProducts"
-                      use-input
-                      @filter="filterProducts"
-                      @update:model-value="(selected) => addProductToGroup(groupIndex, selected)"
-                    >
-                      <template v-slot:no-option>
-                        <q-item>
-                          <q-item-section class="text-grey">
-                            No se encontraron resultados
                           </q-item-section>
                         </q-item>
-                      </template>
-                    </q-select>
+                      </q-list>
 
-                  </q-card-section>
-                </q-card>
-
-                <q-card flat bordered class="q-mt-lg">
-                  <q-card-section>
-                    <div class="row justify-between items-center q-mb-md">
-                      <div class="text-h6 text-primary text-weight-bold">Configuración de Precio</div>
-                    </div>
-                    <q-separator />
-                    <div class="row justify-between items-center q-pt-md">
-                      <div class="col-6">
-                        <q-input
-                          v-model="promotion.finalPrice"
-                          label="Precio Base de la Promoción"
-                          filled
-                          dense
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          prefix="$"
-                          :rules="priceRules"
-                          @focus="handlePriceFocus"
-                        />
-                        <div class="text-body2 text-weight-medium q-mt-sm">
-                          Precio sugerido: {{ formatCurrency(suggestedBasePrice) }}
-                        </div>
-                      </div>
-                      <div class="col-5 text-right">
-                        <div class="text-body2 text-grey-7">Modificadores Activos:</div>
-
-                        <!-- Modificadores de Productos -->
-                        <div v-if="getProductsWithModifiers().length > 0" class="text-caption q-mt-xs">
-                          <div class="text-grey-6 q-mb-xs">Modificadores por producto:</div>
-                          <div v-for="productMod in getProductsWithModifiers()" :key="productMod.name" class="q-mb-xs">
-                            <div class="text-body2 text-weight-medium text-grey-8">
-                              {{ productMod.name }}: {{ productMod.displayText }}
+                      <!-- Preselected summary for group -->
+                      <div v-if="getGroupPreselectedTotal(group) > 0" class="q-mb-md">
+                        <q-card flat bordered class="bg-green-1">
+                          <q-card-section class="q-pa-sm">
+                            <div class="text-body2 text-weight-medium text-positive">
+                              Total preseleccionado: {{ getGroupPreselectedTotal(group) }} / {{ group.quantity }}
                             </div>
+                            <div v-if="getGroupPreselectedTotal(group) > group.quantity" class="text-caption text-negative q-mt-xs">
+                              Excede la cantidad permitida para este grupo
+                            </div>
+                          </q-card-section>
+                        </q-card>
+                      </div>
+
+                      <!-- Add Product Select -->
+                      <q-select
+                        v-model="selectedProductForGroup"
+                        filled
+                        dense
+                        label="Añadir producto al grupo"
+                        :options="filteredProducts"
+                        option-label="label"
+                        option-value="value"
+                        use-input
+                        @filter="filterProducts"
+                        @update:model-value="(selected) => addProductToGroup(groupIndex, selected)"
+                      />
+
+                    </q-card-section>
+                  </q-card>
+
+                  <q-card flat bordered class="q-mt-lg">
+                    <q-card-section>
+                      <div class="row justify-between items-center q-mb-md">
+                        <div class="text-h6 text-primary text-weight-bold">Configuración de precio</div>
+                      </div>
+                      <q-separator />
+                      <div class="row justify-between items-center q-pt-md">
+                        <div class="col-6">
+                          <q-input
+                            v-model="promotion.finalPrice"
+                            label="Precio Base de la Promoción"
+                            filled
+                            dense
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            prefix="$"
+                            :rules="priceRules"
+                            @focus="handlePriceFocus"
+                          />
+                          <div class="text-body2 text-weight-medium q-mt-sm">
+                            Precio sugerido: {{ formatCurrency(suggestedBasePrice) }}
                           </div>
                         </div>
+                        <!--
+                        <div class="col-5 text-right">
+                          <div class="text-body2 text-grey-7">Modificadores Activos:</div>
 
-                        <!-- Mensaje cuando no hay modificadores -->
-                        <div v-if="getProductsWithModifiers().length === 0" class="text-caption text-grey-5 q-mt-xs">
-                          Sin modificadores configurados
+                          Modificadores de Productos
+
+                          <div v-if="getProductsWithModifiers().length > 0" class="text-caption q-mt-xs">
+                            <div class="text-grey-6 q-mb-xs">Modificadores por producto:</div>
+                            <div v-for="productMod in getProductsWithModifiers()" :key="productMod.name" class="q-mb-xs">
+                              <div class="text-body2 text-weight-medium text-grey-8">
+                                {{ productMod.name }}: {{ productMod.displayText }}
+                              </div>
+                            </div>
+                          </div>
+
+                          Mensaje cuando no hay modificadores
+
+                          <div v-if="getProductsWithModifiers().length === 0" class="text-caption text-grey-5 q-mt-xs">
+                            Sin modificadores configurados
+                          </div>
                         </div>
+                        -->
                       </div>
-                    </div>
-                  </q-card-section>
-                </q-card>
+                    </q-card-section>
+                  </q-card>
+                </div>
               </q-tab-panel>
 
               <!-- Tab: Vista Previa -->
@@ -483,7 +461,7 @@
             />
             <q-btn
               color="primary"
-              label="Guardar Promoción"
+              :label="isEditMode ? 'Actualizar Promoción' : 'Guardar Promoción'"
               type="submit"
               :loading="saving"
             />
@@ -520,6 +498,8 @@
               :options="modifierTypeOptions"
               label="Tipo de Modificador"
               filled
+              option-label="label"
+              option-value="value"
               emit-value
               map-options
             />
@@ -585,10 +565,32 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { authentication } from 'src/stores/module-authentication'
 import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
+
+// Props
+const props = defineProps({
+  // Controla la visibilidad del modal
+  modelValue: {
+    type: Boolean,
+    default: false
+  },
+  // Modo edición: true = editar, false = crear
+  editMode: {
+    type: Boolean,
+    default: false
+  },
+  // Datos de la promoción para edición
+  promotionData: {
+    type: Object,
+    default: () => null
+  }
+})
+
+// Emits
+const emit = defineEmits(['update:modelValue', 'promotion-saved', 'promotion-updated'])
 
 // Quasar instance
 const $q = useQuasar()
@@ -596,14 +598,20 @@ const authStore = authentication()
 const branchOffice = computed(() => authStore.branchOffice)
 
 // Reactive state
-const showCreateModal = ref(false)
 const activeTab = ref('basic')
 const saving = ref(false)
 const promotionForm = ref(null)
 const allProducts = ref([])
 const filteredProducts = ref([])
 const selectedProductForGroup = ref(null) // Para limpiar el q-select
-const channelSelect = ref(null)
+
+// Computed properties
+const internalShowModal = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+})
+
+const isEditMode = computed(() => props.editMode && props.promotionData)
 
 // Product Price Modifier Dialog
 const showProductModifierDialog = ref(false)
@@ -620,11 +628,10 @@ const productModifierForm = ref({
 const getInitialPromotionState = () => ({
   name: '',
   description: '',
-  status: 'active',
-  channels: 'pos',
+  channels: ['pos'],
   startDate: null,
   endDate: null,
-  isActive: true,
+  status: true,
   showInCatalog: true,
   requiresStock: true,
   selectionGroups: [],
@@ -644,7 +651,7 @@ const suggestedBasePrice = computed(() => {
   let total = 0
 
   promotion.value.selectionGroups.forEach(group => {
-    const quantity = group.maxSelection || 1
+    const quantity = group.quantity || 1
     let maxPrice = 0
 
     // Find the most expensive product in this group
@@ -655,7 +662,7 @@ const suggestedBasePrice = computed(() => {
       }
     })
 
-    // Add max price * max quantity for this group
+    // Add max price * quantity for this group
     total += maxPrice * quantity
   })
 
@@ -665,12 +672,6 @@ const suggestedBasePrice = computed(() => {
 const promotion = ref(getInitialPromotionState())
 const isDragOver = ref(false)
 
-// Options for selects
-const statusOptions = [
-  { label: 'Activa', value: 'active' },
-  { label: 'Inactiva', value: 'inactive' },
-  { label: 'Borrador', value: 'draft' }
-]
 const channelOptions = [
   { label: 'Punto de Venta', value: 'pos' },
   { label: 'App Móvil', value: 'mobile_app' },
@@ -693,19 +694,42 @@ const handlePriceFocus = (event) => {
   // No need to do anything special for number inputs
 }
 
-// Methods
-const openCreateModal = () => {
-  showCreateModal.value = true
-}
+// Watch for props changes
+watch(
+  () => [props.modelValue, props.promotionData, props.editMode],
+  ([newModelValue, newPromotionData, newEditMode]) => {
+    if (newModelValue && newEditMode && newPromotionData) {
+      // Cargar datos para edición
+      loadPromotionForEdit(newPromotionData)
+    } else if (newModelValue && !newEditMode) {
+      // Resetear para creación
+      resetForm()
+    }
+  },
+  { immediate: true, deep: true }
+)
 
+// Methods
 const resetForm = () => {
   promotion.value = getInitialPromotionState()
   activeTab.value = 'basic'
   filteredProducts.value = allProducts.value
 }
 
+const loadPromotionForEdit = (promotionData) => {
+  if (promotionData) {
+    promotion.value = {
+      ...getInitialPromotionState(),
+      ...promotionData,
+      // Asegurar que arrays existen
+      selectionGroups: promotionData.selectionGroups || [],
+      images: promotionData.images || []
+    }
+  }
+}
+
 const closeModal = () => {
-  showCreateModal.value = false
+  internalShowModal.value = false
   resetForm()
 }
 
@@ -798,11 +822,13 @@ const fetchProducts = async () => {
       branch_office_id: branchOffice.value?.id
     }
     const { data } = await api.get('/products', { params })
+    console.log('Productos obtenidos:', data) // Debug
     const products = data.map(p => ({
-      label: p.name,
+      label: p.name || p.label || `Producto ${p.id}`,
       value: p.id,
       ...p
     }))
+    console.log('Productos mapeados:', products) // Debug
     allProducts.value = products
     filteredProducts.value = products
   } catch (error) {
@@ -816,26 +842,35 @@ const fetchProducts = async () => {
 }
 
 const filterProducts = (val, update) => {
+  console.log('Filtrando productos con valor:', val) // Debug
+  console.log('Productos disponibles:', allProducts.value.length) // Debug
+
   if (val === '') {
     update(() => {
       filteredProducts.value = allProducts.value
+      console.log('Sin filtro - mostrando todos:', filteredProducts.value.length) // Debug
     })
     return
   }
+
   update(() => {
     const needle = val.toLowerCase()
     filteredProducts.value = allProducts.value.filter(
-      p => p.label.toLowerCase().indexOf(needle) > -1
+      p => {
+        const label = p.label || p.name || ''
+        const match = label.toLowerCase().indexOf(needle) > -1
+        console.log(`Producto: ${label}, Busca: ${needle}, Coincide: ${match}`) // Debug
+        return match
+      }
     )
+    console.log('Productos filtrados:', filteredProducts.value.length) // Debug
   })
 }
 
 const addSelectionGroup = () => {
   promotion.value.selectionGroups.push({
     name: `Grupo ${promotion.value.selectionGroups.length + 1}`,
-    required: false,
-    minSelection: 1,
-    maxSelection: 1,
+    quantity: 1,
     products: []
   })
 }
@@ -864,7 +899,8 @@ const addProductToGroup = (groupIndex, selectedProduct) => {
 
   group.products.push({
     productId: selectedProduct.value,
-    priceModifier: null
+    priceModifier: null,
+    presetQuantity: 0
   })
 
   selectedProductForGroup.value = null // Limpiar selección
@@ -882,49 +918,74 @@ const getProductById = (productId) => {
   return allProducts.value.find(p => p.id === productId || p.value === productId)
 }
 
-const getProductsWithModifiers = () => {
-  const productsWithModifiers = []
+// Get total preselected quantity for a group
+const getGroupPreselectedTotal = (group) => {
+  return group.products.reduce((total, product) => {
+    return total + (product.presetQuantity || 0)
+  }, 0)
+}
 
-  promotion.value.selectionGroups.forEach(group => {
-    group.products.forEach(product => {
-      if (product.priceModifier) {
-        const productDetails = getProductById(product.productId)
-        productsWithModifiers.push({
-          name: productDetails?.name || productDetails?.label || 'Producto no encontrado',
-          modifier: product.priceModifier,
-          displayText: product.priceModifier.type === 'FIXED'
-            ? (product.priceModifier.value >= 0 ? '+' : '') + formatCurrency(product.priceModifier.value)
-            : (product.priceModifier.value >= 0 ? '+' : '') + product.priceModifier.value + '%'
-        })
-      }
+// Validate preselected quantities for a group
+const validatePreselectedQuantities = (groupIndex) => {
+  const group = promotion.value.selectionGroups[groupIndex]
+  if (!group) return
+
+  const total = getGroupPreselectedTotal(group)
+
+  if (total > group.quantity) {
+    $q.notify({
+      type: 'warning',
+      message: `El total preseleccionado (${total}) excede la cantidad permitida para este grupo (${group.quantity})`,
+      position: 'top'
     })
-  })
-
-  return productsWithModifiers
-}
-
-const openProductModifierDialog = (groupIndex, productIndex) => {
-  currentModifierGroupIndex.value = groupIndex
-  currentModifierProductIndex.value = productIndex
-  currentModifierProduct.value = promotion.value.selectionGroups[groupIndex].products[productIndex]
-
-  // Load existing modifier if present
-  if (currentModifierProduct.value.priceModifier) {
-    productModifierForm.value = {
-      type: currentModifierProduct.value.priceModifier.type,
-      value: currentModifierProduct.value.priceModifier.value,
-      description: currentModifierProduct.value.priceModifier.description || ''
-    }
-  } else {
-    productModifierForm.value = {
-      type: 'FIXED',
-      value: 0,
-      description: ''
-    }
   }
-
-  showProductModifierDialog.value = true
 }
+
+/* TODO: Funcion para obtener los productos con modificadores */
+// const getProductsWithModifiers = () => {
+//   const productsWithModifiers = []
+
+//   promotion.value.selectionGroups.forEach(group => {
+//     group.products.forEach(product => {
+//       if (product.priceModifier) {
+//         const productDetails = getProductById(product.productId)
+//         productsWithModifiers.push({
+//           name: productDetails?.name || productDetails?.label || 'Producto no encontrado',
+//           modifier: product.priceModifier,
+//           displayText: product.priceModifier.type === 'FIXED'
+//             ? (product.priceModifier.value >= 0 ? '+' : '') + formatCurrency(product.priceModifier.value)
+//             : (product.priceModifier.value >= 0 ? '+' : '') + product.priceModifier.value + '%'
+//         })
+//       }
+//     })
+//   })
+
+//   return productsWithModifiers
+// }
+
+/* TODO: Funcion para abrir el dialogo de modificador de producto */
+// const openProductModifierDialog = (groupIndex, productIndex) => {
+//   currentModifierGroupIndex.value = groupIndex
+//   currentModifierProductIndex.value = productIndex
+//   currentModifierProduct.value = promotion.value.selectionGroups[groupIndex].products[productIndex]
+
+//   // Load existing modifier if present
+//   if (currentModifierProduct.value.priceModifier) {
+//     productModifierForm.value = {
+//       type: currentModifierProduct.value.priceModifier.type,
+//       value: currentModifierProduct.value.priceModifier.value,
+//       description: currentModifierProduct.value.priceModifier.description || ''
+//     }
+//   } else {
+//     productModifierForm.value = {
+//       type: 'FIXED',
+//       value: 0,
+//       description: ''
+//     }
+//   }
+
+//   showProductModifierDialog.value = true
+// }
 
 const closeProductModifierDialog = () => {
   showProductModifierDialog.value = false
@@ -1026,16 +1087,32 @@ const savePromotion = async () => {
       ...promotion.value,
       finalPrice: Number(promotion.value.finalPrice)
     }
-    const { data } = await api.post('/promotions', payload)
-    $q.notify({
-      type: 'positive',
-      message: `Promoción "${data.name}" creada con ID: ${data.id}`,
-      position: 'top'
-    })
+
+    let response
+    if (isEditMode.value) {
+      // Actualizar promoción existente
+      response = await api.put(`/promotions/${promotion.value.id}`, payload)
+      $q.notify({
+        type: 'positive',
+        message: `Promoción "${response.data.name}" actualizada exitosamente`,
+        position: 'top'
+      })
+      emit('promotion-updated', response.data)
+    } else {
+      // Crear nueva promoción
+      response = await api.post('/promotions', payload)
+      $q.notify({
+        type: 'positive',
+        message: `Promoción "${response.data.name}" creada con ID: ${response.data.id}`,
+        position: 'top'
+      })
+      emit('promotion-saved', response.data)
+    }
+
     closeModal()
   } catch (error) {
     console.error('Error saving promotion:', error)
-    let errorMessage = 'Error al crear la promoción.'
+    let errorMessage = isEditMode.value ? 'Error al actualizar la promoción.' : 'Error al crear la promoción.'
     if (error.response && error.response.data && error.response.data.message) {
       errorMessage = error.response.data.message
     } else if (error.response && error.response.data && error.response.data.error) {
@@ -1126,7 +1203,7 @@ onMounted(() => {
 
 /* Dropzone styles */
 .dropzone-card {
-  border: 2px dashed #e0e0e0;
+  border: 2px dashed #e0e0e0 !important;
   border-radius: 8px;
   transition: all 0.3s ease;
   cursor: pointer;

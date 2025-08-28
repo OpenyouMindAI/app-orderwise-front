@@ -662,17 +662,8 @@
                 {{ currentGroup.name }}
               </div>
               <div class="text-subtitle1 q-mb-sm">
-                Selecciona {{ currentGroup.minSelection }}{{ currentGroup.minSelection !== currentGroup.maxSelection ? ` a ${currentGroup.maxSelection}` : '' }} producto{{ currentGroup.maxSelection > 1 ? 's' : '' }}
+                Selecciona {{ currentGroup.quantity }} producto{{ currentGroup.quantity > 1 ? 's' : '' }}
               </div>
-              <q-chip
-                :color="currentGroup.required ? 'orange' : 'green'"
-                :text-color="'white'"
-                size="md"
-                icon="info"
-                class="text-weight-bold"
-              >
-                {{ currentGroup.required ? 'Obligatorio' : 'Opcional' }}
-              </q-chip>
             </div>
 
             <!-- Products Grid -->
@@ -731,7 +722,7 @@
                         round
                         color="positive"
                         @click.stop="increaseQuantity(product.productId)"
-                        :disable="getTotalSelectedQuantity() >= currentGroup.maxSelection"
+                        :disable="getTotalSelectedQuantity() >= currentGroup.quantity"
                       />
                     </div>
                   </div>
@@ -742,7 +733,7 @@
             <!-- Selection status -->
             <div class="text-center q-mt-lg">
               <q-linear-progress
-                :value="getTotalSelectedQuantity() / currentGroup.maxSelection"
+                :value="getTotalSelectedQuantity() / currentGroup.quantity"
                 color="primary"
                 size="8px"
                 rounded
@@ -750,7 +741,7 @@
               />
               <div class="text-subtitle2 q-mb-sm text-weight-medium">
                 <q-icon name="shopping_cart" class="q-mr-xs" />
-                {{ getTotalSelectedQuantity() }} de {{ currentGroup.maxSelection }} seleccionados
+                {{ getTotalSelectedQuantity() }} de {{ currentGroup.quantity }} seleccionados
               </div>
 
               <!-- Price calculation with modifiers -->
@@ -768,14 +759,14 @@
                       ${{ promotionTotal.toFixed(2) }}
                     </div>
                   </div>
-                  <div v-if="promoSelections.length > 0" class="q-mt-xs">
+                  <!-- <div v-if="promoSelections.length > 0" class="q-mt-xs">
                     <div class="text-caption text-grey-6">Modificadores aplicados:</div>
                     <div v-for="selection in promoSelections" :key="`${selection.groupIndex}-${selection.productId}`" class="text-caption">
                       <template v-if="getProductModifierInfo(selection)">
                         {{ getProductModifierInfo(selection) }}
                       </template>
                     </div>
-                  </div>
+                  </div> -->
                 </q-card>
               </div>
 
@@ -2702,11 +2693,10 @@ export default {
               is_bundle: true,
               bundle_stock: 100,
               description: promotion.description,
-              status: promotion.status,
               startDate: promotion.startDate,
               endDate: promotion.endDate,
               channels: promotion.channels,
-              isActive: promotion.isActive,
+              status: promotion.status,
               showInCatalog: promotion.showInCatalog,
               requiresStock: promotion.requiresStock,
               selectionGroups: promotion.selectionGroups || [],
@@ -3236,6 +3226,13 @@ export default {
       this.currentPromo = promoWithDetails
       this.currentGroupIndex = 0
       this.promoSelections = []
+
+      // Initialize preselected products
+      this.initializePreselectedProducts()
+
+      // Auto-advance through completed groups
+      this.autoAdvanceCompletedGroups()
+
       this.promoDialog = true
     },
 
@@ -3293,7 +3290,71 @@ export default {
     },
 
     /**
-     * Close promo dialog
+     * Initialize preselected products when opening promo dialog
+     */
+    initializePreselectedProducts () {
+      if (!this.currentPromo) return
+
+      console.log('🌟 INITIALIZING PRESELECTED PRODUCTS')
+      this.currentPromo.selectionGroups.forEach((group, groupIndex) => {
+        group.products.forEach(product => {
+          if (product.presetQuantity && product.presetQuantity > 0) {
+            console.log(`⭐ Preselecting ${product.presetQuantity}x ${product.name}`)
+
+            // Add single selection with correct quantity
+            this.promoSelections.push({
+              groupIndex,
+              productId: product.productId,
+              product,
+              quantity: product.presetQuantity
+            })
+          }
+        })
+      })
+
+      console.log('✅ PRESELECTED PRODUCTS INITIALIZED:', this.promoSelections)
+    },
+
+    /**
+     * Auto-advance through completed groups due to preselection
+     */
+    autoAdvanceCompletedGroups () {
+      if (!this.currentPromo) return
+
+      console.log('🚀 AUTO-ADVANCING THROUGH COMPLETED GROUPS')
+
+      // Check each group starting from the current one
+      while (this.currentGroupIndex < this.currentPromo.selectionGroups.length) {
+        const currentGroup = this.currentPromo.selectionGroups[this.currentGroupIndex]
+        const groupSelections = this.promoSelections.filter(sel => sel.groupIndex === this.currentGroupIndex)
+        const totalSelected = groupSelections.reduce((sum, sel) => sum + sel.quantity, 0)
+
+        console.log(`📊 Group ${this.currentGroupIndex} (${currentGroup.name}): ${totalSelected}/${currentGroup.quantity}`)
+
+        // If current group is complete, move to next
+        if (totalSelected === currentGroup.quantity) {
+          console.log(`✅ Group ${this.currentGroupIndex} is complete, advancing...`)
+
+          // If this is the last group, we're done
+          if (this.currentGroupIndex === this.currentPromo.selectionGroups.length - 1) {
+            console.log('🎉 ALL GROUPS COMPLETE! Ready to add to cart.')
+            break
+          }
+
+          // Move to next group
+          this.currentGroupIndex++
+        } else {
+          // Current group is incomplete, stop here
+          console.log(`⏸️ Group ${this.currentGroupIndex} needs user input, stopping auto-advance`)
+          break
+        }
+      }
+
+      console.log(`📍 Final position: Group ${this.currentGroupIndex}`)
+    },
+
+    /**
+     * Close promo selection dialog
      */
     closePromoDialog () {
       this.promoDialog = false
@@ -3316,11 +3377,11 @@ export default {
      * Get product quantity in current group
      */
     getProductQuantity (productId) {
-      const selection = this.promoSelections.find(selection =>
+      const selections = this.promoSelections.filter(selection =>
         selection.groupIndex === this.currentGroupIndex &&
         selection.productId === productId
       )
-      return selection ? selection.quantity : 0
+      return selections.reduce((total, selection) => total + selection.quantity, 0)
     },
 
     /**
@@ -3428,7 +3489,7 @@ export default {
         this.promoSelections.splice(existingIndex, 1)
       } else {
         // Add selection if within limits
-        if (this.getTotalSelectedQuantity() < this.currentGroup.maxSelection) {
+        if (this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
           console.log('✅ PRODUCT SELECTED:', product.name, 'in group:', this.currentGroup.name)
           this.promoSelections.push({
             groupIndex: this.currentGroupIndex,
@@ -3451,7 +3512,7 @@ export default {
         selection.groupIndex === this.currentGroupIndex &&
         selection.productId === productId
       )
-      if (selection && this.getTotalSelectedQuantity() < this.currentGroup.maxSelection) {
+      if (selection && this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
         selection.quantity++
         console.log('➕ QUANTITY INCREASED:', selection.product.name, 'new quantity:', selection.quantity)
         console.log('📊 UPDATED SELECTIONS:', this.promoSelections)
@@ -3478,8 +3539,7 @@ export default {
      */
     isCurrentGroupValid () {
       const totalSelected = this.getTotalSelectedQuantity()
-      return totalSelected >= this.currentGroup.minSelection &&
-             totalSelected <= this.currentGroup.maxSelection
+      return totalSelected === this.currentGroup.quantity
     },
 
     /**
