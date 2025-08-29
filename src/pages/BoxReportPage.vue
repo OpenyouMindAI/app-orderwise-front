@@ -626,29 +626,12 @@
         </q-card-section>
 
         <q-card-section class="col q-gutter-md">
-          <!-- Seller Filter -->
-          <div v-if="validate">
-            <div class="text-subtitle2 q-mb-sm">👤 Vendedor</div>
-            <q-select
-              v-model="seller"
-              use-input
-              filled
-              label="Seleccionar vendedor"
-              input-debounce="0"
-              option-value="id"
-              :option-label="(row) => `${row.document_number ?? ''} | ${row.name}`"
-              :options="sellers"
-              clearable
-              @filter="filterSellers"
-              color="primary"
-            />
-          </div>
-
           <!-- Date Range -->
           <div>
             <div class="text-subtitle2 q-mb-sm">📅 Período</div>
             <q-option-group
               v-model="panel"
+              inline
               :options="[
                 { label: 'Un día específico', value: 'day' },
                 { label: 'Rango de fechas', value: 'between' }
@@ -705,6 +688,40 @@
               </div>
             </q-tab-panel>
           </q-tab-panels>
+          <!-- Seller Filter -->
+          <div v-if="validate">
+            <div class="text-subtitle2 q-mb-sm">👤 Vendedor</div>
+            <q-select
+              v-model="seller"
+              use-input
+              filled
+              label="Seleccionar vendedor"
+              input-debounce="0"
+              option-value="id"
+              :option-label="(row) => `${row.document_number ?? ''} | ${row.name}`"
+              :options="sellers"
+              clearable
+              @filter="filterSellers"
+              color="primary"
+            />
+          </div>
+          <div v-if="validate">
+            <div class="text-subtitle2 q-mb-sm">🔄 Turno</div>
+            <q-select
+              v-model="cashBoxUser"
+              use-input
+              filled
+              label="Seleccionar turnos"
+              input-debounce="0"
+              option-value="id"
+              :option-label="(row) => `${row.user?.name || ''} | ${row.cashbox?.name || ''} | ${formatDate(row.created_at, 'DD/MM/YYYY H:m:s')}`"
+              :options="cashBoxUsers"
+              clearable
+              @filter="filterCashBoxUser"
+              color="primary"
+            />
+          </div>
+
         </q-card-section>
 
         <q-card-actions class="q-pa-md">
@@ -805,6 +822,7 @@ export default {
   data () {
     return {
       loading: false,
+      cashBoxUser: null,
       cashFlowDetailsDialog: false,
       cashFlowLoading: false,
       formatDate,
@@ -842,6 +860,7 @@ export default {
       seller: null,
       validate: null,
       permissions: ['SAM'],
+      cashBoxUsers: [],
 
       // Expansion state management
       expandedCards: {
@@ -993,7 +1012,9 @@ export default {
       if (profit < 0) return 'red-6'
       return 'grey-6'
     },
-
+    /**
+     * Clear filters
+     */
     clearFilter () {
       this.day = date.formatDate(Date(), 'YYYY-MM-DD')
       this.fromHours = null
@@ -1004,7 +1025,11 @@ export default {
       this.panel = 'day'
       this.filterDate()
     },
-
+    /**
+     * Filter sellers by name or document number
+     * @param {string} value
+     * @param {Function} update
+     */
     async filterSellers (value, update) {
       try {
         const { data } = await this.$api.get('sellers', {
@@ -1022,12 +1047,32 @@ export default {
         notify(error.message, 'negative', 'warning')
       }
     },
+    /**
+     * Filter cashier box users by username
+     * @param {string} value
+     * @param {Function} update
+     */
+    async filterCashBoxUser (value, update) {
+      try {
+        const { data } = await this.$api.get('cashier-boxes', {
+          params: {
+            userName: value,
+            cashier_id: this.seller?.id,
+            ...this.formatFilter()
+          }
+        })
+        update(() => {
+          this.cashBoxUsers = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
 
-    async filterDate () {
-      if (!this.branchOffice?.id) return
-
+    formatFilter () {
+      let params = {}
       if (this.panel === 'day') {
-        this.params = {
+        params = {
           branch_office_id: this.branchOffice.id,
           seller_id: this.seller?.id,
           day: this.day,
@@ -1035,17 +1080,22 @@ export default {
           toHours: this.toHours
         }
       } else {
-        this.params = {
+        params = {
           seller_id: this.seller?.id,
           branch_office_id: this.branchOffice.id,
           to: this.to,
           from: this.from
         }
       }
+      return params
+    },
 
+    async filterDate () {
+      if (!this.branchOffice?.id) return
+      this.params = this.formatFilter()
+      this.params.cashbox_user_id = this.cashBoxUser?.id || null
       this.loading = true
       this.dialogFilter = false
-
       try {
         await Promise.all([
           this.getCategoryTotals(this.params),

@@ -196,7 +196,6 @@
                             v-model="profitPercentageDisplay"
                             label="Margen %"
                             dense
-                            readonly
                             class="profit-percentage-input"
                             @keydown="handleProfitPercentageKeydown"
                             @focus="initializeProfitPercentage"
@@ -267,7 +266,6 @@
                                 label="Margen"
                                 filled
                                 dense
-                                readonly
                                 class="profit-percentage-input"
                                 @keydown="event => handlePriceListMarginKeydown(event, priceList)"
                                 @focus="initializePriceListMargin(priceList)"
@@ -581,7 +579,6 @@
                           v-model="profitPercentageDisplay"
                           label="Margen %"
                           dense
-                          readonly
                           class="profit-percentage-input"
                           @keydown="handleProfitPercentageKeydown"
                           @focus="initializeProfitPercentage"
@@ -630,61 +627,59 @@
                         <div>No hay listas de precios adicionales</div>
                       </div>
 
-                      <q-card
-                        v-for="(priceList, index) in priceLists"
-                        :key="index"
-                        flat
-                        bordered
-                        class="q-mb-sm"
-                      >
-                        <q-card-section class="q-pa-sm">
-                          <div class="row q-col-gutter-sm items-center">
-                            <div class="col-5">
-                              <q-input
-                                v-model="priceList.name"
-                                label="Nombre de la lista"
-                                filled
-                                dense
-                                :rules="[val => !!val || 'El precio mínimo es 3']"
-                              />
-                            </div>
-                            <div class="col-5">
-                              <q-input
-                                v-model="priceList.price"
-                                label="Precio"
-                                type="number"
-                                step=".01"
-                                :rules="[val => val >= 1 || 'El precio mínimo es 3']"
-                                filled
-                                dense
-                                @update:model-value="calculatePriceListMargin(priceList)"
-                              />
-                              <q-input
+                        <q-card
+                          v-for="(priceList, index) in priceLists"
+                          :key="index"
+                          class="q-mb-sm q-pa-none"
+                        >
+                          <q-card-section class="q-pa-md">
+                            <div class="row q-gutter-x-md items-star">
+                              <div class="col">
+                                <q-input
+                                  v-model="priceList.name"
+                                  label="Nombre de la lista"
+                                  filled
+                                  dense
+                                  :rules="[val => !!val || 'El precio mínimo es 3']"
+                                />
+                              </div>
+                              <div class="col">
+                                <q-input
                                 v-model="priceList.profitPercentageDisplay"
-                                label="Margen %"
+                                label="Margen"
                                 filled
                                 dense
-                                readonly
                                 class="profit-percentage-input"
                                 @keydown="event => handlePriceListMarginKeydown(event, priceList)"
                                 @focus="initializePriceListMargin(priceList)"
-                              />
+                                />
+                              </div>
+                              <div class="col">
+                                <q-input
+                                  v-model="priceList.price"
+                                  label="Precio"
+                                  type="number"
+                                  step=".01"
+                                  :rules="[val => val >= 1 || 'El precio mínimo es 3']"
+                                  filled
+                                  dense
+                                  @update:model-value="calculatePriceListMargin(priceList)"
+                                />
+                              </div>
+                              <div class="col-auto q-pb-xs">
+                                <q-btn
+                                  icon="delete"
+                                  color="negative"
+                                  round
+                                  flat
+                                  @click="removePriceList(index)"
+                                >
+                                  <q-tooltip>Eliminar lista</q-tooltip>
+                                </q-btn>
+                              </div>
                             </div>
-                            <div class="col-2 text-right">
-                              <q-btn
-                                icon="delete"
-                                color="negative"
-                                size="sm"
-                                round
-                                flat
-                                @click="removePriceList(index)"
-                              >
-                                <q-tooltip>Eliminar lista</q-tooltip>
-                              </q-btn>
-                            </div>
-                          </div>
-                        </q-card-section>
-                      </q-card>
+                          </q-card-section>
+                        </q-card>
                     </div>
 
                     <div class="row q-col-gutter-sm">
@@ -1286,7 +1281,7 @@ export default {
     },
 
     calculatePriceListMargin (priceList) {
-      const basePrice = parseFloat(this.product.price)
+      const basePrice = parseFloat(this.product.cost)
       const listPrice = parseFloat(priceList.price)
 
       if (!isNaN(basePrice) && !isNaN(listPrice) && basePrice > 0) {
@@ -1302,7 +1297,7 @@ export default {
     },
 
     calculatePriceListPrice (priceList) {
-      const basePrice = parseFloat(this.product.price)
+      const basePrice = parseFloat(this.product.cost)
       const margin = parseFloat(priceList.profit_percentage)
 
       if (!isNaN(basePrice) && !isNaN(margin) && basePrice > 0) {

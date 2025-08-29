@@ -62,7 +62,7 @@ export const previewTicket = async (data, userSession) => {
 
   if (data?.tables?.length > 0) {
     data?.tables?.forEach((table) => {
-      doc.text(`MESA: ${table?.name} Sala ${table.living_room?.name}`, 5, y)
+      doc.text(`MESA: ${table?.name} Sala ${table.living_room?.name || ''}`, 5, y)
       y += 4
     })
   }

@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12" id="select-client">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-12" id="select-client">
             <q-select
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
@@ -27,7 +27,7 @@
               </template>
             </q-select>
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-6">
             <q-select
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
@@ -43,7 +43,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div v-if="invoiceType.bill" class="col-xl-3 col-lg-3 col-md-3 col-sm-4 col-xs-6">
+          <div v-if="invoiceType.bill" class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
             <q-select
               v-model="voucherType"
               use-input
@@ -59,7 +59,7 @@
               @filter="getVoucherTypes"
             />
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
             <q-select
               use-input
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
@@ -75,6 +75,20 @@
               @filter="filterTypeOfServices"
             />
           </div>
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
+            <q-btn
+              style="border-radius: 10px; padding: 5px 15px"
+              dense
+              :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+              :color="isUserBoxOpen ? 'negative' : 'primary'"
+              :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+              @click="showCashBoxDialog = true"
+            >
+              <q-tooltip class="text-body2" anchor="bottom middle">
+                {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+              </q-tooltip>
+            </q-btn>
+          </div>
         </div>
         <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
@@ -84,7 +98,6 @@
                 dense
                 v-model="barcode"
                 autofocus
-                type="number"
                 label="Código"
                 ref="barcode"
                 :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
@@ -194,7 +207,6 @@
                   Buscar factura
                 </q-tooltip>
               </q-btn>
-
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
@@ -227,7 +239,7 @@
                       {{ props.row.barcode }}
                     </q-td>
                     <q-td key="name" :props="props">
-                      {{ props.row.name.slice(0, 20) }}{{ props.row.name.length > 20 ? '...' : '' }}
+                      {{ props.row.name.slice(0, 40) }}{{ props.row.name.length > 40 ? '...' : '' }}
                       <q-tooltip class="text-body2" anchor="bottom middle">
                         {{ props.row.name }}
                       </q-tooltip>
@@ -408,14 +420,14 @@
               <div v-else>
                 <div class="text-h6 q-mb-md">Artículos</div>
                 <div class="q-gutter-y-md">
-                  <q-card v-for="(product, index) in products" :key="index" flat bordered class="product-card">
+                  <q-card v-for="(product, rowIndex) in products" :key="rowIndex" flat bordered class="product-card">
                     <q-card-section>
                       <div class="row items-center justify-between q-mb-sm q-pr-sm">
                         <div class="text-subtitle1 text-weight-bold">
                           {{ product.barcode }} - {{ product.name }}
                         </div>
                         <q-badge floating class="q-pa-none" style="background-color: transparent;">
-                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ rowIndex })" />
                         </q-badge>
                       </div>
                       <div class="row q-mb-xs">
@@ -621,19 +633,22 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+              <div class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
                 <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
-                    style="height: 120px; width: 100%; border-radius: 10px;"
+                    style="height: 150px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
                     @click="props.row.is_bundle ? openPromoDialog(props.row) : validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center">
-                      {{ props.row.name.slice(0, 20) }}
+                    <div class="absolute-full text-body2 flex flex-center text-bold text-center">
+                      {{ props.row.name }}
                       <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
+                    <q-tooltip class="text-body2">
+                      {{props.row.name}}
+                    </q-tooltip>
                   </q-img>
                 </q-card>
               </div>
@@ -825,7 +840,7 @@
           </div>
           <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-md row">
             <div class="col-12">
-              <q-toggle v-if="tableSelected.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
+              <q-toggle v-if="invoice?.tables?.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
               <q-markup-table>
                 <thead>
                   <tr>
@@ -1006,7 +1021,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
+    <q-dialog v-model="dialogTable">
       <drawer-table
         ref="drawerTable"
         :tablesSelected="tableSelected"
@@ -1014,11 +1029,10 @@
         @update:invoice="selectInvoice"
         @update:freeTable="freeTable"
       >
-        <template v-slot:footer>
-          <q-card-actions align="right">
-            <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
-            <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          </q-card-actions>
+        <template v-slot:header>
+          <q-space />
+          <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
+          <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
         </template>
       </drawer-table>
     </q-dialog>
@@ -1051,6 +1065,15 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <cash-box-dialog
+      v-model="showCashBoxDialog"
+      :cashier-id="userSession.id"
+      :is-box-already-open="isUserBoxOpen"
+      :available-cash-boxes="availableCashBoxes"
+      @box-opened="handleBoxOpened"
+      @box-closed="handleBoxClosed"
+      @box-created="checkCashBoxStatus"
+    />
     <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
         <q-form @submit="saveCashflow" class="column full-height">
@@ -1272,6 +1295,7 @@ import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
+import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1286,10 +1310,13 @@ export default {
     DrawerTable,
     WaitByPaymentMp,
     BarcodeScanner,
+    CashBoxDialog,
     TransferMpDialog
   },
   data () {
     return {
+      cashBoxState: null,
+
       scanner: false,
       /**
        * Show payment details modal
@@ -1417,6 +1444,21 @@ export default {
        * @type {Boolean}
        */
       searchInvoice: false,
+      /**
+       * Cash box dialog
+       * @type {Boolean}
+       */
+      showCashBoxDialog: false,
+      /**
+       * Indicates if the user has an open cash box
+       * @type {Boolean}
+       */
+      isUserBoxOpen: false,
+      /**
+       * List of available cash boxes for the user
+       * @type {Array}
+       */
+      availableCashBoxes: [],
       /**
        * Search
        * @type {String}
@@ -1970,6 +2012,7 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     this.listenPayments()
+    this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
   },
@@ -2763,6 +2806,7 @@ export default {
           return {
             ...product,
             ...product.pivot,
+            id: product.id,
             quantity: product.pivot.amount,
             subtotal: product.pivot.price * product.pivot.amount,
             product_price_lists: product.product_price_lists
@@ -2771,7 +2815,7 @@ export default {
         this.client = invoice.client
         this.invoiceType = invoice.invoice_type
         this.typeOfService = invoice.type_of_service
-        this.tableSelected = invoice.tables.map(table => table.id)
+
         this.searchInvoice = false
         this.setPayments(invoice.invoice_payments)
         this.$router.push({
@@ -2853,6 +2897,7 @@ export default {
     setModelInvoice () {
       return {
         ...this.invoice,
+        cashbox_user_id: this.cashBoxState.id,
         tableClose: this.tableClose,
         title: this.invoiceType?.name,
         client_id: this.client?.id,
@@ -2869,7 +2914,7 @@ export default {
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.paymentModel(this.payments),
         total_amount: this.totalBill,
-        tables: this.tableSelected,
+        tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
@@ -3201,6 +3246,149 @@ export default {
     },
 
     /**
+     * Checks the current cash box status for the user
+     * and updates the isUserBoxOpen state accordingly.
+     */
+    async checkCashBoxStatus () {
+      try {
+        const savedState = this.getCashBoxState()
+
+        if (!savedState) {
+          this.isUserBoxOpen = false
+          this.showCashBoxDialog = true
+          await this.loadAvailableCashBoxes()
+          return
+        }
+
+        const { data } = await this.$api.get('cashier-init')
+
+        const cashierSession = data
+
+        // Verificar si la sesión está abierta
+        const isSessionOpen = cashierSession &&
+                             cashierSession.status === 'open' &&
+                             !cashierSession.close_date
+
+        if (isSessionOpen) {
+          // Usuario tiene una caja abierta - sincronizar datos
+          this.isUserBoxOpen = true
+          this.availableCashBoxes = []
+
+          // Actualizar localStorage con datos más recientes de la API
+          await this.updateCashBoxState({
+            id: cashierSession.id,
+            isOpen: true,
+            openedAt: cashierSession.init_date || savedState.openedAt,
+            cashboxId: cashierSession.cashbox_id,
+            userId: this.userSession.id,
+            initialBalance: parseFloat(cashierSession.init_balance) || savedState.initialBalance || 0,
+            sessionId: cashierSession.id
+          })
+        } else {
+          // Usuario no tiene caja abierta - limpiar localStorage
+          localStorage.removeItem('cashbox_state')
+          this.isUserBoxOpen = false
+          this.showCashBoxDialog = true
+          await this.loadAvailableCashBoxes()
+        }
+      } catch (error) {
+        if (error.response?.status === 404) {
+          localStorage.removeItem('cashbox_state')
+          this.isUserBoxOpen = false
+          await this.loadAvailableCashBoxes()
+        } else {
+          console.error('❌ Error al verificar estado de caja:', error)
+          this.isUserBoxOpen = false
+          this.availableCashBoxes = []
+
+          // Mostrar notificación solo para errores reales
+          this.$q.notify({
+            type: 'negative',
+            message: 'Error al verificar el estado de la caja',
+            caption: 'Intenta recargar la página'
+          })
+        }
+      }
+    },
+
+    /**
+     * Loads available cash boxes from the API
+     * Filters only active cash boxes
+     */
+    async loadAvailableCashBoxes () {
+      if (!this.branchOffice?.id) {
+        console.error('Error: branchOffice.id no está disponible. No se pueden cargar cajas.')
+        this.availableCashBoxes = []
+        return
+      }
+
+      try {
+        const params = {
+          dataEqualFilter: {
+            branch_office_id: this.branchOffice.id
+          }
+        }
+
+        // Obtener todas las cajas del sistema para la sucursal actual
+        const response = await this.$api.get('cashboxes', { params })
+        const allBoxes = response.data.data || response.data || []
+
+        // Filtrar solo las cajas activas (el backend ya debería hacer esto, pero es una buena práctica)
+        this.availableCashBoxes = allBoxes.filter(box =>
+          box.status === 'active' && !box.disabled
+        )
+      } catch (error) {
+        console.error('Error al cargar cajas disponibles:', error)
+        this.availableCashBoxes = []
+        throw error // Re-throw para que el método que llama pueda manejar el error
+      }
+    },
+
+    /**
+     * Handles the 'open-box' event from the CashBoxDialog component.
+     * @param {object} data - The data emitted from the dialog, containing the box and amount.
+     */
+    /**
+     * Handles the 'box-opened' event from the dialog.
+     * Updates the local state to reflect that a box is now open.
+     * @param {Object} boxData - Data about the opened box (optional)
+     */
+    async handleBoxOpened (boxData = {}) {
+      this.isUserBoxOpen = true
+      this.availableCashBoxes = [] // Ya no hay cajas disponibles porque tiene una abierta
+
+      try {
+        // Actualizar estado de caja en company_config
+        await this.updateCashBoxState({
+          isOpen: true,
+          openedAt: new Date().toISOString(),
+          cashboxId: boxData.cashboxId || null,
+          userId: this.userSession.id,
+          initialBalance: boxData.initialBalance || 0
+        })
+      } catch (error) {
+        console.error('Error al guardar estado de apertura de caja:', error)
+      }
+    },
+
+    async handleBoxClosed (closeData = {}) {
+      this.isUserBoxOpen = false
+
+      try {
+        // Eliminar completamente el registro de localStorage al cerrar la caja
+        localStorage.removeItem('cashbox_state')
+
+        // Recargar las cajas disponibles después del cierre
+        await this.loadAvailableCashBoxes()
+      } catch (error) {
+        console.error('Error al cargar cajas disponibles después del cierre:', error)
+        this.availableCashBoxes = []
+
+        this.$q.notify({
+          type: 'warning',
+          message: 'Caja cerrada, pero hubo un problema al recargar las cajas disponibles',
+          caption: 'Intenta recargar la página'
+        })
      * Open promo selection dialog
      */
     async openPromoDialog (promo) {
@@ -3520,6 +3708,75 @@ export default {
     },
 
     /**
+     * Actualiza el estado de la caja en localStorage únicamente
+     * @param {Object} cashBoxState - Estado de la caja a guardar
+     */
+    async updateCashBoxState (data) {
+      const stateWithTimestamp = {
+        ...data,
+        lastUpdated: new Date().toISOString()
+      }
+
+      try {
+        localStorage.setItem('cashbox_state', JSON.stringify(stateWithTimestamp))
+        this.cashBoxState = stateWithTimestamp
+      } catch (error) {
+        console.error('❌ Error al guardar en localStorage:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al guardar estado de caja',
+          caption: 'Los cambios podrían no persistir'
+        })
+      }
+    },
+
+    /**
+     * Obtiene el estado actual de la caja desde localStorage
+     * @returns {Object|null} El estado actual de la caja o null
+     */
+    getCashBoxState () {
+      try {
+        const localState = localStorage.getItem('cashbox_state')
+        if (localState) {
+          return JSON.parse(localState)
+        }
+      } catch (error) {
+        console.error('Error al leer estado desde localStorage:', error)
+      }
+      return null
+    },
+
+    /**
+     * Checks if there's a cash box state indicating an open box
+     * @returns {Boolean} True if there's an open cash box state
+     */
+    hasCashBoxStateOpen () {
+      const state = this.getCashBoxState()
+      return state?.isOpen === true && state?.cashboxId
+    },
+
+    /**
+     * Initializes the cash box state from company_config on page load
+     * This provides a fallback when API is not available
+     */
+    initializeCashBoxStateFromConfig () {
+      const savedState = this.getCashBoxState()
+      if (savedState) {
+        if (savedState.isOpen && savedState.cashboxId) {
+          this.isUserBoxOpen = true
+          this.availableCashBoxes = []
+          // Mostrar notificación informativa
+          this.$q.notify({
+            type: 'info',
+            message: 'Sesión de caja restaurada',
+            caption: `Caja ${savedState.cashboxId} sigue abierta desde ${new Date(savedState.openedAt).toLocaleDateString()}`
+          })
+        } else {
+          this.isUserBoxOpen = false
+        }
+      } else {
+        this.isUserBoxOpen = false
+      }
      * Decrease product quantity
      */
     decreaseQuantity (productId) {
