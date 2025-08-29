@@ -224,7 +224,7 @@
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
-                row-key="name"
+                row-key="id"
                 title="Artículos"
                 dense
                 hide-pagination
@@ -700,7 +700,7 @@
 
                   <!-- Quantity controls -->
                   <div v-if="isProductSelected(product.id)" class="absolute-bottom-right q-ma-xs">
-                    <div class="row items-center q-gutter-xs bg-white rounded-borders q-pa-xs shadow-2">
+                    <div class="row items-center q-gutter-xs rounded-borders q-pa-xs shadow-2">
                       <q-btn
                         icon="remove"
                         size="sm"
@@ -709,7 +709,7 @@
                         @click.stop="decreaseQuantity(product.id)"
                         :disable="getProductQuantity(product.id) <= 1"
                       />
-                      <span class="text-weight-bold q-px-sm">{{ getProductQuantity(product.id) }}</span>
+                      <span class="text-weight-bold q-px-sm text-body1">{{ getProductQuantity(product.id) }}</span>
                       <q-btn
                         icon="add"
                         size="sm"
@@ -740,7 +740,7 @@
 
               <!-- Price calculation with modifiers -->
               <div class="q-mb-lg">
-                <q-card flat bordered class="q-pa-md bg-grey-1">
+                <q-card flat bordered class="q-pa-md">
                   <div class="text-body1 text-weight-bold q-mb-xs">
                     <q-icon name="attach_money" class="q-mr-xs text-green" />
                     Total de la Promoción

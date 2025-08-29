@@ -317,15 +317,13 @@
                               <!-- Preselected quantity input -->
                               <q-input
                                 v-model.number="product.quantity"
-                                :model-value="product.quantity || product.pivot.quantity"
                                 type="number"
                                 min="0"
                                 :max="group.quantity"
                                 dense
                                 filled
-                                style="width: 60px;"
-                                label="N°"
-                                :title="'Cantidad preseleccionada para ' + (getProductById(product.product_id)?.name || 'Producto')"
+                                style="width: 100px;"
+                                label="Cantidad"
                                 @update:model-value="validatePreselectedQuantities(groupIndex)"
                               />
 
@@ -402,7 +400,6 @@
                             step="0.01"
                             prefix="$"
                             :rules="priceRules"
-                            @focus="handlePriceFocus"
                           />
                           <div class="text-body2 text-weight-medium q-mt-sm">
                             Precio sugerido: {{ formatCurrency(suggestedBasePrice) }}
@@ -613,15 +610,11 @@ const suggestedBasePrice = computed(() => {
     const quantity = group.quantity || 1
     let maxPrice = 0
 
-    // Find the most expensive product in this group
     group.products.forEach(product => {
-      const productDetails = getProductById(product.product_id)
-      if (productDetails?.price && productDetails.price > maxPrice) {
-        maxPrice = productDetails.price
+      if (product.price && product.price > maxPrice) {
+        maxPrice = product.price
       }
     })
-
-    // Add max price * quantity for this group
     total += maxPrice * quantity
   })
 
@@ -648,10 +641,6 @@ const priceRules = [
   val => (val !== null && val !== '') || 'El precio es requerido',
   val => val > 0 || 'El precio debe ser mayor a cero'
 ]
-
-const handlePriceFocus = (event) => {
-  // No need to do anything special for number inputs
-}
 
 // Watch for props changes
 watch(
@@ -680,8 +669,13 @@ const loadPromotionForEdit = (promotionData) => {
     promotion.value = {
       ...getInitialPromotionState(),
       ...promotionData,
-      // Asegurar que arrays existen
-      promotion_details: promotionData.promotion_details || [],
+      promotion_details: promotionData.promotion_details.map(group => ({
+        ...group,
+        products: group.products.map(product => ({
+          ...product,
+          quantity: product.pivot.quantity || 0
+        }))
+      })) || [],
       images: promotionData.images || []
     }
   }
@@ -856,8 +850,9 @@ const addProductToGroup = (groupIndex, selectedProduct) => {
   }
 
   group.products.push({
-    product_id: selectedProduct.value,
-    quantity: 0
+    product_id: selectedProduct.id,
+    name: selectedProduct.name,
+    quantity: 1
   })
 
   selectedProductForGroup.value = null // Limpiar selección
