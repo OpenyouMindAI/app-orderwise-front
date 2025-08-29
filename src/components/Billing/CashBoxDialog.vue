@@ -75,9 +75,24 @@
               filled
               lazy-rules
               :rules="boxSelectionRules"
-              class="q-mb-md"
+              class="q-mb-md curved-input"
               :disable="availableCashBoxes.length === 1"
-            />
+            >
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-icon
+                      :name="scope.opt.open ? 'lock_open' : 'lock'"
+                      :color="scope.opt.open ? 'positive' : 'negative'"
+                      size="sm"
+                    />
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
 
             <q-input
               ref="amountInput"
@@ -201,6 +216,23 @@ export default {
   // ==========================================
   // LIFECYCLE HOOKS
   // ==========================================
+  created () {
+    // Set isReady to true immediately to prevent infinite spinner
+    this.isReady = true
+
+    // Safe initialization of debounced function if needed
+    if (this.$utils && this.$utils.debounce) {
+      this.debouncedLoadBoxes = this.$utils.debounce(this.loadBoxes?.bind(this), 500)
+    } else {
+      // Fallback debounce implementation
+      let timeout
+      this.debouncedLoadBoxes = (...args) => {
+        clearTimeout(timeout)
+        timeout = setTimeout(() => this.loadBoxes?.(...args), 500)
+      }
+    }
+  },
+
   mounted () {
     // The watcher for modelValue will handle initialization on open
   },
@@ -218,7 +250,6 @@ export default {
      */
     async initializeDialog () {
       this.resetForm()
-      await this.checkCashBoxStatus()
       this.setInitialFocus()
     },
 
@@ -229,7 +260,7 @@ export default {
       this.initialAmount = null
       this.newBoxName = ''
       this.endBalanceAmount = null
-      this.isReady = false
+      // Don't set isReady = false to prevent spinner from appearing again
       this.boxAlreadyOpen = false
       this.cashierSession = null
 
@@ -264,67 +295,19 @@ export default {
     // Cash Box Status Methods
     // ------------------------------------------
 
-    /**
-     * Check current cash box status from localStorage and backend
-     */
-    async checkCashBoxStatus () {
-      try {
-        const savedState = this.getCashBoxStateFromStorage()
+    // MÉTODO ELIMINADO: checkCashBoxStatus()
+    // La lógica ahora está centralizada en BillingPage.loadAvailableCashBoxes()
+    // El componente padre ya maneja todo el estado de las cajas
 
-        // If no localStorage data, skip backend check
-        if (!savedState) {
-          this.boxAlreadyOpen = false
-          return
-        }
+    // MÉTODO ELIMINADO: handleExistingCashBoxFromOtherBusiness()
+    // Ya no es necesario porque el componente padre maneja todo el estado de cajas
+    // La lógica de validación está centralizada en BillingPage.loadAvailableCashBoxes()
 
-        // Verify with backend if localStorage has data
-        const response = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
+    // MÉTODO ELIMINADO: isSessionOpen()
+    // Ya no se usa porque no validamos sesiones desde el modal
 
-        this.cashierSession = response.data
-        this.boxAlreadyOpen = this.isSessionOpen(response.data)
-      } catch (error) {
-        this.handleCashBoxStatusError(error)
-      }
-    },
-
-    /**
-     * Get cash box state from localStorage
-     * @returns {Object|null} Cash box state or null
-     */
-    getCashBoxStateFromStorage () {
-      try {
-        const localState = localStorage.getItem('cashbox_state')
-        return localState ? JSON.parse(localState) : null
-      } catch (error) {
-        console.error('Error reading localStorage:', error)
-        return null
-      }
-    },
-
-    /**
-     * Check if cashier session is open
-     * @param {Object} session - Cashier session data
-     * @returns {boolean} True if session is open
-     */
-    isSessionOpen (session) {
-      return session &&
-             session.status === 'open' &&
-             !session.close_date
-    },
-
-    /**
-     * Handle errors when checking cash box status
-     * @param {Error} error - The error object
-     */
-    handleCashBoxStatusError (error) {
-      // 404 is expected when no active session exists
-      if (error.response?.status === 404) {
-        this.boxAlreadyOpen = false
-      } else {
-        console.error('Error verificando estado de caja:', error)
-        this.boxAlreadyOpen = false
-      }
-    },
+    // MÉTODO ELIMINADO: handleCashBoxStatusError()
+    // Ya no se usa porque no validamos estados de sesión desde el modal
 
     // ------------------------------------------
     // Form Submission Handlers
@@ -339,12 +322,15 @@ export default {
       this.isSubmitting = true
 
       try {
+        // No need to check existing sessions - parent component handles all validation
         const payload = {
           cashbox_id: this.selectedBox.id,
           user_id: this.cashierId,
           init_balance: parseFloat(this.initialAmount),
           init_date: new Date().toISOString().split('T')[0],
-          status: 'open'
+          status: 'open',
+          branch_office_id: this.branchOffice.id,
+          company_id: this.branchOffice.company_id
         }
 
         await this.$api.post('cashier-open', payload)
@@ -405,31 +391,28 @@ export default {
       // Validate the end balance amount
       const endBalance = this.endBalanceAmount
       if (endBalance === null || endBalance === '' || endBalance < 0) {
-        this.showErrorNotification('El monto final es requerido y debe ser mayor o igual a cero')
+        this.showErrorNotification('El monto final es requerido y debe ser mayor or igual a cero')
         return
       }
 
       this.isSubmitting = true
 
       try {
-        // Get current session to ensure we have the correct ID
-        const sessionResponse = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
-        const cashierSession = sessionResponse.data
-
-        if (!this.isSessionOpen(cashierSession)) {
+        // Use the current session data from API
+        if (!this.cashierSession || !this.cashierSession.id) {
           throw new Error('No se encontró una sesión de caja abierta para cerrar')
         }
 
         const payload = { end_balance: parseFloat(endBalance) }
 
-        await this.$api.put(`cashier-close/${cashierSession.id}`, payload)
+        await this.$api.put(`cashier-close/${this.cashierSession.id}`, payload)
 
         this.showSuccessNotification('La caja ha sido cerrada con éxito', `Saldo final: $${endBalance}`)
 
         this.$emit('box-closed', {
-          cashboxId: cashierSession.cashbox_id,
+          cashboxId: this.cashierSession.cashbox_id,
           endBalance: parseFloat(endBalance),
-          sessionId: cashierSession.id
+          sessionId: this.cashierSession.id
         })
 
         this.closeDialog()
@@ -519,6 +502,17 @@ export default {
     handleApiError (error, defaultMessage, caption = 'Intenta nuevamente') {
       console.error(defaultMessage, error)
 
+      // Enhanced error logging for debugging
+      if (error.response) {
+        console.error('📊 Error Response Status:', error.response.status)
+        console.error('📋 Error Response Data:', error.response.data)
+        console.error('📄 Error Response Headers:', error.response.headers)
+      } else if (error.request) {
+        console.error('📡 No response received:', error.request)
+      } else {
+        console.error('⚙️ Error in request setup:', error.message)
+      }
+
       const message = error.response?.data?.message ||
                      error.message ||
                      defaultMessage
@@ -532,3 +526,17 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.curved-input :deep(.q-field__control) {
+  overflow: hidden;
+}
+
+.curved-input :deep(.q-field__control)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  border: 1px solid;
+  pointer-events: none;
+}
+</style>
