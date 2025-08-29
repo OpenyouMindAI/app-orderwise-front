@@ -3255,7 +3255,6 @@ export default {
 
         if (!savedState) {
           this.isUserBoxOpen = false
-          this.showCashBoxDialog = true
           await this.loadAvailableCashBoxes()
           return
         }
@@ -3389,6 +3388,9 @@ export default {
           message: 'Caja cerrada, pero hubo un problema al recargar las cajas disponibles',
           caption: 'Intenta recargar la página'
         })
+      }
+    },
+    /*
      * Open promo selection dialog
      */
     async openPromoDialog (promo) {
@@ -3777,6 +3779,8 @@ export default {
       } else {
         this.isUserBoxOpen = false
       }
+    },
+    /**
      * Decrease product quantity
      */
     decreaseQuantity (productId) {
