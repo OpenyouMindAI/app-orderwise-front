@@ -40,7 +40,6 @@
           >
             <q-tab name="basic" label="Datos Básicos" />
             <q-tab name="groups" label="Grupos y Productos" />
-            <q-tab name="preview" label="Vista Previa" />
           </q-tabs>
           <q-separator />
 
@@ -90,7 +89,7 @@
                       <div class="row q-col-gutter-sm">
                         <div class="col-12 col-md-6">
                           <q-input
-                            v-model="promotion.startDate"
+                            v-model="promotion.start_date"
                             label="Fecha de inicio"
                             type="date"
                             filled
@@ -99,7 +98,7 @@
                         </div>
                         <div class="col-12 col-md-6">
                           <q-input
-                            v-model="promotion.endDate"
+                            v-model="promotion.end_date"
                             label="Fecha de fin"
                             type="date"
                             filled
@@ -174,7 +173,7 @@
                           <div v-else>
                             <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
                             <div class="text-h6 text-grey-7 q-mb-sm">
-                              Arrastra la imágen aquí
+                              Arrastra la imagen aquí
                             </div>
                             <div class="text-body2 text-grey-5 q-mb-md">
                               o haz clic para seleccionar archivo
@@ -210,12 +209,12 @@
                           color="positive"
                         />
                         <q-toggle
-                          v-model="promotion.showInCatalog"
+                          v-model="promotion.show_in_catalog"
                           label="Mostrar en catálogo"
                           color="positive"
                         />
                         <q-toggle
-                          v-model="promotion.requiresStock"
+                          v-model="promotion.requires_stock"
                           label="Requiere stock"
                           color="positive"
                         />
@@ -239,14 +238,14 @@
                     />
                   </div>
 
-                  <div v-if="promotion.selectionGroups.length === 0" class="text-center q-pa-xl text-grey-6">
+                  <div v-if="promotion.promotion_details.length === 0" class="text-center q-pa-xl text-grey-6">
                     <q-icon name="group_work" size="4rem" class="q-mb-md" />
                     <div class="text-h6 q-mb-sm">No hay grupos de selección</div>
                     <div class="text-body2">Agrega grupos para organizar los productos de tu promoción</div>
                   </div>
 
                   <q-card
-                    v-for="(group, groupIndex) in promotion.selectionGroups"
+                    v-for="(group, groupIndex) in promotion.promotion_details"
                     :key="`group-${groupIndex}`"
                     class="q-mb-md"
                     flat
@@ -269,7 +268,7 @@
                       </div>
 
                       <div class="row q-col-gutter-sm">
-                        <div class="col-12 col-md-10">
+                        <div class="col-8 col-md-10">
                           <q-input
                             v-model="group.name"
                             label="Nombre del grupo"
@@ -310,20 +309,15 @@
                           :key="`product-${groupIndex}-${productIndex}`"
                         >
                           <q-item-section>
-                            <q-item-label>{{ getProductById(product.productId)?.name || getProductById(product.productId)?.label || 'Producto no encontrado' }}</q-item-label>
+                            <q-item-label>{{ product.name }}</q-item-label>
                           </q-item-section>
                           <q-item-section side>
                             <div class="row items-center no-wrap q-gutter-xs">
-                              <div v-if="product.priceModifier" class="text-body2 text-weight-medium text-grey-8 q-mr-xs">
-                                {{ product.priceModifier.type === 'FIXED' ?
-                                    (product.priceModifier.value >= 0 ? '+' : '') + formatCurrency(product.priceModifier.value) :
-                                    (product.priceModifier.value >= 0 ? '+' : '') + product.priceModifier.value + '%'
-                                }}
-                              </div>
 
                               <!-- Preselected quantity input -->
                               <q-input
-                                v-model.number="product.presetQuantity"
+                                v-model.number="product.quantity"
+                                :model-value="product.quantity || product.pivot.quantity"
                                 type="number"
                                 min="0"
                                 :max="group.quantity"
@@ -331,7 +325,7 @@
                                 filled
                                 style="width: 60px;"
                                 label="N°"
-                                :title="'Cantidad preseleccionada para ' + (getProductById(product.productId)?.name || 'Producto')"
+                                :title="'Cantidad preseleccionada para ' + (getProductById(product.product_id)?.name || 'Producto')"
                                 @update:model-value="validatePreselectedQuantities(groupIndex)"
                               />
 
@@ -343,7 +337,7 @@
                                 round
                                 flat
                                 @click="openProductModifierDialog(groupIndex, productIndex)"
-                                :title="'Configurar modificador para ' + (getProductById(product.productId)?.name || getProductById(product.productId)?.label || 'Producto')"
+                                :title="'Configurar modificador para ' + (getProductById(product.product_id)?.name || getProductById(product.product_id)?.label || 'Producto')"
                               /> -->
 
                               <q-btn
@@ -399,7 +393,7 @@
                       <div class="row justify-between items-center q-pt-md">
                         <div class="col-6">
                           <q-input
-                            v-model="promotion.finalPrice"
+                            v-model="promotion.final_price"
                             label="Precio Base de la Promoción"
                             filled
                             dense
@@ -414,38 +408,10 @@
                             Precio sugerido: {{ formatCurrency(suggestedBasePrice) }}
                           </div>
                         </div>
-                        <!--
-                        <div class="col-5 text-right">
-                          <div class="text-body2 text-grey-7">Modificadores Activos:</div>
-
-                          Modificadores de Productos
-
-                          <div v-if="getProductsWithModifiers().length > 0" class="text-caption q-mt-xs">
-                            <div class="text-grey-6 q-mb-xs">Modificadores por producto:</div>
-                            <div v-for="productMod in getProductsWithModifiers()" :key="productMod.name" class="q-mb-xs">
-                              <div class="text-body2 text-weight-medium text-grey-8">
-                                {{ productMod.name }}: {{ productMod.displayText }}
-                              </div>
-                            </div>
-                          </div>
-
-                          Mensaje cuando no hay modificadores
-
-                          <div v-if="getProductsWithModifiers().length === 0" class="text-caption text-grey-5 q-mt-xs">
-                            Sin modificadores configurados
-                          </div>
-                        </div>
-                        -->
                       </div>
                     </q-card-section>
                   </q-card>
                 </div>
-              </q-tab-panel>
-
-              <!-- Tab: Vista Previa -->
-              <q-tab-panel name="preview" class="q-pa-md">
-                <div class="text-h6 text-primary q-mb-md">Vista Previa de la Promoción</div>
-                <pre class="bg-grey-2 q-pa-md rounded-borders">{{ promotion }}</pre>
               </q-tab-panel>
             </q-tab-panels>
           </div>
@@ -490,7 +456,7 @@
         <q-card-section>
           <div class="q-gutter-md">
             <div class="text-body2 text-grey-7">
-              Precio base de la promoción: <span class="text-weight-bold">{{ formatCurrency(promotion.finalPrice || 0) }}</span>
+              Precio base de la promoción: <span class="text-weight-bold">{{ formatCurrency(promotion.final_price || 0) }}</span>
             </div>
 
             <q-select
@@ -531,10 +497,10 @@
               <div class="text-body2 text-grey-7 q-mb-sm">Vista Previa del Precio</div>
               <div class="row justify-center items-baseline q-gutter-sm">
                 <div class="text-h6 text-grey-6" :class="{ 'text-strike': productModifierForm.value !== 0 }">
-                  {{ formatCurrency(promotion.finalPrice || 0) }}
+                  {{ formatCurrency(promotion.final_price || 0) }}
                 </div>
                 <q-icon v-if="productModifierForm.value !== 0" name="arrow_forward" color="grey" />
-                <div v-if="productModifierForm.value !== 0" class="text-h6 text-weight-bold" :class="getProductModifierPreview() > (promotion.finalPrice || 0) ? 'text-positive' : 'text-negative'">
+                <div v-if="productModifierForm.value !== 0" class="text-h6 text-weight-bold" :class="getProductModifierPreview() > (promotion.final_price || 0) ? 'text-positive' : 'text-negative'">
                   {{ formatCurrency(getProductModifierPreview()) }}
                 </div>
               </div>
@@ -550,13 +516,6 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancelar" @click="closeProductModifierDialog" />
-          <q-btn
-            flat
-            label="Quitar Modificador"
-            color="negative"
-            @click="removeProductModifier"
-            v-if="currentModifierProduct && currentModifierProduct.priceModifier"
-          />
           <q-btn color="primary" label="Aplicar" @click="applyProductModifier" />
         </q-card-actions>
       </q-card>
@@ -629,13 +588,13 @@ const getInitialPromotionState = () => ({
   name: '',
   description: '',
   channels: ['pos'],
-  startDate: null,
-  endDate: null,
+  start_date: null,
+  end_date: null,
   status: true,
   showInCatalog: true,
   requiresStock: true,
-  selectionGroups: [],
-  finalPrice: 0,
+  promotion_details: [],
+  final_price: 0,
   imageUrl: null,
   images: []
 })
@@ -650,13 +609,13 @@ const formatCurrency = (value) => {
 const suggestedBasePrice = computed(() => {
   let total = 0
 
-  promotion.value.selectionGroups.forEach(group => {
+  promotion.value.promotion_details.forEach(group => {
     const quantity = group.quantity || 1
     let maxPrice = 0
 
     // Find the most expensive product in this group
     group.products.forEach(product => {
-      const productDetails = getProductById(product.productId)
+      const productDetails = getProductById(product.product_id)
       if (productDetails?.price && productDetails.price > maxPrice) {
         maxPrice = productDetails.price
       }
@@ -722,7 +681,7 @@ const loadPromotionForEdit = (promotionData) => {
       ...getInitialPromotionState(),
       ...promotionData,
       // Asegurar que arrays existen
-      selectionGroups: promotionData.selectionGroups || [],
+      promotion_details: promotionData.promotion_details || [],
       images: promotionData.images || []
     }
   }
@@ -821,14 +780,13 @@ const fetchProducts = async () => {
     const params = {
       branch_office_id: branchOffice.value?.id
     }
-    const { data } = await api.get('/products', { params })
+    const { data } = await api.get('products', { params })
     console.log('Productos obtenidos:', data) // Debug
     const products = data.map(p => ({
       label: p.name || p.label || `Producto ${p.id}`,
       value: p.id,
       ...p
     }))
-    console.log('Productos mapeados:', products) // Debug
     allProducts.value = products
     filteredProducts.value = products
   } catch (error) {
@@ -868,25 +826,25 @@ const filterProducts = (val, update) => {
 }
 
 const addSelectionGroup = () => {
-  promotion.value.selectionGroups.push({
-    name: `Grupo ${promotion.value.selectionGroups.length + 1}`,
+  promotion.value.promotion_details.push({
+    name: `Grupo ${promotion.value.promotion_details.length + 1}`,
     quantity: 1,
     products: []
   })
 }
 
 const removeSelectionGroup = (index) => {
-  promotion.value.selectionGroups.splice(index, 1)
+  promotion.value.promotion_details.splice(index, 1)
 }
 
 const addProductToGroup = (groupIndex, selectedProduct) => {
   if (!selectedProduct) return
 
-  const group = promotion.value.selectionGroups[groupIndex]
+  const group = promotion.value.promotion_details[groupIndex]
   if (!group) return
 
   // Evitar duplicados
-  const alreadyExists = group.products.some(p => p.productId === selectedProduct.value)
+  const alreadyExists = group.products.some(p => p.product_id === selectedProduct.value)
   if (alreadyExists) {
     $q.notify({
       type: 'warning',
@@ -898,16 +856,15 @@ const addProductToGroup = (groupIndex, selectedProduct) => {
   }
 
   group.products.push({
-    productId: selectedProduct.value,
-    priceModifier: null,
-    presetQuantity: 0
+    product_id: selectedProduct.value,
+    quantity: 0
   })
 
   selectedProductForGroup.value = null // Limpiar selección
 }
 
 const removeProductFromGroup = (groupIndex, productIndex) => {
-  const group = promotion.value.selectionGroups[groupIndex]
+  const group = promotion.value.promotion_details[groupIndex]
   if (group) {
     group.products.splice(productIndex, 1)
   }
@@ -921,13 +878,13 @@ const getProductById = (productId) => {
 // Get total preselected quantity for a group
 const getGroupPreselectedTotal = (group) => {
   return group.products.reduce((total, product) => {
-    return total + (product.presetQuantity || 0)
+    return total + (product.quantity || 0)
   }, 0)
 }
 
 // Validate preselected quantities for a group
 const validatePreselectedQuantities = (groupIndex) => {
-  const group = promotion.value.selectionGroups[groupIndex]
+  const group = promotion.value.promotion_details[groupIndex]
   if (!group) return
 
   const total = getGroupPreselectedTotal(group)
@@ -945,10 +902,10 @@ const validatePreselectedQuantities = (groupIndex) => {
 // const getProductsWithModifiers = () => {
 //   const productsWithModifiers = []
 
-//   promotion.value.selectionGroups.forEach(group => {
+//   promotion.value.promotion_details.forEach(group => {
 //     group.products.forEach(product => {
 //       if (product.priceModifier) {
-//         const productDetails = getProductById(product.productId)
+//         const productDetails = getProductById(product.product_id)
 //         productsWithModifiers.push({
 //           name: productDetails?.name || productDetails?.label || 'Producto no encontrado',
 //           modifier: product.priceModifier,
@@ -967,7 +924,7 @@ const validatePreselectedQuantities = (groupIndex) => {
 // const openProductModifierDialog = (groupIndex, productIndex) => {
 //   currentModifierGroupIndex.value = groupIndex
 //   currentModifierProductIndex.value = productIndex
-//   currentModifierProduct.value = promotion.value.selectionGroups[groupIndex].products[productIndex]
+//   currentModifierProduct.value = promotion.value.promotion_details[groupIndex].products[productIndex]
 
 //   // Load existing modifier if present
 //   if (currentModifierProduct.value.priceModifier) {
@@ -998,7 +955,7 @@ const closeProductModifierDialog = () => {
 }
 
 const getProductModifierPreview = () => {
-  const basePrice = Number(promotion.value.finalPrice) || 0
+  const basePrice = Number(promotion.value.final_price) || 0
 
   if (Number(productModifierForm.value.value) === 0) {
     return basePrice
@@ -1018,7 +975,7 @@ const getProductModifierPreview = () => {
 const applyProductModifier = () => {
   if (!currentModifierProduct.value) return
 
-  const product = promotion.value.selectionGroups[currentModifierGroupIndex.value]
+  const product = promotion.value.promotion_details[currentModifierGroupIndex.value]
     .products[currentModifierProductIndex.value]
 
   if (productModifierForm.value.value === 0) {
@@ -1041,33 +998,16 @@ const applyProductModifier = () => {
   closeProductModifierDialog()
 }
 
-const removeProductModifier = () => {
-  if (!currentModifierProduct.value) return
-
-  const product = promotion.value.selectionGroups[currentModifierGroupIndex.value]
-    .products[currentModifierProductIndex.value]
-
-  product.priceModifier = null
-
-  $q.notify({
-    type: 'info',
-    message: 'Modificador de producto removido',
-    position: 'top'
-  })
-
-  closeProductModifierDialog()
-}
-
 const savePromotion = async () => {
   const formIsValid = await promotionForm.value.validate()
 
   let customValidation = true
   let customMessage = ''
 
-  if (promotion.value.selectionGroups.length === 0) {
+  if (promotion.value.promotion_details.length === 0) {
     customValidation = false
     customMessage = 'Debe agregar al menos un grupo de selección.'
-  } else if (promotion.value.selectionGroups.some(g => g.products.length === 0)) {
+  } else if (promotion.value.promotion_details.some(g => g.products.length === 0)) {
     customValidation = false
     customMessage = 'Todos los grupos deben contener al menos un producto.'
   }
@@ -1083,15 +1023,10 @@ const savePromotion = async () => {
 
   saving.value = true
   try {
-    const payload = {
-      ...promotion.value,
-      finalPrice: Number(promotion.value.finalPrice)
-    }
-
     let response
     if (isEditMode.value) {
       // Actualizar promoción existente
-      response = await api.put(`/promotions/${promotion.value.id}`, payload)
+      response = await api.put(`promotions/${promotion.value.id}`, promotion.value)
       $q.notify({
         type: 'positive',
         message: `Promoción "${response.data.name}" actualizada exitosamente`,
@@ -1100,7 +1035,7 @@ const savePromotion = async () => {
       emit('promotion-updated', response.data)
     } else {
       // Crear nueva promoción
-      response = await api.post('/promotions', payload)
+      response = await api.post('promotions', promotion.value)
       $q.notify({
         type: 'positive',
         message: `Promoción "${response.data.name}" creada con ID: ${response.data.id}`,
@@ -1111,17 +1046,9 @@ const savePromotion = async () => {
 
     closeModal()
   } catch (error) {
-    console.error('Error saving promotion:', error)
-    let errorMessage = isEditMode.value ? 'Error al actualizar la promoción.' : 'Error al crear la promoción.'
-    if (error.response && error.response.data && error.response.data.message) {
-      errorMessage = error.response.data.message
-    } else if (error.response && error.response.data && error.response.data.error) {
-      errorMessage = error.response.data.error
-    }
-
     $q.notify({
       type: 'negative',
-      message: errorMessage,
+      message: error.message,
       caption: 'Por favor, revise los datos e intente de nuevo.',
       position: 'top'
     })
@@ -1130,34 +1057,9 @@ const savePromotion = async () => {
   }
 }
 
-const fetchPromotions = async () => {
-  try {
-    const params = {
-      branch_office_id: branchOffice.value?.id
-    }
-    const { data } = await api.get('/promotions', { params })
-    console.log('=== TODAS LAS PROMOCIONES GUARDADAS ===')
-    console.log('Total de promociones:', data.length)
-    data.forEach((promo, index) => {
-      console.log(`\n--- Promoción ${index + 1} ---`)
-      console.log('ID:', promo.id)
-      console.log('Nombre:', promo.name)
-      console.log('Precio Final:', promo.finalPrice)
-      console.log('Estado:', promo.status)
-      console.log('Canales:', promo.channels)
-      console.log('Grupos de Selección:', promo.selectionGroups?.length || 0)
-      console.log('Datos completos:', promo)
-    })
-    console.log('=== FIN LISTADO PROMOCIONES ===')
-  } catch (error) {
-    console.error('Error fetching promotions:', error)
-  }
-}
-
 // Lifecycle hooks
 onMounted(() => {
   fetchProducts()
-  fetchPromotions()
 })
 </script>
 

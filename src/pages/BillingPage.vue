@@ -236,7 +236,7 @@
                 <template v-slot:body="props">
                   <q-tr :props="props">
                     <q-td key="barcode" :props="props">
-                      {{ props.row.barcode }}
+                      {{ props.row.barcode || '-' }}
                     </q-td>
                     <q-td key="name" :props="props">
                       {{ props.row.name.slice(0, 40) }}{{ props.row.name.length > 40 ? '...' : '' }}
@@ -316,24 +316,24 @@
                     </q-td>
                     <q-td key="actions" :props="props">
                       <q-btn
-                        v-if="props.row.selectionGroups && props.row.selectionGroups.length > 0"
+                        v-if="props.row.promotion_details && props.row.promotion_details.length > 0"
                         :icon="props.expand ? 'expand_less' : 'expand_more'"
-                        size="xs"
+                        size="sm"
                         color="primary"
-                        flat
                         @click="props.expand = !props.expand"
+                        round
                         class="q-mr-xs"
                       />
-                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)" />
+                      <q-btn icon="delete" size="sm" color="negative" @click="deleteProduct(props)" round/>
                     </q-td>
                   </q-tr>
                   <q-tr v-show="props.expand" :props="props">
                     <q-td colspan="100%" class="q-pa-sm">
                       <div class="text-left">
-                        <div v-if="props.row.selectionGroups && props.row.selectionGroups.length > 0">
+                        <div v-if="props.row.promotion_details && props.row.promotion_details.length > 0">
                           <div class="text-weight-medium q-mb-sm">Detalles de la promoción</div>
 
-                          <div v-for="group in props.row.selectionGroups" :key="group.name" class="q-mb-sm">
+                          <div v-for="group in props.row.promotion_details" :key="group.name" class="q-mb-sm">
                             <div class="text-subtitle2 text-grey-8 q-mb-xs">
                               {{ group.name }}
                             </div>
@@ -341,21 +341,12 @@
                               <!-- Show selected products for this group -->
                               <div v-if="props.row.selectedProducts && props.row.selectedProducts.length > 0">
                                 <div
-                                  v-for="selection in props.row.selectedProducts.filter(sel => sel.groupIndex === props.row.selectionGroups.indexOf(group))"
-                                  :key="selection.productId"
+                                  v-for="selection in props.row.selectedProducts.filter(sel => sel.groupIndex === props.row.promotion_details.indexOf(group))"
+                                  :key="selection.product_id"
                                   class="row justify-between q-py-xs"
                                 >
                                   <span>{{ selection.product.name }}</span>
                                   <div class="row items-center q-gutter-xs">
-                                    <div v-if="selection.product.priceModifier && typeof selection.product.priceModifier === 'object'" class="text-caption text-orange-8">
-                                      <q-icon name="add_circle" size="xs" class="q-mr-xs" />
-                                      <template v-if="selection.product.priceModifier.type === 'FIXED'">
-                                        +${{ formatNumber(selection.product.priceModifier.value) }}
-                                      </template>
-                                      <template v-else-if="selection.product.priceModifier.type === 'PERCENTAGE'">
-                                        +{{ selection.product.priceModifier.value }}%
-                                      </template>
-                                    </div>
                                     <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
                                   </div>
                                 </div>
@@ -372,7 +363,7 @@
                           <div class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
                             <div class="row justify-between items-center">
                               <span class="text-weight-medium">Total promoción:</span>
-                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.subtotal || props.row.finalPrice || props.row.price) }}</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.subtotal || props.row.final_price || props.row.price) }}</span>
                             </div>
                           </div>
                         </div>
@@ -382,23 +373,23 @@
                           <div class="q-ml-sm">
                             <!-- Show selected products if available (for promos from modal) -->
                             <div v-if="props.row.selectedProducts && props.row.selectedProducts.length > 0">
-                              <div v-for="selection in props.row.selectedProducts" :key="selection.productId" class="row justify-between q-py-xs">
+                              <div v-for="selection in props.row.selectedProducts" :key="selection.product_id" class="row justify-between q-py-xs">
                                 <span>{{ selection.product.name }}</span>
                                 <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
                               </div>
                             </div>
                             <!-- Fallback to all products (for legacy promos) -->
                             <div v-else>
-                              <div v-for="item in props.row.products" :key="item.productId || item.id" class="row justify-between q-py-xs">
+                              <div v-for="item in props.row.products" :key="item.product_id || item.id" class="row justify-between q-py-xs">
                                 <span>{{ item.name }}</span>
                                 <span class="text-weight-medium">1 unidad</span>
                               </div>
                             </div>
                           </div>
-                          <div v-if="props.row.finalPrice" class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
+                          <div v-if="props.row.final_price" class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
                             <div class="row justify-between items-center">
                               <span class="text-weight-medium">Total:</span>
-                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.finalPrice) }}</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.final_price) }}</span>
                             </div>
                           </div>
                         </div>
@@ -685,14 +676,14 @@
             <div class="row q-col-gutter-sm justify-center">
               <div
                 v-for="product in currentGroup.products"
-                :key="product.productId"
+                :key="product.id"
                 class="col-xs-6 col-sm-4 col-md-3"
               >
                 <div class="relative-position">
                   <q-card
                     class="cursor-pointer product-card"
                     style="border-radius: 15px; overflow: hidden;"
-                    :class="{ 'selected-product': isProductSelected(product.productId) }"
+                    :class="{ 'selected-product': isProductSelected(product.id) }"
                     @click="toggleProductSelection(product)"
                   >
                     <q-img
@@ -702,41 +693,29 @@
                     >
                       <!-- Product name overlay -->
                       <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center text-white product-name-overlay">
-                        <div>
-                          {{ product.name }}
-                          <div v-if="product.priceModifier" class="text-caption text-yellow-4 q-mt-xs">
-                            {{ getModifierDisplayText(product) }}
-                          </div>
-                        </div>
+                        {{ product.name }}
                       </div>
-
-                      <!-- Selection indicator -->
-                      <!-- <div v-if="isProductSelected(product.productId)" class="absolute-top-right q-ma-sm">
-                        <q-badge color="positive" rounded>
-                          <q-icon name="check_circle" size="md" />
-                        </q-badge>
-                      </div> -->
                     </q-img>
                   </q-card>
 
                   <!-- Quantity controls -->
-                  <div v-if="isProductSelected(product.productId)" class="absolute-bottom-right q-ma-xs">
+                  <div v-if="isProductSelected(product.id)" class="absolute-bottom-right q-ma-xs">
                     <div class="row items-center q-gutter-xs bg-white rounded-borders q-pa-xs shadow-2">
                       <q-btn
                         icon="remove"
                         size="sm"
                         round
                         color="negative"
-                        @click.stop="decreaseQuantity(product.productId)"
-                        :disable="getProductQuantity(product.productId) <= 1"
+                        @click.stop="decreaseQuantity(product.id)"
+                        :disable="getProductQuantity(product.id) <= 1"
                       />
-                      <span class="text-weight-bold q-px-sm">{{ getProductQuantity(product.productId) }}</span>
+                      <span class="text-weight-bold q-px-sm">{{ getProductQuantity(product.id) }}</span>
                       <q-btn
                         icon="add"
                         size="sm"
                         round
                         color="positive"
-                        @click.stop="increaseQuantity(product.productId)"
+                        @click.stop="increaseQuantity(product.id)"
                         :disable="getTotalSelectedQuantity() >= currentGroup.quantity"
                       />
                     </div>
@@ -768,20 +747,12 @@
                   </div>
                   <div class="row justify-between items-center">
                     <div class="text-subtitle2 text-grey-7">
-                      Precio base: ${{ parseFloat(currentPromo.finalPrice || 0).toFixed(2) }}
+                      Precio base: ${{ parseFloat(currentPromo.final_price || 0).toFixed(2) }}
                     </div>
                     <div class="text-h6 text-weight-bold text-primary">
                       ${{ promotionTotal.toFixed(2) }}
                     </div>
                   </div>
-                  <!-- <div v-if="promoSelections.length > 0" class="q-mt-xs">
-                    <div class="text-caption text-grey-6">Modificadores aplicados:</div>
-                    <div v-for="selection in promoSelections" :key="`${selection.groupIndex}-${selection.productId}`" class="text-caption">
-                      <template v-if="getProductModifierInfo(selection)">
-                        {{ getProductModifierInfo(selection) }}
-                      </template>
-                    </div>
-                  </div> -->
                 </q-card>
               </div>
 
@@ -796,7 +767,7 @@
                   class="text-weight-bold"
                 />
                 <q-btn
-                  v-if="currentGroupIndex < currentPromo.selectionGroups.length - 1"
+                  v-if="currentGroupIndex < currentPromo.promotion_details.length - 1"
                   unelevated
                   color="primary"
                   label="Siguiente →"
@@ -806,9 +777,8 @@
                 />
                 <q-btn
                   v-else
-                  unelevated
-                  color="green"
-                  label="🛒 Agregar al Carrito"
+                  color="primary"
+                  label="🛒 Agregar"
                   @click="addPromoToCart"
                   :disable="!isCurrentGroupValid()"
                   class="text-weight-bold"
@@ -1769,7 +1739,7 @@ export default {
       return this.branchOffice
     },
     currentGroup () {
-      return this.currentPromo?.selectionGroups?.[this.currentGroupIndex]
+      return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
     },
     // Reactive promotion total calculation
     promotionTotal () {
@@ -1778,15 +1748,15 @@ export default {
         return 0
       }
 
-      let total = parseFloat(this.currentPromo.finalPrice) || 0
+      let total = parseFloat(this.currentPromo.final_price) || 0
       console.log('💰 Base price (computed):', total)
       console.log('📋 Current selections (computed):', this.promoSelections)
 
       // Add modifiers for selected products
       this.promoSelections.forEach(selection => {
         console.log('🔍 Processing selection (computed):', selection)
-        const group = this.currentPromo.selectionGroups[selection.groupIndex]
-        const product = group?.products?.find(p => p.productId === selection.productId)
+        const group = this.currentPromo.promotion_details[selection.groupIndex]
+        const product = group?.products?.find(p => p.product_id === selection.id)
 
         console.log('🛍️ Found product (computed):', product)
 
@@ -1803,7 +1773,7 @@ export default {
           if (product.priceModifier.type === 'FIXED') {
             modifierAmount = parseFloat(product.priceModifier.value) || 0
           } else if (product.priceModifier.type === 'PERCENTAGE') {
-            const basePrice = parseFloat(this.currentPromo.finalPrice) || 0
+            const basePrice = parseFloat(this.currentPromo.final_price) || 0
             modifierAmount = (basePrice * (parseFloat(product.priceModifier.value) || 0)) / 100
           }
 
@@ -2721,32 +2691,17 @@ export default {
         const params = {
           branch_office_id: this.branchOffice?.id
         }
-        const { data } = await this.$api.get('/promotions', { params })
+        const { data } = await this.$api.get('promotions', { params })
 
         // Add promotions to the beginning of the products list
         if (data && data.length > 0) {
           data.forEach(promotion => {
-            // Transform promotion to match product structure
-            const promotionProduct = {
-              id: `promo-${promotion.id}`,
-              name: promotion.name,
-              barcode: promotion.barcode || `PROMO${promotion.id}`,
-              price: promotion.finalPrice,
-              images: promotion.images || [],
+            this.allProducts.unshift({
+              ...promotion,
               is_bundle: true,
-              bundle_stock: 100,
-              description: promotion.description,
-              startDate: promotion.startDate,
-              endDate: promotion.endDate,
-              channels: promotion.channels,
-              status: promotion.status,
-              showInCatalog: promotion.showInCatalog,
-              requiresStock: promotion.requiresStock,
-              selectionGroups: promotion.selectionGroups || [],
-              finalPrice: promotion.finalPrice,
-              products: promotion.products || []
-            }
-            this.allProducts.unshift(promotionProduct)
+              skip_stock: !promotion.requires_stock,
+              price: promotion.final_price
+            })
           })
         }
 
@@ -3030,8 +2985,6 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
-      console.log('💾 PUSHING PRODUCT TO CART:', product.name)
-      console.log('🔍 Product selectedProducts:', product.selectedProducts)
       const cartProduct = {
         id: product.id,
         name: product.name,
@@ -3050,10 +3003,10 @@ export default {
         unit_of_measure: product.unit_of_measure,
         product_price_lists: product.product_price_lists,
         // Preserve promo/bundle specific properties
-        selectionGroups: product.selectionGroups || [],
+        promotion_details: product.promotion_details || [],
         products: product.products || [],
         selectedProducts: product.selectedProducts || [],
-        finalPrice: product.finalPrice
+        final_price: product.final_price
       }
 
       console.log('🛒 CART PRODUCT CREATED:', cartProduct)
@@ -3103,8 +3056,6 @@ export default {
       } else {
         this.addNewProduct(data, isWeightProduct, quantity)
       }
-
-      // Resetear valores
       this.resetQuantities()
     },
 
@@ -3160,6 +3111,7 @@ export default {
      * Agrega un nuevo producto al carrito
      */
     addNewProduct (data, isWeightProduct, quantity) {
+      console.log({ data, isWeightProduct, quantity })
       const newProduct = {
         ...data,
         product_id: data.id,
@@ -3174,9 +3126,9 @@ export default {
           : data.price * quantity,
         // Explicitly preserve bundle/promo properties
         is_bundle: data.is_bundle || false,
-        products: data.products || [],
-        selectionGroups: data.selectionGroups || [],
-        finalPrice: data.finalPrice || data.price
+        products: data.promotion_details || [],
+        promotion_details: data.promotion_details || [],
+        final_price: data.final_price || data.price
       }
 
       // Asegurar precisión en decimales
@@ -3344,10 +3296,6 @@ export default {
     },
 
     /**
-     * Handles the 'open-box' event from the CashBoxDialog component.
-     * @param {object} data - The data emitted from the dialog, containing the box and amount.
-     */
-    /**
      * Handles the 'box-opened' event from the dialog.
      * Updates the local state to reflect that a box is now open.
      * @param {Object} boxData - Data about the opened box (optional)
@@ -3394,24 +3342,7 @@ export default {
      * Open promo selection dialog
      */
     async openPromoDialog (promo) {
-      console.log('🎯 PROMO MODAL OPENED:', promo.name)
-      console.log('📋 Selection Groups:', promo.selectionGroups)
-      console.log('🔍 FULL PROMO STRUCTURE:', JSON.stringify(promo, null, 2))
-
-      // Clone the promo to avoid modifying the original
       const promoWithDetails = { ...promo }
-
-      // Fetch product details for each selection group
-      if (promoWithDetails.selectionGroups && promoWithDetails.selectionGroups.length > 0) {
-        for (const group of promoWithDetails.selectionGroups) {
-          if (group.products && group.products.length > 0) {
-            // Fetch details for each product in the group
-            for (const product of group.products) {
-              await this.fetchProductDetails(product)
-            }
-          }
-        }
-      }
 
       this.currentPromo = promoWithDetails
       this.currentGroupIndex = 0
@@ -3427,82 +3358,22 @@ export default {
     },
 
     /**
-     * Fetch product details by ID
-     */
-    async fetchProductDetails (product) {
-      try {
-        if (!product.productId) {
-          console.warn('Product ID is missing:', product)
-          return
-        }
-
-        // Check if product already has name and images
-        if (product.name && product.images && product.images.length > 0) {
-          return // Already has details
-        }
-
-        console.log('🔍 Fetching details for product ID:', product.productId)
-
-        const { data } = await this.$api.get(`products/${product.productId}`)
-
-        console.log('📦 Raw API response for product:', data)
-
-        if (data) {
-          // Update product with fetched details
-          product.name = data.name || `Producto ${product.productId}`
-          product.images = data.images || []
-          product.description = data.description || ''
-          product.price = data.price || 0
-          product.barcode = data.barcode || ''
-
-          // Keep existing modifier data if it was already set in promotion structure
-          // Only update if modifier data isn't already present
-          if (!product.priceModifier && !product.modifierType && !product.modifierValue) {
-            product.priceModifier = data.priceModifier || data.price_modifier || data.modifier || null
-            product.modifierType = data.modifierType || data.modifier_type || data.type || null
-            product.modifierValue = data.modifierValue || data.modifier_value || data.value || 0
-          }
-
-          console.log('✅ Product details fetched:', {
-            id: product.productId,
-            name: product.name,
-            imagesCount: product.images.length,
-            modifier: product.priceModifier ? `${product.modifierType}: ${product.modifierValue}` : 'None from API',
-            existingModifier: product.priceModifier ? 'Had modifier from promotion' : 'No existing modifier'
-          })
-        }
-      } catch (error) {
-        console.error('❌ Error fetching product details:', error)
-        // Set fallback values if API call fails
-        product.name = product.name || `Producto ${product.productId}`
-        product.images = product.images || []
-      }
-    },
-
-    /**
      * Initialize preselected products when opening promo dialog
      */
     initializePreselectedProducts () {
       if (!this.currentPromo) return
-
-      console.log('🌟 INITIALIZING PRESELECTED PRODUCTS')
-      this.currentPromo.selectionGroups.forEach((group, groupIndex) => {
+      this.currentPromo.promotion_details.forEach((group, groupIndex) => {
         group.products.forEach(product => {
-          if (product.presetQuantity && product.presetQuantity > 0) {
-            console.log(`⭐ Preselecting ${product.presetQuantity}x ${product.name}`)
-
-            // Add single selection with correct quantity
+          if (product.quantity && product.quantity > 0) {
             this.promoSelections.push({
               groupIndex,
-              productId: product.productId,
+              product_id: product.id,
               product,
-              quantity: product.presetQuantity
+              quantity: product.quantity
             })
           }
         })
       })
-
-      console.log('✅ PRESELECTED PRODUCTS INITIALIZED:', this.promoSelections)
     },
 
     /**
@@ -3514,8 +3385,8 @@ export default {
       console.log('🚀 AUTO-ADVANCING THROUGH COMPLETED GROUPS')
 
       // Check each group starting from the current one
-      while (this.currentGroupIndex < this.currentPromo.selectionGroups.length) {
-        const currentGroup = this.currentPromo.selectionGroups[this.currentGroupIndex]
+      while (this.currentGroupIndex < this.currentPromo.promotion_details.length) {
+        const currentGroup = this.currentPromo.promotion_details[this.currentGroupIndex]
         const groupSelections = this.promoSelections.filter(sel => sel.groupIndex === this.currentGroupIndex)
         const totalSelected = groupSelections.reduce((sum, sel) => sum + sel.quantity, 0)
 
@@ -3526,7 +3397,7 @@ export default {
           console.log(`✅ Group ${this.currentGroupIndex} is complete, advancing...`)
 
           // If this is the last group, we're done
-          if (this.currentGroupIndex === this.currentPromo.selectionGroups.length - 1) {
+          if (this.currentGroupIndex === this.currentPromo.promotion_details.length - 1) {
             console.log('🎉 ALL GROUPS COMPLETE! Ready to add to cart.')
             break
           }
@@ -3556,103 +3427,22 @@ export default {
     /**
      * Check if product is selected in current group
      */
-    isProductSelected (productId) {
+    isProductSelected (id) {
       return this.promoSelections.some(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.productId === productId
+        selection.product_id === id
       )
     },
 
     /**
      * Get product quantity in current group
      */
-    getProductQuantity (productId) {
+    getProductQuantity (id) {
       const selections = this.promoSelections.filter(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.productId === productId
+        selection.product_id === id
       )
       return selections.reduce((total, selection) => total + selection.quantity, 0)
-    },
-
-    /**
-     * Calculate promotion total with modifiers
-     */
-    calculatePromotionTotal () {
-      if (!this.currentPromo) {
-        console.log('❌ No currentPromo available')
-        return 0
-      }
-
-      let total = parseFloat(this.currentPromo.finalPrice) || 0
-      console.log('💰 Base price:', total)
-      console.log('📋 Current selections:', this.promoSelections)
-
-      // Add modifiers for selected products
-      this.promoSelections.forEach(selection => {
-        console.log('🔍 Processing selection:', selection)
-        const group = this.currentPromo.selectionGroups[selection.groupIndex]
-        const product = group?.products?.find(p => p.productId === selection.productId)
-
-        console.log('🛍️ Found product:', product)
-
-        if (product && product.priceModifier) {
-          const quantity = selection.quantity || 1
-          let modifierAmount = 0
-
-          console.log('⚡ Product has modifier:', {
-            type: product.modifierType,
-            value: product.modifierValue,
-            quantity
-          })
-
-          if (product.modifierType === 'FIXED') {
-            modifierAmount = parseFloat(product.modifierValue) || 0
-          } else if (product.modifierType === 'PERCENTAGE') {
-            const basePrice = parseFloat(this.currentPromo.finalPrice) || 0
-            modifierAmount = (basePrice * (parseFloat(product.modifierValue) || 0)) / 100
-          }
-
-          const totalModifier = modifierAmount * quantity
-          total += totalModifier
-
-          console.log('➕ Adding modifier:', totalModifier, 'New total:', total)
-        } else {
-          console.log('❌ Product has no modifier or not found')
-        }
-      })
-
-      console.log('💯 Final total:', total)
-      return Math.max(0, total)
-    },
-
-    /**
-     * Get modifier text for display
-     */
-    getModifierDisplayText (product) {
-      if (!product.priceModifier) return ''
-
-      if (product.modifierType === 'FIXED') {
-        return `+$${product.modifierValue}`
-      } else if (product.modifierType === 'PERCENTAGE') {
-        return `+${product.modifierValue}%`
-      }
-
-      return ''
-    },
-
-    /**
-     * Get product modifier info for selection display
-     */
-    getProductModifierInfo (selection) {
-      const group = this.currentPromo?.selectionGroups[selection.groupIndex]
-      const product = group?.products?.find(p => p.productId === selection.productId)
-
-      if (!product || !product.priceModifier) return null
-
-      const quantity = selection.quantity || 1
-      const modifierText = this.getModifierDisplayText(product)
-
-      return `${product.name} (${quantity}x): ${modifierText}`
     },
 
     /**
@@ -3670,37 +3460,32 @@ export default {
     toggleProductSelection (product) {
       const existingIndex = this.promoSelections.findIndex(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.productId === product.productId
+        selection.product_id === product.id
       )
 
+      console.log('>>>>>>>>>>>>>>>>>>>>', product)
+
       if (existingIndex >= 0) {
-        // Remove selection
-        console.log('❌ PRODUCT DESELECTED:', product.name)
         this.promoSelections.splice(existingIndex, 1)
       } else {
-        // Add selection if within limits
         if (this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
-          console.log('✅ PRODUCT SELECTED:', product.name, 'in group:', this.currentGroup.name)
           this.promoSelections.push({
             groupIndex: this.currentGroupIndex,
-            productId: product.productId,
+            product_id: product.id,
             product,
-            quantity: 1
+            quantity: product?.pivot?.quantity || 1
           })
-        } else {
-          console.log('⚠️ SELECTION LIMIT REACHED for group:', this.currentGroup.name)
         }
       }
-      console.log('📊 CURRENT SELECTIONS:', this.promoSelections)
     },
 
     /**
      * Increase product quantity
      */
-    increaseQuantity (productId) {
+    increaseQuantity (id) {
       const selection = this.promoSelections.find(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.productId === productId
+        selection.product_id === id
       )
       if (selection && this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
         selection.quantity++
@@ -3767,7 +3552,6 @@ export default {
         if (savedState.isOpen && savedState.cashboxId) {
           this.isUserBoxOpen = true
           this.availableCashBoxes = []
-          // Mostrar notificación informativa
           this.$q.notify({
             type: 'info',
             message: 'Sesión de caja restaurada',
@@ -3783,10 +3567,10 @@ export default {
     /**
      * Decrease product quantity
      */
-    decreaseQuantity (productId) {
+    decreaseQuantity (id) {
       const selection = this.promoSelections.find(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.productId === productId
+        selection.product_id === id
       )
       if (selection && selection.quantity > 1) {
         selection.quantity--
@@ -3807,7 +3591,7 @@ export default {
      * Go to next group
      */
     nextGroup () {
-      if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.selectionGroups.length - 1) {
+      if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.promotion_details.length - 1) {
         console.log('➡️ MOVING TO NEXT GROUP from:', this.currentGroup.name)
         this.currentGroupIndex++
         console.log('📍 NOW IN GROUP:', this.currentGroup.name)
@@ -3838,20 +3622,22 @@ export default {
 
       // Create summary of selected products
       const selectedSummary = this.promoSelections.map(sel => ({
-        group: this.currentPromo.selectionGroups[sel.groupIndex].name,
+        group: this.currentPromo.promotion_details[sel.groupIndex].name,
         product: sel.product.name,
         quantity: sel.quantity,
         price: sel.product.price
       }))
+
       console.log('📋 SELECTION SUMMARY:', selectedSummary)
 
-      // Create promo product with selections
+      console.log('>>>>>>>>>>>>>>>>>>>>', this.currentPromo)
+
       const promoProduct = {
         ...this.currentPromo,
         selectedProducts: this.promoSelections,
         quantity: 1,
         amount: 1,
-        price: this.promotionTotal,
+        price: this.currentPromo.final_price,
         subtotal: this.promotionTotal
       }
 
@@ -3862,7 +3648,7 @@ export default {
       this.closePromoDialog()
 
       this.$q.notify({
-        message: `${this.currentPromo.name} agregado al carrito`,
+        message: `${promoProduct.name} agregado`,
         color: 'positive',
         icon: 'check_circle'
       })
