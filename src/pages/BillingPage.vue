@@ -750,7 +750,7 @@
                       Precio base: ${{ parseFloat(currentPromo.final_price || 0).toFixed(2) }}
                     </div>
                     <div class="text-h6 text-weight-bold text-primary">
-                      ${{ promotionTotal.toFixed(2) }}
+                      ${{ currentPromo.final_price }}
                     </div>
                   </div>
                 </q-card>
@@ -1740,54 +1740,6 @@ export default {
     },
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
-    },
-    // Reactive promotion total calculation
-    promotionTotal () {
-      if (!this.currentPromo) {
-        console.log('❌ No currentPromo available for computed')
-        return 0
-      }
-
-      let total = parseFloat(this.currentPromo.final_price) || 0
-      console.log('💰 Base price (computed):', total)
-      console.log('📋 Current selections (computed):', this.promoSelections)
-
-      // Add modifiers for selected products
-      this.promoSelections.forEach(selection => {
-        console.log('🔍 Processing selection (computed):', selection)
-        const group = this.currentPromo.promotion_details[selection.groupIndex]
-        const product = group?.products?.find(p => p.product_id === selection.id)
-
-        console.log('🛍️ Found product (computed):', product)
-
-        if (product && product.priceModifier && typeof product.priceModifier === 'object') {
-          const quantity = selection.quantity || 1
-          let modifierAmount = 0
-
-          console.log('⚡ Product has modifier (computed):', {
-            type: product.priceModifier.type,
-            value: product.priceModifier.value,
-            quantity
-          })
-
-          if (product.priceModifier.type === 'FIXED') {
-            modifierAmount = parseFloat(product.priceModifier.value) || 0
-          } else if (product.priceModifier.type === 'PERCENTAGE') {
-            const basePrice = parseFloat(this.currentPromo.final_price) || 0
-            modifierAmount = (basePrice * (parseFloat(product.priceModifier.value) || 0)) / 100
-          }
-
-          const totalModifier = modifierAmount * quantity
-          total += totalModifier
-
-          console.log('➕ Adding modifier (computed):', totalModifier, 'New total:', total)
-        } else {
-          console.log('❌ Product has no modifier or not found (computed)')
-        }
-      })
-
-      console.log('💯 Final total (computed):', total)
-      return Math.max(0, total)
     },
     /**
      * Total payment
@@ -2985,6 +2937,7 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
+      console.log(product)
       const cartProduct = {
         id: product.id,
         name: product.name,
@@ -3009,14 +2962,10 @@ export default {
         final_price: product.final_price
       }
 
-      console.log('🛒 CART PRODUCT CREATED:', cartProduct)
-      console.log('🔍 Cart Product selectedProducts:', cartProduct.selectedProducts)
       this.products = [
         ...this.products,
         cartProduct
       ]
-
-      console.log('📦 PRODUCTS ARRAY AFTER PUSH:', this.products)
     },
     /**
      * Valida y agrega productos al carrito con cálculos precisos
@@ -3111,7 +3060,6 @@ export default {
      * Agrega un nuevo producto al carrito
      */
     addNewProduct (data, isWeightProduct, quantity) {
-      console.log({ data, isWeightProduct, quantity })
       const newProduct = {
         ...data,
         product_id: data.id,
@@ -3382,36 +3330,25 @@ export default {
     autoAdvanceCompletedGroups () {
       if (!this.currentPromo) return
 
-      console.log('🚀 AUTO-ADVANCING THROUGH COMPLETED GROUPS')
-
       // Check each group starting from the current one
       while (this.currentGroupIndex < this.currentPromo.promotion_details.length) {
         const currentGroup = this.currentPromo.promotion_details[this.currentGroupIndex]
         const groupSelections = this.promoSelections.filter(sel => sel.groupIndex === this.currentGroupIndex)
         const totalSelected = groupSelections.reduce((sum, sel) => sum + sel.quantity, 0)
 
-        console.log(`📊 Group ${this.currentGroupIndex} (${currentGroup.name}): ${totalSelected}/${currentGroup.quantity}`)
-
         // If current group is complete, move to next
         if (totalSelected === currentGroup.quantity) {
-          console.log(`✅ Group ${this.currentGroupIndex} is complete, advancing...`)
-
           // If this is the last group, we're done
           if (this.currentGroupIndex === this.currentPromo.promotion_details.length - 1) {
-            console.log('🎉 ALL GROUPS COMPLETE! Ready to add to cart.')
             break
           }
 
           // Move to next group
           this.currentGroupIndex++
         } else {
-          // Current group is incomplete, stop here
-          console.log(`⏸️ Group ${this.currentGroupIndex} needs user input, stopping auto-advance`)
           break
         }
       }
-
-      console.log(`📍 Final position: Group ${this.currentGroupIndex}`)
     },
 
     /**
@@ -3463,8 +3400,6 @@ export default {
         selection.product_id === product.id
       )
 
-      console.log('>>>>>>>>>>>>>>>>>>>>', product)
-
       if (existingIndex >= 0) {
         this.promoSelections.splice(existingIndex, 1)
       } else {
@@ -3508,7 +3443,6 @@ export default {
         localStorage.setItem('cashbox_state', JSON.stringify(stateWithTimestamp))
         this.cashBoxState = stateWithTimestamp
       } catch (error) {
-        console.error('❌ Error al guardar en localStorage:', error)
         this.$q.notify({
           type: 'negative',
           message: 'Error al guardar estado de caja',
@@ -3574,8 +3508,6 @@ export default {
       )
       if (selection && selection.quantity > 1) {
         selection.quantity--
-        console.log('➖ QUANTITY DECREASED:', selection.product.name, 'new quantity:', selection.quantity)
-        console.log('📊 UPDATED SELECTIONS:', this.promoSelections)
       }
     },
 
@@ -3592,10 +3524,7 @@ export default {
      */
     nextGroup () {
       if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.promotion_details.length - 1) {
-        console.log('➡️ MOVING TO NEXT GROUP from:', this.currentGroup.name)
         this.currentGroupIndex++
-        console.log('📍 NOW IN GROUP:', this.currentGroup.name)
-        console.log('📊 ALL SELECTIONS SO FAR:', this.promoSelections)
       }
     },
 
@@ -3604,9 +3533,7 @@ export default {
      */
     previousGroup () {
       if (this.currentGroupIndex > 0) {
-        console.log('⬅️ MOVING TO PREVIOUS GROUP from:', this.currentGroup.name)
         this.currentGroupIndex--
-        console.log('📍 NOW IN GROUP:', this.currentGroup.name)
       }
     },
 
@@ -3616,32 +3543,14 @@ export default {
     addPromoToCart () {
       if (!this.isCurrentGroupValid()) return
 
-      console.log('🛒 ADDING PROMO TO CART')
-      console.log('🎯 Promo Name:', this.currentPromo.name)
-      console.log('🎪 Final Selections:', this.promoSelections)
-
-      // Create summary of selected products
-      const selectedSummary = this.promoSelections.map(sel => ({
-        group: this.currentPromo.promotion_details[sel.groupIndex].name,
-        product: sel.product.name,
-        quantity: sel.quantity,
-        price: sel.product.price
-      }))
-
-      console.log('📋 SELECTION SUMMARY:', selectedSummary)
-
-      console.log('>>>>>>>>>>>>>>>>>>>>', this.currentPromo)
-
       const promoProduct = {
         ...this.currentPromo,
         selectedProducts: this.promoSelections,
         quantity: 1,
         amount: 1,
         price: this.currentPromo.final_price,
-        subtotal: this.promotionTotal
+        subtotal: this.currentPromo.final_price
       }
-
-      console.log('🛍️ FINAL PROMO PRODUCT:', promoProduct)
 
       this.pushProduct(promoProduct)
       this.calculateTotal()

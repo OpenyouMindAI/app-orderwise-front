@@ -207,16 +207,22 @@
                           v-model="promotion.status"
                           label="Promoción activa"
                           color="positive"
-                        />
-                        <q-toggle
+                          :true-value="1"
+                          :false-value="0"
+                          />
+                          <q-toggle
                           v-model="promotion.show_in_catalog"
                           label="Mostrar en catálogo"
                           color="positive"
-                        />
-                        <q-toggle
+                          :true-value="1"
+                          :false-value="0"
+                          />
+                          <q-toggle
                           v-model="promotion.requires_stock"
                           label="Requiere stock"
                           color="positive"
+                          :true-value="1"
+                          :false-value="0"
                         />
                       </div>
                     </q-card>
@@ -588,8 +594,8 @@ const getInitialPromotionState = () => ({
   start_date: null,
   end_date: null,
   status: true,
-  showInCatalog: true,
-  requiresStock: true,
+  show_in_catalog: true,
+  requires_stock: true,
   promotion_details: [],
   final_price: 0,
   imageUrl: null,
