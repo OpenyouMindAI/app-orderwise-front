@@ -2203,6 +2203,7 @@ export default {
           amount: this.amount,
           branch_office_id: this.branchOffice?.id,
           type_cashflow: this.panel,
+          cashbox_user_id: this.cashBoxState?.id,
           payment_method_id: this.paymentMethodCashFlow
         })
         this.$q.notify({
@@ -2937,7 +2938,6 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
-      console.log(product)
       const cartProduct = {
         id: product.id,
         name: product.name,
