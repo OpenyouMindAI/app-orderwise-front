@@ -1045,7 +1045,7 @@
       @box-created="checkCashBoxStatus"
     />
     <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 800px; max-width: 80vw;'">
         <q-form @submit="saveCashflow" class="column full-height">
           <q-card-section class="q-py-sm flex justify-between items-center bg-primary text-white">
             <span class="text-h6">Flujo de dinero</span>
@@ -1059,7 +1059,8 @@
                   inline
                   :options="[
                     { label: 'Entrada', value: 'debit' },
-                    { label: 'Salida', value: 'credit' }
+                    { label: 'Salida', value: 'credit' },
+                    { label: 'Arqueo', value: 'withdrawal' },
                   ]"
                 />
               </div>
@@ -1098,6 +1099,71 @@
                   autogrow
                   required
                 />
+                <q-card
+                  flat
+                  bordered
+                  class="dropzone-card q-mb-md"
+                  :class="{ 'dropzone-active': isDragOver }"
+                  @dragover.prevent="isDragOver = true"
+                  @dragleave.prevent="isDragOver = false"
+                  @drop.prevent="handleDrop"
+                >
+                  <q-card-section class="text-center q-pa-xl q-gutter-y-md">
+                    <!-- Image Preview Grid -->
+                    <div class="col-12" v-if="cashflowImages.length">
+                      <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
+                      <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
+                        <div
+                          v-for="(image, index) in cashflowImages"
+                          :key="index"
+                          class="col-6 col-sm-4 col-md-4"
+                        >
+                          <q-card flat class="image-preview-card">
+                            <q-img
+                              :src="image.url"
+                              :ratio="1"
+                              class="rounded-borders"
+                            >
+                              <div class="absolute-top-right bg-transparent">
+                                <q-btn
+                                  size="sm"
+                                  icon="close"
+                                  color="negative"
+                                  round
+                                  dense
+                                  @click="deleteImage(image, index)"
+                                />
+                              </div>
+                            </q-img>
+                          </q-card>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else>
+                      <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
+                      <div class="text-h6 text-grey-7 q-mb-sm">
+                        Arrastra las imágenes aquí
+                      </div>
+                      <div class="text-body2 text-grey-5 q-mb-md">
+                        o haz clic para seleccionar archivos
+                      </div>
+                    </div>
+                    <q-btn
+                      color="primary"
+                      label="Seleccionar Imágenes"
+                      @click="$refs.fileInput.click()"
+                      unelevated
+                    />
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      style="display: none"
+                      @change="handleFileSelect"
+                    />
+                  </q-card-section>
+                </q-card>
               </div>
             </div>
           </q-card-section>
@@ -1293,6 +1359,7 @@ export default {
        * @type {Boolean}
        */
       showDetailsModal: false,
+      isDragOver: false,
       /**
        * Current payment
        * @type {Object}
@@ -1429,6 +1496,7 @@ export default {
        * @type {Array}
        */
       availableCashBoxes: [],
+      cashflowImages: [],
       /**
        * Search
        * @type {String}
@@ -2198,14 +2266,15 @@ export default {
           return
         }
         this.loadingCashflow = true
-        await this.$api.post('cashflow', {
+        await this.$api.post('cashflow', this.modelData({
           description: this.description,
           amount: this.amount,
           branch_office_id: this.branchOffice?.id,
           type_cashflow: this.panel,
           cashbox_user_id: this.cashBoxState?.id,
-          payment_method_id: this.paymentMethodCashFlow
-        })
+          payment_method_id: this.paymentMethodCashFlow,
+          images: this.cashflowImages
+        }))
         this.$q.notify({
           message: 'Entrada/Salida guardada',
           icon: 'check_circle',
@@ -2338,6 +2407,77 @@ export default {
       } else {
         this.payments = [...this.payments, payment]
       }
+    },
+    /**
+     * Model product
+     * @param {Object} data product
+     */
+    modelData (data, put = false) {
+      const formData = new FormData()
+      if (put) {
+        formData.append('_method', 'put')
+      }
+      for (const key in data) {
+        if (Object.hasOwnProperty.call(data, key)) {
+          const element = data[key]
+          if (typeof data[key] !== 'object') {
+            formData.append(key, element)
+          }
+        }
+      }
+
+      data.images.forEach((element, index) => {
+        formData.append(`images[${index}]`, element.image)
+      })
+
+      return formData
+    },
+    /**
+     * Delete image
+     * @param {Object} image data image
+     * @param {Number} index index image
+     */
+    deleteImage (image, index) {
+      if (image.id) {
+        this.$api.delete(`product-images/${image.id}`)
+          .then(({ data }) => {
+            this.cashflowImages.splice(index, 1)
+          })
+          .catch(err => {
+            this.visible = false
+            Notify.create({
+              message: err.message,
+              icon: 'warning',
+              color: 'negative'
+            })
+          })
+      } else {
+        this.cashflowImages.splice(index, 1)
+      }
+    },
+    handleDrop (event) {
+      this.isDragOver = false
+      const files = Array.from(event.dataTransfer.files)
+      this.processFiles(files)
+    },
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      this.processFiles(files)
+    },
+    processFiles (files) {
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            this.cashflowImages.push({
+              image: file,
+              url: e.target.result
+            })
+          }
+          reader.readAsDataURL(file)
+        }
+      })
+      console.log(this.cashflowImages)
     },
     /**
      * Prompt cash amount
@@ -3156,14 +3296,6 @@ export default {
     async checkCashBoxStatus () {
       console.log('🔄 Verificando estado de cajas con nuevo algoritmo simplificado')
       try {
-        const savedState = this.getCashBoxState()
-
-        if (!savedState) {
-          this.isUserBoxOpen = false
-          await this.loadAvailableCashBoxes()
-          return
-        }
-
         const { data } = await this.$api.get('cashier-init')
 
         const cashierSession = data
@@ -3482,38 +3614,6 @@ export default {
         })
       }
     },
-
-    /**
-     * Checks if there's a cash box state indicating an open box
-     * @returns {Boolean} True if there's an open cash box state
-     */
-    hasCashBoxStateOpen () {
-      const state = this.getCashBoxState()
-      return state?.isOpen === true && state?.cashboxId
-    },
-
-    /**
-     * Initializes the cash box state from company_config on page load
-     * This provides a fallback when API is not available
-     */
-    initializeCashBoxStateFromConfig () {
-      const savedState = this.getCashBoxState()
-      if (savedState) {
-        if (savedState.isOpen && savedState.cashboxId) {
-          this.isUserBoxOpen = true
-          this.availableCashBoxes = []
-          this.$q.notify({
-            type: 'info',
-            message: 'Sesión de caja restaurada',
-            caption: `Caja ${savedState.cashboxId} sigue abierta desde ${new Date(savedState.openedAt).toLocaleDateString()}`
-          })
-        } else {
-          this.isUserBoxOpen = false
-        }
-      } else {
-        this.isUserBoxOpen = false
-      }
-    },
     /**
      * Decrease product quantity
      */
@@ -3663,4 +3763,30 @@ export default {
     font-size: 11px !important;
   }
 }
+</style>
+<style>
+
+.dropzone-card {
+  border: 2px dashed #e0e0e0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.profit-percentage-input input {
+  text-align: right !important;
+}
+
+.dropzone-card:hover,
+.dropzone-active {
+  border-color: #1976d2;
+}
+
+.image-preview-card {
+  transition: transform 0.2s ease;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.02);
+}
+
 </style>
