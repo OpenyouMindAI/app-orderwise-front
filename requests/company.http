@@ -1,7 +1,33 @@
 @api_url = https://api-orderwise.qbitsinc.com/api
 @token = eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiZWUwY2ZlMmQyODYxODVkNTg3ZDUyMjBkNDFlMGNmNGVkNzA1OGFhZDkzZDNmYzMzMmU3NGNjNTdhNWE1OGZiYzZkMDIwMTBlMGU4YzNkOTYiLCJpYXQiOjE3NTUyNjExMDEuNDA0NDIxLCJuYmYiOjE3NTUyNjExMDEuNDA0NDIzLCJleHAiOjE3ODY3OTcxMDEuNDAyMjksInN1YiI6IjM1Iiwic2NvcGVzIjpbXX0.VqrmHk9GKR_1eEZ__o4PgtKcvo7HiXW-XEdDYY-yb1Td9ejL4C6uOftCYNoFEHnsAsOPi8odOZ2FAiZmX3r0hp-xy8cxQw4kuE3JcyllfJwX4g-Fy8_U7STd4xngOCkY6ugKRq3bAPc7AsyOISPZj1YiTDwP_rqY5CR2dJyJeXMrdbZKH0qoOhcW3ImVYXLPNYsGcvc5qNT9_3rtTgqbaN1JN5D_Q_DXasIaSYLOEgAAfgOsAl7dqn2uFDA8n-V2cb8g5R5fsuaDG_k2xQzMbQg5xz_AH4ZqFSFHW13nUYiiRMKZFZjAu5w0HTNYrRWPpsHw_KndlFx3RlLDNZqkBlcjRP8Es7cJ4u0i7sV2fkKkVn3Gez2o4FsqsKoUzLAckpb2AQ7I657TwdK5gd3LNRBs-_PGASa-T6vaNlKivBzFD1cRcQm8EWjHhGo8hX9sVTT-edNE2FEWL9cxIQ6OeNLjjNADacb-ZpOSwVTARUoiCAZiyZzzwq5ldaiuEAQEnQL7ldRVv2AIMXrbRuk_VjHqDa2HPCuzM-ruomf6W8VQJnhzAuYngW_ootTq_hliTXnYd_7fatSiGN8V___kKbWm5z1h41Pme5TsJEPexqnpJ5C3M4ZSrXrU9aOt4sLK6T5CLUjgV7iZQVxlMSVc6nGX7tMD--uoYFZqVjBHFxs
 
-### Obtener configuración de la empresa
-GET {{api_url}}/company-configs
+
+### Listar cajas
+GET {{api_url}}/cashboxes
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+### Crear caja
+POST {{api_url}}/cashboxes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Caja Terceria",
+  "status": "active",
+  "branch_office_id": 1
+}
+
+### Ver cajas activas
+GET {{api_url}}/cashier-init
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Cerrar caja
+PUT {{api_url}}/cashier-close/29
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "end_balance": 1000
+}

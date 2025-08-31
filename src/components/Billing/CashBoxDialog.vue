@@ -64,24 +64,50 @@
 
         <!-- State 3: Cash boxes available - select and open -->
         <q-card-section v-else class="q-pt-md">
-          <q-form @submit.prevent="handleOpenBox">
+          <q-form @submit.prevent="openCashBoxSession">
             <q-select
               ref="boxSelect"
-              v-model="selectedBox"
+              v-model="selectedCashBox"
               :options="availableCashBoxes"
               label="Selecciona una caja"
               option-value="id"
-              option-label="name"
               filled
               lazy-rules
               :rules="boxSelectionRules"
               class="q-mb-md"
               :disable="availableCashBoxes.length === 1"
-            />
+            >
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon
+                      :name="scope.opt.open ? 'radio_button_checked' : 'radio_button_unchecked'"
+                      :color="scope.opt.open ? 'negative' : 'positive'"
+                    />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ scope.opt.open ? 'Caja abierta' : 'Caja cerrada' }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+              <template v-slot:selected-item="scope">
+                <div class="row items-center">
+                  <q-icon
+                    :name="scope.opt.open ? 'radio_button_checked' : 'radio_button_unchecked'"
+                    :color="scope.opt.open ? 'negative' : 'positive'"
+                    class="q-mr-sm"
+                  />
+                  <span>{{ scope.opt.name }}</span>
+                </div>
+              </template>
+            </q-select>
 
             <q-input
               ref="amountInput"
-              v-model.number="initialAmount"
+              v-model.number="initialBalance"
               type="number"
               label="Monto inicial"
               filled
@@ -91,8 +117,8 @@
             />
 
             <q-card-actions align="right" class="q-mt-md">
-              <q-btn flat label="Cancelar" color="primary" v-close-popup :disable="isSubmitting" />
-              <q-btn type="submit" label="Abrir Caja" color="primary" :loading="isSubmitting" />
+              <q-btn flat label="Cancelar" color="primary" v-close-popup :disable="loadingOpenBox" />
+              <q-btn type="submit" label="Abrir Caja" color="primary" :loading="loadingOpenBox" />
             </q-card-actions>
           </q-form>
         </q-card-section>
@@ -124,6 +150,10 @@ export default {
     availableCashBoxes: {
       type: Array,
       default: () => []
+    },
+    branchOffice: {
+      type: Object,
+      required: true
     }
   },
 
@@ -137,10 +167,12 @@ export default {
       // Loading and submission states
       isReady: false,
       isSubmitting: false,
+      loadingOpenBox: false,
+      loadingCloseBox: false,
 
       // Form data
-      selectedBox: null,
-      initialAmount: null,
+      selectedCashBox: null,
+      initialBalance: null,
       newBoxName: '',
       endBalanceAmount: null,
 
@@ -156,10 +188,6 @@ export default {
   computed: {
     authStore () {
       return authentication()
-    },
-
-    branchOffice () {
-      return this.authStore.branchOffice
     },
 
     // Validation rules
@@ -191,7 +219,7 @@ export default {
     availableCashBoxes: {
       handler (newVal) {
         if (newVal && newVal.length === 1) {
-          this.selectedBox = newVal[0]
+          this.selectedCashBox = newVal[0]
         }
       },
       immediate: true
@@ -226,16 +254,16 @@ export default {
      * Reset form to initial state
      */
     resetForm () {
-      this.initialAmount = null
+      this.initialBalance = null
       this.newBoxName = ''
       this.endBalanceAmount = null
       this.isReady = false
       this.boxAlreadyOpen = false
       this.cashierSession = null
 
-      // Don't reset selectedBox if there's only one available
+      // Don't reset selectedCashBox if there's only one available
       if (this.availableCashBoxes.length !== 1) {
-        this.selectedBox = null
+        this.selectedCashBox = null
       }
     },
 
@@ -265,51 +293,16 @@ export default {
     // ------------------------------------------
 
     /**
-     * Check current cash box status from localStorage and backend
+     * Check current cash box status from backend
      */
     async checkCashBoxStatus () {
       try {
-        const savedState = this.getCashBoxStateFromStorage()
-
-        // If no localStorage data, skip backend check
-        if (!savedState) {
-          this.boxAlreadyOpen = false
-          return
-        }
-
-        // Verify with backend if localStorage has data
-        const response = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
-
+        const response = await this.$api.get('cashier-init')
         this.cashierSession = response.data
-        this.boxAlreadyOpen = this.isSessionOpen(response.data)
+        this.boxAlreadyOpen = response.data && response.data.open === true
       } catch (error) {
         this.handleCashBoxStatusError(error)
       }
-    },
-
-    /**
-     * Get cash box state from localStorage
-     * @returns {Object|null} Cash box state or null
-     */
-    getCashBoxStateFromStorage () {
-      try {
-        const localState = localStorage.getItem('cashbox_state')
-        return localState ? JSON.parse(localState) : null
-      } catch (error) {
-        console.error('Error reading localStorage:', error)
-        return null
-      }
-    },
-
-    /**
-     * Check if cashier session is open
-     * @param {Object} session - Cashier session data
-     * @returns {boolean} True if session is open
-     */
-    isSessionOpen (session) {
-      return session &&
-             session.status === 'open' &&
-             !session.close_date
     },
 
     /**
@@ -331,37 +324,43 @@ export default {
     // ------------------------------------------
 
     /**
-     * Handle opening an existing cash box
+     * Open cash box session with new API
      */
-    async handleOpenBox () {
-      if (!this.validateOpenBoxForm()) return
-
-      this.isSubmitting = true
-
+    async openCashBoxSession () {
       try {
+        this.loadingOpenBox = true
+
         const payload = {
-          cashbox_id: this.selectedBox.id,
+          cashbox_id: this.selectedCashBox.id,
           user_id: this.cashierId,
-          init_balance: parseFloat(this.initialAmount),
-          init_date: new Date().toISOString().split('T')[0],
-          status: 'open'
+          init_balance: parseFloat(this.initialBalance),
+          init_date: new Date().toISOString().split('T')[0], // Fecha actual YYYY-MM-DD
+          init_time: new Date().toTimeString().split(' ')[0], // Hora actual HH:MM:SS
+          status: 'open',
+          branch_office_id: this.branchOffice.id
         }
 
-        await this.$api.post('cashier-open', payload)
+        const response = await this.$api.post('cashier-open', payload)
 
-        this.showSuccessNotification(`Caja "${this.selectedBox.name}" abierta con éxito`, `Monto inicial: $${this.initialAmount}`)
-
-        this.$emit('box-opened', {
-          cashboxId: this.selectedBox.id,
-          initialBalance: this.initialAmount,
-          boxName: this.selectedBox.name
+        this.$q.notify({
+          type: 'positive',
+          message: 'Caja abierta correctamente',
+          timeout: 3000
         })
 
-        this.closeDialog()
+        // Emit event with session data
+        this.$emit('box-opened', {
+          sessionId: response.data.id,
+          cashboxId: this.selectedCashBox.id,
+          initialBalance: this.initialBalance
+        })
+
+        this.resetForm()
+        this.$emit('update:modelValue', false)
       } catch (error) {
-        this.handleApiError(error, 'Error al abrir caja')
+        this.handleApiError(error, 'Error al abrir la caja')
       } finally {
-        this.isSubmitting = false
+        this.loadingOpenBox = false
       }
     },
 
@@ -413,10 +412,10 @@ export default {
 
       try {
         // Get current session to ensure we have the correct ID
-        const sessionResponse = await this.$api.get(`cashier-init?user_id=${this.cashierId}`)
+        const sessionResponse = await this.$api.get('cashier-init')
         const cashierSession = sessionResponse.data
 
-        if (!this.isSessionOpen(cashierSession)) {
+        if (!cashierSession || !cashierSession.open) {
           throw new Error('No se encontró una sesión de caja abierta para cerrar')
         }
 
@@ -449,12 +448,12 @@ export default {
      * @returns {boolean} True if valid
      */
     validateOpenBoxForm () {
-      if (!this.selectedBox?.id) {
+      if (!this.selectedCashBox?.id) {
         this.showErrorNotification('Debes seleccionar una caja válida')
         return false
       }
 
-      if (this.initialAmount === null || this.initialAmount === '' || this.initialAmount < 0) {
+      if (this.initialBalance === null || this.initialBalance === '' || this.initialBalance < 0) {
         this.showErrorNotification('El monto inicial debe ser mayor o igual a cero')
         return false
       }

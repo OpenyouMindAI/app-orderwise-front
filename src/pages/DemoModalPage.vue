@@ -617,8 +617,12 @@ const suggestedBasePrice = computed(() => {
     let maxPrice = 0
 
     group.products.forEach(product => {
-      if (product.price && product.price > maxPrice) {
-        maxPrice = product.price
+      // Obtener detalles completos del producto usando getProductById
+      const productDetails = getProductById(product.product_id)
+      const productPrice = productDetails?.price || 0
+
+      if (productPrice > maxPrice) {
+        maxPrice = productPrice
       }
     })
     total += maxPrice * quantity
@@ -675,12 +679,13 @@ const loadPromotionForEdit = (promotionData) => {
     promotion.value = {
       ...getInitialPromotionState(),
       ...promotionData,
-      promotion_details: promotionData.promotion_details.map(group => ({
+      promotion_details: promotionData.promotion_details?.map(group => ({
         ...group,
-        products: group.products.map(product => ({
+        products: group.products?.map(product => ({
           ...product,
-          quantity: product.pivot.quantity || 0
-        }))
+          quantity: product.pivot?.quantity || product.quantity || 0,
+          preselectedQuantity: product.pivot?.preselectedQuantity || product.preselectedQuantity || 0
+        })) || []
       })) || [],
       images: promotionData.images || []
     }
@@ -817,7 +822,7 @@ const filterProducts = (val, update) => {
       p => {
         const label = p.label || p.name || ''
         const match = label.toLowerCase().indexOf(needle) > -1
-        console.log(`Producto: ${label}, Busca: ${needle}, Coincide: ${match}`) // Debug
+        // console.log(`Producto: ${label}, Busca: ${needle}, Coincide: ${match}`) // Debug
         return match
       }
     )
@@ -1024,6 +1029,7 @@ const savePromotion = async () => {
 
   saving.value = true
   try {
+    console.log('📤 Enviando promoción:', JSON.stringify(promotion.value, null, 2)) // Debug
     let response
     if (isEditMode.value) {
       // Actualizar promoción existente
