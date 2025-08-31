@@ -1059,7 +1059,7 @@ export default {
   },
   data () {
     return {
-      cashBoxState: null,
+      currentCashierSession: null,
 
       scanner: false,
       /**
@@ -2856,73 +2856,35 @@ export default {
      * Checks the current cash box status for the user
      * and updates the isUserBoxOpen state accordingly.
      */
+    /**
+     * Simplified method that just calls loadAvailableCashBoxes
+     * All cashbox logic is now handled in loadAvailableCashBoxes
+     */
     async checkCashBoxStatus () {
+      console.log('🔄 Verificando estado de cajas con nuevo algoritmo simplificado')
       try {
-        const savedState = this.getCashBoxState()
-
-        if (!savedState) {
-          this.isUserBoxOpen = false
-          this.showCashBoxDialog = true
-          await this.loadAvailableCashBoxes()
-          return
-        }
-
-        const { data } = await this.$api.get('cashier-init')
-
-        const cashierSession = data
-
-        // Verificar si la sesión está abierta
-        const isSessionOpen = cashierSession &&
-                             cashierSession.status === 'open' &&
-                             !cashierSession.close_date
-
-        if (isSessionOpen) {
-          // Usuario tiene una caja abierta - sincronizar datos
-          this.isUserBoxOpen = true
-          this.availableCashBoxes = []
-
-          // Actualizar localStorage con datos más recientes de la API
-          await this.updateCashBoxState({
-            id: cashierSession.id,
-            isOpen: true,
-            openedAt: cashierSession.init_date || savedState.openedAt,
-            cashboxId: cashierSession.cashbox_id,
-            userId: this.userSession.id,
-            initialBalance: parseFloat(cashierSession.init_balance) || savedState.initialBalance || 0,
-            sessionId: cashierSession.id
-          })
-        } else {
-          // Usuario no tiene caja abierta - limpiar localStorage
-          localStorage.removeItem('cashbox_state')
-          this.isUserBoxOpen = false
-          this.showCashBoxDialog = true
-          await this.loadAvailableCashBoxes()
-        }
+        await this.loadAvailableCashBoxes()
       } catch (error) {
-        if (error.response?.status === 404) {
-          localStorage.removeItem('cashbox_state')
-          this.isUserBoxOpen = false
-          await this.loadAvailableCashBoxes()
-        } else {
-          console.error('❌ Error al verificar estado de caja:', error)
-          this.isUserBoxOpen = false
-          this.availableCashBoxes = []
-
-          // Mostrar notificación solo para errores reales
-          this.$q.notify({
-            type: 'negative',
-            message: 'Error al verificar el estado de la caja',
-            caption: 'Intenta recargar la página'
-          })
-        }
+        console.error('Error en checkCashBoxStatus:', error)
+        // Fallback: no mostrar modal ni romper la app
+        this.isUserBoxOpen = false
+        this.showCashBoxDialog = false
+        this.availableCashBoxes = []
+        this.currentCashierSession = null
       }
     },
 
     /**
-     * Loads available cash boxes from the API
-     * Filters only active cash boxes
+     * Loads available cash boxes and handles automatic selection logic
+     * New simplified algorithm:
+     * - If user has 1 box and it's open: auto-select
+     * - If user has 1 box and it's closed: show modal to enter amount
+     * - If user has multiple boxes: show all for selection
      */
     async loadAvailableCashBoxes () {
+      console.log('🔍 Iniciando loadAvailableCashBoxes...')
+      console.log('🏢 branchOffice actual:', this.branchOffice)
+
       if (!this.branchOffice?.id) {
         console.error('Error: branchOffice.id no está disponible. No se pueden cargar cajas.')
         this.availableCashBoxes = []
@@ -2930,24 +2892,65 @@ export default {
       }
 
       try {
-        const params = {
-          dataEqualFilter: {
-            branch_office_id: this.branchOffice.id
-          }
-        }
+        // Obtener todas las cajas del sistema
+        const response = await this.$api.get('cashboxes')
+        console.log('📦 Respuesta completa de la API:', response.data)
 
-        // Obtener todas las cajas del sistema para la sucursal actual
-        const response = await this.$api.get('cashboxes', { params })
         const allBoxes = response.data.data || response.data || []
+        console.log('📋 Todas las cajas obtenidas:', allBoxes)
 
-        // Filtrar solo las cajas activas (el backend ya debería hacer esto, pero es una buena práctica)
-        this.availableCashBoxes = allBoxes.filter(box =>
-          box.status === 'active' && !box.disabled
+        // Filtrar cajas activas del usuario actual
+        const userBoxes = allBoxes.filter(box =>
+          box.status === 'active' &&
+          !box.disabled &&
+          box.branch_office_id === this.branchOffice.id
         )
+
+        console.log('📦 Cajas del usuario actual:', userBoxes)
+        console.log('🔢 Cantidad de cajas:', userBoxes.length)
+
+        // Aplicar nueva lógica simplificada
+        if (userBoxes.length === 0) {
+          // No hay cajas disponibles
+          console.log('⚠️ No hay cajas disponibles para este usuario')
+          this.availableCashBoxes = []
+          this.isUserBoxOpen = false
+          this.showCashBoxDialog = false
+        } else if (userBoxes.length === 1) {
+          // Usuario tiene solo 1 caja
+          const singleBox = userBoxes[0]
+          console.log('📦 Usuario tiene solo 1 caja:', singleBox)
+          console.log('🔓 Estado open de la caja:', singleBox.open)
+
+          if (singleBox.open === true) {
+            // Caja está abierta: auto-seleccionar
+            console.log('✅ Auto-seleccionando caja abierta')
+            this.isUserBoxOpen = true
+            this.availableCashBoxes = []
+            this.currentCashierSession = { cashbox: singleBox }
+            this.showCashBoxDialog = false
+          } else {
+            // Caja está cerrada: mostrar modal para ingresar monto
+            console.log('🔒 Caja cerrada, mostrando modal para abrir')
+            this.isUserBoxOpen = false
+            this.availableCashBoxes = [singleBox]
+            this.currentCashierSession = null
+            this.showCashBoxDialog = true
+          }
+        } else {
+          // Usuario tiene múltiples cajas: mostrar todas para selección
+          console.log('📦 Usuario tiene múltiples cajas, mostrando selector')
+          this.availableCashBoxes = userBoxes
+          this.isUserBoxOpen = false
+          this.currentCashierSession = null
+          this.showCashBoxDialog = true
+        }
       } catch (error) {
-        console.error('Error al cargar cajas disponibles:', error)
+        console.error('❌ Error al cargar cajas disponibles:', error)
+        console.error('❌ Detalles del error:', error.response?.data || error.message)
         this.availableCashBoxes = []
-        throw error // Re-throw para que el método que llama pueda manejar el error
+        this.isUserBoxOpen = false
+        this.showCashBoxDialog = false
       }
     },
 
@@ -2963,113 +2966,27 @@ export default {
     async handleBoxOpened (boxData = {}) {
       this.isUserBoxOpen = true
       this.availableCashBoxes = [] // Ya no hay cajas disponibles porque tiene una abierta
+      this.currentCashierSession = boxData
+      this.showCashBoxDialog = false
 
-      try {
-        // Actualizar estado de caja en company_config
-        await this.updateCashBoxState({
-          isOpen: true,
-          openedAt: new Date().toISOString(),
-          cashboxId: boxData.cashboxId || null,
-          userId: this.userSession.id,
-          initialBalance: boxData.initialBalance || 0
-        })
-      } catch (error) {
-        console.error('Error al guardar estado de apertura de caja:', error)
-      }
+      console.log('✅ Caja abierta correctamente:', boxData)
     },
 
     async handleBoxClosed (closeData = {}) {
       this.isUserBoxOpen = false
+      this.currentCashierSession = null
 
       try {
-        // Eliminar completamente el registro de localStorage al cerrar la caja
-        localStorage.removeItem('cashbox_state')
-
-        // Recargar las cajas disponibles después del cierre
+        // Actualizar disponibilidad de cajas después del cierre
         await this.loadAvailableCashBoxes()
+
+        // Mostrar modal para seleccionar otra caja o crear una nueva
+        this.showCashBoxDialog = true
       } catch (error) {
-        console.error('Error al cargar cajas disponibles después del cierre:', error)
-        this.availableCashBoxes = []
-
-        this.$q.notify({
-          type: 'warning',
-          message: 'Caja cerrada, pero hubo un problema al recargar las cajas disponibles',
-          caption: 'Intenta recargar la página'
-        })
-      }
-    },
-
-    /**
-     * Actualiza el estado de la caja en localStorage únicamente
-     * @param {Object} cashBoxState - Estado de la caja a guardar
-     */
-    async updateCashBoxState (data) {
-      const stateWithTimestamp = {
-        ...data,
-        lastUpdated: new Date().toISOString()
-      }
-
-      try {
-        localStorage.setItem('cashbox_state', JSON.stringify(stateWithTimestamp))
-        this.cashBoxState = stateWithTimestamp
-      } catch (error) {
-        console.error('❌ Error al guardar en localStorage:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Error al guardar estado de caja',
-          caption: 'Los cambios podrían no persistir'
-        })
-      }
-    },
-
-    /**
-     * Obtiene el estado actual de la caja desde localStorage
-     * @returns {Object|null} El estado actual de la caja o null
-     */
-    getCashBoxState () {
-      try {
-        const localState = localStorage.getItem('cashbox_state')
-        if (localState) {
-          return JSON.parse(localState)
-        }
-      } catch (error) {
-        console.error('Error al leer estado desde localStorage:', error)
-      }
-      return null
-    },
-
-    /**
-     * Checks if there's a cash box state indicating an open box
-     * @returns {Boolean} True if there's an open cash box state
-     */
-    hasCashBoxStateOpen () {
-      const state = this.getCashBoxState()
-      return state?.isOpen === true && state?.cashboxId
-    },
-
-    /**
-     * Initializes the cash box state from company_config on page load
-     * This provides a fallback when API is not available
-     */
-    initializeCashBoxStateFromConfig () {
-      const savedState = this.getCashBoxState()
-      if (savedState) {
-        if (savedState.isOpen && savedState.cashboxId) {
-          this.isUserBoxOpen = true
-          this.availableCashBoxes = []
-          // Mostrar notificación informativa
-          this.$q.notify({
-            type: 'info',
-            message: 'Sesión de caja restaurada',
-            caption: `Caja ${savedState.cashboxId} sigue abierta desde ${new Date(savedState.openedAt).toLocaleDateString()}`
-          })
-        } else {
-          this.isUserBoxOpen = false
-        }
-      } else {
-        this.isUserBoxOpen = false
+        console.error('Error al procesar cierre de caja:', error)
       }
     }
+
   }
 }
 </script>
