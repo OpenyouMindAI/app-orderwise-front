@@ -196,6 +196,12 @@ const routes = [
         component: () => import('pages/TypeOfServicePage.vue')
       },
       {
+        path: 'cashboxes',
+        name: 'Cashbox',
+        meta: { requiresAuth: true },
+        component: () => import('pages/CashboxPage.vue')
+      },
+      {
         path: 'transfer-products',
         name: 'TransferProduct',
         meta: { requiresAuth: true },

@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddTypeOfService = true" icon="add_circle" label="Agregar Tipo"/>
+        <q-btn color="primary" @click="openAddTypeOfService = true" icon="add_circle" label=""/>
       </div>
       <div class="col-12">
         <q-table
@@ -37,7 +37,6 @@
       </div>
     </div>
 
-    <!-- Diálogo para agregar nuevo tipo de servicio -->
     <q-dialog v-model="openAddTypeOfService" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveServiceType">
@@ -67,14 +66,13 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn flat label="Cancelar" @click="closeModal" />
+            <q-btn style="background-color: #3b9e9d; color: white;" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="loading"/>
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
 
-    <!-- Diálogo para editar tipo de servicio -->
     <q-dialog v-model="openEditTypeOfService" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveEdit">
@@ -104,7 +102,7 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn flat label="Cancelar" @click="closeModal" />
+            <q-btn style="background-color: #3b9e9d; color: white;" label="Cancelar" @click="closeModal" />
             <q-btn color="negative" label="Eliminar" @click="deleteServiceType" :loading="loading" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="loading"/>
           </q-card-actions>
@@ -189,8 +187,8 @@ export default {
         .catch(error => {
           this.loading = false
           const message = error.response?.data?.message ||
-                 error.message ||
-                 'Error al procesar la solicitud'
+                   error.message ||
+                   'Error al procesar la solicitud'
 
           Notify.create({
             message,
@@ -213,7 +211,7 @@ export default {
         .catch(error => {
           this.loading = false
           const message = error.response?.data?.message ||
-                 'Error al actualizar el tipo de servicio'
+                   'Error al actualizar el tipo de servicio'
 
           Notify.create({
             message: message.includes('validation')
