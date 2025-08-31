@@ -16,6 +16,12 @@ const routes = [
         component: () => import('pages/ProductPage.vue')
       },
       {
+        path: 'promotions',
+        meta: { requiresAuth: true },
+        name: 'Promotion',
+        component: () => import('pages/PromotionPage.vue')
+      },
+      {
         path: 'bills',
         meta: { requiresAuth: true },
         name: 'Bill',
@@ -230,6 +236,18 @@ const routes = [
         name: 'TableControl',
         meta: { requiresAuth: true },
         component: () => import('pages/TableControlPage.vue')
+      },
+      {
+        path: 'point-of-sales',
+        name: 'PointOfSale',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/PointOfSalePage.vue')
+      },
+      {
+        path: 'promotions',
+        name: 'Promotion',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/PromotionPage.vue')
       }
     ]
   },

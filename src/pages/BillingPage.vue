@@ -224,7 +224,7 @@
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
-                row-key="name"
+                row-key="id"
                 title="Artículos"
                 dense
                 hide-pagination
@@ -236,7 +236,7 @@
                 <template v-slot:body="props">
                   <q-tr :props="props">
                     <q-td key="barcode" :props="props">
-                      {{ props.row.barcode }}
+                      {{ props.row.barcode || '-' }}
                     </q-td>
                     <q-td key="name" :props="props">
                       {{ props.row.name.slice(0, 40) }}{{ props.row.name.length > 40 ? '...' : '' }}
@@ -315,7 +315,93 @@
                       {{ formatNumber(props.row.subtotal) }}
                     </q-td>
                     <q-td key="actions" :props="props">
-                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)" />
+                      <q-btn
+                        v-if="props.row.promotion_details && props.row.promotion_details.length > 0"
+                        :icon="props.expand ? 'expand_less' : 'expand_more'"
+                        size="sm"
+                        color="primary"
+                        @click="props.expand = !props.expand"
+                        round
+                        class="q-mr-xs"
+                      />
+                      <q-btn icon="delete" size="sm" color="negative" @click="deleteProduct(props)" round/>
+                    </q-td>
+                  </q-tr>
+                  <q-tr v-show="props.expand" :props="props">
+                    <q-td colspan="100%" class="q-pa-sm">
+                      <div class="text-left">
+                        <div v-if="props.row.promotion_details && props.row.promotion_details.length > 0">
+                          <div class="text-weight-medium q-mb-sm">Detalles de la promoción</div>
+
+                          <div v-for="group in props.row.promotion_details" :key="group.name" class="q-mb-sm">
+                            <div class="text-subtitle2 text-grey-8 q-mb-xs">
+                              {{ group.name }}
+                            </div>
+                            <div class="q-ml-sm">
+                              <!-- Show selected products for this group -->
+                              <div v-if="props.row.selectedProducts && props.row.selectedProducts.length > 0">
+                                <div
+                                  v-for="selection in props.row.selectedProducts.filter(sel => sel.groupIndex === props.row.promotion_details.indexOf(group))"
+                                  :key="selection.product_id"
+                                  class="row justify-between q-py-xs"
+                                >
+                                  <span>{{ selection.product.name }}</span>
+                                  <div class="row items-center q-gutter-xs">
+                                    <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <!-- Fallback if no selected products -->
+                              <div v-else>
+                                <div class="text-caption text-grey-6 q-py-xs">
+                                  No hay productos seleccionados para este grupo
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
+                            <div class="row justify-between items-center">
+                              <span class="text-weight-medium">Total promoción:</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.subtotal || props.row.final_price || props.row.price) }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else-if="(props.row.selectedProducts && props.row.selectedProducts.length > 0) || (props.row.products && props.row.products.length > 0)">
+                          <div class="text-weight-medium q-mb-sm">Productos incluidos</div>
+                          <div class="q-ml-sm">
+                            <!-- Show selected products if available (for promos from modal) -->
+                            <div v-if="props.row.selectedProducts && props.row.selectedProducts.length > 0">
+                              <div v-for="selection in props.row.selectedProducts" :key="selection.product_id" class="row justify-between q-py-xs">
+                                <span>{{ selection.product.name }}</span>
+                                <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
+                              </div>
+                            </div>
+                            <!-- Fallback to all products (for legacy promos) -->
+                            <div v-else>
+                              <div v-for="item in props.row.products" :key="item.product_id || item.id" class="row justify-between q-py-xs">
+                                <span>{{ item.name }}</span>
+                                <span class="text-weight-medium">1 unidad</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-if="props.row.final_price" class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
+                            <div class="row justify-between items-center">
+                              <span class="text-weight-medium">Total:</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.final_price) }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else-if="props.row.is_bundle">
+                          <div class="text-grey-6">Producto promocional sin detalles específicos</div>
+                        </div>
+
+                        <div v-else>
+                          <div class="text-grey-6">No hay detalles adicionales para este producto</div>
+                        </div>
+                      </div>
                     </q-td>
                   </q-tr>
                 </template>
@@ -543,7 +629,7 @@
                   <q-img
                     style="height: 150px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                    @click="validateProduct(props.row, true)"
+                    @click="props.row.is_bundle ? openPromoDialog(props.row) : validateProduct(props.row, true)"
                   >
                     <div class="absolute-full text-body2 flex flex-center text-bold text-center">
                       {{ props.row.name }}
@@ -565,6 +651,146 @@
         </div>
       </div>
     </q-form>
+
+    <!-- Promo Selection Dialog -->
+    <q-dialog v-model="promoDialog" :maximized="$q.screen.lt.sm" persistent>
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <span class="text-h6">{{ currentPromo?.name }} - {{ currentGroup?.name }}</span>
+          <q-btn flat icon="close" round size="md" @click="closePromoDialog"/>
+        </q-card-section>
+
+        <q-card-section class="q-pa-md">
+          <div v-if="currentGroup">
+            <!-- Header with selection info -->
+            <div class="text-center q-mb-lg">
+              <div class="text-h6 text-weight-bold q-mb-sm">
+                {{ currentGroup.name }}
+              </div>
+              <div class="text-subtitle1 q-mb-sm">
+                Selecciona {{ currentGroup.quantity }} producto{{ currentGroup.quantity > 1 ? 's' : '' }}
+              </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="row q-col-gutter-sm justify-center">
+              <div
+                v-for="product in currentGroup.products"
+                :key="product.id"
+                class="col-xs-6 col-sm-4 col-md-3"
+              >
+                <div class="relative-position">
+                  <q-card
+                    class="cursor-pointer product-card"
+                    style="border-radius: 15px; overflow: hidden;"
+                    :class="{ 'selected-product': isProductSelected(product.id) }"
+                    @click="toggleProductSelection(product)"
+                  >
+                    <q-img
+                      style="height: 140px; width: 100%;"
+                      :src="product.images && product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                      :ratio="1"
+                    >
+                      <!-- Product name overlay -->
+                      <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center text-white product-name-overlay">
+                        {{ product.name }}
+                      </div>
+                    </q-img>
+                  </q-card>
+
+                  <!-- Quantity controls -->
+                  <div v-if="isProductSelected(product.id)" class="absolute-bottom-right q-ma-xs">
+                    <div class="row items-center q-gutter-xs rounded-borders q-pa-xs shadow-2">
+                      <q-btn
+                        icon="remove"
+                        size="sm"
+                        round
+                        color="negative"
+                        @click.stop="decreaseQuantity(product.id)"
+                        :disable="getProductQuantity(product.id) <= 1"
+                      />
+                      <span class="text-weight-bold q-px-sm text-body1">{{ getProductQuantity(product.id) }}</span>
+                      <q-btn
+                        icon="add"
+                        size="sm"
+                        round
+                        color="positive"
+                        @click.stop="increaseQuantity(product.id)"
+                        :disable="getTotalSelectedQuantity() >= currentGroup.quantity"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selection status -->
+            <div class="text-center q-mt-lg">
+              <q-linear-progress
+                :value="getTotalSelectedQuantity() / currentGroup.quantity"
+                color="primary"
+                size="8px"
+                rounded
+                class="q-mb-sm"
+              />
+              <div class="text-subtitle2 q-mb-sm text-weight-medium">
+                <q-icon name="shopping_cart" class="q-mr-xs" />
+                {{ getTotalSelectedQuantity() }} de {{ currentGroup.quantity }} seleccionados
+              </div>
+
+              <!-- Price calculation with modifiers -->
+              <div class="q-mb-lg">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-body1 text-weight-bold q-mb-xs">
+                    <q-icon name="attach_money" class="q-mr-xs text-green" />
+                    Total de la Promoción
+                  </div>
+                  <div class="row justify-between items-center">
+                    <div class="text-subtitle2 text-grey-7">
+                      Precio base: ${{ parseFloat(currentPromo.final_price || 0).toFixed(2) }}
+                    </div>
+                    <div class="text-h6 text-weight-bold text-primary">
+                      ${{ currentPromo.final_price }}
+                    </div>
+                  </div>
+                </q-card>
+              </div>
+
+              <!-- Navigation buttons -->
+              <div class="row q-gutter-md justify-center">
+                <q-btn
+                  v-if="currentGroupIndex > 0"
+                  outline
+                  color="grey-7"
+                  label="← Anterior"
+                  @click="previousGroup"
+                  class="text-weight-bold"
+                />
+                <q-btn
+                  v-if="currentGroupIndex < currentPromo.promotion_details.length - 1"
+                  unelevated
+                  color="primary"
+                  label="Siguiente →"
+                  @click="nextGroup"
+                  :disable="!isCurrentGroupValid()"
+                  class="text-weight-bold"
+                />
+                <q-btn
+                  v-else
+                  color="primary"
+                  label="🛒 Agregar"
+                  @click="addPromoToCart"
+                  :disable="!isCurrentGroupValid()"
+                  class="text-weight-bold"
+                  size="lg"
+                />
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
@@ -1272,6 +1498,26 @@ export default {
        */
       dialogPayment: false,
       /**
+       * Promo selection dialog
+       * @type {Boolean}
+       */
+      promoDialog: false,
+      /**
+       * Current promo being configured
+       * @type {Object}
+       */
+      currentPromo: null,
+      /**
+       * Current group index in promo selection
+       * @type {Number}
+       */
+      currentGroupIndex: 0,
+      /**
+       * Selected products for current promo
+       * @type {Array}
+       */
+      promoSelections: [],
+      /**
        * Invoice types
        * @type {Array}
        */
@@ -1487,6 +1733,13 @@ export default {
       if (totalWithDiscount > 0) return this.totalWithDiscount - this.totalPayment
 
       return totalWithDiscount
+    },
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    branchOfficeCharged () {
+      return this.branchOffice
+    },
+    currentGroup () {
+      return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
     },
     /**
      * Total payment
@@ -1950,6 +2203,7 @@ export default {
           amount: this.amount,
           branch_office_id: this.branchOffice?.id,
           type_cashflow: this.panel,
+          cashbox_user_id: this.cashBoxState?.id,
           payment_method_id: this.paymentMethodCashFlow
         })
         this.$q.notify({
@@ -2370,7 +2624,8 @@ export default {
         .then(({ data }) => {
           this.allProducts = data.data
           this.pagination.rowsNumber = data.total
-          this.loadingProducts = false
+          // Fetch and add promotions from API
+          this.fetchPromotions()
         })
         .catch(err => {
           this.loadingProducts = false
@@ -2380,6 +2635,34 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Fetch promotions from API and add them to products list
+     */
+    async fetchPromotions () {
+      try {
+        const params = {
+          branch_office_id: this.branchOffice?.id
+        }
+        const { data } = await this.$api.get('promotions', { params })
+
+        // Add promotions to the beginning of the products list
+        if (data && data.length > 0) {
+          data.forEach(promotion => {
+            this.allProducts.unshift({
+              ...promotion,
+              is_bundle: true,
+              skip_stock: !promotion.requires_stock,
+              price: promotion.final_price
+            })
+          })
+        }
+
+        this.loadingProducts = false
+      } catch (error) {
+        console.error('Error fetching promotions:', error)
+        this.loadingProducts = false
+      }
     },
     /**
      * Set payments
@@ -2655,26 +2938,33 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
+      const cartProduct = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        amount: product.quantity,
+        quantity: product.quantity,
+        subtotal: product.subtotal,
+        product_id: product.id,
+        cost: product.cost,
+        barcode: product.barcode,
+        normal_stock: product.normal_stock || 0,
+        bundle_stock: product.bundle_stock || 0,
+        skip_stock: product.skip_stock,
+        is_bundle: product.is_bundle,
+        aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
+        unit_of_measure: product.unit_of_measure,
+        product_price_lists: product.product_price_lists,
+        // Preserve promo/bundle specific properties
+        promotion_details: product.promotion_details || [],
+        products: product.products || [],
+        selectedProducts: product.selectedProducts || [],
+        final_price: product.final_price
+      }
+
       this.products = [
         ...this.products,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          amount: product.quantity,
-          quantity: product.quantity,
-          subtotal: product.subtotal,
-          product_id: product.id,
-          cost: product.cost,
-          barcode: product.barcode,
-          normal_stock: product.normal_stock || 0,
-          bundle_stock: product.bundle_stock || 0,
-          skip_stock: product.skip_stock,
-          is_bundle: product.is_bundle,
-          aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
-          unit_of_measure: product.unit_of_measure,
-          product_price_lists: product.product_price_lists
-        }
+        cartProduct
       ]
     },
     /**
@@ -2715,8 +3005,6 @@ export default {
       } else {
         this.addNewProduct(data, isWeightProduct, quantity)
       }
-
-      // Resetear valores
       this.resetQuantities()
     },
 
@@ -2783,7 +3071,12 @@ export default {
           : quantity,
         subtotal: isWeightProduct && this.currentAmount
           ? this.currentAmount
-          : data.price * quantity
+          : data.price * quantity,
+        // Explicitly preserve bundle/promo properties
+        is_bundle: data.is_bundle || false,
+        products: data.promotion_details || [],
+        promotion_details: data.promotion_details || [],
+        final_price: data.final_price || data.price
       }
 
       // Asegurar precisión en decimales
@@ -2863,7 +3156,45 @@ export default {
     async checkCashBoxStatus () {
       console.log('🔄 Verificando estado de cajas con nuevo algoritmo simplificado')
       try {
-        await this.loadAvailableCashBoxes()
+        const savedState = this.getCashBoxState()
+
+        if (!savedState) {
+          this.isUserBoxOpen = false
+          await this.loadAvailableCashBoxes()
+          return
+        }
+
+        const { data } = await this.$api.get('cashier-init')
+
+        const cashierSession = data
+
+        // Verificar si la sesión está abierta
+        const isSessionOpen = cashierSession &&
+                             cashierSession.status === 'open' &&
+                             !cashierSession.close_date
+
+        if (isSessionOpen) {
+          // Usuario tiene una caja abierta - sincronizar datos
+          this.isUserBoxOpen = true
+          this.availableCashBoxes = []
+
+          // Actualizar localStorage con datos más recientes de la API
+          await this.updateCashBoxState({
+            id: cashierSession.id,
+            isOpen: true,
+            openedAt: cashierSession.init_date || savedState.openedAt,
+            cashboxId: cashierSession.cashbox_id,
+            userId: this.userSession.id,
+            initialBalance: parseFloat(cashierSession.init_balance) || savedState.initialBalance || 0,
+            sessionId: cashierSession.id
+          })
+        } else {
+          // Usuario no tiene caja abierta - limpiar localStorage
+          localStorage.removeItem('cashbox_state')
+          this.isUserBoxOpen = false
+          this.showCashBoxDialog = true
+          await this.loadAvailableCashBoxes()
+        }
       } catch (error) {
         console.error('Error en checkCashBoxStatus:', error)
         // Fallback: no mostrar modal ni romper la app
@@ -2955,10 +3286,6 @@ export default {
     },
 
     /**
-     * Handles the 'open-box' event from the CashBoxDialog component.
-     * @param {object} data - The data emitted from the dialog, containing the box and amount.
-     */
-    /**
      * Handles the 'box-opened' event from the dialog.
      * Updates the local state to reflect that a box is now open.
      * @param {Object} boxData - Data about the opened box (optional)
@@ -2979,14 +3306,361 @@ export default {
       try {
         // Actualizar disponibilidad de cajas después del cierre
         await this.loadAvailableCashBoxes()
-
-        // Mostrar modal para seleccionar otra caja o crear una nueva
-        this.showCashBoxDialog = true
       } catch (error) {
-        console.error('Error al procesar cierre de caja:', error)
-      }
-    }
+        console.error('Error al cargar cajas disponibles después del cierre:', error)
+        this.availableCashBoxes = []
 
+        this.$q.notify({
+          type: 'warning',
+          message: 'Caja cerrada, pero hubo un problema al recargar las cajas disponibles',
+          caption: 'Intenta recargar la página'
+        })
+      }
+    },
+    /*
+     * Open promo selection dialog
+     */
+    async openPromoDialog (promo) {
+      const promoWithDetails = { ...promo }
+
+      this.currentPromo = promoWithDetails
+      this.currentGroupIndex = 0
+      this.promoSelections = []
+
+      // Initialize preselected products
+      this.initializePreselectedProducts()
+
+      // Auto-advance through completed groups
+      this.autoAdvanceCompletedGroups()
+
+      this.promoDialog = true
+    },
+
+    /**
+     * Initialize preselected products when opening promo dialog
+     */
+    initializePreselectedProducts () {
+      if (!this.currentPromo) return
+      this.currentPromo.promotion_details.forEach((group, groupIndex) => {
+        group.products.forEach(product => {
+          if (product.quantity && product.quantity > 0) {
+            this.promoSelections.push({
+              groupIndex,
+              product_id: product.id,
+              product,
+              quantity: product.quantity
+            })
+          }
+        })
+      })
+    },
+
+    /**
+     * Auto-advance through completed groups due to preselection
+     */
+    autoAdvanceCompletedGroups () {
+      if (!this.currentPromo) return
+
+      // Check each group starting from the current one
+      while (this.currentGroupIndex < this.currentPromo.promotion_details.length) {
+        const currentGroup = this.currentPromo.promotion_details[this.currentGroupIndex]
+        const groupSelections = this.promoSelections.filter(sel => sel.groupIndex === this.currentGroupIndex)
+        const totalSelected = groupSelections.reduce((sum, sel) => sum + sel.quantity, 0)
+
+        // If current group is complete, move to next
+        if (totalSelected === currentGroup.quantity) {
+          // If this is the last group, we're done
+          if (this.currentGroupIndex === this.currentPromo.promotion_details.length - 1) {
+            break
+          }
+
+          // Move to next group
+          this.currentGroupIndex++
+        } else {
+          break
+        }
+      }
+    },
+
+    /**
+     * Close promo selection dialog
+     */
+    closePromoDialog () {
+      this.promoDialog = false
+      this.currentPromo = null
+      this.currentGroupIndex = 0
+      this.promoSelections = []
+    },
+
+    /**
+     * Check if product is selected in current group
+     */
+    isProductSelected (id) {
+      return this.promoSelections.some(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.product_id === id
+      )
+    },
+
+    /**
+     * Get product quantity in current group
+     */
+    getProductQuantity (id) {
+      const selections = this.promoSelections.filter(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.product_id === id
+      )
+      return selections.reduce((total, selection) => total + selection.quantity, 0)
+    },
+
+    /**
+     * Get total selected quantity for current group
+     */
+    getTotalSelectedQuantity () {
+      return this.promoSelections
+        .filter(selection => selection.groupIndex === this.currentGroupIndex)
+        .reduce((total, selection) => total + selection.quantity, 0)
+    },
+
+    /**
+     * Toggle product selection
+     */
+    toggleProductSelection (product) {
+      const existingIndex = this.promoSelections.findIndex(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.product_id === product.id
+      )
+
+      if (existingIndex >= 0) {
+        this.promoSelections.splice(existingIndex, 1)
+      } else {
+        if (this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
+          this.promoSelections.push({
+            groupIndex: this.currentGroupIndex,
+            product_id: product.id,
+            product,
+            quantity: product?.pivot?.quantity || 1
+          })
+        }
+      }
+    },
+
+    /**
+     * Increase product quantity
+     */
+    increaseQuantity (id) {
+      const selection = this.promoSelections.find(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.product_id === id
+      )
+      if (selection && this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
+        selection.quantity++
+        console.log('➕ QUANTITY INCREASED:', selection.product.name, 'new quantity:', selection.quantity)
+        console.log('📊 UPDATED SELECTIONS:', this.promoSelections)
+      }
+    },
+
+    /**
+     * Actualiza el estado de la caja en localStorage únicamente
+     * @param {Object} cashBoxState - Estado de la caja a guardar
+     */
+    async updateCashBoxState (data) {
+      const stateWithTimestamp = {
+        ...data,
+        lastUpdated: new Date().toISOString()
+      }
+
+      try {
+        localStorage.setItem('cashbox_state', JSON.stringify(stateWithTimestamp))
+        this.cashBoxState = stateWithTimestamp
+      } catch (error) {
+        this.showCashBoxDialog = true
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al guardar estado de caja',
+          caption: 'Los cambios podrían no persistir'
+        })
+      }
+    },
+
+    /**
+     * Checks if there's a cash box state indicating an open box
+     * @returns {Boolean} True if there's an open cash box state
+     */
+    hasCashBoxStateOpen () {
+      const state = this.getCashBoxState()
+      return state?.isOpen === true && state?.cashboxId
+    },
+
+    /**
+     * Initializes the cash box state from company_config on page load
+     * This provides a fallback when API is not available
+     */
+    initializeCashBoxStateFromConfig () {
+      const savedState = this.getCashBoxState()
+      if (savedState) {
+        if (savedState.isOpen && savedState.cashboxId) {
+          this.isUserBoxOpen = true
+          this.availableCashBoxes = []
+          this.$q.notify({
+            type: 'info',
+            message: 'Sesión de caja restaurada',
+            caption: `Caja ${savedState.cashboxId} sigue abierta desde ${new Date(savedState.openedAt).toLocaleDateString()}`
+          })
+        } else {
+          this.isUserBoxOpen = false
+        }
+      } else {
+        this.isUserBoxOpen = false
+      }
+    },
+    /**
+     * Decrease product quantity
+     */
+    decreaseQuantity (id) {
+      const selection = this.promoSelections.find(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        selection.product_id === id
+      )
+      if (selection && selection.quantity > 1) {
+        selection.quantity--
+      }
+    },
+
+    /**
+     * Check if current group selection is valid
+     */
+    isCurrentGroupValid () {
+      const totalSelected = this.getTotalSelectedQuantity()
+      return totalSelected === this.currentGroup.quantity
+    },
+
+    /**
+     * Go to next group
+     */
+    nextGroup () {
+      if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.promotion_details.length - 1) {
+        this.currentGroupIndex++
+      }
+    },
+
+    /**
+     * Go to previous group
+     */
+    previousGroup () {
+      if (this.currentGroupIndex > 0) {
+        this.currentGroupIndex--
+      }
+    },
+
+    /**
+     * Add promo to cart with selected products
+     */
+    addPromoToCart () {
+      if (!this.isCurrentGroupValid()) return
+
+      const promoProduct = {
+        ...this.currentPromo,
+        selectedProducts: this.promoSelections,
+        quantity: 1,
+        amount: 1,
+        price: this.currentPromo.final_price,
+        subtotal: this.currentPromo.final_price
+      }
+
+      this.pushProduct(promoProduct)
+      this.calculateTotal()
+      this.closePromoDialog()
+
+      this.$q.notify({
+        message: `${promoProduct.name} agregado`,
+        color: 'positive',
+        icon: 'check_circle'
+      })
+    }
   }
 }
 </script>
+
+<style scoped>
+.product-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.selected-product {
+  border: 2px solid #21BA45 !important;
+  box-shadow: 0 0 15px rgba(33, 186, 69, 0.3);
+}
+
+.product-name-overlay {
+  background: linear-gradient(45deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
+  backdrop-filter: blur(2px);
+  padding: 8px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.selected-product .product-name-overlay {
+  background: linear-gradient(45deg, rgba(33, 186, 69, 0.8) 0%, rgba(33, 186, 69, 0.6) 100%);
+}
+
+/* Smooth animations for quantity controls */
+.absolute-bottom-right {
+  animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced modal styling */
+.q-dialog .q-card {
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress bar styling */
+.q-linear-progress {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Button enhancements */
+.q-btn {
+  transition: all 0.2s ease;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Badge styling */
+.q-badge {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .col-xs-6 {
+    padding: 2px;
+  }
+
+  .product-card {
+    margin: 2px;
+  }
+
+  .text-subtitle2 {
+    font-size: 11px !important;
+  }
+}
+</style>

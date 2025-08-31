@@ -71,14 +71,17 @@
              <div class="row items-center full-width">
                <q-icon name="assessment" size="md" class="q-mr-sm"/>
                <div class="col text-center">
-                 <div class="text-h5 text-weight-bold" :class="getProfitColor(getTotalProfit())">
-                   {{ formatNumber(getTotalProfit()) }}
+                 <div class="text-h5 text-weight-bold" :class="getProfitColor(categoryTotalsTotals.category_total)">
+                   {{ formatNumber(categoryTotalsTotals.category_total) }}
                  </div>
-                 <div class="text-caption">Ganancia Total del Período</div>
+                 <!-- <div class="text-h5 text-weight-bold" :class="getProfitColor(getTotalProfit())">
+                   {{ formatNumber(getTotalProfit()) }}
+                 </div> -->
+                 <div class="text-caption">Venta Total del Período</div>
                </div>
                <div class="col-auto text-right">
                  <div class="text-caption">Costos: {{ formatNumberCompact(categoryTotalsTotals.cost_total || 0) }}</div>
-                 <div class="text-caption">Ventas: {{ formatNumberCompact(categoryTotalsTotals.category_total || 0) }}</div>
+                 <div class="text-caption">Ganancias: {{ formatNumberCompact(getTotalProfit() || 0) }}</div>
                  <div class="text-caption">Flujo: {{ formatNumberCompact(cashflowTotals.cashflow_totals || 0) }}</div>
                </div>
              </div>
