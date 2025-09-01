@@ -21,7 +21,7 @@
       <!-- Content when ready -->
       <div v-if="isReady">
         <!-- State 1: Cash box already open -->
-        <q-card-section v-if="boxAlreadyOpen" class="q-pt-lg">
+        <q-card-section v-if="isBoxAlreadyOpen" class="q-pt-lg">
           <q-form @submit.prevent="handleCloseBox">
             <p class="text-subtitle1 text-center q-mb-md">Ingresa el saldo final para cerrar la caja.</p>
             <q-input
@@ -177,7 +177,6 @@ export default {
       endBalanceAmount: null,
 
       // Internal component state
-      boxAlreadyOpen: false,
       cashierSession: null
     }
   },
@@ -246,7 +245,6 @@ export default {
      */
     async initializeDialog () {
       this.resetForm()
-      await this.checkCashBoxStatus()
       this.setInitialFocus()
     },
 
@@ -258,8 +256,6 @@ export default {
       this.newBoxName = ''
       this.endBalanceAmount = null
       this.isReady = false
-      this.boxAlreadyOpen = false
-      this.cashierSession = null
 
       // Don't reset selectedCashBox if there's only one available
       if (this.availableCashBoxes.length !== 1) {
@@ -276,7 +272,7 @@ export default {
       this.$nextTick(() => {
         if (this.availableCashBoxes.length === 0) {
           this.$refs.newBoxNameInput?.focus()
-        } else if (this.boxAlreadyOpen) {
+        } else if (this.isBoxAlreadyOpen) {
           this.$refs.endBalanceInput?.focus()
         } else if (this.availableCashBoxes.length === 1) {
           // Focus amount input if box is auto-selected
@@ -286,37 +282,6 @@ export default {
           this.$refs.boxSelect?.focus()
         }
       })
-    },
-
-    // ------------------------------------------
-    // Cash Box Status Methods
-    // ------------------------------------------
-
-    /**
-     * Check current cash box status from backend
-     */
-    async checkCashBoxStatus () {
-      try {
-        const response = await this.$api.get('cashier-init')
-        this.cashierSession = response.data
-        this.boxAlreadyOpen = response.data && response.data.open === true
-      } catch (error) {
-        this.handleCashBoxStatusError(error)
-      }
-    },
-
-    /**
-     * Handle errors when checking cash box status
-     * @param {Error} error - The error object
-     */
-    handleCashBoxStatusError (error) {
-      // 404 is expected when no active session exists
-      if (error.response?.status === 404) {
-        this.boxAlreadyOpen = false
-      } else {
-        console.error('Error verificando estado de caja:', error)
-        this.boxAlreadyOpen = false
-      }
     },
 
     // ------------------------------------------
@@ -402,8 +367,10 @@ export default {
      */
     async handleCloseBox () {
       // Validate the end balance amount
+      console.log('Iniciando handleCloseBox. Monto final:', this.endBalanceAmount)
       const endBalance = this.endBalanceAmount
       if (endBalance === null || endBalance === '' || endBalance < 0) {
+        console.log('Validación de monto final falló.')
         this.showErrorNotification('El monto final es requerido y debe ser mayor o igual a cero')
         return
       }
@@ -415,12 +382,11 @@ export default {
         const sessionResponse = await this.$api.get('cashier-init')
         const cashierSession = sessionResponse.data
 
-        if (!cashierSession || !cashierSession.open) {
+        if (!cashierSession) {
           throw new Error('No se encontró una sesión de caja abierta para cerrar')
         }
 
         const payload = { end_balance: parseFloat(endBalance) }
-
         await this.$api.put(`cashier-close/${cashierSession.id}`, payload)
 
         this.showSuccessNotification('La caja ha sido cerrada con éxito', `Saldo final: $${endBalance}`)

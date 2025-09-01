@@ -13,10 +13,14 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "Caja Terceria",
+  "name": "Caja Secundaria",
   "status": "active",
   "branch_office_id": 1
 }
+
+### Eliminar caja
+DELETE {{api_url}}/cashboxes/28
+Authorization: Bearer {{token}}
 
 ### Ver cajas activas
 GET {{api_url}}/cashier-init

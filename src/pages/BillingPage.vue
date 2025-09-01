@@ -1038,7 +1038,7 @@
     </q-dialog>
 
     <!-- Cash Box Dialog -->
-    <cash-box-dialog
+    <CashBoxDialog
       v-model="showCashBoxDialog"
       :cashier-id="userSession.id"
       :is-box-already-open="isUserBoxOpen"
@@ -1046,7 +1046,7 @@
       :branch-office="branchOffice"
       @box-opened="handleBoxOpened"
       @box-closed="handleBoxClosed"
-      @box-created="handleBoxCreated"
+      @box-created="loadAvailableCashBoxes"
     />
 
     <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
@@ -3210,17 +3210,13 @@ export default {
       }
 
       try {
-        const response = await this.$api.get('cashboxes', {
-          params: {
-            branch_office_id: this.branchOffice.id,
-            status: 'active'
-          }
-        })
+        // 1. Obtener TODAS las cajas sin filtros
+        const response = await this.$api.get('cashboxes')
         const allBoxes = response.data || []
 
-        // Filtrar cajas no eliminadas y agregar campo 'open'
+        // 2. Filtrar por sucursal y estado en el cliente
         this.availableCashBoxes = allBoxes
-          .filter(box => !box.deleted_at)
+          .filter(box => box.branch_office_id === this.branchOffice.id && !box.deleted_at)
           .map(box => ({
             ...box,
             open: box.current_session ? box.current_session.open : false
