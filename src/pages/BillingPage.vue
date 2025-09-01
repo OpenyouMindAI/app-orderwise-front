@@ -673,52 +673,52 @@
             </div>
 
             <!-- Products Grid -->
-            <div class="row q-col-gutter-sm justify-center">
+            <div class="row q-col-gutter-md justify-center">
               <div
                 v-for="product in currentGroup.products"
                 :key="product.id || product.product_id"
                 class="col-xs-6 col-sm-4 col-md-3"
               >
-                <div class="relative-position">
-                  <q-card
-                    class="cursor-pointer product-card"
-                    style="border-radius: 15px; overflow: hidden;"
-                    :class="{ 'selected-product': isProductSelected(product.id || product.product_id) }"
+                <div class="product-container">
+                  <div
+                    class="modern-product-card"
+                    :class="{ 'modern-product-card--selected': isProductSelected(product.id || product.product_id) }"
                     @click="toggleProductSelection(product)"
                     :key="`product-${product.id || product.product_id}-${currentGroupIndex}`"
+                    :style="{
+                      backgroundImage: `url(${product.images && product.images[0] ? product.images[0].url : 'images/404-image.jpg'})`
+                    }"
                   >
-                    <q-img
-                      style="height: 140px; width: 100%;"
-                      :src="product.images && product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
-                      :ratio="1"
-                    >
-                      <!-- Product name overlay -->
-                      <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center text-white product-name-overlay">
-                        {{ product.name }}
-                      </div>
-                    </q-img>
-                  </q-card>
+                    <!-- Dark overlay -->
+                    <div class="product-overlay"></div>
 
-                  <!-- Quantity controls -->
-                  <div v-if="isProductSelected(product.id || product.product_id)" class="absolute-bottom-right q-ma-xs">
-                    <div class="row items-center q-gutter-xs rounded-borders q-pa-xs shadow-2">
-                      <q-btn
-                        icon="remove"
-                        size="sm"
-                        round
-                        color="negative"
-                        @click.stop="decreaseQuantity(product.id || product.product_id)"
-                        :disable="getProductQuantity(product.id || product.product_id) <= 1"
-                      />
-                      <span class="text-weight-bold q-px-sm text-body1">{{ getProductQuantity(product.id || product.product_id) }}</span>
-                      <q-btn
-                        icon="add"
-                        size="sm"
-                        round
-                        color="positive"
-                        @click.stop="increaseQuantity(product.id || product.product_id)"
-                        :disable="getTotalSelectedQuantity() >= currentGroup.quantity"
-                      />
+                    <!-- Selection indicator -->
+                    <div v-if="isProductSelected(product.id || product.product_id)" class="selection-indicator">
+                      <q-icon name="check_circle" color="white" size="18px" />
+                    </div>
+
+                    <!-- Product content -->
+                    <div class="product-content">
+                      <div class="product-name">{{ product.name }}</div>
+
+                      <!-- Quantity controls -->
+                      <div v-if="isProductSelected(product.id || product.product_id)" class="quantity-controls">
+                        <button
+                          class="quantity-btn quantity-btn--minus"
+                          @click.stop="decreaseQuantity(product.id || product.product_id)"
+                          :disabled="getProductQuantity(product.id || product.product_id) <= 1"
+                        >
+                          <q-icon name="remove" size="14px" />
+                        </button>
+                        <span class="quantity-display">{{ getProductQuantity(product.id || product.product_id) }}</span>
+                        <button
+                          class="quantity-btn quantity-btn--plus"
+                          @click.stop="increaseQuantity(product.id || product.product_id)"
+                          :disabled="getTotalSelectedQuantity() >= currentGroup.quantity"
+                        >
+                          <q-icon name="add" size="14px" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3673,6 +3673,8 @@ export default {
 
       const promoProduct = {
         ...this.currentPromo,
+        promotion_id: this.currentPromo.id,
+        promotion_detail_id: this.currentPromo.id, // FIXME: Deberia usar otro id?
         selectedProducts: this.promoSelections,
         quantity: 1,
         amount: 1,
@@ -3793,12 +3795,165 @@ export default {
   border-color: #1976d2;
 }
 
+/* Modern Product Card Styles */
+.product-container {
+  position: relative;
+}
+
+.modern-product-card {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+}
+
+.modern-product-card--selected {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 3px #10b981;
+}
+
+.product-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.6) 50%,
+    rgba(0, 0, 0, 0.7) 100%);
+  z-index: 1;
+}
+
+.selection-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #10b981;
+  border-radius: 50%;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+  z-index: 3;
+  backdrop-filter: blur(4px);
+}
+
+.product-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  z-index: 2;
+  text-align: center;
+}
+
+.product-name {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quantity-controls {
+  position: absolute;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quantity-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quantity-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quantity-btn--minus {
+  background: #ef4444;
+  color: white;
+}
+
+.quantity-btn--minus:hover:not(:disabled) {
+  background: #dc2626;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.quantity-btn--plus {
+  background: #10b981;
+  color: white;
+}
+
+.quantity-btn--plus:hover:not(:disabled) {
+  background: #059669;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.quantity-display {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1f2937;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
 .image-preview-card {
   transition: transform 0.2s ease;
 }
 
 .image-preview-card:hover {
   transform: scale(1.02);
+}
+
+.product-name-overlay {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(2px);
 }
 
 </style>

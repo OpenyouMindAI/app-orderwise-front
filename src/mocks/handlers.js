@@ -39,8 +39,8 @@ export const handlers = [
     console.log('Received Payload:', body)
 
     // Basic validation
-    if (!body.name || typeof body.finalPrice === 'undefined') {
-      console.error('MSW: Validation failed. Name or finalPrice missing.')
+    if (!body.name || typeof body.final_price === 'undefined') {
+      console.error('MSW: Validation failed. Name or final_price missing.')
       return res(
         ctx.status(400),
         ctx.json({ error: 'Bad Request: Missing required fields.' })

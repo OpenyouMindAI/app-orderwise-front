@@ -233,7 +233,7 @@
               <!-- Tab: Grupos de Selección -->
               <q-tab-panel name="groups" class="q-pa-md">
                 <div class="q-pb-md">
-                  <div class="row justify-between items-center">
+                  <div class="row justify-between items-center q-pb-md">
                     <div class="text-h6 text-primary">Grupos de Selección</div>
                     <q-btn
                       color="positive"

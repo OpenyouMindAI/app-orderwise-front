@@ -75,7 +75,7 @@
     </div>
 
     <!-- Modal Reutilizable para Crear/Editar Promociones -->
-    <DemoModalPage
+    <ModalComponent
       v-model="openPromotionModal"
       :edit-mode="editMode"
       :promotion-data="selectedPromotion"
@@ -89,12 +89,12 @@
 import { notify } from 'src/const/mixins'
 import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
-import DemoModalPage from 'src/pages/DemoModalPage.vue'
+import ModalComponent from 'src/components/Promotion/ModalComponent.vue'
 import { getDownload } from 'src/const/services'
 
 export default {
   components: {
-    DemoModalPage
+    ModalComponent
   },
   data () {
     return {
