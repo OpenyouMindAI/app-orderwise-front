@@ -9,7 +9,7 @@
     <q-card style="width: 500px; max-width: 80vw; min-height: 250px;">
       <!-- Header Section -->
       <q-card-section class="q-py-sm bg-primary text-white flex justify-between items-center">
-        <span class="text-h6">Turno</span>
+        <span class="text-h6">{{ dialogTitle }}</span>
         <q-btn flat icon="close" round size="md" v-close-popup />
       </q-card-section>
 
@@ -200,6 +200,20 @@ export default {
 
     amountValidationRules () {
       return [val => (val !== null && val !== '' && val >= 0) || 'El monto es requerido y debe ser mayor o igual a cero']
+    },
+
+    /**
+     * Dynamic dialog title based on the current state
+     * @returns {string}
+     */
+    dialogTitle () {
+      if (this.isBoxAlreadyOpen) {
+        return 'Cerrar Caja'
+      }
+      if (this.availableCashBoxes.length === 0) {
+        return 'Crear Caja'
+      }
+      return 'Abrir Caja'
     }
   },
 
