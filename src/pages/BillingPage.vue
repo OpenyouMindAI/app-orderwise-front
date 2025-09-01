@@ -686,12 +686,9 @@
                     @click="toggleProductSelection(product)"
                     :key="`product-${product.id || product.product_id}-${currentGroupIndex}`"
                     :style="{
-                      backgroundImage: `url(${product.images && product.images[0] ? product.images[0].url : 'images/404-image.jpg'})`
+                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${product.images && product.images[0] ? product.images[0].url : 'images/404-image.jpg'})`
                     }"
                   >
-                    <!-- Dark overlay -->
-                    <div class="product-overlay"></div>
-
                     <!-- Selection indicator -->
                     <div v-if="isProductSelected(product.id || product.product_id)" class="selection-indicator">
                       <q-icon name="check_circle" color="white" size="18px" />
@@ -758,32 +755,39 @@
               </div>
 
               <!-- Navigation buttons -->
-              <div class="row q-gutter-md justify-center">
+              <div class="row q-gutter-md justify-center q-mt-lg">
                 <q-btn
                   v-if="currentGroupIndex > 0"
-                  outline
-                  color="grey-7"
-                  label="← Anterior"
+                  flat
+                  color="grey-8"
+                  icon="chevron_left"
+                  label="Anterior"
                   @click="previousGroup"
-                  class="text-weight-bold"
+                  class="modern-nav-btn modern-nav-btn--secondary"
+                  padding="12px 24px"
                 />
                 <q-btn
                   v-if="currentGroupIndex < currentPromo.promotion_details.length - 1"
                   unelevated
                   color="primary"
-                  label="Siguiente →"
+                  icon-right="chevron_right"
+                  label="Siguiente"
                   @click="nextGroup"
                   :disable="!isCurrentGroupValid()"
-                  class="text-weight-bold"
+                  class="modern-nav-btn modern-nav-btn--primary"
+                  padding="12px 24px"
                 />
                 <q-btn
                   v-else
-                  color="primary"
-                  label="🛒 Agregar"
+                  unelevated
+                  color="positive"
+                  icon="shopping_cart"
+                  label="Agregar al Carrito"
                   @click="addPromoToCart"
                   :disable="!isCurrentGroupValid()"
-                  class="text-weight-bold"
-                  size="lg"
+                  class="modern-nav-btn modern-nav-btn--success"
+                  padding="14px 28px"
+                  size="md"
                 />
               </div>
             </div>
@@ -3420,19 +3424,88 @@ export default {
      * Open promo selection dialog
      */
     async openPromoDialog (promo) {
-      const promoWithDetails = { ...promo }
+      try {
+        const promoWithDetails = { ...promo }
 
-      this.currentPromo = promoWithDetails
-      this.currentGroupIndex = 0
-      this.promoSelections = []
+        // Collect all unique product IDs from promotion groups
+        const productIds = new Set()
+        if (promoWithDetails.promotion_details && promoWithDetails.promotion_details.length > 0) {
+          promoWithDetails.promotion_details.forEach(group => {
+            if (group.products && group.products.length > 0) {
+              group.products.forEach(product => {
+                productIds.add(product.product_id)
+              })
+            }
+          })
+        }
 
-      // Initialize preselected products
-      this.initializePreselectedProducts()
+        // Find missing products that are not in allProducts
+        const missingProductIds = Array.from(productIds).filter(id =>
+          !this.allProducts.find(p => p.id === id)
+        )
 
-      // Auto-advance through completed groups
-      this.autoAdvanceCompletedGroups()
+        // Fetch missing products if any
+        let missingProducts = []
+        if (missingProductIds.length > 0) {
+          try {
+            const { data } = await this.$api.get('products', {
+              params: {
+                branch_office_id: this.branchOffice?.id,
+                whereIn: {
+                  id: missingProductIds
+                },
+                perPage: missingProductIds.length,
+                paginate: false
+              }
+            })
+            missingProducts = Array.isArray(data) ? data : (data.data || [])
+          } catch (error) {
+            console.error('Error fetching missing products:', error)
+          }
+        }
 
-      this.promoDialog = true
+        // Merge complete product data with promotion products
+        if (promoWithDetails.promotion_details && promoWithDetails.promotion_details.length > 0) {
+          for (const group of promoWithDetails.promotion_details) {
+            if (group.products && group.products.length > 0) {
+              for (const product of group.products) {
+                // Look for complete product data in allProducts first, then in missingProducts
+                let completeProduct = this.allProducts.find(p => p.id === product.product_id)
+                if (!completeProduct) {
+                  completeProduct = missingProducts.find(p => p.id === product.product_id)
+                }
+
+                if (completeProduct) {
+                  // Merge complete product data with existing product data
+                  Object.assign(product, {
+                    ...completeProduct,
+                    // Preserve promotion-specific data
+                    product_id: product.product_id,
+                    quantity: product.quantity || 0
+                  })
+                } else {
+                  console.warn(`Product with ID ${product.product_id} not found`)
+                }
+              }
+            }
+          }
+        }
+
+        this.currentPromo = promoWithDetails
+        this.currentGroupIndex = 0
+        this.promoSelections = []
+
+        // Initialize preselected products
+        this.initializePreselectedProducts()
+
+        // Auto-advance through completed groups
+        this.autoAdvanceCompletedGroups()
+
+        this.promoDialog = true
+      } catch (error) {
+        console.error('Error opening promo dialog:', error)
+        notify('Error al cargar los detalles de la promoción', 'negative', 'warning')
+      }
     },
 
     /**
@@ -3811,25 +3884,11 @@ export default {
   background-position: center;
   background-repeat: no-repeat;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  border: 2px solid transparent;
 }
 
 .modern-product-card--selected {
   border-color: rgba(255, 255, 255, 0.6);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 3px #10b981;
-}
-
-.product-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0.6) 50%,
-    rgba(0, 0, 0, 0.7) 100%);
-  z-index: 1;
 }
 
 .selection-indicator {
@@ -3954,6 +4013,43 @@ export default {
 .product-name-overlay {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
   backdrop-filter: blur(2px);
+}
+
+/* Modern Navigation Buttons */
+.modern-nav-btn {
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modern-nav-btn--secondary {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e5e7eb;
+}
+
+.modern-nav-btn--secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-nav-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+}
+
+.modern-nav-btn--success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  font-size: 15px;
+}
+
+.modern-nav-btn--success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
 </style>

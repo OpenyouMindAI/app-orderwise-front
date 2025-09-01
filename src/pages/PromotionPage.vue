@@ -310,19 +310,32 @@ export default {
     async getPromotions (params = this.params) {
       this.visible = true
       try {
+        // Verificar que branchOffice esté disponible
+        if (!this.branchOffice?.id) {
+          console.warn('⚠️  Branch office not available, retrying in 1 second...')
+          this.visible = false
+          setTimeout(() => {
+            this.getPromotions(params)
+          }, 1000)
+          return
+        }
+
         const requestParams = {
           ...params,
-          branch_office_id: this.branchOffice?.id
+          branch_office_id: this.branchOffice.id
         }
+
+        console.log('📡 Fetching promotions with params:', requestParams)
         const { data } = await this.$api.get('promotions', { params: requestParams })
 
-        this.promotions = data.data || []
-        this.paginationConfig.rowsNumber = data.total || 0
+        console.log('✅ Promotions response:', data)
+        this.promotions = data.data || data || []
+        this.paginationConfig.rowsNumber = data.total || this.promotions.length
 
         this.visible = false
       } catch (err) {
         this.visible = false
-        console.error('Error fetching promotions:', err)
+        console.error('❌ Error fetching promotions:', err)
         Notify.create({
           message: err.message || 'Error al cargar promociones',
           icon: 'warning',
