@@ -254,6 +254,12 @@ const routes = [
         name: 'Promotion',
         meta: { requiresAuth: true },
         component: () => import('src/pages/PromotionPage.vue')
+      },
+      {
+        path: 'report-withdrawals',
+        name: 'ReportWithdrawals',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/ReportWithdrawalsPage.vue')
       }
     ]
   },

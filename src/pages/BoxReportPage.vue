@@ -833,7 +833,8 @@ export default {
       formatNumber,
       translate: {
         debit: 'Entrada',
-        credit: 'Salida'
+        credit: 'Salida',
+        withdrawal: 'Arqueo'
       },
       fromHours: null,
       toHours: null,
