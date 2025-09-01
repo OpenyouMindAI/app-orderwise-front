@@ -82,7 +82,7 @@
               :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
               :color="isUserBoxOpen ? 'negative' : 'primary'"
               :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
-              @click="showCashBoxDialog = true"
+              @click="handleCashBoxButtonClick"
             >
               <q-tooltip class="text-body2" anchor="bottom middle">
                 {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
@@ -676,15 +676,16 @@
             <div class="row q-col-gutter-sm justify-center">
               <div
                 v-for="product in currentGroup.products"
-                :key="product.id"
+                :key="product.id || product.product_id"
                 class="col-xs-6 col-sm-4 col-md-3"
               >
                 <div class="relative-position">
                   <q-card
                     class="cursor-pointer product-card"
                     style="border-radius: 15px; overflow: hidden;"
-                    :class="{ 'selected-product': isProductSelected(product.id) }"
+                    :class="{ 'selected-product': isProductSelected(product.id || product.product_id) }"
                     @click="toggleProductSelection(product)"
+                    :key="`product-${product.id || product.product_id}-${currentGroupIndex}`"
                   >
                     <q-img
                       style="height: 140px; width: 100%;"
@@ -699,23 +700,23 @@
                   </q-card>
 
                   <!-- Quantity controls -->
-                  <div v-if="isProductSelected(product.id)" class="absolute-bottom-right q-ma-xs">
+                  <div v-if="isProductSelected(product.id || product.product_id)" class="absolute-bottom-right q-ma-xs">
                     <div class="row items-center q-gutter-xs rounded-borders q-pa-xs shadow-2">
                       <q-btn
                         icon="remove"
                         size="sm"
                         round
                         color="negative"
-                        @click.stop="decreaseQuantity(product.id)"
-                        :disable="getProductQuantity(product.id) <= 1"
+                        @click.stop="decreaseQuantity(product.id || product.product_id)"
+                        :disable="getProductQuantity(product.id || product.product_id) <= 1"
                       />
-                      <span class="text-weight-bold q-px-sm text-body1">{{ getProductQuantity(product.id) }}</span>
+                      <span class="text-weight-bold q-px-sm text-body1">{{ getProductQuantity(product.id || product.product_id) }}</span>
                       <q-btn
                         icon="add"
                         size="sm"
                         round
                         color="positive"
-                        @click.stop="increaseQuantity(product.id)"
+                        @click.stop="increaseQuantity(product.id || product.product_id)"
                         :disable="getTotalSelectedQuantity() >= currentGroup.quantity"
                       />
                     </div>
@@ -1035,15 +1036,19 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-    <cash-box-dialog
+
+    <!-- Cash Box Dialog -->
+    <CashBoxDialog
       v-model="showCashBoxDialog"
       :cashier-id="userSession.id"
       :is-box-already-open="isUserBoxOpen"
       :available-cash-boxes="availableCashBoxes"
+      :branch-office="branchOffice"
       @box-opened="handleBoxOpened"
       @box-closed="handleBoxClosed"
-      @box-created="checkCashBoxStatus"
+      @box-created="loadAvailableCashBoxes"
     />
+
     <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 800px; max-width: 80vw;'">
         <q-form @submit="saveCashflow" class="column full-height">
@@ -1354,6 +1359,12 @@ export default {
       currentCashierSession: null,
 
       scanner: false,
+
+      // Cash Box System
+      showCashBoxDialog: false,
+      isUserBoxOpen: false,
+      availableCashBoxes: [],
+      cashBoxState: null,
       /**
        * Show payment details modal
        * @type {Boolean}
@@ -1482,20 +1493,9 @@ export default {
        */
       searchInvoice: false,
       /**
-       * Cash box dialog
-       * @type {Boolean}
-       */
-      showCashBoxDialog: false,
-      /**
-       * Indicates if the user has an open cash box
-       * @type {Boolean}
-       */
-      isUserBoxOpen: false,
-      /**
-       * List of available cash boxes for the user
+       * Cash flow images
        * @type {Array}
        */
-      availableCashBoxes: [],
       cashflowImages: [],
       /**
        * Search
@@ -2945,7 +2945,6 @@ export default {
     setModelInvoice () {
       return {
         ...this.invoice,
-        cashbox_user_id: this.cashBoxState.id,
         tableClose: this.tableClose,
         title: this.invoiceType?.name,
         client_id: this.client?.id,
@@ -3287,7 +3286,7 @@ export default {
 
     /**
      * Checks the current cash box status for the user
-     * and updates the isUserBoxOpen state accordingly.
+     * using the new API structure
      */
     /**
      * Simplified method that just calls loadAvailableCashBoxes
@@ -3298,157 +3297,125 @@ export default {
       try {
         const { data } = await this.$api.get('cashier-init')
 
-        const cashierSession = data
-
-        // Verificar si la sesión está abierta
-        const isSessionOpen = cashierSession &&
-                             cashierSession.status === 'open' &&
-                             !cashierSession.close_date
-
-        if (isSessionOpen) {
-          // Usuario tiene una caja abierta - sincronizar datos
+        // Usuario tiene una caja abierta (validar user_id actual + status='open')
+        if (data && data.status === 'open' && data.user_id === this.userSession.id) {
           this.isUserBoxOpen = true
+          this.cashBoxState = {
+            id: data.id,
+            cashbox_id: data.cashbox_id,
+            user_id: data.user_id,
+            init_balance: parseFloat(data.init_balance),
+            init_date: data.init_date,
+            status: data.status,
+            close_date: data.close_date,
+            end_balance: data.end_balance,
+            user_close_id: data.user_close_id
+          }
           this.availableCashBoxes = []
-
-          // Actualizar localStorage con datos más recientes de la API
-          await this.updateCashBoxState({
-            id: cashierSession.id,
-            isOpen: true,
-            openedAt: cashierSession.init_date || savedState.openedAt,
-            cashboxId: cashierSession.cashbox_id,
-            userId: this.userSession.id,
-            initialBalance: parseFloat(cashierSession.init_balance) || savedState.initialBalance || 0,
-            sessionId: cashierSession.id
-          })
         } else {
-          // Usuario no tiene caja abierta - limpiar localStorage
-          localStorage.removeItem('cashbox_state')
-          this.isUserBoxOpen = false
-          this.showCashBoxDialog = true
-          await this.loadAvailableCashBoxes()
+          // Respuesta exitosa pero sin sesión activa
+          await this.handleNoActiveSession()
         }
       } catch (error) {
-        console.error('Error en checkCashBoxStatus:', error)
-        // Fallback: no mostrar modal ni romper la app
-        this.isUserBoxOpen = false
-        this.showCashBoxDialog = false
-        this.availableCashBoxes = []
-        this.currentCashierSession = null
+        if (error.response?.status === 404) {
+          // 404 es comportamiento normal - no hay sesión activa
+          await this.handleNoActiveSession()
+        } else {
+          // Error real del servidor
+          console.error('Error al verificar estado de caja:', error)
+          this.isUserBoxOpen = false
+          this.cashBoxState = null
+          this.availableCashBoxes = []
+        }
       }
     },
 
     /**
-     * Loads available cash boxes and handles automatic selection logic
-     * New simplified algorithm:
-     * - If user has 1 box and it's open: auto-select
-     * - If user has 1 box and it's closed: show modal to enter amount
-     * - If user has multiple boxes: show all for selection
+     * Handle when there's no active cashbox session
+     */
+    async handleNoActiveSession () {
+      this.isUserBoxOpen = false
+      this.cashBoxState = null
+      await this.loadAvailableCashBoxes()
+    },
+
+    /**
+     * Handle cash box button click - load boxes before showing modal
+     */
+    async handleCashBoxButtonClick () {
+      // Si no hay caja abierta, cargar cajas disponibles antes de mostrar modal
+      if (!this.isUserBoxOpen) {
+        await this.loadAvailableCashBoxes()
+      }
+
+      this.showCashBoxDialog = true
+    },
+
+    /**
+     * Loads available cash boxes from API with open/closed status
      */
     async loadAvailableCashBoxes () {
       console.log('🔍 Iniciando loadAvailableCashBoxes...')
       console.log('🏢 branchOffice actual:', this.branchOffice)
 
       if (!this.branchOffice?.id) {
-        console.error('Error: branchOffice.id no está disponible. No se pueden cargar cajas.')
+        console.error('Error: branchOffice.id no está disponible')
         this.availableCashBoxes = []
         return
       }
 
       try {
-        // Obtener todas las cajas del sistema
+        // 1. Obtener TODAS las cajas sin filtros
         const response = await this.$api.get('cashboxes')
-        console.log('📦 Respuesta completa de la API:', response.data)
+        const allBoxes = response.data || []
 
-        const allBoxes = response.data.data || response.data || []
-        console.log('📋 Todas las cajas obtenidas:', allBoxes)
-
-        // Filtrar cajas activas del usuario actual
-        const userBoxes = allBoxes.filter(box =>
-          box.status === 'active' &&
-          !box.disabled &&
-          box.branch_office_id === this.branchOffice.id
-        )
-
-        console.log('📦 Cajas del usuario actual:', userBoxes)
-        console.log('🔢 Cantidad de cajas:', userBoxes.length)
-
-        // Aplicar nueva lógica simplificada
-        if (userBoxes.length === 0) {
-          // No hay cajas disponibles
-          console.log('⚠️ No hay cajas disponibles para este usuario')
-          this.availableCashBoxes = []
-          this.isUserBoxOpen = false
-          this.showCashBoxDialog = false
-        } else if (userBoxes.length === 1) {
-          // Usuario tiene solo 1 caja
-          const singleBox = userBoxes[0]
-          console.log('📦 Usuario tiene solo 1 caja:', singleBox)
-          console.log('🔓 Estado open de la caja:', singleBox.open)
-
-          if (singleBox.open === true) {
-            // Caja está abierta: auto-seleccionar
-            console.log('✅ Auto-seleccionando caja abierta')
-            this.isUserBoxOpen = true
-            this.availableCashBoxes = []
-            this.currentCashierSession = { cashbox: singleBox }
-            this.showCashBoxDialog = false
-          } else {
-            // Caja está cerrada: mostrar modal para ingresar monto
-            console.log('🔒 Caja cerrada, mostrando modal para abrir')
-            this.isUserBoxOpen = false
-            this.availableCashBoxes = [singleBox]
-            this.currentCashierSession = null
-            this.showCashBoxDialog = true
-          }
-        } else {
-          // Usuario tiene múltiples cajas: mostrar todas para selección
-          console.log('📦 Usuario tiene múltiples cajas, mostrando selector')
-          this.availableCashBoxes = userBoxes
-          this.isUserBoxOpen = false
-          this.currentCashierSession = null
-          this.showCashBoxDialog = true
-        }
+        // 2. Filtrar por sucursal y estado en el cliente
+        this.availableCashBoxes = allBoxes
+          .filter(box => box.branch_office_id === this.branchOffice.id && !box.deleted_at)
+          .map(box => ({
+            ...box,
+            open: box.current_session ? box.current_session.open : false
+          }))
       } catch (error) {
         console.error('❌ Error al cargar cajas disponibles:', error)
         console.error('❌ Detalles del error:', error.response?.data || error.message)
         this.availableCashBoxes = []
-        this.isUserBoxOpen = false
-        this.showCashBoxDialog = false
       }
     },
 
     /**
-     * Handles the 'box-opened' event from the dialog.
-     * Updates the local state to reflect that a box is now open.
-     * @param {Object} boxData - Data about the opened box (optional)
+     * Handle when a cash box is opened
      */
-    async handleBoxOpened (boxData = {}) {
+    handleBoxOpened (boxData) {
       this.isUserBoxOpen = true
-      this.availableCashBoxes = [] // Ya no hay cajas disponibles porque tiene una abierta
-      this.currentCashierSession = boxData
-      this.showCashBoxDialog = false
-
-      console.log('✅ Caja abierta correctamente:', boxData)
-    },
-
-    async handleBoxClosed (closeData = {}) {
-      this.isUserBoxOpen = false
-      this.currentCashierSession = null
-
-      try {
-        // Actualizar disponibilidad de cajas después del cierre
-        await this.loadAvailableCashBoxes()
-      } catch (error) {
-        console.error('Error al cargar cajas disponibles después del cierre:', error)
-        this.availableCashBoxes = []
-
-        this.$q.notify({
-          type: 'warning',
-          message: 'Caja cerrada, pero hubo un problema al recargar las cajas disponibles',
-          caption: 'Intenta recargar la página'
-        })
+      this.cashBoxState = {
+        id: boxData.sessionId,
+        cashbox_id: boxData.cashboxId,
+        user_id: this.userSession.id,
+        init_balance: boxData.initialBalance,
+        open: true
       }
+      this.availableCashBoxes = []
     },
+
+    /**
+     * Handle when a cash box is closed
+     */
+    handleBoxClosed (closeData) {
+      this.isUserBoxOpen = false
+      this.cashBoxState = null
+      // Reload available boxes after closing
+      this.loadAvailableCashBoxes()
+    },
+
+    /**
+     * Handle when a new cash box is created
+     */
+    handleBoxCreated (newBox) {
+      // Reload available boxes to include the new one
+      this.loadAvailableCashBoxes()
+    },
+
     /*
      * Open promo selection dialog
      */
@@ -3473,18 +3440,22 @@ export default {
      */
     initializePreselectedProducts () {
       if (!this.currentPromo) return
+      console.log('🔄 Initializing preselected products')
       this.currentPromo.promotion_details.forEach((group, groupIndex) => {
         group.products.forEach(product => {
           if (product.quantity && product.quantity > 0) {
+            const productId = product.id || product.product_id
+            console.log('📦 Adding preselected:', product.name, 'ID:', productId, 'Qty:', product.quantity)
             this.promoSelections.push({
               groupIndex,
-              product_id: product.id,
+              product_id: String(productId),
               product,
               quantity: product.quantity
             })
           }
         })
       })
+      console.log('✅ Preselected products initialized:', this.promoSelections.length)
     },
 
     /**
@@ -3528,21 +3499,40 @@ export default {
      * Check if product is selected in current group
      */
     isProductSelected (id) {
-      return this.promoSelections.some(selection =>
+      if (!id) {
+        console.warn('⚠️ isProductSelected called with undefined id')
+        return false
+      }
+      const isSelected = this.promoSelections.some(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.product_id === id
+        String(selection.product_id) === String(id)
       )
+      console.log(`🔎 Product ${id} selected:`, isSelected, 'in group:', this.currentGroupIndex)
+      console.log('All selections:', this.promoSelections)
+      return isSelected
     },
 
     /**
      * Get product quantity in current group
      */
     getProductQuantity (id) {
+      if (!id) {
+        console.warn('⚠️ getProductQuantity called with undefined id')
+        return 0
+      }
       const selections = this.promoSelections.filter(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.product_id === id
+        String(selection.product_id) === String(id)
       )
-      return selections.reduce((total, selection) => total + selection.quantity, 0)
+      const quantity = selections.reduce((total, selection) => total + selection.quantity, 0)
+
+      console.log(`🔢 getProductQuantity for ID ${id}:`)
+      console.log('   Current group:', this.currentGroupIndex)
+      console.log('   All selections:', this.promoSelections.map(s => ({ id: s.product_id, group: s.groupIndex, qty: s.quantity, name: s.product.name })))
+      console.log('   Filtered selections:', selections)
+      console.log('   Final quantity:', quantity)
+
+      return quantity
     },
 
     /**
@@ -3558,72 +3548,94 @@ export default {
      * Toggle product selection
      */
     toggleProductSelection (product) {
-      const existingIndex = this.promoSelections.findIndex(selection =>
+      const productId = product.id || product.product_id
+      console.log('👆 Toggle product:', product.name, 'ID:', productId, 'Group:', this.currentGroupIndex)
+      console.log('📋 Current selections before toggle:', this.promoSelections.map(s => ({ id: s.product_id, group: s.groupIndex, name: s.product.name, qty: s.quantity })))
+
+      const existingSelectionIndex = this.promoSelections.findIndex(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.product_id === product.id
+        String(selection.product_id) === String(productId)
       )
 
-      if (existingIndex >= 0) {
-        this.promoSelections.splice(existingIndex, 1)
+      console.log('🔍 Found existing selection index:', existingSelectionIndex)
+
+      if (existingSelectionIndex >= 0) {
+        // Product is already selected, remove it completely
+        this.promoSelections.splice(existingSelectionIndex, 1)
+        console.log('➖ Removed product from selection completely')
       } else {
-        if (this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
+        // Product not selected, add it if we haven't reached the limit
+        const currentTotal = this.getTotalSelectedQuantity()
+        console.log('📊 Current total selected:', currentTotal, 'Group limit:', this.currentGroup.quantity)
+        if (currentTotal < this.currentGroup.quantity) {
           this.promoSelections.push({
             groupIndex: this.currentGroupIndex,
-            product_id: product.id,
+            product_id: String(productId),
             product,
-            quantity: product?.pivot?.quantity || 1
+            quantity: 1
           })
+          console.log('➕ Added product to selection with quantity 1')
+        } else {
+          console.log('⚠️ Cannot add more products - group limit reached')
         }
       }
+
+      console.log('📋 Updated selections after toggle:', this.promoSelections.map(s => ({ id: s.product_id, group: s.groupIndex, name: s.product.name, qty: s.quantity })))
     },
 
     /**
      * Increase product quantity
      */
     increaseQuantity (id) {
+      if (!id) {
+        console.warn('⚠️ increaseQuantity called with undefined id')
+        return
+      }
+      console.log('➕ Increase quantity for product:', id)
       const selection = this.promoSelections.find(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.product_id === id
+        String(selection.product_id) === String(id)
       )
-      if (selection && this.getTotalSelectedQuantity() < this.currentGroup.quantity) {
-        selection.quantity++
-        console.log('➕ QUANTITY INCREASED:', selection.product.name, 'new quantity:', selection.quantity)
-        console.log('📊 UPDATED SELECTIONS:', this.promoSelections)
+
+      if (selection) {
+        const currentTotal = this.getTotalSelectedQuantity()
+        console.log('📊 Current total before increase:', currentTotal, 'Group limit:', this.currentGroup.quantity)
+        if (currentTotal < this.currentGroup.quantity) {
+          selection.quantity++
+          console.log('➕ QUANTITY INCREASED:', selection.product.name, 'new quantity:', selection.quantity)
+          console.log('📊 New total after increase:', this.getTotalSelectedQuantity())
+        } else {
+          console.log('⚠️ Cannot increase - group limit reached')
+        }
+      } else {
+        console.log('❌ No selection found for product ID:', id)
       }
     },
 
-    /**
-     * Actualiza el estado de la caja en localStorage únicamente
-     * @param {Object} cashBoxState - Estado de la caja a guardar
-     */
-    async updateCashBoxState (data) {
-      const stateWithTimestamp = {
-        ...data,
-        lastUpdated: new Date().toISOString()
-      }
-
-      try {
-        localStorage.setItem('cashbox_state', JSON.stringify(stateWithTimestamp))
-        this.cashBoxState = stateWithTimestamp
-      } catch (error) {
-        this.showCashBoxDialog = true
-        this.$q.notify({
-          type: 'negative',
-          message: 'Error al guardar estado de caja',
-          caption: 'Los cambios podrían no persistir'
-        })
-      }
-    },
     /**
      * Decrease product quantity
      */
     decreaseQuantity (id) {
+      if (!id) {
+        console.warn('⚠️ decreaseQuantity called with undefined id')
+        return
+      }
+      console.log('➖ Decrease quantity for product:', id)
       const selection = this.promoSelections.find(selection =>
         selection.groupIndex === this.currentGroupIndex &&
-        selection.product_id === id
+        String(selection.product_id) === String(id)
       )
-      if (selection && selection.quantity > 1) {
-        selection.quantity--
+
+      if (selection) {
+        if (selection.quantity > 1) {
+          selection.quantity--
+          console.log('➖ QUANTITY DECREASED:', selection.product.name, 'new quantity:', selection.quantity)
+          console.log('📊 New total after decrease:', this.getTotalSelectedQuantity())
+        } else {
+          console.log('⚠️ Cannot decrease below 1 - use toggle to remove product')
+        }
+      } else {
+        console.log('❌ No selection found for product ID:', id)
       }
     },
 

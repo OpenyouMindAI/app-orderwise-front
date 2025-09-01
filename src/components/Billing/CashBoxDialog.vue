@@ -21,7 +21,7 @@
       <!-- Content when ready -->
       <div v-if="isReady">
         <!-- State 1: Cash box already open -->
-        <q-card-section v-if="boxAlreadyOpen" class="q-pt-lg">
+        <q-card-section v-if="isBoxAlreadyOpen" class="q-pt-lg">
           <q-form @submit.prevent="handleCloseBox">
             <p class="text-subtitle1 text-center q-mb-md">Ingresa el saldo final para cerrar la caja.</p>
             <q-input
@@ -64,39 +64,50 @@
 
         <!-- State 3: Cash boxes available - select and open -->
         <q-card-section v-else class="q-pt-md">
-          <q-form @submit.prevent="handleOpenBox">
+          <q-form @submit.prevent="openCashBoxSession">
             <q-select
               ref="boxSelect"
-              v-model="selectedBox"
+              v-model="selectedCashBox"
               :options="availableCashBoxes"
               label="Selecciona una caja"
               option-value="id"
-              option-label="name"
               filled
               lazy-rules
               :rules="boxSelectionRules"
-              class="q-mb-md curved-input"
+              class="q-mb-md"
               :disable="availableCashBoxes.length === 1"
             >
               <template v-slot:option="scope">
                 <q-item v-bind="scope.itemProps">
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.name }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
+                  <q-item-section avatar>
                     <q-icon
-                      :name="scope.opt.open ? 'lock_open' : 'lock'"
-                      :color="scope.opt.open ? 'positive' : 'negative'"
-                      size="sm"
+                      :name="scope.opt.open ? 'radio_button_checked' : 'radio_button_unchecked'"
+                      :color="scope.opt.open ? 'negative' : 'positive'"
                     />
                   </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ scope.opt.open ? 'Caja abierta' : 'Caja cerrada' }}
+                    </q-item-label>
+                  </q-item-section>
                 </q-item>
+              </template>
+              <template v-slot:selected-item="scope">
+                <div class="row items-center">
+                  <q-icon
+                    :name="scope.opt.open ? 'radio_button_checked' : 'radio_button_unchecked'"
+                    :color="scope.opt.open ? 'negative' : 'positive'"
+                    class="q-mr-sm"
+                  />
+                  <span>{{ scope.opt.name }}</span>
+                </div>
               </template>
             </q-select>
 
             <q-input
               ref="amountInput"
-              v-model.number="initialAmount"
+              v-model.number="initialBalance"
               type="number"
               label="Monto inicial"
               filled
@@ -106,8 +117,8 @@
             />
 
             <q-card-actions align="right" class="q-mt-md">
-              <q-btn flat label="Cancelar" color="primary" v-close-popup :disable="isSubmitting" />
-              <q-btn type="submit" label="Abrir Caja" color="primary" :loading="isSubmitting" />
+              <q-btn flat label="Cancelar" color="primary" v-close-popup :disable="loadingOpenBox" />
+              <q-btn type="submit" label="Abrir Caja" color="primary" :loading="loadingOpenBox" />
             </q-card-actions>
           </q-form>
         </q-card-section>
@@ -139,6 +150,10 @@ export default {
     availableCashBoxes: {
       type: Array,
       default: () => []
+    },
+    branchOffice: {
+      type: Object,
+      required: true
     }
   },
 
@@ -152,15 +167,16 @@ export default {
       // Loading and submission states
       isReady: false,
       isSubmitting: false,
+      loadingOpenBox: false,
+      loadingCloseBox: false,
 
       // Form data
-      selectedBox: null,
-      initialAmount: null,
+      selectedCashBox: null,
+      initialBalance: null,
       newBoxName: '',
       endBalanceAmount: null,
 
       // Internal component state
-      boxAlreadyOpen: false,
       cashierSession: null
     }
   },
@@ -171,10 +187,6 @@ export default {
   computed: {
     authStore () {
       return authentication()
-    },
-
-    branchOffice () {
-      return this.authStore.branchOffice
     },
 
     // Validation rules
@@ -206,7 +218,7 @@ export default {
     availableCashBoxes: {
       handler (newVal) {
         if (newVal && newVal.length === 1) {
-          this.selectedBox = newVal[0]
+          this.selectedCashBox = newVal[0]
         }
       },
       immediate: true
@@ -216,23 +228,6 @@ export default {
   // ==========================================
   // LIFECYCLE HOOKS
   // ==========================================
-  created () {
-    // Set isReady to true immediately to prevent infinite spinner
-    this.isReady = true
-
-    // Safe initialization of debounced function if needed
-    if (this.$utils && this.$utils.debounce) {
-      this.debouncedLoadBoxes = this.$utils.debounce(this.loadBoxes?.bind(this), 500)
-    } else {
-      // Fallback debounce implementation
-      let timeout
-      this.debouncedLoadBoxes = (...args) => {
-        clearTimeout(timeout)
-        timeout = setTimeout(() => this.loadBoxes?.(...args), 500)
-      }
-    }
-  },
-
   mounted () {
     // The watcher for modelValue will handle initialization on open
   },
@@ -257,16 +252,14 @@ export default {
      * Reset form to initial state
      */
     resetForm () {
-      this.initialAmount = null
+      this.initialBalance = null
       this.newBoxName = ''
       this.endBalanceAmount = null
-      // Don't set isReady = false to prevent spinner from appearing again
-      this.boxAlreadyOpen = false
-      this.cashierSession = null
+      this.isReady = false
 
-      // Don't reset selectedBox if there's only one available
+      // Don't reset selectedCashBox if there's only one available
       if (this.availableCashBoxes.length !== 1) {
-        this.selectedBox = null
+        this.selectedCashBox = null
       }
     },
 
@@ -279,7 +272,7 @@ export default {
       this.$nextTick(() => {
         if (this.availableCashBoxes.length === 0) {
           this.$refs.newBoxNameInput?.focus()
-        } else if (this.boxAlreadyOpen) {
+        } else if (this.isBoxAlreadyOpen) {
           this.$refs.endBalanceInput?.focus()
         } else if (this.availableCashBoxes.length === 1) {
           // Focus amount input if box is auto-selected
@@ -292,62 +285,47 @@ export default {
     },
 
     // ------------------------------------------
-    // Cash Box Status Methods
-    // ------------------------------------------
-
-    // MÉTODO ELIMINADO: checkCashBoxStatus()
-    // La lógica ahora está centralizada en BillingPage.loadAvailableCashBoxes()
-    // El componente padre ya maneja todo el estado de las cajas
-
-    // MÉTODO ELIMINADO: handleExistingCashBoxFromOtherBusiness()
-    // Ya no es necesario porque el componente padre maneja todo el estado de cajas
-    // La lógica de validación está centralizada en BillingPage.loadAvailableCashBoxes()
-
-    // MÉTODO ELIMINADO: isSessionOpen()
-    // Ya no se usa porque no validamos sesiones desde el modal
-
-    // MÉTODO ELIMINADO: handleCashBoxStatusError()
-    // Ya no se usa porque no validamos estados de sesión desde el modal
-
-    // ------------------------------------------
     // Form Submission Handlers
     // ------------------------------------------
 
     /**
-     * Handle opening an existing cash box
+     * Open cash box session with new API
      */
-    async handleOpenBox () {
-      if (!this.validateOpenBoxForm()) return
-
-      this.isSubmitting = true
-
+    async openCashBoxSession () {
       try {
-        // No need to check existing sessions - parent component handles all validation
+        this.loadingOpenBox = true
+
         const payload = {
-          cashbox_id: this.selectedBox.id,
+          cashbox_id: this.selectedCashBox.id,
           user_id: this.cashierId,
-          init_balance: parseFloat(this.initialAmount),
-          init_date: new Date().toISOString().split('T')[0],
+          init_balance: parseFloat(this.initialBalance),
+          init_date: new Date().toISOString().split('T')[0], // Fecha actual YYYY-MM-DD
+          init_time: new Date().toTimeString().split(' ')[0], // Hora actual HH:MM:SS
           status: 'open',
-          branch_office_id: this.branchOffice.id,
-          company_id: this.branchOffice.company_id
+          branch_office_id: this.branchOffice.id
         }
 
-        await this.$api.post('cashier-open', payload)
+        const response = await this.$api.post('cashier-open', payload)
 
-        this.showSuccessNotification(`Caja "${this.selectedBox.name}" abierta con éxito`, `Monto inicial: $${this.initialAmount}`)
-
-        this.$emit('box-opened', {
-          cashboxId: this.selectedBox.id,
-          initialBalance: this.initialAmount,
-          boxName: this.selectedBox.name
+        this.$q.notify({
+          type: 'positive',
+          message: 'Caja abierta correctamente',
+          timeout: 3000
         })
 
-        this.closeDialog()
+        // Emit event with session data
+        this.$emit('box-opened', {
+          sessionId: response.data.id,
+          cashboxId: this.selectedCashBox.id,
+          initialBalance: this.initialBalance
+        })
+
+        this.resetForm()
+        this.$emit('update:modelValue', false)
       } catch (error) {
-        this.handleApiError(error, 'Error al abrir caja')
+        this.handleApiError(error, 'Error al abrir la caja')
       } finally {
-        this.isSubmitting = false
+        this.loadingOpenBox = false
       }
     },
 
@@ -389,30 +367,34 @@ export default {
      */
     async handleCloseBox () {
       // Validate the end balance amount
+      console.log('Iniciando handleCloseBox. Monto final:', this.endBalanceAmount)
       const endBalance = this.endBalanceAmount
       if (endBalance === null || endBalance === '' || endBalance < 0) {
-        this.showErrorNotification('El monto final es requerido y debe ser mayor or igual a cero')
+        console.log('Validación de monto final falló.')
+        this.showErrorNotification('El monto final es requerido y debe ser mayor o igual a cero')
         return
       }
 
       this.isSubmitting = true
 
       try {
-        // Use the current session data from API
-        if (!this.cashierSession || !this.cashierSession.id) {
+        // Get current session to ensure we have the correct ID
+        const sessionResponse = await this.$api.get('cashier-init')
+        const cashierSession = sessionResponse.data
+
+        if (!cashierSession) {
           throw new Error('No se encontró una sesión de caja abierta para cerrar')
         }
 
         const payload = { end_balance: parseFloat(endBalance) }
-
-        await this.$api.put(`cashier-close/${this.cashierSession.id}`, payload)
+        await this.$api.put(`cashier-close/${cashierSession.id}`, payload)
 
         this.showSuccessNotification('La caja ha sido cerrada con éxito', `Saldo final: $${endBalance}`)
 
         this.$emit('box-closed', {
-          cashboxId: this.cashierSession.cashbox_id,
+          cashboxId: cashierSession.cashbox_id,
           endBalance: parseFloat(endBalance),
-          sessionId: this.cashierSession.id
+          sessionId: cashierSession.id
         })
 
         this.closeDialog()
@@ -432,12 +414,12 @@ export default {
      * @returns {boolean} True if valid
      */
     validateOpenBoxForm () {
-      if (!this.selectedBox?.id) {
+      if (!this.selectedCashBox?.id) {
         this.showErrorNotification('Debes seleccionar una caja válida')
         return false
       }
 
-      if (this.initialAmount === null || this.initialAmount === '' || this.initialAmount < 0) {
+      if (this.initialBalance === null || this.initialBalance === '' || this.initialBalance < 0) {
         this.showErrorNotification('El monto inicial debe ser mayor o igual a cero')
         return false
       }
@@ -502,17 +484,6 @@ export default {
     handleApiError (error, defaultMessage, caption = 'Intenta nuevamente') {
       console.error(defaultMessage, error)
 
-      // Enhanced error logging for debugging
-      if (error.response) {
-        console.error('📊 Error Response Status:', error.response.status)
-        console.error('📋 Error Response Data:', error.response.data)
-        console.error('📄 Error Response Headers:', error.response.headers)
-      } else if (error.request) {
-        console.error('📡 No response received:', error.request)
-      } else {
-        console.error('⚙️ Error in request setup:', error.message)
-      }
-
       const message = error.response?.data?.message ||
                      error.message ||
                      defaultMessage
@@ -526,17 +497,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.curved-input :deep(.q-field__control) {
-  overflow: hidden;
-}
-
-.curved-input :deep(.q-field__control)::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  border: 1px solid;
-  pointer-events: none;
-}
-</style>
