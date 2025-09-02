@@ -664,14 +664,14 @@
                 v-model="from"
                 filled
                 label="Fecha inicial"
-                type="date"
+                type="datetime-local"
                 color="primary"
               />
               <q-input
                 v-model="to"
                 filled
                 label="Fecha final"
-                type="date"
+                type="datetime-local"
                 color="primary"
               />
             </q-tab-panel>
