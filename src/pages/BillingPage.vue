@@ -3322,8 +3322,10 @@ export default {
           await this.handleNoActiveSession()
         }
       } catch (error) {
-        if (error.response?.status === 404) {
-          // 404 es comportamiento normal - no hay sesión activa
+        if (error.response?.status === 404 ||
+            error.message?.includes('No query results for model') ||
+            error.message?.includes('CashboxUser')) {
+          // 404 o sin datos es comportamiento normal - no hay sesión activa
           await this.handleNoActiveSession()
         } else {
           // Error real del servidor
@@ -3342,6 +3344,9 @@ export default {
       this.isUserBoxOpen = false
       this.cashBoxState = null
       await this.loadAvailableCashBoxes()
+
+      // Mostrar automáticamente el modal para abrir caja con delay para asegurar renderizado
+      this.showCashBoxDialog = true
     },
 
     /**
