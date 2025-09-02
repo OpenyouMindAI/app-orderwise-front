@@ -2424,7 +2424,8 @@ export default {
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
           const element = data[key]
-          if (typeof data[key] !== 'object') {
+          console.log(element)
+          if (typeof element !== 'object' && element) {
             formData.append(key, element)
           }
         }
@@ -3347,7 +3348,6 @@ export default {
      * Handle cash box button click - load boxes before showing modal
      */
     async handleCashBoxButtonClick () {
-      // Si no hay caja abierta, cargar cajas disponibles antes de mostrar modal
       if (!this.isUserBoxOpen) {
         await this.loadAvailableCashBoxes()
       }
@@ -3359,9 +3359,6 @@ export default {
      * Loads available cash boxes from API with open/closed status
      */
     async loadAvailableCashBoxes () {
-      console.log('🔍 Iniciando loadAvailableCashBoxes...')
-      console.log('🏢 branchOffice actual:', this.branchOffice)
-
       if (!this.branchOffice?.id) {
         console.error('Error: branchOffice.id no está disponible')
         this.availableCashBoxes = []
@@ -3381,8 +3378,6 @@ export default {
             open: box.current_session ? box.current_session.open : false
           }))
       } catch (error) {
-        console.error('❌ Error al cargar cajas disponibles:', error)
-        console.error('❌ Detalles del error:', error.response?.data || error.message)
         this.availableCashBoxes = []
       }
     },
