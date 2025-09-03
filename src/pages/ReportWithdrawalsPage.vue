@@ -566,12 +566,13 @@ export default {
         const payload = {
           id: withdrawal.id,
           description: withdrawal.description,
-          amount: newAmount,
+          amount: withdrawal.amount,
           branch_office_id: branchOffice.value?.id,
           type_cashflow: 'withdrawal',
           cashbox_user_id: withdrawal.cashbox_user_id,
           payment_method_id: withdrawal.payment_method_id,
-          created_at: withdrawal.created_at // Mantener fecha original
+          created_at: withdrawal.created_at, // Mantener fecha original
+          actual_amount: newAmount
         }
 
         await api.put(`cashflow/${withdrawal.id}`, payload)
@@ -579,8 +580,16 @@ export default {
         // Reset additional amount after successful update
         additionalAmounts.value[withdrawal.id] = 0
 
-        // Reload data to reflect changes
-        loadData()
+        // Update local data without reloading to maintain expanded state
+        const dayIndex = daysData.value.findIndex(day =>
+          day.withdrawals.some(w => w.id === withdrawal.id)
+        )
+        if (dayIndex >= 0) {
+          const withdrawalIndex = daysData.value[dayIndex].withdrawals.findIndex(w => w.id === withdrawal.id)
+          if (withdrawalIndex >= 0) {
+            daysData.value[dayIndex].withdrawals[withdrawalIndex].amount = newAmount
+          }
+        }
 
         $q.notify({
           type: 'positive',
