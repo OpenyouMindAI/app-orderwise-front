@@ -574,7 +574,7 @@ export default {
           created_at: withdrawal.created_at // Mantener fecha original
         }
 
-        await api.put('cashflow', payload)
+        await api.put(`cashflow/${withdrawal.id}`, payload)
 
         // Reset additional amount after successful update
         additionalAmounts.value[withdrawal.id] = 0
