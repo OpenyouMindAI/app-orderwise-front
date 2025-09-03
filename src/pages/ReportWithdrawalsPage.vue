@@ -257,6 +257,15 @@
               >
                 <q-tooltip>{{ props.expand ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
               </q-btn>
+
+              <q-btn
+                flat
+                round
+                size="sm"
+                color="primary"
+                icon="add"
+                @click="showCashflowModal = true"
+              />
             </q-td>
           </q-tr>
 
@@ -275,49 +284,45 @@
                     style="border-left: 4px solid var(--q-negative);"
                   >
                     <q-card-section class="q-pa-md">
-                      <div class="row items-start justify-between">
-                        <div class="col">
-                          <div class="row items-center q-gutter-sm q-mb-sm">
-                            <q-badge color="negative" text-color="white" class="text-body2">
-                              {{ withdrawal.time }}
-                            </q-badge>
-                            <div class="text-body1 text-weight-medium">
-                              {{ withdrawal.description }} -
-                            </div>
-                            <div class="text-body1 text-weight-medium">
-                              {{ withdrawal.payment_method_name }}
-                            </div>
+                      <div class="row items-center justify-between">
+                        <div class="row items-center q-gutter-x-sm">
+                          <q-badge color="negative" text-color="white" class="text-body2">
+                            {{ withdrawal.time }}
+                          </q-badge>
+                          <div class="text-body1 text-weight-medium">
+                            {{ withdrawal.description }} -
                           </div>
-                          <!-- <div class="row q-col-gutter-md"> -->
-                            <!-- <div class="col-6 col-md-3">
-                              <div class="text-caption text-weight-medium">Método</div>
-                              <div class="text-body2 text-weight-medium">{{  }}</div>
-                            </div> -->
-                            <!-- <div class="col-6 col-md-3">
-                              <div class="text-caption text-weight-medium">Caja</div>
-                              <div class="text-body2 text-weight-medium">{{ withdrawal.cashbox_user_id }}</div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                              <div class="text-caption text-weight-medium">Sucursal</div>
-                              <div class="text-body2 text-weight-medium">{{ withdrawal.branch_office_id }}</div>
-                            </div> -->
-                            <!-- <div class="col-6 col-md-3">
-                              <div class="text-caption text-weight-medium">Usuario</div>
-                              <div class="text-body2 text-weight-medium">{{ withdrawal.user_created_id }}</div>
-                            </div> -->
-                          <!-- </div> -->
+                          <div class="text-body1 text-weight-medium">
+                            {{ withdrawal.payment_method_name }}
+                          </div>
                         </div>
-                        <div class="text-right flex items-center q-gutter-sm" style="min-width: 120px;">
-                          <div class="text-subtitle1 text-weight-bold text-negative">
-                            {{ formatCurrency(withdrawal.amount) }}
+
+                        <div class="row items-center q-gutter-x-sm">
+                          <div class="text-subtitle1 text-weight-bold">
+                            Monto: {{ formatCurrency(withdrawal.amount) }}
                           </div>
+
+                          <q-input
+                            v-model.number="additionalAmounts[withdrawal.id]"
+                            placeholder="Monto adicional"
+                            type="number"
+                            outlined
+                            dense
+                            style="width: 150px;"
+                            prefix="$"
+                          />
+
+                          <div v-if="additionalAmounts[withdrawal.id] > 0" class="text-subtitle1 text-weight-bold" :class="getDifferenceColor(withdrawal.amount, withdrawal.id)">
+                            Diferencia: {{ formatCurrency(calculateTotal(withdrawal.amount, withdrawal.id)) }}
+                          </div>
+
                           <q-btn
                             flat
-                            round
-                            size="sm"
+                            rounded
                             color="primary"
-                            icon="add"
-                            @click="addWithdrawal(props.row.day)"
+                            label="Guardar"
+                            icon-right="save"
+                            @click="updateWithdrawal(withdrawal)"
                           />
                         </div>
                       </div>
@@ -330,6 +335,18 @@
         </template>
       </q-table>
     </div>
+
+    <!-- Cashflow Modal -->
+    <CashflowModal
+      v-model="showCashflowModal"
+      :payment-methods="paymentMethods"
+      :cash-box-state="null"
+      :branch-office="branchOffice"
+      :flow-type-options="[
+        { label: 'Arqueo', value: 'withdrawal' }
+      ]"
+      @cashflow-saved="onCashflowSaved"
+    />
   </q-page>
 </template>
 
@@ -338,9 +355,13 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
+import CashflowModal from 'src/components/CashflowModal.vue'
 
 export default {
   name: 'WithdrawalsReport',
+  components: {
+    CashflowModal
+  },
 
   setup () {
     const $q = useQuasar()
@@ -359,6 +380,11 @@ export default {
       payment_method_ids: [],
       cashbox_user_id: null
     })
+
+    const additionalAmounts = ref({})
+    const showCashflowModal = ref(false)
+    const userSession = computed(() => store.userSession)
+    const branchOffice = computed(() => store.branchOffice)
 
     const totalAmount = computed(() => {
       return daysData.value.reduce((sum, day) => sum + parseFloat(day.sum_amount || 0), 0)
@@ -523,13 +549,60 @@ export default {
       })
     }
 
-    // Open a form or navigate to add a new withdrawal entry.
-    const addWithdrawal = (day) => {
-      // This is a placeholder implementation. You can replace this
-      // with navigation to a creation page or opening a dialog.
+    // Update withdrawal with new calculated amount
+    const updateWithdrawal = async (withdrawal) => {
+      try {
+        // Get the calculated total amount
+        const newAmount = calculateTotal(withdrawal.amount, withdrawal.id)
+
+        if (!additionalAmounts.value[withdrawal.id] || additionalAmounts.value[withdrawal.id] <= 0) {
+          $q.notify({
+            type: 'warning',
+            message: 'Debe ingresar un monto adicional válido'
+          })
+          return
+        }
+
+        const payload = {
+          id: withdrawal.id,
+          description: withdrawal.description,
+          amount: newAmount,
+          branch_office_id: branchOffice.value?.id,
+          type_cashflow: 'withdrawal',
+          cashbox_user_id: withdrawal.cashbox_user_id,
+          payment_method_id: withdrawal.payment_method_id,
+          created_at: withdrawal.created_at // Mantener fecha original
+        }
+
+        await api.put('cashflow', payload)
+
+        // Reset additional amount after successful update
+        additionalAmounts.value[withdrawal.id] = 0
+
+        // Reload data to reflect changes
+        loadData()
+
+        $q.notify({
+          type: 'positive',
+          message: 'Retiro actualizado exitosamente'
+        })
+      } catch (error) {
+        console.error('Error updating withdrawal:', error)
+        $q.notify({
+          type: 'negative',
+          message: 'Error al actualizar el retiro',
+          caption: error.response?.data?.message || error.message
+        })
+      }
+    }
+
+    // Handle cashflow saved event
+    const onCashflowSaved = () => {
+      showCashflowModal.value = false
+      loadData()
       $q.notify({
-        type: 'info',
-        message: 'Agregar retiro para ' + formatDate(day)
+        type: 'positive',
+        message: 'Retiro guardado exitosamente'
       })
     }
     const printReport = () => {
@@ -552,7 +625,7 @@ export default {
             <p><strong>Período:</strong> ${formatDate(dateFrom.value)} - ${formatDate(dateTo.value)}</p>
             <div class="total">Total General: ${formatCurrency(totalAmount.value)}</div>
             <div class="total">Total Retiros: ${totalWithdrawals.value}</div>
-            
+
             ${daysData.value.map(day => `
               <h3>Fecha: ${formatDate(day.day)} - Total: ${formatCurrency(day.sum_amount)} (${day.count} retiros)</h3>
               <table>
@@ -601,7 +674,9 @@ export default {
     }
 
     function formatDate (dateString) {
-      return new Date(dateString).toLocaleDateString('es-AR', {
+      // Agregar 'T00:00:00' para evitar problemas de zona horaria
+      const date = new Date(dateString + 'T00:00:00')
+      return date.toLocaleDateString('es-AR', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -610,11 +685,31 @@ export default {
     }
 
     function formatDateShort (dateString) {
-      return new Date(dateString).toLocaleDateString('es-AR')
+      // Agregar 'T00:00:00' para evitar problemas de zona horaria
+      const date = new Date(dateString + 'T00:00:00')
+      return date.toLocaleDateString('es-AR')
     }
 
     function formatDateForInput (date) {
       return date.toISOString().split('T')[0]
+    }
+
+    function calculateTotal (originalAmount, withdrawalId) {
+      const newAmount = additionalAmounts.value[withdrawalId]
+      return newAmount && newAmount > 0 ? parseFloat(newAmount) : parseFloat(originalAmount)
+    }
+
+    function getDifferenceColor (originalAmount, withdrawalId) {
+      const newAmount = additionalAmounts.value[withdrawalId]
+      if (!newAmount || newAmount <= 0) return 'text-negative'
+
+      const original = parseFloat(originalAmount)
+      const replacement = parseFloat(newAmount)
+      const difference = replacement - original
+
+      if (difference < 0) return 'text-negative' // Rojo
+      if (difference > 0) return 'text-positive' // Verde
+      return 'text-info' // Azul
     }
 
     // Lifecycle
@@ -651,7 +746,14 @@ export default {
       formatCurrency,
       formatDate,
       formatDateShort,
-      addWithdrawal
+      calculateTotal,
+      getDifferenceColor,
+      additionalAmounts,
+      showCashflowModal,
+      userSession,
+      branchOffice,
+      updateWithdrawal,
+      onCashflowSaved
     }
   }
 }
