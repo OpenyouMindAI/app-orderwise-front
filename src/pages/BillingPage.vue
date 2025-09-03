@@ -1053,135 +1053,19 @@
       @box-created="loadAvailableCashBoxes"
     />
 
-    <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 800px; max-width: 80vw;'">
-        <q-form @submit="saveCashflow" class="column full-height">
-          <q-card-section class="q-py-sm flex justify-between items-center bg-primary text-white">
-            <span class="text-h6">Flujo de dinero</span>
-            <q-btn flat icon="close" round size="md" v-close-popup/>
-          </q-card-section>
-          <q-card-section class="col">
-            <div class="full-width row q-gutter-y-sm">
-              <div class="col-12">
-                <q-option-group
-                  v-model="panel"
-                  inline
-                  :options="[
-                    { label: 'Entrada', value: 'debit' },
-                    { label: 'Salida', value: 'credit' },
-                    { label: 'Arqueo', value: 'withdrawal' },
-                  ]"
-                />
-              </div>
-              <div class="column col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-                <q-radio
-                  v-for="paymentMethod in paymentMethods"
-                  :key="paymentMethod.id"
-                  color="primary"
-                  v-model="paymentMethodCashFlow"
-                  :label="paymentMethod.name"
-                  :val="paymentMethod.id"
-                />
-              </div>
-              <div class="col-xl-8 col-lg-8 col-md-8 col-sm-12 col-xs-12 q-gutter-sm">
-                <q-input
-                  name="amount"
-                  autocomplete="amount"
-                  v-model="amount"
-                  color="primary"
-                  label="Monto"
-                  filled
-                  clearable
-                  type="amount"
-                  required
-                  autofocus
-                />
-                <q-input
-                  name="description"
-                  autocomplete="description"
-                  v-model="description"
-                  color="primary"
-                  label="Descripción"
-                  filled
-                  clearable
-                  type="textarea"
-                  autogrow
-                  required
-                />
-                <q-card
-                  flat
-                  bordered
-                  class="dropzone-card q-mb-md"
-                  :class="{ 'dropzone-active': isDragOver }"
-                  @dragover.prevent="isDragOver = true"
-                  @dragleave.prevent="isDragOver = false"
-                  @drop.prevent="handleDrop"
-                >
-                  <q-card-section class="text-center q-pa-xl q-gutter-y-md">
-                    <!-- Image Preview Grid -->
-                    <div class="col-12" v-if="cashflowImages.length">
-                      <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                      <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
-                        <div
-                          v-for="(image, index) in cashflowImages"
-                          :key="index"
-                          class="col-6 col-sm-4 col-md-4"
-                        >
-                          <q-card flat class="image-preview-card">
-                            <q-img
-                              :src="image.url"
-                              :ratio="1"
-                              class="rounded-borders"
-                            >
-                              <div class="absolute-top-right bg-transparent">
-                                <q-btn
-                                  size="sm"
-                                  icon="close"
-                                  color="negative"
-                                  round
-                                  dense
-                                  @click="deleteImage(image, index)"
-                                />
-                              </div>
-                            </q-img>
-                          </q-card>
-                        </div>
-                      </div>
-                    </div>
-                    <div v-else>
-                      <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
-                      <div class="text-h6 text-grey-7 q-mb-sm">
-                        Arrastra las imágenes aquí
-                      </div>
-                      <div class="text-body2 text-grey-5 q-mb-md">
-                        o haz clic para seleccionar archivos
-                      </div>
-                    </div>
-                    <q-btn
-                      color="primary"
-                      label="Seleccionar Imágenes"
-                      @click="$refs.fileInput.click()"
-                      unelevated
-                    />
-                    <input
-                      ref="fileInput"
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      style="display: none"
-                      @change="handleFileSelect"
-                    />
-                  </q-card-section>
-                </q-card>
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn type="submit" color="primary" label="Guardar" icon="save" :loading="loadingCashflow"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
+    <!-- Cashflow Modal Component -->
+    <CashflowModal
+      v-model="cashflow"
+      :payment-methods="paymentMethods"
+      :cash-box-state="cashBoxState"
+      :branch-office="branchOffice"
+      :flow-type-options="[
+        { label: 'Entrada', value: 'debit' },
+        { label: 'Salida', value: 'credit' },
+        { label: 'Arqueo', value: 'withdrawal' }
+      ]"
+      @cashflow-saved="onCashflowSaved"
+    />
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
@@ -1341,6 +1225,7 @@ import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
 import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
+import CashflowModal from 'src/components/CashflowModal.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1356,7 +1241,8 @@ export default {
     WaitByPaymentMp,
     BarcodeScanner,
     CashBoxDialog,
-    TransferMpDialog
+    TransferMpDialog,
+    CashflowModal
   },
   data () {
     return {
@@ -1406,11 +1292,6 @@ export default {
        */
       loadingBilling: false,
       /**
-       * Payment method cash flow
-       * @type {Object}
-       */
-      paymentMethodCashFlow: null,
-      /**
        * Loading search
        * @type {Boolean}
        */
@@ -1452,26 +1333,6 @@ export default {
       currentAmount: 0,
       balanceCode: 0,
       /**
-       * Panel
-       * @type {String}
-       */
-      panel: 'debit',
-      /**
-       * Amount
-       * @type {Number}
-       */
-      amount: null,
-      /**
-       * Loading cashflow
-       * @type {Boolean}
-       */
-      loadingCashflow: false,
-      /**
-       * Description cashflow
-       * @type {String}
-       */
-      description: '',
-      /**
        * Invoice description
        * @type {String}
        */
@@ -1496,11 +1357,6 @@ export default {
        * @type {Boolean}
        */
       searchInvoice: false,
-      /**
-       * Cash flow images
-       * @type {Array}
-       */
-      cashflowImages: [],
       /**
        * Search
        * @type {String}
@@ -2261,44 +2117,6 @@ export default {
       this.tableSelected = data
     },
     /**
-     * Save cashflow
-     */
-    async saveCashflow () {
-      try {
-        if (!this.paymentMethodCashFlow) {
-          notify('Debe seleccionar un método de pago', 'negative', 'warning')
-          return
-        }
-        this.loadingCashflow = true
-        await this.$api.post('cashflow', this.modelData({
-          description: this.description,
-          amount: this.amount,
-          branch_office_id: this.branchOffice?.id,
-          type_cashflow: this.panel,
-          cashbox_user_id: this.cashBoxState?.id,
-          payment_method_id: this.paymentMethodCashFlow,
-          images: this.cashflowImages
-        }))
-        this.$q.notify({
-          message: 'Entrada/Salida guardada',
-          icon: 'check_circle',
-          color: 'positive'
-        })
-        this.cashflow = false
-        this.amount = 0
-        this.description = ''
-        this.panel = 'debit'
-      } catch (error) {
-        this.$q.notify({
-          message: error.message,
-          icon: 'warning',
-          color: 'negative'
-        })
-      } finally {
-        this.loadingCashflow = false
-      }
-    },
-    /**
      * Save clients
      */
     saveClient () {
@@ -2436,53 +2254,6 @@ export default {
       })
 
       return formData
-    },
-    /**
-     * Delete image
-     * @param {Object} image data image
-     * @param {Number} index index image
-     */
-    deleteImage (image, index) {
-      if (image.id) {
-        this.$api.delete(`product-images/${image.id}`)
-          .then(({ data }) => {
-            this.cashflowImages.splice(index, 1)
-          })
-          .catch(err => {
-            this.visible = false
-            Notify.create({
-              message: err.message,
-              icon: 'warning',
-              color: 'negative'
-            })
-          })
-      } else {
-        this.cashflowImages.splice(index, 1)
-      }
-    },
-    handleDrop (event) {
-      this.isDragOver = false
-      const files = Array.from(event.dataTransfer.files)
-      this.processFiles(files)
-    },
-    handleFileSelect (event) {
-      const files = Array.from(event.target.files)
-      this.processFiles(files)
-    },
-    processFiles (files) {
-      files.forEach(file => {
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            this.cashflowImages.push({
-              image: file,
-              url: e.target.result
-            })
-          }
-          reader.readAsDataURL(file)
-        }
-      })
-      console.log(this.cashflowImages)
     },
     /**
      * Prompt cash amount
@@ -3764,6 +3535,14 @@ export default {
         color: 'positive',
         icon: 'check_circle'
       })
+    },
+
+    /**
+     * Handle cashflow saved event
+     */
+    onCashflowSaved () {
+      // Refresh data if needed or show success message
+      console.log('Cashflow saved successfully')
     }
   }
 }
