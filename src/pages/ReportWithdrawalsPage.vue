@@ -625,10 +625,30 @@ export default {
     }
 
     // Handle cashflow saved event
-    const onCashflowSaved = () => {
+    const onCashflowSaved = (newCashflow) => {
       showCashflowModal.value = false
+      const currentSelectedDate = selectedDate.value
       selectedDate.value = null
-      loadData()
+      if (newCashflow && currentSelectedDate) {
+        const dayIndex = daysData.value.findIndex(day => day.day === currentSelectedDate)
+        if (dayIndex >= 0) {
+          // Add new withdrawal to existing day
+          if (!daysData.value[dayIndex].withdrawals) {
+            daysData.value[dayIndex].withdrawals = []
+          }
+          daysData.value[dayIndex].withdrawals.push(newCashflow)
+          // Update counters
+          daysData.value[dayIndex].count = (daysData.value[dayIndex].count || 0) + 1
+          daysData.value[dayIndex].sum_amount = (daysData.value[dayIndex].sum_amount || 0) + parseFloat(newCashflow.amount || 0)
+        } else {
+          // Fallback: reload data if day not found
+          loadData()
+        }
+      } else {
+        // Fallback: reload data if no specific date
+        loadData()
+      }
+
       $q.notify({
         type: 'positive',
         message: 'Retiro guardado exitosamente'
