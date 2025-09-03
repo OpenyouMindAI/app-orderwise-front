@@ -173,6 +173,10 @@ export default {
         { label: 'Salida', value: 'credit' },
         { label: 'Arqueo', value: 'withdrawal' }
       ]
+    },
+    createdAt: {
+      type: String,
+      default: null
     }
   },
   emits: ['update:modelValue', 'cashflow-saved'],
@@ -253,7 +257,8 @@ export default {
           type_cashflow: this.panel,
           cashbox_user_id: this.cashBoxState?.id,
           payment_method_id: this.paymentMethodCashFlow,
-          images: this.cashflowImages
+          images: this.cashflowImages,
+          created_at: this.createdAt
         })
 
         await this.$api.post('cashflow', payload)

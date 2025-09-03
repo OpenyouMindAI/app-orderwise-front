@@ -264,7 +264,7 @@
                 size="sm"
                 color="primary"
                 icon="add"
-                @click="showCashflowModal = true"
+                @click="openCashflowModal(props.row.day)"
               />
             </q-td>
           </q-tr>
@@ -304,7 +304,7 @@
 
                           <q-input
                             v-model.number="additionalAmounts[withdrawal.id]"
-                            placeholder="Monto adicional"
+                            placeholder="Monto Contado"
                             type="number"
                             outlined
                             dense
@@ -342,6 +342,7 @@
       :payment-methods="paymentMethods"
       :cash-box-state="null"
       :branch-office="branchOffice"
+      :created-at="selectedDate"
       :flow-type-options="[
         { label: 'Arqueo', value: 'withdrawal' }
       ]"
@@ -383,6 +384,7 @@ export default {
 
     const additionalAmounts = ref({})
     const showCashflowModal = ref(false)
+    const selectedDate = ref(null)
     const userSession = computed(() => store.userSession)
     const branchOffice = computed(() => store.branchOffice)
 
@@ -483,6 +485,17 @@ export default {
 
         const response = await api.get('/reports/withdrawals-per-day', { params })
         daysData.value = response.data.days || []
+
+        // Populate additionalAmounts with actual_amount values
+        daysData.value.forEach(day => {
+          if (day.withdrawals) {
+            day.withdrawals.forEach(withdrawal => {
+              if (withdrawal.actual_amount && withdrawal.actual_amount !== withdrawal.amount) {
+                additionalAmounts.value[withdrawal.id] = withdrawal.actual_amount
+              }
+            })
+          }
+        })
       } catch (error) {
         console.error('Error loading withdrawals:', error)
         $q.notify({
@@ -552,8 +565,8 @@ export default {
     // Update withdrawal with new calculated amount
     const updateWithdrawal = async (withdrawal) => {
       try {
-        // Get the calculated total amount
-        const newAmount = calculateTotal(withdrawal.amount, withdrawal.id)
+        // Get the new amount from additionalAmounts
+        const newAmount = additionalAmounts.value[withdrawal.id]
 
         if (!additionalAmounts.value[withdrawal.id] || additionalAmounts.value[withdrawal.id] <= 0) {
           $q.notify({
@@ -605,9 +618,16 @@ export default {
       }
     }
 
+    // Open cashflow modal with specific date
+    const openCashflowModal = (day) => {
+      selectedDate.value = day
+      showCashflowModal.value = true
+    }
+
     // Handle cashflow saved event
     const onCashflowSaved = () => {
       showCashflowModal.value = false
+      selectedDate.value = null
       loadData()
       $q.notify({
         type: 'positive',
@@ -705,7 +725,10 @@ export default {
 
     function calculateTotal (originalAmount, withdrawalId) {
       const newAmount = additionalAmounts.value[withdrawalId]
-      return newAmount && newAmount > 0 ? parseFloat(newAmount) : parseFloat(originalAmount)
+      if (newAmount && newAmount > 0) {
+        return parseFloat(newAmount) - parseFloat(originalAmount)
+      }
+      return 0
     }
 
     function getDifferenceColor (originalAmount, withdrawalId) {
@@ -759,9 +782,11 @@ export default {
       getDifferenceColor,
       additionalAmounts,
       showCashflowModal,
+      selectedDate,
       userSession,
       branchOffice,
       updateWithdrawal,
+      openCashflowModal,
       onCashflowSaved
     }
   }
