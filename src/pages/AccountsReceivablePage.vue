@@ -49,29 +49,73 @@
         </div>
       </div>
       <div class="col-12 q-pa-sm">
-        <q-table
-          v-model:pagination="paginationConfig"
-          row-key="id"
-          :columns="columns"
-          :rows="clients"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          no-data-label="Registro no encontrado"
-          @request="setPagination"
-          @row-click="editClient"
+        <q-tabs
+          v-model="activeTab"
+          dense
+          class="text-grey"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
+          narrow-indicator
         >
-          <template #loading>
-            <q-inner-loading showing color="primary" />
-          </template>
-          <template #top-right>
-            <q-input v-model="filter" filled dense debounce="500" placeholder="Buscar">
-              <template #append>
-                <q-icon name="search" />
+          <q-tab name="invoices" label="Facturas" icon="receipt" />
+          <q-tab name="payments" label="Pagos" icon="payment" />
+        </q-tabs>
+
+        <q-separator />
+
+        <q-tab-panels v-model="activeTab" animated>
+          <q-tab-panel name="invoices">
+            <q-table
+              v-model:pagination="paginationConfig"
+              row-key="id"
+              :columns="columns"
+              :rows="clients"
+              :loading="visible"
+              :filter="filter"
+              binary-state-sort
+              no-data-label="Registro no encontrado"
+              @request="setPagination"
+              @row-click="editClient"
+            >
+              <template #loading>
+                <q-inner-loading showing color="primary" />
               </template>
-            </q-input>
-          </template>
-        </q-table>
+              <template #top-right>
+                <q-input v-model="filter" filled dense debounce="500" placeholder="Buscar">
+                  <template #append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </template>
+            </q-table>
+          </q-tab-panel>
+
+          <q-tab-panel name="payments">
+            <q-table
+              v-model:pagination="paginationConfig"
+              row-key="id"
+              :columns="paymentColumns"
+              :rows="payments"
+              :loading="visible"
+              :filter="filter"
+              binary-state-sort
+              no-data-label="Registro no encontrado"
+              @request="setPagination"
+            >
+              <template #loading>
+                <q-inner-loading showing color="primary" />
+              </template>
+              <template #top-right>
+                <q-input v-model="filter" filled dense debounce="500" placeholder="Buscar">
+                  <template #append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </template>
+            </q-table>
+          </q-tab-panel>
+        </q-tab-panels>
       </div>
     </div>
     <q-dialog
@@ -517,6 +561,7 @@ export default {
       clients: [],
       sellers: [],
       sales: [],
+      payments: [],
       seller: null,
       filter: '',
       fromHours: null,
@@ -559,6 +604,7 @@ export default {
       },
       visible: false,
       totals: null,
+      activeTab: 'invoices',
       columns: [
         {
           name: 'id',
@@ -653,16 +699,68 @@ export default {
           format: row => formatNumber(row)
         }
       ],
+      paymentColumns: [
+        {
+          name: 'invoice_code',
+          align: 'left',
+          label: 'Código Factura',
+          field: row => row.invoice?.code || '-',
+          sortable: true
+        },
+        {
+          name: 'payment_date',
+          align: 'left',
+          label: 'Fecha y Hora del Pago',
+          field: row => `${row.date} ${row.hour}`,
+          sortable: true
+        },
+        {
+          name: 'payment_method',
+          align: 'left',
+          label: 'Método de Pago',
+          field: row => row.payment_method?.name || '-',
+          sortable: true
+        },
+        {
+          name: 'client',
+          align: 'left',
+          label: 'Cliente',
+          field: row => row.invoice?.client?.name || '-',
+          sortable: true
+        },
+        {
+          name: 'seller',
+          align: 'left',
+          label: 'Vendedor',
+          field: row => row.invoice?.seller?.name || '-',
+          sortable: true
+        },
+        {
+          name: 'amount',
+          align: 'right',
+          label: 'Monto',
+          field: 'amount',
+          format: row => formatNumber(row),
+          sortable: true
+        },
+        {
+          name: 'files',
+          align: 'center',
+          label: 'Archivos',
+          field: row => row.files?.length || 0,
+          format: row => row > 0 ? `${row} archivo(s)` : 'Sin archivos'
+        }
+      ],
       paginationConfig: {
-        rowsPerPage: 20,
-        rowsNumber: 20,
+        rowsPerPage: 10,
+        rowsNumber: 10,
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
       },
       salePagination: {
-        rowsPerPage: 20,
-        rowsNumber: 20,
+        rowsPerPage: 10,
+        rowsNumber: 10,
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
@@ -675,6 +773,14 @@ export default {
   watch: {
     filter (data) {
       this.searchData(data)
+    },
+    activeTab (newTab) {
+      if (newTab === 'payments') {
+        this.setPagination({
+          pagination: this.paginationConfig,
+          filter: undefined
+        })
+      }
     },
     branchOffice (data) {
       this.filterDate()
@@ -887,7 +993,7 @@ export default {
       }
     },
     /**
-     * Search beneficiary
+     * Search data based on active tab
      * @param  {Object}
      */
     searchData (data) {
@@ -895,7 +1001,11 @@ export default {
         this.params.dataSearch[dataSearch] = data
       }
       this.params.page = 1
-      this.getClients(this.params)
+      if (this.activeTab === 'payments') {
+        this.getPayments(this.params)
+      } else {
+        this.getClients(this.params)
+      }
     },
     /**
      * Get all clients
@@ -942,6 +1052,28 @@ export default {
         })
     },
     /**
+     * Get all payments
+     * @param {Object} params
+     */
+    getPayments (params = this.params) {
+      this.visible = true
+      this.$api
+        .get('invoice-payments', { params })
+        .then(({ data }) => {
+          this.payments = data.data
+          this.visible = false
+          this.paginationConfig.rowsNumber = data.total
+        })
+        .catch((err) => {
+          this.visible = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
      * Get totals for the current client
      * @param {Object} params
      * @returns {Promise<void>}
@@ -977,7 +1109,11 @@ export default {
         ...this.params,
         ...this.filters
       }
-      this.getClients(params)
+      if (this.activeTab === 'payments') {
+        this.getPayments(params)
+      } else {
+        this.getClients(params)
+      }
     },
     /**
      * Set data pagination emit event
