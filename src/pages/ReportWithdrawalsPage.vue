@@ -250,12 +250,12 @@
               <q-btn
                 flat
                 rounded
-                :icon="props.expand ? 'expand_less' : 'expand_more'"
-                @click="props.expand = !props.expand"
-                :color="props.expand ? 'primary' : 'grey-5'"
+                :icon="expandedRows.has(props.row.day) ? 'expand_less' : 'expand_more'"
+                @click="toggleExpanded(props.row.day)"
+                :color="expandedRows.has(props.row.day) ? 'primary' : 'grey-5'"
                 size="md"
               >
-                <q-tooltip>{{ props.expand ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
+                <q-tooltip>{{ expandedRows.has(props.row.day) ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
               </q-btn>
 
               <q-btn
@@ -270,7 +270,7 @@
           </q-tr>
 
           <!-- Expandable section with Quasar colors and Add button -->
-          <q-tr v-show="props.expand" :props="props">
+          <q-tr v-show="expandedRows.has(props.row.day)" :props="props">
             <q-td colspan="100%" class="p-0">
               <div class="q-pa-sm">
                 <div class="column q-gutter-md">
@@ -385,6 +385,7 @@ export default {
     const additionalAmounts = ref({})
     const showCashflowModal = ref(false)
     const selectedDate = ref(null)
+    const expandedRows = ref(new Set())
     const userSession = computed(() => store.userSession)
     const branchOffice = computed(() => store.branchOffice)
 
@@ -590,8 +591,8 @@ export default {
 
         await api.put(`cashflow/${withdrawal.id}`, payload)
 
-        // Reset additional amount after successful update
-        additionalAmounts.value[withdrawal.id] = 0
+        // Keep the additional amount in the input for reference
+        // additionalAmounts.value[withdrawal.id] = 0
 
         // Update local data without reloading to maintain expanded state
         const dayIndex = daysData.value.findIndex(day =>
@@ -600,7 +601,8 @@ export default {
         if (dayIndex >= 0) {
           const withdrawalIndex = daysData.value[dayIndex].withdrawals.findIndex(w => w.id === withdrawal.id)
           if (withdrawalIndex >= 0) {
-            daysData.value[dayIndex].withdrawals[withdrawalIndex].amount = newAmount
+            // Update actual_amount instead of amount to preserve original amount for difference calculation
+            daysData.value[dayIndex].withdrawals[withdrawalIndex].actual_amount = newAmount
           }
         }
 
@@ -618,10 +620,21 @@ export default {
       }
     }
 
+    // Toggle expanded state for a specific day
+    const toggleExpanded = (day) => {
+      if (expandedRows.value.has(day)) {
+        expandedRows.value.delete(day)
+      } else {
+        expandedRows.value.add(day)
+      }
+    }
+
     // Open cashflow modal with specific date
     const openCashflowModal = (day) => {
       selectedDate.value = day
       showCashflowModal.value = true
+      // Ensure the row is expanded when adding a new record
+      expandedRows.value.add(day)
     }
 
     // Handle cashflow saved event
@@ -803,11 +816,13 @@ export default {
       additionalAmounts,
       showCashflowModal,
       selectedDate,
+      expandedRows,
       userSession,
       branchOffice,
       updateWithdrawal,
       openCashflowModal,
-      onCashflowSaved
+      onCashflowSaved,
+      toggleExpanded
     }
   }
 }
