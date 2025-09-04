@@ -274,8 +274,41 @@
             <q-td colspan="100%" class="p-0">
               <div class="q-pa-sm">
                 <div class="column q-gutter-md">
+                  <!-- Pagination info -->
+                  <div v-if="props.row.withdrawals.length > itemsPerPage" class="row items-center justify-between q-mb-sm">
+                    <div class="text-caption text-grey-7">
+                      Mostrando {{ ((dayPagination[props.row.day]?.currentPage || 1) - 1) * itemsPerPage + 1 }} -
+                      {{ Math.min((dayPagination[props.row.day]?.currentPage || 1) * itemsPerPage, props.row.withdrawals.length) }}
+                      de {{ props.row.withdrawals.length }} retiros
+                    </div>
+                    <div class="row q-gutter-xs">
+                      <q-btn
+                        flat
+                        round
+                        size="sm"
+                        icon="chevron_left"
+                        color="primary"
+                        :disable="(dayPagination[props.row.day]?.currentPage || 1) === 1"
+                        @click="changePage(props.row.day, 'prev')"
+                      />
+                      <div class="text-caption text-center q-px-sm q-py-xs">
+                        {{ dayPagination[props.row.day]?.currentPage || 1 }} / {{ getTotalPages(props.row.withdrawals) }}
+                      </div>
+                      <q-btn
+                        flat
+                        round
+                        size="sm"
+                        icon="chevron_right"
+                        color="primary"
+                        :disable="(dayPagination[props.row.day]?.currentPage || 1) === getTotalPages(props.row.withdrawals)"
+                        @click="changePage(props.row.day, 'next')"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Paginated withdrawals -->
                   <q-card
-                    v-for="withdrawal in props.row.withdrawals"
+                    v-for="withdrawal in getPaginatedWithdrawals(props.row.withdrawals, props.row.day)"
                     :key="withdrawal.id"
                     class="rounded-borders"
                     bordered
@@ -303,7 +336,7 @@
                           </div>
 
                           <q-input
-                            v-model.number="additionalAmounts[withdrawal.id]"
+                            v-model.number="withdrawal.actual_amount"
                             placeholder="Monto Contado"
                             type="number"
                             outlined
@@ -312,16 +345,15 @@
                             prefix="$"
                           />
 
-                          <div v-if="additionalAmounts[withdrawal.id] > 0" class="text-subtitle1 text-weight-bold" :class="getDifferenceColor(withdrawal.amount, withdrawal.id)">
-                            Diferencia: {{ formatCurrency(calculateTotal(withdrawal.amount, withdrawal.id)) }}
+                          <div v-if="withdrawal.actual_amount > 0" class="text-subtitle1 text-weight-bold" :class="getDifferenceColor(withdrawal.amount, withdrawal.actual_amount)">
+                            Diferencia: {{ formatCurrency(calculateTotal(withdrawal.amount, withdrawal.actual_amount)) }}
                           </div>
 
                           <q-btn
-                            flat
                             rounded
                             color="primary"
                             label="Guardar"
-                            icon-right="save"
+                            icon="save"
                             @click="updateWithdrawal(withdrawal)"
                           />
                         </div>
@@ -382,10 +414,11 @@ export default {
       cashbox_user_id: null
     })
 
-    const additionalAmounts = ref({})
     const showCashflowModal = ref(false)
     const selectedDate = ref(null)
     const expandedRows = ref(new Set())
+    const dayPagination = ref({})
+    const itemsPerPage = 5
     const userSession = computed(() => store.userSession)
     const branchOffice = computed(() => store.branchOffice)
 
@@ -486,17 +519,6 @@ export default {
 
         const response = await api.get('/reports/withdrawals-per-day', { params })
         daysData.value = response.data.days || []
-
-        // Populate additionalAmounts with actual_amount values
-        daysData.value.forEach(day => {
-          if (day.withdrawals) {
-            day.withdrawals.forEach(withdrawal => {
-              if (withdrawal.actual_amount && withdrawal.actual_amount !== withdrawal.amount) {
-                additionalAmounts.value[withdrawal.id] = withdrawal.actual_amount
-              }
-            })
-          }
-        })
       } catch (error) {
         console.error('Error loading withdrawals:', error)
         $q.notify({
@@ -566,10 +588,10 @@ export default {
     // Update withdrawal with new calculated amount
     const updateWithdrawal = async (withdrawal) => {
       try {
-        // Get the new amount from additionalAmounts
-        const newAmount = additionalAmounts.value[withdrawal.id]
+        // Get the new amount from withdrawal.actual_amount
+        const newAmount = withdrawal.actual_amount
 
-        if (!additionalAmounts.value[withdrawal.id] || additionalAmounts.value[withdrawal.id] <= 0) {
+        if (!newAmount || newAmount <= 0) {
           $q.notify({
             type: 'warning',
             message: 'Debe ingresar un monto adicional válido'
@@ -590,9 +612,6 @@ export default {
         }
 
         await api.put(`cashflow/${withdrawal.id}`, payload)
-
-        // Keep the additional amount in the input for reference
-        // additionalAmounts.value[withdrawal.id] = 0
 
         // Update local data without reloading to maintain expanded state
         const dayIndex = daysData.value.findIndex(day =>
@@ -620,12 +639,51 @@ export default {
       }
     }
 
+    // Get paginated withdrawals for a specific day
+    const getPaginatedWithdrawals = (dayWithdrawals, day) => {
+      if (!dayPagination.value[day]) {
+        dayPagination.value[day] = { currentPage: 1 }
+      }
+
+      const startIndex = (dayPagination.value[day].currentPage - 1) * itemsPerPage
+      const endIndex = startIndex + itemsPerPage
+      return dayWithdrawals.slice(startIndex, endIndex)
+    }
+
+    // Get total pages for a specific day
+    const getTotalPages = (dayWithdrawals) => {
+      return Math.ceil(dayWithdrawals.length / itemsPerPage)
+    }
+
+    // Change page for a specific day
+    const changePage = (day, direction) => {
+      if (!dayPagination.value[day]) {
+        dayPagination.value[day] = { currentPage: 1 }
+      }
+
+      const dayData = daysData.value.find(d => d.day === day)
+      if (!dayData) return
+
+      const totalPages = getTotalPages(dayData.withdrawals)
+      const currentPage = dayPagination.value[day].currentPage
+
+      if (direction === 'next' && currentPage < totalPages) {
+        dayPagination.value[day].currentPage++
+      } else if (direction === 'prev' && currentPage > 1) {
+        dayPagination.value[day].currentPage--
+      }
+    }
+
     // Toggle expanded state for a specific day
     const toggleExpanded = (day) => {
       if (expandedRows.value.has(day)) {
         expandedRows.value.delete(day)
       } else {
         expandedRows.value.add(day)
+        // Initialize pagination for this day if not exists
+        if (!dayPagination.value[day]) {
+          dayPagination.value[day] = { currentPage: 1 }
+        }
       }
     }
 
@@ -756,16 +814,16 @@ export default {
       return date.toISOString().split('T')[0]
     }
 
-    function calculateTotal (originalAmount, withdrawalId) {
-      const newAmount = additionalAmounts.value[withdrawalId]
+    function calculateTotal (originalAmount, actualAmount) {
+      const newAmount = actualAmount
       if (newAmount && newAmount > 0) {
         return parseFloat(newAmount) - parseFloat(originalAmount)
       }
       return 0
     }
 
-    function getDifferenceColor (originalAmount, withdrawalId) {
-      const newAmount = additionalAmounts.value[withdrawalId]
+    function getDifferenceColor (originalAmount, actualAmount) {
+      const newAmount = actualAmount
       if (!newAmount || newAmount <= 0) return 'text-negative'
 
       const original = parseFloat(originalAmount)
@@ -813,10 +871,14 @@ export default {
       formatDateShort,
       calculateTotal,
       getDifferenceColor,
-      additionalAmounts,
       showCashflowModal,
       selectedDate,
       expandedRows,
+      dayPagination,
+      itemsPerPage,
+      getPaginatedWithdrawals,
+      getTotalPages,
+      changePage,
       userSession,
       branchOffice,
       updateWithdrawal,
