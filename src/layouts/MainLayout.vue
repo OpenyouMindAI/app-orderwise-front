@@ -457,13 +457,13 @@ export default {
           })
 
           notification.onclick = () => {
-            window.open(`${window.location.origin}/#/command-orders/?id=${data.invoice_id}`, '_blank')
+            window.open(`${window.location.origin}/command-orders/?id=${data.invoice_id}`, '_blank')
           }
 
           function createNotification (title, options) {
             notify('Hay una nueva comanda', 'primary', 'notifications', 'bottom-right')
-            const audio = new Audio('audios/notify.mp3')
-            audio.play()
+            // const audio = new Audio('audios/notify.mp3')
+            // audio.play()
             return new Notification(title, options)
           }
         }
@@ -481,7 +481,7 @@ export default {
     },
 
     copyCatalog () {
-      copyToClipboard(`${window.location.origin}/#/catalog/${this.userSession.company_session_id}/${this.branchOffice?.id}`)
+      copyToClipboard(`${window.location.origin}/catalog/${this.userSession.company_session_id}/${this.branchOffice?.id}`)
         .then(() => {
           notify('Link copiado exitosamente', 'positive', 'check_circle')
         })
