@@ -152,7 +152,12 @@
                 <div class="text-subtitle1 text-weight-bold">💳 Métodos de Pago</div>
               </div>
               <div class="col-auto flex justify-center items-center q-gutter-x-md">
-                <div class="text-body1 text-bold">Total: {{ formatNumber(paymentMethodTotals.payment_total || 0) }}</div>
+                <div class="text-body1 text-bold" @click.stop="paymentDetailsModal">
+                  Total: {{ formatNumber(paymentMethodTotals.payment_total || 0) }}
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Ver detalles de pagos
+                  </q-tooltip>
+                </div>
                 <q-chip
                   :color="paymentMethodTotals.payment_method_totals?.length ? 'white' : 'orange'"
                   :text-color="paymentMethodTotals.payment_method_totals?.length ? 'green-6' : 'white'"
@@ -746,6 +751,67 @@
       </q-card>
     </q-dialog>
 
+    <!-- Payment Details Dialog -->
+    <q-dialog v-model="paymentDetailsDialog">
+      <q-card style="width: 800px; max-width: 90vw;">
+        <q-card-section class="bg-green-6 text-white row items-center">
+          <div class="text-h6">💳 Detalle de Pagos por Método</div>
+          <q-space/>
+          <q-btn icon="close" flat round @click="paymentDetailsDialog = false"/>
+        </q-card-section>
+
+        <q-card-section>
+          <q-markup-table v-if="invoicePayments.data?.length" class="q-mt-md">
+            <thead>
+              <tr>
+                <th class="text-left">Factura</th>
+                <th class="text-left">Cliente</th>
+                <th class="text-left">Método de Pago</th>
+                <th class="text-left">Fecha</th>
+                <th class="text-left">Hora</th>
+                <th class="text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="payment in invoicePayments.data" :key="payment.id">
+                <td class="text-left">
+                  {{ payment.invoice?.invoice_number || 'N/A' }}
+                </td>
+                <td class="text-left">
+                  {{ payment.invoice?.customer?.name || 'Cliente General' }}
+                </td>
+                <td class="text-left">
+                  {{ payment.payment_method?.name }}
+                </td>
+                <td class="text-left">
+                  {{ formatDate(payment.created_at, 'DD/MM/YYYY') }}
+                </td>
+                <td class="text-left">
+                  {{ formatDate(payment.created_at, 'HH:mm:ss') }}
+                </td>
+                <td class="text-right text-positive">
+                  {{ formatNumber(payment.amount) }}
+                </td>
+              </tr>
+              <tr>
+                <th colspan="5" class="text-right">
+                  <span class="text-subtitle1">Total:</span>
+                </th>
+                <th class="text-right text-positive">
+                  <span class="text-subtitle1">{{ formatNumber(getTotalPayments()) }}</span>
+                </th>
+              </tr>
+            </tbody>
+          </q-markup-table>
+          <div v-else class="text-center q-pa-lg text-grey-6">
+            <q-icon name="info" size="lg"/>
+            <div class="text-h6 q-mt-md">No hay datos de pagos</div>
+            <div class="text-body2">No se encontraron pagos en el período seleccionado</div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <!-- Cash Flow Details Dialog -->
     <q-dialog v-model="cashFlowDetailsDialog">
       <q-card style="width: 700px; max-width: 80vw;">
@@ -839,6 +905,9 @@ export default {
       cashBoxUser: null,
       cashFlowDetailsDialog: false,
       cashFlowLoading: false,
+      paymentDetailsDialog: false,
+      paymentDetailsLoading: false,
+      invoicePayments: { data: [] },
       formatDate,
       panel: 'day',
       formatNumber,
@@ -867,7 +936,6 @@ export default {
         sortOrder: 'desc'
       },
       totals: [],
-      invoicePayments: [],
       typeOfServicesTotals: {},
       paymentMethodTotals: {},
       categoryTotalsTotals: {},
@@ -1181,6 +1249,88 @@ export default {
         ...this.params,
         type_cashflow: data?.type_cashflow
       })
+    },
+
+    /**
+     * Opens payment details modal and loads payment data
+     */
+    paymentDetailsModal () {
+      this.paymentDetailsDialog = true
+      this.getInvoicePayments(this.params)
+    },
+
+    /**
+     * Get invoice payments details from API
+     * @param {Object} filters - Filter parameters
+     */
+    async getInvoicePayments (filters = {}) {
+      try {
+        this.paymentDetailsLoading = true
+
+        // Construir parámetros igual que AccountsReceivablePage
+        const paymentsParams = {
+          paginate: true,
+          sortBy: 'id',
+          sortOrder: 'desc',
+          perPage: 100, // Obtener más registros para el modal
+          dataSearch: {
+            'invoice.id': '',
+            amount: ''
+          }
+        }
+
+        // Construir filtros con estructura correcta
+        const filtersPayments = {
+          dataEqualFilter: {
+            'invoice.branch_office_id': this.branchOffice?.id,
+            'invoice.seller_id': this.seller?.id
+          }
+        }
+
+        // Agregar filtros de fecha según el panel activo
+        if (this.panel === 'day' && this.day) {
+          filtersPayments.dateFilter = {
+            field: 'created_at',
+            from: `${this.day} ${this.fromHours || '00:00'}`,
+            to: `${this.day} ${this.toHours || '23:59'}`
+          }
+        } else if (this.panel === 'between' && this.from && this.to) {
+          filtersPayments.dateFilter = {
+            field: 'created_at',
+            from: this.from,
+            to: this.to
+          }
+        }
+
+        // Combinar parámetros y filtros
+        const finalParams = {
+          ...paymentsParams,
+          ...filtersPayments
+        }
+
+        const { data } = await this.$api.get('invoice-payments', { params: finalParams })
+        // IMPORTANTE: La respuesta viene en data.data, no directamente en data
+        this.invoicePayments = { data: data.data || [] }
+      } catch (error) {
+        this.$q.notify({
+          message: error.message || 'Error al cargar los pagos',
+          color: 'negative',
+          icon: 'warning'
+        })
+      } finally {
+        this.paymentDetailsLoading = false
+      }
+    },
+
+    /**
+     * Calculate total payments amount
+     * @returns {number} Total amount
+     */
+    getTotalPayments () {
+      if (!this.invoicePayments.data?.length) return 0
+      return this.invoicePayments.data.reduce((total, payment) => {
+        return total + parseFloat(payment.amount || 0)
+      }, 0)
     },
 
     async getCashflowDetails (params) {
