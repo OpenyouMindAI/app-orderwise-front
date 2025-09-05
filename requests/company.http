@@ -10,3 +10,17 @@ Content-Type: application/json
 GET {{api_url}}/invoice-payments?paginate=true&sortBy=id&sortOrder=desc&perPage=20&page=1
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+
+### Obtener pagos de facturas
+GET {{api_url}}/invoice-payments?paginate=true&sortBy=id&sortOrder=desc&perPage=10&dataSearch[id]=&dataSearch[name]=&dataSearch[document_number]=&page=1&date=2025-09-05&branch_office_id=1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+# codgio de factura
+# fecha y hora del pago no de la factura ()
+# metodo de pago
+# cliente
+# el vendedor si hay si no poner un -
+# Los files
