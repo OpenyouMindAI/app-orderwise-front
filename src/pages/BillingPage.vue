@@ -2549,6 +2549,7 @@ export default {
             this.allProducts.unshift({
               ...promotion,
               is_bundle: true,
+              is_promotion: true,
               cost: this.sumCostPromotion(promotion.promotion_details),
               skip_stock: !promotion.requires_stock,
               price: promotion.final_price

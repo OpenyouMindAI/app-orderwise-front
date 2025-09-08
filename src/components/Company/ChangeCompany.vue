@@ -269,7 +269,7 @@ const getActivityBadgeColor = (org) => {
   const daysDiff = Math.floor((now - invoiceDate) / (1000 * 60 * 60 * 24))
 
   if (daysDiff <= 2) return 'positive' // Verde
-  if (daysDiff <= 7) return 'warning'  // Amarillo/Naranja
+  if (daysDiff <= 7) return 'warning' // Amarillo/Naranja
   if (daysDiff <= 30) return 'orange-8' // Naranja oscuro
   return 'negative' // Rojo
 }
