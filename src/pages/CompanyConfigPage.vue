@@ -142,7 +142,7 @@
                 label="Continuar"
                 :loading="loading"
                 unelevated
-                class="action-btn"
+                class="action-btn q-mt-sm"
               />
             </div>
           </q-form>
@@ -363,11 +363,21 @@
               <div class="form-group">
                 <div class="checkbox-group">
                   <q-checkbox
-                    v-model="companyConfig.other.partial_billing"
-                    label="Facturación parcial"
-                    color="primary"
+                  v-model="companyConfig.other.partial_billing"
+                  label="Facturación parcial"
+                  color="primary"
                   />
                   <p class="checkbox-description">Permitir facturación parcial</p>
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <q-checkbox
+                    v-model="companyConfig.other.open_cashbox"
+                    label="Arqueo de caja"
+                    color="primary"
+                  />
+                  <p class="checkbox-description">Permitir arqueo de caja</p>
                 </div>
               </div>
             </div>
@@ -635,7 +645,8 @@ const companyConfig = ref({
   other: company.value?.company_config?.other || {},
   point_of_sale: company.value?.company_config?.point_of_sale,
   files: company.value?.company_config?.files || [],
-  partial_billing: company.value?.company_config?.partial_billing || false
+  partial_billing: company.value?.company_config?.partial_billing || false,
+  open_cashbox: company.value?.company_config?.open_cashbox || false
 })
 
 const menuConfig = ref({
@@ -759,7 +770,6 @@ const onSubmit = async () => {
       ...data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
-    step.value = 2
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -799,7 +809,6 @@ const onSubmitImages = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
-    step.value = 6
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -924,7 +933,6 @@ const saveMenuConfig = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
-    step.value = 5
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -969,7 +977,6 @@ const onSubmitConfig = async () => {
     }
 
     notify('Guardado exitosamente', 'positive', 'check_circle')
-    step.value = step.value + 1
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
