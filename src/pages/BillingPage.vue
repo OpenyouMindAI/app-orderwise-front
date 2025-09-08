@@ -75,7 +75,7 @@
               @filter="filterTypeOfServices"
             />
           </div>
-          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6" v-if="openCashBox">
             <q-btn
               style="border-radius: 10px; padding: 5px 15px"
               dense
@@ -782,7 +782,7 @@
                   unelevated
                   color="positive"
                   icon="shopping_cart"
-                  label="Agregar al Carrito"
+                  label="Agregar Promocion"
                   @click="addPromoToCart"
                   :disable="!isCurrentGroupValid()"
                   class="modern-nav-btn modern-nav-btn--success"
@@ -1311,6 +1311,11 @@ export default {
        * @type {Boolean}
        */
       invoicePrinter: false,
+      /**
+       * Open cash box
+       * @type {Boolean}
+       */
+      openCashBox: false,
       /**
        * Quantity dialog
        * @type {Boolean}
@@ -2174,9 +2179,10 @@ export default {
      * Add payment
      * @param {Object} data data payment
      */
-    addPayment (data) {
+    addPayment (data, open = true) {
       if (!this.hasPendingPayment()) return
-      if (data.acronym && data.acronym.toLowerCase() === 'efe') {
+
+      if ((data.acronym && data.acronym.toLowerCase() === 'efe')) {
         this.promptPaymentAmount(data, true).then(amount => {
           if (amount !== null) {
             const payment = this.createPayment(data, amount)
@@ -2254,36 +2260,6 @@ export default {
       })
 
       return formData
-    },
-    /**
-     * Prompt cash amount
-     * @param {Object} data data payment
-     * @returns {Promise}
-     */
-    promptCashAmount (data) {
-      return new Promise((resolve) => {
-        this.$q.dialog({
-          title: data.name || 'Pago en efectivo',
-          color: 'primary',
-          message: 'Ingrese el monto en efectivo. Si es el monto exacto, presione Aceptar.',
-          persistent: true,
-          prompt: {
-            model: '',
-            type: 'number',
-            min: 0,
-            filled: true,
-            label: 'Monto'
-          },
-          ok: {
-            label: 'Aceptar',
-            color: 'primary'
-          }
-        }).onOk(val => {
-          const amount = parseFloat(val)
-          resolve(!isNaN(amount) && amount > 0 ? amount : this.pendingPayment)
-        }).onCancel(() => resolve(this.pendingPayment))
-          .onDismiss(() => resolve(this.pendingPayment))
-      })
     },
     /**
      * Prompt payment amount - Pregunta el monto para cualquier método de pago
@@ -2552,6 +2528,11 @@ export default {
           })
         })
     },
+    sumCostPromotion (data) {
+      return (data ?? [])
+        .flatMap(g => g.products ?? [])
+        .reduce((sum, p) => sum + (Number.isFinite(Number(p.cost)) ? Number(p.cost) : 0), 0)
+    },
     /**
      * Fetch promotions from API and add them to products list
      */
@@ -2568,6 +2549,7 @@ export default {
             this.allProducts.unshift({
               ...promotion,
               is_bundle: true,
+              cost: this.sumCostPromotion(promotion.promotion_details),
               skip_stock: !promotion.requires_stock,
               price: promotion.final_price
             })
@@ -2809,6 +2791,7 @@ export default {
       this.voucherType = companySession?.company_config?.other?.voucher_type
       this.balanceCode = companySession?.company_config?.other?.balance_code
       this.partialBilling = companySession?.company_config?.other?.partial_billing || false
+      this.openCashBox = companySession?.company_config?.other?.open_cashbox || false
       this.calculateTotal()
     },
     /**
@@ -2853,10 +2836,11 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
+      const isPromotion = product?.promotion_details && product.promotion_details.length > 0
       const cartProduct = {
         id: product.id,
         name: product.name,
-        price: product.price,
+        price: isPromotion ? product.final_price : product.price,
         amount: product.quantity,
         quantity: product.quantity,
         subtotal: product.subtotal,
@@ -2870,7 +2854,7 @@ export default {
         aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
         unit_of_measure: product.unit_of_measure,
         product_price_lists: product.product_price_lists,
-        // Preserve promo/bundle specific properties
+        is_promotion: isPromotion,
         promotion_details: product.promotion_details || [],
         products: product.products || [],
         selectedProducts: product.selectedProducts || [],
@@ -3024,7 +3008,7 @@ export default {
     },
 
     /**
-     * Resetea cantidades temporales
+     * Reset quantities
      */
     resetQuantities () {
       this.quantity = 1
@@ -3069,11 +3053,13 @@ export default {
      * All cashbox logic is now handled in loadAvailableCashBoxes
      */
     async checkCashBoxStatus () {
-      console.log('🔄 Verificando estado de cajas con nuevo algoritmo simplificado')
+      if (!this.openCashBox) return
       try {
-        const { data } = await this.$api.get('cashier-init')
-
-        // Usuario tiene una caja abierta (validar user_id actual + status='open')
+        const { data } = await this.$api.get('cashier-init', {
+          params: {
+            branch_office_id: this.branchOffice?.id
+          }
+        })
         if (data && data.status === 'open' && data.user_id === this.userSession.id) {
           this.isUserBoxOpen = true
           this.cashBoxState = {
@@ -3142,11 +3128,16 @@ export default {
       }
 
       try {
-        // 1. Obtener TODAS las cajas sin filtros
-        const response = await this.$api.get('cashboxes')
+        const response = await this.$api.get('cashboxes', {
+          params: {
+            dataEqualFilter: {
+              branch_office_id: this.branchOffice.id
+            }
+          }
+        })
+
         const allBoxes = response.data || []
 
-        // 2. Filtrar por sucursal y estado en el cliente
         this.availableCashBoxes = allBoxes
           .filter(box => box.branch_office_id === this.branchOffice.id && !box.deleted_at)
           .map(box => ({
@@ -3284,22 +3275,20 @@ export default {
      */
     initializePreselectedProducts () {
       if (!this.currentPromo) return
-      console.log('🔄 Initializing preselected products')
       this.currentPromo.promotion_details.forEach((group, groupIndex) => {
         group.products.forEach(product => {
           if (product.quantity && product.quantity > 0) {
             const productId = product.id || product.product_id
-            console.log('📦 Adding preselected:', product.name, 'ID:', productId, 'Qty:', product.quantity)
             this.promoSelections.push({
               groupIndex,
               product_id: String(productId),
               product,
-              quantity: product.quantity
+              quantity: product.quantity,
+              amount: product.quantity
             })
           }
         })
       })
-      console.log('✅ Preselected products initialized:', this.promoSelections.length)
     },
 
     /**
@@ -3351,8 +3340,6 @@ export default {
         selection.groupIndex === this.currentGroupIndex &&
         String(selection.product_id) === String(id)
       )
-      console.log(`🔎 Product ${id} selected:`, isSelected, 'in group:', this.currentGroupIndex)
-      console.log('All selections:', this.promoSelections)
       return isSelected
     },
 
@@ -3369,12 +3356,6 @@ export default {
         String(selection.product_id) === String(id)
       )
       const quantity = selections.reduce((total, selection) => total + selection.quantity, 0)
-
-      console.log(`🔢 getProductQuantity for ID ${id}:`)
-      console.log('   Current group:', this.currentGroupIndex)
-      console.log('   All selections:', this.promoSelections.map(s => ({ id: s.product_id, group: s.groupIndex, qty: s.quantity, name: s.product.name })))
-      console.log('   Filtered selections:', selections)
-      console.log('   Final quantity:', quantity)
 
       return quantity
     },
@@ -3393,24 +3374,16 @@ export default {
      */
     toggleProductSelection (product) {
       const productId = product.id || product.product_id
-      console.log('👆 Toggle product:', product.name, 'ID:', productId, 'Group:', this.currentGroupIndex)
-      console.log('📋 Current selections before toggle:', this.promoSelections.map(s => ({ id: s.product_id, group: s.groupIndex, name: s.product.name, qty: s.quantity })))
 
       const existingSelectionIndex = this.promoSelections.findIndex(selection =>
         selection.groupIndex === this.currentGroupIndex &&
         String(selection.product_id) === String(productId)
       )
 
-      console.log('🔍 Found existing selection index:', existingSelectionIndex)
-
       if (existingSelectionIndex >= 0) {
-        // Product is already selected, remove it completely
         this.promoSelections.splice(existingSelectionIndex, 1)
-        console.log('➖ Removed product from selection completely')
       } else {
-        // Product not selected, add it if we haven't reached the limit
         const currentTotal = this.getTotalSelectedQuantity()
-        console.log('📊 Current total selected:', currentTotal, 'Group limit:', this.currentGroup.quantity)
         if (currentTotal < this.currentGroup.quantity) {
           this.promoSelections.push({
             groupIndex: this.currentGroupIndex,
@@ -3418,13 +3391,8 @@ export default {
             product,
             quantity: 1
           })
-          console.log('➕ Added product to selection with quantity 1')
-        } else {
-          console.log('⚠️ Cannot add more products - group limit reached')
         }
       }
-
-      console.log('📋 Updated selections after toggle:', this.promoSelections.map(s => ({ id: s.product_id, group: s.groupIndex, name: s.product.name, qty: s.quantity })))
     },
 
     /**
@@ -3435,7 +3403,6 @@ export default {
         console.warn('⚠️ increaseQuantity called with undefined id')
         return
       }
-      console.log('➕ Increase quantity for product:', id)
       const selection = this.promoSelections.find(selection =>
         selection.groupIndex === this.currentGroupIndex &&
         String(selection.product_id) === String(id)
@@ -3443,11 +3410,8 @@ export default {
 
       if (selection) {
         const currentTotal = this.getTotalSelectedQuantity()
-        console.log('📊 Current total before increase:', currentTotal, 'Group limit:', this.currentGroup.quantity)
         if (currentTotal < this.currentGroup.quantity) {
           selection.quantity++
-          console.log('➕ QUANTITY INCREASED:', selection.product.name, 'new quantity:', selection.quantity)
-          console.log('📊 New total after increase:', this.getTotalSelectedQuantity())
         } else {
           console.log('⚠️ Cannot increase - group limit reached')
         }
@@ -3464,23 +3428,12 @@ export default {
         console.warn('⚠️ decreaseQuantity called with undefined id')
         return
       }
-      console.log('➖ Decrease quantity for product:', id)
       const selection = this.promoSelections.find(selection =>
         selection.groupIndex === this.currentGroupIndex &&
         String(selection.product_id) === String(id)
       )
 
-      if (selection) {
-        if (selection.quantity > 1) {
-          selection.quantity--
-          console.log('➖ QUANTITY DECREASED:', selection.product.name, 'new quantity:', selection.quantity)
-          console.log('📊 New total after decrease:', this.getTotalSelectedQuantity())
-        } else {
-          console.log('⚠️ Cannot decrease below 1 - use toggle to remove product')
-        }
-      } else {
-        console.log('❌ No selection found for product ID:', id)
-      }
+      if (selection && selection.quantity > 1) selection.quantity--
     },
 
     /**
@@ -3514,11 +3467,11 @@ export default {
      */
     addPromoToCart () {
       if (!this.isCurrentGroupValid()) return
-
+      console.log(this.currentPromo)
       const promoProduct = {
         ...this.currentPromo,
         promotion_id: this.currentPromo.id,
-        promotion_detail_id: this.currentPromo.id, // FIXME: Deberia usar otro id?
+        promotion_detail_id: this.currentPromo.id,
         selectedProducts: this.promoSelections,
         quantity: 1,
         amount: 1,

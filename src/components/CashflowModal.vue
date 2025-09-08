@@ -258,7 +258,7 @@ export default {
           cashbox_user_id: this.cashBoxState?.id,
           payment_method_id: this.paymentMethodCashFlow,
           images: this.cashflowImages,
-          created_at: this.createdAt
+          created_at: this.createdAt ? `${this.createdAt}T${new Date().toTimeString().substring(0, 8)}` : null
         })
 
         await this.$api.post('cashflow', payload)
