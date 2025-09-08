@@ -322,8 +322,8 @@
                       <div class="col-7">
                         <div class="text-body2 text-weight-medium">
                           <q-icon
-                            :name="cashFlow.type_cashflow === 'debit' ? 'add_circle' : 'remove_circle'"
-                            :color="cashFlow.type_cashflow === 'debit' ? 'positive' : 'negative'"
+                            :name="cashFlow.type_cashflow === 'debit' || cashFlow.type_cashflow === 'init_cashbox' ? 'add_circle' : 'remove_circle'"
+                            :color="cashFlow.type_cashflow === 'debit' || cashFlow.type_cashflow === 'init_cashbox' ? 'positive' : 'negative'"
                             size="xs"
                             class="q-mr-xs"
                           />
@@ -332,7 +332,7 @@
                         <div class="text-caption text-grey-6">Ver detalles</div>
                       </div>
                       <div class="col-5 text-right">
-                        <div class="text-body1 text-weight-bold" :class="cashFlow.type_cashflow === 'debit' ? 'text-positive' : 'text-negative'">
+                        <div class="text-body1 text-weight-bold" :class="cashFlow.type_cashflow === 'debit' || cashFlow.type_cashflow === 'init_cashbox' ? 'text-positive' : 'text-negative'">
                           {{ formatNumberCompact(cashFlow.totals) }}
                         </div>
                       </div>
@@ -834,7 +834,9 @@ export default {
       translate: {
         debit: 'Entrada',
         credit: 'Salida',
-        withdrawal: 'Arqueo'
+        withdrawal: 'Arqueo',
+        init_cashbox: 'Apertura',
+        close_cashbox: 'Cierre'
       },
       fromHours: null,
       toHours: null,
@@ -983,7 +985,7 @@ export default {
       ) || []
 
       return relatedCashFlow.reduce((sum, cf) => {
-        return sum + (cf.type_cashflow === 'debit' ? cf.totals : -cf.totals)
+        return sum + (cf.type_cashflow === 'debit' || cf.type_cashflow === 'init_cashbox' ? cf.totals : -cf.totals)
       }, 0)
     },
 

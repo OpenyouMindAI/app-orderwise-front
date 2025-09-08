@@ -361,6 +361,18 @@
               </div>
 
               <div class="form-group">
+                <label class="field-label">Punto de venta</label>
+                <q-input
+                  v-model="companyConfig.point_of_sale"
+                  outlined
+                  dense
+                  class="custom-input"
+                />
+              </div>
+              <div class="form-group">
+              </div>
+
+              <div class="form-group">
                 <div class="checkbox-group">
                   <q-checkbox
                   v-model="companyConfig.other.partial_billing"

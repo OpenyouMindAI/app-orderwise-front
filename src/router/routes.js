@@ -259,7 +259,7 @@ const routes = [
         path: 'modules',
         name: 'Module',
         meta: { requiresAuth: true },
-        component: () => import('pages/ModulePage.vue'),
+        component: () => import('pages/ModulePage.vue')
       },
       {
         path: 'report-withdrawals',
