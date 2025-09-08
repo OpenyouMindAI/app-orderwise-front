@@ -144,6 +144,19 @@
                   target="_blank"
                   type="a"
                 />
+                <q-btn
+                  round
+                  flat
+                  icon="android"
+                  href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
+                  target="_blank"
+                  v-if="!$q.platform.is.nativeMobile"
+                  type="a"
+                >
+                  <q-tooltip class="text-body2">
+                    Actualizar app
+                  </q-tooltip>
+                </q-btn>
               </div>
             </q-banner>
           </q-popup-proxy>

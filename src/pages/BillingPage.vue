@@ -629,7 +629,7 @@
                   <q-img
                     style="height: 150px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                    @click="props.row.is_bundle ? openPromoDialog(props.row) : validateProduct(props.row, true)"
+                    @click="props.row.is_promotion ? openPromoDialog(props.row) : validateProduct(props.row, true)"
                   >
                     <div class="absolute-full text-body2 flex flex-center text-bold text-center">
                       {{ props.row.name }}
@@ -2836,11 +2836,10 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
-      const isPromotion = product?.promotion_details && product.promotion_details.length > 0
       const cartProduct = {
         id: product.id,
         name: product.name,
-        price: isPromotion ? product.final_price : product.price,
+        price: product.is_promotion ? product.final_price : product.price,
         amount: product.quantity,
         quantity: product.quantity,
         subtotal: product.subtotal,
@@ -2854,7 +2853,7 @@ export default {
         aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
         unit_of_measure: product.unit_of_measure,
         product_price_lists: product.product_price_lists,
-        is_promotion: isPromotion,
+        is_promotion: product.is_promotion,
         promotion_details: product.promotion_details || [],
         products: product.products || [],
         selectedProducts: product.selectedProducts || [],
@@ -3475,6 +3474,7 @@ export default {
         selectedProducts: this.promoSelections,
         quantity: 1,
         amount: 1,
+        is_promotion: true,
         price: this.currentPromo.final_price,
         subtotal: this.currentPromo.final_price
       }
