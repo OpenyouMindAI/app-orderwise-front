@@ -761,53 +761,30 @@
         </q-card-section>
 
         <q-card-section>
-          <q-markup-table v-if="invoicePayments.data?.length" class="q-mt-md">
-            <thead>
-              <tr>
-                <th class="text-left">Factura</th>
-                <th class="text-left">Cliente</th>
-                <th class="text-left">Método de Pago</th>
-                <th class="text-left">Fecha</th>
-                <th class="text-left">Hora</th>
-                <th class="text-right">Monto</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="payment in invoicePayments.data" :key="payment.id">
-                <td class="text-left">
-                  {{ payment.invoice?.invoice_number || 'N/A' }}
-                </td>
-                <td class="text-left">
-                  {{ payment.invoice?.customer?.name || 'Cliente General' }}
-                </td>
-                <td class="text-left">
-                  {{ payment.payment_method?.name }}
-                </td>
-                <td class="text-left">
-                  {{ formatDate(payment.created_at, 'DD/MM/YYYY') }}
-                </td>
-                <td class="text-left">
-                  {{ formatDate(payment.created_at, 'HH:mm:ss') }}
-                </td>
-                <td class="text-right text-positive">
-                  {{ formatNumber(payment.amount) }}
-                </td>
-              </tr>
-              <tr>
-                <th colspan="5" class="text-right">
-                  <span class="text-subtitle1">Total:</span>
-                </th>
-                <th class="text-right text-positive">
-                  <span class="text-subtitle1">{{ formatNumber(getTotalPayments()) }}</span>
-                </th>
-              </tr>
-            </tbody>
-          </q-markup-table>
-          <div v-else class="text-center q-pa-lg text-grey-6">
-            <q-icon name="info" size="lg"/>
-            <div class="text-h6 q-mt-md">No hay datos de pagos</div>
-            <div class="text-body2">No se encontraron pagos en el período seleccionado</div>
-          </div>
+          <q-table
+            :columns="paymentColumns"
+            :rows="invoicePayments.data || []"
+            :loading="paymentDetailsLoading"
+            v-model:pagination="paymentDetailsPagination"
+            @request="setPaymentDetailsPagination"
+            binary-state-sort
+            no-data-label="No se encontraron pagos en el período seleccionado"
+            row-key="id"
+          >
+            <template v-slot:loading>
+              <q-inner-loading showing color="primary" />
+            </template>
+            <template v-slot:bottom>
+              <div class="full-width row justify-between items-center q-pa-sm">
+                <div class="text-subtitle1 text-weight-bold">
+                  Total: <span class="text-positive">{{ formatNumber(getTotalPayments()) }}</span>
+                </div>
+                <div class="text-caption text-grey-6">
+                  {{ paymentDetailsPagination.rowsNumber }} registro(s) encontrado(s)
+                </div>
+              </div>
+            </template>
+          </q-table>
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -908,6 +885,52 @@ export default {
       paymentDetailsDialog: false,
       paymentDetailsLoading: false,
       invoicePayments: { data: [] },
+      paymentDetailsPagination: {
+        rowsPerPage: 10,
+        rowsNumber: 0,
+        paginate: true,
+        sortBy: 'created_at',
+        sortOrder: 'desc'
+      },
+      paymentColumns: [
+        {
+          name: 'invoice_number',
+          align: 'left',
+          label: 'Factura',
+          field: row => row.invoice?.invoice_number || row.invoice?.code || 'N/A',
+          sortable: true
+        },
+        {
+          name: 'customer',
+          align: 'left',
+          label: 'Cliente',
+          field: row => row.invoice?.customer?.name || row.invoice?.client?.name || 'Cliente General',
+          sortable: true
+        },
+        {
+          name: 'payment_method',
+          align: 'left',
+          label: 'Método de Pago',
+          field: row => row.payment_method?.name,
+          sortable: true
+        },
+        {
+          name: 'created_at',
+          align: 'left',
+          label: 'Fecha y Hora',
+          field: 'created_at',
+          format: val => `${formatDate(val, 'DD/MM/YYYY')} ${formatDate(val, 'HH:mm:ss')}`,
+          sortable: true
+        },
+        {
+          name: 'amount',
+          align: 'right',
+          label: 'Monto',
+          field: 'amount',
+          format: val => formatNumber(val),
+          sortable: true
+        }
+      ],
       formatDate,
       panel: 'day',
       formatNumber,
@@ -947,14 +970,6 @@ export default {
       paymentDetails: [],
       modalTitle: '',
       modalLoading: false,
-      paymentDetailsPagination: {
-        sortBy: 'date',
-        descending: true,
-        page: 1,
-        rowsPerPage: 10,
-        rowsNumber: 0,
-        filter: ''
-      },
       cashBoxUsers: [],
 
       // Expansion state management
@@ -1311,6 +1326,7 @@ export default {
         const { data } = await this.$api.get('invoice-payments', { params: finalParams })
         // IMPORTANTE: La respuesta viene en data.data, no directamente en data
         this.invoicePayments = { data: data.data || [] }
+        this.paymentDetailsPagination.rowsNumber = data.total || 0
       } catch (error) {
         this.$q.notify({
           message: error.message || 'Error al cargar los pagos',
@@ -1331,6 +1347,77 @@ export default {
       return this.invoicePayments.data.reduce((total, payment) => {
         return total + parseFloat(payment.amount || 0)
       }, 0)
+    },
+
+    /**
+     * Set payment details pagination
+     * @param {Object} data - Pagination data from q-table
+     */
+    setPaymentDetailsPagination (data) {
+      const paymentsParams = {
+        paginate: true,
+        sortBy: data.pagination.sortBy || 'created_at',
+        sortOrder: data.pagination.descending ? 'asc' : 'desc',
+        perPage: data.pagination.rowsPerPage,
+        page: data.pagination.page,
+        dataSearch: {
+          'invoice.id': '',
+          amount: ''
+        }
+      }
+
+      // Construir filtros con estructura correcta
+      const filtersPayments = {
+        dataEqualFilter: {
+          'invoice.branch_office_id': this.branchOffice?.id,
+          'invoice.seller_id': this.seller?.id
+        }
+      }
+
+      // Agregar filtros de fecha según el panel activo
+      if (this.panel === 'day' && this.day) {
+        filtersPayments.dateFilter = {
+          field: 'created_at',
+          from: `${this.day} ${this.fromHours || '00:00'}`,
+          to: `${this.day} ${this.toHours || '23:59'}`
+        }
+      } else if (this.panel === 'between' && this.from && this.to) {
+        filtersPayments.dateFilter = {
+          field: 'created_at',
+          from: this.from,
+          to: this.to
+        }
+      }
+
+      // Combinar parámetros y filtros
+      const finalParams = {
+        ...paymentsParams,
+        ...filtersPayments
+      }
+
+      this.paymentDetailsPagination = data.pagination
+      this.getInvoicePaymentsPaginated(finalParams)
+    },
+
+    /**
+     * Get invoice payments with pagination
+     * @param {Object} params - Complete parameters with pagination
+     */
+    async getInvoicePaymentsPaginated (params) {
+      try {
+        this.paymentDetailsLoading = true
+        const { data } = await this.$api.get('invoice-payments', { params })
+        this.invoicePayments = { data: data.data || [] }
+        this.paymentDetailsPagination.rowsNumber = data.total || 0
+      } catch (error) {
+        this.$q.notify({
+          message: error.message || 'Error al cargar los pagos',
+          color: 'negative',
+          icon: 'warning'
+        })
+      } finally {
+        this.paymentDetailsLoading = false
+      }
     },
 
     async getCashflowDetails (params) {
