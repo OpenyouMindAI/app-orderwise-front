@@ -1247,7 +1247,7 @@ export default {
     },
 
     initializePriceListMargin (priceList) {
-      priceList.profitPercentageValue = 0
+      priceList.profitPercentageValue = Math.max(0, Math.round((priceList.profit_percentage || 0) * 100))
       this.formatPriceListMargin(priceList)
     },
 

@@ -1,0 +1,36 @@
+@api_url = https://api-orderwise-dev.qbitsinc.com/api
+@token = eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0IiwianRpIjoiNzI2ZmM1YjVhZGY4ODBkZTdlODBmOTY0NmNjMmY4NDQ2NDAxZThlZDUwMGUyYzNhNmUyZTUzMDJhZDJhZDgwYjBkN2RiNTJlZGIxZmM0ZGEiLCJpYXQiOjE3NTY5MDY1NDQuMTYwMDg5LCJuYmYiOjE3NTY5MDY1NDQuMTYwMDkxLCJleHAiOjE3ODg0NDI1NDQuMTU4MzEsInN1YiI6IjM1Iiwic2NvcGVzIjpbXX0.Xe87Wz6NQLs1H7C5Ves4BW1QpCeKs8qvwyqvi0t6AL05woFpHzs6bX57uyw91Dxvi68NDR5DWK5PfKWCtUXOq-r5LULSFYo5bSesA0c5X767LQu2kKj-at8j4sZSNTeNoZw7-rwgCEn9vtfnr7hEBKD6r2u8jqvnwcGHCQvu2sq9Eyv0PXuyJBnsN5aH3XquojihnFvLpGm2YIzBLSlKKdRybzhj-wM4WXrPD4Phcbq_7ws6R0elaI1wVYTlDYbp2GAEcgBj1AAH8QmY_IDyVEh4sgBWmoSaChObERlxmx8OQe5ceRJouuntC0QcDY3WPVFw7qm93Qj0K57WxK_nQH43GE-b_6LezYAyL0qQ3abBTx_dQSL43Lw-ydgDLzpMxJVcMeG4xqGLQiZr_N6_tDGgTyTW6PK6CwIvL4dsh9D1psi3qwr1rQLICkGn9QgTv9DYifgGQNpXPPuv9E56WQnfmYv1gfD905PSqmTL_jpABcvN9dfEP94RIFQ_INrCIqdFtpJG0zTVqMUSGLluUKZ7ftP93dwy4b18KYxoHfD0J5k5pv9XI2LJjEI-5ynP61DE-V4TS7Z9-DBcQ0-2FyhgAPV-S5ofRZJEVrtFKviB95MC7EDT-ZAMEABvaQnLQFjWYeiqP-5lQY261zzCL4SkZ1NGXOLtOHJWlhvyfC0
+
+### Listar cajas
+GET {{api_url}}/cashboxes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Crear caja
+POST {{api_url}}/cashboxes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Caja Secundaria",
+  "status": "active",
+  "branch_office_id": 1
+}
+
+### Eliminar caja
+DELETE {{api_url}}/cashboxes/28
+Authorization: Bearer {{token}}
+
+### Ver cajas activas
+GET {{api_url}}/cashier-init
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Cerrar caja
+PUT {{api_url}}/cashier-close/5
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "end_balance": 1000
+}

@@ -31,6 +31,12 @@
       ]
     }
   },
+  "include": [
+    "src/**/*.js",
+    "src/**/*.vue",
+    "src/**/*.ts",
+    "src/**/*.d.ts"
+  ],
   "exclude": [
     "dist",
     ".quasar",

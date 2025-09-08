@@ -16,6 +16,12 @@ const routes = [
         component: () => import('pages/ProductPage.vue')
       },
       {
+        path: 'promotions',
+        meta: { requiresAuth: true },
+        name: 'Promotion',
+        component: () => import('pages/PromotionPage.vue')
+      },
+      {
         path: 'bills',
         meta: { requiresAuth: true },
         name: 'Bill',
@@ -190,6 +196,12 @@ const routes = [
         component: () => import('pages/TypeOfServicePage.vue')
       },
       {
+        path: 'cashboxes',
+        name: 'Cashbox',
+        meta: { requiresAuth: true },
+        component: () => import('pages/CashboxPage.vue')
+      },
+      {
         path: 'transfer-products',
         name: 'TransferProduct',
         meta: { requiresAuth: true },
@@ -230,6 +242,30 @@ const routes = [
         name: 'TableControl',
         meta: { requiresAuth: true },
         component: () => import('pages/TableControlPage.vue')
+      },
+      {
+        path: 'point-of-sales',
+        name: 'PointOfSale',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/PointOfSalePage.vue')
+      },
+      {
+        path: 'promotions',
+        name: 'Promotion',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/PromotionPage.vue')
+      },
+      {
+        path: 'modules',
+        name: 'Module',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ModulePage.vue'),
+      },
+      {
+        path: 'report-withdrawals',
+        name: 'ReportWithdrawals',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/ReportWithdrawalsPage.vue')
       }
     ]
   },
