@@ -60,13 +60,25 @@
                       </div>
                       <div class="row q-col-gutter-sm">
                         <div class="col-12">
-                          <q-input
-                            v-model="promotion.name"
-                            label="Nombre de la promoción"
-                            filled
-                            dense
-                            :rules="nameRules"
-                          />
+                          <div class="row q-col-gutter-sm">
+                            <div class="col-4">
+                              <q-input
+                                v-model="promotion.barcode"
+                                label="Código"
+                                filled
+                                dense
+                              />
+                            </div>
+                            <div class="col-8">
+                              <q-input
+                                v-model="promotion.name"
+                                label="Nombre de la promoción"
+                                filled
+                                dense
+                                :rules="nameRules"
+                              />
+                            </div>
+                          </div>
                         </div>
                         <div class="col-12">
                           <q-input
@@ -590,6 +602,7 @@ const productModifierForm = ref({
 const getInitialPromotionState = () => ({
   name: '',
   description: '',
+  barcode: '',
   channels: ['pos'],
   start_date: null,
   end_date: null,
