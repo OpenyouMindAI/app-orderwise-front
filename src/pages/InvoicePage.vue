@@ -250,6 +250,21 @@
                               {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
                             </td>
                           </tr>
+                          <tr v-for="product in invoice.promotions" :key="product.id">
+                            <td class="text-left">
+                              {{ product.barcode }}
+                            </td>
+                            <td class="text-left">
+                              {{ product.name.slice(0, 15) }} ...
+                              <q-tooltip class="text-subtitle1">{{ product.name }}</q-tooltip>
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(product.pivot.quantity) }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(product.pivot.quantity *  product.pivot.price) }}
+                            </td>
+                          </tr>
                         </tbody>
                       </q-markup-table>
                     </q-card-section>
