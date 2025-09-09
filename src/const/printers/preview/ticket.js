@@ -62,7 +62,7 @@ export const previewTicket = async (data, userSession) => {
 
   if (data?.tables?.length > 0) {
     data?.tables?.forEach((table) => {
-      doc.text(`MESA: ${table?.name} Sala ${table.living_room?.name}`, 5, y)
+      doc.text(`MESA: ${table?.name} Sala ${table.living_room?.name || ''}`, 5, y)
       y += 4
     })
   }
@@ -82,6 +82,24 @@ export const previewTicket = async (data, userSession) => {
   data.products.forEach((product) => {
     const cantidadPrecio = `${formatNumber(product.pivot.amount)} X ${product.pivot.price}`
     const subtotal = (product.pivot.amount * product.pivot.price).toFixed(2)
+
+    doc.text(cantidadPrecio, 5, y)
+    if (data.billing) {
+      doc.text(`${product.pivot.taxe}%`, 50, y, { align: 'center' })
+    }
+    doc.text(subtotal, 90, y, { align: 'right' })
+    y += 4
+
+    const maxWidth = 60
+    const description = doc.splitTextToSize(product.name, maxWidth)
+    description.forEach((linea) => {
+      doc.text(linea, 5, y)
+      y += 4
+    })
+  })
+  data.promotions.forEach((product) => {
+    const cantidadPrecio = `${formatNumber(product.pivot.quantity)} X ${product.pivot.price}`
+    const subtotal = (product.pivot.quantity * product.pivot.price).toFixed(2)
 
     doc.text(cantidadPrecio, 5, y)
     if (data.billing) {

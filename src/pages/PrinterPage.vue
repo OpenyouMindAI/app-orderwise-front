@@ -510,12 +510,12 @@ const printer = reactive({
 })
 const filter = ref('')
 const sizeOptions = [
-  { label: '44mm', value: 29 },
-  { label: '57mm', value: 32 },
-  { label: '58mm', value: 40 },
-  { label: '76mm', value: 48 },
-  { label: '80mm', value: 58 },
-  { label: '110mm', value: 72 }
+  { label: '44mm', value: 24 },
+  { label: '57mm', value: 28 },
+  { label: '58mm', value: 35 },
+  { label: '76mm', value: 42 },
+  { label: '80mm', value: 50 },
+  { label: '110mm', value: 65 }
 ]
 const openAddPrinter = ref(false)
 const size = ref(company?.company_config?.other?.printer?.size)

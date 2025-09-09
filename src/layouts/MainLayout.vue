@@ -140,10 +140,23 @@
                   round
                   flat
                   icon="print"
-                  href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/main.exe"
+                  href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/printer_ui_win_0.19.zip"
                   target="_blank"
                   type="a"
                 />
+                <q-btn
+                  round
+                  flat
+                  icon="android"
+                  href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
+                  target="_blank"
+                  v-if="!$q.platform.is.nativeMobile"
+                  type="a"
+                >
+                  <q-tooltip class="text-body2">
+                    Actualizar app
+                  </q-tooltip>
+                </q-btn>
               </div>
             </q-banner>
           </q-popup-proxy>
@@ -416,7 +429,6 @@ export default {
       try {
         loading(true)
         const url = `${import.meta.env.VITE_APP_URL}/verifying/${this.access_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
-        console.log(url)
         await MultiDisplayManager.showOnSecondScreen({
           url
         })
@@ -429,8 +441,9 @@ export default {
     async closeScreen () {
       // Obtener estado
       const status = await MultiDisplayManager.getSecondScreenStatus()
+      alert(status.message, status.isShowing)
       if (status.isShowing) {
-        //  Cerrar pantalla
+        // Cerrar pantalla
         await MultiDisplayManager.closeSecondScreen()
       }
     },
@@ -457,13 +470,13 @@ export default {
           })
 
           notification.onclick = () => {
-            window.open(`${window.location.origin}/#/command-orders/?id=${data.invoice_id}`, '_blank')
+            window.open(`${window.location.origin}/command-orders/?id=${data.invoice_id}`, '_blank')
           }
 
           function createNotification (title, options) {
             notify('Hay una nueva comanda', 'primary', 'notifications', 'bottom-right')
-            const audio = new Audio('audios/notify.mp3')
-            audio.play()
+            // const audio = new Audio('audios/notify.mp3')
+            // audio.play()
             return new Notification(title, options)
           }
         }
@@ -481,7 +494,7 @@ export default {
     },
 
     copyCatalog () {
-      copyToClipboard(`${window.location.origin}/#/catalog/${this.userSession.company_session_id}/${this.branchOffice?.id}`)
+      copyToClipboard(`${window.location.origin}/catalog/${this.userSession.company_session_id}/${this.branchOffice?.id}`)
         .then(() => {
           notify('Link copiado exitosamente', 'positive', 'check_circle')
         })

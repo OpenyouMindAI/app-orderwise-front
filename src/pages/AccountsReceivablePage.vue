@@ -271,6 +271,13 @@
               filled
               dense
             />
+            <q-input
+              v-model="paymentDate"
+              label="Fecha del pago"
+              type="datetime-local"
+              filled
+              dense
+            />
           </div>
         </q-card-section>
         <q-card-actions align="right">
@@ -504,6 +511,7 @@ export default {
       addPaymentDialog: false,
       paymentMethodSelected: null,
       reference: null,
+      paymentDate: null,
       panel: 'day',
       client: {},
       clients: [],
@@ -1036,9 +1044,12 @@ export default {
           invoice_id: this.billDetails?.id,
           payment_method_id: this.paymentMethodSelected,
           client_id: this.client?.id,
-          reference: this.reference
+          reference: this.reference,
+          created_at: this.paymentDate ? new Date(this.paymentDate).toISOString() : new Date().toISOString()
         })
-        await this.getInvoice(this.billDetails?.id)
+        if (this.billDetails?.id) {
+          await this.getInvoice(this.billDetails?.id)
+        }
         this.filterDate()
         this.reference = null
       } catch (error) {

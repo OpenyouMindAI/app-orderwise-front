@@ -1,7 +1,6 @@
 import { CapacitorThermalPrinter } from 'capacitor-thermal-printer'
-import { formatDate, formatNumber, notify } from '../../mixins'
+import { formatDate, formatNumber } from '../../mixins'
 import { setQrImage } from '../common'
-import { api } from 'src/boot/axios'
 
 function separatorLine (length = 29) {
   return '-'.repeat(length) + '\n'
@@ -15,16 +14,14 @@ const header = (invoice, lineWidth) => {
 }
 
 export async function printCommand (invoice, config) {
-  const lineWidth = config?.size?.value || 29
+  const lineWidth = config?.size?.value || 24
   let detail = `NRO: ${invoice.code}\n` +
     `CLIENTE: ${invoice.client?.name || '-'}\n` +
-    `TELEFONO: ${invoice.client?.phone_number || '-'}\n` +
     `TIPO DE SERVICIO: ${invoice.type_of_service?.name || '-'}\n` +
-    `FECHA: ${invoice.date}\n` +
-    `HORA: ${invoice.hour}\n` +
+    `FECHA: ${invoice.date} ${invoice.hour}\n` +
     `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
     separatorLine(lineWidth) +
-    'Descripcion         Cantidad\n' +
+    'Descripcion         quantity\n' +
     separatorLine(lineWidth)
 
   invoice.products.forEach((product) => {
@@ -39,10 +36,34 @@ export async function printCommand (invoice, config) {
       nameLines.push(name.substring(i, i + maxNameLen))
     }
 
-    // Imprimir todas las líneas del nombre; solo en la última línea va la cantidad alineada a la derecha
+    // Imprimir todas las líneas del nombre; solo en la última línea va la quantity alineada a la derecha
     nameLines.forEach((line, idx) => {
       if (idx === nameLines.length - 1) {
-        // última línea: cantidad alineada derecha
+        // última línea: quantity alineada derecha
+        const spaces = ' '.repeat(Math.max(0, lineWidth - line.length - qtyLen))
+        detail += `${line}${spaces}${quantity}\n`
+      } else {
+        detail += `${line}\n`
+      }
+    })
+  })
+
+  invoice.promotions.forEach((product) => {
+    const name = product.name || ''
+    const quantity = parseFloat(product.pivot.quantity).toFixed(2)
+    const qtyLen = quantity.length
+    const maxNameLen = lineWidth
+
+    // Dividir el nombre en líneas completas (sin cortar)
+    const nameLines = []
+    for (let i = 0; i < name.length; i += maxNameLen) {
+      nameLines.push(name.substring(i, i + maxNameLen))
+    }
+
+    // Imprimir todas las líneas del nombre; solo en la última línea va la quantity alineada a la derecha
+    nameLines.forEach((line, idx) => {
+      if (idx === nameLines.length - 1) {
+        // última línea: quantity alineada derecha
         const spaces = ' '.repeat(Math.max(0, lineWidth - line.length - qtyLen))
         detail += `${line}${spaces}${quantity}\n`
       } else {
@@ -57,21 +78,27 @@ export async function printCommand (invoice, config) {
     'Gracias por tu compra!\n'
 
   // 4. Combinamos y enviamos a la impresora
-  await CapacitorThermalPrinter.begin()
-    .align('left')
-    .text(header(invoice, lineWidth))
-    .bold()
-    .text(detail)
-    .clearFormatting()
-    .align('center')
-    .text(footer)
-    .beep()
-    .cutPaper()
-    .write()
-    .then(() => console.log('Printed!'))
-    .catch(async (e) => {
-      console.log(e)
-    })
+  for (let i = 0; i < Number(config.quantityToPrint); i++) {
+    try {
+      await CapacitorThermalPrinter.begin()
+        .align('left')
+        .text(header(invoice, lineWidth))
+        .bold()
+        .text(detail)
+        .clearFormatting()
+        .align('center')
+        .text(footer)
+        .beep()
+        .cutPaper()
+        .write()
+        .then(() => console.log('Printed!'))
+        .catch(async (e) => {
+          console.log(e)
+        })
+    } catch (e) {
+      console.error(`Error printing copy ${i + 1}:`, e)
+    }
+  }
 }
 
 export async function printTicket (invoice, config) {
@@ -95,11 +122,29 @@ export async function printTicket (invoice, config) {
   }
 
   invoice.products.forEach((p) => {
-    const cantidad = parseFloat(p.pivot.amount).toFixed(2)
+    const quantity = parseFloat(p.pivot.amount).toFixed(2)
     const precio = p.pivot.price
-    const total = (parseFloat(cantidad) * parseFloat(precio)).toFixed(2)
+    const total = (parseFloat(quantity) * parseFloat(precio)).toFixed(2)
 
-    const leftDetail = `${cantidad} X ${precio}`
+    const leftDetail = `${quantity} X ${precio}`
+    const totalLen = total.length
+    const detailLine = leftDetail.padEnd(lineWidth - totalLen) + total + '\n'
+
+    detail += detailLine
+
+    const name = p.name || ''
+    for (let i = 0; i < name.length; i += lineWidth) {
+      detail += name.substring(i, i + lineWidth) + '\n'
+    }
+    detail += '\n'
+  })
+
+  invoice.promotions.forEach((p) => {
+    const quantity = parseFloat(p.pivot.quantity).toFixed(2)
+    const precio = p.pivot.price
+    const total = (parseFloat(quantity) * parseFloat(precio)).toFixed(2)
+
+    const leftDetail = `${quantity} X ${precio}`
     const totalLen = total.length
     const detailLine = leftDetail.padEnd(lineWidth - totalLen) + total + '\n'
 

@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12" id="select-client">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-12" id="select-client">
             <q-select
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
@@ -27,7 +27,7 @@
               </template>
             </q-select>
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-6">
             <q-select
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
@@ -43,7 +43,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div v-if="invoiceType.bill" class="col-xl-3 col-lg-3 col-md-3 col-sm-4 col-xs-6">
+          <div v-if="invoiceType.bill" class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
             <q-select
               v-model="voucherType"
               use-input
@@ -59,7 +59,7 @@
               @filter="getVoucherTypes"
             />
           </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
             <q-select
               use-input
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
@@ -75,6 +75,20 @@
               @filter="filterTypeOfServices"
             />
           </div>
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6" v-if="openCashBox">
+            <q-btn
+              style="border-radius: 10px; padding: 5px 15px"
+              dense
+              :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+              :color="isUserBoxOpen ? 'negative' : 'primary'"
+              :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+              @click="handleCashBoxButtonClick"
+            >
+              <q-tooltip class="text-body2" anchor="bottom middle">
+                {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+              </q-tooltip>
+            </q-btn>
+          </div>
         </div>
         <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
           <div class="row q-col-gutter-sm">
@@ -84,7 +98,6 @@
                 dense
                 v-model="barcode"
                 autofocus
-                type="number"
                 label="Código"
                 ref="barcode"
                 :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
@@ -194,7 +207,6 @@
                   Buscar factura
                 </q-tooltip>
               </q-btn>
-
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
@@ -212,7 +224,7 @@
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
-                row-key="name"
+                row-key="id"
                 title="Artículos"
                 dense
                 hide-pagination
@@ -224,10 +236,10 @@
                 <template v-slot:body="props">
                   <q-tr :props="props">
                     <q-td key="barcode" :props="props">
-                      {{ props.row.barcode }}
+                      {{ props.row.barcode || '-' }}
                     </q-td>
                     <q-td key="name" :props="props">
-                      {{ props.row.name.slice(0, 20) }}{{ props.row.name.length > 20 ? '...' : '' }}
+                      {{ props.row.name.slice(0, 40) }}{{ props.row.name.length > 40 ? '...' : '' }}
                       <q-tooltip class="text-body2" anchor="bottom middle">
                         {{ props.row.name }}
                       </q-tooltip>
@@ -303,7 +315,93 @@
                       {{ formatNumber(props.row.subtotal) }}
                     </q-td>
                     <q-td key="actions" :props="props">
-                      <q-btn icon="delete" size="xs" color="negative" @click="deleteProduct(props)" />
+                      <q-btn
+                        v-if="props.row.promotion_details && props.row.promotion_details.length > 0"
+                        :icon="props.expand ? 'expand_less' : 'expand_more'"
+                        size="sm"
+                        color="primary"
+                        @click="props.expand = !props.expand"
+                        round
+                        class="q-mr-xs"
+                      />
+                      <q-btn icon="delete" size="sm" color="negative" @click="deleteProduct(props)" round/>
+                    </q-td>
+                  </q-tr>
+                  <q-tr v-show="props.expand" :props="props">
+                    <q-td colspan="100%" class="q-pa-sm">
+                      <div class="text-left">
+                        <div v-if="props.row.promotion_details && props.row.promotion_details.length > 0">
+                          <div class="text-weight-medium q-mb-sm">Detalles de la promoción</div>
+
+                          <div v-for="group in props.row.promotion_details" :key="group.name" class="q-mb-sm">
+                            <div class="text-subtitle2 text-grey-8 q-mb-xs">
+                              {{ group.name }}
+                            </div>
+                            <div class="q-ml-sm">
+                              <!-- Show selected products for this group -->
+                              <div v-if="props.row.selectedProducts && props.row.selectedProducts.length > 0">
+                                <div
+                                  v-for="selection in props.row.selectedProducts.filter(sel => sel.groupIndex === props.row.promotion_details.indexOf(group))"
+                                  :key="selection.product_id"
+                                  class="row justify-between q-py-xs"
+                                >
+                                  <span>{{ selection.product.name }}</span>
+                                  <div class="row items-center q-gutter-xs">
+                                    <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <!-- Fallback if no selected products -->
+                              <div v-else>
+                                <div class="text-caption text-grey-6 q-py-xs">
+                                  No hay productos seleccionados para este grupo
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
+                            <div class="row justify-between items-center">
+                              <span class="text-weight-medium">Total promoción:</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.subtotal || props.row.final_price || props.row.price) }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else-if="(props.row.selectedProducts && props.row.selectedProducts.length > 0) || (props.row.products && props.row.products.length > 0)">
+                          <div class="text-weight-medium q-mb-sm">Productos incluidos</div>
+                          <div class="q-ml-sm">
+                            <!-- Show selected products if available (for promos from modal) -->
+                            <div v-if="props.row.selectedProducts && props.row.selectedProducts.length > 0">
+                              <div v-for="selection in props.row.selectedProducts" :key="selection.product_id" class="row justify-between q-py-xs">
+                                <span>{{ selection.product.name }}</span>
+                                <span class="text-weight-medium">{{ selection.quantity }} unidad{{ selection.quantity > 1 ? 'es' : '' }}</span>
+                              </div>
+                            </div>
+                            <!-- Fallback to all products (for legacy promos) -->
+                            <div v-else>
+                              <div v-for="item in props.row.products" :key="item.product_id || item.id" class="row justify-between q-py-xs">
+                                <span>{{ item.name }}</span>
+                                <span class="text-weight-medium">1 unidad</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-if="props.row.final_price" class="q-mt-sm q-pt-sm" style="border-top: 1px solid #e0e0e0;">
+                            <div class="row justify-between items-center">
+                              <span class="text-weight-medium">Total:</span>
+                              <span class="text-weight-bold text-primary">${{ formatNumber(props.row.final_price) }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-else-if="props.row.is_bundle">
+                          <div class="text-grey-6">Producto promocional sin detalles específicos</div>
+                        </div>
+
+                        <div v-else>
+                          <div class="text-grey-6">No hay detalles adicionales para este producto</div>
+                        </div>
+                      </div>
                     </q-td>
                   </q-tr>
                 </template>
@@ -313,14 +411,14 @@
               <div v-else>
                 <div class="text-h6 q-mb-md">Artículos</div>
                 <div class="q-gutter-y-md">
-                  <q-card v-for="(product, index) in products" :key="index" flat bordered class="product-card">
+                  <q-card v-for="(product, rowIndex) in products" :key="rowIndex" flat bordered class="product-card">
                     <q-card-section>
                       <div class="row items-center justify-between q-mb-sm q-pr-sm">
                         <div class="text-subtitle1 text-weight-bold">
                           {{ product.barcode }} - {{ product.name }}
                         </div>
                         <q-badge floating class="q-pa-none" style="background-color: transparent;">
-                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ row: product })" />
+                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ rowIndex })" />
                         </q-badge>
                       </div>
                       <div class="row q-mb-xs">
@@ -526,19 +624,22 @@
               </div>
             </template>
             <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2">
+              <div class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
                 <q-card class="my-card" style="border-radius: 10px;">
                   <q-img
-                    style="height: 120px; width: 100%; border-radius: 10px;"
+                    style="height: 150px; width: 100%; border-radius: 10px;"
                     :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                    @click="validateProduct(props.row, true)"
+                    @click="props.row.is_promotion ? openPromoDialog(props.row) : validateProduct(props.row, true)"
                   >
-                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
-                      {{ props.row.name.slice(0, 20) }}
+                    <div class="absolute-full text-body2 flex flex-center text-bold text-center">
+                      {{ props.row.name }}
                       <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
+                    <q-tooltip class="text-body2">
+                      {{props.row.name}}
+                    </q-tooltip>
                   </q-img>
                 </q-card>
               </div>
@@ -550,6 +651,151 @@
         </div>
       </div>
     </q-form>
+
+    <!-- Promo Selection Dialog -->
+    <q-dialog v-model="promoDialog" :maximized="$q.screen.lt.sm" persistent>
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
+          <span class="text-h6">{{ currentPromo?.name }} - {{ currentGroup?.name }}</span>
+          <q-btn flat icon="close" round size="md" @click="closePromoDialog"/>
+        </q-card-section>
+
+        <q-card-section class="q-pa-md">
+          <div v-if="currentGroup">
+            <!-- Header with selection info -->
+            <div class="text-center q-mb-lg">
+              <div class="text-h6 text-weight-bold q-mb-sm">
+                {{ currentGroup.name }}
+              </div>
+              <div class="text-subtitle1 q-mb-sm">
+                Selecciona {{ currentGroup.quantity }} producto{{ currentGroup.quantity > 1 ? 's' : '' }}
+              </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="row q-col-gutter-md justify-center">
+              <div
+                v-for="product in currentGroup.products"
+                :key="product.id || product.product_id"
+                class="col-xs-6 col-sm-4 col-md-3"
+              >
+                <div class="product-container">
+                  <div
+                    class="modern-product-card"
+                    :class="{ 'modern-product-card--selected': isProductSelected(product.id || product.product_id) }"
+                    @click="toggleProductSelection(product)"
+                    :key="`product-${product.id || product.product_id}-${currentGroupIndex}`"
+                    :style="{
+                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${product.images && product.images[0] ? product.images[0].url : 'images/404-image.jpg'})`
+                    }"
+                  >
+                    <!-- Selection indicator -->
+                    <div v-if="isProductSelected(product.id || product.product_id)" class="selection-indicator">
+                      <q-icon name="check_circle" color="white" size="18px" />
+                    </div>
+
+                    <!-- Product content -->
+                    <div class="product-content">
+                      <div class="product-name">{{ product.name }}</div>
+
+                      <!-- Quantity controls -->
+                      <div v-if="isProductSelected(product.id || product.product_id)" class="quantity-controls">
+                        <button
+                          class="quantity-btn quantity-btn--minus"
+                          @click.stop="decreaseQuantity(product.id || product.product_id)"
+                          :disabled="getProductQuantity(product.id || product.product_id) <= 1"
+                        >
+                          <q-icon name="remove" size="14px" />
+                        </button>
+                        <span class="quantity-display">{{ getProductQuantity(product.id || product.product_id) }}</span>
+                        <button
+                          class="quantity-btn quantity-btn--plus"
+                          @click.stop="increaseQuantity(product.id || product.product_id)"
+                          :disabled="getTotalSelectedQuantity() >= currentGroup.quantity"
+                        >
+                          <q-icon name="add" size="14px" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selection status -->
+            <div class="text-center q-mt-lg">
+              <q-linear-progress
+                :value="getTotalSelectedQuantity() / currentGroup.quantity"
+                color="primary"
+                size="8px"
+                rounded
+                class="q-mb-sm"
+              />
+              <div class="text-subtitle2 q-mb-sm text-weight-medium">
+                <q-icon name="shopping_cart" class="q-mr-xs" />
+                {{ getTotalSelectedQuantity() }} de {{ currentGroup.quantity }} seleccionados
+              </div>
+
+              <!-- Price calculation with modifiers -->
+              <div class="q-mb-lg">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-body1 text-weight-bold q-mb-xs">
+                    <q-icon name="attach_money" class="q-mr-xs text-green" />
+                    Total de la Promoción
+                  </div>
+                  <div class="row justify-between items-center">
+                    <div class="text-subtitle2 text-grey-7">
+                      Precio base: ${{ parseFloat(currentPromo.final_price || 0).toFixed(2) }}
+                    </div>
+                    <div class="text-h6 text-weight-bold text-primary">
+                      ${{ currentPromo.final_price }}
+                    </div>
+                  </div>
+                </q-card>
+              </div>
+
+              <!-- Navigation buttons -->
+              <div class="row q-gutter-md justify-center q-mt-lg">
+                <q-btn
+                  v-if="currentGroupIndex > 0"
+                  flat
+                  color="grey-8"
+                  icon="chevron_left"
+                  label="Anterior"
+                  @click="previousGroup"
+                  class="modern-nav-btn modern-nav-btn--secondary"
+                  padding="12px 24px"
+                />
+                <q-btn
+                  v-if="currentGroupIndex < currentPromo.promotion_details.length - 1"
+                  unelevated
+                  color="primary"
+                  icon-right="chevron_right"
+                  label="Siguiente"
+                  @click="nextGroup"
+                  :disable="!isCurrentGroupValid()"
+                  class="modern-nav-btn modern-nav-btn--primary"
+                  padding="12px 24px"
+                />
+                <q-btn
+                  v-else
+                  unelevated
+                  color="positive"
+                  icon="shopping_cart"
+                  label="Agregar Promocion"
+                  @click="addPromoToCart"
+                  :disable="!isCurrentGroupValid()"
+                  class="modern-nav-btn modern-nav-btn--success"
+                  padding="14px 28px"
+                  size="md"
+                />
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
@@ -569,7 +815,7 @@
           </div>
           <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-md row">
             <div class="col-12">
-              <q-toggle v-if="tableSelected.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
+              <q-toggle v-if="invoice?.tables?.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
               <q-markup-table>
                 <thead>
                   <tr>
@@ -577,6 +823,7 @@
                     <th class="text-left">Método de pago</th>
                     <th class="text-left">Referencia</th>
                     <th class="text-right">Monto</th>
+                    <th class="text-right">% Descuento</th>
                     <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -607,6 +854,7 @@
                         v-model.number="payment.amount"
                         auto-save
                         v-slot="scope"
+                        @update:model-value="appendPayment(payment)"
                       >
                         <q-input
                           v-model="scope.value"
@@ -615,6 +863,7 @@
                         />
                       </q-popup-edit>
                     </td>
+                    <td class="text-right">{{ payment.discount_percentage }}</td>
                     <q-td class="text-center q-gutter-x-xs">
                       <q-btn
                         icon="delete"
@@ -637,24 +886,56 @@
               </q-markup-table>
             </div>
             <div class="col-12">
-              <q-list separator bordered style="border-radius: 10px;">
-                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+              <q-item style="border: none !important">
+                  <q-item-section v-if="pendingPayment >= 0">
+                    RESTANTE POR COBRAR
+                  </q-item-section>
+                  <q-item-section v-else>
+                    VUELTO
+                  </q-item-section>
+                  <q-item-section side v-if="coin" class="text-bold text-black">
+                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                  </q-item-section>
+                </q-item>
+              <q-list separator bordered style="border-radius: 10px;" dense>
+
+                <q-item class="bg-positive text-white text-subtitle1" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
                   <q-item-section>
-                    TOTAL
+                    SUBTOTAL
                   </q-item-section>
                   <q-item-section side v-if="coin" class="text-white">
                     {{ coin.symbol }} {{ formatNumber(totalBill) }}
                   </q-item-section>
                 </q-item>
-                <q-item>
-                  <q-item-section v-if="pendingPayment >= 0">
-                    TOTAL POR COBRAR
-                  </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
+                <q-item v-for="paymentMethod in selectedPaymentMethods" :key="paymentMethod.name" v-show="selectedPaymentMethods.length > 0">
+                  <q-item-section>
+                    {{ paymentMethod.name }}
+                    <span v-if="paymentMethod.discount_percentage > 0" class="text-caption text-positive">
+                      ({{ paymentMethod.discount_percentage }}% descuento)
+                    </span>
                   </q-item-section>
                   <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                    {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}
+                    <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
+                      (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
+                    </span>
+                  </q-item-section>
+                </q-item>
+                <!-- Total de descuento -->
+                <q-item v-if="discountAmount > 0" class="text-subtitle1">
+                  <q-item-section>
+                    DESCUENTO TOTAL
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    {{ coin.symbol }} {{ formatNumber(discountAmount) }}
+                  </q-item-section>
+                </q-item>
+                <q-item v-if="discountAmount > 0" class="bg-positive text-white text-h6 text-bold" style="border-radius: 0px 0px 10px 10px;  border-top: none !important">
+                  <q-item-section>
+                    <q-item-label>TOTAL</q-item-label>
+                  </q-item-section>
+                  <q-item-section side v-if="coin" class="text-white">
+                    {{ coin.symbol }} {{ formatNumber(totalWithDiscount) }}
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -715,7 +996,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
+    <q-dialog v-model="dialogTable">
       <drawer-table
         ref="drawerTable"
         :tablesSelected="tableSelected"
@@ -723,11 +1004,10 @@
         @update:invoice="selectInvoice"
         @update:freeTable="freeTable"
       >
-        <template v-slot:footer>
-          <q-card-actions align="right">
-            <q-btn color="negative" label="Cerrar" @click="dialogTable = false"/>
-            <q-btn color="primary" label="Aceptar" @click="dialogTable = false"/>
-          </q-card-actions>
+        <template v-slot:header>
+          <q-space />
+          <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
+          <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
         </template>
       </drawer-table>
     </q-dialog>
@@ -760,69 +1040,32 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="cashflow" :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
-        <q-form @submit="saveCashflow" class="column full-height">
-          <q-card-section class="q-py-sm flex justify-between items-center bg-primary text-white">
-            <span class="text-h6">Flujo de dinero</span>
-            <q-btn flat icon="close" round size="md" v-close-popup/>
-          </q-card-section>
-          <q-card-section class="col">
-            <div class="full-width row q-gutter-y-sm">
-              <div class="col-12">
-                <q-option-group
-                  v-model="panel"
-                  inline
-                  :options="[
-                    { label: 'Entrada', value: 'debit' },
-                    { label: 'Salida', value: 'credit' }
-                  ]"
-                />
-              </div>
-              <div class="column col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-                <q-radio
-                  v-for="paymentMethod in paymentMethods"
-                  :key="paymentMethod.id"
-                  color="primary"
-                  v-model="paymentMethodCashFlow"
-                  :label="paymentMethod.name"
-                  :val="paymentMethod.id"
-                />
-              </div>
-              <div class="col-xl-8 col-lg-8 col-md-8 col-sm-12 col-xs-12 q-gutter-sm">
-                <q-input
-                  name="amount"
-                  autocomplete="amount"
-                  v-model="amount"
-                  color="primary"
-                  label="Monto"
-                  filled
-                  clearable
-                  type="amount"
-                  required
-                  autofocus
-                />
-                <q-input
-                  name="description"
-                  autocomplete="description"
-                  v-model="description"
-                  color="primary"
-                  label="Descripción"
-                  filled
-                  clearable
-                  type="textarea"
-                  autogrow
-                  required
-                />
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn type="submit" color="primary" label="Guardar" icon="save" :loading="loadingCashflow"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
+
+    <!-- Cash Box Dialog -->
+    <CashBoxDialog
+      v-model="showCashBoxDialog"
+      :cashier-id="userSession.id"
+      :is-box-already-open="isUserBoxOpen"
+      :available-cash-boxes="availableCashBoxes"
+      :branch-office="branchOffice"
+      @box-opened="handleBoxOpened"
+      @box-closed="handleBoxClosed"
+      @box-created="loadAvailableCashBoxes"
+    />
+
+    <!-- Cashflow Modal Component -->
+    <CashflowModal
+      v-model="cashflow"
+      :payment-methods="paymentMethods"
+      :cash-box-state="cashBoxState"
+      :branch-office="branchOffice"
+      :flow-type-options="[
+        { label: 'Entrada', value: 'debit' },
+        { label: 'Salida', value: 'credit' },
+        { label: 'Arqueo', value: 'withdrawal' }
+      ]"
+      @cashflow-saved="onCashflowSaved"
+    />
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
@@ -981,6 +1224,8 @@ import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
+import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
+import CashflowModal from 'src/components/CashflowModal.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -995,16 +1240,27 @@ export default {
     DrawerTable,
     WaitByPaymentMp,
     BarcodeScanner,
-    TransferMpDialog
+    CashBoxDialog,
+    TransferMpDialog,
+    CashflowModal
   },
   data () {
     return {
+      currentCashierSession: null,
+
       scanner: false,
+
+      // Cash Box System
+      showCashBoxDialog: false,
+      isUserBoxOpen: false,
+      availableCashBoxes: [],
+      cashBoxState: null,
       /**
        * Show payment details modal
        * @type {Boolean}
        */
       showDetailsModal: false,
+      isDragOver: false,
       /**
        * Current payment
        * @type {Object}
@@ -1036,11 +1292,6 @@ export default {
        */
       loadingBilling: false,
       /**
-       * Payment method cash flow
-       * @type {Object}
-       */
-      paymentMethodCashFlow: null,
-      /**
        * Loading search
        * @type {Boolean}
        */
@@ -1060,6 +1311,11 @@ export default {
        * @type {Boolean}
        */
       invoicePrinter: false,
+      /**
+       * Open cash box
+       * @type {Boolean}
+       */
+      openCashBox: false,
       /**
        * Quantity dialog
        * @type {Boolean}
@@ -1081,26 +1337,6 @@ export default {
        */
       currentAmount: 0,
       balanceCode: 0,
-      /**
-       * Panel
-       * @type {String}
-       */
-      panel: 'debit',
-      /**
-       * Amount
-       * @type {Number}
-       */
-      amount: null,
-      /**
-       * Loading cashflow
-       * @type {Boolean}
-       */
-      loadingCashflow: false,
-      /**
-       * Description cashflow
-       * @type {String}
-       */
-      description: '',
       /**
        * Invoice description
        * @type {String}
@@ -1194,6 +1430,26 @@ export default {
        * @type {Boolean}
        */
       dialogPayment: false,
+      /**
+       * Promo selection dialog
+       * @type {Boolean}
+       */
+      promoDialog: false,
+      /**
+       * Current promo being configured
+       * @type {Object}
+       */
+      currentPromo: null,
+      /**
+       * Current group index in promo selection
+       * @type {Number}
+       */
+      currentGroupIndex: 0,
+      /**
+       * Selected products for current promo
+       * @type {Array}
+       */
+      promoSelections: [],
       /**
        * Invoice types
        * @type {Array}
@@ -1405,7 +1661,29 @@ export default {
      * @returns {Number}
      */
     pendingPayment () {
-      return this.totalBill - this.totalPayment
+      const totalWithDiscount = this.totalWithDiscount - this.totalPaymentWithDiscount
+
+      if (totalWithDiscount > 0) return this.totalWithDiscount - this.totalPayment
+
+      return totalWithDiscount
+    },
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    branchOfficeCharged () {
+      return this.branchOffice
+    },
+    currentGroup () {
+      return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
+    },
+    /**
+     * Total payment
+     * @returns {Number}
+     */
+    totalPaymentWithDiscount () {
+      let totalPayment = 0
+      this.payments.forEach((payment) => {
+        totalPayment = totalPayment + (payment.amount - payment.discount_amount) || 0
+      })
+      return totalPayment
     },
     /**
      * Total payment
@@ -1417,6 +1695,39 @@ export default {
         totalPayment = totalPayment + payment.amount
       })
       return totalPayment
+    },
+    /**
+     * Discount amount - Calcula el descuento total aplicado
+     * @returns {Number}
+     */
+    discountAmount () {
+      let totalDiscount = 0
+      this.payments.forEach((payment) => {
+        if (payment.discount_percentage && payment.discount_percentage > 0) {
+          const discountAmount = (payment.amount * payment.discount_percentage) / 100
+          totalDiscount += discountAmount
+        }
+      })
+      return totalDiscount
+    },
+    /**
+     * Selected payment methods - Obtiene los métodos de pago seleccionados
+     * @returns {Array}
+     */
+    selectedPaymentMethods () {
+      return this.payments.map(payment => ({
+        name: payment.name,
+        amount: payment.amount,
+        discount_percentage: payment.discount_percentage || 0,
+        discountAmount: payment.discount_percentage ? (payment.amount * payment.discount_percentage) / 100 : 0
+      }))
+    },
+    /**
+     * Total with discount - Total con descuento (visual)
+     * @returns {Number}
+     */
+    totalWithDiscount () {
+      return this.totalBill - this.discountAmount
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice'])
@@ -1445,8 +1756,12 @@ export default {
         products
       }
     },
-    payments (payments) {
-      this.invoiceShare = { ...this.invoiceShare, payments }
+    payments: {
+      handler (payments) {
+        this.$forceUpdate()
+        this.invoiceShare = { ...this.invoiceShare, payments }
+      },
+      deep: true
     },
     async invoiceShare (data) {
       try {
@@ -1552,11 +1867,11 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     this.listenPayments()
+    this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
-
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
     },
@@ -1807,42 +2122,6 @@ export default {
       this.tableSelected = data
     },
     /**
-     * Save cashflow
-     */
-    async saveCashflow () {
-      try {
-        if (!this.paymentMethodCashFlow) {
-          notify('Debe seleccionar un método de pago', 'negative', 'warning')
-          return
-        }
-        this.loadingCashflow = true
-        await this.$api.post('cashflow', {
-          description: this.description,
-          amount: this.amount,
-          branch_office_id: this.branchOffice?.id,
-          type_cashflow: this.panel,
-          payment_method_id: this.paymentMethodCashFlow
-        })
-        this.$q.notify({
-          message: 'Entrada/Salida guardada',
-          icon: 'check_circle',
-          color: 'positive'
-        })
-        this.cashflow = false
-        this.amount = 0
-        this.description = ''
-        this.panel = 'debit'
-      } catch (error) {
-        this.$q.notify({
-          message: error.message,
-          icon: 'warning',
-          color: 'negative'
-        })
-      } finally {
-        this.loadingCashflow = false
-      }
-    },
-    /**
      * Save clients
      */
     saveClient () {
@@ -1900,19 +2179,21 @@ export default {
      * Add payment
      * @param {Object} data data payment
      */
-    addPayment (data) {
+    addPayment (data, open = true) {
       if (!this.hasPendingPayment()) return
 
-      if (data.acronym !== 'EFE') {
-        const payment = this.createPayment(data, this.pendingPayment)
-        this.appendPayment(payment)
-        return
-      }
-
-      this.promptCashAmount(data).then(amount => {
+      if ((data.acronym && data.acronym.toLowerCase() === 'efe')) {
+        this.promptPaymentAmount(data, true).then(amount => {
+          if (amount !== null) {
+            const payment = this.createPayment(data, amount)
+            this.appendPayment(payment)
+          }
+        })
+      } else {
+        const amount = this.pendingPayment
         const payment = this.createPayment(data, amount)
         this.appendPayment(payment)
-      })
+      }
     },
     /**
      * Has pending payment
@@ -1924,7 +2205,7 @@ export default {
     /**
      * Create payment
      * @param {Object} data data payment
-     * @param {Number} amount amount
+     * @param {Number} amountToCover amount
      * @returns {Object}
      */
     createPayment (data, amount) {
@@ -1935,7 +2216,11 @@ export default {
         reference: null,
         coin_id: this.coin?.id ?? null,
         payment_method_id: data.id,
-        user_created_id: this.userSession?.id ?? null
+        user_created_id: this.userSession?.id ?? null,
+        discount_percentage: data.percentage || 0,
+        discount_amount: data.percentage
+          ? ((parseFloat(amount) || this.pendingPayment) * data.percentage) / 100
+          : 0
       }
     },
     /**
@@ -1943,39 +2228,75 @@ export default {
      * @param {Object} payment payment
      */
     appendPayment (payment) {
-      this.payments = [...this.payments, payment]
+      const paymentFund = this.payments.find(p => p.payment_method_id === payment.payment_method_id)
+      if (paymentFund) {
+        paymentFund.amount = payment.amount
+        paymentFund.discount_amount = payment.amount * (payment.discount_percentage / 100)
+      } else {
+        this.payments = [...this.payments, payment]
+      }
     },
     /**
-     * Prompt cash amount
+     * Model product
+     * @param {Object} data product
+     */
+    modelData (data, put = false) {
+      const formData = new FormData()
+      if (put) {
+        formData.append('_method', 'put')
+      }
+      for (const key in data) {
+        if (Object.hasOwnProperty.call(data, key)) {
+          const element = data[key]
+          console.log(element)
+          if (typeof element !== 'object' && element) {
+            formData.append(key, element)
+          }
+        }
+      }
+
+      data.images.forEach((element, index) => {
+        formData.append(`images[${index}]`, element.image)
+      })
+
+      return formData
+    },
+    /**
+     * Prompt payment amount - Pregunta el monto para cualquier método de pago
      * @param {Object} data data payment
      * @returns {Promise}
      */
-    promptCashAmount (data) {
+    promptPaymentAmount (data, emptyInput = false) {
       return new Promise((resolve) => {
+        const discountText = data.discount_percentage > 0
+          ? ` (${data.discount_percentage}% de descuento)`
+          : ''
+
         this.$q.dialog({
-          title: data.name || 'Pago en efectivo',
+          title: `Pago con ${data.name} ${discountText}`,
           color: 'primary',
-          message: 'Ingrese el monto en efectivo. Si es el monto exacto, presione Aceptar.',
+          message: `Ingrese el monto a pagar con ${data.name}.`,
           persistent: true,
           prompt: {
-            model: '',
+            model: emptyInput ? '' : this.pendingPayment.toString(),
             type: 'number',
             min: 0,
             filled: true,
-            label: 'Monto'
+            label: 'Monto a pagar'
           },
-          ok: {
-            label: 'Aceptar',
-            color: 'primary'
-          }
+          ok: { label: 'Aceptar', color: 'primary' },
+          cancel: { label: 'Cancelar', color: 'negative' }
         }).onOk(val => {
           const amount = parseFloat(val)
-          resolve(!isNaN(amount) && amount > 0 ? amount : this.pendingPayment)
+          if (!isNaN(amount) && amount > 0) {
+            resolve(amount)
+          } else {
+            resolve(this.pendingPayment)
+          }
         }).onCancel(() => resolve(this.pendingPayment))
           .onDismiss(() => resolve(this.pendingPayment))
       })
     },
-
     /**
      * Get all payment-methods
      */
@@ -2195,7 +2516,8 @@ export default {
         .then(({ data }) => {
           this.allProducts = data.data
           this.pagination.rowsNumber = data.total
-          this.loadingProducts = false
+          // Fetch and add promotions from API
+          this.fetchPromotions()
         })
         .catch(err => {
           this.loadingProducts = false
@@ -2205,6 +2527,41 @@ export default {
             color: 'negative'
           })
         })
+    },
+    sumCostPromotion (data) {
+      return (data ?? [])
+        .flatMap(g => g.products ?? [])
+        .reduce((sum, p) => sum + (Number.isFinite(Number(p.cost)) ? Number(p.cost) : 0), 0)
+    },
+    /**
+     * Fetch promotions from API and add them to products list
+     */
+    async fetchPromotions () {
+      try {
+        const params = {
+          branch_office_id: this.branchOffice?.id
+        }
+        const { data } = await this.$api.get('promotions', { params })
+
+        // Add promotions to the beginning of the products list
+        if (data && data.length > 0) {
+          data.forEach(promotion => {
+            this.allProducts.unshift({
+              ...promotion,
+              is_bundle: true,
+              is_promotion: true,
+              cost: this.sumCostPromotion(promotion.promotion_details),
+              skip_stock: !promotion.requires_stock,
+              price: promotion.final_price
+            })
+          })
+        }
+
+        this.loadingProducts = false
+      } catch (error) {
+        console.error('Error fetching promotions:', error)
+        this.loadingProducts = false
+      }
     },
     /**
      * Set payments
@@ -2217,6 +2574,7 @@ export default {
           payment_method_id: payment.payment_method_id,
           name: payment.payment_method.name,
           amount: payment.amount,
+          discount_percentage: payment.discount_percentage,
           reference: payment.reference,
           coin_id: payment.coin_id
         })
@@ -2255,6 +2613,7 @@ export default {
           return {
             ...product,
             ...product.pivot,
+            id: product.id,
             quantity: product.pivot.amount,
             subtotal: product.pivot.price * product.pivot.amount,
             product_price_lists: product.product_price_lists
@@ -2263,7 +2622,7 @@ export default {
         this.client = invoice.client
         this.invoiceType = invoice.invoice_type
         this.typeOfService = invoice.type_of_service
-        this.tableSelected = invoice.tables.map(table => table.id)
+
         this.searchInvoice = false
         this.setPayments(invoice.invoice_payments)
         this.$router.push({
@@ -2343,6 +2702,7 @@ export default {
      * @returns {Object}
      */
     setModelInvoice () {
+      console.log(this.cashBoxState)
       return {
         ...this.invoice,
         tableClose: this.tableClose,
@@ -2354,6 +2714,7 @@ export default {
         type_of_service_id: this.typeOfService.id,
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
+        cashbox_user_id: this.cashBoxState?.id,
         exchange_rate: this.exchangeRate,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
@@ -2361,7 +2722,7 @@ export default {
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.paymentModel(this.payments),
         total_amount: this.totalBill,
-        tables: this.tableSelected,
+        tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
@@ -2404,6 +2765,7 @@ export default {
         if (this.$route.query.id) {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
+          console.log(params)
           res = await this.$api.post('invoices', params)
         }
         this.printBill(res.data.data)
@@ -2413,6 +2775,7 @@ export default {
           filter: undefined
         })
       } catch (error) {
+        console.log(error)
         notify(error.message, 'negative', 'warning')
       } finally {
         this.loadingBilling = false
@@ -2431,6 +2794,7 @@ export default {
       this.voucherType = companySession?.company_config?.other?.voucher_type
       this.balanceCode = companySession?.company_config?.other?.balance_code
       this.partialBilling = companySession?.company_config?.other?.partial_billing || false
+      this.openCashBox = companySession?.company_config?.other?.open_cashbox || false
       this.calculateTotal()
     },
     /**
@@ -2475,26 +2839,33 @@ export default {
      * @param {Object} product product
      */
     pushProduct (product) {
+      const cartProduct = {
+        id: product.id,
+        name: product.name,
+        price: product.is_promotion ? product.final_price : product.price,
+        amount: product.quantity,
+        quantity: product.quantity,
+        subtotal: product.subtotal,
+        product_id: product.id,
+        cost: product.cost,
+        barcode: product.barcode,
+        normal_stock: product.normal_stock || 0,
+        bundle_stock: product.bundle_stock || 0,
+        skip_stock: product.skip_stock,
+        is_bundle: product.is_bundle,
+        aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
+        unit_of_measure: product.unit_of_measure,
+        product_price_lists: product.product_price_lists,
+        is_promotion: product.is_promotion,
+        promotion_details: product.promotion_details || [],
+        products: product.products || [],
+        selectedProducts: product.selectedProducts || [],
+        final_price: product.final_price
+      }
+
       this.products = [
         ...this.products,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          amount: product.quantity,
-          quantity: product.quantity,
-          subtotal: product.subtotal,
-          product_id: product.id,
-          cost: product.cost,
-          barcode: product.barcode,
-          normal_stock: product.normal_stock || 0,
-          bundle_stock: product.bundle_stock || 0,
-          skip_stock: product.skip_stock,
-          is_bundle: product.is_bundle,
-          aliquot_type: product.aliquot_type || product?.category?.aliquot_type,
-          unit_of_measure: product.unit_of_measure,
-          product_price_lists: product.product_price_lists
-        }
+        cartProduct
       ]
     },
     /**
@@ -2535,8 +2906,6 @@ export default {
       } else {
         this.addNewProduct(data, isWeightProduct, quantity)
       }
-
-      // Resetear valores
       this.resetQuantities()
     },
 
@@ -2603,7 +2972,12 @@ export default {
           : quantity,
         subtotal: isWeightProduct && this.currentAmount
           ? this.currentAmount
-          : data.price * quantity
+          : data.price * quantity,
+        // Explicitly preserve bundle/promo properties
+        is_bundle: data.is_bundle || false,
+        products: data.promotion_details || [],
+        promotion_details: data.promotion_details || [],
+        final_price: data.final_price || data.price
       }
 
       // Asegurar precisión en decimales
@@ -2636,7 +3010,7 @@ export default {
     },
 
     /**
-     * Resetea cantidades temporales
+     * Reset quantities
      */
     resetQuantities () {
       this.quantity = 1
@@ -2670,7 +3044,747 @@ export default {
       } else {
         notify('Producto no encontrado', 'negative', 'warning')
       }
+    },
+
+    /**
+     * Checks the current cash box status for the user
+     * using the new API structure
+     */
+    /**
+     * Simplified method that just calls loadAvailableCashBoxes
+     * All cashbox logic is now handled in loadAvailableCashBoxes
+     */
+    async checkCashBoxStatus () {
+      if (!this.openCashBox) return
+      try {
+        const { data } = await this.$api.get('cashier-init', {
+          params: {
+            branch_office_id: this.branchOffice?.id
+          }
+        })
+        if (data && data.status === 'open' && data.user_id === this.userSession.id) {
+          this.isUserBoxOpen = true
+          this.cashBoxState = {
+            id: data.id,
+            cashbox_id: data.cashbox_id,
+            user_id: data.user_id,
+            init_balance: parseFloat(data.init_balance),
+            init_date: data.init_date,
+            status: data.status,
+            close_date: data.close_date,
+            end_balance: data.end_balance,
+            user_close_id: data.user_close_id
+          }
+          this.availableCashBoxes = []
+        } else {
+          // Respuesta exitosa pero sin sesión activa
+          await this.handleNoActiveSession()
+        }
+      } catch (error) {
+        if (error.response?.status === 404 ||
+            error.message?.includes('No query results for model') ||
+            error.message?.includes('CashboxUser')) {
+          // 404 o sin datos es comportamiento normal - no hay sesión activa
+          await this.handleNoActiveSession()
+        } else {
+          // Error real del servidor
+          console.error('Error al verificar estado de caja:', error)
+          this.isUserBoxOpen = false
+          this.cashBoxState = null
+          this.availableCashBoxes = []
+        }
+      }
+    },
+
+    /**
+     * Handle when there's no active cashbox session
+     */
+    async handleNoActiveSession () {
+      this.isUserBoxOpen = false
+      this.cashBoxState = null
+      await this.loadAvailableCashBoxes()
+
+      // Mostrar automáticamente el modal para abrir caja con delay para asegurar renderizado
+      this.showCashBoxDialog = true
+    },
+
+    /**
+     * Handle cash box button click - load boxes before showing modal
+     */
+    async handleCashBoxButtonClick () {
+      if (!this.isUserBoxOpen) {
+        await this.loadAvailableCashBoxes()
+      }
+
+      this.showCashBoxDialog = true
+    },
+
+    /**
+     * Loads available cash boxes from API with open/closed status
+     */
+    async loadAvailableCashBoxes () {
+      if (!this.branchOffice?.id) {
+        console.error('Error: branchOffice.id no está disponible')
+        this.availableCashBoxes = []
+        return
+      }
+
+      try {
+        const response = await this.$api.get('cashboxes', {
+          params: {
+            dataEqualFilter: {
+              branch_office_id: this.branchOffice.id
+            }
+          }
+        })
+
+        const allBoxes = response.data || []
+
+        this.availableCashBoxes = allBoxes
+          .filter(box => box.branch_office_id === this.branchOffice.id && !box.deleted_at)
+          .map(box => ({
+            ...box,
+            open: box.current_session ? box.current_session.open : false
+          }))
+      } catch (error) {
+        this.availableCashBoxes = []
+      }
+    },
+
+    /**
+     * Handle when a cash box is opened
+     */
+    handleBoxOpened (boxData) {
+      this.isUserBoxOpen = true
+      this.cashBoxState = {
+        id: boxData.sessionId,
+        cashbox_id: boxData.cashboxId,
+        user_id: this.userSession.id,
+        init_balance: boxData.initialBalance,
+        open: true
+      }
+      this.availableCashBoxes = []
+    },
+
+    /**
+     * Handle when a cash box is closed
+     */
+    handleBoxClosed (closeData) {
+      this.isUserBoxOpen = false
+      this.cashBoxState = null
+      // Reload available boxes after closing
+      this.loadAvailableCashBoxes()
+    },
+
+    /**
+     * Handle when a new cash box is created
+     */
+    handleBoxCreated (newBox) {
+      // Reload available boxes to include the new one
+      this.loadAvailableCashBoxes()
+    },
+
+    /*
+     * Open promo selection dialog
+     */
+    async openPromoDialog (promo) {
+      try {
+        const promoWithDetails = { ...promo }
+
+        // Collect all unique product IDs from promotion groups
+        const productIds = new Set()
+        if (promoWithDetails.promotion_details && promoWithDetails.promotion_details.length > 0) {
+          promoWithDetails.promotion_details.forEach(group => {
+            if (group.products && group.products.length > 0) {
+              group.products.forEach(product => {
+                productIds.add(product.product_id)
+              })
+            }
+          })
+        }
+
+        // Find missing products that are not in allProducts
+        const missingProductIds = Array.from(productIds).filter(id =>
+          !this.allProducts.find(p => p.id === id)
+        )
+
+        // Fetch missing products if any
+        let missingProducts = []
+        if (missingProductIds.length > 0) {
+          try {
+            const { data } = await this.$api.get('products', {
+              params: {
+                branch_office_id: this.branchOffice?.id,
+                whereIn: {
+                  id: missingProductIds
+                },
+                perPage: missingProductIds.length,
+                paginate: false
+              }
+            })
+            missingProducts = Array.isArray(data) ? data : (data.data || [])
+          } catch (error) {
+            console.error('Error fetching missing products:', error)
+          }
+        }
+
+        // Merge complete product data with promotion products
+        if (promoWithDetails.promotion_details && promoWithDetails.promotion_details.length > 0) {
+          for (const group of promoWithDetails.promotion_details) {
+            if (group.products && group.products.length > 0) {
+              for (const product of group.products) {
+                // Look for complete product data in allProducts first, then in missingProducts
+                let completeProduct = this.allProducts.find(p => p.id === product.product_id)
+                if (!completeProduct) {
+                  completeProduct = missingProducts.find(p => p.id === product.product_id)
+                }
+
+                if (completeProduct) {
+                  // Merge complete product data with existing product data
+                  Object.assign(product, {
+                    ...completeProduct,
+                    // Preserve promotion-specific data
+                    product_id: product.product_id,
+                    quantity: product.quantity || 0
+                  })
+                } else {
+                  console.warn(`Product with ID ${product.product_id} not found`)
+                }
+              }
+            }
+          }
+        }
+
+        this.currentPromo = promoWithDetails
+        this.currentGroupIndex = 0
+        this.promoSelections = []
+
+        // Initialize preselected products
+        this.initializePreselectedProducts()
+
+        // Auto-advance through completed groups
+        this.autoAdvanceCompletedGroups()
+
+        this.promoDialog = true
+      } catch (error) {
+        console.error('Error opening promo dialog:', error)
+        notify('Error al cargar los detalles de la promoción', 'negative', 'warning')
+      }
+    },
+
+    /**
+     * Initialize preselected products when opening promo dialog
+     */
+    initializePreselectedProducts () {
+      if (!this.currentPromo) return
+      this.currentPromo.promotion_details.forEach((group, groupIndex) => {
+        group.products.forEach(product => {
+          if (product.quantity && product.quantity > 0) {
+            const productId = product.id || product.product_id
+            this.promoSelections.push({
+              groupIndex,
+              product_id: String(productId),
+              product,
+              quantity: product.quantity,
+              amount: product.quantity
+            })
+          }
+        })
+      })
+    },
+
+    /**
+     * Auto-advance through completed groups due to preselection
+     */
+    autoAdvanceCompletedGroups () {
+      if (!this.currentPromo) return
+
+      // Check each group starting from the current one
+      while (this.currentGroupIndex < this.currentPromo.promotion_details.length) {
+        const currentGroup = this.currentPromo.promotion_details[this.currentGroupIndex]
+        const groupSelections = this.promoSelections.filter(sel => sel.groupIndex === this.currentGroupIndex)
+        const totalSelected = groupSelections.reduce((sum, sel) => sum + sel.quantity, 0)
+
+        // If current group is complete, move to next
+        if (totalSelected === currentGroup.quantity) {
+          // If this is the last group, we're done
+          if (this.currentGroupIndex === this.currentPromo.promotion_details.length - 1) {
+            break
+          }
+
+          // Move to next group
+          this.currentGroupIndex++
+        } else {
+          break
+        }
+      }
+    },
+
+    /**
+     * Close promo selection dialog
+     */
+    closePromoDialog () {
+      this.promoDialog = false
+      this.currentPromo = null
+      this.currentGroupIndex = 0
+      this.promoSelections = []
+    },
+
+    /**
+     * Check if product is selected in current group
+     */
+    isProductSelected (id) {
+      if (!id) {
+        console.warn('⚠️ isProductSelected called with undefined id')
+        return false
+      }
+      const isSelected = this.promoSelections.some(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        String(selection.product_id) === String(id)
+      )
+      return isSelected
+    },
+
+    /**
+     * Get product quantity in current group
+     */
+    getProductQuantity (id) {
+      if (!id) {
+        console.warn('⚠️ getProductQuantity called with undefined id')
+        return 0
+      }
+      const selections = this.promoSelections.filter(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        String(selection.product_id) === String(id)
+      )
+      const quantity = selections.reduce((total, selection) => total + selection.quantity, 0)
+
+      return quantity
+    },
+
+    /**
+     * Get total selected quantity for current group
+     */
+    getTotalSelectedQuantity () {
+      return this.promoSelections
+        .filter(selection => selection.groupIndex === this.currentGroupIndex)
+        .reduce((total, selection) => total + selection.quantity, 0)
+    },
+
+    /**
+     * Toggle product selection
+     */
+    toggleProductSelection (product) {
+      const productId = product.id || product.product_id
+
+      const existingSelectionIndex = this.promoSelections.findIndex(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        String(selection.product_id) === String(productId)
+      )
+
+      if (existingSelectionIndex >= 0) {
+        this.promoSelections.splice(existingSelectionIndex, 1)
+      } else {
+        const currentTotal = this.getTotalSelectedQuantity()
+        if (currentTotal < this.currentGroup.quantity) {
+          this.promoSelections.push({
+            groupIndex: this.currentGroupIndex,
+            product_id: String(productId),
+            product,
+            quantity: 1
+          })
+        }
+      }
+    },
+
+    /**
+     * Increase product quantity
+     */
+    increaseQuantity (id) {
+      if (!id) {
+        console.warn('⚠️ increaseQuantity called with undefined id')
+        return
+      }
+      const selection = this.promoSelections.find(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        String(selection.product_id) === String(id)
+      )
+
+      if (selection) {
+        const currentTotal = this.getTotalSelectedQuantity()
+        if (currentTotal < this.currentGroup.quantity) {
+          selection.quantity++
+        } else {
+          console.log('⚠️ Cannot increase - group limit reached')
+        }
+      } else {
+        console.log('❌ No selection found for product ID:', id)
+      }
+    },
+
+    /**
+     * Decrease product quantity
+     */
+    decreaseQuantity (id) {
+      if (!id) {
+        console.warn('⚠️ decreaseQuantity called with undefined id')
+        return
+      }
+      const selection = this.promoSelections.find(selection =>
+        selection.groupIndex === this.currentGroupIndex &&
+        String(selection.product_id) === String(id)
+      )
+
+      if (selection && selection.quantity > 1) selection.quantity--
+    },
+
+    /**
+     * Check if current group selection is valid
+     */
+    isCurrentGroupValid () {
+      const totalSelected = this.getTotalSelectedQuantity()
+      return totalSelected === this.currentGroup.quantity
+    },
+
+    /**
+     * Go to next group
+     */
+    nextGroup () {
+      if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.promotion_details.length - 1) {
+        this.currentGroupIndex++
+      }
+    },
+
+    /**
+     * Go to previous group
+     */
+    previousGroup () {
+      if (this.currentGroupIndex > 0) {
+        this.currentGroupIndex--
+      }
+    },
+
+    /**
+     * Add promo to cart with selected products
+     */
+    addPromoToCart () {
+      if (!this.isCurrentGroupValid()) return
+      console.log(this.currentPromo)
+      const promoProduct = {
+        ...this.currentPromo,
+        promotion_id: this.currentPromo.id,
+        promotion_detail_id: this.currentPromo.id,
+        selectedProducts: this.promoSelections,
+        quantity: 1,
+        amount: 1,
+        is_promotion: true,
+        price: this.currentPromo.final_price,
+        subtotal: this.currentPromo.final_price
+      }
+
+      this.pushProduct(promoProduct)
+      this.calculateTotal()
+      this.closePromoDialog()
+
+      this.$q.notify({
+        message: `${promoProduct.name} agregado`,
+        color: 'positive',
+        icon: 'check_circle'
+      })
+    },
+
+    /**
+     * Handle cashflow saved event
+     */
+    onCashflowSaved () {
+      // Refresh data if needed or show success message
+      console.log('Cashflow saved successfully')
     }
   }
 }
 </script>
+
+<style scoped>
+.product-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.selected-product {
+  border: 2px solid #21BA45 !important;
+  box-shadow: 0 0 15px rgba(33, 186, 69, 0.3);
+}
+
+.product-name-overlay {
+  background: linear-gradient(45deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
+  backdrop-filter: blur(2px);
+  padding: 8px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.selected-product .product-name-overlay {
+  background: linear-gradient(45deg, rgba(33, 186, 69, 0.8) 0%, rgba(33, 186, 69, 0.6) 100%);
+}
+
+/* Smooth animations for quantity controls */
+.absolute-bottom-right {
+  animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced modal styling */
+.q-dialog .q-card {
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress bar styling */
+.q-linear-progress {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Button enhancements */
+.q-btn {
+  transition: all 0.2s ease;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Badge styling */
+.q-badge {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .col-xs-6 {
+    padding: 2px;
+  }
+
+  .product-card {
+    margin: 2px;
+  }
+
+  .text-subtitle2 {
+    font-size: 11px !important;
+  }
+}
+</style>
+<style>
+
+.dropzone-card {
+  border: 2px dashed #e0e0e0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.profit-percentage-input input {
+  text-align: right !important;
+}
+
+.dropzone-card:hover,
+.dropzone-active {
+  border-color: #1976d2;
+}
+
+/* Modern Product Card Styles */
+.product-container {
+  position: relative;
+}
+
+.modern-product-card {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.modern-product-card--selected {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 3px #10b981;
+}
+
+.selection-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #10b981;
+  border-radius: 50%;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+  z-index: 3;
+  backdrop-filter: blur(4px);
+}
+
+.product-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  z-index: 2;
+  text-align: center;
+}
+
+.product-name {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quantity-controls {
+  position: absolute;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quantity-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quantity-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quantity-btn--minus {
+  background: #ef4444;
+  color: white;
+}
+
+.quantity-btn--minus:hover:not(:disabled) {
+  background: #dc2626;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.quantity-btn--plus {
+  background: #10b981;
+  color: white;
+}
+
+.quantity-btn--plus:hover:not(:disabled) {
+  background: #059669;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.quantity-display {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1f2937;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.image-preview-card {
+  transition: transform 0.2s ease;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.02);
+}
+
+.product-name-overlay {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(2px);
+}
+
+/* Modern Navigation Buttons */
+.modern-nav-btn {
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modern-nav-btn--secondary {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e5e7eb;
+}
+
+.modern-nav-btn--secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-nav-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+}
+
+.modern-nav-btn--success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  font-size: 15px;
+}
+
+.modern-nav-btn--success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+</style>

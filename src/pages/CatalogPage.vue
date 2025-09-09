@@ -1123,6 +1123,7 @@ export default {
      */
     validStockProduct (data, amount) {
       const stock = data.is_bundle ? data.bundle_stock : data.normal_stock
+      console.log(data)
       if (!data.skip_stock) {
         return stock >= amount
       }
