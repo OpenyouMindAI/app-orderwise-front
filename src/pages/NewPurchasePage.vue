@@ -707,17 +707,6 @@
         </q-form>
       </q-card>
     </q-dialog>
-    <!-- <q-dialog v-model="modelScan">
-      <q-card>
-        <q-card-section class="q-pb-none q-pt-xs q-px-xs bg-dark">
-          <stream-barcode-reader @debarcode="getOneProduct"/>
-        </q-card-section>
-      </q-card>
-    </q-dialog> -->
-
-    <q-dialog  v-model="addPriceList">
-      <h1>HOLAA</h1>
-    </q-dialog>
 
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
@@ -1256,7 +1245,6 @@ export default {
        */
       priceLists: [],
       isDragOver: false,
-      addPriceList: false,
       /**
        * Open dialog to add products
        * @type {Boolean}
@@ -1439,11 +1427,6 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
-
-    testCOSAS () {
-      this.addPriceList = true
-      console.log(this.addPriceList)
-    },
     /**
      * Update values
      * @param {String} inputName input name
@@ -1554,6 +1537,24 @@ export default {
           user_created_id: this.userSession.id
         })
       }
+    },
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      this.processFiles(files)
+    },
+    processFiles (files) {
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            this.product.images.push({
+              image: file,
+              url: e.target.result
+            })
+          }
+          reader.readAsDataURL(file)
+        }
+      })
     },
     /**
      * Get all payment-methods
