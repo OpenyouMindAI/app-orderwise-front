@@ -2702,6 +2702,7 @@ export default {
      * @returns {Object}
      */
     setModelInvoice () {
+      console.log(this.cashBoxState)
       return {
         ...this.invoice,
         tableClose: this.tableClose,
@@ -2713,6 +2714,7 @@ export default {
         type_of_service_id: this.typeOfService.id,
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
+        cashbox_user_id: this.cashBoxState?.id,
         exchange_rate: this.exchangeRate,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
