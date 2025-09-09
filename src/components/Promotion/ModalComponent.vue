@@ -745,14 +745,15 @@ const processFiles = (files) => {
       return
     }
 
-    // Create FileReader to convert to base64
+    // Create FileReader for preview
     const reader = new FileReader()
     reader.onload = (e) => {
       const imageData = {
-        url: e.target.result,
+        url: e.target.result, // For preview
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        image: file // Keep original file for FormData
       }
 
       // Initialize images array if it doesn't exist
@@ -1017,6 +1018,55 @@ const applyProductModifier = () => {
   closeProductModifierDialog()
 }
 
+// Function to create FormData similar to ProductPage.vue
+const createPromotionFormData = (data, isUpdate = false) => {
+  const formData = new FormData()
+
+  if (isUpdate) {
+    formData.append('_method', 'put')
+  }
+
+  // Add all non-object fields to FormData
+  for (const key in data) {
+    if (Object.hasOwnProperty.call(data, key)) {
+      const element = data[key]
+      if (typeof data[key] !== 'object' && key !== 'images') {
+        formData.append(key, element)
+      }
+    }
+  }
+
+  // Add promotion_details as JSON
+  if (data.promotion_details && data.promotion_details.length > 0) {
+    formData.append('promotion_details', JSON.stringify(data.promotion_details))
+  }
+
+  // Add channels as JSON if it's an array
+  if (Array.isArray(data.channels)) {
+    formData.append('channels', JSON.stringify(data.channels))
+  }
+
+  // Add images to FormData
+  if (data.images && data.images.length > 0) {
+    data.images.forEach((imageData, index) => {
+      if (imageData.image) {
+        // New image file
+        formData.append(`images[${index}]`, imageData.image)
+      } else if (imageData.id) {
+        // Existing image (for edit mode)
+        formData.append(`existing_images[${index}]`, imageData.id)
+      }
+    })
+  }
+
+  // Add branch office ID if available
+  if (branchOffice.value?.id) {
+    formData.append('branch_office_id', branchOffice.value.id)
+  }
+
+  return formData
+}
+
 const savePromotion = async () => {
   const formIsValid = await promotionForm.value.validate()
 
@@ -1042,11 +1092,17 @@ const savePromotion = async () => {
 
   saving.value = true
   try {
-    console.log('📤 Enviando promoción:', JSON.stringify(promotion.value, null, 2)) // Debug
+    console.log('📤 Enviando promoción como FormData:', promotion.value) // Debug
+
     let response
     if (isEditMode.value) {
-      // Actualizar promoción existente
-      response = await api.put(`promotions/${promotion.value.id}`, promotion.value)
+      // Actualizar promoción existente usando FormData
+      const formData = createPromotionFormData(promotion.value, true)
+      response = await api.post(`promotions/${promotion.value.id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
       $q.notify({
         type: 'positive',
         message: `Promoción "${response.data.name}" actualizada exitosamente`,
@@ -1054,8 +1110,13 @@ const savePromotion = async () => {
       })
       emit('promotion-updated', response.data)
     } else {
-      // Crear nueva promoción
-      response = await api.post('promotions', promotion.value)
+      // Crear nueva promoción usando FormData
+      const formData = createPromotionFormData(promotion.value, false)
+      response = await api.post('promotions', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
       $q.notify({
         type: 'positive',
         message: `Promoción "${response.data.name}" creada con ID: ${response.data.id}`,
