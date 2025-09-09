@@ -1,9 +1,12 @@
 import { rest } from 'msw'
 import mockPromotionAPI from '../services/mockPromotionAPI.js'
 
+// Get API base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_APP_API_URL || 'https://api-orderwise.qbitsinc.com/api/'
+
 export const handlers = [
   // GET promotions
-  rest.get('https://api-orderwise.qbitsinc.com/api/promotions', async (req, res, ctx) => {
+  rest.get(`${API_BASE_URL}promotions`, async (req, res, ctx) => {
     console.log('--- MSW: Intercepted GET /api/promotions ---')
 
     const url = new URL(req.url)
@@ -32,7 +35,7 @@ export const handlers = [
   }),
 
   // POST promotions
-  rest.post('https://api-orderwise.qbitsinc.com/api/promotions', async (req, res, ctx) => {
+  rest.post(`${API_BASE_URL}promotions`, async (req, res, ctx) => {
     const body = await req.json()
 
     console.log('--- MSW: Intercepted POST /api/promotions ---')
@@ -75,7 +78,7 @@ export const handlers = [
   }),
 
   // PUT promotions/:id - Update promotion
-  rest.put('https://api-orderwise.qbitsinc.com/api/promotions/:id', async (req, res, ctx) => {
+  rest.put(`${API_BASE_URL}promotions/:id`, async (req, res, ctx) => {
     const { id } = req.params
     const body = await req.json()
 
@@ -110,7 +113,7 @@ export const handlers = [
   }),
 
   // DELETE promotions/:id - Delete promotion
-  rest.delete('https://api-orderwise.qbitsinc.com/api/promotions/:id', async (req, res, ctx) => {
+  rest.delete(`${API_BASE_URL}promotions/:id`, async (req, res, ctx) => {
     const { id } = req.params
 
     console.log('--- MSW: Intercepted DELETE /api/promotions/' + id + ' ---')
