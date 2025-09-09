@@ -648,6 +648,7 @@ const company = ref(userSession.company_session)
 // Company config
 const companyConfig = ref({
   id: company.value?.company_config?.id,
+  client: company.value?.company_config?.client,
   paymentMethod: company.value?.company_config?.payment_method,
   invoiceType: company.value?.company_config?.invoice_type,
   typeOfService: company.value?.company_config?.type_of_service,
