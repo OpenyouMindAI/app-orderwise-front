@@ -1047,7 +1047,9 @@ export default {
           reference: this.reference,
           created_at: this.paymentDate ? new Date(this.paymentDate).toISOString() : new Date().toISOString()
         })
-        await this.getInvoice(this.billDetails?.id)
+        if (this.billDetails?.id) {
+          await this.getInvoice(this.billDetails?.id)
+        }
         this.filterDate()
         this.reference = null
       } catch (error) {
