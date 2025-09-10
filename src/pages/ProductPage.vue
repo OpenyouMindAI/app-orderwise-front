@@ -652,7 +652,7 @@
                                 class="profit-percentage-input"
                                 @keydown="event => handlePriceListMarginKeydown(event, priceList)"
                                 @focus="initializePriceListMargin(priceList)"
-                                />
+                              />
                               </div>
                               <div class="col">
                                 <q-input
