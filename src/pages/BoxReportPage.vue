@@ -1351,6 +1351,11 @@ export default {
           }
         }
 
+        // Add payment method filter if a specific method was selected
+        if (this.selectedPaymentMethod && this.selectedPaymentMethod.payment_method_id) {
+          filtersPayments.dataEqualFilter.payment_method_id = this.selectedPaymentMethod.payment_method_id
+        }
+
         // Add date filters according to active panel
         if (this.panel === 'day' && this.day) {
           filtersPayments.dateFilter = {
