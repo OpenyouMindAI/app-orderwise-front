@@ -3277,14 +3277,16 @@ export default {
       if (!this.currentPromo) return
       this.currentPromo.promotion_details.forEach((group, groupIndex) => {
         group.products.forEach(product => {
-          if (product.quantity && product.quantity > 0) {
+          // Check for preselected quantity in pivot.quantity (new structure)
+          const preselectedQuantity = product.pivot?.quantity || product.quantity || 0
+          if (preselectedQuantity && preselectedQuantity > 0) {
             const productId = product.id || product.product_id
             this.promoSelections.push({
               groupIndex,
               product_id: String(productId),
               product,
-              quantity: product.quantity,
-              amount: product.quantity
+              quantity: preselectedQuantity,
+              amount: preselectedQuantity
             })
           }
         })
