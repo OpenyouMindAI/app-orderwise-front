@@ -761,37 +761,6 @@
         </q-card-section>
 
         <q-card-section>
-          <!-- Payment Method Filters -->
-          <div class="row q-gutter-sm q-mb-md">
-            <q-select
-              v-model="selectedPaymentFilter"
-              :options="paymentMethodFilters"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              filled
-              dense
-              label="Filtrar por método"
-              style="min-width: 200px"
-              @update:model-value="onPaymentFilterChange"
-            >
-              <template v-slot:prepend>
-                <q-icon name="filter_list" />
-              </template>
-            </q-select>
-            <q-btn
-              flat
-              round
-              dense
-              icon="refresh"
-              color="primary"
-              @click="refreshPaymentData"
-              >
-              <q-tooltip>Actualizar datos</q-tooltip>
-            </q-btn>
-          </div>
-
           <q-table
             v-if="invoicePayments.data?.length"
             :columns="paymentColumns"
@@ -827,19 +796,7 @@
             <div class="text-h6 q-mt-md">No hay datos de pagos</div>
             <div class="text-body2 q-mt-sm">No se encontraron pagos en el período seleccionado</div>
           </div>
-
-          <!-- Total Summary Card -->
-          <q-card v-if="invoicePayments.data?.length" flat class="q-mt-sm">
-            <q-card-section class="q-pa-sm bg-grey-1">
-              <div class="row justify-between items-center">
-                <div class="text-caption text-grey-7">
-                  {{ paymentDetailsPagination.rowsNumber || 0 }} registro(s) encontrado(s)
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
         </q-card-section>
-
         <q-inner-loading :showing="paymentDetailsLoading" color="primary" />
       </q-card>
     </q-dialog>
@@ -1350,7 +1307,7 @@ export default {
             'invoice.seller_id': this.seller?.id
           }
         }
-
+        console.log('HOLA', this.selectedPaymentMethod)
         // Add payment method filter if a specific method was selected
         if (this.selectedPaymentMethod && this.selectedPaymentMethod.payment_method_id) {
           filtersPayments.dataEqualFilter.payment_method_id = this.selectedPaymentMethod.payment_method_id
@@ -1415,6 +1372,11 @@ export default {
           'invoice.branch_office_id': this.branchOffice?.id,
           'invoice.seller_id': this.seller?.id
         }
+      }
+
+      // Add payment method filter if a specific method was selected
+      if (this.selectedPaymentMethod && this.selectedPaymentMethod.payment_method_id) {
+        filtersPayments.dataEqualFilter.payment_method_id = this.selectedPaymentMethod.payment_method_id
       }
 
       // Agregar filtros de fecha según el panel activo
