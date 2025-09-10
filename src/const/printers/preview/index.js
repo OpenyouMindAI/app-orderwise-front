@@ -13,7 +13,15 @@ import {
 export const sendTicket = async (data, userSession) => {
   const doc = await previewTicket(data, userSession)
   const pdfUrl = doc.output('bloburl')
-  window.open(pdfUrl, '_blank')
+  const newWindow = window.open(pdfUrl, '_blank')
+
+  if (!newWindow) {
+    // Fallback: descargar el PDF si el navegador bloquea ventanas emergentes
+    const link = document.createElement('a')
+    link.href = pdfUrl
+    link.download = `factura-${data.code || Date.now()}.pdf`
+    link.click()
+  }
 }
 /**
  * Preview
