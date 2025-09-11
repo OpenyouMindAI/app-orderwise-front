@@ -3203,28 +3203,24 @@ export default {
           })
         }
 
-        // Find missing products that are not in allProducts
-        const missingProductIds = Array.from(productIds).filter(id =>
-          !this.allProducts.find(p => p.id === id)
-        )
-
-        // Fetch missing products if any
-        let missingProducts = []
-        if (missingProductIds.length > 0) {
+        // Fetch only the specific products needed for this promotion using whereIn
+        let promotionProducts = []
+        const productIdsArray = Array.from(productIds)
+        if (productIdsArray.length > 0) {
           try {
             const { data } = await this.$api.get('products', {
               params: {
                 branch_office_id: this.branchOffice?.id,
                 whereIn: {
-                  id: missingProductIds
+                  id: productIdsArray
                 },
-                perPage: missingProductIds.length,
+                perPage: productIdsArray.length,
                 paginate: false
               }
             })
-            missingProducts = Array.isArray(data) ? data : (data.data || [])
+            promotionProducts = Array.isArray(data) ? data : (data.data || [])
           } catch (error) {
-            console.error('Error fetching missing products:', error)
+            console.error('Error fetching promotion products:', error)
           }
         }
 
@@ -3233,11 +3229,8 @@ export default {
           for (const group of promoWithDetails.promotion_details) {
             if (group.products && group.products.length > 0) {
               for (const product of group.products) {
-                // Look for complete product data in allProducts first, then in missingProducts
-                let completeProduct = this.allProducts.find(p => p.id === product.product_id)
-                if (!completeProduct) {
-                  completeProduct = missingProducts.find(p => p.id === product.product_id)
-                }
+                // Find complete product data in the fetched promotion products
+                const completeProduct = promotionProducts.find(p => p.id === product.product_id)
 
                 if (completeProduct) {
                   // Merge complete product data with existing product data
@@ -3279,14 +3272,16 @@ export default {
       if (!this.currentPromo) return
       this.currentPromo.promotion_details.forEach((group, groupIndex) => {
         group.products.forEach(product => {
-          if (product.quantity && product.quantity > 0) {
+          // Check for preselected quantity in pivot.quantity (new structure)
+          const preselectedQuantity = product.pivot?.quantity || product.quantity || 0
+          if (preselectedQuantity && preselectedQuantity > 0) {
             const productId = product.id || product.product_id
             this.promoSelections.push({
               groupIndex,
               product_id: String(productId),
               product,
-              quantity: product.quantity,
-              amount: product.quantity
+              quantity: preselectedQuantity,
+              amount: preselectedQuantity
             })
           }
         })
