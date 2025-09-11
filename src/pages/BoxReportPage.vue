@@ -754,7 +754,7 @@
     <!-- Payment Details Dialog -->
     <q-dialog v-model="paymentDetailsDialog">
       <q-card style="width: 800px; max-width: 90vw;">
-        <q-card-section class="bg-green-6 text-white row items-center">
+        <q-card-section class="bg-primary text-white row items-center">
           <div class="text-h6">💳 Detalle de Pagos por Método</div>
           <q-space/>
           <q-btn icon="close" flat round @click="paymentDetailsDialog = false"/>
@@ -1273,6 +1273,8 @@ export default {
     paymentDetailsModal () {
       this.paymentDetailsDialog = true
       this.paymentDetailsLoading = true
+      // Clear selected payment method for "Total" view
+      this.selectedPaymentMethod = null
       // Reset pagination to first page
       this.paymentDetailsPagination.page = 1
       this.paymentDetailsPagination.rowsPerPage = 10
