@@ -8,5 +8,11 @@
   "[vue]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
-  "cSpell.words": ["kardex", "Kardex"]
+  "cSpell.words": [
+    "kardex",
+    "Kardex"
+  ],
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
 }
