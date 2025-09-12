@@ -77,8 +77,6 @@
                   <div>
                     <span>
                       {{ product.name }}
-                    </span>
-                    <span v-if="product?.pivot?.amount">
                       x
                       {{ Number(product?.pivot?.amount).toFixed(2) }}
                     </span>
@@ -89,6 +87,53 @@
                     </p>
                   </div>
                 </div>
+
+                <!-- Promociones -->
+                <template v-if="invoice.promotions && invoice.promotions.length > 0">
+                  <span class="text-bold q-mt-sm">Promociones:</span>
+                  <div
+                    v-for="promotion in invoice.promotions" :key="promotion.id"
+                    class="full-width"
+                  >
+                    <div class="row items-center">
+                      <span>
+                        {{ promotion.name }}
+                        x
+                        {{ Number(promotion.pivot.quantity).toFixed(2) }}
+                      </span>
+                      <q-btn
+                        v-if="promotion.pivot && promotion.pivot.promotion_details && promotion.pivot.promotion_details.length > 0"
+                        :icon="promotionExpanded[promotion.id] ? 'expand_less' : 'expand_more'"
+                        size="xs"
+                        color="orange"
+                        @click.stop="togglePromotionDetails(promotion.id)"
+                        round
+                        dense
+                        class="q-ml-xs"
+                      />
+                    </div>
+
+                    <!-- Detalles de la promoción -->
+                    <div v-if="promotionExpanded[promotion.id] && promotion.pivot && promotion.pivot.promotion_details" class="q-ml-md q-mt-xs">
+                      <div v-for="group in promotion.pivot.promotion_details" :key="group.id" class="q-mb-xs">
+                        <div class="text-body2 text-weight-medium">
+                          {{ group.name }} ({{ group.quantity }} requeridos)
+                        </div>
+                        <div class="q-ml-sm">
+                          <div v-if="group.products && group.products.length > 0">
+                            <div
+                              v-for="product in group.products.filter(p => p.pivot && p.pivot.quantity > 0)"
+                              :key="product.id"
+                              class="text-body2 text-grey-7"
+                            >
+                              • {{ product.name }} ({{ product.pivot.quantity }} {{ product.pivot.quantity === 1 ? 'unidad' : 'unidades' }})
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </q-card-section>
               <q-separator/>
               <q-card-section  class="q-py-sm" v-if="invoice.client">
@@ -339,6 +384,83 @@
                       >
                         Observación: {{ product?.pivot?.observation }}
                       </span>
+                      <q-separator class="q-mt-sm" />
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
+
+              <!-- Promociones -->
+              <q-expansion-item
+                v-if="invoice.promotions && invoice.promotions.length > 0"
+                icon="local_offer"
+                label="Promociones"
+                style="border-radius: 10px"
+                class="shadow-1 overflow-hidden"
+                default-opened
+              >
+                <q-card>
+                  <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 250px">
+                    <div v-for="promotion in invoice.promotions" :key="promotion.id" class="col-12 column q-mb-md">
+                      <div class="full-width flex items-center justify-between">
+                        <div class="flex q-gutter-sm items-center">
+                          <file-component
+                            v-if="promotion?.images?.length > 0"
+                            :files="[promotion.images[0]]"
+                            image-style="height: 50px; width: 50px; border-radius: 10px;"
+                            only-view
+                          />
+                          <span class="text-body1 text-weight-medium">
+                            {{ promotion.name }}
+                            <q-tooltip class="text-subtitle1">
+                              {{ promotion.name }}
+                            </q-tooltip>
+                          </span>
+                        </div>
+                        <div class="flex items-center q-gutter-xs">
+                          <span class="text-bold">
+                            {{ formatNumber(promotion.pivot.quantity) }}
+                          </span>
+                          <q-btn
+                            v-if="promotion.pivot && promotion.pivot.promotion_details && promotion.pivot.promotion_details.length > 0"
+                            :icon="promotionExpanded[promotion.id] ? 'expand_less' : 'expand_more'"
+                            size="xs"
+                            color="orange"
+                            @click="togglePromotionDetails(promotion.id)"
+                            round
+                            dense
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Detalles de la promoción -->
+                      <div v-if="promotionExpanded[promotion.id] && promotion.pivot && promotion.pivot.promotion_details" class="q-mt-sm">
+                        <div class="text-body2 text-weight-medium q-mb-sm">Detalles de la promoción</div>
+                        <div v-for="group in promotion.pivot.promotion_details" :key="group.id" class="q-mb-sm">
+                          <div class="text-body2 text-weight-medium q-mb-xs">
+                            {{ group.name }} ({{ group.quantity }} requeridos)
+                          </div>
+                          <div class="q-ml-md">
+                            <div v-if="group.products && group.products.length > 0">
+                              <div
+                                v-for="product in group.products.filter(p => p.pivot && p.pivot.quantity > 0)"
+                                :key="product.id"
+                                class="row justify-between items-center q-py-xs q-px-sm q-mb-xs"
+                                style="border-left: 2px solid #e0e0e0;"
+                              >
+                                <span class="text-body2">• {{ product.name }}</span>
+                                <span class="text-weight-medium">
+                                  {{ product.pivot.quantity }} {{ product.pivot.quantity === 1 ? 'unidad' : 'unidades' }}
+                                </span>
+                              </div>
+                            </div>
+                            <div v-else class="text-caption text-grey-6 q-py-xs">
+                              No hay productos seleccionados para este grupo
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       <q-separator class="q-mt-sm" />
                     </div>
                   </q-card-section>
@@ -646,6 +768,12 @@ const interval = ref(null)
 const role = ref({})
 
 const validate = ref(true)
+
+/**
+ * Promotion expanded state
+ * @type {Object}
+ */
+const promotionExpanded = ref({})
 
 const permissions = ['SAM']
 
@@ -983,6 +1111,14 @@ const cancelInvoice = async () => {
   } finally {
     cancelLoading.value = false
   }
+}
+
+/**
+ * Toggle promotion details visibility
+ * @param {Number} promotionId promotion id
+ */
+const togglePromotionDetails = (promotionId) => {
+  promotionExpanded.value[promotionId] = !promotionExpanded.value[promotionId]
 }
 
 </script>

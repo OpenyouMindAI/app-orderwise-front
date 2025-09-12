@@ -232,6 +232,7 @@
                             <th class="text-left">Descripción</th>
                             <th class="text-right">Cantidad</th>
                             <th class="text-right">Subtotal</th>
+                            <th class="text-center">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -249,22 +250,72 @@
                             <td class="text-right">
                               {{ formatNumber(product.pivot.amount *  product.pivot.price) }}
                             </td>
-                          </tr>
-                          <tr v-for="product in invoice.promotions" :key="product.id">
-                            <td class="text-left">
-                              {{ product.barcode }}
-                            </td>
-                            <td class="text-left">
-                              {{ product.name.slice(0, 15) }} ...
-                              <q-tooltip class="text-subtitle1">{{ product.name }}</q-tooltip>
-                            </td>
-                            <td class="text-right">
-                              {{ formatNumber(product.pivot.quantity) }}
-                            </td>
-                            <td class="text-right">
-                              {{ formatNumber(product.pivot.quantity *  product.pivot.price) }}
+                            <td class="text-center">
+                              -
                             </td>
                           </tr>
+                          <template v-for="promotion in invoice.promotions" :key="promotion.id">
+                            <tr>
+                              <td class="text-left">
+                                {{ promotion.barcode || '-' }}
+                              </td>
+                              <td class="text-left">
+                                {{ promotion.name.slice(0, 15) }} ...
+                                <q-tooltip class="text-subtitle1">{{ promotion.name }}</q-tooltip>
+                              </td>
+                              <td class="text-right">
+                                {{ formatNumber(promotion.pivot.quantity) }}
+                              </td>
+                              <td class="text-right">
+                                {{ formatNumber(promotion.pivot.price || promotion.final_price) }}
+                              </td>
+                              <td class="text-center">
+                                <q-btn
+                                  v-if="promotion.pivot && promotion.pivot.promotion_details && promotion.pivot.promotion_details.length > 0"
+                                  :icon="promotionExpanded[promotion.id] ? 'expand_less' : 'expand_more'"
+                                  size="sm"
+                                  color="orange"
+                                  @click="togglePromotionDetails(promotion.id)"
+                                  round
+                                  dense
+                                />
+                                <span v-else class="text-caption text-grey-6">Promoción</span>
+                              </td>
+                            </tr>
+                            <!-- Detalles de la promoción -->
+                            <tr v-if="promotionExpanded[promotion.id] && promotion.pivot && promotion.pivot.promotion_details">
+                              <td colspan="5" class="q-pa-md">
+                                <div class="text-weight-medium q-mb-sm">Detalles de la promoción: {{ promotion.name }}</div>
+
+                                <div v-for="group in promotion.pivot.promotion_details" :key="group.id" class="q-mb-md">
+                                  <div class="text-subtitle2 text-weight-medium q-mb-xs">
+                                    {{ group.name }} ({{ group.quantity }} requeridos)
+                                  </div>
+
+                                  <div class="q-ml-md">
+                                    <div v-if="group.products && group.products.length > 0">
+                                      <div
+                                        v-for="product in group.products.filter(p => p.pivot && p.pivot.quantity > 0)"
+                                        :key="product.id"
+                                        class="row justify-between items-center q-py-xs q-px-sm q-mb-xs"
+                                        style="border-left: 2px solid #e0e0e0;"
+                                      >
+                                        <div class="row items-center q-gutter-xs">
+                                          <span class="text-body2">• {{ product.name }}</span>
+                                        </div>
+                                        <div class="text-weight-medium">
+                                          {{ product.pivot.quantity }} {{ product.pivot.quantity === 1 ? 'unidad' : 'unidades' }}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div v-else class="text-caption text-grey-6 q-py-xs">
+                                      No hay productos seleccionados para este grupo
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
                         </tbody>
                       </q-markup-table>
                     </q-card-section>
@@ -850,7 +901,60 @@ export default {
        * Invoice types
        * @type {Array}
        */
-      invoiceTypes: []
+      invoiceTypes: [],
+      /**
+       * Promotion expansion state
+       * @type {Object}
+       */
+      promotionExpanded: {},
+      /**
+       * Product columns for invoice details table
+       * @type {Array}
+       */
+      productColumns: [
+        {
+          name: 'barcode',
+          align: 'left',
+          label: 'Código',
+          field: 'barcode',
+          sortable: false
+        },
+        {
+          name: 'name',
+          align: 'left',
+          label: 'Descripción',
+          field: 'name',
+          sortable: false
+        },
+        {
+          name: 'price',
+          align: 'right',
+          label: 'Precio',
+          field: 'price',
+          sortable: false
+        },
+        {
+          name: 'quantity',
+          align: 'right',
+          label: 'Cantidad',
+          field: 'quantity',
+          sortable: false
+        },
+        {
+          name: 'subtotal',
+          align: 'right',
+          label: 'Subtotal',
+          field: 'subtotal',
+          sortable: false
+        },
+        {
+          name: 'actions',
+          align: 'center',
+          label: 'Acciones',
+          field: 'actions',
+          sortable: false
+        }
+      ]
     }
   },
   computed: {
@@ -861,6 +965,71 @@ export default {
     totalBill () {
       const sum = this.invoice.taxes.reduce((accumulator, currentValue) => accumulator + currentValue.total, 0)
       return sum + this.invoice.total
+    },
+    /**
+     * Combines products and promotions for the invoice details table
+     * @returns {Array}
+     */
+    invoiceProducts () {
+      if (!this.invoice) return []
+
+      const products = []
+
+      // Add regular products
+      if (this.invoice.products && this.invoice.products.length > 0) {
+        this.invoice.products.forEach(product => {
+          products.push({
+            id: product.id,
+            barcode: product.barcode || '-',
+            name: product.name,
+            price: product.pivot?.price || product.price,
+            quantity: product.pivot?.amount || product.quantity || 1,
+            subtotal: (product.pivot?.amount || product.quantity || 1) * (product.pivot?.price || product.price),
+            type: 'product'
+          })
+        })
+      }
+
+      // Add promotions
+      if (this.invoice.promotions && this.invoice.promotions.length > 0) {
+        this.invoice.promotions.forEach(promotion => {
+          // Process selected products from promotion_details
+          const selectedProducts = []
+          if (promotion.pivot && promotion.pivot.promotion_details) {
+            promotion.pivot.promotion_details.forEach((group, groupIndex) => {
+              if (group.products && group.products.length > 0) {
+                group.products.forEach(product => {
+                  if (product.pivot && product.pivot.quantity > 0) {
+                    selectedProducts.push({
+                      product_id: product.id,
+                      product,
+                      quantity: product.pivot.quantity,
+                      groupIndex,
+                      groupName: group.name
+                    })
+                  }
+                })
+              }
+            })
+          }
+
+          products.push({
+            id: promotion.id,
+            barcode: promotion.barcode || '-',
+            name: promotion.name,
+            price: promotion.pivot?.price || promotion.final_price || 0,
+            quantity: promotion.pivot?.quantity || 1,
+            subtotal: promotion.pivot?.price || promotion.final_price || 0,
+            type: 'promotion',
+            promotion_details: promotion.pivot?.promotion_details || null,
+            selectedProducts,
+            final_price: promotion.final_price || null,
+            is_bundle: promotion.is_bundle || false
+          })
+        })
+      }
+
+      return products
     },
     ...mapState(authentication, ['branchOffice', 'userSession'])
   },
@@ -980,6 +1149,16 @@ export default {
       }
       await this.getBranchOffices()
       this.filterInvoice()
+    },
+    /**
+     * Toggle promotion details expansion
+     * @param {Number} promotionId
+     */
+    togglePromotionDetails (promotionId) {
+      this.promotionExpanded = {
+        ...this.promotionExpanded,
+        [promotionId]: !this.promotionExpanded[promotionId]
+      }
     },
     /**
      * Get all sellers
