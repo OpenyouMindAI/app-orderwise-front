@@ -266,6 +266,18 @@ const routes = [
         name: 'ReportWithdrawals',
         meta: { requiresAuth: true },
         component: () => import('src/pages/ReportWithdrawalsPage.vue')
+      },
+      {
+        path: 'logs',
+        name: 'Log',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/LogPage.vue')
+      },
+      {
+        path: 'notifications',
+        name: 'Notification',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/NotificationPage.vue')
       }
     ]
   },

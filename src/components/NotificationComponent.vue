@@ -77,17 +77,17 @@
                 thumbnail
                 :class="notify.read_at ? 'text-grey' : ''"
               >
-                <q-avatar size="xl" :icon="notify.data.icon" />
+                <q-avatar size="xl" :icon="getErrorIcon(notify)" />
               </q-item-section>
               <q-item-section>
                 <q-item-label
                   lines="1"
                   :class="notify.read_at ? 'text-grey' : ''"
                 >
-                  {{ $t(`command.${notify.data?.title}`) }}
+                  {{ $t(`command.${notify.data?.title || notify.data?.error_type?.toLowerCase()}`) }}
                 </q-item-label>
                 <q-item-label caption lines="2">
-                  <span>{{ notify.data?.content }}</span>
+                  <span>{{ notify.data?.content || notify.data?.message }}</span>
                 </q-item-label>
                 <q-item-label
                   caption
@@ -210,7 +210,15 @@ export default {
         console.error('Error adding document: ', error)
       }
     }
-
+    const getErrorIcon = (notification) => {
+      const errorType = notification?.data?.error_type
+      switch (errorType) {
+        case 'DATABASE_ERROR': return 'storage'
+        case 'APPLICATION_ERROR': return 'code'
+        case 'GENERAL_ERROR': return 'error'
+        default: return notification.data.icon
+      }
+    }
     /**
      * Go to about page
      * @param {Object} notify notify
@@ -227,7 +235,7 @@ export default {
             }
           )
         } else {
-          $router.push({ path: data?.data?.route || '' })
+          $router.push({ path: data?.data?.route || 'notifications', query: { id: notify.id } })
         }
         getAllNotifications(true)
       } catch (error) {
@@ -243,6 +251,7 @@ export default {
 
     return {
       active,
+      getErrorIcon,
       loadingNotification,
       notifications,
       numberOfNotifications,

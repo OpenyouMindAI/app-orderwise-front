@@ -232,9 +232,17 @@
                 :columns="columns"
                 style="max-height: 400px; overflow: auto;"
                 :pagination="{ rowsPerPage: 0 }"
+                tabindex="0"
+                @keydown="handleKeyboardNavigation"
+                ref="productsTable"
               >
                 <template v-slot:body="props">
-                  <q-tr :props="props">
+                  <q-tr
+                    :props="props"
+                    :class="{ 'bg-blue-1 text-blue-10': selectedProductIndex == props.rowIndex }"
+                    @click="selectProduct(props.rowIndex)"
+                    style="cursor: pointer;"
+                  >
                     <q-td key="barcode" :props="props">
                       {{ props.row.barcode || '-' }}
                     </q-td>
@@ -320,11 +328,11 @@
                         :icon="props.expand ? 'expand_less' : 'expand_more'"
                         size="sm"
                         color="primary"
-                        @click="props.expand = !props.expand"
+                        @click.stop="props.expand = !props.expand"
                         round
                         class="q-mr-xs"
                       />
-                      <q-btn icon="delete" size="sm" color="negative" @click="deleteProduct(props)" round/>
+                      <q-btn icon="delete" size="sm" color="negative" @click.stop="deleteProduct(props)" round/>
                     </q-td>
                   </q-tr>
                   <q-tr v-show="props.expand" :props="props">
@@ -581,7 +589,7 @@
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-6 col-xl-6">
+        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-6 col-xl-6" ref="productsSection">
           <q-table
             v-model:pagination="pagination"
             row-key="name"
@@ -653,7 +661,7 @@
     </q-form>
 
     <!-- Promo Selection Dialog -->
-    <q-dialog v-model="promoDialog" :maximized="$q.screen.lt.sm" persistent>
+    <q-dialog v-model="promoDialog" :maximized="$q.screen.lt.sm" persistent ref="promoModal">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
           <span class="text-h6">{{ currentPromo?.name }} - {{ currentGroup?.name }}</span>
@@ -1332,6 +1340,16 @@ export default {
        */
       quantity: 1,
       /**
+       * Selected product index for keyboard navigation
+       * @type {Number}
+       */
+      selectedProductIndex: -1,
+      /**
+       * Is keyboard navigation active
+       * @type {Boolean}
+       */
+      keyboardNavigationActive: false,
+      /**
        * Current amount
        * @type {Number}
        */
@@ -1821,6 +1839,7 @@ export default {
     /**
      * Init keywords button
      */
+    document.addEventListener('click', this.handleOutsideClick)
     window.addEventListener('keydown', (e) => {
       switch (e.key) {
         case 'F1':
@@ -1859,6 +1878,7 @@ export default {
     })
   },
   beforeUnmount () {
+    document.removeEventListener('click', this.handleOutsideClick)
     window.removeEventListener('keydown', () => {
       this.dialogPayment = true
     })
@@ -1874,6 +1894,137 @@ export default {
   methods: {
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
+    },
+    /**
+     * Select a product by index for keyboard navigation
+     * @param {Number} index - Product index
+     */
+    selectProduct (index) {
+      this.selectedProductIndex = index
+      this.keyboardNavigationActive = true
+      // Focus the table to ensure keyboard events are captured
+      this.$nextTick(() => {
+        if (this.$refs.productsTable && this.$refs.productsTable.$el) {
+          this.$refs.productsTable.$el.focus()
+        }
+      })
+    },
+    /**
+     * Move to next product (TAB key)
+     */
+    moveToNextProduct () {
+      if (this.products.length === 0) return
+
+      if (this.selectedProductIndex < this.products.length - 1) {
+        this.selectedProductIndex++
+      } else {
+        this.selectedProductIndex = 0
+      }
+    },
+    /**
+     * Move to previous product (Shift+TAB)
+     */
+    moveToPreviousProduct () {
+      if (this.products.length === 0) return
+
+      if (this.selectedProductIndex > 0) {
+        this.selectedProductIndex--
+      } else {
+        this.selectedProductIndex = this.products.length - 1
+      }
+    },
+    /**
+     * Increase quantity of selected product
+     */
+    increaseSelectedProductQuantity () {
+      if (this.selectedProductIndex >= 0 && this.products[this.selectedProductIndex]) {
+        const product = this.products[this.selectedProductIndex]
+        product.quantity = (product.quantity || 1) + 1
+        this.calculate(product)
+      }
+    },
+    /**
+     * Decrease quantity of selected product
+     */
+    decreaseSelectedProductQuantity () {
+      if (this.selectedProductIndex >= 0 && this.products[this.selectedProductIndex]) {
+        const product = this.products[this.selectedProductIndex]
+        if (product.quantity > 1) {
+          product.quantity = (product.quantity || 1) - 1
+          this.calculate(product)
+        }
+      }
+    },
+    /**
+     * Handle keyboard navigation
+     * @param {KeyboardEvent} event
+     */
+    handleKeyboardNavigation (event) {
+      if (!this.keyboardNavigationActive || this.products.length === 0) return
+
+      switch (event.key) {
+        case 'Tab':
+          event.preventDefault()
+          if (event.shiftKey) {
+            this.moveToPreviousProduct()
+          } else {
+            this.moveToNextProduct()
+          }
+          break
+        case 'ArrowUp':
+        case '+':
+          event.preventDefault()
+          this.increaseSelectedProductQuantity()
+          break
+        case 'ArrowDown':
+        case '-':
+          event.preventDefault()
+          this.decreaseSelectedProductQuantity()
+          break
+        case 'Escape':
+          event.preventDefault()
+          this.selectedProductIndex = -1
+          this.keyboardNavigationActive = false
+          break
+      }
+    },
+    /**
+     * Reset product selection when products array changes
+     */
+    resetProductSelection () {
+      // Always reset selection when products array changes to avoid index conflicts
+      this.selectedProductIndex = -1
+      this.keyboardNavigationActive = false
+    },
+    /**
+     * Auto-select the last added product in the cart
+     * Reusable function for keyboard navigation enhancement
+     */
+    selectLastAddedProduct () {
+      this.$nextTick(() => {
+        const newProductIndex = this.products.length - 1
+        if (newProductIndex >= 0) {
+          this.selectProduct(newProductIndex)
+        }
+      })
+    },
+    /**
+     * Deselect product when clicking outside table
+     * @param {Event} event
+     */
+    handleOutsideClick (event) {
+      const tableElement = this.$refs.productsTable?.$el
+      const productsSection = this.$refs.productsSection
+      const promoModal = this.$refs.promoModal
+
+      // Check if click is outside both table and products section
+      const isOutsideTable = tableElement && !tableElement.contains(event.target)
+      const isOutsideProductsSection = productsSection && !productsSection.contains(event.target)
+      const isOutsidePromoModal = promoModal && !promoModal.contains(event.target)
+      if (isOutsideTable && isOutsideProductsSection && isOutsidePromoModal) {
+        this.selectedProductIndex = -1
+        this.keyboardNavigationActive = false
+      }
     },
     listenPayments () {
       const { company_session: companySession } = this.userSession
@@ -2645,6 +2796,7 @@ export default {
     clear () {
       this.payments = []
       this.products = []
+      this.resetProductSelection()
       this.tableSelected = []
       this.invoiceDescription = ''
       this.deliveryDate = formatDate(Date(), 'YYYY-MM-DD HH:mm:ss')
@@ -2804,6 +2956,7 @@ export default {
     deleteProduct (product) {
       this.products.splice(product.rowIndex, 1)
       this.products = [...this.products]
+      this.resetProductSelection()
       this.calculateTotal()
     },
     /**
@@ -2867,6 +3020,9 @@ export default {
         ...this.products,
         cartProduct
       ]
+
+      // Seleccionar automáticamente el producto recién agregado
+      this.selectLastAddedProduct()
     },
     /**
      * Valida y agrega productos al carrito con cálculos precisos
@@ -2938,18 +3094,21 @@ export default {
      * Calcula subtotal con validación de stock
      */
     calculate (data) {
-      // Validación final de stock
-      if (!this.validStockProduct(data, data.quantity)) {
-        const availableStock = data.stock || 0
-        data.quantity = Math.min(data.quantity, availableStock)
-        data.amount = data.quantity
-        data.subtotal = data.price * data.quantity
+      // Las promociones no requieren validación de stock
+      if (!data.is_promotion) {
+        // Validación final de stock solo para productos normales
+        if (!this.validStockProduct(data, data.quantity)) {
+          const availableStock = data.stock || 0
+          data.quantity = Math.min(data.quantity, availableStock)
+          data.amount = data.quantity
+          data.subtotal = data.price * data.quantity
 
-        this.$q.notify({
-          message: `Stock ajustado a ${availableStock} unidades`,
-          color: 'warning',
-          timeout: 1500
-        })
+          this.$q.notify({
+            message: `Stock ajustado a ${availableStock} unidades`,
+            color: 'warning',
+            timeout: 1500
+          })
+        }
       }
 
       // Cálculo preciso con redondeo a 2 decimales
@@ -3464,7 +3623,6 @@ export default {
      */
     addPromoToCart () {
       if (!this.isCurrentGroupValid()) return
-      console.log(this.currentPromo)
       const promoProduct = {
         ...this.currentPromo,
         promotion_id: this.currentPromo.id,
@@ -3480,6 +3638,9 @@ export default {
       this.pushProduct(promoProduct)
       this.calculateTotal()
       this.closePromoDialog()
+
+      // Auto-select the newly added promotion
+      this.selectLastAddedProduct()
 
       this.$q.notify({
         message: `${promoProduct.name} agregado`,
