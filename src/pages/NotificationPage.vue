@@ -277,7 +277,7 @@
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/services'
 import { defineComponent, ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 export default defineComponent({
   name: 'NotificationPage',
@@ -290,11 +290,19 @@ export default defineComponent({
     const typeFilter = ref(null)
     const severityFilter = ref(null)
     const route = useRoute()
+    const router = useRouter()
 
     watch(route, () => {
       if (route.query.id) {
         selected.value = items.value.find(item => item.id === route.query.id)
         drawer.value = true
+      }
+    })
+
+    watch(drawer, () => {
+      if (!drawer.value) {
+        selected.value = null
+        router.replace({ query: {} })
       }
     })
 
@@ -387,6 +395,13 @@ export default defineComponent({
         }
 
         items.value = notifications
+
+        if (route.query.id) {
+          if (items.value.length > 0) {
+            selected.value = items.value.find(item => item.id === route.query.id)
+            drawer.value = true
+          }
+        }
       } catch (error) {
         console.error('Error fetching notifications:', error)
         $q.notify({
