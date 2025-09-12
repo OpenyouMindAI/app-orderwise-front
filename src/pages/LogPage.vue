@@ -31,7 +31,7 @@
           </div>
 
           <div class="col-12 col-md-1 flex items-center justify-end">
-            <q-btn dense color="primary" icon="refresh" @click="fetchLogs" round />
+            <q-btn dense color="primary" icon="refresh" @click="fetchLogs" rounded label="Actualizar"/>
           </div>
         </div>
       </q-card-section>
@@ -44,12 +44,12 @@
       flat bordered
       color="primary"
       :loading="loading"
-      v-model:pagination="pagination"
-      @request="onRequest"
       :filter="filters.search"
       :rows-per-page-options="[10,25,50,100]"
       :virtual-scroll="true"
       :virtual-scroll-item-size="56"
+      v-model:pagination="pagination"
+      @request="onRequest"
       :dense="compact"
     >
       <template #top-right>
@@ -246,7 +246,7 @@ const filters = reactive({
   dateRangeLabel: ''
 })
 
-const pagination = reactive({ page: 1, rowsPerPage: 25, rowsNumber: 0, sortBy: 'created_at', descending: true })
+const pagination = ref({ page: 1, rowsPerPage: 25, rowsNumber: 0, sortBy: 'created_at', descending: true })
 
 const columns = [
   { name: 'id', label: 'ID', field: 'id', sortable: true, align: 'left' },
@@ -363,10 +363,11 @@ function applyDateRange () {
 }
 
 async function onRequest (ctx) {
-  pagination.page = ctx.pagination.page
-  pagination.rowsPerPage = ctx.pagination.rowsPerPage
-  pagination.sortBy = ctx.pagination.sortBy
-  pagination.descending = ctx.pagination.descending
+  pagination.value.page = ctx.pagination.page
+  pagination.value.rowsPerPage = ctx.pagination.rowsPerPage
+  pagination.value.sortBy = ctx.pagination.sortBy
+  pagination.value.descending = ctx.pagination.descending
+  pagination.value.rowsNumber = 20
   await fetchLogs()
 }
 
@@ -375,11 +376,11 @@ async function fetchLogs () {
   try {
     const { data } = await api.get('user-activity', {
       params: {
-        page: pagination.page,
+        page: pagination.value.page,
         paginate: true,
-        perPage: pagination.rowsPerPage,
-        sortBy: pagination.sortBy,
-        sortOrder: pagination.descending ? 'desc' : 'asc',
+        perPage: pagination.value.rowsPerPage,
+        sortBy: pagination.value.sortBy,
+        sortOrder: pagination.value.descending ? 'desc' : 'asc',
         dataSearch: {
           ip_address: filters.search,
           endpoint: filters.search
@@ -396,7 +397,7 @@ async function fetchLogs () {
       }
     })
     rows.value = data.data
-    pagination.rowsNumber = data.total
+    pagination.value.rowsNumber = data.total
   } catch (e) {
     $q.notify({ type: 'negative', message: 'Error cargando logs', position: 'top' })
   } finally {

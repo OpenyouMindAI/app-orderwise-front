@@ -527,7 +527,6 @@ export default defineComponent({
     gap: 16px;
     margin-bottom: 24px;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
     border-radius: 16px;
     border: 1px solid rgba(229, 231, 235, 0.5);
@@ -585,7 +584,6 @@ export default defineComponent({
   .modern-card {
     border-radius: 16px;
     border: 1px solid rgba(229, 231, 235, 0.5);
-    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     cursor: pointer;
@@ -611,20 +609,17 @@ export default defineComponent({
   .notification-title {
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
     margin-bottom: 4px;
   }
 
   .notification-exception {
     font-size: 14px;
     font-weight: 500;
-    color: #374151;
     margin-bottom: 8px;
   }
 
   .notification-message {
     font-size: 14px;
-    color: #6b7280;
     margin-bottom: 12px;
     line-height: 1.5;
   }
@@ -647,7 +642,6 @@ export default defineComponent({
 
   .card-actions {
     padding: 12px 20px;
-    background: rgba(249, 250, 251, 0.8);
     gap: 8px;
   }
 
@@ -663,18 +657,11 @@ export default defineComponent({
 
   /* Estilos del drawer mejorados */
   .notification-drawer {
-    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
-  }
-
-  .drawer-toolbar {
-    background: linear-gradient(135deg, rgba(190, 18, 60, 0.1), rgba(236, 72, 153, 0.1));
-    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
   }
 
   .drawer-title {
     font-weight: 600;
-    color: #1f2937;
   }
 
   .drawer-content {
@@ -687,7 +674,6 @@ export default defineComponent({
   .detail-card {
     border-radius: 12px;
     border: 1px solid rgba(229, 231, 235, 0.5);
-    background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
   }
 
@@ -701,7 +687,6 @@ export default defineComponent({
   .detail-title {
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
   }
 
   .detail-content {
@@ -719,14 +704,12 @@ export default defineComponent({
   .detail-label {
     font-size: 12px;
     font-weight: 600;
-    color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .detail-value {
     font-size: 14px;
-    color: #374151;
     word-break: break-word;
   }
 
@@ -746,7 +729,6 @@ export default defineComponent({
     word-break: break-word;
     max-height: 300px;
     overflow: auto;
-    color: #334155;
   }
 
   .trace-block {
