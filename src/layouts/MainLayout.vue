@@ -363,7 +363,7 @@ import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
-import { copyToClipboard } from 'quasar'
+import { copyToClipboard, Notify } from 'quasar'
 export default {
   name: 'MainLayout',
   components: { NotificationComponent },
@@ -460,23 +460,52 @@ export default {
      * Set notification
      * @param {Object} data data
      */
-    setNotification ({ data }) {
+    setNotification ({ data, id }) {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
-          const notification = createNotification(this.$t(`command.${data.name}`), {
-            body: data.description,
-            icon: '/icons/icon-128x128.png'
-          })
 
-          notification.onclick = () => {
-            window.open(`${window.location.origin}/command-orders/?id=${data.invoice_id}`, '_blank')
+          if (data.invoice_id) {
+            const notification = createNotification(this.$t(`command.${data.name}`), {
+              body: data.description,
+              icon: '/icons/icon-128x128.png'
+            }, false)
+            notification.onclick = () => {
+              window.open(`${window.location.origin}/command-orders/?id=${data.invoice_id}`, '_blank')
+            }
           }
 
-          function createNotification (title, options) {
-            notify('Hay una nueva comanda', 'primary', 'notifications', 'bottom-right')
-            // const audio = new Audio('audios/notify.mp3')
-            // audio.play()
+          if (data.error_type) {
+            const notification = createNotification(this.$t(`command.${data?.error_type?.toLowerCase()}`), {
+              body: data.description,
+              icon: '/icons/icon-128x128.png'
+            }, true)
+            notification.onclick = () => {
+              window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
+            }
+          }
+
+          function createNotification (title, options, sound) {
+            Notify.create({
+              type: 'negative',
+              message: title,
+              position: 'bottom-right',
+              timeout: 0,
+              icon: 'notifications',
+              actions: [
+                {
+                  label: 'Ver',
+                  color: 'primary',
+                  handler: () => {
+                    window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
+                  }
+                }
+              ]
+            })
+            if (sound) {
+              const audio = new Audio('audios/bug_notification.wav')
+              audio.play()
+            }
             return new Notification(title, options)
           }
         }

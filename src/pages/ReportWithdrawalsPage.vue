@@ -356,6 +356,26 @@
                             icon="save"
                             @click="updateWithdrawal(withdrawal)"
                           />
+
+                          <q-btn
+                            v-if="withdrawal.images && withdrawal.images.length > 0"
+                            rounded
+                            color="blue-5"
+                            icon="photo"
+                            @click="openFileWithdrawal(withdrawal)"
+                          >
+                            <q-tooltip>Ver imagen ({{ withdrawal.images.length }})</q-tooltip>
+                          </q-btn>
+
+                          <!-- <q-btn
+                            v-else
+                            rounded
+                            color="grey-5"
+                            icon="error"
+                            disable
+                          >
+                            <q-tooltip>Sin imagen</q-tooltip>
+                          </q-btn> -->
                         </div>
                       </div>
                     </q-card-section>
@@ -380,6 +400,66 @@
       ]"
       @cashflow-saved="onCashflowSaved"
     />
+
+    <!-- Image Preview Dialog -->
+    <q-dialog
+      v-model="showImagePreview"
+      :maximized="$q.screen.lt.md"
+      :full-width="$q.screen.gt.sm"
+      :full-height="$q.screen.gt.sm"
+    >
+      <q-card class="image-preview-card">
+        <q-card-section class="row items-center q-pa-sm bg-dark text-white">
+          <div class="text-subtitle1 text-weight-medium">Previsualización de Imagen - Retiro</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup color="white" size="sm" />
+        </q-card-section>
+
+        <q-card-section class="image-container">
+          <div v-if="imageLoading" class="image-placeholder">
+            <q-spinner-dots size="50px" color="primary" />
+            <div class="text-primary q-mt-md">Cargando imagen...</div>
+          </div>
+
+          <div v-else-if="imageError" class="image-placeholder">
+            <q-icon name="broken_image" size="80px" color="grey-5" />
+            <div class="text-grey-8 q-mt-md text-weight-medium">Error al cargar la imagen</div>
+            <div class="text-grey-6 q-mt-sm text-caption">{{ imageError }}</div>
+          </div>
+
+          <img
+            v-else-if="previewImageUrl"
+            :src="previewImageUrl"
+            class="preview-image"
+            @error="handleImageError"
+            @load="imageLoading = false"
+          />
+
+          <div v-else class="image-placeholder">
+            <q-icon name="image_not_supported" size="80px" color="grey-5" />
+            <div class="text-grey-8 q-mt-md text-weight-medium">No hay imagen disponible</div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="center" class="q-pa-md bg-grey-1">
+          <q-btn
+            v-if="previewImageUrl && !imageError"
+            color="primary"
+            icon="download"
+            label="Descargar"
+            @click="downloadImage"
+            unelevated
+          />
+          <q-btn
+            color="grey-7"
+            icon="close"
+            label="Cerrar"
+            v-close-popup
+            flat
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -421,6 +501,13 @@ export default {
     const itemsPerPage = 5
     const userSession = computed(() => store.userSession)
     const branchOffice = computed(() => store.branchOffice)
+
+    // Image preview state
+    const showImagePreview = ref(false)
+    const previewImageUrl = ref(null)
+    const imageLoading = ref(false)
+    const imageError = ref(null)
+    const currentWithdrawal = ref(null)
 
     const totalAmount = computed(() => {
       return daysData.value.reduce((sum, day) => sum + parseFloat(day.sum_amount || 0), 0)
@@ -725,6 +812,69 @@ export default {
         message: 'Retiro guardado exitosamente'
       })
     }
+
+    // Image preview functions
+    const openFileWithdrawal = (withdrawal) => {
+      try {
+        currentWithdrawal.value = withdrawal
+        imageLoading.value = true
+        imageError.value = null
+        previewImageUrl.value = null
+        showImagePreview.value = true
+
+        // Check if withdrawal has images
+        if (withdrawal.images && withdrawal.images.length > 0) {
+          // Use the first image URL directly from the API response
+          const firstImage = withdrawal.images[0]
+          if (firstImage.url) {
+            previewImageUrl.value = firstImage.url
+            imageLoading.value = false
+          } else {
+            throw new Error('URL de imagen no disponible')
+          }
+        } else {
+          throw new Error('No hay imágenes disponibles para este retiro')
+        }
+      } catch (error) {
+        console.error('Error loading withdrawal image:', error)
+        imageError.value = error.message || 'Error al cargar la imagen'
+        previewImageUrl.value = null
+        imageLoading.value = false
+      }
+    }
+
+    const handleImageError = () => {
+      imageError.value = 'Error al cargar la imagen'
+      imageLoading.value = false
+    }
+
+    const downloadImage = () => {
+      if (previewImageUrl.value && currentWithdrawal.value) {
+        const link = document.createElement('a')
+        link.href = previewImageUrl.value
+
+        // Create a descriptive filename
+        const date = currentWithdrawal.value.created_at
+          ? currentWithdrawal.value.created_at.split('T')[0]
+          : new Date().toISOString().split('T')[0]
+        const description = currentWithdrawal.value.description?.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '') || 'retiro'
+        const extension = previewImageUrl.value.includes('.jpg') ? '.jpg'
+          : previewImageUrl.value.includes('.png') ? '.png'
+            : previewImageUrl.value.includes('.jpeg') ? '.jpeg' : '.jpg'
+
+        link.download = `${description}-${currentWithdrawal.value.id}-${date}${extension}`
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        $q.notify({
+          type: 'positive',
+          message: 'Descarga iniciada',
+          caption: 'La imagen se está descargando...'
+        })
+      }
+    }
     const printReport = () => {
       const printContent = `
         <html>
@@ -884,7 +1034,17 @@ export default {
       updateWithdrawal,
       openCashflowModal,
       onCashflowSaved,
-      toggleExpanded
+      toggleExpanded,
+
+      // Image preview
+      showImagePreview,
+      previewImageUrl,
+      imageLoading,
+      imageError,
+      currentWithdrawal,
+      openFileWithdrawal,
+      handleImageError,
+      downloadImage
     }
   }
 }
@@ -1353,6 +1513,67 @@ export default {
 
 .mt-2 {
   margin-top: 0.5rem;
+}
+
+/* Image Preview Modal Styles */
+.image-preview-card {
+  max-width: 95vw;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.image-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0;
+  background-color: #f5f5f5;
+  overflow: hidden;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .image-preview-card {
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .image-container {
+    min-height: calc(100vh - 120px);
+  }
+}
+
+@media (min-width: 769px) {
+  .image-preview-card {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .image-container {
+    min-height: calc(95vh - 120px);
+  }
 }
 
 @media print {

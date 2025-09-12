@@ -349,7 +349,7 @@
           <q-btn icon="close" flat round dense @click="closeModal" />
         </q-card-section>
         <q-form @submit="saveProduct" ref="formAddProduct">
-          <q-card-section class="scroll " style="height: calc(100vh - 200px);">
+          <q-card-section>
             <div class="row q-col-gutter-sm">
               <div class="row col-md-7 col-xs-12 col-sm-12">
                 <!-- Datos básicos -->
@@ -474,75 +474,7 @@
                           dense
                         />
                       </div>
-                    </div>
-
-                    <!-- Lista de precios adicionales -->
-                    <div class="q-mb-md">
-                      <div class="flex items-center justify-between q-mb-sm">
-                        <span class="text-body1 text-weight-medium">Listas de precios adicionales</span>
-                        <q-btn
-                          color="positive"
-                          icon="add"
-                          label="Agregar lista"
-                          size="sm"
-                          @click="addPriceLis"
-                          unelevated
-                        />
-                      </div>
-
-                      <div v-if="priceLists.length === 0" class="text-center q-pa-md text-grey-6">
-                        <q-icon name="list_alt" size="2rem" class="q-mb-sm" />
-                        <div>No hay listas de precios adicionales</div>
-                      </div>
-
-                      <q-card
-                        v-for="(priceList, index) in priceLists"
-                        :key="index"
-                        flat
-                        bordered
-                        class="q-mb-sm"
-                      >
-                        <q-card-section class="q-pa-sm">
-                          <div class="row q-col-gutter-sm items-center">
-                            <div class="col-5">
-                              <q-input
-                                v-model="priceList.name"
-                                label="Nombre de la lista"
-                                filled
-                                dense
-                                :rules="[val => !!val || 'El precio mínimo es 3']"
-                              />
-                            </div>
-                            <div class="col-5">
-                              <q-input
-                                v-model="priceList.price"
-                                label="Precio"
-                                type="number"
-                                step=".01"
-                                :rules="[val => val >= 1 || 'El precio mínimo es 3']"
-                                filled
-                                dense
-                              />
-                            </div>
-                            <div class="col-2 text-right">
-                              <q-btn
-                                icon="delete"
-                                color="negative"
-                                size="sm"
-                                round
-                                flat
-                                @click="removePriceList(index)"
-                              >
-                                <q-tooltip>Eliminar lista</q-tooltip>
-                              </q-btn>
-                            </div>
-                          </div>
-                        </q-card-section>
-                      </q-card>
-                    </div>
-
-                    <div class="row q-col-gutter-sm">
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
                         <q-select
                           use-input
                           filled
@@ -707,17 +639,6 @@
         </q-form>
       </q-card>
     </q-dialog>
-    <!-- <q-dialog v-model="modelScan">
-      <q-card>
-        <q-card-section class="q-pb-none q-pt-xs q-px-xs bg-dark">
-          <stream-barcode-reader @debarcode="getOneProduct"/>
-        </q-card-section>
-      </q-card>
-    </q-dialog> -->
-
-    <q-dialog  v-model="addPriceList">
-      <h1>HOLAA</h1>
-    </q-dialog>
 
     <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
@@ -876,7 +797,6 @@
                 filled
                 v-model="providerAdded.document_number"
                 label="Número de documento"
-                :rules="[val => !!val || 'El campo es requerido.']"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -1256,7 +1176,6 @@ export default {
        */
       priceLists: [],
       isDragOver: false,
-      addPriceList: false,
       /**
        * Open dialog to add products
        * @type {Boolean}
@@ -1439,11 +1358,6 @@ export default {
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
   },
   methods: {
-
-    testCOSAS () {
-      this.addPriceList = true
-      console.log(this.addPriceList)
-    },
     /**
      * Update values
      * @param {String} inputName input name
@@ -1554,6 +1468,24 @@ export default {
           user_created_id: this.userSession.id
         })
       }
+    },
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      this.processFiles(files)
+    },
+    processFiles (files) {
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            this.product.images.push({
+              image: file,
+              url: e.target.result
+            })
+          }
+          reader.readAsDataURL(file)
+        }
+      })
     },
     /**
      * Get all payment-methods
@@ -2054,26 +1986,6 @@ export default {
         notify(err.message, 'negative', 'warning')
       }
     },
-    handleFileSelect (event) {
-      const files = Array.from(event.target.files)
-      files.forEach(file => {
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            this.product.images.push({
-              image: file,
-              url: e.target.result,
-              // Añadir un ID temporal para manejar mejor las imágenes
-              tempId: Date.now() + Math.random().toString(36).substring(2)
-            })
-          }
-          reader.readAsDataURL(file)
-        }
-      })
-      // Limpiar el input para permitir seleccionar las mismas imágenes otra vez
-      this.$refs.fileInput.value = ''
-    },
-
     deleteImageadd (image, index) {
       if (image.tempId || image.id) {
         if (image.id) {
@@ -2109,9 +2021,17 @@ export default {
       console.log(payload)
       this.$api.post('products', payload)
         .then(({ data }) => {
-          this.getProducts()
           this.openAddProduct = false
           this.visible = false
+          this.product = {}
+          this.pushProduct({
+            name: data.name,
+            quantity: 1,
+            subtotal: data.cost,
+            product_id: data.id,
+            cost: data.cost,
+            barcode: data.barcode
+          })
           this.closeModal()
           Notify.create({
             message: 'Producto creado exitosamente',
@@ -2211,20 +2131,6 @@ export default {
       this.isDragOver = false
       const files = Array.from(event.dataTransfer.files)
       this.processFiles(files)
-    },
-    processFiles (files) {
-      files.forEach(file => {
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            this.product.images.push({
-              image: file,
-              url: e.target.result
-            })
-          }
-          reader.readAsDataURL(file)
-        }
-      })
     },
     setCategory (data) {
       this.product.aliquot_type = data.aliquot_type
