@@ -6,6 +6,9 @@ export default {
   success: 'Action was successful',
 
   command: {
-    pending: 'Pendiente'
+    pending: 'Pendiente',
+    database_error: 'Error de base de datos',
+    application_error: 'Error de aplicación',
+    general_error: 'Error general'
   }
 }
