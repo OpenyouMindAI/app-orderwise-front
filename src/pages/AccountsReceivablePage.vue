@@ -49,29 +49,73 @@
         </div>
       </div>
       <div class="col-12 q-pa-sm">
-        <q-table
-          v-model:pagination="paginationConfig"
-          row-key="id"
-          :columns="columns"
-          :rows="clients"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          no-data-label="Registro no encontrado"
-          @request="setPagination"
-          @row-click="editClient"
+        <q-tabs
+          v-model="activeTab"
+          dense
+          class="text-grey"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
+          narrow-indicator
         >
-          <template #loading>
-            <q-inner-loading showing color="primary" />
-          </template>
-          <template #top-right>
-            <q-input v-model="filter" filled dense debounce="500" placeholder="Buscar">
-              <template #append>
-                <q-icon name="search" />
+          <q-tab name="invoices" label="Facturas" icon="receipt" />
+          <q-tab name="payments" label="Pagos" icon="payment" />
+        </q-tabs>
+
+        <q-separator />
+
+        <q-tab-panels v-model="activeTab" animated>
+          <q-tab-panel name="invoices">
+            <q-table
+              v-model:pagination="paginationConfig"
+              row-key="id"
+              :columns="columns"
+              :rows="clients"
+              :loading="visible"
+              :filter="filter"
+              binary-state-sort
+              no-data-label="Registro no encontrado"
+              @request="setPagination"
+              @row-click="editClient"
+            >
+              <template #loading>
+                <q-inner-loading showing color="primary" />
               </template>
-            </q-input>
-          </template>
-        </q-table>
+              <template #top-right>
+                <q-input v-model="filter" filled dense debounce="500" placeholder="Buscar">
+                  <template #append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </template>
+            </q-table>
+          </q-tab-panel>
+
+          <q-tab-panel name="payments">
+            <q-table
+              v-model:pagination="paymentPagination"
+              row-key="id"
+              :columns="paymentColumns"
+              :rows="payments"
+              :loading="visible"
+              :filter="filter"
+              binary-state-sort
+              no-data-label="Registro no encontrado"
+              @request="setPaymentsPagination"
+            >
+              <template #loading>
+                <q-inner-loading showing color="primary" />
+              </template>
+              <template #top-right>
+                <q-input v-model="filter" filled dense debounce="500" placeholder="Buscar">
+                  <template #append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </template>
+            </q-table>
+          </q-tab-panel>
+        </q-tab-panels>
       </div>
     </div>
     <q-dialog
@@ -496,7 +540,7 @@
 
 <script>
 import { mapState } from 'pinia'
-import { date, Notify } from 'quasar'
+import { Notify } from 'quasar'
 import { formatNumber, formatDate, notify, loading } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { commandPrint, ticketPrint } from 'src/const/printers'
@@ -517,6 +561,7 @@ export default {
       clients: [],
       sellers: [],
       sales: [],
+      payments: [],
       seller: null,
       filter: '',
       fromHours: null,
@@ -542,6 +587,20 @@ export default {
         }
       },
       /**
+       * Params search payments
+       * @type {Object}
+       */
+      paymentsParams: {
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc',
+        perPage: 1,
+        dataSearch: {
+          'invoice.id': '',
+          amount: ''
+        }
+      },
+      /**
        * Params search
        * @type {Object}
        */
@@ -559,6 +618,7 @@ export default {
       },
       visible: false,
       totals: null,
+      activeTab: 'invoices',
       columns: [
         {
           name: 'id',
@@ -653,21 +713,81 @@ export default {
           format: row => formatNumber(row)
         }
       ],
+      paymentColumns: [
+        {
+          name: 'invoice_code',
+          align: 'left',
+          label: 'Código Factura',
+          field: row => row.invoice?.code || '-',
+          sortable: true
+        },
+        {
+          name: 'payment_date',
+          align: 'left',
+          label: 'Fecha y Hora del Pago',
+          field: row => `${row.date} ${row.hour}`,
+          sortable: true
+        },
+        {
+          name: 'payment_method',
+          align: 'left',
+          label: 'Método de Pago',
+          field: row => row.payment_method?.name || '-',
+          sortable: true
+        },
+        {
+          name: 'client',
+          align: 'left',
+          label: 'Cliente',
+          field: row => row.invoice?.client?.name || '-',
+          sortable: true
+        },
+        {
+          name: 'seller',
+          align: 'left',
+          label: 'Vendedor',
+          field: row => row.invoice?.seller?.name || '-',
+          sortable: true
+        },
+        {
+          name: 'amount',
+          align: 'right',
+          label: 'Monto',
+          field: 'amount',
+          format: row => formatNumber(row),
+          sortable: true
+        },
+        {
+          name: 'files',
+          align: 'center',
+          label: 'Archivos',
+          field: row => row.files?.length || 0,
+          format: row => row > 0 ? `${row} archivo(s)` : 'Sin archivos'
+        }
+      ],
       paginationConfig: {
-        rowsPerPage: 20,
-        rowsNumber: 20,
+        rowsPerPage: 10,
+        rowsNumber: 10,
+        paginate: true,
+        sortBy: 'id',
+        sortOrder: 'desc'
+      },
+      paymentPagination: {
+        rowsPerPage: 10,
+        rowsNumber: 10,
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
       },
       salePagination: {
-        rowsPerPage: 20,
-        rowsNumber: 20,
+        rowsPerPage: 10,
+        rowsNumber: 10,
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
       },
       filters: {},
+      filtersPayments: {},
       paymentMethods: [],
       cancelLoading: false
     }
@@ -675,6 +795,14 @@ export default {
   watch: {
     filter (data) {
       this.searchData(data)
+    },
+    activeTab (newTab) {
+      if (newTab === 'payments') {
+        this.setPaymentsPagination({
+          pagination: this.paginationConfig,
+          filter: undefined
+        })
+      }
     },
     branchOffice (data) {
       this.filterDate()
@@ -807,17 +935,50 @@ export default {
       }
     },
     /**
-     * Clear filter
+     * Clear all filters and reset to default values
+     * Resets date filters, seller selection, search input and UI state
      */
     clearFilter () {
-      this.day = date.formatDate(Date(), 'YYYY-MM-DD')
-      this.fromHours = '00:00'
-      this.toHours = '23:59'
-      this.seller = null
-      this.from = date.formatDate(Date(), 'YYYY-MM-DD')
-      this.to = date.formatDate(Date(), 'YYYY-MM-DD')
-      this.panel = 'day'
-      this.filterDate()
+      try {
+        // Reset all date and time filters to empty/null values
+        this.day = null
+        this.fromHours = null
+        this.toHours = null
+        this.from = null
+        this.to = null
+
+        // Reset filter selections
+        this.seller = null
+        this.filter = '' // Clear search input
+
+        // Reset UI state
+        this.panel = 'day'
+
+        // Close filter dialog if open
+        if (this.dialogFilter) {
+          this.dialogFilter = false
+        }
+
+        // Apply the cleared filters
+        this.filterDate()
+
+        // Provide user feedback
+        this.$q.notify({
+          message: 'Filtros limpiados correctamente',
+          color: 'positive',
+          icon: 'filter_alt_off',
+          position: 'top',
+          timeout: 2000
+        })
+      } catch (error) {
+        console.error('❌ Error al limpiar filtros:', error)
+        this.$q.notify({
+          message: 'Error al limpiar los filtros',
+          color: 'negative',
+          icon: 'warning',
+          position: 'top'
+        })
+      }
     },
     /**
      * Get all sellers
@@ -842,25 +1003,68 @@ export default {
       }
     },
     /**
+     * Remove null/undefined properties from object
+     */
+    cleanFilters (obj) {
+      return Object.fromEntries(
+        Object.entries(obj).filter(([_, value]) => value != null && value !== '')
+      )
+    },
+    /**
      * Filter date
      */
     async filterDate () {
-      if (this.panel === 'day') {
-        this.filters = {
-          branch_office_id: this.branchOffice?.id,
-          seller_id: this.seller?.id,
-          day: this.day,
-          fromHours: this.fromHours,
-          toHours: this.toHours
+      // Los filtros se adaptan según el tab activo
+      if (this.activeTab === 'payments') {
+        // Filtros para pagos - compatible con estructura de invoice-payments
+        const dataEqualFilter = this.cleanFilters({
+          'invoice.branch_office_id': this.branchOffice?.id,
+          'invoice.seller_id': this.seller?.id
+        })
+
+        this.filtersPayments = { dataEqualFilter }
+
+        if (this.panel === 'day' && this.day) {
+          this.filtersPayments.dateFilter = {
+            field: 'created_at',
+            from: `${this.day} ${this.fromHours || '00:00'}`,
+            to: `${this.day} ${this.toHours || '23:59'}`
+          }
+        } else if (this.panel === 'between') {
+          const dateFilter = this.cleanFilters({
+            field: 'created_at',
+            from: this.from,
+            to: this.to
+          })
+          if (Object.keys(dateFilter).length > 1) { // más que solo 'field'
+            this.filtersPayments.dateFilter = dateFilter
+          }
         }
+
+        this.setPaymentsPagination({
+          pagination: this.paymentPagination,
+          filter: undefined
+        })
       } else {
-        this.filters = {
-          seller_id: this.seller?.id,
-          branch_office_id: this.branchOffice?.id,
-          to: this.to,
-          from: this.from
+        // Filtros para facturas/clientes - estructura original
+        if (this.panel === 'day') {
+          this.filters = this.cleanFilters({
+            branch_office_id: this.branchOffice?.id,
+            seller_id: this.seller?.id,
+            day: this.day,
+            fromHours: this.fromHours,
+            toHours: this.toHours
+          })
+        } else {
+          this.filters = this.cleanFilters({
+            seller_id: this.seller?.id,
+            branch_office_id: this.branchOffice?.id,
+            from: this.from,
+            to: this.to
+          })
         }
       }
+
       if (this.client?.id) {
         this.setSalePagination({
           pagination: this.salePagination,
@@ -887,7 +1091,7 @@ export default {
       }
     },
     /**
-     * Search beneficiary
+     * Search data based on active tab
      * @param  {Object}
      */
     searchData (data) {
@@ -895,7 +1099,15 @@ export default {
         this.params.dataSearch[dataSearch] = data
       }
       this.params.page = 1
-      this.getClients(this.params)
+      const params = {
+        ...this.params,
+        ...this.filters
+      }
+      if (this.activeTab === 'payments') {
+        this.getPayments(params)
+      } else {
+        this.getClients(params)
+      }
     },
     /**
      * Get all clients
@@ -931,6 +1143,28 @@ export default {
           this.sales = data.data
           this.visible = false
           this.salePagination.rowsNumber = data.total
+        })
+        .catch((err) => {
+          this.visible = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Get all payments
+     * @param {Object} params
+     */
+    getPayments (params = this.paymentsParams) {
+      this.visible = true
+      this.$api
+        .get('invoice-payments', { params })
+        .then(({ data }) => {
+          this.payments = data.data
+          this.visible = false
+          this.paginationConfig.rowsNumber = data.total
         })
         .catch((err) => {
           this.visible = false
@@ -978,6 +1212,19 @@ export default {
         ...this.filters
       }
       this.getClients(params)
+    },
+
+    setPaymentsPagination (data) {
+      this.paymentsParams.sortOrder = data.pagination.descending ? 'asc' : 'desc'
+      this.paymentsParams.page = data.pagination.page
+      this.paymentsParams.sortBy = data.pagination.sortBy ?? this.paymentsParams.sortBy
+      this.paymentsParams.perPage = data.pagination.rowsPerPage
+      this.paymentPagination = data.pagination
+      const params = {
+        ...this.paymentsParams,
+        ...this.filtersPayments
+      }
+      this.getPayments(params)
     },
     /**
      * Set data pagination emit event
