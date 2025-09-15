@@ -3221,7 +3221,7 @@ export default {
             branch_office_id: this.branchOffice?.id
           }
         })
-        if (data && data.status === 'open' && data.user_id === this.userSession.id) {
+        if (data && data.status === 'open') {
           this.isUserBoxOpen = true
           this.cashBoxState = {
             id: data.id,
