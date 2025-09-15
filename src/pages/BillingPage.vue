@@ -264,13 +264,15 @@
                         <div class="q-gutter-md" style="min-width: 250px">
                           <!-- Toggle para seleccionar tipo de precio (solo si hay listas de precios) -->
                           <q-radio
-                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0"
+                            v-if="props.row.product_price_lists &&
+                              props.row.product_price_lists.length > 0"
                             v-model="priceInputType"
                             val="list"
                             label="Lista de precios"
                           />
                           <q-radio
-                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0"
+                            v-if="props.row.product_price_lists &&
+                              props.row.product_price_lists.length > 0"
                             v-model="priceInputType"
                             val="manual"
                             label="Precio manual"
@@ -278,11 +280,13 @@
 
                           <!-- Selector de lista de precios -->
                           <q-select
-                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0 && priceInputType === 'list'"
+                            v-if="props.row.product_price_lists &&
+                              props.row.product_price_lists.length > 0 &&
+                              priceInputType === 'list'"
                             v-model="selectedPriceList"
                             :options="props.row.product_price_lists"
                             option-label="name"
-                            option-value="id"
+                            option-value="price"
                             label="Seleccionar lista de precios"
                             emit-value
                             map-options
@@ -306,12 +310,14 @@
                       <q-popup-edit
                         v-model.number="props.row.quantity"
                         auto-save
+                        :ref="`quantityInput-${props.rowIndex}`"
                         v-slot="scope"
                         @update:model-value="calculate(props.row)"
                       >
                         <q-input
                           label="Cantidad"
                           type="number"
+                          @focus="e => e.target.select()"
                           v-model.number="scope.value"
                           :model-value="Number(scope.value).toFixed(3)"
                           autofocus
@@ -2665,9 +2671,17 @@ export default {
         }
       })
         .then(({ data }) => {
-          this.allProducts = data.data
+          this.allProducts = data.data.map(product => ({
+            ...product,
+            product_price_lists: [
+              ...(product.product_price_lists || []),
+              {
+                name: 'Precio base',
+                price: product.price
+              }
+            ]
+          }))
           this.pagination.rowsNumber = data.total
-          // Fetch and add promotions from API
           this.fetchPromotions()
         })
         .catch(err => {
@@ -3362,7 +3376,6 @@ export default {
           })
         }
 
-        // Fetch only the specific products needed for this promotion using whereIn
         let promotionProducts = []
         const productIdsArray = Array.from(productIds)
         if (productIdsArray.length > 0) {
