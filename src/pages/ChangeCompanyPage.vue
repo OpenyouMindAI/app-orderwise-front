@@ -21,6 +21,7 @@ import ChangeCompany from 'src/components/Company/ChangeCompany.vue'
 import { loading } from 'src/const/mixins'
 import { computed, onBeforeMount, ref } from 'vue'
 import { authentication } from 'src/stores/module-authentication'
+import { orderBy } from 'firebase/firestore'
 
 const store = authentication()
 
@@ -36,9 +37,16 @@ const { userSession } = store
 const companies = ref([])
 
 const params = computed(() => {
-  if (userSession.is_root) return {}
+  if (userSession.is_root) {
+    return {
+      sortBy: 'name',
+      sortOrder: 'asc'
+    }
+  }
 
   return {
+    sortBy: 'name',
+    sortOrder: 'asc',
     dataEqualFilter: {
       'users.user_id': userSession?.id
     }
