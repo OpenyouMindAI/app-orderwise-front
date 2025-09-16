@@ -819,6 +819,7 @@
                 <th class="text-left">Hora</th>
                 <th class="text-left">Descripción</th>
                 <th class="text-right">Monto</th>
+                <th class="text-right" v-if="userSession?.is_root">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -838,13 +839,22 @@
                 <td class="text-right" :class="item.type_cashflow === 'debit' ? 'text-positive' : 'text-negative'">
                   {{ formatNumber(item.amount) }}
                 </td>
+                <td v-if="userSession?.is_root" class="text-right">
+                  <q-btn
+                    flat
+                    round
+                    color="negative"
+                    icon="delete"
+                    @click="deleteCashflow(item)"
+                  />
+                </td>
               </tr>
               <tr>
                 <th colspan="4" class="text-right">
                   <span class="text-subtitle1">Total:</span>
                 </th>
-                <th :class="cashflows.total > 0 ? 'text-positive' : 'text-negative'" class="text-right">
-                  <span class="text-subtitle1">
+                <th colspan="2" :class="cashflows.total > 0 ? 'text-positive' : 'text-negative'" class="text-left">
+                  <span class="text-subtitle1 q-ml-lg">
                     {{ formatNumber(cashflows.total) }}
                   </span>
                 </th>
@@ -1282,6 +1292,19 @@ export default {
       this.paymentDetailsPagination.rowsPerPage = 10
       // Load initial data with pagination
       this.loadInitialPaymentData()
+    },
+
+    deleteCashflow (cashflow) {
+      console.log(cashflow)
+      this.$api.delete(`cashflows/${cashflow.id}`)
+        .then(() => {
+          this.cashFlowDetails(cashflow)
+          this.getCashflowTotals()
+          notify('Flujo de dinero eliminado correctamente', 'positive', 'check')
+        })
+        .catch(error => {
+          notify(error.message, 'negative', 'warning')
+        })
     },
 
     /**
