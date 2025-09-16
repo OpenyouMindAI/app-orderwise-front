@@ -1032,7 +1032,7 @@
           <q-btn flat icon="close" round size="md" v-close-popup/>
         </q-card-section>
         <q-card-section>
-          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center justify-between">
+          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center">
             <div class="col-10">
               <q-input
                 name="search"
@@ -2021,13 +2021,17 @@ export default {
     handleOutsideClick (event) {
       const tableElement = this.$refs.productsTable?.$el
       const productsSection = this.$refs.productsSection
-      const promoModal = this.$refs.promoModal
+      const promoModal = this.$refs.promoModal?.$el
 
       // Check if click is outside both table and products section
       const isOutsideTable = tableElement && !tableElement.contains(event.target)
       const isOutsideProductsSection = productsSection && !productsSection.contains(event.target)
       const isOutsidePromoModal = promoModal && !promoModal.contains(event.target)
-      if (isOutsideTable && isOutsideProductsSection && isOutsidePromoModal) {
+
+      // Also check if promo dialog is open
+      const isPromoDialogOpen = this.promoDialog
+
+      if (isOutsideTable && isOutsideProductsSection && (isOutsidePromoModal || !isPromoDialogOpen)) {
         this.selectedProductIndex = -1
         this.keyboardNavigationActive = false
       }
@@ -2133,7 +2137,7 @@ export default {
     },
     /**
      * Select category
-     * @param {String} value Value filter
+     * @param {String} value user Session Value filter
      * @param {Callback} update update options
      */
     async getDocumentTypes (value, update) {
@@ -3370,7 +3374,17 @@ export default {
           promoWithDetails.promotion_details.forEach(group => {
             if (group.products && group.products.length > 0) {
               group.products.forEach(product => {
-                productIds.add(product.product_id)
+                // Debug: Log product structure to understand the data
+                console.log('Product structure:', product)
+
+                // Handle different possible property names
+                const productId = product.product_id || product.id || product.productId
+
+                if (productId) {
+                  productIds.add(productId)
+                } else {
+                  console.warn('Product without valid ID found:', product)
+                }
               })
             }
           })
@@ -3401,19 +3415,27 @@ export default {
           for (const group of promoWithDetails.promotion_details) {
             if (group.products && group.products.length > 0) {
               for (const product of group.products) {
+                // Handle different possible property names for product ID
+                const productId = product.product_id || product.id || product.productId
+
+                if (!productId) {
+                  console.warn('Product without valid ID found in merge:', product)
+                  continue
+                }
+
                 // Find complete product data in the fetched promotion products
-                const completeProduct = promotionProducts.find(p => p.id === product.product_id)
+                const completeProduct = promotionProducts.find(p => p.id === productId)
 
                 if (completeProduct) {
                   // Merge complete product data with existing product data
                   Object.assign(product, {
                     ...completeProduct,
                     // Preserve promotion-specific data
-                    product_id: product.product_id,
+                    product_id: productId,
                     quantity: product.quantity || 0
                   })
                 } else {
-                  console.warn(`Product with ID ${product.product_id} not found`)
+                  console.warn(`Product with ID ${productId} not found in API response`)
                 }
               }
             }
