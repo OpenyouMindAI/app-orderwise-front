@@ -812,9 +812,7 @@
       :coin="coin"
       :show-table-close="invoice?.tables?.length && invoice?.id"
       :table-close="tableClose"
-      :actions="paymentActions"
       :loading="loadingBilling"
-      :close-callbacks="billingCloseCallbacks"
       :user-session="userSession"
       :cash-box-state="cashBoxState"
       @update:show="dialogPayment = $event"
@@ -1438,26 +1436,6 @@ export default {
        */
       companyConfig: {},
       /**
-       * Payment Modal Data
-       * @type {Array}
-       // Payment Modal Data
-      paymentActions: [
-        { key: 'invoice', label: 'Factura', icon: 'print', color: 'secondary', showBadge: true },
-        { key: 'command', label: 'Comanda', icon: 'print', color: 'warning', showBadge: false },
-        { key: 'save', label: 'Guardar sin imprimir', icon: 'save', color: 'primary', showBadge: false }
-      ],
-      billingCloseCallbacks: {
-        clearData: () => {
-          const invoiceToClose = this.invoice
-          this.clearBillingData()
-          if (invoiceToClose && invoiceToClose.id) {
-            this.freeTableAfterClose(invoiceToClose)
-          }
-        },
-        navigate: () => this.$router.push({ name: 'Billing' }),
-        refresh: () => this.getLocalStorage()
-      },
-      /**
        * Products columns
        * @type {Array}
        */
@@ -1526,6 +1504,12 @@ export default {
     },
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
+    },
+    pendingPayment () {
+      const totalPayments = this.payments.reduce((total, payment) => {
+        return total + ((payment.amount - (payment.discount_amount || 0)) || 0)
+      }, 0)
+      return this.totalBill - totalPayments
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice'])
@@ -1795,12 +1779,13 @@ export default {
     handleOutsideClick (event) {
       const tableElement = this.$refs.productsTable?.$el
       const productsSection = this.$refs.productsSection
-      const promoModal = this.$refs.promoModal
+      const promoModal = this.$refs.promoModal?.$el || this.$refs.promoModal
 
       // Check if click is outside both table and products section
       const isOutsideTable = tableElement && !tableElement.contains(event.target)
       const isOutsideProductsSection = productsSection && !productsSection.contains(event.target)
-      const isOutsidePromoModal = promoModal && !promoModal.contains(event.target)
+      const isOutsidePromoModal = !promoModal || !promoModal.contains(event.target)
+
       if (isOutsideTable && isOutsideProductsSection && isOutsidePromoModal) {
         this.selectedProductIndex = -1
         this.keyboardNavigationActive = false

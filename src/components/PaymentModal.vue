@@ -35,7 +35,6 @@
           <q-markup-table class="q-mb-md">
             <thead>
               <tr>
-                <th class="text-left" v-if="partialBilling">✅</th>
                 <th class="text-left">Método de pago</th>
                 <th class="text-left">Referencia</th>
                 <th class="text-right">Monto</th>
@@ -45,13 +44,6 @@
             </thead>
             <tbody>
               <tr v-for="(payment, index) in localPayments" :key="payment.id || index">
-                <td class="text-left" v-if="partialBilling">
-                  <q-checkbox
-                    :model-value="payment.checked"
-                    @update:model-value="updatePaymentCheck(payment, index, $event)"
-                    color="primary"
-                  />
-                </td>
                 <td class="text-left">{{ payment.name }}</td>
                 <td class="text-left">
                   <span v-if="payment.reference">{{ payment.reference }}</span>
@@ -213,10 +205,8 @@ export default {
     'payment-add',
     'payment-update',
     'payment-delete',
-    'payment-check',
     'qr-payment',
-    'action-click',
-    'close-complete'
+    'action-click'
   ],
   props: {
     show: {
@@ -239,10 +229,6 @@ export default {
       type: Object,
       default: null
     },
-    partialBilling: {
-      type: Boolean,
-      default: false
-    },
     showTableClose: {
       type: Boolean,
       default: false
@@ -262,10 +248,6 @@ export default {
     loading: {
       type: Boolean,
       default: false
-    },
-    closeCallbacks: {
-      type: Object,
-      default: () => ({})
     },
     userSession: {
       type: Object,
@@ -442,11 +424,6 @@ export default {
       emit('payment-update', { payment, index, payments: localPayments.value })
     }
 
-    const updatePaymentCheck = (payment, index, checked) => {
-      payment.checked = checked
-      emit('payment-check', { payment, index, payments: localPayments.value })
-    }
-
     const paymentModel = (payments) => {
       if (pendingPayment.value < 0) {
         const cash = payments.find(payment => payment.acronym === 'EFE')
@@ -480,20 +457,6 @@ export default {
       return setModelInvoice()
     }
 
-    const executeCloseCallbacks = () => {
-      if (props.tableClose && props.closeCallbacks) {
-        if (props.closeCallbacks.clearData) {
-          props.closeCallbacks.clearData()
-        }
-        if (props.closeCallbacks.navigate) {
-          props.closeCallbacks.navigate()
-        }
-        if (props.closeCallbacks.refresh) {
-          props.closeCallbacks.refresh()
-        }
-      }
-    }
-
     const handleActionClick = (action) => {
       const params = setParamsBill()
       if (!params) return
@@ -505,11 +468,8 @@ export default {
         tableClose: props.tableClose
       })
 
-      // Execute close callbacks if table should be closed
-      if (props.tableClose) {
-        executeCloseCallbacks()
-        emit('close-complete')
-      }
+      // Emit action click event
+      // Table close logic is handled by parent component
     }
 
     return {
@@ -527,7 +487,6 @@ export default {
       deletePayment,
       updatePaymentAmount,
       updatePaymentReference,
-      updatePaymentCheck,
       handleActionClick,
       setModelInvoice,
       setParamsBill,
