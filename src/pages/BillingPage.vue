@@ -810,7 +810,7 @@
       :payments="payments"
       :total-amount="totalBill"
       :coin="coin"
-      :show-table-close="invoice?.tables?.length && invoice?.id"
+      :show-table-close="!!(invoice?.tables?.length && invoice?.id)"
       :table-close="tableClose"
       :loading="loadingBilling"
       :user-session="userSession"
@@ -2091,6 +2091,7 @@ export default {
       this.waitingPayment = true
     },
     handlePaymentAction ({ action, params, payments, tableClose }) {
+      console.log('=== PAYMENT ACTION ===', { action, params, payments, tableClose })
       this.payments = payments
       this.tableClose = tableClose
       switch (action) {
@@ -2547,8 +2548,8 @@ export default {
      * @returns {Object}
      */
     setModelInvoice () {
-      console.log(this.cashBoxState)
-      return {
+      console.log('=== CASHBOX STATE ===', this.cashBoxState)
+      const invoiceModel = {
         ...this.invoice,
         tableClose: this.tableClose,
         title: this.invoiceType?.name,
@@ -2571,6 +2572,8 @@ export default {
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
+      console.log('=== INVOICE MODEL COMPLETE ===', invoiceModel)
+      return invoiceModel
     },
     /**
      * Set params bill
@@ -2608,9 +2611,10 @@ export default {
         if (!params) return
 
         if (this.$route.query.id) {
+          console.log('=== UPDATING INVOICE ===', { id: this.$route.query.id, params })
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
-          console.log(params)
+          console.log('=== CREATING NEW INVOICE ===', params)
           res = await this.$api.post('invoices', params)
         }
         this.printBill(res.data.data)
