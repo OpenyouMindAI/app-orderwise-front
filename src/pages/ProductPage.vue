@@ -1031,6 +1031,7 @@ export default {
   components: { StockProduct, PackProduct, BulkPriceDialog },
   data () {
     return {
+      originalProduct: null,
       listPriceDialog: false,
       dialogFilter: false,
       filters: {
@@ -1166,13 +1167,6 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
-    'product.price' (newPrice) {
-      if (this.priceLists && this.priceLists.length > 0) {
-        this.priceLists.forEach(priceList => {
-          this.calculatePriceListPrice(priceList)
-        })
-      }
-    },
     /**
      * Set pagination when branch office changes
      * @param {Object} value branch office
@@ -1193,15 +1187,6 @@ export default {
     filter (data) {
       this.searchData(data)
     },
-    'product.profit_percentage': {
-      handler (newVal) {
-        if (newVal !== undefined && newVal !== null) {
-          this.profitPercentageValue = Math.max(0, Math.round(newVal * 100))
-          this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
-        }
-      },
-      immediate: true
-    },
     category (data) {
       if (data) {
         this.product.category_id = data.id
@@ -1219,6 +1204,26 @@ export default {
     this.getMeasurementUnits()
   },
   methods: {
+    /**
+     * Create deep clone of product
+     * @param {Object} product - Product to clone
+     * @returns {Object} - Cloned product
+     */
+    deepCloneProduct (product) {
+      // Crear una copia profunda del producto
+      const cloned = JSON.parse(JSON.stringify(product))
+
+      // Manejar propiedades especiales que no se clonan bien con JSON
+      if (product.images) {
+        cloned.images = product.images.map(img => ({
+          ...img,
+          // Preservar objetos File si existen
+          image: img.image instanceof File ? img.image : img.image
+        }))
+      }
+
+      return cloned
+    },
     updateProfitPercentage (newVal) {
       if (newVal && this.product.cost > 0) {
         const price = this.product.cost * (1 + newVal / 100)
@@ -1228,6 +1233,8 @@ export default {
     formatProfitPercentage () {
       this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
       this.product.profit_percentage = this.profitPercentageValue / 100
+
+      // Solo calcular precio si hay un costo válido
       if (this.product.cost > 0) {
         this.product.price = parseFloat((this.product.cost * (1 + this.product.profit_percentage / 100)).toFixed(2))
       }
@@ -1239,11 +1246,14 @@ export default {
       } else if (e.key === 'Backspace') {
         this.profitPercentageValue = Math.max(0, Math.floor(this.profitPercentageValue / 10))
       }
+
+      // Calcular precio solo cuando el usuario escribe
       this.formatProfitPercentage()
     },
     initializeProfitPercentage () {
       this.profitPercentageValue = Math.max(0, Math.round((this.product.profit_percentage || 0) * 100))
-      this.formatProfitPercentage()
+      this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
+      // No calcular precio automáticamente
     },
 
     initializePriceListMargin (priceList) {
@@ -1258,6 +1268,8 @@ export default {
       } else if (e.key === 'Backspace') {
         priceList.profitPercentageValue = Math.max(0, Math.floor((priceList.profitPercentageValue || 0) / 10))
       }
+
+      // Solo calcular precio cuando el usuario escriba en el margen
       this.formatPriceListMargin(priceList)
     },
 
@@ -1265,18 +1277,36 @@ export default {
       const displayValue = ((priceList.profitPercentageValue || 0) / 100).toFixed(2)
       priceList.profitPercentageDisplay = displayValue
       priceList.profit_percentage = parseFloat(displayValue)
-      this.calculatePriceListPrice(priceList)
+
+      // Calcular precio solo si hay costo válido
+      const basePrice = parseFloat(this.product.cost)
+      if (!isNaN(basePrice) && basePrice > 0) {
+        const newPrice = basePrice * (1 + priceList.profit_percentage / 100)
+        priceList.price = parseFloat(newPrice.toFixed(2))
+      }
     },
     updatePrice (newVal) {
+      // Solo calcular margen si el usuario cambió el precio manualmente
       if (newVal && this.product.cost > 0) {
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
-        this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
+        this.product.profit_percentage = Number(margin.toFixed(4))
+        // Actualizar display del margen
+        this.profitPercentageValue = Math.round(this.product.profit_percentage * 100)
+        this.profitPercentageDisplay = this.product.profit_percentage.toFixed(2)
       }
     },
     updateCost (newVal) {
-      if (newVal && this.product.profit_percentage != null) {
-        const price = newVal * (1 + this.product.profit_percentage / 100)
-        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
+      // No calcular automáticamente el precio, solo limpiar el margen si no hay precio
+      if (!this.product.price || this.product.price === 0) {
+        this.product.profit_percentage = 0
+        this.profitPercentageValue = 0
+        this.profitPercentageDisplay = '0.00'
+      } else {
+        // Recalcular margen basado en precio actual
+        const margin = ((this.product.price - newVal) / newVal) * 100
+        this.product.profit_percentage = Number(margin.toFixed(4))
+        this.profitPercentageValue = Math.round(this.product.profit_percentage * 100)
+        this.profitPercentageDisplay = this.product.profit_percentage.toFixed(2)
       }
     },
 
@@ -1289,24 +1319,10 @@ export default {
         priceList.profit_percentage = parseFloat(margin.toFixed(2))
         priceList.profitPercentageValue = Math.round(margin * 100)
         priceList.profitPercentageDisplay = margin.toFixed(2)
-      } else {
-        priceList.profit_percentage = null
-        priceList.profitPercentageValue = 0
-        priceList.profitPercentageDisplay = '0.00'
       }
+      // No calcular precio automáticamente desde aquí
     },
 
-    calculatePriceListPrice (priceList) {
-      const basePrice = parseFloat(this.product.cost)
-      const margin = parseFloat(priceList.profit_percentage)
-
-      if (!isNaN(basePrice) && !isNaN(margin) && basePrice > 0) {
-        const newPrice = basePrice * (1 + margin / 100)
-        priceList.price = parseFloat(newPrice.toFixed(2))
-      } else {
-        priceList.price = null
-      }
-    },
     /**
      * Start scanner
      */
@@ -1729,8 +1745,20 @@ export default {
      * Close all modals
      */
     closeModal () {
+      // Si estamos editando y hay un producto original, restaurarlo en la lista
+      if (this.openEditProduct && this.originalProduct) {
+        // Encontrar el índice del producto en la lista
+        const index = this.products.findIndex(p => p.id === this.originalProduct.id)
+        if (index !== -1) {
+          // Restaurar el producto original en la lista
+          this.products.splice(index, 1, this.deepCloneProduct(this.originalProduct))
+        }
+      }
+
+      // Limpiar estados
       this.openAddProduct = false
       this.openEditProduct = false
+      this.originalProduct = null
       this.priceLists = []
       this.product = {
         images: [],
@@ -1866,18 +1894,28 @@ export default {
      * View product
      */
     editProduct (event, row, index) {
+      // Guardar el producto original antes de cualquier modificación
+      this.originalProduct = this.deepCloneProduct(row)
+
+      // Crear una copia para trabajar
+      this.product = this.deepCloneProduct(row)
+
       this.openEditProduct = true
-      this.product = row
-      this.unitOfMeasure = row.unit_of_measure_id
-      this.addonsProducts = row.addons
+      this.unitOfMeasure = this.product.unit_of_measure_id
+      this.addonsProducts = this.product.addons || []
       this.priceLists = this.product.product_price_lists || []
+
+      // Inicializar valores display sin cálculos
       this.priceLists.forEach(pl => {
         const profitPercentageFromDB = pl.profit_percentage || 0
-
         pl.profit_percentage = parseFloat(profitPercentageFromDB)
         pl.profitPercentageValue = Math.round(profitPercentageFromDB * 100)
         pl.profitPercentageDisplay = Number(profitPercentageFromDB).toFixed(2)
       })
+
+      // Inicializar margen principal
+      this.profitPercentageValue = Math.round((this.product.profit_percentage || 0) * 100)
+      this.profitPercentageDisplay = ((this.product.profit_percentage || 0)).toFixed(2)
     },
     /**
      * Save edit
@@ -1888,6 +1926,7 @@ export default {
         .then(({ data }) => {
           this.getProducts()
           this.openEditProduct = false
+          this.originalProduct = null
           this.visible = false
           this.closeModal()
           Notify.create({
