@@ -393,7 +393,11 @@ export default {
 
       try {
         // Get current session to ensure we have the correct ID
-        const sessionResponse = await this.$api.get('cashier-init')
+        const sessionResponse = await this.$api.get('cashier-init', {
+          params: {
+            branch_office_id: this.branchOffice.id
+          }
+        })
         const cashierSession = sessionResponse.data
 
         if (!cashierSession) {
