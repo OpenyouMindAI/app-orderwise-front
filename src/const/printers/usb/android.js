@@ -91,21 +91,22 @@ export async function printTicketUsb (invoice, config) {
       }
     })
 
-    invoice.promotions.forEach((p) => {
-      const quantity = parseFloat(p.pivot.quantity).toFixed(2)
-      const precio = p.pivot.price
-      const total = (parseFloat(quantity) * parseFloat(precio)).toFixed(2)
+    if (invoice.promotions && invoice.promotions.length > 0) {
+      invoice.promotions.forEach((p) => {
+        const quantity = parseFloat(p.pivot.quantity).toFixed(2)
+        const precio = p.pivot.price
+        const total = (parseFloat(quantity) * parseFloat(precio)).toFixed(2)
 
-      const leftDetail = `${quantity} X ${precio}`
-      const totalLen = total.length
-      detail += leftDetail.padEnd(lineWidth - totalLen) + total + '\n'
+        const leftDetail = `${quantity} X ${precio}`
+        const totalLen = total.length
+        detail += leftDetail.padEnd(lineWidth - totalLen) + total + '\n'
 
-      const name = p.name || ''
-      for (let i = 0; i < name.length; i += lineWidth) {
-        detail += name.substring(i, i + lineWidth) + '\n'
-      }
-    })
-
+        const name = p.name || ''
+        for (let i = 0; i < name.length; i += lineWidth) {
+          detail += name.substring(i, i + lineWidth) + '\n'
+        }
+      })
+    }
     detail += separatorLine(lineWidth)
 
     await printer.text({
@@ -215,26 +216,28 @@ export async function printCommandUsb (invoice, config) {
       })
     })
 
-    invoice.promotions.forEach((product) => {
-      const name = product.name || ''
-      const quantity = parseFloat(product.pivot.quantity).toFixed(2)
-      const qtyLen = quantity.length
-      const maxNameLen = lineWidth
-
-      const nameLines = []
-      for (let i = 0; i < name.length; i += maxNameLen) {
-        nameLines.push(name.substring(i, i + maxNameLen))
-      }
-
-      nameLines.forEach((line, idx) => {
-        if (idx === nameLines.length - 1) {
-          const spaces = ' '.repeat(Math.max(0, lineWidth - line.length - qtyLen))
-          detail += `${line}${spaces}${quantity}\n`
-        } else {
-          detail += `${line}\n`
+    if (invoice.promotions && invoice.promotions.length > 0) {
+      invoice.promotions.forEach((product) => {
+        const name = product.name || ''
+        const quantity = parseFloat(product.pivot.quantity).toFixed(2)
+        const qtyLen = quantity.length
+        const maxNameLen = lineWidth
+  
+        const nameLines = []
+        for (let i = 0; i < name.length; i += maxNameLen) {
+          nameLines.push(name.substring(i, i + maxNameLen))
         }
+  
+        nameLines.forEach((line, idx) => {
+          if (idx === nameLines.length - 1) {
+            const spaces = ' '.repeat(Math.max(0, lineWidth - line.length - qtyLen))
+            detail += `${line}${spaces}${quantity}\n`
+          } else {
+            detail += `${line}\n`
+          }
+        })
       })
-    })
+    }
 
     await printer.text({
       text: detail,
