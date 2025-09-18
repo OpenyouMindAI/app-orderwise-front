@@ -158,7 +158,7 @@
 </template>
 
 <script>
-import { notify } from 'src/const/mixins'
+import { formatDate, notify } from 'src/const/mixins'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 
@@ -290,8 +290,8 @@ export default {
           payment_method_id: this.paymentMethodCashFlow,
           images: this.cashflowImages,
           created_at: this.date
-            ? `${this.date} 05:00:00`
-            : this.formatDateTime(this.createdAt || new Date())
+            ? `${this.date} ${formatDate(new Date(), 'HH:mm:ss')}`
+            : formatDate(this.createdAt || new Date(), 'YYYY-MM-DD HH:mm:ss')
         })
 
         await this.$api.post('cashflow', payload)
