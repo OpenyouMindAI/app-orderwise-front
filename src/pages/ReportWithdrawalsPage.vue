@@ -552,13 +552,6 @@ export default {
         sortable: true
       },
       {
-        name: 'count',
-        label: 'Cantidad',
-        field: 'count',
-        align: 'center',
-        sortable: true
-      },
-      {
         name: 'sum_amount',
         label: 'Total (ARS)',
         field: 'sum_amount',
