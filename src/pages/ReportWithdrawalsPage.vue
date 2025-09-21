@@ -263,15 +263,6 @@
               >
                 <q-tooltip>{{ expandedRows.has(props.row.day) ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
               </q-btn>
-
-              <q-btn
-                flat
-                round
-                size="sm"
-                color="primary"
-                icon="add"
-                @click="openCashflowModal(props.row.day)"
-              />
             </q-td>
           </q-tr>
 
@@ -318,9 +309,19 @@
                   <q-card
                     v-for="cashbox in props.row.cashboxes" :key="cashbox.cashbox_user_id" class="q-mb-lg"
                   >
-                    <div class="text-subtitle2 q-mb-sm">
-                      <strong>Caja:</strong> {{ cashbox.cashbox_user_id }}
-                      <span v-if="cashbox.user">({{ cashbox.user.name }})</span>
+                    <div class="text-subtitle2 q-mb-sm flex justify-between q-pa-sm">
+                      <div class="text-subtitle1">
+                        <strong>{{ cashbox.cashbox.name }}</strong>
+                        <span v-if="cashbox.user" class="text-body2 q-ml-sm">({{ cashbox.user.name }})</span>
+                      </div>
+                      <q-btn
+                        flat
+                        round
+                        size="sm"
+                        color="primary"
+                        icon="add"
+                        @click="openCashflowModal(cashbox)"
+                      />
                     </div>
                     <q-card
                       v-for="withdrawal in cashbox.withdrawals" :key="withdrawal.id"
@@ -395,7 +396,10 @@
       :payment-methods="paymentMethods"
       :cash-box-state="null"
       :branch-office="branchOffice"
-      :created-at="selectedDate"
+      :created-at="cashflow.createdAt"
+      :payment-method="cashflow.paymentMethodId"
+      :description-value="cashflow.description"
+      :cashBoxState="cashflow.cashboxUser"
       :flow-type-options="[
         { label: 'Arqueo', value: 'withdrawal' }
       ]"
@@ -477,6 +481,14 @@ export default {
     CashflowModal
   },
 
+  watch: {
+    showCashflowModal (newShow) {
+      if (!newShow) {
+        this.cashflow = {}
+      }
+    }
+  },
+
   setup () {
     const $q = useQuasar()
 
@@ -500,6 +512,7 @@ export default {
     const expandedRows = ref(new Set())
     const dayPagination = ref({})
     const itemsPerPage = 5
+    const cashflow = ref({})
     const userSession = computed(() => store.userSession)
     const branchOffice = computed(() => store.branchOffice)
 
@@ -815,11 +828,21 @@ export default {
     }
 
     // Open cashflow modal with specific date
-    const openCashflowModal = (day) => {
-      selectedDate.value = day
+    const openCashflowModal = (row) => {
+      selectedDate.value = row.day
       showCashflowModal.value = true
+      console.log(row)
+      cashflow.value = {
+        cashboxUser: {
+          id: row.cashbox_user_id
+        },
+        paymentMethodId: row.by_payment_method[0].payment_method_id,
+        createdAt: row.closed_at,
+        branchOffice: branchOffice.value,
+        description: 'Arqueo'
+      }
       // Ensure the row is expanded when adding a new record
-      expandedRows.value.add(day)
+      expandedRows.value.add(row.day)
     }
 
     // Handle cashflow saved event
@@ -846,6 +869,8 @@ export default {
         // Fallback: reload data if no specific date
         loadData()
       }
+
+      cashflow.value = {}
 
       $q.notify({
         type: 'positive',
@@ -1040,6 +1065,7 @@ export default {
       paymentMethods,
       dateFrom,
       dateTo,
+      cashflow,
       filters,
 
       // Computed

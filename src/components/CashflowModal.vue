@@ -169,6 +169,10 @@ export default {
       type: Boolean,
       default: false
     },
+    paymentMethod: {
+      type: Number,
+      default: null
+    },
     paymentMethods: {
       type: Array,
       required: true
@@ -180,6 +184,14 @@ export default {
     branchOffice: {
       type: Object,
       required: true
+    },
+    flowType: {
+      type: String,
+      default: 'debit'
+    },
+    descriptionValue: {
+      type: String,
+      default: ''
     },
     flowTypeOptions: {
       type: Array,
@@ -251,6 +263,31 @@ export default {
     ...mapState(authentication, ['userSession'])
   },
   watch: {
+    paymentMethod: {
+      handler (newPaymentMethod) {
+        this.paymentMethodCashFlow = newPaymentMethod
+      },
+      immediate: true
+    },
+    cashBoxState: {
+      handler (newCashboxUser) {
+        console.log(newCashboxUser)
+        this.cashboxUser = newCashboxUser
+      },
+      immediate: true
+    },
+    descriptionValue: {
+      handler (newDescription) {
+        this.description = newDescription
+      },
+      immediate: true
+    },
+    createdAt: {
+      handler (newCreatedAt) {
+        this.date = formatDate(newCreatedAt, 'YYYY-MM-DD')
+      },
+      immediate: true
+    },
     flowTypeOptions: {
       handler (newOptions) {
         if (newOptions.length === 1) {
