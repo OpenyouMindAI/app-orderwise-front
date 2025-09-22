@@ -1251,13 +1251,15 @@ export default {
       this.formatProfitPercentage()
     },
     initializeProfitPercentage () {
-      this.profitPercentageValue = Math.max(0, Math.round((this.product.profit_percentage || 0) * 100))
+      const profitPercentage = parseFloat(this.product.profit_percentage || 0)
+      this.profitPercentageValue = Math.max(0, Math.round(profitPercentage * 100))
       this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
       // No calcular precio automáticamente
     },
 
     initializePriceListMargin (priceList) {
-      priceList.profitPercentageValue = Math.max(0, Math.round((priceList.profit_percentage || 0) * 100))
+      const profitPercentage = parseFloat(priceList.profit_percentage || 0)
+      priceList.profitPercentageValue = Math.max(0, Math.round(profitPercentage * 100))
       this.formatPriceListMargin(priceList)
     },
 
@@ -1292,21 +1294,32 @@ export default {
         this.product.profit_percentage = Number(margin.toFixed(4))
         // Actualizar display del margen
         this.profitPercentageValue = Math.round(this.product.profit_percentage * 100)
-        this.profitPercentageDisplay = this.product.profit_percentage.toFixed(2)
+        this.profitPercentageDisplay = parseFloat(this.product.profit_percentage || 0).toFixed(2)
       }
     },
     updateCost (newVal) {
-      // No calcular automáticamente el precio, solo limpiar el margen si no hay precio
-      if (!this.product.price || this.product.price === 0) {
-        this.product.profit_percentage = 0
-        this.profitPercentageValue = 0
-        this.profitPercentageDisplay = '0.00'
+      // Mantener el margen constante y recalcular el precio basado en el nuevo costo
+      if (newVal && newVal > 0) {
+        // Usar el margen existente para calcular el nuevo precio principal
+        const currentMargin = parseFloat(this.product.profit_percentage || 0)
+        this.product.price = parseFloat((newVal * (1 + currentMargin / 100)).toFixed(2))
+
+        // También actualizar los precios de las listas de precios manteniendo sus márgenes
+        this.priceLists.forEach(priceList => {
+          if (priceList.profit_percentage != null) {
+            const listMargin = parseFloat(priceList.profit_percentage || 0)
+            priceList.price = parseFloat((newVal * (1 + listMargin / 100)).toFixed(2))
+          }
+        })
       } else {
-        // Recalcular margen basado en precio actual
-        const margin = ((this.product.price - newVal) / newVal) * 100
-        this.product.profit_percentage = Number(margin.toFixed(4))
-        this.profitPercentageValue = Math.round(this.product.profit_percentage * 100)
-        this.profitPercentageDisplay = this.product.profit_percentage.toFixed(2)
+        // Si costo es 0, mantener el margen pero resetear solo el precio
+        // El margen se preserva para no perder la configuración
+        this.product.price = 0
+
+        // También resetear solo los precios de las listas, manteniendo sus márgenes
+        this.priceLists.forEach(priceList => {
+          priceList.price = 0
+        })
       }
     },
 
@@ -1914,8 +1927,9 @@ export default {
       })
 
       // Inicializar margen principal
-      this.profitPercentageValue = Math.round((this.product.profit_percentage || 0) * 100)
-      this.profitPercentageDisplay = ((this.product.profit_percentage || 0)).toFixed(2)
+      const profitPercentageValue = parseFloat(this.product.profit_percentage || 0)
+      this.profitPercentageValue = Math.round(profitPercentageValue * 100)
+      this.profitPercentageDisplay = profitPercentageValue.toFixed(2)
     },
     /**
      * Save edit
