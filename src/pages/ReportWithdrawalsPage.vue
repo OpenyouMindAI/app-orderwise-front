@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <div class="max-w-7xl mx-auto q-mt-sm space-y-4">
+    <div class="max-w-7xl mx-auto q-mt-sm space-y-4 q-mt-md q-gutter-y-md">
 
       <!-- Filters section using Quasar classes for dark mode -->
       <q-expansion-item
@@ -45,7 +45,7 @@
       >
         <q-card flat bordered>
           <q-card-section class="q-pa-md">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="flex q-gutter-md">
                 <div class="row items-center justify-between">
                   <div class="row items-center q-gutter-xs">
                     <q-btn
@@ -154,8 +154,8 @@
       </q-expansion-item>
 
       <!-- Completely redesigned summary cards with gradients and better visual hierarchy -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <q-card class="text-red shadow-2xl">
+      <div class="row q-gutter-md justify-between">
+        <q-card class="text-red shadow-2xl col-3">
           <q-card-section>
             <div class="flex items-center justify-between">
               <div>
@@ -167,7 +167,7 @@
           </q-card-section>
         </q-card>
 
-        <q-card class="bg-gradient-to-br from-blue-500 to-blue-600 text-blue shadow-2xl border-0 overflow-hidden relative">
+        <q-card class="bg-gradient-to-br col-3 from-blue-500 to-blue-600 text-blue shadow-2xl border-0 overflow-hidden relative">
           <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
           <q-card-section class="p-8 relative">
             <div class="flex items-center justify-between">
@@ -180,7 +180,7 @@
           </q-card-section>
         </q-card>
 
-        <q-card class="bg-gradient-to-br from-emerald-500 text-positive shadow-2xl border-0 overflow-hidden relative">
+        <q-card class="bg-gradient-to-br col-3 from-emerald-500 text-positive shadow-2xl border-0 overflow-hidden relative">
           <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
           <q-card-section class="p-8 relative">
             <div class="flex items-center justify-between">
@@ -233,6 +233,9 @@
                 </div>
               </div>
             </q-td>
+            <q-td key="paid_sales" :props="props" class="text-right q-py-md">
+              <div class="text-h6 text-weight-bold text-negative">{{ formatCurrency(props.row.paid_sales) }}</div>
+            </q-td>
             <q-td key="count" :props="props" class="text-center q-py-md">
               <q-chip
                 :color="props.row.count > 5 ? 'info' : 'primary'"
@@ -246,6 +249,9 @@
             <q-td key="sum_amount" :props="props" class="text-right q-py-md">
               <div class="text-h6 text-weight-bold text-negative">{{ formatCurrency(props.row.sum_amount) }}</div>
             </q-td>
+            <q-td key="difference" :props="props" class="text-right q-py-md">
+              <div class="text-h6 text-weight-bold text-negative">{{ formatCurrency(props.row.difference_report) }}</div>
+            </q-td>
             <q-td key="actions" :props="props" class="text-center q-py-md">
               <q-btn
                 flat
@@ -257,15 +263,6 @@
               >
                 <q-tooltip>{{ expandedRows.has(props.row.day) ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
               </q-btn>
-
-              <q-btn
-                flat
-                round
-                size="sm"
-                color="primary"
-                icon="add"
-                @click="openCashflowModal(props.row.day)"
-              />
             </q-td>
           </q-tr>
 
@@ -275,11 +272,13 @@
               <div class="q-pa-sm">
                 <div class="column q-gutter-md">
                   <!-- Pagination info -->
-                  <div v-if="props.row.withdrawals.length > itemsPerPage" class="row items-center justify-between q-mb-sm">
+                  <!-- Comment out pagination until we refactor for new structure -->
+                  <!--
+                  <div v-if="props.row.count > itemsPerPage" class="row items-center justify-between q-mb-sm">
                     <div class="text-caption text-grey-7">
                       Mostrando {{ ((dayPagination[props.row.day]?.currentPage || 1) - 1) * itemsPerPage + 1 }} -
-                      {{ Math.min((dayPagination[props.row.day]?.currentPage || 1) * itemsPerPage, props.row.withdrawals.length) }}
-                      de {{ props.row.withdrawals.length }} retiros
+                      {{ Math.min((dayPagination[props.row.day]?.currentPage || 1) * itemsPerPage, props.row.count) }}
+                      de {{ props.row.count }} retiros
                     </div>
                     <div class="row q-gutter-xs">
                       <q-btn
@@ -292,7 +291,7 @@
                         @click="changePage(props.row.day, 'prev')"
                       />
                       <div class="text-caption text-center q-px-sm q-py-xs">
-                        {{ dayPagination[props.row.day]?.currentPage || 1 }} / {{ getTotalPages(props.row.withdrawals) }}
+                        {{ dayPagination[props.row.day]?.currentPage || 1 }} / {{ Math.ceil(props.row.count / itemsPerPage) }}
                       </div>
                       <q-btn
                         flat
@@ -300,85 +299,88 @@
                         size="sm"
                         icon="chevron_right"
                         color="primary"
-                        :disable="(dayPagination[props.row.day]?.currentPage || 1) === getTotalPages(props.row.withdrawals)"
+                        :disable="(dayPagination[props.row.day]?.currentPage || 1) === Math.ceil(props.row.count / itemsPerPage)"
                         @click="changePage(props.row.day, 'next')"
                       />
                     </div>
                   </div>
-
+                  -->
                   <!-- Paginated withdrawals -->
                   <q-card
-                    v-for="withdrawal in getPaginatedWithdrawals(props.row.withdrawals, props.row.day)"
-                    :key="withdrawal.id"
-                    class="rounded-borders"
-                    bordered
-                    flat
-                    :elevation="1"
-                    style="border-left: 4px solid var(--q-negative);"
+                    v-for="cashbox in props.row.cashboxes" :key="cashbox.cashbox_user_id" class="q-mb-lg"
                   >
-                    <q-card-section class="q-pa-md">
-                      <div class="row items-center justify-between">
-                        <div class="row items-center q-gutter-x-sm">
-                          <q-badge color="negative" text-color="white" class="text-body2">
-                            {{ withdrawal.time }}
-                          </q-badge>
-                          <div class="text-body1 text-weight-medium">
-                            {{ withdrawal.description }} -
-                          </div>
-                          <div class="text-body1 text-weight-medium">
-                            {{ withdrawal.payment_method_name }}
-                          </div>
-                        </div>
-
-                        <div class="row items-center q-gutter-x-sm">
-                          <div class="text-subtitle1 text-weight-bold">
-                            Monto: {{ formatCurrency(withdrawal.amount) }}
-                          </div>
-
-                          <q-input
-                            v-model.number="withdrawal.actual_amount"
-                            placeholder="Monto Contado"
-                            type="number"
-                            outlined
-                            dense
-                            style="width: 150px;"
-                            prefix="$"
-                          />
-
-                          <div v-if="withdrawal.actual_amount > 0" class="text-subtitle1 text-weight-bold" :class="getDifferenceColor(withdrawal.amount, withdrawal.actual_amount)">
-                            Diferencia: {{ formatCurrency(calculateTotal(withdrawal.amount, withdrawal.actual_amount)) }}
-                          </div>
-
-                          <q-btn
-                            rounded
-                            color="primary"
-                            label="Guardar"
-                            icon="save"
-                            @click="updateWithdrawal(withdrawal)"
-                          />
-
-                          <q-btn
-                            v-if="withdrawal.images && withdrawal.images.length > 0"
-                            rounded
-                            color="blue-5"
-                            icon="photo"
-                            @click="openFileWithdrawal(withdrawal)"
-                          >
-                            <q-tooltip>Ver imagen ({{ withdrawal.images.length }})</q-tooltip>
-                          </q-btn>
-
-                          <!-- <q-btn
-                            v-else
-                            rounded
-                            color="grey-5"
-                            icon="error"
-                            disable
-                          >
-                            <q-tooltip>Sin imagen</q-tooltip>
-                          </q-btn> -->
-                        </div>
+                    <div class="text-subtitle2 q-mb-sm flex justify-between q-pa-sm">
+                      <div class="text-subtitle1">
+                        <strong>{{ cashbox.cashbox.name }}</strong>
+                        <span v-if="cashbox.user" class="text-body2 q-ml-sm">({{ cashbox.user.name }})</span>
                       </div>
-                    </q-card-section>
+                      <q-btn
+                        flat
+                        round
+                        size="sm"
+                        color="primary"
+                        icon="add"
+                        @click="openCashflowModal(cashbox)"
+                      />
+                    </div>
+                    <q-card
+                      v-for="withdrawal in cashbox.withdrawals" :key="withdrawal.id"
+                      class="rounded-borders"
+                      bordered
+                      flat
+                      :elevation="1"
+                      style="border-left: 4px solid var(--q-negative);"
+                    >
+                      <q-card-section class="q-pa-md">
+                        <div class="row items-center justify-between">
+                          <div class="row items-center q-gutter-x-sm">
+                            <q-badge color="negative" text-color="white" class="text-body2">
+                              {{ withdrawal.time }}
+                            </q-badge>
+                            <div class="text-body1 text-weight-medium">
+                              {{ withdrawal.description }} -
+                            </div>
+                            <div class="text-body1 text-weight-medium">
+                              {{ withdrawal.payment_method_name }}
+                            </div>
+                          </div>
+
+                          <div class="row items-center q-gutter-x-sm">
+                            <div class="text-subtitle1 text-weight-bold">
+                              Monto: {{ formatCurrency(withdrawal.amount) }}
+                            </div>
+
+                            <q-input
+                              v-model.number="withdrawal.actual_amount"
+                              placeholder="Monto Contado"
+                              type="number"
+                              outlined
+                              dense
+                              style="width: 150px;"
+                              prefix="$"
+                            />
+
+                            <q-btn
+                              rounded
+                              color="primary"
+                              label="Guardar"
+                              icon="save"
+                              @click="updateWithdrawal(withdrawal)"
+                            />
+
+                            <q-btn
+                              v-if="withdrawal.images && withdrawal.images.length > 0"
+                              rounded
+                              color="blue-5"
+                              icon="photo"
+                              @click="openFileWithdrawal(withdrawal)"
+                            >
+                              <q-tooltip>Ver imagen ({{ withdrawal.images.length }})</q-tooltip>
+                            </q-btn>
+                          </div>
+                        </div>
+                      </q-card-section>
+                    </q-card>
                   </q-card>
                 </div>
               </div>
@@ -394,7 +396,10 @@
       :payment-methods="paymentMethods"
       :cash-box-state="null"
       :branch-office="branchOffice"
-      :created-at="selectedDate"
+      :created-at="cashflow.createdAt"
+      :payment-method="cashflow.paymentMethodId"
+      :description-value="cashflow.description"
+      :cashBoxState="cashflow.cashboxUser"
       :flow-type-options="[
         { label: 'Arqueo', value: 'withdrawal' }
       ]"
@@ -464,7 +469,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
@@ -474,6 +479,14 @@ export default {
   name: 'WithdrawalsReport',
   components: {
     CashflowModal
+  },
+
+  watch: {
+    showCashflowModal (newShow) {
+      if (!newShow) {
+        this.cashflow = {}
+      }
+    }
   },
 
   setup () {
@@ -499,6 +512,7 @@ export default {
     const expandedRows = ref(new Set())
     const dayPagination = ref({})
     const itemsPerPage = 5
+    const cashflow = ref({})
     const userSession = computed(() => store.userSession)
     const branchOffice = computed(() => store.branchOffice)
 
@@ -530,10 +544,11 @@ export default {
         sortable: true
       },
       {
-        name: 'count',
-        label: 'Cantidad',
-        field: 'count',
-        align: 'center',
+        name: 'paid_sales',
+        label: 'Ventas Pagadas',
+        field: 'paid_sales',
+        align: 'right',
+        format: val => formatCurrency(val),
         sortable: true
       },
       {
@@ -544,12 +559,33 @@ export default {
         sortable: true
       },
       {
+        name: 'difference',
+        label: 'Diferencia',
+        field: 'difference',
+        align: 'right',
+        format: val => formatCurrency(val),
+        sortable: true
+      },
+      {
         name: 'actions',
         label: 'Acciones',
         field: 'actions',
         align: 'center'
       }
     ]
+
+    const isMounted = ref(false)
+
+    onMounted(() => {
+      isMounted.value = true
+      loadBranchOffices()
+      loadPaymentMethods()
+      loadData()
+    })
+
+    onUnmounted(() => {
+      isMounted.value = false
+    })
 
     const loadBranchOffices = async () => {
       loadingBranches.value = true
@@ -584,6 +620,7 @@ export default {
     }
 
     const loadData = async () => {
+      if (!isMounted.value) return
       loading.value = true
 
       try {
@@ -595,27 +632,33 @@ export default {
 
         // Add filters if they have values
         if (filters.value.branch_office_ids?.length) {
-          params.branch_office_ids = filters.value.branch_office_ids.map(data => data.id)
+          params.branch_office_ids = filters.value.branch_office_ids.map(data => data?.id)
         }
         if (filters.value.payment_method_ids?.length) {
-          params.payment_method_ids = filters.value.payment_method_ids.map(data => data.id)
+          params.payment_method_ids = filters.value.payment_method_ids.map(data => data?.id)
         }
         if (filters.value.cashbox_user_id) {
           params.cashbox_user_id = filters.value.cashbox_user_id
         }
 
         const response = await api.get('/reports/withdrawals-per-day', { params })
-        daysData.value = response.data.days || []
+        if (isMounted.value) {
+          daysData.value = response.data.days || []
+        }
       } catch (error) {
         console.error('Error loading withdrawals:', error)
-        $q.notify({
-          type: 'negative',
-          message: 'Error cargando datos de retiros',
-          caption: error.response?.data?.message || error.message
-        })
-        daysData.value = []
+        if (isMounted.value) {
+          $q.notify({
+            type: 'negative',
+            message: 'Error cargando datos de retiros',
+            caption: error.response?.data?.message || error.message
+          })
+          daysData.value = []
+        }
       } finally {
-        loading.value = false
+        if (isMounted.value) {
+          loading.value = false
+        }
       }
     }
 
@@ -710,6 +753,9 @@ export default {
             // Update actual_amount instead of amount to preserve original amount for difference calculation
             daysData.value[dayIndex].withdrawals[withdrawalIndex].actual_amount = newAmount
           }
+        } else {
+          // Fallback: reload data if day not found
+          loadData()
         }
 
         $q.notify({
@@ -775,11 +821,21 @@ export default {
     }
 
     // Open cashflow modal with specific date
-    const openCashflowModal = (day) => {
-      selectedDate.value = day
+    const openCashflowModal = (row) => {
+      selectedDate.value = row.day
       showCashflowModal.value = true
+      console.log(row)
+      cashflow.value = {
+        cashboxUser: {
+          id: row.cashbox_user_id
+        },
+        paymentMethodId: row.by_payment_method[0].payment_method_id,
+        createdAt: row.closed_at,
+        branchOffice: branchOffice.value,
+        description: 'Arqueo'
+      }
       // Ensure the row is expanded when adding a new record
-      expandedRows.value.add(day)
+      expandedRows.value.add(row.day)
     }
 
     // Handle cashflow saved event
@@ -806,6 +862,8 @@ export default {
         // Fallback: reload data if no specific date
         loadData()
       }
+
+      cashflow.value = {}
 
       $q.notify({
         type: 'positive',
@@ -875,6 +933,11 @@ export default {
         })
       }
     }
+
+    const getAllWithdrawalsForDay = (dayData) => {
+      return dayData.cashboxes.flatMap(cashbox => cashbox.withdrawals)
+    }
+
     const printReport = () => {
       const printContent = `
         <html>
@@ -911,7 +974,7 @@ export default {
                   </tr>
                 </thead>
                 <tbody>
-                  ${day.withdrawals.map(w => `
+                  ${getAllWithdrawalsForDay(day).map(w => `
                     <tr>
                       <td>${w.time}</td>
                       <td>${w.description}</td>
@@ -985,13 +1048,6 @@ export default {
       return 'text-info' // Azul
     }
 
-    // Lifecycle
-    onMounted(() => {
-      loadBranchOffices()
-      loadPaymentMethods()
-      loadData()
-    })
-
     return {
       // State
       loading,
@@ -1002,6 +1058,7 @@ export default {
       paymentMethods,
       dateFrom,
       dateTo,
+      cashflow,
       filters,
 
       // Computed
@@ -1067,126 +1124,6 @@ export default {
   border-radius: 0.75rem;
 }
 
-.tracking-tight {
-  letter-spacing: -0.025em;
-}
-
-.tracking-wide {
-  letter-spacing: 0.025em;
-}
-
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-.duration-200 {
-  transition-duration: 200ms;
-}
-
-.hover\:bg-white\/30:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.hover\:bg-gray-200:hover {
-  background-color: #e5e7eb;
-}
-
-.hover\:bg-blue-50\/50:hover {
-  background-color: rgba(239, 246, 255, 0.5);
-}
-
-.hover\:shadow-xl:hover {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.modern-table {
-  border-radius: 1rem;
-  overflow: hidden;
-}
-
-.modern-select {
-  border-radius: 0.5rem;
-}
-
-/* Grid system */
-.grid {
-  display: grid;
-}
-
-.grid-cols-1 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.grid-cols-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.grid-cols-4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-@media (min-width: 768px) {
-  .md\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .md\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .md\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-/* Spacing utilities */
-.gap-6 {
-  gap: 1.5rem;
-}
-
-.gap-8 {
-  gap: 2rem;
-}
-
-.space-y-1 > * + * {
-  margin-top: 0.25rem;
-}
-
-.space-y-2 > * + * {
-  margin-top: 0.5rem;
-}
-
-.space-y-4 > * + * {
-  margin-top: 1rem;
-}
-
-.space-y-6 > * + * {
-  margin-top: 1.5rem;
-}
-
-.space-y-8 > * + * {
-  margin-top: 2rem;
-}
-
-.space-x-3 > * + * {
-  margin-left: 0.75rem;
-}
-
-.space-x-4 > * + * {
-  margin-left: 1rem;
-}
-
-.space-x-6 > * + * {
-  margin-left: 1.5rem;
-}
-
-/* Sizing utilities */
 .w-24 {
   width: 6rem;
 }
