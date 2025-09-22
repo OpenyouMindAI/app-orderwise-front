@@ -265,34 +265,6 @@
                   </div>
 
                   <div class="product-actions">
-                    <div class="quantity-controls">
-                      <q-btn
-                        icon="remove"
-                        size="sm"
-                        round
-                        flat
-                        @click="decreaseQuantity(index)"
-                        :disable="product.pivot.amount <= 1"
-                        class="quantity-btn"
-                      />
-                      <q-input
-                        v-model.number="product.pivot.amount"
-                        type="number"
-                        min="1"
-                        dense
-                        outlined
-                        class="quantity-input"
-                        @update:model-value="updateQuantity(index, $event)"
-                      />
-                      <q-btn
-                        icon="add"
-                        size="sm"
-                        round
-                        flat
-                        @click="increaseQuantity(index)"
-                        class="quantity-btn"
-                      />
-                    </div>
                     <div class="product-item-actions items-center q-gutter-x-sm">
                       <div class="product-total">
                         ${{ formatNumber(product.pivot.price * product.pivot.amount) }}
@@ -319,6 +291,36 @@
                       >
                         <q-tooltip>Eliminar producto</q-tooltip>
                       </q-btn>
+                    </div>
+                    <div class="quantity-controls">
+                      <q-btn
+                        icon="remove"
+                        size="sm"
+                        round
+                        flat
+                        @click="decreaseQuantity(index)"
+                        :disable="product.pivot.amount <= 1"
+                        class="quantity-btn"
+                      />
+                      <q-input
+                        :model-value="formatInputNumber(product.pivot.amount)"
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        dense
+                        outlined
+                        class="quantity-input"
+                        style="min-width: 100px;"
+                        @update:model-value="updateQuantity(index, $event)"
+                      />
+                      <q-btn
+                        icon="add"
+                        size="sm"
+                        round
+                        flat
+                        @click="increaseQuantity(index)"
+                        class="quantity-btn"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1253,6 +1255,19 @@ export default {
       if (newQuantity >= 1) {
         this.invoiceProducts[index].pivot.amount = newQuantity
       }
+    },
+
+    // Format number to show only necessary decimals (max 2)
+    formatInputNumber (value) {
+      if (!value && value !== 0) return ''
+      const num = Number(value)
+      if (isNaN(num)) return value
+
+      // Round to 2 decimal places
+      const rounded = Math.round(num * 100) / 100
+
+      // Convert to string and remove trailing zeros
+      return rounded.toString().replace(/\.?0+$/, '')
     },
 
     removeProduct (index) {
