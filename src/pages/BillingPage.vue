@@ -264,13 +264,15 @@
                         <div class="q-gutter-md" style="min-width: 250px">
                           <!-- Toggle para seleccionar tipo de precio (solo si hay listas de precios) -->
                           <q-radio
-                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0"
+                            v-if="props.row.product_price_lists &&
+                              props.row.product_price_lists.length > 0"
                             v-model="priceInputType"
                             val="list"
                             label="Lista de precios"
                           />
                           <q-radio
-                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0"
+                            v-if="props.row.product_price_lists &&
+                              props.row.product_price_lists.length > 0"
                             v-model="priceInputType"
                             val="manual"
                             label="Precio manual"
@@ -278,11 +280,13 @@
 
                           <!-- Selector de lista de precios -->
                           <q-select
-                            v-if="props.row.product_price_lists && props.row.product_price_lists.length > 0 && priceInputType === 'list'"
+                            v-if="props.row.product_price_lists &&
+                              props.row.product_price_lists.length > 0 &&
+                              priceInputType === 'list'"
                             v-model="selectedPriceList"
                             :options="props.row.product_price_lists"
                             option-label="name"
-                            option-value="id"
+                            option-value="price"
                             label="Seleccionar lista de precios"
                             emit-value
                             map-options
@@ -306,12 +310,14 @@
                       <q-popup-edit
                         v-model.number="props.row.quantity"
                         auto-save
+                        :ref="`quantityInput-${props.rowIndex}`"
                         v-slot="scope"
                         @update:model-value="calculate(props.row)"
                       >
                         <q-input
                           label="Cantidad"
                           type="number"
+                          @focus="e => e.target.select()"
                           v-model.number="scope.value"
                           :model-value="Number(scope.value).toFixed(3)"
                           autofocus
@@ -848,7 +854,7 @@
           <q-btn flat icon="close" round size="md" v-close-popup/>
         </q-card-section>
         <q-card-section>
-          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center justify-between">
+          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center">
             <div class="col-10">
               <q-input
                 name="search"
@@ -1776,7 +1782,10 @@ export default {
       const isOutsideProductsSection = productsSection && !productsSection.contains(event.target)
       const isOutsidePromoModal = !promoModal || !promoModal.contains(event.target)
 
-      if (isOutsideTable && isOutsideProductsSection && isOutsidePromoModal) {
+      // Also check if promo dialog is open
+      const isPromoDialogOpen = this.promoDialog
+
+      if (isOutsideTable && isOutsideProductsSection && isOutsidePromoModal && !isPromoDialogOpen) {
         this.selectedProductIndex = -1
         this.keyboardNavigationActive = false
       }
@@ -1882,7 +1891,7 @@ export default {
     },
     /**
      * Select category
-     * @param {String} value Value filter
+     * @param {String} value user Session Value filter
      * @param {Callback} update update options
      */
     async getDocumentTypes (value, update) {
@@ -2427,9 +2436,17 @@ export default {
         }
       })
         .then(({ data }) => {
-          this.allProducts = data.data
+          this.allProducts = data.data.map(product => ({
+            ...product,
+            product_price_lists: [
+              ...(product.product_price_lists || []),
+              {
+                name: 'Precio base',
+                price: product.price
+              }
+            ]
+          }))
           this.pagination.rowsNumber = data.total
-          // Fetch and add promotions from API
           this.fetchPromotions()
         })
         .catch(err => {
@@ -3093,7 +3110,7 @@ export default {
             branch_office_id: this.branchOffice?.id
           }
         })
-        if (data && data.status === 'open' && data.user_id === this.userSession.id) {
+        if (data && data.status === 'open') {
           this.isUserBoxOpen = true
           this.cashBoxState = {
             id: data.id,
@@ -3228,13 +3245,22 @@ export default {
           promoWithDetails.promotion_details.forEach(group => {
             if (group.products && group.products.length > 0) {
               group.products.forEach(product => {
-                productIds.add(product.product_id)
+                // Debug: Log product structure to understand the data
+                console.log('Product structure:', product)
+
+                // Handle different possible property names
+                const productId = product.product_id || product.id || product.productId
+
+                if (productId) {
+                  productIds.add(productId)
+                } else {
+                  console.warn('Product without valid ID found:', product)
+                }
               })
             }
           })
         }
 
-        // Fetch only the specific products needed for this promotion using whereIn
         let promotionProducts = []
         const productIdsArray = Array.from(productIds)
         if (productIdsArray.length > 0) {
@@ -3260,19 +3286,27 @@ export default {
           for (const group of promoWithDetails.promotion_details) {
             if (group.products && group.products.length > 0) {
               for (const product of group.products) {
+                // Handle different possible property names for product ID
+                const productId = product.product_id || product.id || product.productId
+
+                if (!productId) {
+                  console.warn('Product without valid ID found in merge:', product)
+                  continue
+                }
+
                 // Find complete product data in the fetched promotion products
-                const completeProduct = promotionProducts.find(p => p.id === product.product_id)
+                const completeProduct = promotionProducts.find(p => p.id === productId)
 
                 if (completeProduct) {
                   // Merge complete product data with existing product data
                   Object.assign(product, {
                     ...completeProduct,
                     // Preserve promotion-specific data
-                    product_id: product.product_id,
+                    product_id: productId,
                     quantity: product.quantity || 0
                   })
                 } else {
-                  console.warn(`Product with ID ${product.product_id} not found`)
+                  console.warn(`Product with ID ${productId} not found in API response`)
                 }
               }
             }

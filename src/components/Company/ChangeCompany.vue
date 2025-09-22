@@ -1,63 +1,6 @@
 <template>
-  <div>
-    <!-- Resumen de empresas por status -->
-    <q-card class="q-mb-md">
-      <q-card-section class="q-pb-sm">
-        <div class="text-h6 text-grey-8 q-mb-sm" v-if="user.is_root">Resumen de Actividad</div>
-        <div class="row q-gutter-sm" v-if="user.is_root">
-          <div class="col-auto">
-            <q-chip
-              :label="`Activas: ${statusCounts.active}`"
-              color="positive"
-              text-color="white"
-              icon="trending_up"
-              size="sm"
-            />
-          </div>
-          <div class="col-auto">
-            <q-chip
-              :label="`Moderadas: ${statusCounts.moderate}`"
-              color="warning"
-              text-color="white"
-              icon="schedule"
-              size="sm"
-            />
-          </div>
-          <div class="col-auto">
-            <q-chip
-              :label="`Baja actividad: ${statusCounts.low}`"
-              color="orange-8"
-              text-color="white"
-              icon="trending_down"
-              size="sm"
-            />
-          </div>
-          <div class="col-auto">
-            <q-chip
-              :label="`Inactivas: ${statusCounts.inactive}`"
-              color="negative"
-              text-color="white"
-              icon="pause_circle"
-              size="sm"
-            />
-          </div>
-          <div class="col-auto">
-            <q-chip
-              :label="`Sin actividad: ${statusCounts.noActivity}`"
-              color="grey-6"
-              text-color="white"
-              icon="help_outline"
-              size="sm"
-            />
-          </div>
-        </div>
-        <div class="text-caption text-grey-6 q-mt-xs">
-          Total de empresas: {{ filteredCompanies.length }}
-        </div>
-      </q-card-section>
-    </q-card>
-
-    <!-- Buscador -->
+  <div class="full-width">
+    <!-- Search Bar with Icon -->
     <q-input
       v-model="searchQuery"
       outlined
@@ -65,152 +8,170 @@
       placeholder="Buscar empresa por nombre..."
       class="q-mb-md"
       clearable
+      rounded
+      bg-color="white"
+      input-class="text-grey-9"
     >
       <template v-slot:prepend>
-        <q-icon name="search" />
+        <q-icon name="search" color="primary" />
       </template>
     </q-input>
 
-    <!-- Lista de empresas paginada -->
-    <div v-if="paginatedCompanies.length > 0">
-      <q-card
-        v-for="org in paginatedCompanies"
-        :key="org.id"
-        class="q-mt-sm cursor-pointer q-py-sm bg-primary text-white"
+    <!-- Company List with Infinite Scroll -->
+    <q-infinite-scroll
+      @load="onLoadMore"
+      :offset="250"
+      :disable="!hasMoreItems"
+      scroll-target="#company-scroll-area"
+      class="scroll"
+      id="company-scroll-area"
+      style="height: 60vh"
+    >
+      <transition-group
+        name="list"
+        tag="div"
+        class="q-gutter-y-sm"
       >
-        <q-item>
-          <q-item-section avatar>
-            <img
-              alt="logo"
-              :src="org.url || whiteLogo"
-              :style="$q.screen.lt.md
-                ? 'height: 50px; width: 70px;'
-                : 'height: 50px; width: 130px;'
-              "
-            />
-          </q-item-section>
+        <q-card
+          v-for="org in visibleCompanies"
+          :key="org.id"
+          class="company-card"
+          :class="{ 'current-company': org.id === user.company_session_id }"
+          flat
+          bordered
+        >
+          <q-item>
+            <q-item-section avatar>
+              <q-avatar
+                size="80px"
+                class="bg-grey"
+                >
+                <img
+                  :src="org.url || whiteLogo"
+                  class="company-logo"
+                  style="height: 70px;" fit="contain"
+                />
+              </q-avatar>
+            </q-item-section>
 
-          <q-item-section>
-            <q-item-label class="text-subtitle1">
-              {{ org.name }} - {{ org.document_number }}
-            </q-item-label>
-            <q-item-label class="q-subtitle2">
-              {{ org.email }}
-              <!-- Etiqueta de actividad dinámica -->
-              <q-badge
-                rounded
-                floating
-                class="text-white text-bold q-pa-xs"
-                :color="getActivityBadgeColor(org)"
+            <q-item-section>
+              <div class="row items-center q-mb-xs">
+                <q-item-label class="text-subtitle1 text-weight-bold">
+                  {{ org.name }}
+                </q-item-label>
+                <q-badge
+                  v-if="org.id === user.company_session_id"
+                  color="primary"
+                  class="q-ml-sm"
+                  rounded
+                >
+                  Actual
+                </q-badge>
+              </div>
+
+              <q-item-label class="text-caption text-grey-7 q-mb-xs">
+                {{ org.document_number }} • {{ org.email }}
+              </q-item-label>
+
+              <div class="row items-center">
+                <q-badge
+                  rounded
+                  class="q-mr-sm"
+                  :color="getActivityBadgeColor(org)"
+                  text-color="white"
+                >
+                  {{ getActivityStatus(org) }}
+                </q-badge>
+              </div>
+            </q-item-section>
+
+            <q-item-section side>
+              <q-btn
+                v-if="org.id !== user.company_session_id"
+                icon="sync"
+                round
+                flat
+                color="primary"
+                size="md"
+                @click="changeCompany(org)"
               >
-                {{ getActivityStatus(org) }}
-              </q-badge>
-            </q-item-label>
-            <q-item-label class="text-subtitle1" v-if="org?.invoice">
-              Última actividad: {{ formatDate(org?.invoice?.created_at, 'DD/MM/YYYY HH:mm:ss') }}
-            </q-item-label>
-            <q-item-label class="text-caption" v-else>
-              Sin actividad registrada
-            </q-item-label>
-          </q-item-section>
+                <q-tooltip>Cambiar empresa</q-tooltip>
+              </q-btn>
+            </q-item-section>
+          </q-item>
+        </q-card>
+      </transition-group>
 
-          <q-item-section side>
-            <q-btn
-              v-if="org.id === user.company_session_id"
-              icon="published_with_changes"
-              color="white"
-              size="lg"
-              dense
-              round
-              flat
-            />
-            <q-btn
-              v-else
-              flat
-              icon="sync"
-              size="lg"
-              round
-              dense
-              @click="changeCompany(org)"
-            >
-              <q-tooltip>Cambiar la sesión de la empresa</q-tooltip>
-            </q-btn>
-          </q-item-section>
-        </q-item>
-      </q-card>
-    </div>
+      <template v-slot:loading>
+        <div class="row justify-center q-my-md">
+          <q-spinner-dots color="primary" size="40px" />
+        </div>
+      </template>
+    </q-infinite-scroll>
 
-    <!-- Mensaje cuando no hay resultados -->
-    <div v-else class="text-center q-pa-lg">
-      <q-icon name="search_off" size="4rem" color="grey-5" />
-      <div class="text-h6 text-grey-6 q-mt-md">
-        No se encontraron empresas
-      </div>
-      <div class="text-body2 text-grey-5">
+    <!-- No Results Message -->
+    <div
+      v-if="filteredCompanies.length === 0"
+      class="column items-center justify-center q-pa-xl text-center"
+    >
+      <q-icon
+        name="search_off"
+        size="4rem"
+        color="grey-4"
+        class="q-mb-md"
+      />
+      <div class="text-h6 text-grey-6">No se encontraron empresas</div>
+      <div class="text-body2 text-grey-5 q-mt-sm">
         {{ searchQuery ? 'Intenta con otro término de búsqueda' : 'No hay empresas disponibles' }}
       </div>
     </div>
 
-    <!-- Paginación -->
-    <div class="q-mt-lg flex flex-center" v-if="totalPages > 1">
-      <q-pagination
-        v-model="currentPage"
-        :max="totalPages"
-        :max-pages="6"
-        boundary-numbers
-        direction-links
-        outline
-        color="primary"
-        active-design="unelevated"
-        active-color="primary"
-        active-text-color="white"
-      />
-    </div>
+    <!-- Confirmation Dialog -->
+    <q-dialog v-model="confirmDialog">
+      <q-card style="width: 100%; max-width: 400px">
+        <q-card-section class="row items-center q-pb-sm bg-primary text-white">
+          <q-avatar
+            icon="sync"
+            color="white"
+            text-color="primary"
+            class="q-mr-sm"
+          />
+          <span class="text-h6">Cambiar de empresa</span>
+        </q-card-section>
 
-    <!-- Información de paginación -->
-    <div class="text-center text-caption text-grey-6 q-mt-sm" v-if="filteredCompanies.length > 0">
-      Mostrando {{ startIndex + 1 }}-{{ endIndex }} de {{ filteredCompanies.length }} empresas
-    </div>
+        <q-card-section class="q-pt-lg">
+          <div class="text-center q-mb-md bg-grey rounded-borders q-pa-md" style="max-height: 100px;">
+            <q-img :src="company.url || whiteLogo" class="full-width" style="height: 70px;" fit="contain"/>
+          </div>
 
-    <!-- Dialog de confirmación -->
-    <q-dialog v-model="confirmDialog" persistent>
-      <q-card style="width: 400px; max-width: 80vw">
-        <q-form @submit="updateSession">
-          <q-card-section class="row items-center q-py-md bg-primary text-white">
-            <div class="text-h6">Confirmar usuario</div>
-          </q-card-section>
-          <q-card-section class="q-py-xs flex flex-center">
-            <q-img :src="company.url || whiteLogo" width="200px" />
-          </q-card-section>
-          <q-card-section class="q-pb-md">
+          <q-form @submit="updateSession">
             <q-input
               v-model="password"
               type="password"
-              label="Contraseña"
+              label="Ingresa tu contraseña para confirmar"
               outlined
               dense
               autofocus
-              :rules="[
-                (val) => (val && val.length > 0) || 'Este campo es requerido',
-              ]"
+              :rules="[val => !!val || 'La contraseña es requerida']"
+              class="q-mb-md"
             />
-          </q-card-section>
-          <q-card-actions align="right" class="q-gutter-sm q-pt-none">
-            <q-btn
-              color="secondary"
-              icon="cancel"
-              label="Cancelar"
-              @click="confirmDialog = false"
-            />
-            <q-btn
-              color="primary"
-              icon="check_circle"
-              label="Aceptar"
-              type="submit"
-              :loading="loading"
-            />
-          </q-card-actions>
-        </q-form>
+
+            <div class="row q-gutter-sm justify-end">
+              <q-btn
+                flat
+                label="Cancelar"
+                color="grey-7"
+                v-close-popup
+              />
+              <q-btn
+                label="Confirmar"
+                type="submit"
+                color="primary"
+                :loading="loading"
+              />
+            </div>
+          </q-form>
+        </q-card-section>
       </q-card>
     </q-dialog>
   </div>
@@ -236,50 +197,78 @@ const password = ref('')
 const confirmDialog = ref(false)
 const loading = ref(false)
 const searchQuery = ref('')
-const currentPage = ref(1)
-const itemsPerPage = ref(5)
+const visibleCount = ref(10) // Número inicial de empresas a mostrar
 
 // Store y Quasar
 const store = authentication()
 const user = store.userSession
 const $q = useQuasar()
 
-// Logo variable
-const whiteLogo = 'path/to/white/logo.png'
+// Computed properties
+const filteredCompanies = computed(() => {
+  if (!searchQuery.value) return props.companies
+  const query = searchQuery.value.toLowerCase()
+  return props.companies.filter(org =>
+    org.name.toLowerCase().includes(query) ||
+    org.document_number?.toLowerCase().includes(query) ||
+    org.email?.toLowerCase().includes(query)
+  )
+})
 
-// Funciones y computeds deben estar al principio
+const visibleCompanies = computed(() => {
+  return filteredCompanies.value.slice(0, visibleCount.value)
+})
+
+const hasMoreItems = computed(() => {
+  return visibleCompanies.value.length < filteredCompanies.value.length
+})
+
+// Methods
+const onLoadMore = (index, done) => {
+  if (hasMoreItems.value) {
+    setTimeout(() => {
+      visibleCount.value += 5
+      done()
+    }, 800)
+  } else {
+    done(true) // Detiene la carga infinita
+  }
+}
+
 const getActivityStatus = (org) => {
   if (!org.invoice) return 'Sin actividad'
-
   const now = new Date()
   const invoiceDate = new Date(org.invoice.created_at)
   const daysDiff = Math.floor((now - invoiceDate) / (1000 * 60 * 60 * 24))
 
-  if (daysDiff <= 2) return 'Activa'
-  if (daysDiff <= 7) return 'Moderada'
-  if (daysDiff <= 30) return 'Baja actividad'
-  return 'Inactiva'
+  if (daysDiff === 0) return 'Hoy'
+  if (daysDiff === 1) return 'Ayer'
+  if (daysDiff <= 7) return `Hace ${daysDiff} días`
+  if (daysDiff <= 30) return 'Este mes'
+  return 'Hace más de un mes'
 }
 
 const getActivityBadgeColor = (org) => {
   if (!org.invoice) return 'grey-6'
-
   const now = new Date()
   const invoiceDate = new Date(org.invoice.created_at)
   const daysDiff = Math.floor((now - invoiceDate) / (1000 * 60 * 60 * 24))
 
-  if (daysDiff <= 2) return 'positive' // Verde
-  if (daysDiff <= 7) return 'warning' // Amarillo/Naranja
-  if (daysDiff <= 30) return 'orange-8' // Naranja oscuro
-  return 'negative' // Rojo
+  if (daysDiff <= 1) return 'positive'
+  if (daysDiff <= 7) return 'warning'
+  if (daysDiff <= 30) return 'orange'
+  return 'negative'
 }
 
 const changeCompany = (data) => {
   company.value = data
+  password.value = ''
   confirmDialog.value = true
 }
 
 const updateSession = async () => {
+  if (!password.value) return
+
   try {
     loading.value = true
     const { data } = await api.post('session/company', {
@@ -298,97 +287,51 @@ const updateSession = async () => {
     setTimeout(() => window.location.reload(), 2000)
   } catch (error) {
     $q.notify({
-      message: error?.message || error.message,
-      color: 'negative',
-      progress: true,
-      timeout: 1500
+      type: 'negative',
+      message: error.response?.data?.message || 'Error al cambiar de empresa',
+      position: 'top'
     })
   } finally {
     loading.value = false
-    password.value = ''
-    confirmDialog.value = false
   }
 }
 
-// Computed para ordenar empresas por última factura
-const sortedCompanies = computed(() => {
-  return [...props.companies].sort((a, b) => {
-    // Empresas con facturas primero, ordenadas por fecha más reciente
-    if (a.invoice && b.invoice) {
-      return new Date(b.invoice.created_at) - new Date(a.invoice.created_at)
-    }
-    if (a.invoice && !b.invoice) return -1
-    if (!a.invoice && b.invoice) return 1
-    // Si ninguna tiene factura, ordenar por nombre
-    return a.name.localeCompare(b.name)
-  })
-})
-
-// Computed para filtrar empresas por búsqueda
-const filteredCompanies = computed(() => {
-  if (!searchQuery.value) return sortedCompanies.value
-
-  const query = searchQuery.value.toLowerCase().trim()
-  return sortedCompanies.value.filter(company =>
-    company.name.toLowerCase().includes(query) ||
-    company.document_number.toLowerCase().includes(query) ||
-    company.email.toLowerCase().includes(query)
-  )
-})
-
-// Computed para paginación
-const totalPages = computed(() => {
-  return Math.ceil(filteredCompanies.value.length / itemsPerPage.value)
-})
-
-const startIndex = computed(() => {
-  return (currentPage.value - 1) * itemsPerPage.value
-})
-
-const endIndex = computed(() => {
-  return Math.min(startIndex.value + itemsPerPage.value, filteredCompanies.value.length)
-})
-
-const paginatedCompanies = computed(() => {
-  return filteredCompanies.value.slice(startIndex.value, endIndex.value)
-})
-
-// Watcher para resetear página cuando se busca
 watch(searchQuery, () => {
-  currentPage.value = 1
-})
-
-// Computed para contar empresas por status
-const statusCounts = computed(() => {
-  const counts = {
-    active: 0,
-    moderate: 0,
-    low: 0,
-    inactive: 0,
-    noActivity: 0
-  }
-
-  filteredCompanies.value.forEach(org => {
-    const status = getActivityStatus(org)
-    switch (status) {
-      case 'Activa':
-        counts.active++
-        break
-      case 'Moderada':
-        counts.moderate++
-        break
-      case 'Baja actividad':
-        counts.low++
-        break
-      case 'Inactiva':
-        counts.inactive++
-        break
-      case 'Sin actividad':
-        counts.noActivity++
-        break
-    }
-  })
-
-  return counts
+  visibleCount.value = 10
 })
 </script>
+
+<style scoped>
+.company-card {
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+  border-radius: 8px;
+}
+
+.company-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.company-card.current-company {
+  border-left: 4px solid var(--q-primary);
+  background-color: rgba(25, 118, 210, 0.05);
+}
+
+.company-logo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+</style>

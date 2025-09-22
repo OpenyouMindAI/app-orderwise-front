@@ -150,7 +150,6 @@
                   icon="android"
                   href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
                   target="_blank"
-                  v-if="!$q.platform.is.nativeMobile"
                   type="a"
                 >
                   <q-tooltip class="text-body2">
@@ -486,22 +485,6 @@ export default {
           }
 
           function createNotification (title, options, sound) {
-            Notify.create({
-              type: 'negative',
-              message: title,
-              position: 'bottom-right',
-              timeout: 0,
-              icon: 'notifications',
-              actions: [
-                {
-                  label: 'Ver',
-                  color: 'primary',
-                  handler: () => {
-                    window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
-                  }
-                }
-              ]
-            })
             if (sound) {
               const audio = new Audio('audios/bug_notification.wav')
               audio.play()

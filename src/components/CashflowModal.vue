@@ -57,6 +57,19 @@
                   autofocus
                 />
                 <q-input
+                  v-if="userSession.is_root || userSession.is_super_admin"
+                  name="created_at"
+                  autocomplete="created_at"
+                  v-model="date"
+                  color="primary"
+                  label="Fecha"
+                  filled
+                  clearable
+                  type="date"
+                  required
+                  autofocus
+                />
+                <q-input
                   name="description"
                   autocomplete="description"
                   v-model="description"
@@ -145,7 +158,9 @@
 </template>
 
 <script>
-import { notify } from 'src/const/mixins'
+import { formatDate, notify } from 'src/const/mixins'
+import { mapState } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
 
 export default {
   name: 'CashflowModal',
@@ -182,6 +197,11 @@ export default {
   emits: ['update:modelValue', 'cashflow-saved'],
   data () {
     return {
+      /**
+       * Date cashflow
+       * @type {String}
+       */
+      date: null,
       /**
        * Panel
        * @type {String}
@@ -227,7 +247,8 @@ export default {
       set (value) {
         this.$emit('update:modelValue', value)
       }
-    }
+    },
+    ...mapState(authentication, ['userSession'])
   },
   watch: {
     flowTypeOptions: {
@@ -240,6 +261,16 @@ export default {
     }
   },
   methods: {
+    /**
+     * Format date time
+     * @param {String} dateStr date string
+     * @returns {String} date string
+     */
+    formatDateTime (dateStr) {
+      if (!dateStr) return null
+      const date = new Date(dateStr)
+      return date.toISOString().slice(0, 19).replace('T', ' ')
+    },
     /**
      * Save cashflow
      */
@@ -258,7 +289,9 @@ export default {
           cashbox_user_id: this.cashBoxState?.id,
           payment_method_id: this.paymentMethodCashFlow,
           images: this.cashflowImages,
-          created_at: this.createdAt ? `${this.createdAt}T${new Date().toTimeString().substring(0, 8)}` : null
+          created_at: this.date
+            ? `${this.date} ${formatDate(new Date(), 'HH:mm:ss')}`
+            : formatDate(this.createdAt || new Date(), 'YYYY-MM-DD HH:mm:ss')
         })
 
         await this.$api.post('cashflow', payload)

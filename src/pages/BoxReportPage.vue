@@ -152,7 +152,12 @@
                 <div class="text-subtitle1 text-weight-bold">💳 Métodos de Pago</div>
               </div>
               <div class="col-auto flex justify-center items-center q-gutter-x-md">
-                <div class="text-body1 text-bold">Total: {{ formatNumber(paymentMethodTotals.payment_total || 0) }}</div>
+                <div class="text-body1 text-bold" @click.stop="paymentDetailsModal">
+                  Total: {{ formatNumber(paymentMethodTotals.payment_total || 0) }}
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Ver detalles de pagos
+                  </q-tooltip>
+                </div>
                 <q-chip
                   :color="paymentMethodTotals.payment_method_totals?.length ? 'white' : 'orange'"
                   :text-color="paymentMethodTotals.payment_method_totals?.length ? 'green-6' : 'white'"
@@ -175,7 +180,7 @@
                   </div>
 
                   <!-- Compact Cash Flow Display -->
-                  <div class="cash-flow-compact q-pa-xs rounded-borders q-mt-xs">
+                  <div class="cash-flow-compact q-pa-xs rounded-borders q-mt-xs cursor-pointer" @click="openPaymentDetailsDialog(method)">
                     <div class="row q-gutter-xs text-center">
                       <div class="col">
                         <div class="text-caption text-grey-7">Ventas</div>
@@ -198,7 +203,7 @@
                     </div>
                   </div>
 
-                  <q-separator v-if="method !== paymentMethodTotals.payment_method_totals[paymentMethodTotals.payment_method_totals.length - 1]" class="q-my-sm"/>
+                  <!-- <q-separator v-if="method !== paymentMethodTotals.payment_method_totals[paymentMethodTotals.payment_method_totals.length - 1]" class="q-my-sm"/> -->
                 </div>
               </div>
               <div v-else class="text-center q-pa-md text-grey-6">
@@ -746,6 +751,56 @@
       </q-card>
     </q-dialog>
 
+    <!-- Payment Details Dialog -->
+    <q-dialog v-model="paymentDetailsDialog">
+      <q-card style="width: 800px; max-width: 90vw;">
+        <q-card-section class="bg-primary text-white row items-center">
+          <div class="text-h6">💳 Detalle de Pagos por Método</div>
+          <q-space/>
+          <q-btn icon="close" flat round @click="paymentDetailsDialog = false"/>
+        </q-card-section>
+
+        <q-card-section>
+          <q-table
+            v-if="invoicePayments.data?.length"
+            :columns="paymentColumns"
+            :rows="invoicePayments.data || []"
+            :loading="paymentDetailsLoading"
+            v-model:pagination="paymentDetailsPagination"
+            @request="setPaymentDetailsPagination"
+            binary-state-sort
+            no-data-label="No se encontraron pagos en el período seleccionado"
+            row-key="id"
+          >
+            <template v-slot:top-right>
+              <q-input
+                v-model="paymentSearchFilter"
+                filled
+                dense
+                debounce="500"
+                placeholder="Buscar pagos..."
+                @update:model-value="onPaymentSearch"
+              >
+                <template v-slot:append>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </template>
+            <template v-slot:loading>
+              <q-inner-loading showing color="primary" />
+            </template>
+          </q-table>
+
+          <div v-else class="text-center q-pa-xl text-grey-6">
+            <q-icon name="info" size="xl"/>
+            <div class="text-h6 q-mt-md">No hay datos de pagos</div>
+            <div class="text-body2 q-mt-sm">No se encontraron pagos en el período seleccionado</div>
+          </div>
+        </q-card-section>
+        <q-inner-loading :showing="paymentDetailsLoading" color="primary" />
+      </q-card>
+    </q-dialog>
+
     <!-- Cash Flow Details Dialog -->
     <q-dialog v-model="cashFlowDetailsDialog">
       <q-card style="width: 700px; max-width: 80vw;">
@@ -764,6 +819,7 @@
                 <th class="text-left">Hora</th>
                 <th class="text-left">Descripción</th>
                 <th class="text-right">Monto</th>
+                <th class="text-right" v-if="userSession?.is_root">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -783,13 +839,22 @@
                 <td class="text-right" :class="item.type_cashflow === 'debit' ? 'text-positive' : 'text-negative'">
                   {{ formatNumber(item.amount) }}
                 </td>
+                <td v-if="userSession?.is_root" class="text-right">
+                  <q-btn
+                    flat
+                    round
+                    color="negative"
+                    icon="delete"
+                    @click="deleteCashflow(item)"
+                  />
+                </td>
               </tr>
               <tr>
                 <th colspan="4" class="text-right">
                   <span class="text-subtitle1">Total:</span>
                 </th>
-                <th :class="cashflows.total > 0 ? 'text-positive' : 'text-negative'" class="text-right">
-                  <span class="text-subtitle1">
+                <th colspan="2" :class="cashflows.total > 0 ? 'text-positive' : 'text-negative'" class="text-left">
+                  <span class="text-subtitle1 q-ml-lg">
                     {{ formatNumber(cashflows.total) }}
                   </span>
                 </th>
@@ -820,7 +885,7 @@ import { notify } from '../const/mixins'
 import { printReportTaxes } from 'src/const/report'
 
 export default {
-  name: 'OptimizedDenseReport',
+  name: 'BoxReportPage',
 
   data () {
     return {
@@ -828,6 +893,63 @@ export default {
       cashBoxUser: null,
       cashFlowDetailsDialog: false,
       cashFlowLoading: false,
+      paymentDetailsDialog: false,
+      paymentDetailsLoading: false,
+      invoicePayments: { data: [] },
+      paymentDetailsPagination: {
+        rowsPerPage: 10,
+        rowsNumber: 0,
+        paginate: true,
+        sortBy: 'created_at',
+        selectedPaymentMethod: null
+      },
+      paymentMethodFilters: [
+        { label: 'Todos los métodos', value: null },
+        { label: 'Efectivo', value: 'efectivo' },
+        { label: 'Débito', value: 'debito' },
+        { label: 'Crédito', value: 'credito' }
+      ],
+      selectedPaymentFilter: null,
+      paymentSearchFilter: '',
+      paymentColumns: [
+        {
+          name: 'invoice_number',
+          align: 'left',
+          label: 'Factura',
+          field: row => row.invoice?.invoice_number || row.invoice?.code || 'N/A',
+          sortable: true
+        },
+        {
+          name: 'customer',
+          align: 'left',
+          label: 'Cliente',
+          field: row => row.invoice?.customer?.name || row.invoice?.client?.name || 'Cliente General',
+          sortable: true
+        },
+        {
+          name: 'payment_method',
+          align: 'left',
+          label: 'Método de Pago',
+          field: row => row.payment_method?.name,
+          sortable: true
+        },
+        {
+          name: 'created_at',
+          align: 'left',
+          label: 'Fecha y Hora',
+          field: 'created_at',
+          format: val => `${formatDate(val, 'DD/MM/YYYY')} ${formatDate(val, 'HH:mm:ss')}`,
+          sortable: true
+        },
+        {
+          name: 'amount',
+          align: 'right',
+          label: 'Monto',
+          field: 'amount',
+          format: val => formatNumber(val),
+          sortable: true
+        }
+      ],
       formatDate,
       panel: 'day',
       formatNumber,
@@ -841,8 +963,8 @@ export default {
       fromHours: null,
       toHours: null,
       day: date.formatDate(Date(), 'YYYY-MM-DD'),
-      from: date.formatDate(Date(), 'YYYY-MM-DD'),
-      to: date.formatDate(Date(), 'YYYY-MM-DD'),
+      from: date.formatDate(Date(), 'YYYY-MM-DDTHH:mm'),
+      to: date.formatDate(Date(), 'YYYY-MM-DDTHH:mm'),
       cashflowTotals: {},
       dialogFilter: false,
       filter: null,
@@ -858,7 +980,6 @@ export default {
         sortOrder: 'desc'
       },
       totals: [],
-      invoicePayments: [],
       typeOfServicesTotals: {},
       paymentMethodTotals: {},
       categoryTotalsTotals: {},
@@ -881,6 +1002,16 @@ export default {
   },
 
   watch: {
+    isPaymentDetailsDialogOpen (newValue) {
+      if (!newValue) {
+        // Reset details when dialog is closed
+        this.paymentDetails = []
+        this.paymentDetailsPagination.filter = ''
+        this.paymentDetailsPagination.page = 1
+        this.paymentDetailsPagination.rowsNumber = 0
+        this.selectedPaymentMethod = null
+      }
+    },
     branchOffice (data) {
       if (data) {
         this.filterDate()
@@ -1148,6 +1279,179 @@ export default {
       })
     },
 
+    /**
+     * Opens payment details modal and loads payment data
+     */
+    paymentDetailsModal () {
+      this.paymentDetailsDialog = true
+      this.paymentDetailsLoading = true
+      // Clear selected payment method for "Total" view
+      this.selectedPaymentMethod = null
+      // Reset pagination to first page
+      this.paymentDetailsPagination.page = 1
+      this.paymentDetailsPagination.rowsPerPage = 10
+      // Load initial data with pagination
+      this.loadInitialPaymentData()
+    },
+
+    deleteCashflow (cashflow) {
+      console.log(cashflow)
+      this.$api.delete(`cashflows/${cashflow.id}`)
+        .then(() => {
+          this.cashFlowDetails(cashflow)
+          this.getCashflowTotals()
+          notify('Flujo de dinero eliminado correctamente', 'positive', 'check')
+        })
+        .catch(error => {
+          notify(error.message, 'negative', 'warning')
+        })
+    },
+
+    /**
+     * Load initial payment data for modal
+     */
+    async loadInitialPaymentData () {
+      try {
+        this.paymentDetailsLoading = true
+
+        // Build parameters similar to AccountsReceivablePage
+        const paymentsParams = {
+          paginate: true,
+          sortBy: this.paymentDetailsPagination.sortBy || 'created_at',
+          sortOrder: this.paymentDetailsPagination.descending ? 'asc' : 'desc',
+          perPage: this.paymentDetailsPagination.rowsPerPage,
+          page: this.paymentDetailsPagination.page,
+          dataSearch: {
+            'invoice.id': '',
+            amount: ''
+          }
+        }
+
+        // Build filters with correct structure
+        const filtersPayments = {
+          dataEqualFilter: {
+            'invoice.branch_office_id': this.branchOffice?.id,
+            'invoice.seller_id': this.seller?.id
+          }
+        }
+        console.log('HOLA', this.selectedPaymentMethod)
+        // Add payment method filter if a specific method was selected
+        if (this.selectedPaymentMethod && this.selectedPaymentMethod.payment_method_id) {
+          filtersPayments.dataEqualFilter.payment_method_id = this.selectedPaymentMethod.payment_method_id
+        }
+
+        // Add date filters according to active panel
+        if (this.panel === 'day' && this.day) {
+          filtersPayments.dateFilter = {
+            field: 'created_at',
+            from: `${this.day} ${this.fromHours || '00:00'}`,
+            to: `${this.day} ${this.toHours || '23:59'}`
+          }
+        } else if (this.panel === 'between' && this.from && this.to) {
+          filtersPayments.dateFilter = {
+            field: 'created_at',
+            from: this.from,
+            to: this.to
+          }
+        }
+
+        // Combine parameters and filters
+        const finalParams = {
+          ...paymentsParams,
+          ...filtersPayments
+        }
+
+        const { data } = await this.$api.get('invoice-payments', { params: finalParams })
+        // IMPORTANT: Response comes in data.data
+        this.invoicePayments = { data: data.data || [] }
+        this.paymentDetailsPagination.rowsNumber = data.total || 0
+      } catch (error) {
+        this.$q.notify({
+          message: error.message || 'Error al cargar los pagos',
+          color: 'negative',
+          icon: 'warning'
+        })
+      } finally {
+        this.paymentDetailsLoading = false
+      }
+    },
+
+    /**
+     * Set payment details pagination
+     * @param {Object} data - Pagination data from q-table
+     */
+    setPaymentDetailsPagination (data) {
+      const paymentsParams = {
+        paginate: true,
+        sortBy: data.pagination.sortBy || 'created_at',
+        sortOrder: data.pagination.descending ? 'asc' : 'desc',
+        perPage: data.pagination.rowsPerPage,
+        page: data.pagination.page,
+        dataSearch: {
+          'invoice.id': '',
+          amount: ''
+        }
+      }
+
+      // Construir filtros con estructura correcta
+      const filtersPayments = {
+        dataEqualFilter: {
+          'invoice.branch_office_id': this.branchOffice?.id,
+          'invoice.seller_id': this.seller?.id
+        }
+      }
+
+      // Add payment method filter if a specific method was selected
+      if (this.selectedPaymentMethod && this.selectedPaymentMethod.payment_method_id) {
+        filtersPayments.dataEqualFilter.payment_method_id = this.selectedPaymentMethod.payment_method_id
+      }
+
+      // Agregar filtros de fecha según el panel activo
+      if (this.panel === 'day' && this.day) {
+        filtersPayments.dateFilter = {
+          field: 'created_at',
+          from: `${this.day} ${this.fromHours || '00:00'}`,
+          to: `${this.day} ${this.toHours || '23:59'}`
+        }
+      } else if (this.panel === 'between' && this.from && this.to) {
+        filtersPayments.dateFilter = {
+          field: 'created_at',
+          from: this.from,
+          to: this.to
+        }
+      }
+
+      // Combinar parámetros y filtros
+      const finalParams = {
+        ...paymentsParams,
+        ...filtersPayments
+      }
+
+      this.paymentDetailsPagination = data.pagination
+      this.getInvoicePaymentsPaginated(finalParams)
+    },
+
+    /**
+     * Get invoice payments with pagination
+     * @param {Object} params - Complete parameters with pagination
+     */
+    async getInvoicePaymentsPaginated (params) {
+      try {
+        this.paymentDetailsLoading = true
+        const { data } = await this.$api.get('invoice-payments', { params })
+        this.invoicePayments = { data: data.data || [] }
+        this.paymentDetailsPagination.rowsNumber = data.total || 0
+      } catch (error) {
+        this.$q.notify({
+          message: error.message || 'Error al cargar los pagos',
+          color: 'negative',
+          icon: 'warning'
+        })
+      } finally {
+        this.paymentDetailsLoading = false
+      }
+    },
+
     async getCashflowDetails (params) {
       try {
         this.cashFlowLoading = true
@@ -1187,6 +1491,103 @@ export default {
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
+    },
+
+    async openPaymentDetailsDialog (method) {
+      this.modalTitle = method?.payment_method_name || 'Todos los Pagos'
+      this.paymentDetailsDialog = true
+      this.paymentDetailsLoading = true
+      // Store selected method to use in pagination requests
+      this.selectedPaymentMethod = method
+      // Reset pagination
+      this.paymentDetailsPagination.page = 1
+      this.loadInitialPaymentData()
+    },
+
+    async handlePaymentDetailsRequest (props) {
+      const { page, rowsPerPage, sortBy, descending } = props.pagination
+      const filter = props.filter
+
+      // Use pagination parameters from request
+      this.paymentDetailsPagination.page = page
+      this.paymentDetailsPagination.rowsPerPage = rowsPerPage
+
+      // Use same structure as getInvoicePaymentsPaginated
+      const finalParams = {
+        'invoice.invoice_date': {
+          startDate: this.params.startDate,
+          endDate: this.params.endDate
+        },
+        rowsPerPage,
+        page,
+        sortBy: sortBy || 'created_at',
+        descending: descending !== false,
+        dataSearch: {
+          'invoice.id': '',
+          amount: filter || this.paymentSearchFilter || ''
+        }
+      }
+
+      // Build filters with correct structure
+      const filtersPayments = {
+        dataEqualFilter: {
+          'invoice.branch_office_id': this.branchOffice?.id,
+          'invoice.seller_id': this.seller?.id
+        }
+      }
+
+      // Add payment method filter
+      if (this.selectedPaymentFilter) {
+        filtersPayments.dataLikeFilter = {
+          'payment_method.name': this.selectedPaymentFilter
+        }
+      }
+
+      // Merge filters into final params
+      const requestParams = {
+        ...finalParams,
+        ...filtersPayments
+      }
+
+      try {
+        this.paymentDetailsLoading = true
+        const { data } = await this.$api.get('invoice-payments', { params: requestParams })
+        this.invoicePayments = { data: data.data || [] }
+        this.paymentDetailsPagination = {
+          ...props.pagination,
+          rowsNumber: data.total || 0,
+          filter: props.filter
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.paymentDetailsLoading = false
+      }
+    },
+
+    /**
+     * Handle payment method filter change
+     */
+    onPaymentFilterChange () {
+      // Reset pagination and reload data
+      this.paymentDetailsPagination.page = 1
+      this.loadInitialPaymentData()
+    },
+
+    /**
+     * Handle payment search filter change
+     */
+    onPaymentSearch () {
+      // Reset pagination and reload data
+      this.paymentDetailsPagination.page = 1
+      this.loadInitialPaymentData()
+    },
+
+    /**
+     * Refresh payment data
+     */
+    refreshPaymentData () {
+      this.loadInitialPaymentData()
     },
 
     async getCategoryTotals (params) {
@@ -1241,7 +1642,6 @@ export default {
 }
 
 .payment-method-compact {
-  border-left: 3px solid #4CAF50;
   padding-left: 8px;
   background: rgba(76, 175, 80, 0.03);
   border-radius: 6px;
