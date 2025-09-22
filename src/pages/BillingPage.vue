@@ -810,206 +810,28 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
-        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
-          <span class="text-h6">Desglose de pago</span>
-          <q-btn flat icon="close" round size="md" v-close-popup/>
-        </q-card-section>
-        <q-card-section class="row q-col-gutter-md q-px-sm">
-          <div class="col-xs-12 col-sm-4 col-md-4 col-lg-3 q-gutter-xs">
-            <q-btn
-              color="secondary"
-              size="17px"
-              style="width: 100%"
-              :label="paymentMethod.name"
-              v-for="paymentMethod in paymentMethods" :key="paymentMethod.id"
-              @click="addPayment(paymentMethod)"
-            />
-          </div>
-          <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9 q-gutter-md row">
-            <div class="col-12">
-              <q-toggle v-if="invoice?.tables?.length && invoice?.id" v-model="tableClose" label="Cerrar mesa" />
-              <q-markup-table>
-                <thead>
-                  <tr>
-                    <th class="text-left" v-if="partialBilling">✅</th>
-                    <th class="text-left">Método de pago</th>
-                    <th class="text-left">Referencia</th>
-                    <th class="text-right">Monto</th>
-                    <th class="text-right">% Descuento</th>
-                    <th class="text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(payment, index) in payments" :key="payment.id">
-                    <td class="text-left" v-if="partialBilling">
-                      <q-checkbox v-model="payment.checked" color="primary"/>
-                    </td>
-                    <td class="text-left">{{ payment.name }}</td>
-                    <td class="text-left">
-                      <span v-if="payment.reference"> {{ payment.reference }}</span>
-                      <span v-else>-</span>
-                      <q-popup-edit
-                        v-model="payment.reference"
-                        auto-save
-                        v-slot="scope"
-                      >
-                        <q-input
-                          v-model="scope.value"
-                          autofocus
-                          @keyup.enter="scope.set"
-                        />
-                      </q-popup-edit>
-                    </td>
-                    <td class="text-right">
-                      {{ formatNumber(payment.amount) }}
-                      <q-popup-edit
-                        v-model.number="payment.amount"
-                        auto-save
-                        v-slot="scope"
-                        @update:model-value="appendPayment(payment)"
-                      >
-                        <q-input
-                          v-model="scope.value"
-                          autofocus
-                          @keyup.enter="scope.set"
-                        />
-                      </q-popup-edit>
-                    </td>
-                    <td class="text-right">{{ payment.discount_percentage }}</td>
-                    <q-td class="text-center q-gutter-x-xs">
-                      <q-btn
-                        icon="delete"
-                        color="negative"
-                        rounded
-                        dense
-                        @click="deletePayment(index)"
-                        />
-                        <q-btn
-                          v-if="payment.acronym === 'MPQA'"
-                          rounded
-                          dense
-                          icon="qr_code"
-                          color="secondary"
-                          @click="waitingPayment = true"
-                        />
-                    </q-td>
-                  </tr>
-                </tbody>
-              </q-markup-table>
-            </div>
-            <div class="col-12">
-              <q-item style="border: none !important">
-                  <q-item-section v-if="pendingPayment >= 0">
-                    RESTANTE POR COBRAR
-                  </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
-                  </q-item-section>
-                  <q-item-section side v-if="coin" class="text-bold text-black">
-                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
-                  </q-item-section>
-                </q-item>
-              <q-list separator bordered style="border-radius: 10px;" dense>
+    <PaymentModal
+      :show="dialogPayment"
+      :payment-methods="paymentMethods"
+      :payments="payments"
+      :total-amount="totalBill"
+      :coin="coin"
+      :show-table-close="!!(invoice?.tables?.length && invoice?.id)"
+      :table-close="tableClose"
+      :loading="loadingBilling"
+      :user-session="userSession"
+      :cash-box-state="cashBoxState"
+      @update:show="dialogPayment = $event"
+      @update:table-close="tableClose = $event"
+      @payment-add="handlePaymentAdd"
+      @payment-update="handlePaymentUpdate"
+      @payment-delete="handlePaymentDelete"
+      @payment-check="handlePaymentCheck"
+      @qr-payment="handleQRPayment"
+      @action-click="handlePaymentAction"
+      @close-complete="onCloseComplete"
+    />
 
-                <q-item class="bg-positive text-white text-subtitle1" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
-                  <q-item-section>
-                    SUBTOTAL
-                  </q-item-section>
-                  <q-item-section side v-if="coin" class="text-white">
-                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
-                  </q-item-section>
-                </q-item>
-                <q-item v-for="paymentMethod in selectedPaymentMethods" :key="paymentMethod.name" v-show="selectedPaymentMethods.length > 0">
-                  <q-item-section>
-                    {{ paymentMethod.name }}
-                    <span v-if="paymentMethod.discount_percentage > 0" class="text-caption text-positive">
-                      ({{ paymentMethod.discount_percentage }}% descuento)
-                    </span>
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}
-                    <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
-                      (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
-                    </span>
-                  </q-item-section>
-                </q-item>
-                <!-- Total de descuento -->
-                <q-item v-if="discountAmount > 0" class="text-subtitle1">
-                  <q-item-section>
-                    DESCUENTO TOTAL
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{ coin.symbol }} {{ formatNumber(discountAmount) }}
-                  </q-item-section>
-                </q-item>
-                <q-item v-if="discountAmount > 0" class="bg-positive text-white text-h6 text-bold" style="border-radius: 0px 0px 10px 10px;  border-top: none !important">
-                  <q-item-section>
-                    <q-item-label>TOTAL</q-item-label>
-                  </q-item-section>
-                  <q-item-section side v-if="coin" class="text-white">
-                    {{ coin.symbol }} {{ formatNumber(totalWithDiscount) }}
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-          </div>
-        </q-card-section>
-        <q-card-actions align="right" class="q-gutter-y-sm">
-          <q-btn
-            label="Factura"
-            color="secondary"
-            icon="print"
-            :class="$q.screen.lt.sm ? 'full-width' : ''"
-            :loading="loadingBilling"
-            @click="savePrintInvoice"
-          >
-            <q-badge
-              color="negative"
-              align="bottom"
-              floating
-              v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-            >
-              F7
-            </q-badge>
-          </q-btn>
-          <q-btn
-            label="Comanda"
-            icon="print"
-            @click="submitBill"
-            color="warning"
-            :class="$q.screen.lt.sm ? 'full-width' : ''"
-            :loading="loadingBilling"
-          >
-            <q-badge
-              color="negative"
-              align="bottom"
-              floating
-              v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-            >
-              F8
-            </q-badge>
-          </q-btn>
-          <q-btn
-            label="Guardar sin imprimir"
-            @click="saveWithoutPrint"
-            color="primary"
-            :class="$q.screen.lt.sm ? 'full-width' : ''"
-            :loading="loadingBilling"
-          >
-            <q-badge
-              color="negative"
-              align="bottom"
-              floating
-              v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-            >
-              F9
-            </q-badge>
-          </q-btn>
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
     <q-dialog v-model="dialogTable">
       <drawer-table
         ref="drawerTable"
@@ -1238,6 +1060,7 @@ import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
+import PaymentModal from 'src/components/PaymentModal.vue'
 import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
 import {
@@ -1252,6 +1075,7 @@ export default {
   name: 'BillingPage',
   components: {
     DrawerTable,
+    PaymentModal,
     WaitByPaymentMp,
     BarcodeScanner,
     CashBoxDialog,
@@ -1375,7 +1199,7 @@ export default {
        * Delivery date
        * @type {String}
        */
-      deliveryDate: formatDate(Date(), 'YYYY-MM-DD HH:mm:ss'),
+      deliveryDate: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
       /**
        * Format number
        * @type {Function}
@@ -1680,17 +1504,6 @@ export default {
     }
   },
   computed: {
-    /**
-     * Pending payment
-     * @returns {Number}
-     */
-    pendingPayment () {
-      const totalWithDiscount = this.totalWithDiscount - this.totalPaymentWithDiscount
-
-      if (totalWithDiscount > 0) return this.totalWithDiscount - this.totalPayment
-
-      return totalWithDiscount
-    },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     branchOfficeCharged () {
       return this.branchOffice
@@ -1698,60 +1511,11 @@ export default {
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
     },
-    /**
-     * Total payment
-     * @returns {Number}
-     */
-    totalPaymentWithDiscount () {
-      let totalPayment = 0
-      this.payments.forEach((payment) => {
-        totalPayment = totalPayment + (payment.amount - payment.discount_amount) || 0
-      })
-      return totalPayment
-    },
-    /**
-     * Total payment
-     * @returns {Number}
-     */
-    totalPayment () {
-      let totalPayment = 0
-      this.payments.forEach((payment) => {
-        totalPayment = totalPayment + payment.amount
-      })
-      return totalPayment
-    },
-    /**
-     * Discount amount - Calcula el descuento total aplicado
-     * @returns {Number}
-     */
-    discountAmount () {
-      let totalDiscount = 0
-      this.payments.forEach((payment) => {
-        if (payment.discount_percentage && payment.discount_percentage > 0) {
-          const discountAmount = (payment.amount * payment.discount_percentage) / 100
-          totalDiscount += discountAmount
-        }
-      })
-      return totalDiscount
-    },
-    /**
-     * Selected payment methods - Obtiene los métodos de pago seleccionados
-     * @returns {Array}
-     */
-    selectedPaymentMethods () {
-      return this.payments.map(payment => ({
-        name: payment.name,
-        amount: payment.amount,
-        discount_percentage: payment.discount_percentage || 0,
-        discountAmount: payment.discount_percentage ? (payment.amount * payment.discount_percentage) / 100 : 0
-      }))
-    },
-    /**
-     * Total with discount - Total con descuento (visual)
-     * @returns {Number}
-     */
-    totalWithDiscount () {
-      return this.totalBill - this.discountAmount
+    pendingPayment () {
+      const totalPayments = this.payments.reduce((total, payment) => {
+        return total + ((payment.amount - (payment.discount_amount || 0)) || 0)
+      }, 0)
+      return this.totalBill - totalPayments
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice'])
@@ -1814,16 +1578,6 @@ export default {
         pagination: this.pagination,
         filter: undefined
       })
-    },
-    /**
-     * Dialog payment
-     * @param {Object} data data payment
-     */
-    dialogPayment (data) {
-      const { company_session: companySession } = this.userSession
-      if (data && companySession?.company_config?.payment_method) {
-        this.addPayment(companySession?.company_config?.payment_method)
-      }
     },
     branchOffice (data) {
       if (data) {
@@ -2021,17 +1775,17 @@ export default {
     handleOutsideClick (event) {
       const tableElement = this.$refs.productsTable?.$el
       const productsSection = this.$refs.productsSection
-      const promoModal = this.$refs.promoModal?.$el
+      const promoModal = this.$refs.promoModal?.$el || this.$refs.promoModal
 
       // Check if click is outside both table and products section
       const isOutsideTable = tableElement && !tableElement.contains(event.target)
       const isOutsideProductsSection = productsSection && !productsSection.contains(event.target)
-      const isOutsidePromoModal = promoModal && !promoModal.contains(event.target)
+      const isOutsidePromoModal = !promoModal || !promoModal.contains(event.target)
 
       // Also check if promo dialog is open
       const isPromoDialogOpen = this.promoDialog
 
-      if (isOutsideTable && isOutsideProductsSection && (isOutsidePromoModal || !isPromoDialogOpen)) {
+      if (isOutsideTable && isOutsideProductsSection && isOutsidePromoModal && !isPromoDialogOpen) {
         this.selectedProductIndex = -1
         this.keyboardNavigationActive = false
       }
@@ -2041,10 +1795,10 @@ export default {
       if (companySession?.company_config?.other?.qpay_id) {
         const channel = this.$echoPay.channel('mercado-pago-payment')
         channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}.${this.branchOffice.id}`, (data) => {
-          const { showPaymentNotification, showDetailsModal, currentPayment } = usePaymentNotifier()
-          showPaymentNotification(data.payment)
-          this.showDetailsModal = showDetailsModal
-          this.currentPayment = currentPayment
+          const paymentNotifier = usePaymentNotifier()
+          paymentNotifier.showPaymentNotification(data.payment)
+          this.showDetailsModal = paymentNotifier.showDetailsModal
+          this.currentPayment = paymentNotifier.currentPayment
         })
       }
     },
@@ -2280,6 +2034,15 @@ export default {
      * @param {Object} data table selected
      */
     setTableSelected (data) {
+      console.log('=== TABLE SELECTION ===', {
+        selectedTables: data,
+        tablesCount: data?.length || 0,
+        tableIds: data?.map(table => table?.id || table) || [],
+        currentInvoice: {
+          id: this.invoice?.id,
+          status: this.invoice?.status
+        }
+      })
       this.tableSelected = data
     },
     /**
@@ -2309,6 +2072,60 @@ export default {
         })
     },
     /**
+     * Payment success
+     * @param {Object} data data payments
+     */
+    paymentSuccess (data) {
+      const payment = this.payments.find(payment => payment.amount === data.transaction_amount && payment.acronym === 'MPQA')
+      payment.reference = String(data.id)
+    },
+    /**
+     * Handle payment modal events
+     */
+    handlePaymentAdd (payment) {
+      // Payment is already added by the modal
+      this.payments = [...this.payments]
+    },
+    handlePaymentUpdate ({ payment, payments }) {
+      this.payments = payments
+    },
+    handlePaymentDelete ({ payments }) {
+      this.payments = payments
+    },
+    handlePaymentCheck ({ payment, index }) {
+      // Handle payment check if needed
+    },
+    handleQRPayment (payment) {
+      this.waitingPayment = true
+    },
+    handlePaymentAction ({ action, params, payments, tableClose }) {
+      console.log('=== PAYMENT ACTION RECEIVED ===', {
+        action,
+        params,
+        payments,
+        tableClose,
+        currentTableSelected: this.tableSelected,
+        totalBill: this.totalBill,
+        products: this.products
+      })
+      this.payments = payments
+      this.tableClose = tableClose
+      switch (action) {
+        case 'invoice':
+          this.savePrintInvoice()
+          break
+        case 'command':
+          this.submitBill()
+          break
+        case 'save':
+          this.saveWithoutPrint()
+          break
+      }
+    },
+    onCloseComplete () {
+      console.log('Payment modal closed successfully')
+    },
+    /**
      * Save without print
      */
     saveWithoutPrint () {
@@ -2316,7 +2133,7 @@ export default {
       this.$refs.saveBill.submit()
     },
     /**
-     * Save without print
+     * Save print invoice
      */
     savePrintInvoice () {
       this.invoicePrinter = true
@@ -2327,75 +2144,6 @@ export default {
      */
     submitBill () {
       this.$refs.saveBill.submit()
-    },
-    /**
-     * Payment success
-     * @param {Object} data data payments
-     */
-    paymentSuccess (data) {
-      const payment = this.payments.find(payment => payment.amount === data.transaction_amount && payment.acronym === 'MPQA')
-      payment.reference = String(data.id)
-    },
-    /**
-     * Add payment
-     * @param {Object} data data payment
-     */
-    addPayment (data, open = true) {
-      if (!this.hasPendingPayment()) return
-
-      if ((data.acronym && data.acronym.toLowerCase() === 'efe')) {
-        this.promptPaymentAmount(data, true).then(amount => {
-          if (amount !== null) {
-            const payment = this.createPayment(data, amount)
-            this.appendPayment(payment)
-          }
-        })
-      } else {
-        const amount = this.pendingPayment
-        const payment = this.createPayment(data, amount)
-        this.appendPayment(payment)
-      }
-    },
-    /**
-     * Has pending payment
-     * @returns {Boolean}
-     */
-    hasPendingPayment () {
-      return this.pendingPayment && this.pendingPayment > 0
-    },
-    /**
-     * Create payment
-     * @param {Object} data data payment
-     * @param {Number} amountToCover amount
-     * @returns {Object}
-     */
-    createPayment (data, amount) {
-      return {
-        name: data.name,
-        acronym: data.acronym,
-        amount: parseFloat(amount) || this.pendingPayment,
-        reference: null,
-        coin_id: this.coin?.id ?? null,
-        payment_method_id: data.id,
-        user_created_id: this.userSession?.id ?? null,
-        discount_percentage: data.percentage || 0,
-        discount_amount: data.percentage
-          ? ((parseFloat(amount) || this.pendingPayment) * data.percentage) / 100
-          : 0
-      }
-    },
-    /**
-     * Append payment
-     * @param {Object} payment payment
-     */
-    appendPayment (payment) {
-      const paymentFund = this.payments.find(p => p.payment_method_id === payment.payment_method_id)
-      if (paymentFund) {
-        paymentFund.amount = payment.amount
-        paymentFund.discount_amount = payment.amount * (payment.discount_percentage / 100)
-      } else {
-        this.payments = [...this.payments, payment]
-      }
     },
     /**
      * Model product
@@ -2421,42 +2169,6 @@ export default {
       })
 
       return formData
-    },
-    /**
-     * Prompt payment amount - Pregunta el monto para cualquier método de pago
-     * @param {Object} data data payment
-     * @returns {Promise}
-     */
-    promptPaymentAmount (data, emptyInput = false) {
-      return new Promise((resolve) => {
-        const discountText = data.discount_percentage > 0
-          ? ` (${data.discount_percentage}% de descuento)`
-          : ''
-
-        this.$q.dialog({
-          title: `Pago con ${data.name} ${discountText}`,
-          color: 'primary',
-          message: `Ingrese el monto a pagar con ${data.name}.`,
-          persistent: true,
-          prompt: {
-            model: emptyInput ? '' : this.pendingPayment.toString(),
-            type: 'number',
-            min: 0,
-            filled: true,
-            label: 'Monto a pagar'
-          },
-          ok: { label: 'Aceptar', color: 'primary' },
-          cancel: { label: 'Cancelar', color: 'negative' }
-        }).onOk(val => {
-          const amount = parseFloat(val)
-          if (!isNaN(amount) && amount > 0) {
-            resolve(amount)
-          } else {
-            resolve(this.pendingPayment)
-          }
-        }).onCancel(() => resolve(this.pendingPayment))
-          .onDismiss(() => resolve(this.pendingPayment))
-      })
     },
     /**
      * Get all payment-methods
@@ -2612,24 +2324,73 @@ export default {
      * @param {Object} table  table data
      */
     async selectInvoice (table) {
+      console.log('=== SELECT INVOICE FROM TABLE ===', {
+        table,
+        tableId: table?.id,
+        tableName: table?.name,
+        invoices: table?.invoices,
+        invoiceToLoad: table?.invoices?.[0],
+        invoiceId: table?.invoices?.[0]?.id
+      })
+
       loading(true)
       const invoiceOne = table.invoices[0]
       await this.getInvoiceOne(invoiceOne.id)
       this.dialogTable = false
       loading(false)
+
+      console.log('=== INVOICE LOADED FROM TABLE ===', {
+        loadedInvoice: {
+          id: this.invoice?.id,
+          code: this.invoice?.code,
+          status: this.invoice?.status,
+          tables: this.invoice?.tables
+        },
+        productsLoaded: this.products?.length || 0,
+        paymentsLoaded: this.payments?.length || 0
+      })
     },
     /**
      * Free table
      * @param {Object} table  table data
      */
     async freeTable (table) {
+      console.log('=== FREE TABLE INITIATED ===', {
+        table,
+        tableId: table?.id,
+        tableName: table?.name,
+        tableStatus: table?.status,
+        hasInvoices: !!(table?.invoices && table.invoices.length > 0),
+        invoicesCount: table?.invoices?.length || 0
+      })
+
       try {
         await this.selectInvoice(table)
         this.tableClose = true
+
+        console.log('=== TABLE CLOSE ACTIVATED ===', {
+          tableClose: this.tableClose,
+          willOpenPaymentDialog: true,
+          currentInvoice: {
+            id: this.invoice?.id,
+            totalAmount: this.totalBill,
+            productsCount: this.products?.length || 0
+          }
+        })
+
         setTimeout(() => {
           this.dialogPayment = true
+          console.log('=== PAYMENT DIALOG OPENED FOR TABLE CLOSE ===', {
+            dialogPayment: this.dialogPayment,
+            tableClose: this.tableClose,
+            tableId: table?.id
+          })
         }, 200)
       } catch (error) {
+        console.log('=== ERROR FREEING TABLE ===', {
+          error: error.message,
+          tableId: table?.id
+        })
         notify(error.message, 'negative', 'warning')
       }
     },
@@ -2812,20 +2573,56 @@ export default {
      * Clear invoice
      */
     clear () {
+      console.log('=== CLEARING BILLING DATA STARTED ===', {
+        beforeClear: {
+          payments: this.payments,
+          productsCount: this.products?.length || 0,
+          tableSelected: this.tableSelected,
+          tableClose: this.tableClose,
+          invoiceDescription: this.invoiceDescription,
+          totalBill: this.totalBill,
+          dialogPayment: this.dialogPayment,
+          withoutPrint: this.withoutPrint,
+          invoicePrinter: this.invoicePrinter,
+          currentInvoice: {
+            id: this.invoice?.id,
+            code: this.invoice?.code,
+            status: this.invoice?.status
+          }
+        }
+      })
+
       this.payments = []
       this.products = []
       this.resetProductSelection()
       this.tableSelected = []
       this.invoiceDescription = ''
-      this.deliveryDate = formatDate(Date(), 'YYYY-MM-DD HH:mm:ss')
+      this.deliveryDate = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
       this.withoutPrint = false
       this.invoicePrinter = false
       this.tableClose = false
       this.calculateTotal()
+
+      console.log('=== NAVIGATING TO BILLING PAGE ===', {
+        routeName: 'Billing',
+        timestamp: new Date().toISOString()
+      })
+
       this.$router.push({ name: 'Billing' })
       this.setInvoice({})
+
       setTimeout(() => {
+        console.log('=== CLEARING BILLING DATA COMPLETED ===', {
+          afterClear: {
+            payments: this.payments,
+            productsCount: this.products?.length || 0,
+            tableSelected: this.tableSelected,
+            tableClose: this.tableClose,
+            totalBill: this.totalBill,
+            invoice: this.invoice
+          }
+        })
         this.$refs.saveBill.resetValidation()
         this.getLocalStorage()
         this.invoice = null
@@ -2836,44 +2633,76 @@ export default {
      * @param {Object} data invoice saved
      */
     async printBill (data) {
+      console.log('=== PRINT BILL INITIATED ===', {
+        invoiceData: data,
+        withoutPrint: this.withoutPrint,
+        invoicePrinter: this.invoicePrinter,
+        tableClose: this.tableClose,
+        tableSelected: this.tableSelected
+      })
+
       const invoice = await this.getInvoiceOneRequest(data.id)
 
       if (!invoice) {
+        console.log('=== ERROR: Invoice not found ===', { invoiceId: data.id })
         notify('Error al obtener la factura', 'negative', 'warning')
         return
       }
 
+      console.log('=== INVOICE RETRIEVED FOR PRINT ===', {
+        invoice,
+        hasTableInfo: !!(invoice.tables && invoice.tables.length > 0),
+        tables: invoice.tables
+      })
+
       if (this.withoutPrint) {
+        console.log('=== SAVE WITHOUT PRINT - CLEARING DATA ===', {
+          tableClose: this.tableClose,
+          willClearTable: true
+        })
         this.clear()
         this.withoutPrint = false
         return
       }
       if (this.invoicePrinter) {
+        console.log('=== PRINTING TICKET ===', { invoice: invoice.id })
         await ticketPrint(invoice)
       } else {
+        console.log('=== PRINTING COMMAND ===', { invoice: invoice.id })
         await commandPrint(invoice)
       }
+
+      console.log('=== PRINT COMPLETED - CLEARING DATA ===', {
+        tableClose: this.tableClose,
+        willClearTable: true
+      })
       this.clear()
-    },
-    /**
-     * Payment model
-     * @param {Array} payments payments
-     * @returns {Array}
-     */
-    paymentModel (payments) {
-      if (this.pendingPayment < 0) {
-        const cash = payments.find(payment => payment.acronym === 'EFE')
-        cash.amount = cash.amount - Math.abs(this.pendingPayment)
-      }
-      return payments.filter(payment => payment.amount > 0)
     },
     /**
      * Set invoice model
      * @returns {Object}
      */
     setModelInvoice () {
-      console.log(this.cashBoxState)
-      return {
+      console.log('=== CASHBOX STATE ===', this.cashBoxState)
+
+      // Datos de contexto para debug
+      console.log('=== MESA CONTEXT DATA ===', {
+        tableSelected: this.tableSelected,
+        tableClose: this.tableClose,
+        payments: this.payments,
+        totalBill: this.totalBill,
+        products: this.products?.length || 0,
+        userSession: {
+          id: this.userSession?.id,
+          name: this.userSession?.name
+        },
+        branchOffice: {
+          id: this.branchOffice?.id,
+          name: this.branchOffice?.name
+        }
+      })
+
+      const invoiceModel = {
         ...this.invoice,
         tableClose: this.tableClose,
         title: this.invoiceType?.name,
@@ -2890,12 +2719,41 @@ export default {
         branch_office_id: this.branchOffice?.id,
         products: this.products,
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
-        payments: this.paymentModel(this.payments),
+        payments: this.payments.filter(payment => payment.amount > 0),
         total_amount: this.totalBill,
         tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
+
+      console.log('=== COMPLETE INVOICE MODEL TO SEND ===', {
+        invoiceModel,
+        tableInfo: {
+          tableIds: invoiceModel.tables,
+          willCloseTable: invoiceModel.tableClose
+        },
+        paymentInfo: {
+          paymentsCount: invoiceModel.payments?.length || 0,
+          paymentsData: invoiceModel.payments,
+          totalAmount: invoiceModel.total_amount
+        },
+        productsInfo: {
+          productsCount: invoiceModel.products?.length || 0,
+          productsList: invoiceModel.products?.map(p => ({
+            id: p.id,
+            name: p.name,
+            quantity: p.quantity,
+            price: p.price,
+            subtotal: p.subtotal
+          }))
+        },
+        cashboxInfo: {
+          cashboxId: invoiceModel.cashbox_user_id,
+          cashboxState: this.cashBoxState
+        }
+      })
+
+      return invoiceModel
     },
     /**
      * Set params bill
@@ -2933,11 +2791,32 @@ export default {
         if (!params) return
 
         if (this.$route.query.id) {
+          console.log('=== UPDATING INVOICE ===', {
+            invoiceId: this.$route.query.id,
+            endpoint: `invoices/${this.$route.query.id}`,
+            method: 'PUT',
+            payload: params,
+            payloadSize: JSON.stringify(params).length
+          })
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
-          console.log(params)
+          console.log('=== CREATING NEW INVOICE ===', {
+            endpoint: 'invoices',
+            method: 'POST',
+            payload: params,
+            payloadSize: JSON.stringify(params).length,
+            hasTableToClose: params.tableClose,
+            tablesInvolved: params.tables
+          })
           res = await this.$api.post('invoices', params)
         }
+
+        console.log('=== API RESPONSE RECEIVED ===', {
+          success: !!res,
+          data: res?.data,
+          invoiceCreated: res?.data?.data,
+          timestamp: new Date().toISOString()
+        })
         this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
         this.setPagination({
@@ -2976,14 +2855,6 @@ export default {
       this.products = [...this.products]
       this.resetProductSelection()
       this.calculateTotal()
-    },
-    /**
-     * Delete invoice payment
-     * @param {Number} index value index payments
-     */
-    deletePayment (index) {
-      this.payments.splice(index, 1)
-      this.payments = [...this.payments]
     },
     /**
      * Calculate the total
