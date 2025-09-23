@@ -216,7 +216,7 @@
         :rows="daysData"
         :columns="dayColumns"
         row-key="day"
-        :pagination="{ rowsPerPage: 10 }"
+        :pagination="{ rowsPerPage: 0 }"
         class="shadow-2 rounded-borders"
         table-header-class="bg-primary text-white"
         flat
@@ -623,8 +623,8 @@ export default {
      * Number of items to display per page in the paginated lists
      * @type {number}
      */
-    const itemsPerPage = 10
-    
+    const itemsPerPage = 50
+
     /*
      * Aggregated totals for the report
      * @type {import('vue').Ref<{
@@ -640,25 +640,25 @@ export default {
      * @type {import('vue').Ref<boolean>}
      */
     const showImagePreview = ref(false)
-    
+
     /*
      * URL of the image being previewed
      * @type {import('vue').Ref<string|null>}
      */
     const previewImageUrl = ref(null)
-    
+
     /*
      * Loading state for the image preview
      * @type {import('vue').Ref<boolean>}
      */
     const imageLoading = ref(false)
-    
+
     /*
      * Error message for image loading failures
      * @type {import('vue').Ref<string|null>}
      */
     const imageError = ref(null)
-    
+
     /*
      * Currently selected withdrawal for preview
      * @type {import('vue').Ref<Object|null>}
@@ -836,12 +836,12 @@ export default {
       }
     }
 
-    /** 
+    /**
      * Timer ID for debouncing API calls
      * @type {number|null}
      */
     let debounceTimer = null
-    
+
     /**
      * Debounced version of loadData to prevent excessive API calls
      * @returns {void}
@@ -1046,12 +1046,11 @@ export default {
     const openCashflowModal = (row) => {
       selectedDate.value = row.day
       showCashflowModal.value = true
-      console.log(row)
       cashflow.value = {
         cashboxUser: {
           id: row.cashbox_user_id
         },
-        paymentMethodId: row.by_payment_method[0].payment_method_id,
+        paymentMethodId: row.by_payment_method[0]?.payment_method_id || paymentMethods.value[0]?.id,
         createdAt: row.closed_at,
         branchOffice: branchOffice.value,
         description: 'Arqueo'
