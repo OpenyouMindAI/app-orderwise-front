@@ -170,7 +170,7 @@
             <q-card-section class="p-8 relative">
               <div class="flex items-center justify-between">
                 <div>
-                  <div class="text-subtitle1 font-bold mb-2">{{ totalsAmount.difference_report }}</div>
+                  <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalsAmount.difference_report) }}</div>
                   <div class="text-blue text-subtitle2 font-medium">Diferencia</div>
                 </div>
                 <q-icon name="receipt_long" size="3rem" class="text-white/30" />
