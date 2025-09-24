@@ -266,10 +266,6 @@
         :label="category_module.name"
       >
         <div v-for="list in category_module.modules" :key="list.id">
-          {{ console.log('Modulo:', list.title) }}
-          {{ console.log('Rol:', validateRole(list.roles)) }}
-          {{ console.log('Type:', validateBusinessType(list)) }}
-          {{ console.log('name:', list.name != 'home') }}
           <q-item
             v-if="
               validateRole(list.roles) &&
