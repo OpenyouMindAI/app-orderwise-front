@@ -268,7 +268,7 @@
         <div v-for="list in category_module.modules" :key="list.id">
           <q-item
             v-if="
-              validateBusinessType(list.business_types, list.roles) &&
+              validateAccess(list.required_modules, list.roles) &&
               list.name != 'home'
             "
             v-ripple
@@ -405,7 +405,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateBusinessType(module.business_types, module.roles)
+              return this.validateAccess(module.required_modules, module.roles)
             }).length > 0
           )
         })
@@ -618,34 +618,55 @@ export default {
      * @param {Array} roles
      * @returns {Object}
      */
-    validateRole (roles = []) {
-      const rol = this.userSession?.roles[0]
-      if (this.userSession?.is_root) return true
-      if (roles && roles.length > 0 && rol) {
-        return roles.some((element) => element.id === rol.id)
-      }
-      return false
-    },
+    // validateRole (roles = []) {
+    //   const rol = this.userSession?.roles[0]
+    //   // if (this.userSession?.is_root) return true
+    //   if (roles && roles.length > 0 && rol) {
+    //     return roles.some((element) => element.id === rol.id)
+    //   }
+    //   return false
+    // },
     /**
-     * Validate business type
-     * @param {Array} businessTypes - Array of business types to validate against
-     * @param {Array} roles - Array of roles as fallback if no business type
+     * Validate user access (business type modules AND roles - both must pass)
+     * @param {Array} requiredModules - Array of module IDs required for access
+     * @param {Array} roles - Array of roles required for access
      * @returns {Boolean}
      */
-    validateBusinessType (businessTypes = [], roles = []) {
-      const businessType = this.userSession?.company_session?.business_type_id
+    validateAccess (requiredModules = [], roles = []) {
+      // Root users have access to everything
       if (this.userSession?.is_root) return true
 
-      // If user has business type, validate against business types
-      if (businessType) {
-        if (businessTypes && businessTypes.length > 0) {
-          return businessTypes.some((element) => element.id === businessType)
+      let businessTypeValid = false
+      let roleValid = false
+
+      // Validate business type modules
+      const businessTypeModules = this.userSession?.company_session?.business_type?.modules
+      if (businessTypeModules && businessTypeModules.length > 0) {
+        if (!requiredModules || requiredModules.length === 0) {
+          // No specific modules required for business type
+          businessTypeValid = true
+        } else {
+          // Check if user has at least one of the required modules
+          businessTypeValid = requiredModules.some(requiredModuleId =>
+            businessTypeModules.some(userModule => userModule.id === requiredModuleId)
+          )
         }
-        return true // If has business type but no restrictions, allow access
+      } else {
+        // No business type modules, consider as valid if no modules required
+        businessTypeValid = !requiredModules || requiredModules.length === 0
       }
 
-      // If no business type, fallback to role validation
-      return this.validateRole(roles)
+      // Validate roles
+      const userRole = this.userSession?.roles[0]
+      if (userRole && roles && roles.length > 0) {
+        roleValid = roles.some((role) => role.id === userRole.id)
+      } else {
+        // No roles required or no user role, consider as valid if no roles required
+        roleValid = !roles || roles.length === 0
+      }
+
+      // Both business type and role must be valid
+      return businessTypeValid && roleValid
     },
     /**
      * Logout application
