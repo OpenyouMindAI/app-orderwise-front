@@ -62,6 +62,17 @@
               />
             </div>
           </q-card-section>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
+              <q-toggle
+                size="xs"
+                v-model="moduleSelected"
+                :val="modul.id"
+                :label="modul.title"
+                :disable="visible"
+              />
+            </div>
+          </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="negative" label="Eliminar" @click="deleteBusinessType" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
@@ -101,6 +112,17 @@
               />
             </div>
           </q-card-section>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
+              <q-toggle
+                size="xs"
+                v-model="moduleSelected"
+                :val="modul.id"
+                :label="modul.title"
+                :disable="visible"
+              />
+            </div>
+          </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
@@ -118,8 +140,10 @@ export default {
   data () {
     return {
       businessTypes: [],
+      modules: [],
       businessType: {},
       filter: '',
+      moduleSelected: [],
       /**
        * Params search
        * @type {Object}
@@ -183,6 +207,9 @@ export default {
       this.searchData(data)
     }
   },
+  created () {
+    this.getModules()
+  },
   methods: {
     /**
      * Close all modals
@@ -191,6 +218,7 @@ export default {
       this.openAddBusinessType = false
       this.openEditBusinessType = false
       this.businessType = {}
+      this.moduleSelected = []
     },
     /**
      * Search business types
@@ -208,7 +236,7 @@ export default {
      */
     getBusinessTypes (params = this.params) {
       this.visible = true
-      this.$api.get('businesstype', { params })
+      this.$api.get('business-types', { params })
         .then(({ data }) => {
           this.businessTypes = data.data
           this.visible = false
@@ -242,15 +270,17 @@ export default {
       this.visible = true
       const payload = {
         name: this.businessType.name,
-        description: this.businessType.description
+        description: this.businessType.description,
+        modules: this.moduleSelected
       }
 
-      this.$api.post('businesstype', payload)
+      this.$api.post('business-types', payload)
         .then(({ data }) => {
           this.getBusinessTypes()
           this.openAddBusinessType = false
           this.visible = false
           this.businessType = {}
+          this.moduleSelected = []
           Notify.create({
             message: 'Rubro creado exitosamente',
             icon: 'check_circle',
@@ -272,6 +302,7 @@ export default {
     editBusinessType (event, row, index) {
       this.openEditBusinessType = true
       this.businessType = { ...row }
+      this.moduleSelected = row.modules ? row.modules.map(element => element.id) : []
     },
     /**
      * Save edit
@@ -280,15 +311,17 @@ export default {
       this.visible = true
       const payload = {
         name: this.businessType.name,
-        description: this.businessType.description
+        description: this.businessType.description,
+        modules: this.moduleSelected
       }
 
-      this.$api.put(`businesstype/${this.businessType.id}`, payload)
+      this.$api.put(`business-types/${this.businessType.id}`, payload)
         .then(({ data }) => {
           this.getBusinessTypes()
           this.openEditBusinessType = false
           this.visible = false
           this.businessType = {}
+          this.moduleSelected = []
           Notify.create({
             message: 'Rubro editado exitosamente',
             icon: 'check_circle',
@@ -315,12 +348,13 @@ export default {
         persistent: true
       }).onOk(() => {
         this.visible = true
-        this.$api.delete(`businesstype/${this.businessType.id}`)
+        this.$api.delete(`business-types/${this.businessType.id}`)
           .then(({ data }) => {
             this.getBusinessTypes()
             this.openEditBusinessType = false
             this.visible = false
             this.businessType = {}
+            this.moduleSelected = []
             Notify.create({
               message: 'Rubro eliminado exitosamente',
               icon: 'check_circle',
@@ -336,6 +370,17 @@ export default {
             })
           })
       })
+    },
+    /**
+     * Get all modules
+     */
+    async getModules () {
+      try {
+        const { data } = await this.$api.get('modules')
+        this.modules = data
+      } catch (err) {
+        console.error('Error loading modules:', err)
+      }
     }
   }
 }

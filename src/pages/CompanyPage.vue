@@ -449,7 +449,7 @@ async function getCompanies (params) {
  */
 async function getBusinessTypes () {
   try {
-    const { data } = await api.get('businesstype')
+    const { data } = await api.get('business-types')
     businessTypes.value = data.data || data
   } catch (err) {
     notify('Error al cargar los tipos de empresa', 'negative', 'warning')
