@@ -268,7 +268,7 @@
         <div v-for="list in category_module.modules" :key="list.id">
           <q-item
             v-if="
-              validateRole(list.roles) &&
+              validateBusinessType(list.business_types, list.roles) &&
               list.name != 'home'
             "
             v-ripple
@@ -362,7 +362,7 @@ import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
-import { copyToClipboard, Notify } from 'quasar'
+import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',
   components: { NotificationComponent },
@@ -405,7 +405,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateRole(module.roles)
+              return this.validateBusinessType(module.business_types, module.roles)
             }).length > 0
           )
         })
@@ -625,6 +625,27 @@ export default {
         return roles.some((element) => element.id === rol.id)
       }
       return false
+    },
+    /**
+     * Validate business type
+     * @param {Array} businessTypes - Array of business types to validate against
+     * @param {Array} roles - Array of roles as fallback if no business type
+     * @returns {Boolean}
+     */
+    validateBusinessType (businessTypes = [], roles = []) {
+      const businessType = this.userSession?.company_session?.business_type_id
+      if (this.userSession?.is_root) return true
+
+      // If user has business type, validate against business types
+      if (businessType) {
+        if (businessTypes && businessTypes.length > 0) {
+          return businessTypes.some((element) => element.id === businessType)
+        }
+        return true // If has business type but no restrictions, allow access
+      }
+
+      // If no business type, fallback to role validation
+      return this.validateRole(roles)
     },
     /**
      * Logout application
