@@ -620,7 +620,7 @@ export default {
      */
     // validateRole (roles = []) {
     //   const rol = this.userSession?.roles[0]
-    //   // if (this.userSession?.is_root) return true
+    //   if (this.userSession?.is_root) return true
     //   if (roles && roles.length > 0 && rol) {
     //     return roles.some((element) => element.id === rol.id)
     //   }
@@ -656,13 +656,14 @@ export default {
         businessTypeValid = !requiredModules || requiredModules.length === 0
       }
 
-      // Validate roles
-      const userRole = this.userSession?.roles[0]
-      if (userRole && roles && roles.length > 0) {
-        roleValid = roles.some((role) => role.id === userRole.id)
+      // Validate roles - use role_id from userSession for consistency
+      const userRoleId = this.userSession?.role_id
+      if (roles && roles.length > 0) {
+        // Roles are required, check if user has matching role
+        roleValid = userRoleId ? roles.some((role) => role.id === userRoleId) : false
       } else {
-        // No roles required or no user role, consider as valid if no roles required
-        roleValid = !roles || roles.length === 0
+        // No roles required, allow access
+        roleValid = true
       }
 
       // Both business type and role must be valid
