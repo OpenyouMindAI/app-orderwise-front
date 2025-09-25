@@ -1018,7 +1018,9 @@ export default {
         services: true,
         fiscal: false,
         summary: false
-      }
+      },
+
+      appliedBranchOfficeSelect: []
     }
   },
 
@@ -1050,7 +1052,8 @@ export default {
     this.setPermissions()
     this.getBranchOffices().then(() => {
       if (this.branchOffice) {
-        this.branchOfficeSelect = [this.branchOffice]
+        this.branchOfficeSelect = [this.branchOffice] // Mantén la inicialización de branchOfficeSelect si es necesario
+        this.appliedBranchOfficeSelect = [this.branchOffice] // Inicializa appliedBranchOfficeSelect con la sucursal actual
       }
     })
   },
@@ -1068,11 +1071,15 @@ export default {
     },
 
     reportTitle () {
-      if (this.branchOfficeSelect && this.branchOfficeSelect.length > 0) {
-        if (this.branchOfficeSelect.length === 1) {
-          return this.branchOfficeSelect[0].name
+      if (this.appliedBranchOfficeSelect && this.appliedBranchOfficeSelect.length > 0) {
+        if (this.appliedBranchOfficeSelect.length === 1) {
+          return this.appliedBranchOfficeSelect[0].name
         } else {
-          return 'Varias sucursales'
+          if (this.branchOffices && this.branchOffices.length > 0 && this.appliedBranchOfficeSelect.length === this.branchOffices.length && this.appliedBranchOfficeSelect.every(selected => this.branchOffices.some(branch => branch.id === selected.id))) {
+            return 'Todas las sucursales'
+          } else {
+            return this.appliedBranchOfficeSelect.map(branch => branch.name).join(', ')
+          }
         }
       }
       return this.branchOffice?.name || 'Cargando...'
@@ -1281,6 +1288,7 @@ export default {
 
     async filterDate () {
       if (!this.branchOffice?.id) return
+      this.appliedBranchOfficeSelect = [...this.branchOfficeSelect] // Actualiza con el valor seleccionado del filtro
       this.params = this.formatFilter()
       this.params.cashbox_user_id = this.cashBoxUser?.id || null
       this.loading = true
@@ -1290,12 +1298,10 @@ export default {
           this.getCategoryTotals(this.params),
           this.getPaymentMethodTotals(this.params),
           this.getPaymentTotals(this.params),
-          this.getCashflowTotals(this.params),
-          this.getTypeOfServicesTotals(this.params),
-          this.reportInvoiceTaxes(this.params)
+          this.getCashflowTotals(this.params)
         ])
       } catch (error) {
-        notify('Error al cargar los datos', 'negative', 'warning')
+        notify(error.message, 'negative', 'warning')
       } finally {
         this.loading = false
       }
