@@ -502,7 +502,7 @@
                 </div>
               </div>
             </div>
-            <div class="col-12 q-col-gutter-xs q-mt-md row">
+           <div class="col-12 q-col-gutter-xs q-mt-md row">
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-select
                   filled
@@ -517,6 +517,14 @@
               </div>
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              </div>
+              <div class="col-12">
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
+                />
+
               </div>
               <div class="col-12" v-if="typeOfService.code !== 4">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
@@ -1048,6 +1056,7 @@
 </template>
 
 <script>
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -1074,6 +1083,7 @@ import {
 export default {
   name: 'BillingPage',
   components: {
+    AddressComponent,
     DrawerTable,
     PaymentModal,
     WaitByPaymentMp,
@@ -1201,6 +1211,23 @@ export default {
        */
       deliveryDate: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
       /**
+       * Delivery address
+       * @type {Object}
+       */
+      deliveryAddress: {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      },
+      /**
        * Format number
        * @type {Function}
        */
@@ -1210,6 +1237,21 @@ export default {
        * @type {Boolean}
        */
       searchInvoice: false,
+      /**
+       * Address component key
+       * @type {Number}
+       */
+      addressComponentKey: 0,
+      /**
+       * Address
+       * @type {Object}
+       */
+      address: null,
+      /**
+       * Formatted address
+       * @type {String}
+       */
+      formattedAddress: '',
       /**
        * Search
        * @type {String}
@@ -1523,6 +1565,14 @@ export default {
   watch: {
     client (client) {
       this.invoiceShare = { ...this.invoiceShare, client }
+      // Actualizar la dirección cuando se selecciona un cliente
+      if (client && client.address) {
+        this.formattedAddress = client.address
+        this.address = client.address
+      } else {
+        this.formattedAddress = ''
+        this.address = null
+      }
     },
     invoiceType (invoiceType) {
       this.invoiceShare = { ...this.invoiceShare, invoiceType }
@@ -1654,6 +1704,25 @@ export default {
   methods: {
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
+    },
+    /**
+     * Handle address selection from AddressComponent
+     * @param {Object} address - Selected address object
+     */
+    onAddressSelected (address) {
+      this.deliveryAddress = address || {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      }
     },
     /**
      * Select a product by index for keyboard navigation
@@ -2717,6 +2786,7 @@ export default {
         exchange_rate: this.exchangeRate,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
+        address: this.formattedAddress,
         products: this.products,
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0),
@@ -3513,6 +3583,18 @@ export default {
       if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.promotion_details.length - 1) {
         this.currentGroupIndex++
       }
+    },
+    handleAddressSelected (address) {
+      // Si la dirección es nula, reiniciar el objeto de dirección
+      if (!address) {
+        this.address = {}
+        return
+      }
+      // Actualizar los campos de dirección para el formulario
+      this.address = address
+
+      // Si necesitas la dirección formateada completa
+      this.formattedAddress = address
     },
 
     /**
