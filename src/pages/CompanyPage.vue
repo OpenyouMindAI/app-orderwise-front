@@ -96,6 +96,29 @@
                 />
               </div>
               <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                <q-select
+                  v-model="company.business_type_id"
+                  filled
+                  label="Tipo de Empresa"
+                  :options="businessTypes"
+                  option-value="id"
+                  option-label="name"
+                  emit-value
+                  map-options
+                  lazy-rules
+                  :rules="[ val => val || 'Este campo es requerido']"
+                >
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.name }}</q-item-label>
+                        <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                 <q-input
                   v-model="company.address"
                   filled
@@ -179,6 +202,29 @@
                 />
               </div>
               <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                <q-select
+                  v-model="company.business_type_id"
+                  filled
+                  label="Tipo de Empresa"
+                  :options="businessTypes"
+                  option-value="id"
+                  option-label="name"
+                  emit-value
+                  map-options
+                  lazy-rules
+                  :rules="[ val => val || 'Este campo es requerido']"
+                >
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.name }}</q-item-label>
+                        <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                 <q-input
                   v-model="company.address"
                   filled
@@ -210,6 +256,11 @@ import FileButtonComponent from 'src/components/FileButtonComponent.vue'
  * @type {Array}
  */
 const companies = ref([])
+/**
+ * Reactive reference to store the list of business types
+ * @type {Array}
+ */
+const businessTypes = ref([])
 /**
  * File selected
  * @type {Object}
@@ -317,6 +368,7 @@ onMounted(() => {
   setPagination({
     pagination: paginationConfig.value
   })
+  getBusinessTypes()
 })
 
 /**
@@ -347,6 +399,7 @@ const formDate = (data, put = false) => {
   formData.append('document_number', data.document_number)
   formData.append('email', data.email)
   formData.append('phone_number', data.phone_number)
+  formData.append('business_type_id', data.business_type_id)
   if (put) formData.append('_method', 'put')
   return formData
 }
@@ -387,6 +440,20 @@ async function getCompanies (params) {
     notify(err.message, 'negative', 'warning')
   } finally {
     visible.value = false
+  }
+}
+
+/**
+ * Fetches the list of business types from the API
+ * @returns {void}
+ */
+async function getBusinessTypes () {
+  try {
+    const { data } = await api.get('business-types')
+    businessTypes.value = data.data || data
+  } catch (err) {
+    notify('Error al cargar los tipos de empresa', 'negative', 'warning')
+    console.error('Error fetching business types:', err)
   }
 }
 /**

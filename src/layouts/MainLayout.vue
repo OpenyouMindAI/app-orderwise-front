@@ -269,6 +269,7 @@
           <q-item
             v-if="
               validateRole(list.roles) &&
+              validateBusinessType(list) &&
               list.name != 'home'
             "
             v-ripple
@@ -362,7 +363,7 @@ import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
-import { copyToClipboard, Notify } from 'quasar'
+import { copyToClipboard } from 'quasar'
 export default {
   name: 'MainLayout',
   components: { NotificationComponent },
@@ -405,7 +406,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateRole(module.roles)
+              return this.validateRole(module.roles) && this.validateBusinessType(module)
             }).length > 0
           )
         })
@@ -623,6 +624,19 @@ export default {
       if (this.userSession?.is_root) return true
       if (roles && roles.length > 0 && rol) {
         return roles.some((element) => element.id === rol.id)
+      }
+      return false
+    },
+    /**
+     * Validate business type
+     * @param {Array} businessTypes
+     * @returns {Boolean}
+     */
+    validateBusinessType (module) {
+      const businessTypeModules = this.userSession?.company_session?.business_type?.modules || []
+      if (this.userSession?.is_root) return true
+      if (businessTypeModules.length > 0 && module) {
+        return businessTypeModules.some((businessModule) => businessModule.id === module.id)
       }
       return false
     },
