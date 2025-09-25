@@ -1252,16 +1252,13 @@ export default {
         }
       }
 
-      // Apply branch office filter using whereIn logic like InvoicePage.vue
-      if (this.branchOfficeSelect && this.branchOfficeSelect.length > 0) {
-        params.whereIn = {
-          branch_office_id: this.branchOfficeSelect.map(item => item.id)
-        }
-      } else {
-        // Fallback to current branch office
-        params.whereIn = {
-          branch_office_id: [this.branchOffice.id]
-        }
+      // Apply branch office filter with all selected IDs
+      const branchOfficeIds = this.branchOfficeSelect && this.branchOfficeSelect.length > 0
+        ? this.branchOfficeSelect.map(branch => branch.id)
+        : (this.branchOffice?.id ? [this.branchOffice.id] : [])
+
+      if (branchOfficeIds.length > 0) {
+        params.branch_office_id = branchOfficeIds
       }
 
       return params
@@ -1368,21 +1365,14 @@ export default {
         }
 
         // Build filters with correct structure
-        const branchOfficeIds = this.branchOfficeSelect && this.branchOfficeSelect.length > 0
-          ? this.branchOfficeSelect.map(branch => branch.id)
-          : [this.branchOffice?.id]
+        const branchOfficeId = this.branchOfficeSelect && this.branchOfficeSelect.length > 0
+          ? this.branchOfficeSelect[0].id
+          : this.branchOffice?.id
 
         const filtersPayments = {
           dataEqualFilter: {
-            'invoice.seller_id': this.seller?.id
-          }
-        }
-        // Add branch office filter
-        if (branchOfficeIds.length === 1) {
-          filtersPayments.dataEqualFilter['invoice.branch_office_id'] = branchOfficeIds[0]
-        } else {
-          filtersPayments.whereIn = {
-            'invoice.branch_office_id': branchOfficeIds
+            'invoice.seller_id': this.seller?.id,
+            'invoice.branch_office_id': branchOfficeId
           }
         }
         console.log('HOLA', this.selectedPaymentMethod)
