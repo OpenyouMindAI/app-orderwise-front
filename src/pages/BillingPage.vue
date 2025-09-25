@@ -569,37 +569,37 @@
                   </q-btn>
                 </div>
               </div>
-            </div>
-            <div class="col-12">
-              <q-list separator bordered style="border-radius: 10px;">
-                <q-item v-if="tableSelected.length">
-                  <q-item-section>
-                    Mesas
-                  </q-item-section>
-                  <q-item-section side>
-                    {{ tableSelected.length }}
-                  </q-item-section>
-                </q-item>
-                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
-                  <q-item-section>
-                    TOTAL
-                  </q-item-section>
-                  <q-item-section v-if="coin" side class="text-white">
-                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section v-if="pendingPayment >= 0">
-                    TOTAL POR COBRAR
-                  </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
-                  </q-item-section>
-                </q-item>
-              </q-list>
+              <div class="col-12">
+                <q-list separator bordered style="border-radius: 10px;">
+                  <q-item v-if="tableSelected.length">
+                    <q-item-section>
+                      Mesas
+                    </q-item-section>
+                    <q-item-section side>
+                      {{ tableSelected.length }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                    <q-item-section>
+                      TOTAL
+                    </q-item-section>
+                    <q-item-section v-if="coin" side class="text-white">
+                      {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section v-if="pendingPayment >= 0">
+                      TOTAL POR COBRAR
+                    </q-item-section>
+                    <q-item-section v-else>
+                      VUELTO
+                    </q-item-section>
+                    <q-item-section side v-if="coin">
+                      {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
             </div>
           </div>
         </div>
@@ -2653,6 +2653,9 @@ export default {
           dialogPayment: this.dialogPayment,
           withoutPrint: this.withoutPrint,
           invoicePrinter: this.invoicePrinter,
+          address: this.address,
+          formattedAddress: this.formattedAddress,
+          addressComponentKey: this.addressComponentKey,
           currentInvoice: {
             id: this.invoice?.id,
             code: this.invoice?.code,
@@ -2671,6 +2674,13 @@ export default {
       this.withoutPrint = false
       this.invoicePrinter = false
       this.tableClose = false
+
+      // Limpiar campos de dirección
+      this.address = null
+      this.formattedAddress = ''
+      // Reiniciar el componente AddressComponent incrementando su key
+      this.addressComponentKey += 1
+
       this.calculateTotal()
 
       console.log('=== NAVIGATING TO BILLING PAGE ===', {
@@ -2689,6 +2699,9 @@ export default {
             tableSelected: this.tableSelected,
             tableClose: this.tableClose,
             totalBill: this.totalBill,
+            address: this.address,
+            formattedAddress: this.formattedAddress,
+            addressComponentKey: this.addressComponentKey,
             invoice: this.invoice
           }
         })
@@ -2798,6 +2811,11 @@ export default {
 
       console.log('=== COMPLETE INVOICE MODEL TO SEND ===', {
         invoiceModel,
+        addressInfo: {
+          originalAddress: this.address,
+          formattedAddress: this.formattedAddress,
+          addressInModel: invoiceModel.address
+        },
         tableInfo: {
           tableIds: invoiceModel.tables,
           willCloseTable: invoiceModel.tableClose
@@ -3588,13 +3606,51 @@ export default {
       // Si la dirección es nula, reiniciar el objeto de dirección
       if (!address) {
         this.address = {}
+        this.formattedAddress = ''
         return
       }
+
       // Actualizar los campos de dirección para el formulario
       this.address = address
 
-      // Si necesitas la dirección formateada completa
-      this.formattedAddress = address
+      // Formatear la dirección para enviarla en la factura
+      // El componente AddressComponent devuelve un objeto con la estructura específica
+      if (typeof address === 'object' && address !== null) {
+        // Priorizar formattedAddress si existe
+        if (address.formattedAddress) {
+          this.formattedAddress = address.formattedAddress
+        } else if (address.name) {
+          // Si no hay formattedAddress, usar el name del lugar
+          this.formattedAddress = address.name
+        } else {
+          // Construir dirección desde componentes disponibles
+          const addressParts = []
+          if (address.street) addressParts.push(address.street)
+          if (address.city) addressParts.push(address.city)
+          if (address.state) addressParts.push(address.state)
+          if (address.country) addressParts.push(address.country)
+          if (address.zipCode) addressParts.push(address.zipCode)
+
+          this.formattedAddress = addressParts.length > 0
+            ? addressParts.join(', ')
+            : JSON.stringify(address)
+        }
+      } else if (typeof address === 'string') {
+        // Si por alguna razón viene como string
+        this.formattedAddress = address
+      } else {
+        // Fallback: convertir a string
+        this.formattedAddress = String(address)
+      }
+
+      // Debug para verificar qué se está enviando
+      console.log('Address selected:', {
+        original: address,
+        formatted: this.formattedAddress,
+        addressType: typeof address,
+        hasFormattedAddress: !!(address?.formattedAddress),
+        hasName: !!(address?.name)
+      })
     },
 
     /**
