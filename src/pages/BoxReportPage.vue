@@ -3,7 +3,7 @@
     <!-- Header with Branch and Filter -->
     <div class="row items-center justify-between q-mb-lg">
       <div class="text-h5 text-weight-bold text-primary">
-        📊 Reporte Diario - {{ branchOffice?.name || 'Cargando...' }}
+        📊 Reporte Diario - {{ reportTitle }}
       </div>
       <div class="column">
         <div>
@@ -1048,7 +1048,11 @@ export default {
 
   created () {
     this.setPermissions()
-    this.getBranchOffices()
+    this.getBranchOffices().then(() => {
+      if (this.branchOffice) {
+        this.branchOfficeSelect = [this.branchOffice]
+      }
+    })
   },
 
   computed: {
@@ -1061,6 +1065,17 @@ export default {
     isYesterday () {
       const yesterday = date.subtractFromDate(Date(), { days: 1 })
       return this.day === date.formatDate(yesterday, 'YYYY-MM-DD')
+    },
+
+    reportTitle () {
+      if (this.branchOfficeSelect && this.branchOfficeSelect.length > 0) {
+        if (this.branchOfficeSelect.length === 1) {
+          return this.branchOfficeSelect[0].name
+        } else {
+          return 'Varias sucursales'
+        }
+      }
+      return this.branchOffice?.name || 'Cargando...'
     }
   },
 
