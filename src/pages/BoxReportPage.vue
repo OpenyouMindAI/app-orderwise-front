@@ -964,7 +964,7 @@ export default {
           name: 'amount',
           align: 'right',
           label: 'Monto',
-          field: 'amount',
+          field: row => row.amount - row.discount_amount,
           format: val => formatNumber(val),
           sortable: true
         }
