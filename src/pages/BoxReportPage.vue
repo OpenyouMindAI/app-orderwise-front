@@ -1298,7 +1298,8 @@ export default {
           this.getCategoryTotals(this.params),
           this.getPaymentMethodTotals(this.params),
           this.getPaymentTotals(this.params),
-          this.getCashflowTotals(this.params)
+          this.getCashflowTotals(this.params),
+          this.getTypeOfServicesTotals(this.params)
         ])
       } catch (error) {
         notify(error.message, 'negative', 'warning')
