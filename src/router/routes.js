@@ -320,6 +320,11 @@ const routes = [
     component: () => import('pages/RegisterPage.vue')
   },
   {
+    path: '/auth/callback',
+    name: 'OAuthCallback',
+    component: () => import('pages/OAuthCallback.vue')
+  },
+  {
     path: '/auth/callback/:provider',
     name: 'SocialCallback',
     component: () => import('pages/SocialCallbackPage.vue')

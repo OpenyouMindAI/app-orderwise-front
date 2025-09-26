@@ -196,6 +196,7 @@ import { mapActions, mapState } from 'pinia'
 import { authentication } from 'stores/module-authentication'
 import { notify } from '../const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
+import { openSocialAuthPopup, handleSocialAuthSuccess, handleSocialAuthError, redirectToSocialAuth } from 'src/utils/socialAuth'
 export default {
   name: 'LoginPage',
   data () {
@@ -290,38 +291,68 @@ export default {
     },
 
     async loginWithGoogle () {
-      try {
-        this.googleLoading = true
-        // Redirect to Google OAuth
-        window.location.href = `${process.env.API_URL}/authentication/social/google`
-      } catch (error) {
-        Notify.create({
-          message: 'Error al conectar con Google',
-          color: 'negative',
-          position: 'top',
-          icon: 'error'
-        })
-      } finally {
+      this.googleLoading = true
+      
+      const popup = this.openSocialAuthPopup(
+        'google',
+        (token, user) => {
+          this.googleLoading = false
+          this.handleSocialAuthSuccess(token, user, this.$router, this.$q.notify)
+        },
+        (error) => {
+          this.googleLoading = false
+          this.handleSocialAuthError(error, this.$q.notify)
+        }
+      )
+
+      // If popup is blocked, offer direct redirect
+      if (!popup) {
         this.googleLoading = false
+        this.$q.dialog({
+          title: 'Ventanas emergentes bloqueadas',
+          message: '¿Deseas continuar con la autenticación en la misma ventana?',
+          ok: 'Continuar',
+          cancel: 'Cancelar'
+        }).onOk(() => {
+          this.redirectToSocialAuth('google')
+        })
       }
     },
 
     async loginWithFacebook () {
-      try {
-        this.facebookLoading = true
-        // Redirect to Facebook OAuth
-        window.location.href = `${process.env.API_URL}/authentication/social/facebook`
-      } catch (error) {
-        Notify.create({
-          message: 'Error al conectar con Facebook',
-          color: 'negative',
-          position: 'top',
-          icon: 'error'
-        })
-      } finally {
+      this.facebookLoading = true
+      
+      const popup = this.openSocialAuthPopup(
+        'facebook',
+        (token, user) => {
+          this.facebookLoading = false
+          this.handleSocialAuthSuccess(token, user, this.$router, this.$q.notify)
+        },
+        (error) => {
+          this.facebookLoading = false
+          this.handleSocialAuthError(error, this.$q.notify)
+        }
+      )
+
+      // If popup is blocked, offer direct redirect
+      if (!popup) {
         this.facebookLoading = false
+        this.$q.dialog({
+          title: 'Ventanas emergentes bloqueadas',
+          message: '¿Deseas continuar con la autenticación en la misma ventana?',
+          ok: 'Continuar',
+          cancel: 'Cancelar'
+        }).onOk(() => {
+          this.redirectToSocialAuth('facebook')
+        })
       }
     },
+
+    // Import social auth utilities
+    openSocialAuthPopup,
+    handleSocialAuthSuccess,
+    handleSocialAuthError,
+    redirectToSocialAuth,
 
     initParticles () {
       // Initialize particle positions and animations
