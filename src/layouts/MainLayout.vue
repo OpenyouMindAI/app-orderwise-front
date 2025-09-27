@@ -269,7 +269,6 @@
           <q-item
             v-if="
               validateRole(list.roles) &&
-              validateBusinessType(list) &&
               list.name != 'home'
             "
             v-ripple
