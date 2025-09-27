@@ -79,8 +79,8 @@ export const previewCommand = async (data, userSession) => {
       })
     }
   })
-
-  data.promotions.forEach((product) => {
+  if(data.promotions) {
+    data.promotions.forEach((product) => {
     const lines = doc.splitTextToSize(product.name, maxWidth)
     lines.forEach((linea, index) => {
       if (index === 0) {
@@ -99,7 +99,8 @@ export const previewCommand = async (data, userSession) => {
       })
     }
   })
-
+  }
+  
   doc.text('--------------------------------', 5, y)
   y += 5
   doc.text('TOTAL', 5, y)
