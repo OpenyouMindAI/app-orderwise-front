@@ -2761,6 +2761,14 @@ export default {
     setParamsBill () {
       if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
 
+      console.log('=== SET PARAMS BILL ===', {
+        invoiceType: this.invoiceType,
+        pendingPayment: this.pendingPayment,
+        withoutPayment: this.withoutPayment,
+        withServiceType: this.withServiceType,
+        products: this.products
+      })
+
       if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
