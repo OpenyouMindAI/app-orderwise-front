@@ -78,7 +78,7 @@ const routes = [
       {
         path: 'business-type',
         meta: { requiresAuth: true },
-        name: 'Business Type',
+        name: 'BusinessType',
         component: () => import('src/pages/BusinessTypePage.vue')
       },
       {
