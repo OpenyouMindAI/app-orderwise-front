@@ -12,6 +12,8 @@
       label-color="grey-6"
       color="primary"
       @clear="resetAddress"
+      @keyup.enter="handleManualAddressInput"
+      @blur="handleManualAddressInput"
     >
       <template #prepend>
         <q-icon name="place" color="grey-6" size="20px" />
@@ -114,6 +116,8 @@ const addressDetails = ref({
 
 // Carga inicial
 onMounted(async () => {
+  // Dar tiempo para que el componente se monte completamente
+  await nextTick()
   await initializeComponent()
 })
 
@@ -128,11 +132,16 @@ const initializeComponent = async () => {
     const loaded = await loadGoogleMaps()
     if (!loaded) throw new Error('Google Maps no se cargó')
 
-    await nextTick() // Esperar a que el DOM esté listo
+    // Estrategia alternativa: buscar el input directamente en el DOM del componente
+    // sin depender del template ref que no se está bindeando correctamente
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 300))
+
     await initAutocomplete()
     address.value = props?.initialAddress?.formattedAddress || props.initialAddress?.name || ''
   } catch (error) {
-    console.error('Error inicializando:', error)
+    console.error('Error inicializando AddressComponent:', error)
+    // No reintentar en caso de error, mantener el componente funcional sin autocomplete
   } finally {
     loading.value = false
   }
@@ -140,15 +149,69 @@ const initializeComponent = async () => {
 
 const initAutocomplete = async () => {
   try {
-    const inputElement = inputRef.value?.$el?.querySelector('input')
-    if (!inputElement) throw new Error('Input no encontrado')
+    // Evitar múltiples inicializaciones
+    if (autocomplete.value) {
+      console.info('Autocomplete ya inicializado, evitando duplicación')
+      return
+    }
 
-    if (!window.google?.maps?.places) {
+    // Estrategia alternativa: buscar directamente en el DOM sin usar refs
+    // Buscar el input dentro del componente actual usando selectores específicos
+    let inputElement = null
+
+    // Intentar diferentes estrategias de búsqueda con reintentos
+    const searchStrategies = [
+      () => document.querySelector('.places-input-container input'),
+      () => document.querySelector('.places-input input'),
+      () => document.querySelector('.q-field input'),
+      () => {
+        const container = document.querySelector('.places-input-container')
+        return container?.querySelector('input')
+      },
+      () => {
+        // Buscar cualquier input dentro de un q-field que tenga la clase places-input
+        return document.querySelector('.q-field.places-input input')
+      }
+    ]
+
+    // Intentar múltiples veces con pequeñas esperas
+    for (let attempt = 0; attempt < 3 && !inputElement; attempt++) {
+      for (const strategy of searchStrategies) {
+        inputElement = strategy()
+        if (inputElement) {
+          break
+        }
+      }
+
+      if (!inputElement && attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+    }
+
+    if (!inputElement) {
+      // Debug: mostrar toda la estructura disponible
+      const container = document.querySelector('.places-input-container')
+      console.error('Debug - No se encontró input element:', {
+        container,
+        containerHTML: container?.outerHTML,
+        allInputs: document.querySelectorAll('input'),
+        qFieldInputs: document.querySelectorAll('.q-field input')
+      })
+
+      throw new Error('Input element no encontrado en el DOM del componente')
+    }
+
+    if (!window.google?.maps?.places?.Autocomplete) {
       throw new Error('Google Maps Places API no disponible')
     }
 
+    // NOTA IMPORTANTE: Google Maps API Warning Conocido
+    // Google muestra un warning sobre la deprecación de Autocomplete (marzo 2025)
+    // Usando google.maps.places.Autocomplete (estable hasta marzo 2025+)
+    // La migración a PlaceAutocompleteElement se realizará en versiones futuras
+
     autocomplete.value = new window.google.maps.places.Autocomplete(inputElement, {
-      types: ['geocode', 'establishment'], // Busca direcciones y establecimientos
+      types: ['geocode', 'establishment'],
       componentRestrictions: { country: 'ar' },
       fields: ['address_components', 'geometry', 'formatted_address', 'name', 'place_id', 'types']
     })
@@ -162,11 +225,8 @@ const initAutocomplete = async () => {
   }
 }
 
-const onPlaceChanged = async () => {
+const handlePlaceSelection = async (place) => {
   try {
-    if (!autocomplete.value) return
-
-    const place = autocomplete.value.getPlace()
     if (!place?.geometry) {
       console.log('Lugar sin geometría')
       return
@@ -192,6 +252,17 @@ const onPlaceChanged = async () => {
     }
 
     emit('address-selected', addressDetails.value)
+  } catch (error) {
+    console.error('Error procesando lugar:', error)
+  }
+}
+
+const onPlaceChanged = async () => {
+  try {
+    if (!autocomplete.value) return
+
+    const place = autocomplete.value.getPlace()
+    await handlePlaceSelection(place)
   } catch (error) {
     console.error('Error procesando lugar:', error)
   }
@@ -295,6 +366,27 @@ const cleanupMap = () => {
     marker.value = null
   }
   map.value = null
+}
+
+const handleManualAddressInput = () => {
+  if (!address.value || address.value.trim().length < 3) return
+
+  // Crear un objeto de dirección manual cuando Google Maps no está disponible
+  addressDetails.value = {
+    name: '',
+    street: address.value.trim(),
+    city: '',
+    state: '',
+    country: '',
+    zipCode: '',
+    latitude: null,
+    longitude: null,
+    formattedAddress: address.value.trim(),
+    placeId: '',
+    types: ['manual_input']
+  }
+
+  emit('address-selected', addressDetails.value)
 }
 
 const resetAddress = () => {

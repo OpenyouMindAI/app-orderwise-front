@@ -49,14 +49,12 @@
                 label="Nombre"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                type="textarea"
-                v-model="branchOffice.address"
-                autofocus
-                label="Dirección"
+            <!-- Sección de Dirección para Editar -->
+            <div class="col-12">
+              <AddressComponent
+                :key="addressComponentKey"
+                :initial-address="address"
+                @address-selected="handleAddressSelected"
               />
             </div>
           </q-card-section>
@@ -86,13 +84,12 @@
                 label="Nombre"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.address"
-                filled
-                type="textarea"
-                label="Dirección"
-                :rules="[val => !!val || 'El campo es requerido.']"
+            <!-- Sección de Dirección para Agregar -->
+            <div class="col-12">
+              <AddressComponent
+                :key="addressComponentKey"
+                :initial-address="address"
+                @address-selected="handleAddressSelected"
               />
             </div>
           </q-card-section>
@@ -108,7 +105,12 @@
 
 <script>
 import { Notify } from 'quasar'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+
 export default {
+  components: {
+    AddressComponent
+  },
   data () {
     return {
       branchOffices: [],
@@ -122,7 +124,7 @@ export default {
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc',
-        perPage: 1,
+        perPage: 20,
         dataSearch: {
           id: '',
           name: ''
@@ -160,7 +162,12 @@ export default {
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
-      }
+      },
+
+      // Address component variables
+      addressComponentKey: 0,
+      address: null,
+      formattedAddress: ''
     }
   },
   mounted () {
@@ -182,6 +189,10 @@ export default {
       this.openAddBranchOffice = false
       this.openEditBranchOffice = false
       this.branchOffice = {}
+      // Limpiar las variables de dirección
+      this.address = null
+      this.formattedAddress = ''
+      this.addressComponentKey += 1
     },
     /**
      * Search beneficiary
@@ -219,7 +230,7 @@ export default {
      * @param  {Object} data value pagination
      */
     setPagination (data) {
-      console.log(data.pagination.descending)
+      // Processing pagination parameters
       this.params.sortOrder = data.pagination.descending ? 'asc' : 'desc'
       this.params.page = data.pagination.page
       this.params.sortBy = data.pagination.sortBy ?? this.params.sortBy
@@ -232,14 +243,19 @@ export default {
      */
     saveBranchOffice () {
       this.visible = true
-      this.$api.post('branch-offices', this.branchOffice)
+      // Preparar datos incluyendo dirección
+      const branchOfficeData = {
+        ...this.branchOffice,
+        address: this.formattedAddress || this.branchOffice.address || ''
+      }
+      this.$api.post('branch-offices', branchOfficeData)
         .then(({ data }) => {
           this.getBranchOffices()
           this.openAddBranchOffice = false
           this.visible = false
           this.branchOffice = {}
           Notify.create({
-            message: 'Moneda creada exitosamente',
+            message: 'Sucursal creada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -259,20 +275,31 @@ export default {
     editBranchOffice (event, row, index) {
       this.openEditBranchOffice = true
       this.branchOffice = row
+      // Cargar dirección existente
+      if (row.address) {
+        this.formattedAddress = row.address
+        this.address = { formattedAddress: row.address }
+      }
+      this.addressComponentKey += 1
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`branch-offices/${this.branchOffice?.id}`, this.branchOffice)
+      // Preparar datos incluyendo dirección
+      const branchOfficeData = {
+        ...this.branchOffice,
+        address: this.formattedAddress || this.branchOffice.address || ''
+      }
+      this.$api.put(`branch-offices/${this.branchOffice?.id}`, branchOfficeData)
         .then(({ data }) => {
           this.getBranchOffices()
           this.openEditBranchOffice = false
           this.visible = false
           this.branchOffice = {}
           Notify.create({
-            message: 'Moneda editada exitosamente',
+            message: 'Sucursal editada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -298,7 +325,7 @@ export default {
           this.visible = false
           this.branchOffice = {}
           Notify.create({
-            message: 'Moneda eliminada exitosamente',
+            message: 'Sucursal eliminada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
@@ -311,6 +338,53 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Handle address selection from AddressComponent
+     * @param {Object} selectedAddress - Selected address object
+     */
+    handleAddressSelected (selectedAddress) {
+      // Si la dirección es nula, reiniciar el objeto de dirección
+      if (!selectedAddress) {
+        this.address = null
+        this.formattedAddress = ''
+        return
+      }
+
+      // Actualizar los campos de dirección para el formulario
+      this.address = selectedAddress
+
+      // Formatear la dirección para enviarla en la sucursal
+      // El componente AddressComponent devuelve un objeto con la estructura específica
+      if (typeof selectedAddress === 'object' && selectedAddress !== null) {
+        // Priorizar formattedAddress si existe
+        if (selectedAddress.formattedAddress) {
+          this.formattedAddress = selectedAddress.formattedAddress
+        } else if (selectedAddress.name) {
+          // Si no hay formattedAddress, usar el name del lugar
+          this.formattedAddress = selectedAddress.name
+        } else {
+          // Construir dirección desde componentes disponibles
+          const addressParts = []
+          if (selectedAddress.street) addressParts.push(selectedAddress.street)
+          if (selectedAddress.city) addressParts.push(selectedAddress.city)
+          if (selectedAddress.state) addressParts.push(selectedAddress.state)
+          if (selectedAddress.country) addressParts.push(selectedAddress.country)
+          if (selectedAddress.zipCode) addressParts.push(selectedAddress.zipCode)
+
+          this.formattedAddress = addressParts.length > 0
+            ? addressParts.join(', ')
+            : JSON.stringify(selectedAddress)
+        }
+      } else if (typeof selectedAddress === 'string') {
+        // Si por alguna razón viene como string
+        this.formattedAddress = selectedAddress
+      } else {
+        // Fallback: convertir a string
+        this.formattedAddress = String(selectedAddress)
+      }
+
+      // Dirección procesada correctamente - no necesita reinicialización del componente
     }
   }
 }

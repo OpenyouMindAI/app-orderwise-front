@@ -122,14 +122,10 @@
 
               <div class="form-group full-width">
                 <label class="field-label">Dirección</label>
-                <q-input
-                  v-model="company.address"
-                  outlined
-                  dense
-                  type="textarea"
-                  rows="2"
-                  class="custom-input"
-                  :rules="[val => val && val.length > 0 || 'Requerido']"
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
                 />
               </div>
             </div>
@@ -625,6 +621,7 @@ import { api, apiArca } from 'src/boot/axios'
 import { ref, computed, nextTick, onMounted } from 'vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 
 // Reactive data
 const coins = ref([])
@@ -676,13 +673,66 @@ const file = ref({
   url: userSession.company_session.url
 })
 
+// Address component variables
+/**
+ * Address component key for resetting
+ * @type {Number}
+ */
+const addressComponentKey = ref(0)
+
+/**
+ * Address object for AddressComponent
+ * @type {Object}
+ */
+const address = ref(null)
+
+/**
+ * Formatted address string
+ * @type {String}
+ */
+const formattedAddress = ref('')
+
 // Load branch office config into the form on component mount
 onMounted(() => {
   if (branchOffice.value) {
     companyConfig.value.point_of_sale = branchOffice.value.point_of_sale
     companyConfig.value.other.default_price_list = branchOffice.value.default_price_list
   }
+
+  // Inicializar dirección si existe
+  initializeAddress()
 })
+
+/**
+ * Initialize address component with existing company address data
+ */
+const initializeAddress = () => {
+  if (company.value?.address) {
+    formattedAddress.value = company.value.address
+
+    // Crear objeto de dirección para AddressComponent
+    address.value = {
+      name: '',
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+      latitude: company.value.latitude || null,
+      longitude: company.value.longitude || null,
+      formattedAddress: company.value.address,
+      placeId: company.value.place_id || '',
+      types: []
+    }
+  } else {
+    // Si no hay dirección, limpiar campos
+    formattedAddress.value = ''
+    address.value = null
+  }
+
+  // Incrementar clave para forzar re-renderización del AddressComponent
+  addressComponentKey.value += 1
+}
 
 // Computed
 const totalSteps = computed(() => 7)
@@ -767,9 +817,28 @@ const formDate = (data) => {
   const formData = new FormData()
   formData.append('file', file.value.file)
   formData.append('name', data.name)
-  formData.append('address', data.address)
+
+  // Usar la dirección formateada si está disponible
+  const addressToSend = formattedAddress.value || data.address || ''
+  formData.append('address', addressToSend)
+
   formData.append('document_number', data.document_number)
   formData.append('email', data.email)
+  formData.append('phone_number', data.phone_number)
+
+  // Agregar coordenadas GPS si están disponibles
+  if (address.value && typeof address.value === 'object') {
+    if (address.value.latitude !== undefined && address.value.latitude !== null) {
+      formData.append('latitude', address.value.latitude)
+    }
+    if (address.value.longitude !== undefined && address.value.longitude !== null) {
+      formData.append('longitude', address.value.longitude)
+    }
+    if (address.value.placeId) {
+      formData.append('place_id', address.value.placeId)
+    }
+  }
+
   formData.append('_method', 'put')
   return formData
 }
@@ -777,12 +846,31 @@ const formDate = (data) => {
 const onSubmit = async () => {
   try {
     loading.value = true
+
+    // Validar que los campos requeridos estén completos
+    if (!company.value.name || !company.value.email || !company.value.document_number) {
+      notify('Por favor completa todos los campos requeridos', 'negative', 'warning')
+      return
+    }
+
     const { data } = await api.post(`session/company/${company.value.id}`, formDate(company.value))
+
+    // Actualizar la sesión con los nuevos datos
     store.setCompanySession({
       ...company.value,
       ...data
     })
+
+    // Actualizar la variable local con los datos guardados
+    company.value = { ...company.value, ...data }
+
+    // Reinicializar la dirección con los datos actualizados
+    initializeAddress()
+
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Avanzar al siguiente paso
+    step.value = 2
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -995,6 +1083,64 @@ const onSubmitConfig = async () => {
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * Handle address selection from AddressComponent
+ * @param {Object} selectedAddress - The selected address object
+ */
+const handleAddressSelected = (selectedAddress) => {
+  // Si la dirección es nula, reiniciar el objeto de dirección
+  if (!selectedAddress) {
+    address.value = null
+    formattedAddress.value = ''
+    company.value.address = ''
+    return
+  }
+
+  // Actualizar los campos de dirección para el formulario
+  address.value = selectedAddress
+
+  // Formatear la dirección para enviarla en la empresa
+  // El componente AddressComponent devuelve un objeto con la estructura específica
+  if (typeof selectedAddress === 'object' && selectedAddress !== null) {
+    // Priorizar formattedAddress si existe
+    if (selectedAddress.formattedAddress) {
+      formattedAddress.value = selectedAddress.formattedAddress
+    } else if (selectedAddress.name) {
+      // Si no hay formattedAddress, usar el name del lugar
+      formattedAddress.value = selectedAddress.name
+    } else {
+      // Construir dirección desde componentes disponibles
+      const addressParts = []
+      if (selectedAddress.street) addressParts.push(selectedAddress.street)
+      if (selectedAddress.city) addressParts.push(selectedAddress.city)
+      if (selectedAddress.state) addressParts.push(selectedAddress.state)
+      if (selectedAddress.country) addressParts.push(selectedAddress.country)
+      if (selectedAddress.zipCode) addressParts.push(selectedAddress.zipCode)
+
+      formattedAddress.value = addressParts.length > 0
+        ? addressParts.join(', ')
+        : JSON.stringify(selectedAddress)
+    }
+  } else if (typeof selectedAddress === 'string') {
+    // Si por alguna razón viene como string
+    formattedAddress.value = selectedAddress
+  } else {
+    // Fallback: convertir a string
+    formattedAddress.value = String(selectedAddress)
+  }
+
+  // Actualizar el campo de dirección de la empresa
+  company.value.address = formattedAddress.value
+
+  console.log('📍 Dirección seleccionada:', {
+    formatted: formattedAddress.value,
+    coordinates: {
+      lat: address.value?.latitude,
+      lng: address.value?.longitude
+    }
+  })
 }
 </script>
 
