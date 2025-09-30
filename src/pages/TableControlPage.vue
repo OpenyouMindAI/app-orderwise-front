@@ -621,6 +621,8 @@
       :table-close="tableClose"
       :loading="saving"
       :user-session="userSession"
+      :type-of-service="{code: 1}"
+      :invoice-type="{acronym_serie: 'T'}"
       @update:show="showPaymentDialog = $event"
       @update:table-close="tableClose = $event"
       @payment-update="handlePaymentUpdate"
@@ -840,14 +842,14 @@ export default {
         this.invoicePayments = params.payments || []
         // DON'T override tableClose - it's already set in handlePaymentAction
         // this.tableClose = params.tableClose || false
-
+        const invoiceToProcess = { ...this.selectedInvoice } // ← GUARDAR COPIA
         const result = await this.saveInvoice()
 
         // Handle printing based on action
         if (result && action === 'invoice') {
-          // Print invoice logic would go here
+          await ticketPrint(invoiceToProcess)
         } else if (result && action === 'command') {
-          // Print command logic would go here
+          await commandPrint(invoiceToProcess)
         }
 
         return result
