@@ -3,7 +3,7 @@
     <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
       <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
         <span class="text-h6">Desglose de pago</span>
-        <q-btn flat icon="close" round size="md" v-close-popup/>
+        <q-btn flat icon="close" round size="md" @click="closeModal"/>
       </q-card-section>
 
       <q-card-section class="row q-col-gutter-md">
@@ -202,7 +202,6 @@ export default {
   emits: [
     'update:show',
     'update:table-close',
-    'payment-add',
     'payment-update',
     'payment-delete',
     'qr-payment',
@@ -254,6 +253,14 @@ export default {
       default: null
     },
     cashBoxState: {
+      type: Object,
+      default: null
+    },
+    typeOfService: {
+      type: Object,
+      default: null
+    },
+    invoiceType: {
       type: Object,
       default: null
     }
@@ -400,7 +407,6 @@ export default {
         localPayments.value.push(payment)
       }
 
-      emit('payment-add', payment)
       emit('payment-update', { payment, payments: localPayments.value })
     }
 
@@ -444,8 +450,18 @@ export default {
     }
 
     const setParamsBill = () => {
-      // Basic validation - can be extended based on business rules
-      if (pendingPayment.value > 0) {
+      // Obtener datos de validación
+      const typeOfService = props.typeOfService || props.userSession?.company_session?.type_of_service
+      const invoiceType = props.invoiceType || props.userSession?.company_session?.invoice_type
+      const withServiceType = [4] // mostrador
+
+      // Si es Cuenta Corriente (CC) → siempre puede pasar sin pagos
+      if (invoiceType?.acronym_serie === 'CC') {
+        return setModelInvoice()
+      }
+
+      // Si es mostrador (código 4) Y NO es CC Y hay pago pendiente → requiere pago
+      if (withServiceType.includes(typeOfService?.code) && pendingPayment.value > 0) {
         $q.notify({
           message: 'La factura no puede ser generada sin pagar el monto total',
           type: 'negative',
@@ -457,10 +473,11 @@ export default {
       return setModelInvoice()
     }
 
-    const handleActionClick = (action) => {
+    const handleActionClick = async (action) => {
       const params = setParamsBill()
       if (!params) return
 
+      // Emit action to parent for processing
       emit('action-click', {
         action: action.key,
         params,
@@ -468,8 +485,34 @@ export default {
         tableClose: props.tableClose
       })
 
-      // Emit action click event
-      // Table close logic is handled by parent component
+      // If table should be closed, handle it internally
+      if (props.tableClose && props.userSession) {
+        await handleTableClose(params)
+      }
+    }
+
+    const handleTableClose = async (params) => {
+      try {
+        // Clear local payments after successful table close
+        localPayments.value = []
+
+        // Close the modal
+        emit('update:show', false)
+
+        // Navigate to main billing page if we have router access
+        if (window.location.pathname.includes('table-control')) {
+          // For TableControlPage, we need to refresh the tables view
+          setTimeout(() => {
+            window.location.reload()
+          }, 500)
+        }
+      } catch (error) {
+        console.error('Error handling table close:', error)
+      }
+    }
+
+    const closeModal = () => {
+      emit('update:show', false)
     }
 
     return {
@@ -488,6 +531,7 @@ export default {
       updatePaymentAmount,
       updatePaymentReference,
       handleActionClick,
+      closeModal,
       setModelInvoice,
       setParamsBill,
       paymentModel

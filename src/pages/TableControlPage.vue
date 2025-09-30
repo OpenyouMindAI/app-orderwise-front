@@ -619,12 +619,10 @@
       :coin="coin"
       :show-table-close="!!(selectedInvoice && selectedInvoice.id)"
       :table-close="tableClose"
-      :actions="paymentDialogActions"
       :loading="saving"
       :user-session="userSession"
       @update:show="showPaymentDialog = $event"
       @update:table-close="tableClose = $event"
-      @payment-add="handlePaymentAdd"
       @payment-update="handlePaymentUpdate"
       @payment-delete="handlePaymentDelete"
       @action-click="handlePaymentAction"
@@ -711,11 +709,6 @@ export default {
       invoicePayments: [],
       tableClose: false,
       coin: null,
-      paymentDialogActions: [
-        { key: 'invoice', label: 'Factura', icon: 'print', color: 'secondary', showBadge: true },
-        { key: 'command', label: 'Comanda', icon: 'print', color: 'warning', showBadge: false },
-        { key: 'save', label: 'Guardar sin imprimir', icon: 'save', color: 'primary', showBadge: false }
-      ],
 
       // Status mapping for display
       statusMap: {
@@ -803,24 +796,8 @@ export default {
       }
     },
 
-    handlePaymentAdd (payment) {
-      console.log('=== TABLE PAYMENT ADD ===', {
-        payment,
-        currentPaymentsCount: this.invoicePayments?.length || 0,
-        totalAmount: this.calculateTotal(),
-        tableId: this.selectedTable?.id
-      })
-      // Payment is already added by the modal component
-    },
-
     handlePaymentUpdate (data) {
       const { payment, index } = data
-      console.log('=== TABLE PAYMENT UPDATE ===', {
-        payment,
-        index,
-        previousPayment: this.invoicePayments[index],
-        totalPayments: this.invoicePayments?.length || 0
-      })
       if (index !== undefined && this.invoicePayments[index]) {
         this.invoicePayments[index] = { ...payment }
       }
@@ -828,67 +805,25 @@ export default {
 
     handlePaymentDelete (data) {
       const { index } = data
-      console.log('=== TABLE PAYMENT DELETE ===', {
-        index,
-        paymentToDelete: this.invoicePayments[index],
-        totalPaymentsBefore: this.invoicePayments?.length || 0
-      })
       if (index !== undefined) {
         this.invoicePayments.splice(index, 1)
-        console.log('=== PAYMENT DELETED ===', {
-          totalPaymentsAfter: this.invoicePayments?.length || 0
-        })
       }
     },
 
     async handlePaymentAction (data) {
       const { action, params, tableClose } = data
-      console.log('=== TABLE PAYMENT ACTION RECEIVED ===', {
-        action,
-        params,
-        tableClose,
-        currentTableClose: this.tableClose,
-        selectedTable: {
-          id: this.selectedTable?.id,
-          name: this.selectedTable?.name,
-          status: this.selectedTable?.status
-        },
-        selectedInvoice: {
-          id: this.selectedInvoice?.id,
-          status: this.selectedInvoice?.status
-        },
-        invoiceProductsCount: this.invoiceProducts?.length || 0,
-        totalAmount: this.calculateTotal()
-      })
-
       try {
         this.saving = true
 
         // Set tableClose first
         this.tableClose = tableClose
 
-        console.log('=== TABLE CLOSE STATE UPDATED ===', {
-          newTableClose: this.tableClose,
-          willProcessPayments: true,
-          action
-        })
-
         // Add payments to the invoice save
         const success = await this.saveInvoiceWithPayments(params, action)
 
         if (success && tableClose) {
-          console.log('=== PAYMENT SUCCESS WITH TABLE CLOSE ===', {
-            success,
-            tableClose,
-            willClearAndClose: true
-          })
           this.clearInvoiceAndCloseModal()
         } else if (success) {
-          console.log('=== PAYMENT SUCCESS WITHOUT TABLE CLOSE ===', {
-            success,
-            tableClose,
-            willCloseDialogOnly: true
-          })
           this.showPaymentDialog = false
           this.invoicePayments = []
         }
@@ -901,8 +836,6 @@ export default {
 
     async saveInvoiceWithPayments (params, action = 'save') {
       try {
-        console.log('=== TABLE SAVE WITH PAYMENTS ===', { params, action })
-        console.log('=== CURRENT TABLE CLOSE STATE ===', this.tableClose)
         // Use existing saveInvoice logic but include payments
         this.invoicePayments = params.payments || []
         // DON'T override tableClose - it's already set in handlePaymentAction
@@ -913,10 +846,8 @@ export default {
         // Handle printing based on action
         if (result && action === 'invoice') {
           // Print invoice logic would go here
-          console.log('Printing invoice...')
         } else if (result && action === 'command') {
           // Print command logic would go here
-          console.log('Printing command...')
         }
 
         return result
@@ -927,57 +858,21 @@ export default {
     },
 
     clearInvoiceAndCloseModal () {
-      console.log('=== CLEAR INVOICE AND CLOSE MODAL STARTED ===', {
-        tableClose: this.tableClose,
-        selectedInvoice: {
-          id: this.selectedInvoice?.id,
-          tables: this.selectedInvoice?.tables
-        },
-        selectedTable: {
-          id: this.selectedTable?.id,
-          name: this.selectedTable?.name,
-          status: this.selectedTable?.status
-        },
-        invoiceProductsCount: this.invoiceProducts?.length || 0,
-        invoicePaymentsCount: this.invoicePayments?.length || 0
-      })
-
       this.showPaymentDialog = false
 
       if (this.tableClose) {
-        console.log('=== TABLE CLOSE IS TRUE - FREEING TABLE ===', {
-          hasSelectedInvoice: !!this.selectedInvoice,
-          invoiceId: this.selectedInvoice?.id
-        })
         // Free the table first
         if (this.selectedInvoice) {
           this.freeTableAfterClose(this.selectedInvoice)
         }
         // Clear all invoice data and close modal
-        console.log('=== CLEARING ALL INVOICE DATA ===', {
-          beforeClear: {
-            invoiceProductsCount: this.invoiceProducts?.length || 0,
-            selectedInvoiceId: this.selectedInvoice?.id,
-            invoicePaymentsCount: this.invoicePayments?.length || 0
-          }
-        })
 
         this.invoiceProducts = []
         this.selectedInvoice = null
         this.invoicePayments = []
         this.closeInvoiceModal()
         this.refreshTables()
-
-        console.log('=== TABLE CLOSE COMPLETED ===', {
-          invoiceDataCleared: true,
-          modalClosed: true,
-          tablesRefreshed: true
-        })
       } else {
-        console.log('=== KEEPING INVOICE OPEN - CLEARING PAYMENTS ONLY ===', {
-          tableClose: false,
-          invoicePaymentsBefore: this.invoicePayments?.length || 0
-        })
         // Just clear payments but keep the invoice open
         this.invoicePayments = []
       }
@@ -989,17 +884,6 @@ export default {
      */
     async freeTableAfterClose (invoice) {
       try {
-        console.log('=== FREEING TABLE AFTER CLOSE STARTED ===', {
-          invoice,
-          invoiceId: invoice?.id,
-          invoiceTables: invoice?.tables,
-          selectedTable: {
-            id: this.selectedTable?.id,
-            name: this.selectedTable?.name,
-            currentStatus: this.selectedTable?.status
-          }
-        })
-
         // Find table ID from invoice
         let tableId = null
         if (invoice.tables && invoice.tables.length > 0) {
@@ -1010,14 +894,11 @@ export default {
           tableId = this.selectedTable.id
         }
 
-        console.log('=== TABLE ID TO FREE ===', tableId)
-
         if (tableId && this.selectedTable) {
           await this.$api.put(`tables/${tableId}`, {
             ...this.selectedTable,
             status: 'unoccupied'
           })
-          console.log('=== TABLE FREED SUCCESSFULLY ===', tableId)
         } else {
           console.error('=== NO TABLE ID FOUND TO FREE ===')
         }
@@ -1174,7 +1055,6 @@ export default {
             }
           }
         })
-        console.log(data)
         this.availableTablesForTransfer = data
       } catch (err) {
         Notify.create({
@@ -1441,32 +1321,10 @@ export default {
     },
 
     async saveInvoice () {
-      console.log('=== TABLE SAVE INVOICE STARTED ===', {
-        saving: this.saving,
-        hasSelectedInvoice: !!this.selectedInvoice,
-        selectedInvoiceId: this.selectedInvoice?.id,
-        tableClose: this.tableClose,
-        invoiceProductsCount: this.invoiceProducts?.length || 0,
-        invoicePaymentsCount: this.invoicePayments?.length || 0,
-        totalAmount: this.calculateTotal(),
-        selectedTable: {
-          id: this.selectedTable?.id,
-          name: this.selectedTable?.name,
-          status: this.selectedTable?.status
-        }
-      })
-
       this.saving = true
       try {
         // Update existing invoice
         if (this.selectedInvoice) {
-          console.log('=== TABLE UPDATING EXISTING INVOICE ===', {
-            invoiceId: this.selectedInvoice.id,
-            currentStatus: this.selectedInvoice.status,
-            tableClose: this.tableClose,
-            willFreeTable: this.tableClose
-          })
-
           // Save reference to invoice before updating
           const invoiceToUpdate = this.selectedInvoice
           const updateParams = {
@@ -1495,34 +1353,11 @@ export default {
             total_amount: this.calculateTotal()
           }
 
-          console.log('=== TABLE UPDATE PAYLOAD ===', {
-            endpoint: `invoices/${this.selectedInvoice.id}`,
-            method: 'PUT',
-            payload: updateParams,
-            payloadSize: JSON.stringify(updateParams).length,
-            tableInfo: {
-              tableIds: updateParams.tables,
-              willCloseTable: updateParams.tableClose
-            },
-            paymentInfo: {
-              paymentsCount: updateParams.payments?.length || 0,
-              paymentsData: updateParams.payments,
-              totalAmount: updateParams.total_amount
-            },
-            productsInfo: {
-              productsCount: updateParams.products?.length || 0,
-              productsList: updateParams.products
-            }
-          })
+          // Updating existing invoice
 
-          const response = await this.$api.put(`invoices/${this.selectedInvoice.id}`, updateParams)
+          await this.$api.put(`invoices/${this.selectedInvoice.id}`, updateParams)
 
-          console.log('=== TABLE UPDATE API RESPONSE ===', {
-            success: !!response,
-            data: response?.data,
-            updatedInvoice: response?.data?.data,
-            timestamp: new Date().toISOString()
-          })
+          // Invoice updated successfully
           // Restore selectedInvoice reference for table closing
           this.selectedInvoice = invoiceToUpdate
         } else {
@@ -1531,12 +1366,6 @@ export default {
           const typeOfService = this.typeOfServices.find(ts => ts.code === 2)
 
           if (!invoiceType || !typeOfService) {
-            console.log('=== TABLE ERROR: Missing invoice type or service ===', {
-              invoiceType,
-              typeOfService,
-              availableInvoiceTypes: this.invoiceTypes,
-              availableTypeOfServices: this.typeOfServices
-            })
             Notify.create({ message: 'No se pudieron encontrar los tipos de factura o servicio necesarios.', color: 'negative' })
             this.saving = false
             return false
@@ -1546,15 +1375,7 @@ export default {
           const finalConsumerClient = this.clients.find(c => c.name.toUpperCase() === 'CONSUMIDOR FINAL')
           const clientId = finalConsumerClient?.id || this.clients[0]?.id || null
 
-          console.log('=== TABLE CREATING NEW INVOICE ===', {
-            invoiceType,
-            typeOfService,
-            branchOffice: this.branchOffice,
-            coin: this.coin,
-            sellerId,
-            clientId,
-            finalConsumerClient
-          })
+          // Creating new invoice
 
           const params = {
             tableClose: this.tableClose,
@@ -1582,40 +1403,11 @@ export default {
             voucherType: invoiceType?.bill ? null : null
           }
 
-          console.log('=== TABLE CREATE NEW INVOICE PAYLOAD ===', {
-            endpoint: 'invoices',
-            method: 'POST',
-            payload: params,
-            payloadSize: JSON.stringify(params).length,
-            tableInfo: {
-              tableId: params.tables[0],
-              tableName: this.selectedTable?.name,
-              willCloseTable: params.tableClose
-            },
-            paymentInfo: {
-              paymentsCount: params.payments?.length || 0,
-              paymentsData: params.payments,
-              totalAmount: params.total_amount
-            },
-            productsInfo: {
-              productsCount: params.products?.length || 0,
-              productsList: params.products?.map(p => ({
-                id: p.id,
-                name: p.name,
-                quantity: p.quantity || p.amount,
-                price: p.price
-              }))
-            }
-          })
+          // Sending invoice creation request
 
-          const response = await this.$api.post('invoices', params)
+          await this.$api.post('invoices', params)
 
-          console.log('=== TABLE CREATE API RESPONSE ===', {
-            success: !!response,
-            data: response?.data,
-            createdInvoice: response?.data?.data,
-            timestamp: new Date().toISOString()
-          })
+          // Invoice created successfully
         }
 
         Notify.create({
@@ -1627,7 +1419,6 @@ export default {
         // Close modal and refresh tables after successful save
         this.closeInvoiceModal()
         this.refreshTables()
-        console.log('=== SAVE INVOICE RETURNING TRUE ===')
         return true
       } catch (err) {
         Notify.create({
