@@ -99,8 +99,9 @@ export const previewCommand = async (data, userSession) => {
       })
     }
   })
+
   }
-  
+
   doc.text('--------------------------------', 5, y)
   y += 5
   doc.text('TOTAL', 5, y)

@@ -633,7 +633,11 @@ export default {
      */
     validateBusinessType (module) {
       const businessTypeModules = this.userSession?.company_session?.business_type?.modules || []
+
       if (this.userSession?.is_root) return true
+
+      if (businessTypeModules.length === 0) return true
+
       if (businessTypeModules.length > 0 && module) {
         return businessTypeModules.some((businessModule) => businessModule.id === module.id)
       }
