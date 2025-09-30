@@ -185,7 +185,7 @@
             align="bottom"
             floating
           >
-            F7
+            {{ action.shortcut }}
           </q-badge>
         </q-btn>
       </q-card-actions>
@@ -239,9 +239,9 @@ export default {
     actions: {
       type: Array,
       default: () => [
-        { key: 'invoice', label: 'Factura', icon: 'print', color: 'secondary', showBadge: true },
-        { key: 'command', label: 'Comanda', icon: 'print', color: 'warning', showBadge: false },
-        { key: 'save', label: 'Guardar sin imprimir', icon: 'save', color: 'primary', showBadge: false }
+        { key: 'invoice', label: 'Factura', icon: 'print', color: 'secondary', showBadge: true, shortcut: 'F7' },
+        { key: 'command', label: 'Comanda', icon: 'print', color: 'warning', showBadge: true, shortcut: 'F8' },
+        { key: 'save', label: 'Guardar sin imprimir', icon: 'save', color: 'primary', showBadge: true, shortcut: 'F9' }
       ]
     },
     loading: {
@@ -453,14 +453,20 @@ export default {
       // Obtener datos de validación
       const typeOfService = props.typeOfService || props.userSession?.company_session?.type_of_service
       const invoiceType = props.invoiceType || props.userSession?.company_session?.invoice_type
+      const withoutPayment = ['T', 'P', 'CC'] // Tipos que NO requieren pagos
       const withServiceType = [4] // mostrador
 
-      // Si es Cuenta Corriente (CC) → siempre puede pasar sin pagos
-      if (invoiceType?.acronym_serie === 'CC') {
-        return setModelInvoice()
+      // 2. Validación general: Si NO está en withoutPayment Y hay pago pendiente → requiere pago
+      if (!withoutPayment.includes(invoiceType?.acronym_serie) && pendingPayment.value > 0) {
+        $q.notify({
+          message: 'La factura no puede ser generada sin pagar el monto total',
+          type: 'negative',
+          icon: 'warning'
+        })
+        return false
       }
 
-      // Si es mostrador (código 4) Y NO es CC Y hay pago pendiente → requiere pago
+      // 3. Validación mostrador: Si es mostrador Y hay pago pendiente → requiere pago
       if (withServiceType.includes(typeOfService?.code) && pendingPayment.value > 0) {
         $q.notify({
           message: 'La factura no puede ser generada sin pagar el monto total',

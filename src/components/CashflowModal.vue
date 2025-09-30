@@ -271,7 +271,6 @@ export default {
     },
     cashBoxState: {
       handler (newCashboxUser) {
-        console.log(newCashboxUser)
         this.cashboxUser = newCashboxUser
       },
       immediate: true

@@ -2532,8 +2532,12 @@ export default {
       }
 
       if (this.withoutPrint) {
-        // Don't clear automatically - let PaymentModal handle table close
         this.withoutPrint = false
+        // Para guardar sin imprimir, limpiar inmediatamente
+        setTimeout(() => {
+          this.dialogPayment = false
+          this.clear()
+        }, 300)
         return
       }
 
@@ -2548,9 +2552,8 @@ export default {
     /**
      * Set invoice model
      * @returns {Object}
+     */
     setModelInvoice () {
-      // Datos de contexto para debug
-
       const invoiceModel = {
         ...this.invoice,
         tableClose: this.tableClose,
@@ -2606,6 +2609,13 @@ export default {
         }
         this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
+
+        // Cerrar modal y limpiar después de guardar exitoso
+        this.dialogPayment = false
+        if (!this.tableClose && !this.withoutPrint && !this.invoicePrinter) {
+          // Solo limpiar si no hay flags especiales activos
+          setTimeout(() => this.clear(), 500)
+        }
         this.setPagination({
           pagination: this.pagination,
           filter: undefined
@@ -3420,8 +3430,6 @@ export default {
     font-size: 11px !important;
   }
 }
-</style>
-<style>
 
 .dropzone-card {
   border: 2px dashed #e0e0e0;
