@@ -502,7 +502,7 @@
                 </div>
               </div>
             </div>
-            <div class="col-12 q-col-gutter-xs q-mt-md row">
+           <div class="col-12 q-col-gutter-xs q-mt-md row">
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-select
                   filled
@@ -517,6 +517,14 @@
               </div>
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              </div>
+              <div class="col-12">
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
+                />
+
               </div>
               <div class="col-12" v-if="typeOfService.code !== 4">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
@@ -561,37 +569,37 @@
                   </q-btn>
                 </div>
               </div>
-            </div>
-            <div class="col-12">
-              <q-list separator bordered style="border-radius: 10px;">
-                <q-item v-if="tableSelected.length">
-                  <q-item-section>
-                    Mesas
-                  </q-item-section>
-                  <q-item-section side>
-                    {{ tableSelected.length }}
-                  </q-item-section>
-                </q-item>
-                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
-                  <q-item-section>
-                    TOTAL
-                  </q-item-section>
-                  <q-item-section v-if="coin" side class="text-white">
-                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section v-if="pendingPayment >= 0">
-                    TOTAL POR COBRAR
-                  </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
-                  </q-item-section>
-                </q-item>
-              </q-list>
+              <div class="col-12">
+                <q-list separator bordered style="border-radius: 10px;">
+                  <q-item v-if="tableSelected.length">
+                    <q-item-section>
+                      Mesas
+                    </q-item-section>
+                    <q-item-section side>
+                      {{ tableSelected.length }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                    <q-item-section>
+                      TOTAL
+                    </q-item-section>
+                    <q-item-section v-if="coin" side class="text-white">
+                      {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section v-if="pendingPayment >= 0">
+                      TOTAL POR COBRAR
+                    </q-item-section>
+                    <q-item-section v-else>
+                      VUELTO
+                    </q-item-section>
+                    <q-item-section side v-if="coin">
+                      {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
             </div>
           </div>
         </div>
@@ -1048,6 +1056,7 @@
 </template>
 
 <script>
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -1074,6 +1083,7 @@ import {
 export default {
   name: 'BillingPage',
   components: {
+    AddressComponent,
     DrawerTable,
     PaymentModal,
     WaitByPaymentMp,
@@ -1201,6 +1211,23 @@ export default {
        */
       deliveryDate: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
       /**
+       * Delivery address
+       * @type {Object}
+       */
+      deliveryAddress: {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      },
+      /**
        * Format number
        * @type {Function}
        */
@@ -1210,6 +1237,21 @@ export default {
        * @type {Boolean}
        */
       searchInvoice: false,
+      /**
+       * Address component key
+       * @type {Number}
+       */
+      addressComponentKey: 0,
+      /**
+       * Address
+       * @type {Object}
+       */
+      address: null,
+      /**
+       * Formatted address
+       * @type {String}
+       */
+      formattedAddress: '',
       /**
        * Search
        * @type {String}
@@ -1523,6 +1565,14 @@ export default {
   watch: {
     client (client) {
       this.invoiceShare = { ...this.invoiceShare, client }
+      // Actualizar la dirección cuando se selecciona un cliente
+      if (client && client.address) {
+        this.formattedAddress = client.address
+        this.address = client.address
+      } else {
+        this.formattedAddress = ''
+        this.address = null
+      }
     },
     invoiceType (invoiceType) {
       this.invoiceShare = { ...this.invoiceShare, invoiceType }
@@ -1654,6 +1704,25 @@ export default {
   methods: {
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
+    },
+    /**
+     * Handle address selection from AddressComponent
+     * @param {Object} address - Selected address object
+     */
+    onAddressSelected (address) {
+      this.deliveryAddress = address || {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      }
     },
     /**
      * Select a product by index for keyboard navigation
@@ -2132,6 +2201,7 @@ export default {
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
           const element = data[key]
+          // Processing form data element
           if (typeof element !== 'object' && element) {
             formData.append(key, element)
           }
@@ -2298,25 +2368,35 @@ export default {
      * @param {Object} table  table data
      */
     async selectInvoice (table) {
+      // Selecting invoice from table
+
       loading(true)
       const invoiceOne = table.invoices[0]
       await this.getInvoiceOne(invoiceOne.id)
       this.dialogTable = false
       loading(false)
+
+      // Invoice loaded from table
     },
     /**
      * Free table
      * @param {Object} table  table data
      */
     async freeTable (table) {
+      // Freeing table
+
       try {
         await this.selectInvoice(table)
         this.tableClose = true
 
+        // Table close activated
+
         setTimeout(() => {
           this.dialogPayment = true
+          // Payment dialog opened for table close
         }, 200)
       } catch (error) {
+        // Error freeing table
         notify(error.message, 'negative', 'warning')
       }
     },
@@ -2509,7 +2589,16 @@ export default {
       this.withoutPrint = false
       this.invoicePrinter = false
       this.tableClose = false
+
+      // Limpiar campos de dirección
+      this.address = null
+      this.formattedAddress = ''
+      // Reiniciar el componente AddressComponent incrementando su key
+      this.addressComponentKey += 1
+
       this.calculateTotal()
+
+      // Navigating to billing page
       this.$router.push({ name: 'Billing' })
       this.setInvoice({})
 
@@ -2569,6 +2658,7 @@ export default {
         exchange_rate: this.exchangeRate,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
+        address: this.formattedAddress,
         products: this.products,
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0),
@@ -3062,6 +3152,7 @@ export default {
             if (group.products && group.products.length > 0) {
               group.products.forEach(product => {
                 // Debug: Log product structure to understand the data
+                // Processing product data
 
                 // Handle different possible property names
                 const productId = product.product_id || product.id || product.productId
@@ -3289,7 +3380,11 @@ export default {
         const currentTotal = this.getTotalSelectedQuantity()
         if (currentTotal < this.currentGroup.quantity) {
           selection.quantity++
+        } else {
+          // Group limit reached
         }
+      } else {
+        // No selection found for product ID
       }
     },
 
@@ -3324,6 +3419,49 @@ export default {
       if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.promotion_details.length - 1) {
         this.currentGroupIndex++
       }
+    },
+    handleAddressSelected (address) {
+      // Si la dirección es nula, reiniciar el objeto de dirección
+      if (!address) {
+        this.address = {}
+        this.formattedAddress = ''
+        return
+      }
+
+      // Actualizar los campos de dirección para el formulario
+      this.address = address
+
+      // Formatear la dirección para enviarla en la factura
+      // El componente AddressComponent devuelve un objeto con la estructura específica
+      if (typeof address === 'object' && address !== null) {
+        // Priorizar formattedAddress si existe
+        if (address.formattedAddress) {
+          this.formattedAddress = address.formattedAddress
+        } else if (address.name) {
+          // Si no hay formattedAddress, usar el name del lugar
+          this.formattedAddress = address.name
+        } else {
+          // Construir dirección desde componentes disponibles
+          const addressParts = []
+          if (address.street) addressParts.push(address.street)
+          if (address.city) addressParts.push(address.city)
+          if (address.state) addressParts.push(address.state)
+          if (address.country) addressParts.push(address.country)
+          if (address.zipCode) addressParts.push(address.zipCode)
+
+          this.formattedAddress = addressParts.length > 0
+            ? addressParts.join(', ')
+            : JSON.stringify(address)
+        }
+      } else if (typeof address === 'string') {
+        // Si por alguna razón viene como string
+        this.formattedAddress = address
+      } else {
+        // Fallback: convertir a string
+        this.formattedAddress = String(address)
+      }
+
+      // Address processing completed
     },
 
     /**
