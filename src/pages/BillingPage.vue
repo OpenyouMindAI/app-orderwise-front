@@ -2192,7 +2192,6 @@ export default {
       }
     },
     onCloseComplete () {
-      console.log('Payment modal closed successfully')
     },
     /**
      * Save without print
@@ -2226,7 +2225,7 @@ export default {
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
           const element = data[key]
-          console.log(element)
+          // Processing form data element
           if (typeof element !== 'object' && element) {
             formData.append(key, element)
           }
@@ -2393,14 +2392,7 @@ export default {
      * @param {Object} table  table data
      */
     async selectInvoice (table) {
-      console.log('=== SELECT INVOICE FROM TABLE ===', {
-        table,
-        tableId: table?.id,
-        tableName: table?.name,
-        invoices: table?.invoices,
-        invoiceToLoad: table?.invoices?.[0],
-        invoiceId: table?.invoices?.[0]?.id
-      })
+      // Selecting invoice from table
 
       loading(true)
       const invoiceOne = table.invoices[0]
@@ -2408,58 +2400,27 @@ export default {
       this.dialogTable = false
       loading(false)
 
-      console.log('=== INVOICE LOADED FROM TABLE ===', {
-        loadedInvoice: {
-          id: this.invoice?.id,
-          code: this.invoice?.code,
-          status: this.invoice?.status,
-          tables: this.invoice?.tables
-        },
-        productsLoaded: this.products?.length || 0,
-        paymentsLoaded: this.payments?.length || 0
-      })
+      // Invoice loaded from table
     },
     /**
      * Free table
      * @param {Object} table  table data
      */
     async freeTable (table) {
-      console.log('=== FREE TABLE INITIATED ===', {
-        table,
-        tableId: table?.id,
-        tableName: table?.name,
-        tableStatus: table?.status,
-        hasInvoices: !!(table?.invoices && table.invoices.length > 0),
-        invoicesCount: table?.invoices?.length || 0
-      })
+      // Freeing table
 
       try {
         await this.selectInvoice(table)
         this.tableClose = true
 
-        console.log('=== TABLE CLOSE ACTIVATED ===', {
-          tableClose: this.tableClose,
-          willOpenPaymentDialog: true,
-          currentInvoice: {
-            id: this.invoice?.id,
-            totalAmount: this.totalBill,
-            productsCount: this.products?.length || 0
-          }
-        })
+        // Table close activated
 
         setTimeout(() => {
           this.dialogPayment = true
-          console.log('=== PAYMENT DIALOG OPENED FOR TABLE CLOSE ===', {
-            dialogPayment: this.dialogPayment,
-            tableClose: this.tableClose,
-            tableId: table?.id
-          })
+          // Payment dialog opened for table close
         }, 200)
       } catch (error) {
-        console.log('=== ERROR FREEING TABLE ===', {
-          error: error.message,
-          tableId: table?.id
-        })
+        // Error freeing table
         notify(error.message, 'negative', 'warning')
       }
     },
@@ -2683,11 +2644,7 @@ export default {
 
       this.calculateTotal()
 
-      console.log('=== NAVIGATING TO BILLING PAGE ===', {
-        routeName: 'Billing',
-        timestamp: new Date().toISOString()
-      })
-
+      // Navigating to billing page
       this.$router.push({ name: 'Billing' })
       this.setInvoice({})
 
@@ -2765,8 +2722,6 @@ export default {
      * @returns {Object}
      */
     setModelInvoice () {
-      console.log('=== CASHBOX STATE ===', this.cashBoxState)
-
       // Datos de contexto para debug
       console.log('=== MESA CONTEXT DATA ===', {
         tableSelected: this.tableSelected,
@@ -3334,7 +3289,7 @@ export default {
             if (group.products && group.products.length > 0) {
               group.products.forEach(product => {
                 // Debug: Log product structure to understand the data
-                console.log('Product structure:', product)
+                // Processing product data
 
                 // Handle different possible property names
                 const productId = product.product_id || product.id || product.productId
@@ -3563,10 +3518,10 @@ export default {
         if (currentTotal < this.currentGroup.quantity) {
           selection.quantity++
         } else {
-          console.log('⚠️ Cannot increase - group limit reached')
+          // Group limit reached
         }
       } else {
-        console.log('❌ No selection found for product ID:', id)
+        // No selection found for product ID
       }
     },
 
@@ -3643,14 +3598,7 @@ export default {
         this.formattedAddress = String(address)
       }
 
-      // Debug para verificar qué se está enviando
-      console.log('Address selected:', {
-        original: address,
-        formatted: this.formattedAddress,
-        addressType: typeof address,
-        hasFormattedAddress: !!(address?.formattedAddress),
-        hasName: !!(address?.name)
-      })
+      // Address processing completed
     },
 
     /**
@@ -3698,7 +3646,7 @@ export default {
      */
     onCashflowSaved () {
       // Refresh data if needed or show success message
-      console.log('Cashflow saved successfully')
+      // Cashflow saved successfully
     }
   }
 }
