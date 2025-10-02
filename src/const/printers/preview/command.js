@@ -79,7 +79,6 @@ export const previewCommand = async (data, userSession) => {
       })
     }
   })
-
   if(data.promotions) {
     data.promotions.forEach((product) => {
     const lines = doc.splitTextToSize(product.name, maxWidth)
@@ -100,7 +99,7 @@ export const previewCommand = async (data, userSession) => {
       })
     }
   })
-    
+
   }
 
   doc.text('--------------------------------', 5, y)

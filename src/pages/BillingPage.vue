@@ -829,15 +829,15 @@
       :loading="loadingBilling"
       :user-session="userSession"
       :cash-box-state="cashBoxState"
+      :type-of-service="typeOfService"
+      :invoice-type="invoiceType"
       @update:show="dialogPayment = $event"
       @update:table-close="tableClose = $event"
-      @payment-add="handlePaymentAdd"
       @payment-update="handlePaymentUpdate"
       @payment-delete="handlePaymentDelete"
       @payment-check="handlePaymentCheck"
       @qr-payment="handleQRPayment"
       @action-click="handlePaymentAction"
-      @close-complete="onCloseComplete"
     />
 
     <q-dialog v-model="dialogTable">
@@ -908,8 +908,8 @@
         { label: 'Salida', value: 'credit' },
         { label: 'Arqueo', value: 'withdrawal' }
       ]"
-      @cashflow-saved="onCashflowSaved"
     />
+
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
@@ -2103,15 +2103,6 @@ export default {
      * @param {Object} data table selected
      */
     setTableSelected (data) {
-      console.log('=== TABLE SELECTION ===', {
-        selectedTables: data,
-        tablesCount: data?.length || 0,
-        tableIds: data?.map(table => table?.id || table) || [],
-        currentInvoice: {
-          id: this.invoice?.id,
-          status: this.invoice?.status
-        }
-      })
       this.tableSelected = data
     },
     /**
@@ -2151,10 +2142,6 @@ export default {
     /**
      * Handle payment modal events
      */
-    handlePaymentAdd (payment) {
-      // Payment is already added by the modal
-      this.payments = [...this.payments]
-    },
     handlePaymentUpdate ({ payment, payments }) {
       this.payments = payments
     },
@@ -2168,17 +2155,8 @@ export default {
       this.waitingPayment = true
     },
     handlePaymentAction ({ action, params, payments, tableClose }) {
-      console.log('=== PAYMENT ACTION RECEIVED ===', {
-        action,
-        params,
-        payments,
-        tableClose,
-        currentTableSelected: this.tableSelected,
-        totalBill: this.totalBill,
-        products: this.products
-      })
       this.payments = payments
-      this.tableClose = tableClose
+      // tableClose is now handled internally by PaymentModal
       switch (action) {
         case 'invoice':
           this.savePrintInvoice()
@@ -2190,8 +2168,6 @@ export default {
           this.saveWithoutPrint()
           break
       }
-    },
-    onCloseComplete () {
     },
     /**
      * Save without print
@@ -2603,28 +2579,6 @@ export default {
      * Clear invoice
      */
     clear () {
-      console.log('=== CLEARING BILLING DATA STARTED ===', {
-        beforeClear: {
-          payments: this.payments,
-          productsCount: this.products?.length || 0,
-          tableSelected: this.tableSelected,
-          tableClose: this.tableClose,
-          invoiceDescription: this.invoiceDescription,
-          totalBill: this.totalBill,
-          dialogPayment: this.dialogPayment,
-          withoutPrint: this.withoutPrint,
-          invoicePrinter: this.invoicePrinter,
-          address: this.address,
-          formattedAddress: this.formattedAddress,
-          addressComponentKey: this.addressComponentKey,
-          currentInvoice: {
-            id: this.invoice?.id,
-            code: this.invoice?.code,
-            status: this.invoice?.status
-          }
-        }
-      })
-
       this.payments = []
       this.products = []
       this.resetProductSelection()
@@ -2649,19 +2603,6 @@ export default {
       this.setInvoice({})
 
       setTimeout(() => {
-        console.log('=== CLEARING BILLING DATA COMPLETED ===', {
-          afterClear: {
-            payments: this.payments,
-            productsCount: this.products?.length || 0,
-            tableSelected: this.tableSelected,
-            tableClose: this.tableClose,
-            totalBill: this.totalBill,
-            address: this.address,
-            formattedAddress: this.formattedAddress,
-            addressComponentKey: this.addressComponentKey,
-            invoice: this.invoice
-          }
-        })
         this.$refs.saveBill.resetValidation()
         this.getLocalStorage()
         this.invoice = null
@@ -2672,73 +2613,36 @@ export default {
      * @param {Object} data invoice saved
      */
     async printBill (data) {
-      console.log('=== PRINT BILL INITIATED ===', {
-        invoiceData: data,
-        withoutPrint: this.withoutPrint,
-        invoicePrinter: this.invoicePrinter,
-        tableClose: this.tableClose,
-        tableSelected: this.tableSelected
-      })
-
       const invoice = await this.getInvoiceOneRequest(data.id)
 
       if (!invoice) {
-        console.log('=== ERROR: Invoice not found ===', { invoiceId: data.id })
         notify('Error al obtener la factura', 'negative', 'warning')
         return
       }
 
-      console.log('=== INVOICE RETRIEVED FOR PRINT ===', {
-        invoice,
-        hasTableInfo: !!(invoice.tables && invoice.tables.length > 0),
-        tables: invoice.tables
-      })
-
       if (this.withoutPrint) {
-        console.log('=== SAVE WITHOUT PRINT - CLEARING DATA ===', {
-          tableClose: this.tableClose,
-          willClearTable: true
-        })
-        this.clear()
         this.withoutPrint = false
+        // Para guardar sin imprimir, limpiar inmediatamente
+        setTimeout(() => {
+          this.dialogPayment = false
+          this.clear()
+        }, 300)
         return
       }
+
       if (this.invoicePrinter) {
-        console.log('=== PRINTING TICKET ===', { invoice: invoice.id })
         await ticketPrint(invoice)
       } else {
-        console.log('=== PRINTING COMMAND ===', { invoice: invoice.id })
         await commandPrint(invoice)
       }
 
-      console.log('=== PRINT COMPLETED - CLEARING DATA ===', {
-        tableClose: this.tableClose,
-        willClearTable: true
-      })
-      this.clear()
+      // Don't clear automatically - let PaymentModal handle table close
     },
     /**
      * Set invoice model
      * @returns {Object}
      */
     setModelInvoice () {
-      // Datos de contexto para debug
-      console.log('=== MESA CONTEXT DATA ===', {
-        tableSelected: this.tableSelected,
-        tableClose: this.tableClose,
-        payments: this.payments,
-        totalBill: this.totalBill,
-        products: this.products?.length || 0,
-        userSession: {
-          id: this.userSession?.id,
-          name: this.userSession?.name
-        },
-        branchOffice: {
-          id: this.branchOffice?.id,
-          name: this.branchOffice?.name
-        }
-      })
-
       const invoiceModel = {
         ...this.invoice,
         tableClose: this.tableClose,
@@ -2763,39 +2667,6 @@ export default {
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
-
-      console.log('=== COMPLETE INVOICE MODEL TO SEND ===', {
-        invoiceModel,
-        addressInfo: {
-          originalAddress: this.address,
-          formattedAddress: this.formattedAddress,
-          addressInModel: invoiceModel.address
-        },
-        tableInfo: {
-          tableIds: invoiceModel.tables,
-          willCloseTable: invoiceModel.tableClose
-        },
-        paymentInfo: {
-          paymentsCount: invoiceModel.payments?.length || 0,
-          paymentsData: invoiceModel.payments,
-          totalAmount: invoiceModel.total_amount
-        },
-        productsInfo: {
-          productsCount: invoiceModel.products?.length || 0,
-          productsList: invoiceModel.products?.map(p => ({
-            id: p.id,
-            name: p.name,
-            quantity: p.quantity,
-            price: p.price,
-            subtotal: p.subtotal
-          }))
-        },
-        cashboxInfo: {
-          cashboxId: invoiceModel.cashbox_user_id,
-          cashboxState: this.cashBoxState
-        }
-      })
-
       return invoiceModel
     },
     /**
@@ -2842,40 +2713,24 @@ export default {
         if (!params) return
 
         if (this.$route.query.id) {
-          console.log('=== UPDATING INVOICE ===', {
-            invoiceId: this.$route.query.id,
-            endpoint: `invoices/${this.$route.query.id}`,
-            method: 'PUT',
-            payload: params,
-            payloadSize: JSON.stringify(params).length
-          })
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
-          console.log('=== CREATING NEW INVOICE ===', {
-            endpoint: 'invoices',
-            method: 'POST',
-            payload: params,
-            payloadSize: JSON.stringify(params).length,
-            hasTableToClose: params.tableClose,
-            tablesInvolved: params.tables
-          })
           res = await this.$api.post('invoices', params)
         }
-
-        console.log('=== API RESPONSE RECEIVED ===', {
-          success: !!res,
-          data: res?.data,
-          invoiceCreated: res?.data?.data,
-          timestamp: new Date().toISOString()
-        })
         this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
+
+        // Cerrar modal y limpiar después de guardar exitoso
+        this.dialogPayment = false
+        if (!this.tableClose && !this.withoutPrint && !this.invoicePrinter) {
+          // Solo limpiar si no hay flags especiales activos
+          setTimeout(() => this.clear(), 500)
+        }
         this.setPagination({
           pagination: this.pagination,
           filter: undefined
         })
       } catch (error) {
-        console.log(error)
         notify(error.message, 'negative', 'warning')
       } finally {
         this.loadingBilling = false
@@ -3647,14 +3502,6 @@ export default {
         color: 'positive',
         icon: 'check_circle'
       })
-    },
-
-    /**
-     * Handle cashflow saved event
-     */
-    onCashflowSaved () {
-      // Refresh data if needed or show success message
-      // Cashflow saved successfully
     }
   }
 }
@@ -3741,8 +3588,6 @@ export default {
     font-size: 11px !important;
   }
 }
-</style>
-<style>
 
 .dropzone-card {
   border: 2px dashed #e0e0e0;

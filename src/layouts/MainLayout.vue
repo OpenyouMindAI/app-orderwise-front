@@ -405,7 +405,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateRole(module.roles) && this.validateBusinessType(module)
+              return this.validateRole(module.roles)
             }).length > 0
           )
         })
