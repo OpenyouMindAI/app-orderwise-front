@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddClient = true" icon="add_circle"/>
+        <q-btn color="primary" @click="openNewClientModal" icon="add_circle"/>
       </div>
       <div class="col-12">
         <q-table
@@ -27,6 +27,16 @@
                 <q-icon name="search" />
               </template>
             </q-input>
+          </template>
+          <template v-slot:body-cell-address="props">
+            <q-td :props="props">
+              <div
+                class="address-cell"
+                :title="props.value || 'Sin dirección'"
+              >
+                {{ props.value || 'Sin dirección' }}
+              </div>
+            </q-td>
           </template>
         </q-table>
       </div>
@@ -101,12 +111,12 @@
               />
                 <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.address"
-                label="Dirección"
-                type="textarea"
+            <!-- Sección de Dirección para Editar -->
+            <div class="col-12">
+              <AddressComponent
+                :key="addressComponentKey"
+                :initial-address="address"
+                @address-selected="handleAddressSelected"
               />
             </div>
           </q-card-section>
@@ -186,12 +196,12 @@
               />
                 <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.address"
-                label="Dirección"
-                type="textarea"
+            <!-- Sección de Dirección para Agregar -->
+            <div class="col-12">
+              <AddressComponent
+                :key="addressComponentKey"
+                :initial-address="address"
+                @address-selected="handleAddressSelected"
               />
             </div>
           </q-card-section>
@@ -210,13 +220,32 @@ import { apiArca } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 export default {
+  components: {
+    AddressComponent
+  },
   data () {
     return {
       clients: [],
       documentTypes: [],
       client: {},
       filter: '',
+      /**
+       * Address component key for resetting
+       * @type {Number}
+       */
+      addressComponentKey: 0,
+      /**
+       * Address object
+       * @type {Object}
+       */
+      address: null,
+      /**
+       * Formatted address string
+       * @type {String}
+       */
+      formattedAddress: '',
       /**
        * Params search
        * @type {Object}
@@ -225,7 +254,7 @@ export default {
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc',
-        perPage: 1,
+        perPage: 20,
         dataSearch: {
           name: '',
           email: '',
@@ -265,6 +294,16 @@ export default {
           label: 'Correo',
           field: 'email',
           sortable: true
+        },
+        {
+          name: 'address',
+          align: 'left',
+          label: 'Dirección',
+          field: 'address',
+          sortable: true,
+          format: (val) => val || 'Sin dirección',
+          style: 'width: 250px; max-width: 250px;',
+          headerStyle: 'width: 250px; max-width: 250px;'
         }
       ],
       paginationConfig: {
@@ -297,8 +336,45 @@ export default {
     closeModal () {
       this.openAddClient = false
       this.openEditClient = false
-      this.client = {}
+
+      // Limpiar completamente el cliente
+      this.client = {
+        name: '',
+        document_number: '',
+        email: '',
+        phone_number: '',
+        address: '',
+        condition_iva_receptor: null,
+        document_type: null
+      }
       this.role = null
+
+      // Limpiar las variables de dirección
+      this.address = null
+      this.formattedAddress = ''
+      this.addressComponentKey += 1
+    },
+    /**
+     * Open new client modal with clean form
+     */
+    openNewClientModal () {
+      // Limpiar completamente antes de abrir
+      this.client = {
+        name: '',
+        document_number: '',
+        email: '',
+        phone_number: '',
+        address: '',
+        condition_iva_receptor: null,
+        document_type: null
+      }
+      this.role = null
+      this.address = null
+      this.formattedAddress = ''
+      this.addressComponentKey += 1
+
+      // Abrir modal
+      this.openAddClient = true
     },
     /**
      * Search beneficiary
@@ -392,13 +468,80 @@ export default {
      */
     saveClient () {
       this.visible = true
-      this.$api.post('clients', this.client)
+
+      // Validaciones básicas
+      if (!this.client.name || this.client.name.trim() === '') {
+        Notify.create({
+          message: 'El nombre es requerido',
+          icon: 'warning',
+          color: 'negative'
+        })
+        this.visible = false
+        return
+      }
+
+      if (!this.client.email || this.client.email.trim() === '') {
+        Notify.create({
+          message: 'El email es requerido',
+          icon: 'warning',
+          color: 'negative'
+        })
+        this.visible = false
+        return
+      }
+
+      // Preparar datos del cliente con dirección formateada
+      const clientData = { ...this.client }
+
+      // Validar y formatear campos requeridos
+      if (clientData.condition_iva_receptor && typeof clientData.condition_iva_receptor === 'object') {
+        clientData.condition_iva_receptor = JSON.stringify(clientData.condition_iva_receptor)
+      }
+
+      if (clientData.document_type && typeof clientData.document_type === 'object') {
+        clientData.document_type = JSON.stringify(clientData.document_type)
+      }
+
+      // Agregar la dirección formateada
+      if (this.formattedAddress) {
+        clientData.address = this.formattedAddress
+      } else if (this.address && typeof this.address === 'object') {
+        // Si es un objeto, usar formattedAddress o convertir a string simple
+        clientData.address = this.address.formattedAddress || this.address.name || JSON.stringify(this.address)
+      } else if (this.client.address) {
+        clientData.address = this.client.address
+      }
+
+      // Adjuntar datos geográficos si están disponibles
+      if (this.address && typeof this.address === 'object') {
+        if (this.address.latitude !== undefined && this.address.latitude !== null) {
+          clientData.latitude = this.address.latitude
+        }
+        if (this.address.longitude !== undefined && this.address.longitude !== null) {
+          clientData.longitude = this.address.longitude
+        }
+        if (this.address.placeId) {
+          clientData.place_id = this.address.placeId
+        }
+      }
+
+      // Debug: Log de datos antes de enviar
+      console.log('📊 Datos a enviar:', JSON.stringify(clientData, null, 2))
+      console.log('📧 Email:', clientData.email)
+      console.log('📍 Dirección:', clientData.address)
+
+      this.$api.post('clients', clientData)
         .then(({ data }) => {
+          console.log('✅ Cliente creado exitosamente:', data)
           this.getClients()
           this.openAddClient = false
           this.visible = false
           this.client = {}
           this.role = null
+          // Limpiar las variables de dirección
+          this.address = null
+          this.formattedAddress = ''
+          this.addressComponentKey += 1
           Notify.create({
             message: 'Cliente creado exitosamente',
             icon: 'check_circle',
@@ -407,10 +550,19 @@ export default {
         })
         .catch(err => {
           this.visible = false
+          console.error('❌ Error al crear cliente:', err)
+          console.error('📊 Response data:', err.response?.data)
+          console.error('📈 Status:', err.response?.status)
+
+          let errorMessage = err.message
+          if (err.response?.data?.message) {
+            errorMessage = err.response.data.message
+          }
           Notify.create({
-            message: err.message,
+            message: `Error: ${errorMessage}`,
             icon: 'warning',
-            color: 'negative'
+            color: 'negative',
+            timeout: 8000
           })
         })
     },
@@ -423,19 +575,77 @@ export default {
       this.role = row.role
       this.client.condition_iva_receptor = JSON.parse(row.condition_iva_receptor)
       this.client.document_type = JSON.parse(row.document_type)
+
+      // Actualizar la dirección cuando se selecciona un cliente
+      if (row.address) {
+        this.formattedAddress = row.address
+        // Crear objeto de dirección para AddressComponent
+        this.address = {
+          name: '',
+          street: '',
+          city: '',
+          state: '',
+          country: '',
+          zipCode: '',
+          latitude: row.latitude || null,
+          longitude: row.longitude || null,
+          formattedAddress: row.address,
+          placeId: row.place_id || '',
+          types: []
+        }
+        this.client.address = row.address
+      } else {
+        this.formattedAddress = ''
+        this.address = null
+        this.client.address = ''
+      }
+
+      // Incrementar la clave para forzar re-renderización del AddressComponent
+      this.addressComponentKey += 1
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`clients/${this.client.id}`, this.client)
+
+      // Preparar datos del cliente con dirección formateada
+      const clientData = { ...this.client }
+
+      // Agregar la dirección formateada
+      if (this.formattedAddress) {
+        clientData.address = this.formattedAddress
+      } else if (this.address && typeof this.address === 'object') {
+        // Si es un objeto, usar formattedAddress o convertir a string simple
+        clientData.address = this.address.formattedAddress || this.address.name || JSON.stringify(this.address)
+      } else if (this.client.address) {
+        clientData.address = this.client.address
+      }
+
+      // Adjuntar datos geográficos si están disponibles
+      if (this.address && typeof this.address === 'object') {
+        if (this.address.latitude !== undefined && this.address.latitude !== null) {
+          clientData.latitude = this.address.latitude
+        }
+        if (this.address.longitude !== undefined && this.address.longitude !== null) {
+          clientData.longitude = this.address.longitude
+        }
+        if (this.address.placeId) {
+          clientData.place_id = this.address.placeId
+        }
+      }
+
+      this.$api.put(`clients/${this.client.id}`, clientData)
         .then(({ data }) => {
           this.getClients()
           this.openEditClient = false
           this.visible = false
           this.client = {}
           this.role = null
+          // Limpiar las variables de dirección
+          this.address = null
+          this.formattedAddress = ''
+          this.addressComponentKey += 1
           Notify.create({
             message: 'Cliente editado exitosamente',
             icon: 'check_circle',
@@ -476,7 +686,69 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Handle address selection from AddressComponent
+     * @param {String} selectedAddress - The selected address
+     */
+    handleAddressSelected (address) {
+      // Si la dirección es nula, reiniciar el objeto de dirección
+      if (!address) {
+        this.address = null
+        this.formattedAddress = ''
+        return
+      }
+
+      // Actualizar los campos de dirección para el formulario
+      this.address = address
+
+      // Formatear la dirección para enviarla en el cliente
+      // El componente AddressComponent devuelve un objeto con la estructura específica
+      if (typeof address === 'object' && address !== null) {
+        // Priorizar formattedAddress si existe
+        if (address.formattedAddress) {
+          this.formattedAddress = address.formattedAddress
+        } else if (address.name) {
+          // Si no hay formattedAddress, usar el name del lugar
+          this.formattedAddress = address.name
+        } else {
+          // Construir dirección desde componentes disponibles
+          const addressParts = []
+          if (address.street) addressParts.push(address.street)
+          if (address.city) addressParts.push(address.city)
+          if (address.state) addressParts.push(address.state)
+          if (address.country) addressParts.push(address.country)
+          if (address.zipCode) addressParts.push(address.zipCode)
+
+          this.formattedAddress = addressParts.length > 0
+            ? addressParts.join(', ')
+            : JSON.stringify(address)
+        }
+      } else if (typeof address === 'string') {
+        // Si por alguna razón viene como string
+        this.formattedAddress = address
+      } else {
+        // Fallback: convertir a string
+        this.formattedAddress = String(address)
+      }
+
+      // Dirección procesada correctamente - no necesita reinicialización del componente
     }
   }
 }
 </script>
+
+<style scoped>
+.address-cell {
+  width: 250px;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+.address-cell:hover {
+  color: var(--q-primary);
+}
+</style>

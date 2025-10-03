@@ -8,12 +8,23 @@ export const loadGoogleMaps = async () => {
   try {
     const loader = new Loader({
       apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-      libraries: ['places', 'geometry'], // Añadida librería geometry
+      libraries: ['places', 'geometry'],
       language: 'es',
-      region: 'AR'
+      region: 'AR',
+      version: 'weekly' // Usar la versión más reciente que incluye PlaceAutocompleteElement
     })
 
     await loader.load()
+
+    // Cargar los elementos web components de Google Maps si están disponibles
+    if (window.google?.maps?.importLibrary) {
+      try {
+        await window.google.maps.importLibrary('places')
+      } catch (error) {
+        console.warn('No se pudo cargar la nueva librería de places:', error)
+      }
+    }
+
     googleMapsLoaded = true
     return true
   } catch (error) {
