@@ -10,31 +10,11 @@
             <div class="text-subtitle1 text-weight-bold">Reporte de Retiros por Día</div>
             <div class="text-subtitle2">Gestiona y visualiza los retiros diarios de manera inteligente</div>
           </div>
-          <div class="q-gutter-sm col-xs-12 col-sm-12 col-md-4 text-right">
-            <q-btn
-              flat
-              rounded
-              icon="file_download"
-              label="Exportar CSV"
-              @click="exportCSV"
-              :disable="!hasData"
-              color="white"
-            />
-            <q-btn
-              flat
-              rounded
-              icon="print"
-              label="Imprimir"
-              @click="printReport"
-              :disable="!hasData"
-              color="white"
-            />
-          </div>
         </div>
       </div>
     </div>
 
-    <div class="max-w-7xl mx-auto q-mt-sm space-y-4 q-mt-md q-gutter-y-md">
+    <div class=" mx-auto q-mt-sm space-y-4 q-mt-md q-gutter-y-md">
 
       <!-- Filters section using Quasar classes for dark mode -->
       <q-expansion-item
@@ -42,8 +22,9 @@
         label="Filtros"
         class="shadow-2 rounded-borders"
         header-class="text-h6 text-weight-medium q-px-md q-py-sm"
+        default-opened
       >
-        <q-card flat bordered>
+        <q-card flat>
           <q-card-section class="q-pa-md">
             <div class="flex q-gutter-md">
                 <div class="row items-center justify-between">
@@ -63,8 +44,8 @@
                         label="Fecha Desde"
                         readonly
                         outlined
+                        style="min-width: 150px;"
                         class="q-mx-sm"
-                        style="width: 8rem;"
                       >
                         <template v-slot:append>
                           <q-icon name="event" class="cursor-pointer">
@@ -89,8 +70,8 @@
                         label="Fecha Hasta"
                         readonly
                         outlined
+                        style="min-width: 150px;"
                         class="q-mx-sm"
-                        style="width: 8rem;"
                       >
                         <template v-slot:append>
                           <q-icon name="event" class="cursor-pointer">
@@ -131,6 +112,7 @@
                   clearable
                   use-chips
                   outlined
+                  style="min-width: 200px;"
                   @update:model-value="debouncedLoadData"
                   :loading="loadingBranches"
                 />
@@ -145,6 +127,7 @@
                   clearable
                   use-chips
                   outlined
+                  style="min-width: 200px;"
                   @update:model-value="debouncedLoadData"
                   :loading="loadingPaymentMethods"
                 />
@@ -154,46 +137,62 @@
       </q-expansion-item>
 
       <!-- Completely redesigned summary cards with gradients and better visual hierarchy -->
-      <div class="row q-gutter-md justify-between">
-        <q-card class="text-red shadow-2xl col-3">
-          <q-card-section>
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalAmount) }}</div>
-                <div class="text-red text-subtitle2 font-medium">Total Retirado</div>
+      <div class="row q-col-gutter-x-xs justify-between">
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+          <q-card class="text-positive shadow-2xl">
+            <q-card-section>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalsAmount.paid_sales) }}</div>
+                  <div class="text-positive text-subtitle2 font-medium">Total ventas</div>
+                </div>
+                <q-icon name="trending_down" size="3rem" class="text-white/30" />
               </div>
-              <q-icon name="trending_down" size="3rem" class="text-white/30" />
-            </div>
-          </q-card-section>
-        </q-card>
-
-        <q-card class="bg-gradient-to-br col-3 from-blue-500 to-blue-600 text-blue shadow-2xl border-0 overflow-hidden relative">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-          <q-card-section class="p-8 relative">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-subtitle1 font-bold mb-2">{{ totalWithdrawals }}</div>
-                <div class="text-blue text-subtitle2 font-medium">Total Retiros</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+          <q-card class="text-blue shadow-2xl">
+            <q-card-section>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalsAmount.sum_amount) }}</div>
+                  <div class="text-blue text-subtitle2 font-medium">Total Retirado</div>
+                </div>
+                <q-icon name="trending_down" size="3rem" class="text-white/30" />
               </div>
-              <q-icon name="receipt_long" size="3rem" class="text-white/30" />
-            </div>
-          </q-card-section>
-        </q-card>
-
-        <q-card class="bg-gradient-to-br col-3 from-emerald-500 text-positive shadow-2xl border-0 overflow-hidden relative">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-          <q-card-section class="p-8 relative">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-subtitle1 font-bold mb-2">{{ daysData.length }}</div>
-                <div class="text-positive text-subtitle2 font-medium">Días con Actividad</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+          <q-card class="bg-gradient-to-br from-blue-500 to-blue-600 text-blue shadow-2xl border-0 overflow-hidden relative">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+            <q-card-section class="p-8 relative">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalsAmount.difference_report) }}</div>
+                  <div class="text-blue text-subtitle2 font-medium">Diferencia</div>
+                </div>
+                <q-icon name="receipt_long" size="3rem" class="text-white/30" />
               </div>
-              <q-icon name="calendar_today" size="3rem" class="text-white/30" />
-            </div>
-          </q-card-section>
-        </q-card>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+            <q-card class="bg-gradient-to-br from-emerald-500 text-positive shadow-2xl border-0 overflow-hidden relative">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+              <q-card-section class="p-8 relative">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-subtitle1 font-bold mb-2">{{ daysData.length }}</div>
+                  <div class="text-positive text-subtitle2 font-medium">Días con Actividad</div>
+                </div>
+                <q-icon name="calendar_today" size="3rem" class="text-white/30" />
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
-
       <!-- Modern loading state with better skeletons -->
       <div v-if="loading" class="space-y-6">
         <q-skeleton height="80px" class="rounded-2xl" />
@@ -217,7 +216,7 @@
         :rows="daysData"
         :columns="dayColumns"
         row-key="day"
-        :pagination="{ rowsPerPage: 10 }"
+        :pagination="{ rowsPerPage: 0 }"
         class="shadow-2 rounded-borders"
         table-header-class="bg-primary text-white"
         flat
@@ -229,7 +228,7 @@
             <q-td key="day" :props="props" class="q-py-md">
               <div class="column q-gutter-xs">
                 <div class="text-body1 text-weight-bold text-uppercase">
-                  {{ formatDate(props.row.day) }}
+                  {{ formatDate(`${props.row.day} 00:00:00`) }}
                 </div>
               </div>
             </q-td>
@@ -475,6 +474,12 @@ import { useQuasar } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import CashflowModal from 'src/components/CashflowModal.vue'
 
+/**
+ * Component for displaying and managing daily withdrawal reports
+ * @component ReportWithdrawalsPage
+ * @description Displays a report of daily withdrawals with filtering, export, and management capabilities
+ */
+
 export default {
   name: 'WithdrawalsReport',
   components: {
@@ -482,6 +487,10 @@ export default {
   },
 
   watch: {
+    /**
+     * Watcher for showCashflowModal changes
+     * @param {boolean} newShow - New value of showCashflowModal
+     */
     showCashflowModal (newShow) {
       if (!newShow) {
         this.cashflow = {}
@@ -489,48 +498,194 @@ export default {
     }
   },
 
+  /**
+   * Component setup function
+   * @returns {Object} Component's public interface
+   */
   setup () {
     const $q = useQuasar()
 
+    /*
+     * Controls the loading state for the main data
+     * @type {import('vue').Ref<boolean>}
+     */
     const loading = ref(false)
+
+    /*
+     * Controls the loading state for branch offices data
+     * @type {import('vue').Ref<boolean>}
+     */
     const loadingBranches = ref(false)
+
+    /*
+     * Controls the loading state for payment methods data
+     * @type {import('vue').Ref<boolean>}
+     */
     const loadingPaymentMethods = ref(false)
+
+    /*
+     * Array containing daily withdrawal data with summary information
+     * @type {import('vue').Ref<Array<{
+     *   day: string,
+     *   sum_amount: number,
+     *   count: number,
+     *   withdrawals: Array<Object>,
+     *   cashboxes: Array<Object>
+     * }>>}
+     */
     const daysData = ref([])
+
+    /*
+     * Authentication store instance
+     * @type {Object}
+     */
     const store = authentication()
+
+    /*
+     * List of available branch offices
+     * @type {import('vue').Ref<Array<Object>>}
+     */
     const branchOffices = ref([])
+
+    /*
+     * List of available payment methods
+     * @type {import('vue').Ref<Array<Object>>}
+     */
     const paymentMethods = ref([])
-    const dateFrom = ref(formatDateForInput(new Date()))
-    const dateTo = ref(formatDateForInput(new Date()))
+
+    /*
+     * Start date for the report in YYYY-MM-DD format
+     * @type {import('vue').Ref<string>}
+     */
+    const dateFrom = ref('')
+
+    /*
+     * End date for the report in YYYY-MM-DD format
+     * @type {import('vue').Ref<string>}
+     */
+    const dateTo = ref('')
+
+    /*
+     * Active filters for the report
+     * @type {import('vue').Ref<{
+     *   branch_office_ids: Array<number>,
+     *   payment_method_ids: Array<number>,
+     *   cashbox_user_id: number|null
+     * }>}
+     */
     const filters = ref({
-      branch_office_ids: [store.branchOffice],
+      branch_office_ids: [],
       payment_method_ids: [],
       cashbox_user_id: null
     })
 
-    const showCashflowModal = ref(false)
-    const selectedDate = ref(null)
-    const expandedRows = ref(new Set())
-    const dayPagination = ref({})
-    const itemsPerPage = 5
-    const cashflow = ref({})
+    /*
+     * Current user session data from the authentication store
+     * @type {import('vue').ComputedRef<Object>}
+     */
     const userSession = computed(() => store.userSession)
+
+    /*
+     * Current branch office data from the authentication store
+     * @type {import('vue').ComputedRef<Object>}
+     */
     const branchOffice = computed(() => store.branchOffice)
 
-    // Image preview state
-    const showImagePreview = ref(false)
-    const previewImageUrl = ref(null)
-    const imageLoading = ref(false)
-    const imageError = ref(null)
-    const currentWithdrawal = ref(null)
+    /*
+     * Visibility of the cashflow modal
+     * @type {import('vue').Ref<boolean>}
+     */
+    const showCashflowModal = ref(false)
 
+    /*
+     * Currently selected date for cashflow operations
+     * @type {import('vue').Ref<string|null>}
+     */
+    const selectedDate = ref(null)
+
+    /*
+     * Set of expanded row dates
+     * @type {import('vue').Ref<Set<string>>}
+     */
+    /*
+     * Tracks which date rows are currently expanded
+     * @type {import('vue').Ref<Set<string>>}
+     */
+    const expandedRows = ref(new Set())
+
+    /*
+     * Pagination state for each day's withdrawal list
+     * @type {import('vue').Ref<{[key: string]: {currentPage: number}}>}
+     */
+    const dayPagination = ref({})
+
+    /*
+     * Number of items to display per page in the paginated lists
+     * @type {number}
+     */
+    const itemsPerPage = 50
+
+    /*
+     * Aggregated totals for the report
+     * @type {import('vue').Ref<{
+     *   paid_sales?: number,
+     *   sum_amount?: number,
+     *   difference_report?: string
+     * }>}
+     */
+    const totalsAmount = ref({})
+
+    /*
+     * Controls visibility of the image preview modal
+     * @type {import('vue').Ref<boolean>}
+     */
+    const showImagePreview = ref(false)
+
+    /*
+     * URL of the image being previewed
+     * @type {import('vue').Ref<string|null>}
+     */
+    const previewImageUrl = ref(null)
+
+    /*
+     * Loading state for the image preview
+     * @type {import('vue').Ref<boolean>}
+     */
+    const imageLoading = ref(false)
+
+    /*
+     * Error message for image loading failures
+     * @type {import('vue').Ref<string|null>}
+     */
+    const imageError = ref(null)
+
+    /*
+     * Currently selected withdrawal for preview
+     * @type {import('vue').Ref<Object|null>}
+     */
+    const currentWithdrawal = ref(null)
+    const cashflow = ref({})
+
+    /**
+     * Computed property that calculates the total amount of all withdrawals
+     * @type {import('vue').ComputedRef<number>}
+     */
     const totalAmount = computed(() => {
       return daysData.value.reduce((sum, day) => sum + parseFloat(day.sum_amount || 0), 0)
     })
 
+    /**
+     * Computed property that calculates the total number of withdrawals
+     * @type {import('vue').ComputedRef<number>}
+     */
     const totalWithdrawals = computed(() => {
       return daysData.value.reduce((sum, day) => sum + parseInt(day.count || 0), 0)
     })
 
+    /**
+     * Computed property that checks if there is any data to display
+     * @type {import('vue').ComputedRef<boolean>}
+     */
     const hasData = computed(() => {
       return daysData.value.length > 0
     })
@@ -587,6 +742,12 @@ export default {
       isMounted.value = false
     })
 
+    /**
+     * Loads the list of branch offices from the API
+     * @async
+     * @returns {Promise<void>}
+     * @description Fetches branch offices and updates the component state
+     */
     const loadBranchOffices = async () => {
       loadingBranches.value = true
       try {
@@ -603,6 +764,12 @@ export default {
       }
     }
 
+    /**
+     * Loads the list of available payment methods from the API
+     * @async
+     * @returns {Promise<void>}
+     * @description Fetches payment methods and updates the component state
+     */
     const loadPaymentMethods = async () => {
       loadingPaymentMethods.value = true
       try {
@@ -619,6 +786,12 @@ export default {
       }
     }
 
+    /**
+     * Loads withdrawal data based on current filters and date range
+     * @async
+     * @returns {Promise<void>}
+     * @description Fetches withdrawal data from the API and updates the component state
+     */
     const loadData = async () => {
       if (!isMounted.value) return
       loading.value = true
@@ -644,6 +817,7 @@ export default {
         const response = await api.get('/reports/withdrawals-per-day', { params })
         if (isMounted.value) {
           daysData.value = response.data.days || []
+          totalsAmount.value = response.data.meta
         }
       } catch (error) {
         console.error('Error loading withdrawals:', error)
@@ -662,13 +836,28 @@ export default {
       }
     }
 
-    // Debounced load data for filters
+    /**
+     * Timer ID for debouncing API calls
+     * @type {number|null}
+     */
     let debounceTimer = null
+
+    /**
+     * Debounced version of loadData to prevent excessive API calls
+     * @returns {void}
+     * @description Delays the execution of loadData by 300ms to prevent rapid successive calls
+     */
     const debouncedLoadData = () => {
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(loadData, 300)
     }
 
+    /**
+     * Changes the current date range by the specified number of days
+     * @param {number} days - Number of days to adjust the date range by
+     * @returns {void}
+     * @description Updates both dateFrom and dateTo to the same new date
+     */
     const changeDate = (days) => {
       const currentDate = new Date(dateFrom.value)
       currentDate.setDate(currentDate.getDate() + days)
@@ -678,6 +867,11 @@ export default {
       loadData()
     }
 
+    /**
+     * Exports the withdrawal data to a CSV file
+     * @returns {void}
+     * @description Generates and downloads a CSV file containing withdrawal data
+     */
     const exportCSV = () => {
       if (!hasData.value) return
 
@@ -715,7 +909,13 @@ export default {
       })
     }
 
-    // Update withdrawal with new calculated amount
+    /**
+     * Updates a withdrawal with a new calculated amount
+     * @async
+     * @param {Object} withdrawal - The withdrawal object to update
+     * @returns {Promise<void>}
+     * @description Updates the withdrawal amount and refreshes the UI
+     */
     const updateWithdrawal = async (withdrawal) => {
       try {
         // Get the new amount from withdrawal.actual_amount
@@ -772,7 +972,12 @@ export default {
       }
     }
 
-    // Get paginated withdrawals for a specific day
+    /**
+     * Gets a paginated subset of withdrawals for a specific day
+     * @param {Array} dayWithdrawals - Array of withdrawals for the day
+     * @param {string} day - The day identifier
+     * @returns {Array} - Paginated array of withdrawals
+     */
     const getPaginatedWithdrawals = (dayWithdrawals, day) => {
       if (!dayPagination.value[day]) {
         dayPagination.value[day] = { currentPage: 1 }
@@ -783,12 +988,21 @@ export default {
       return dayWithdrawals.slice(startIndex, endIndex)
     }
 
-    // Get total pages for a specific day
+    /**
+     * Calculates the total number of pages for a day's withdrawals
+     * @param {Array} dayWithdrawals - Array of withdrawals for the day
+     * @returns {number} - Total number of pages
+     */
     const getTotalPages = (dayWithdrawals) => {
       return Math.ceil(dayWithdrawals.length / itemsPerPage)
     }
 
-    // Change page for a specific day
+    /**
+     * Changes the current page for a specific day's withdrawals
+     * @param {string} day - The day identifier
+     * @param {string} direction - Direction to change page ('next' or 'prev')
+     * @returns {void}
+     */
     const changePage = (day, direction) => {
       if (!dayPagination.value[day]) {
         dayPagination.value[day] = { currentPage: 1 }
@@ -807,7 +1021,11 @@ export default {
       }
     }
 
-    // Toggle expanded state for a specific day
+    /**
+     * Toggles the expanded/collapsed state for a specific day
+     * @param {string} day - The day identifier to toggle
+     * @returns {void}
+     */
     const toggleExpanded = (day) => {
       if (expandedRows.value.has(day)) {
         expandedRows.value.delete(day)
@@ -820,16 +1038,19 @@ export default {
       }
     }
 
-    // Open cashflow modal with specific date
+    /**
+     * Opens the cashflow modal for a specific date
+     * @param {Object} row - The row data containing date and cashbox information
+     * @returns {void}
+     */
     const openCashflowModal = (row) => {
       selectedDate.value = row.day
       showCashflowModal.value = true
-      console.log(row)
       cashflow.value = {
         cashboxUser: {
           id: row.cashbox_user_id
         },
-        paymentMethodId: row.by_payment_method[0].payment_method_id,
+        paymentMethodId: row.by_payment_method[0]?.payment_method_id || paymentMethods.value[0]?.id,
         createdAt: row.closed_at,
         branchOffice: branchOffice.value,
         description: 'Arqueo'
@@ -838,7 +1059,12 @@ export default {
       expandedRows.value.add(row.day)
     }
 
-    // Handle cashflow saved event
+    /**
+     * Handles the cashflow saved event
+     * @param {Object} newCashflow - The newly saved cashflow data
+     * @returns {void}
+     * @description Updates the UI with the new cashflow data
+     */
     const onCashflowSaved = (newCashflow) => {
       showCashflowModal.value = false
       const currentSelectedDate = selectedDate.value
@@ -871,7 +1097,11 @@ export default {
       })
     }
 
-    // Image preview functions
+    /**
+     * Opens the image preview for a withdrawal
+     * @param {Object} withdrawal - The withdrawal object containing image data
+     * @returns {void}
+     */
     const openFileWithdrawal = (withdrawal) => {
       try {
         currentWithdrawal.value = withdrawal
@@ -901,11 +1131,19 @@ export default {
       }
     }
 
+    /**
+     * Handles image loading errors
+     * @returns {void}
+     */
     const handleImageError = () => {
       imageError.value = 'Error al cargar la imagen'
       imageLoading.value = false
     }
 
+    /**
+     * Initiates download of the currently viewed image
+     * @returns {void}
+     */
     const downloadImage = () => {
       if (previewImageUrl.value && currentWithdrawal.value) {
         const link = document.createElement('a')
@@ -934,10 +1172,20 @@ export default {
       }
     }
 
+    /**
+     * Flattens withdrawals from all cashboxes for a given day
+     * @param {Object} dayData - The day data object containing cashboxes
+     * @returns {Array} - Flattened array of all withdrawals for the day
+     */
     const getAllWithdrawalsForDay = (dayData) => {
       return dayData.cashboxes.flatMap(cashbox => cashbox.withdrawals)
     }
 
+    /**
+     * Generates and opens a print-friendly version of the withdrawal report
+     * @returns {void}
+     * @description Creates a new window with a print-optimized view of the report
+     */
     const printReport = () => {
       const printContent = `
         <html>
@@ -999,6 +1247,11 @@ export default {
     }
 
     // Helper functions
+    /**
+     * Formats a number as currency in Argentine Peso (ARS)
+     * @param {number} amount - Number to format
+     * @returns {string} - Formatted currency string
+     */
     function formatCurrency (amount) {
       return new Intl.NumberFormat('es-AR', {
         style: 'currency',
@@ -1006,27 +1259,48 @@ export default {
       }).format(amount || 0)
     }
 
+    /**
+     * Formats a date string to a localized date format
+     * @param {string} dateString - Date string to format
+     * @returns {string} - Formatted date string in 'DD/MM/YYYY' format
+     */
     function formatDate (dateString) {
-      // Agregar 'T00:00:00' para evitar problemas de zona horaria
-      const date = new Date(dateString + 'T00:00:00')
-      return date.toLocaleDateString('es-AR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
+      if (!dateString) return ''
+      const options = { year: 'numeric', month: '2-digit', day: '2-digit' }
+      return new Date(dateString).toLocaleDateString('es-ES', options)
     }
 
+    /**
+     * Formats a date string to a localized short date format
+     * @param {string} dateString - Date string to format
+     * @returns {string} - Formatted date string in 'DD/MM/YYYY' format
+     */
+    /**
+     * Formats a date string to a short localized format
+     * @param {string} dateString - The date string to format
+     * @returns {string} - Formatted date string
+     */
     function formatDateShort (dateString) {
       // Agregar 'T00:00:00' para evitar problemas de zona horaria
       const date = new Date(dateString + 'T00:00:00')
       return date.toLocaleDateString('es-AR')
     }
 
+    /**
+     * Formats a date object to YYYY-MM-DD string format
+     * @param {Date|string} date - The date to format
+     * @returns {string} - Formatted date string
+     */
     function formatDateForInput (date) {
       return date.toISOString().split('T')[0]
     }
 
+    /**
+     * Calculates the difference between actual and original amount
+     * @param {number|string} originalAmount - The original amount
+     * @param {number|string} actualAmount - The actual/current amount
+     * @returns {number} - The difference between amounts
+     */
     function calculateTotal (originalAmount, actualAmount) {
       const newAmount = actualAmount
       if (newAmount && newAmount > 0) {
@@ -1035,6 +1309,12 @@ export default {
       return 0
     }
 
+    /**
+     * Determines the color class based on amount difference
+     * @param {number|string} originalAmount - The original amount
+     * @param {number|string} actualAmount - The actual/current amount
+     * @returns {string} - CSS class for the difference display
+     */
     function getDifferenceColor (originalAmount, actualAmount) {
       const newAmount = actualAmount
       if (!newAmount || newAmount <= 0) return 'text-negative'
@@ -1060,6 +1340,7 @@ export default {
       dateTo,
       cashflow,
       filters,
+      totalsAmount,
 
       // Computed
       totalAmount,
@@ -1108,411 +1389,46 @@ export default {
 </script>
 
 <style scoped>
+/* Custom shadow that's not in Quasar by default */
 .shadow-2xl {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
-.shadow-xl {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.rounded-2xl {
-  border-radius: 1rem;
-}
-
-.rounded-xl {
-  border-radius: 0.75rem;
-}
-
-.w-24 {
-  width: 6rem;
-}
-
-.h-24 {
-  height: 6rem;
-}
-
-.w-32 {
-  width: 8rem;
-}
-
-.h-32 {
-  height: 8rem;
-}
-
-.w-44 {
-  width: 11rem;
-}
-
-.max-w-md {
-  max-width: 28rem;
-}
-
-.max-w-7xl {
-  max-width: 80rem;
-}
-
-/* Positioning */
-.relative {
-  position: relative;
-}
-
-.absolute {
-  position: absolute;
-}
-
-.inset-0 {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-}
-
-.top-0 {
-  top: 0;
-}
-
-.right-0 {
-  right: 0;
-}
-
-.-mr-16 {
-  margin-right: -4rem;
-}
-
-.-mt-16 {
-  margin-top: -4rem;
-}
-
-.ml-6 {
-  margin-left: 1.5rem;
-}
-
-/* Padding utilities */
-.p-0 {
-  padding: 0;
-}
-
-.p-6 {
-  padding: 1.5rem;
-}
-
-.p-8 {
-  padding: 2rem;
-}
-
-.px-4 {
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-.px-6 {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-.py-3 {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-
-.py-4 {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-}
-
-.py-6 {
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
-}
-
-.py-8 {
-  padding-top: 2rem;
-  padding-bottom: 2rem;
-}
-
-.py-12 {
-  padding-top: 3rem;
-  padding-bottom: 3rem;
-}
-
-.py-20 {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
-}
-
-.pt-0 {
-  padding-top: 0;
-}
-
-/* Text utilities */
-.text-xs {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
-
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-}
-
-.text-xl {
-  font-size: 1.25rem;
-  line-height: 1.75rem;
-}
-
-.text-2xl {
-  font-size: 1.5rem;
-  line-height: 2rem;
-}
-
-.text-3xl {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-}
-
-.text-4xl {
-  font-size: 2.25rem;
-  line-height: 2.5rem;
-}
-
-.text-5xl {
-  font-size: 3rem;
-  line-height: 1;
-}
-
-.font-medium {
-  font-weight: 500;
-}
-
-.font-semibold {
-  font-weight: 600;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
-.uppercase {
-  text-transform: uppercase;
-}
-
-/* Color utilities */
-.text-white {
-  color: #ffffff;
-}
-
-.text-gray-400 {
-  color: #9ca3af;
-}
-
-.text-gray-500 {
-  color: #6b7280;
-}
-
-.text-gray-600 {
-  color: #4b5563;
-}
-
-.text-gray-700 {
-  color: #374151;
-}
-
-.text-gray-800 {
-  color: #1f2937;
-}
-
-.text-gray-900 {
-  color: #111827;
-}
-
-.text-red-600 {
-  color: #dc2626;
-}
-
-.text-blue-100 {
-  color: #dbeafe;
-}
-
-.text-red-100 {
-  color: #fee2e2;
-}
-
-.text-emerald-100 {
-  color: #dcfce7;
-}
-
-.text-indigo-100 {
-  color: #e0e7ff;
-}
-
-.text-indigo-600 {
-  color: #4f46e5;
-}
-
-.bg-gray-100 {
-  background-color: #f3f4f6;
-}
-
-.bg-red-50 {
-  background-color: #fef2f2;
-}
-
-.bg-red-100 {
-  background-color: #fee2e2;
-}
-
-.bg-blue-100 {
-  background-color: #dbeafe;
-}
-
-.border-blue-100 {
-  border-color: #dbeafe;
-}
-
-.border-t {
-  border-top-width: 1px;
-}
-
-.border-l-4 {
-  border-left-width: 4px;
-}
-
-.border-red-500 {
-  border-color: #ef4444;
-}
-
-.border-0 {
-  border-width: 0;
-}
-
-.rounded-full {
-  border-radius: 9999px;
-}
-
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.flex {
-  display: flex;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.items-start {
-  align-items: flex-start;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.flex-wrap {
-  flex-wrap: wrap;
-}
-
-.flex-1 {
-  flex: 1 1 0%;
-}
-
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.mb-2 {
-  margin-bottom: 0.5rem;
-}
-
-.mb-3 {
-  margin-bottom: 0.75rem;
-}
-
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-
-.mb-8 {
-  margin-bottom: 2rem;
-}
-
-.mt-2 {
-  margin-top: 0.5rem;
-}
-
-/* Image Preview Modal Styles */
-.image-preview-card {
-  max-width: 95vw;
-  max-height: 95vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.image-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  padding: 0;
-  background-color: #f5f5f5;
-  overflow: hidden;
-}
-
-.preview-image {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  display: block;
-}
-
-.image-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .image-preview-card {
-    max-width: 100vw;
-    max-height: 100vh;
-    border-radius: 0;
-  }
-
-  .image-container {
-    min-height: calc(100vh - 120px);
+/* Custom responsive grid utilities */
+@media (min-width: 600px) {
+  .col-xs-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
   }
 }
 
-@media (min-width: 769px) {
-  .image-preview-card {
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .image-container {
-    min-height: calc(95vh - 120px);
+@media (min-width: 768px) {
+  .col-sm-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
   }
 }
 
+@media (min-width: 1024px) {
+  .col-md-8 {
+    flex: 0 0 66.666667%;
+    max-width: 66.666667%;
+  }
+
+  .col-md-4 {
+    flex: 0 0 33.333333%;
+    max-width: 33.333333%;
+  }
+}
+
+@media (min-width: 1280px) {
+  .col-lg-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+}
+
+/* Print styles */
 @media print {
   .q-toolbar,
   .q-expansion-item,

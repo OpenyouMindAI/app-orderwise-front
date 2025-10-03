@@ -208,6 +208,11 @@ import AddressComponent from 'src/components/Billing/AddressComponent.vue'
  */
 const companies = ref([])
 /**
+ * Reactive reference to store the list of business types
+ * @type {Array}
+ */
+const businessTypes = ref([])
+/**
  * File selected
  * @type {Object}
  */
@@ -332,6 +337,7 @@ onMounted(() => {
   setPagination({
     pagination: paginationConfig.value
   })
+  getBusinessTypes()
 })
 
 /**
@@ -374,6 +380,7 @@ const formDate = (data, put = false) => {
   formData.append('document_number', data.document_number)
   formData.append('email', data.email)
   formData.append('phone_number', data.phone_number)
+  formData.append('business_type_id', data.business_type_id)
   if (put) formData.append('_method', 'put')
   return formData
 }
@@ -418,6 +425,20 @@ async function getCompanies (params) {
     notify(err.message, 'negative', 'warning')
   } finally {
     visible.value = false
+  }
+}
+
+/**
+ * Fetches the list of business types from the API
+ * @returns {void}
+ */
+async function getBusinessTypes () {
+  try {
+    const { data } = await api.get('business-types')
+    businessTypes.value = data.data || data
+  } catch (err) {
+    notify('Error al cargar los tipos de empresa', 'negative', 'warning')
+    console.error('Error fetching business types:', err)
   }
 }
 /**

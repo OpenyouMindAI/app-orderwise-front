@@ -3,7 +3,7 @@
     <!-- Header with Branch and Filter -->
     <div class="row items-center justify-between q-mb-lg">
       <div class="text-h5 text-weight-bold text-primary">
-        📊 Reporte Diario - {{ branchOffice?.name || 'Cargando...' }}
+        📊 Reporte Diario - {{ reportTitle }}
       </div>
       <div class="column">
         <div>
@@ -713,6 +713,25 @@
               color="primary"
             />
           </div>
+          <!-- Branch Office Filter -->
+          <div v-if="validate">
+            <div class="text-subtitle2 q-mb-sm">🏢 Sucursales</div>
+            <q-select
+              v-model="branchOfficeSelect"
+              :options="branchOffices"
+              style="min-width: 300px;"
+              label="Seleccionar sucursales"
+              option-value="id"
+              option-label="name"
+              filled
+              multiple
+              color="primary"
+            >
+              <template v-if="branchOfficeSelect.length" v-slot:append>
+                <q-icon name="cancel" @click.stop.prevent="branchOfficeSelect = []" class="cursor-pointer" />
+              </template>
+            </q-select>
+          </div>
           <div v-if="validate">
             <div class="text-subtitle2 q-mb-sm">🔄 Turno</div>
             <q-select
@@ -945,7 +964,7 @@ export default {
           name: 'amount',
           align: 'right',
           label: 'Monto',
-          field: 'amount',
+          field: row => row.amount - row.discount_amount,
           format: val => formatNumber(val),
           sortable: true
         }
@@ -988,6 +1007,8 @@ export default {
       validate: null,
       permissions: ['SAM'],
       cashBoxUsers: [],
+      branchOffices: [],
+      branchOfficeSelect: [],
 
       // Expansion state management
       expandedCards: {
@@ -997,7 +1018,9 @@ export default {
         services: true,
         fiscal: false,
         summary: false
-      }
+      },
+
+      appliedBranchOfficeSelect: []
     }
   },
 
@@ -1027,6 +1050,12 @@ export default {
 
   created () {
     this.setPermissions()
+    this.getBranchOffices().then(() => {
+      if (this.branchOffice) {
+        this.branchOfficeSelect = [this.branchOffice] // Mantén la inicialización de branchOfficeSelect si es necesario
+        this.appliedBranchOfficeSelect = [this.branchOffice] // Inicializa appliedBranchOfficeSelect con la sucursal actual
+      }
+    })
   },
 
   computed: {
@@ -1039,6 +1068,21 @@ export default {
     isYesterday () {
       const yesterday = date.subtractFromDate(Date(), { days: 1 })
       return this.day === date.formatDate(yesterday, 'YYYY-MM-DD')
+    },
+
+    reportTitle () {
+      if (this.appliedBranchOfficeSelect && this.appliedBranchOfficeSelect.length > 0) {
+        if (this.appliedBranchOfficeSelect.length === 1) {
+          return this.appliedBranchOfficeSelect[0].name
+        } else {
+          if (this.branchOffices && this.branchOffices.length > 0 && this.appliedBranchOfficeSelect.length === this.branchOffices.length && this.appliedBranchOfficeSelect.every(selected => this.branchOffices.some(branch => branch.id === selected.id))) {
+            return 'Todas las sucursales'
+          } else {
+            return this.appliedBranchOfficeSelect.map(branch => branch.name).join(', ')
+          }
+        }
+      }
+      return this.branchOffice?.name || 'Cargando...'
     }
   },
 
@@ -1160,6 +1204,12 @@ export default {
       this.from = date.formatDate(Date(), 'YYYY-MM-DD')
       this.to = date.formatDate(Date(), 'YYYY-MM-DD')
       this.panel = 'day'
+      // Reset branch office filter
+      if (this.userSession.is_root) {
+        this.branchOfficeSelect = this.branchOffices
+      } else {
+        this.branchOfficeSelect = [this.branchOffice]
+      }
       this.filterDate()
     },
     /**
@@ -1208,9 +1258,9 @@ export default {
 
     formatFilter () {
       let params = {}
+
       if (this.panel === 'day') {
         params = {
-          branch_office_id: this.branchOffice.id,
           seller_id: this.seller?.id,
           day: this.day,
           fromHours: this.fromHours,
@@ -1219,16 +1269,26 @@ export default {
       } else {
         params = {
           seller_id: this.seller?.id,
-          branch_office_id: this.branchOffice.id,
           to: this.to,
           from: this.from
         }
       }
+
+      // Apply branch office filter with all selected IDs
+      const branchOfficeIds = this.branchOfficeSelect && this.branchOfficeSelect.length > 0
+        ? this.branchOfficeSelect.map(branch => branch.id)
+        : (this.branchOffice?.id ? [this.branchOffice.id] : [])
+
+      if (branchOfficeIds.length > 0) {
+        params.branch_office_id = branchOfficeIds
+      }
+
       return params
     },
 
     async filterDate () {
       if (!this.branchOffice?.id) return
+      this.appliedBranchOfficeSelect = [...this.branchOfficeSelect] // Actualiza con el valor seleccionado del filtro
       this.params = this.formatFilter()
       this.params.cashbox_user_id = this.cashBoxUser?.id || null
       this.loading = true
@@ -1239,11 +1299,10 @@ export default {
           this.getPaymentMethodTotals(this.params),
           this.getPaymentTotals(this.params),
           this.getCashflowTotals(this.params),
-          this.getTypeOfServicesTotals(this.params),
-          this.reportInvoiceTaxes(this.params)
+          this.getTypeOfServicesTotals(this.params)
         ])
       } catch (error) {
-        notify('Error al cargar los datos', 'negative', 'warning')
+        notify(error.message, 'negative', 'warning')
       } finally {
         this.loading = false
       }
@@ -1328,10 +1387,14 @@ export default {
         }
 
         // Build filters with correct structure
+        const branchOfficeId = this.branchOfficeSelect && this.branchOfficeSelect.length > 0
+          ? this.branchOfficeSelect[0].id
+          : this.branchOffice?.id
+
         const filtersPayments = {
           dataEqualFilter: {
-            'invoice.branch_office_id': this.branchOffice?.id,
-            'invoice.seller_id': this.seller?.id
+            'invoice.seller_id': this.seller?.id,
+            'invoice.branch_office_id': branchOfficeId
           }
         }
         console.log('HOLA', this.selectedPaymentMethod)
@@ -1394,10 +1457,22 @@ export default {
       }
 
       // Construir filtros con estructura correcta
+      const branchOfficeIds = this.branchOfficeSelect && this.branchOfficeSelect.length > 0
+        ? this.branchOfficeSelect.map(branch => branch.id)
+        : [this.branchOffice?.id]
+
       const filtersPayments = {
         dataEqualFilter: {
-          'invoice.branch_office_id': this.branchOffice?.id,
           'invoice.seller_id': this.seller?.id
+        }
+      }
+
+      // Add branch office filter
+      if (branchOfficeIds.length === 1) {
+        filtersPayments.dataEqualFilter['invoice.branch_office_id'] = branchOfficeIds[0]
+      } else {
+        filtersPayments.whereIn = {
+          'invoice.branch_office_id': branchOfficeIds
         }
       }
 
@@ -1529,10 +1604,22 @@ export default {
       }
 
       // Build filters with correct structure
+      const branchOfficeIds = this.branchOfficeSelect && this.branchOfficeSelect.length > 0
+        ? this.branchOfficeSelect.map(branch => branch.id)
+        : [this.branchOffice?.id]
+
       const filtersPayments = {
         dataEqualFilter: {
-          'invoice.branch_office_id': this.branchOffice?.id,
           'invoice.seller_id': this.seller?.id
+        }
+      }
+
+      // Add branch office filter
+      if (branchOfficeIds.length === 1) {
+        filtersPayments.dataEqualFilter['invoice.branch_office_id'] = branchOfficeIds[0]
+      } else {
+        filtersPayments.whereIn = {
+          'invoice.branch_office_id': branchOfficeIds
         }
       }
 
@@ -1588,6 +1675,25 @@ export default {
      */
     refreshPaymentData () {
       this.loadInitialPaymentData()
+    },
+
+    /**
+     * Get branch offices based on user permissions
+     */
+    async getBranchOffices () {
+      try {
+        if (this.userSession.is_root) {
+          const { data } = await this.$api.get('branch-offices')
+          this.branchOffices = data
+          this.branchOfficeSelect = data
+        } else {
+          this.branchOffices = [this.branchOffice]
+          this.branchOfficeSelect = [this.branchOffice]
+        }
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+        console.error('Error fetching branch offices:', error)
+      }
     },
 
     async getCategoryTotals (params) {

@@ -76,6 +76,12 @@ const routes = [
         component: () => import('pages/RolePage.vue')
       },
       {
+        path: 'business-types',
+        meta: { requiresAuth: true },
+        name: 'BusinessType',
+        component: () => import('src/pages/BusinessTypePage.vue')
+      },
+      {
         path: 'living-rooms',
         meta: { requiresAuth: true },
         name: 'LivingRoom',

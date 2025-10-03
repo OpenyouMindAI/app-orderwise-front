@@ -206,7 +206,7 @@ export default {
       default: null
     }
   },
-  emits: ['update:modelValue', 'cashflow-saved'],
+  emits: ['update:modelValue'],
   data () {
     return {
       /**
@@ -271,8 +271,9 @@ export default {
     },
     cashBoxState: {
       handler (newCashboxUser) {
-        console.log(newCashboxUser)
-        this.cashboxUser = newCashboxUser
+        if (newCashboxUser) {
+          this.cashboxUser = newCashboxUser
+        }
       },
       immediate: true
     },
@@ -336,7 +337,6 @@ export default {
         notify('Flujo de dinero guardado exitosamente', 'positive', 'check')
         this.resetForm()
         this.show = false
-        this.$emit('cashflow-saved')
       } catch (error) {
         console.error('Error saving cashflow:', error)
         notify('Error al guardar el flujo de dinero', 'negative', 'error')
