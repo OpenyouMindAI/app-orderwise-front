@@ -151,7 +151,7 @@ const iconsByCategory = {
     'email',
     'chat',
     'message',
-    'phone',
+    'users.phone_number',
     'call',
     'contacts',
     'contact_mail',

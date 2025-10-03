@@ -318,7 +318,7 @@
               class="q-mb-md input-style"
             />
             <q-input
-              v-model="newClient.phone"
+              v-model="newClient.users.phone_number"
               label="Teléfono"
               outlined
               class="input-style"
@@ -409,7 +409,7 @@ const clientSearch = ref('')
 const newClient = ref({
   name: '',
   email: '',
-  phone: ''
+  users.phone_number: ''
 })
 
 // Transfer State
@@ -855,14 +855,14 @@ const addNewClient = () => {
     id: newId,
     name: newClient.value.name.trim(),
     email: newClient.value.email.trim(),
-    phone: newClient.value.phone.trim()
+    users.phone_number: newClient.value.users.phone_number.trim()
   }
 
   clients.value.push(clientData)
   selectedClient.value = clientData
 
   // Reset form
-  newClient.value = { name: '', email: '', phone: '' }
+  newClient.value = { name: '', email: '', users.phone_number: '' }
   toggleClientDialog(false)
 
   $q.notify({
@@ -989,8 +989,8 @@ const fetchClients = async () => {
     console.error('Error fetching clients:', error)
     // Fallback data
     clients.value = [
-      { id: 1, name: 'Juan Pérez', email: 'juan@email.com', phone: '123456789' },
-      { id: 2, name: 'María García', email: 'maria@email.com', phone: '987654321' }
+      { id: 1, name: 'Juan Pérez', email: 'juan@email.com', users.phone_number: '123456789' },
+      { id: 2, name: 'María García', email: 'maria@email.com', users.phone_number: '987654321' }
     ]
   }
 }
