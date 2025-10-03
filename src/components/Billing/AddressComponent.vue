@@ -18,47 +18,110 @@
       <template #prepend>
         <q-icon name="place" color="grey-6" size="20px" />
       </template>
-
-      <template #append>
-        <q-btn
-          v-if="address && addressDetails.latitude"
-          flat
-          round
-          dense
-          icon="location_on"
-          color="primary"
-          size="sm"
-          class="location-btn"
-          @click.stop="showMapModal"
-        />
-      </template>
     </q-input>
 
-    <q-dialog v-model="mapModal" class="map-dialog" @hide="cleanupMap">
+    <!-- Acciones disponibles -->
+    <div
+      v-if="(address && address.length > 2) || addressDetails.latitude"
+      class="address-actions-section"
+    >
+      <div class="actions-container">
+        <!-- Botón para guardar manualmente -->
+        <q-btn
+          v-if="address && address.length > 2 && !addressDetails.formattedAddress"
+          flat
+          dense
+          icon="save"
+          label="Guardar dirección"
+          color="positive"
+          size="sm"
+          class="action-btn"
+          @click="handleManualAddressInput"
+        />
+
+        <!-- Información guardada -->
+        <div
+          v-if="addressDetails.formattedAddress"
+          class="saved-address-info"
+        >
+          <q-icon name="check_circle" color="positive" size="16px" />
+          <span class="saved-text">{{ addressDetails.formattedAddress }}</span>
+        </div>
+
+        <!-- Botón para ver mapa -->
+        <q-btn
+          v-if="addressDetails.latitude || addressDetails.formattedAddress"
+          flat
+          dense
+          icon="map"
+          label="Ver mapa"
+          color="primary"
+          size="sm"
+          class="action-btn"
+          :loading="geocodingAddress"
+          @click="showMapModal"
+        />
+      </div>
+    </div>
+    <!-- Modal del mapa optimizado -->
+    <q-dialog
+      v-model="mapModal"
+      class="map-dialog"
+      @hide="cleanupMap"
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-card class="map-card">
-        <q-card-section class="map-header bg-primary text-white">
-          <div class="map-title">
-            {{ addressDetails.name || 'Ubicación seleccionada' }}
+        <!-- Header del modal -->
+        <q-card-section class="map-header">
+          <div class="header-content">
+            <div class="location-info">
+              <q-icon name="location_on" color="primary" size="20px" />
+              <div class="location-details">
+                <div class="location-name">
+                  {{ addressDetails.name || 'Ubicación' }}
+                </div>
+                <div class="location-address">
+                  {{ addressDetails.formattedAddress }}
+                </div>
+              </div>
+            </div>
+            <q-btn
+              v-close-popup
+              icon="close"
+              flat
+              round
+              dense
+              color="grey-6"
+              size="sm"
+              class="close-btn"
+            />
           </div>
-          <q-btn v-close-popup icon="close" flat round dense color="grey-7" size="sm" />
         </q-card-section>
 
+        <!-- Contenido del mapa -->
         <q-card-section class="map-content">
-          <div class="address-text">
-            {{ addressDetails.formattedAddress }}
-          </div>
           <div id="map-container" class="map-container"></div>
         </q-card-section>
 
-        <q-card-actions class="map-actions" align="right">
-          <q-btn v-close-popup flat label="Cerrar" color="grey-7" />
+        <!-- Acciones del modal -->
+        <q-card-actions class="map-actions">
+          <q-btn
+            flat
+            label="Cerrar"
+            color="grey-7"
+            @click="mapModal = false"
+            class="secondary-btn"
+          />
+          <q-space />
           <q-btn
             label="Cómo llegar"
             icon="directions"
             color="primary"
             unelevated
             :disable="!addressDetails.latitude"
-            class="directions-btn"
+            :loading="geocodingAddress"
+            class="primary-btn"
             @click="openDirections"
           />
         </q-card-actions>
@@ -80,6 +143,7 @@ const loading = ref(false)
 const mapModal = ref(false)
 const map = ref(null)
 const marker = ref(null)
+const geocodingAddress = ref(false)
 
 const props = defineProps({
   initialAddress: {
@@ -116,10 +180,48 @@ const addressDetails = ref({
 
 // Carga inicial
 onMounted(async () => {
+  // Cargar dirección inicial si existe
+  loadInitialAddress()
+
   // Dar tiempo para que el componente se monte completamente
   await nextTick()
   await initializeComponent()
 })
+
+// Función para cargar dirección inicial de forma segura
+const loadInitialAddress = () => {
+  try {
+    if (props.initialAddress && typeof props.initialAddress === 'object') {
+      const initial = props.initialAddress
+
+      // Cargar dirección en el input
+      if (initial.formattedAddress) {
+        address.value = initial.formattedAddress
+      } else if (initial.name) {
+        address.value = initial.name
+      }
+
+      // Cargar detalles completos si existen
+      if (initial.formattedAddress || initial.latitude) {
+        addressDetails.value = {
+          name: initial.name || '',
+          street: initial.street || '',
+          city: initial.city || '',
+          state: initial.state || '',
+          country: initial.country || '',
+          zipCode: initial.zipCode || '',
+          latitude: initial.latitude || null,
+          longitude: initial.longitude || null,
+          formattedAddress: initial.formattedAddress || '',
+          placeId: initial.placeId || '',
+          types: initial.types || []
+        }
+      }
+    }
+  } catch (error) {
+    // Silencioso: no mostrar error si no hay dirección inicial
+  }
+}
 
 // Limpieza al desmontar
 onUnmounted(() => {
@@ -130,7 +232,14 @@ const initializeComponent = async () => {
   loading.value = true
   try {
     const loaded = await loadGoogleMaps()
-    if (!loaded) throw new Error('Google Maps no se cargó')
+    if (!loaded) {
+      // Google Maps no disponible, usar modo manual
+      return
+    }
+
+    // Estrategia alternativa: buscar el input directamente en el DOM del componente
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 300))
 
     // Estrategia alternativa: buscar el input directamente en el DOM del componente
     // sin depender del template ref que no se está bindeando correctamente
@@ -138,7 +247,6 @@ const initializeComponent = async () => {
     await new Promise(resolve => setTimeout(resolve, 300))
 
     await initAutocomplete()
-    address.value = props?.initialAddress?.formattedAddress || props.initialAddress?.name || ''
   } catch (error) {
     console.error('Error inicializando AddressComponent:', error)
     // No reintentar en caso de error, mantener el componente funcional sin autocomplete
@@ -217,18 +325,17 @@ const initAutocomplete = async () => {
     })
 
     autocomplete.value.addListener('place_changed', () => {
-      onPlaceChanged().catch(console.error)
+      onPlaceChanged().catch(() => {})
     })
   } catch (error) {
-    console.error('Error en autocomplete:', error)
-    throw error
+    // Silencioso: usar modo manual
   }
 }
 
 const handlePlaceSelection = async (place) => {
   try {
     if (!place?.geometry) {
-      console.log('Lugar sin geometría')
+      // Lugar sin geometría, usar modo manual
       return
     }
 
@@ -253,7 +360,7 @@ const handlePlaceSelection = async (place) => {
 
     emit('address-selected', addressDetails.value)
   } catch (error) {
-    console.error('Error procesando lugar:', error)
+    // Error silencioso al procesar lugar
   }
 }
 
@@ -294,12 +401,69 @@ const parseAddressComponents = (components) => {
   })
 }
 
-const showMapModal = async () => {
-  if (!addressDetails.value.latitude) return
+const geocodeAddress = async () => {
+  if (!addressDetails.value.formattedAddress || !window.google?.maps) {
+    return false
+  }
 
-  mapModal.value = true
-  await nextTick()
-  initMap()
+  geocodingAddress.value = true
+
+  try {
+    const geocoder = new window.google.maps.Geocoder()
+
+    const result = await new Promise((resolve, reject) => {
+      geocoder.geocode(
+        {
+          address: addressDetails.value.formattedAddress,
+          componentRestrictions: { country: 'ar' }
+        },
+        (results, status) => {
+          if (status === 'OK' && results?.[0]) {
+            resolve(results[0])
+          } else {
+            reject(new Error(`Geocoding failed: ${status}`))
+          }
+        }
+      )
+    })
+
+    if (result.geometry) {
+      // Actualizar coordenadas sin perder la dirección original
+      addressDetails.value.latitude = result.geometry.location.lat()
+      addressDetails.value.longitude = result.geometry.location.lng()
+
+      // Emitir actualización con coordenadas
+      emit('address-selected', addressDetails.value)
+
+      return true
+    }
+  } catch (error) {
+    console.warn('Error al geocodificar dirección:', error)
+  } finally {
+    geocodingAddress.value = false
+  }
+
+  return false
+}
+
+const showMapModal = async () => {
+  // Si ya tiene coordenadas, mostrar directamente
+  if (addressDetails.value.latitude) {
+    mapModal.value = true
+    await nextTick()
+    initMap()
+    return
+  }
+
+  // Si no tiene coordenadas pero tiene dirección, hacer geocoding
+  if (addressDetails.value.formattedAddress) {
+    await geocodeAddress()
+    if (addressDetails.value.latitude) {
+      mapModal.value = true
+      await nextTick()
+      initMap()
+    }
+  }
 }
 
 const initMap = () => {
@@ -335,7 +499,7 @@ const initMap = () => {
       infoWindow.open(map.value, marker.value)
     }
   } catch (error) {
-    console.error('Error inicializando mapa:', error)
+    // Error silencioso al inicializar mapa
   }
 }
 
@@ -389,6 +553,27 @@ const handleManualAddressInput = () => {
   emit('address-selected', addressDetails.value)
 }
 
+// Nueva función para editar dirección
+const editAddress = () => {
+  if (addressDetails.value.formattedAddress) {
+    address.value = addressDetails.value.formattedAddress
+    // Limpiar los detalles para permitir nueva edición
+    addressDetails.value = {
+      name: '',
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+      latitude: null,
+      longitude: null,
+      formattedAddress: '',
+      placeId: '',
+      types: []
+    }
+  }
+}
+
 const resetAddress = () => {
   address.value = ''
   addressDetails.value = {
@@ -408,102 +593,276 @@ const resetAddress = () => {
 }
 
 defineExpose({
-  resetAddress
+  resetAddress,
+  editAddress
 })
 </script>
 
 <style scoped>
-.places-input-container {
+/* Contenedor principal */
+.address-component {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Sección del input principal */
+.address-input-section {
   position: relative;
 }
 
-.places-input {
-  border-radius: 12px;
-}
-
-.places-input :deep(.q-field__control) {
-  border-radius: 12px;
+/* Input sin estilos personalizados para mantener consistencia */
+.address-input :deep(.q-field__control) {
   min-height: 48px;
 }
 
-.places-input :deep(.q-field__outlined) {
-  border-color: #e0e0e0;
-  transition: border-color 0.2s ease;
+/* Sección de acciones */
+.address-actions-section {
+  margin-top: 4px;
 }
 
-.places-input :deep(.q-field__outlined:hover) {
-  border-color: #bdbdbd;
+.actions-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
 }
 
-.places-input :deep(.q-field--focused .q-field__outlined) {
-  border-color: var(--q-primary);
-  border-width: 2px;
-}
-
-.places-input-field {
-  font-size: 14px;
-  font-weight: 400;
-  color: #424242;
-}
-
-.location-btn {
+.action-btn {
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
   transition: all 0.2s ease;
+  min-width: auto;
 }
 
-.location-btn:hover {
-  background-color: rgba(25, 118, 210, 0.08);
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Información de dirección guardada */
+.saved-address-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 4px;
+  border-left: 3px solid #4caf50;
+  flex: 1;
+  min-width: 200px;
+}
+
+.saved-text {
+  font-size: 12px;
+  color: #2e7d32;
+  font-weight: 500;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+/* Modal del mapa optimizado */
 .map-card {
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  width: 800px;
-  max-width: 90vw;
+  width: 900px;
+  max-width: 95vw;
+  max-height: 90vh;
 }
 
+/* Header mejorado */
 .map-header {
-  border-bottom: 1px solid #e0e0e0;
-  padding: 20px 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  padding: 16px 20px;
+}
+
+.header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
 }
 
-.map-title {
-  font-size: 18px;
+.location-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.location-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.location-name {
+  font-size: 16px;
   font-weight: 600;
-  margin: 0;
+  color: #1a1a1a;
+  line-height: 1.2;
 }
 
-.map-content {
-  padding: 24px;
-}
-
-.address-text {
-  font-size: 14px;
+.location-address {
+  font-size: 13px;
   color: #6c757d;
-  margin-bottom: 16px;
-  line-height: 1.4;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.close-btn {
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(1.05);
+}
+
+/* Contenido del mapa */
+.map-content {
+  padding: 0;
+  position: relative;
 }
 
 .map-container {
   height: 400px;
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
-  background-color: #f8f9fa;
-  overflow: hidden;
+  background: #f8f9fa;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
 }
 
+/* Acciones del modal */
 .map-actions {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 12px 20px;
   gap: 12px;
 }
 
-.directions-btn {
+.secondary-btn {
   border-radius: 8px;
   font-weight: 500;
+  padding: 8px 16px;
+  transition: all 0.2s ease;
+}
+
+.primary-btn {
+  border-radius: 8px;
+  font-weight: 600;
   padding: 8px 20px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+}
+
+.secondary-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Animaciones */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.saved-address-info {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Responsividad mejorada */
+@media (max-width: 768px) {
+  .address-component {
+    gap: 6px;
+  }
+
+  .actions-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .action-btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .saved-address-info {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .map-card {
+    width: 100%;
+    max-width: 100vw;
+    max-height: 85vh;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .map-container {
+    height: 250px;
+  }
+
+  .header-content {
+    gap: 8px;
+  }
+
+  .location-info {
+    gap: 8px;
+  }
+
+  .location-name {
+    font-size: 15px;
+  }
+
+  .location-address {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .actions-container {
+    padding: 6px 0;
+  }
+
+  .action-btn {
+    font-size: 11px;
+    padding: 6px 12px;
+  }
+
+  .saved-text {
+    font-size: 11px;
+  }
 }
 </style>
 

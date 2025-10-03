@@ -254,6 +254,10 @@ export default {
           this.openAddBranchOffice = false
           this.visible = false
           this.branchOffice = {}
+          // Limpiar las variables de dirección
+          this.address = null
+          this.formattedAddress = ''
+          this.addressComponentKey += 1
           Notify.create({
             message: 'Sucursal creada exitosamente',
             icon: 'check_circle',
@@ -298,6 +302,10 @@ export default {
           this.openEditBranchOffice = false
           this.visible = false
           this.branchOffice = {}
+          // Limpiar las variables de dirección
+          this.address = null
+          this.formattedAddress = ''
+          this.addressComponentKey += 1
           Notify.create({
             message: 'Sucursal editada exitosamente',
             icon: 'check_circle',

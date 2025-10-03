@@ -28,6 +28,16 @@
               </template>
             </q-input>
           </template>
+          <template v-slot:body-cell-address="props">
+            <q-td :props="props">
+              <div
+                class="address-cell"
+                :title="props.value || 'Sin dirección'"
+              >
+                {{ props.value || 'Sin dirección' }}
+              </div>
+            </q-td>
+          </template>
         </q-table>
       </div>
     </div>
@@ -284,6 +294,16 @@ export default {
           label: 'Correo',
           field: 'email',
           sortable: true
+        },
+        {
+          name: 'address',
+          align: 'left',
+          label: 'Dirección',
+          field: 'address',
+          sortable: true,
+          format: (val) => val || 'Sin dirección',
+          style: 'width: 250px; max-width: 250px;',
+          headerStyle: 'width: 250px; max-width: 250px;'
         }
       ],
       paginationConfig: {
@@ -333,8 +353,6 @@ export default {
       this.address = null
       this.formattedAddress = ''
       this.addressComponentKey += 1
-
-      console.log('🧹 Modal cerrado - datos limpiados')
     },
     /**
      * Open new client modal with clean form
@@ -719,3 +737,18 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.address-cell {
+  width: 250px;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+.address-cell:hover {
+  color: var(--q-primary);
+}
+</style>
