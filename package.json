@@ -10,10 +10,9 @@
     "test": "echo \"No test specified\" && exit 0",
     "dev": "cross-env NODE_ENV=local quasar dev",
     "build": "quasar build",
-    "build-pwa": "NODE_ENV=production quasar build -m pwa",
-    "build-pwa-dev": "NODE_ENV=staging quasar build -m pwa",
-    "build-pwa-staging": "NODE_ENV=staging quasar build -m pwa",
-    "build-pwa-dixcont": "NODE_ENV=development quasar build -m pwa",
+    "build-pwa": "NODE_ENV=production quasar build",
+    "build-pwa-dev": "NODE_ENV=staging quasar build",
+    "build-pwa-dixcont": "NODE_ENV=staging quasar build",
     "icons": "icongenie generate -i logo.png --skip-trim --padding 50 50"
   },
   "dependencies": {
