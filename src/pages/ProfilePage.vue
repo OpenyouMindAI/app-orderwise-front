@@ -14,7 +14,7 @@
           <div class="avatar-section">
             <div class="avatar-glow"></div>
             <q-avatar size="120px" class="user-avatar" color="primary">
-              <img v-if="profile.avatar" :src="getAvatarUrl(profile.avatar)" alt="Avatar">
+              <img v-if="profile.avatar" :src="profile.avatar" alt="Avatar">
               <span v-else class="avatar-text">{{ getInitials() }}</span>
             </q-avatar>
             <q-btn
@@ -482,10 +482,6 @@ export default {
       } finally {
         this.loading.profile = false
       }
-    },
-    getAvatarUrl (avatar) {
-      // El backend ya retorna la URL completa (Google o Storage::url)
-      return avatar || null
     },
     triggerFileInput () {
       this.$refs.fileInput.click()
