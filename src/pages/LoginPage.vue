@@ -105,17 +105,20 @@
 
         <!-- Botones Sociales -->
         <div class="social-container">
-          <button type="button" class="social-button google-btn" @click="notify('Próximamente disponible', 'info', 'info')">
-            <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            <span>Google</span>
+          <button type="button" class="social-btn google-btn" @click="handleGoogleLogin" :disabled="googleLoading">
+            <q-spinner v-if="googleLoading" color="white" size="18px"/>
+            <template v-else>
+              <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              <span>Google</span>
+            </template>
           </button>
 
-          <button type="button" class="social-button facebook-btn" @click="notify('Próximamente disponible', 'info', 'info')">
+          <button type="button" class="social-btn facebook-btn" @click="notify('Próximamente disponible', 'info', 'info')">
             <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
             </svg>
@@ -157,6 +160,8 @@ export default {
       logo,
       slide: 'style',
       showPassword: false,
+      googleLoading: false,
+      googleClient: null,
       /**
        * Email User
        * @type {String}
@@ -192,8 +197,212 @@ export default {
   },
   mounted () {
     this.$q.dark.set(this.darkMode)
+    this.loadGoogleScript()
   },
   methods: {
+    /**
+     * Cargar el script de Google Identity Services
+     */
+    loadGoogleScript () {
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = () => {
+        this.initializeGoogleSignIn()
+      }
+      document.head.appendChild(script)
+    },
+    /**
+     * Inicializar Google Sign-In
+     */
+    initializeGoogleSignIn () {
+      if (window.google && window.google.accounts) {
+        try {
+          // Inicializar Google Identity Services
+          window.google.accounts.id.initialize({
+            client_id: process.env.GOOGLE_CLIENT_ID,
+            callback: this.handleGoogleCallback,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          })
+
+          // Inicializar OAuth2 para el popup
+          this.googleClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: process.env.GOOGLE_CLIENT_ID,
+            scope: 'email profile',
+            callback: this.handleGoogleTokenResponse
+          })
+        } catch (error) {
+          console.error('Error initializing Google Sign-In:', error)
+        }
+      }
+    },
+    /**
+     * Manejar el clic en el botón de Google
+     */
+    handleGoogleLogin () {
+      this.googleLoading = true
+
+      if (window.google && window.google.accounts) {
+        try {
+          // Intentar con One Tap primero
+          window.google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              // Si One Tap no funciona, usar OAuth2 popup
+              console.log('One Tap not available, using OAuth2 popup')
+              this.openGoogleOAuthPopup()
+            }
+          })
+        } catch (error) {
+          console.error('Error with Google One Tap:', error)
+          // Fallback a OAuth2 popup
+          this.openGoogleOAuthPopup()
+        }
+      } else {
+        this.googleLoading = false
+        notify('Google Sign-In no está disponible', 'negative', 'warning')
+      }
+    },
+    /**
+     * Abrir popup de OAuth2 de Google
+     */
+    openGoogleOAuthPopup () {
+      if (this.googleClient) {
+        try {
+          this.googleClient.requestAccessToken()
+        } catch (error) {
+          this.googleLoading = false
+          notify('Error al abrir Google Sign-In', 'negative', 'warning')
+        }
+      } else {
+        this.googleLoading = false
+        notify('Google OAuth no está inicializado', 'negative', 'warning')
+      }
+    },
+    /**
+     * Manejar respuesta del token de OAuth2
+     */
+    async handleGoogleTokenResponse (tokenResponse) {
+      if (tokenResponse && tokenResponse.access_token) {
+        try {
+          // Obtener información del usuario con el access token
+          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: {
+              Authorization: `Bearer ${tokenResponse.access_token}`
+            }
+          })
+
+          const userInfo = await userInfoResponse.json()
+
+          // Llamar al backend con toda la información
+          await this.authenticateWithGoogle(userInfo.email, userInfo.name, userInfo.sub, userInfo.picture)
+        } catch (error) {
+          this.googleLoading = false
+          console.error('Error getting user info:', error)
+          notify('Error al obtener información de Google', 'negative', 'warning')
+        }
+      } else {
+        this.googleLoading = false
+      }
+    },
+    /**
+     * Autenticar con Google en el backend
+     */
+    async authenticateWithGoogle (email, name, googleId, picture) {
+      try {
+        // Crear un credential con toda la información
+        const credential = btoa(JSON.stringify({
+          email,
+          name,
+          google_id: googleId,
+          picture
+        }))
+
+        const result = await this.$api.post('/authentication/google', {
+          credential
+          // NO enviar email y name por separado, ya están en el credential
+        })
+
+        if (result.data.access_token) {
+          // Usar el mismo método que el login normal para guardar la sesión
+          this.setSessionData(result.data)
+
+          notify('Inicio de sesión exitoso', 'positive', 'check_circle')
+
+          // Redirigir según el tipo de usuario
+          if (result.data.user.is_root) {
+            this.$router.push({ name: 'Billing' })
+          } else if (result.data.user?.roles?.length === 0) {
+            notify('Usuario no tiene permisos', 'negative', 'warning')
+          } else {
+            this.$router.push({ name: 'Tutorial' })
+          }
+        }
+      } catch (error) {
+        console.error('Google authentication error:', error)
+
+        if (error.response?.status === 404) {
+          notify('No hay un usuario registrado con ese email', 'negative', 'warning')
+        } else if (error.response?.status === 401) {
+          notify('No pudimos validar tu cuenta de Google. Inténtalo de nuevo.', 'negative', 'warning')
+        } else {
+          notify('Error al iniciar sesión con Google.', 'negative', 'warning')
+        }
+      } finally {
+        this.googleLoading = false
+      }
+    },
+    /**
+     * Callback de Google después de la autenticación
+     */
+    async handleGoogleCallback (response) {
+      if (!response.credential) {
+        notify('No se pudo obtener las credenciales de Google', 'negative', 'warning')
+        return
+      }
+
+      this.googleLoading = true
+
+      try {
+        const result = await this.$axios.post('/authentication/google', {
+          credential: response.credential
+        })
+
+        if (result.data.access_token) {
+          // Guardar token en localStorage
+          localStorage.setItem('access_token', result.data.access_token)
+          localStorage.setItem('token_type', result.data.token_type)
+          localStorage.setItem('user', JSON.stringify(result.data.user))
+
+          notify('Inicio de sesión exitoso', 'positive', 'check_circle')
+
+          // Redirigir según el tipo de usuario
+          if (result.data.user.is_root) {
+            this.$router.push({ name: 'Billing' })
+          } else if (result.data.user?.roles?.length === 0) {
+            notify('Usuario no tiene permisos', 'negative', 'warning')
+          } else {
+            this.$router.push({ name: 'Tutorial' })
+          }
+        }
+      } catch (error) {
+        console.error('Google login error:', error)
+
+        if (error.response?.status === 404) {
+          // Usuario no existe
+          notify('No hay un usuario registrado con ese email', 'negative', 'warning')
+        } else if (error.response?.status === 401) {
+          // Token inválido
+          notify('No pudimos validar tu cuenta de Google. Inténtalo de nuevo.', 'negative', 'warning')
+        } else {
+          // Error genérico
+          notify('Error al iniciar sesión con Google.', 'negative', 'warning')
+        }
+      } finally {
+        this.googleLoading = false
+      }
+    },
     /**
      * Login app
      */
@@ -232,7 +441,7 @@ export default {
         this.btnDisable = false
       }
     },
-    ...mapActions(authentication, ['login'])
+    ...mapActions(authentication, ['login', 'setSessionData'])
   }
 }
 </script>
@@ -549,6 +758,7 @@ export default {
 /* Botones Sociales */
 .social-container {
   display: flex;
+  flex-direction: row;
   gap: 12px;
   margin-bottom: 28px;
   animation: fadeInUp 0.5s ease-out 1s backwards;
@@ -565,34 +775,61 @@ export default {
   }
 }
 
-.social-button {
+.social-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  height: 48px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  background: rgba(55, 71, 92, 0.6);
+  gap: 8px;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
-  color: #e8eaed;
+  font-weight: 600;
+  color: white;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 20px;
+  letter-spacing: 0.3px;
 }
 
-.social-button:hover {
-  background: rgba(60, 76, 97, 0.8);
+.social-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-btn {
+  background: rgba(55, 71, 92, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.google-btn:hover:not(:disabled) {
+  background: rgba(60, 76, 97, 0.9);
   border-color: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-.social-button:active {
+.google-btn:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.facebook-btn {
+  background: rgba(55, 71, 92, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.facebook-btn:hover {
+  background: rgba(60, 76, 97, 0.9);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.facebook-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(24, 119, 242, 0.3);
 }
 
 .social-icon {
@@ -665,7 +902,7 @@ export default {
     flex-direction: column;
   }
 
-  .social-button {
+  .social-btn {
     width: 100%;
   }
 }
