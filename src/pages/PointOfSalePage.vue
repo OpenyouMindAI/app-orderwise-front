@@ -970,8 +970,8 @@ const fetchClients = async () => {
   } catch (error) {
     console.error('Error fetching clients:', error)
     clients.value = [
-      { id: 1, name: 'Juan Pérez', email: 'juan@email.com', users.phone_number: '123456789' },
-      { id: 2, name: 'María García', email: 'maria@email.com', users.phone_number: '987654321' }
+      { id: 1, name: 'Juan Pérez', email: 'juan@email.com', phone_number: '123456789' },
+      { id: 2, name: 'María García', email: 'maria@email.com', phone_number: '987654321' }
     ]
   }
 }
