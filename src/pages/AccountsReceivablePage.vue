@@ -892,7 +892,7 @@
                 <tbody>
                   <tr v-for="product in (selectedInvoice.products || [])" :key="product.id">
                     <td>{{ product.name }}</td>
-                    <td class="text-center">{{ product.pivot.amount }}</td>
+                    <td class="text-center">{{ formatNumber(product.pivot.amount) }}</td>
                     <td class="text-right">{{ formatCurrency(product.pivot.price) }}</td>
                     <td class="text-right text-weight-bold">{{ formatCurrency(product.pivot.amount * product.pivot.price) }}</td>
                   </tr>
