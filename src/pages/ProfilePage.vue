@@ -1,100 +1,128 @@
 <template>
   <q-page class="profile-page">
+    <!-- Animated Background -->
+    <div class="animated-bg">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+    </div>
+
     <div class="profile-container">
-      <!-- Header -->
-      <div class="profile-header">
-        <div class="avatar-wrapper">
-          <q-avatar size="80px" class="user-avatar" color="primary" text-color="white">
-            <img v-if="profile.avatar" :src="getAvatarUrl(profile.avatar)" alt="Avatar">
-            <span v-else class="avatar-text">
-              {{ getInitials() }}
-            </span>
-          </q-avatar>
-          <q-btn
-            round
-            size="sm"
-            color="primary"
-            icon="photo_camera"
-            class="avatar-upload-btn"
-            @click="triggerFileInput"
-          >
-            <q-tooltip>Cambiar foto</q-tooltip>
-          </q-btn>
-          <input
-            ref="fileInput"
-            type="file"
-            accept="image/*"
-            style="display: none"
-            @change="uploadAvatar"
-          />
-        </div>
-        <div class="user-info">
-          <h2>{{ profile.first_name }} {{ profile.last_name }}</h2>
-          <p>{{ profile.email }}</p>
-          <q-btn
-            v-if="profile.avatar"
-            label="Eliminar foto"
-            size="sm"
-            flat
-            dense
-            color="negative"
-            @click="deleteAvatar"
-            class="q-mt-xs"
-          />
+      <!-- Hero Header with Glass Effect -->
+      <div class="profile-hero">
+        <div class="hero-content">
+          <div class="avatar-section">
+            <div class="avatar-glow"></div>
+            <q-avatar size="120px" class="user-avatar" color="primary">
+              <img v-if="profile.avatar" :src="getAvatarUrl(profile.avatar)" alt="Avatar">
+              <span v-else class="avatar-text">{{ getInitials() }}</span>
+            </q-avatar>
+            <q-btn
+              round
+              size="md"
+              color="primary"
+              icon="photo_camera"
+              class="avatar-upload-btn"
+              @click="triggerFileInput"
+            >
+              <q-tooltip>Cambiar foto</q-tooltip>
+            </q-btn>
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="uploadAvatar"
+            />
+          </div>
+          
+          <div class="user-info">
+            <h1 class="user-name">{{ profile.first_name }} {{ profile.last_name }}</h1>
+            <p class="user-email">
+              <q-icon name="email" size="18px" class="q-mr-xs" />
+              {{ profile.email }}
+            </p>
+            <div class="user-badges">
+              <q-chip 
+                v-if="linkedAccounts.google" 
+                icon="check_circle" 
+                color="positive" 
+                text-color="white" 
+                size="sm"
+              >
+                Google vinculado
+              </q-chip>
+              <q-chip 
+                icon="verified_user" 
+                color="primary" 
+                text-color="white" 
+                size="sm"
+              >
+                Cuenta verificada
+              </q-chip>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Cards Grid -->
       <div class="cards-grid">
-        <!-- Card: Información Personal -->
+        <!-- Card: Información Personal + Email -->
         <q-card class="section-card">
-          <q-card-section class="card-header">
-            <div class="header-icon">
-              <q-icon name="person" size="24px"/>
+          <q-card-section class="card-header-compact">
+            <div class="header-icon-compact">
+              <q-icon name="person" size="20px"/>
             </div>
-            <div>
+            <div class="header-text">
               <h3>Información Personal</h3>
-              <p>Actualiza tus datos básicos</p>
             </div>
           </q-card-section>
 
-          <q-separator/>
+          <q-card-section class="card-content-compact">
+            <q-form @submit.prevent="saveProfile" class="compact-form">
+              <div class="input-row">
+                <q-input
+                  v-model="profileForm.first_name"
+                  label="Nombre"
+                  outlined
+                  dense
+                  :error="!!errors.first_name"
+                  :error-message="errors.first_name"
+                  @update:model-value="errors.first_name = ''"
+                />
+                <q-input
+                  v-model="profileForm.last_name"
+                  label="Apellido"
+                  outlined
+                  dense
+                  :error="!!errors.last_name"
+                  :error-message="errors.last_name"
+                  @update:model-value="errors.last_name = ''"
+                />
+              </div>
 
-          <q-card-section>
-            <q-form @submit.prevent="saveProfile" class="simple-form">
-              <q-input
-                v-model="profileForm.first_name"
-                label="Nombre"
-                outlined
-                :error="!!errors.first_name"
-                :error-message="errors.first_name"
-                :rules="[
-                  val => !!val || 'El nombre es requerido',
-                  val => val.length >= 2 || 'Mínimo 2 caracteres'
-                ]"
-                @update:model-value="errors.first_name = ''"
-              />
+              <div class="input-group q-mt-md">
+                <label class="input-label">Correo Electrónico</label>
+                <div class="email-display-compact">
+                  <span class="email-value-compact">{{ profile.email }}</span>
+                  <q-btn
+                    label="Cambiar"
+                    color="primary"
+                    flat
+                    dense
+                    size="sm"
+                    @click="modals.email = true"
+                  />
+                </div>
+              </div>
 
-              <q-input
-                v-model="profileForm.last_name"
-                label="Apellido"
-                outlined
-                class="q-mt-md"
-                :error="!!errors.last_name"
-                :error-message="errors.last_name"
-                :rules="[
-                  val => !!val || 'El apellido es requerido',
-                  val => val.length >= 2 || 'Mínimo 2 caracteres'
-                ]"
-                @update:model-value="errors.last_name = ''"
-              />
-
-              <div class="q-mt-lg">
+              <div class="q-mt-md flex justify-end">
                 <q-btn
-                  label="Guardar Cambios"
+                  label="Guardar"
                   type="submit"
                   color="primary"
                   unelevated
+                  size="md"
                   :loading="loading.profile"
                   :disable="!hasProfileChanges || loading.profile"
                 />
@@ -103,133 +131,102 @@
           </q-card-section>
         </q-card>
 
-        <!-- Card: Correo Electrónico -->
-        <q-card class="section-card">
-          <q-card-section class="card-header">
-            <div class="header-icon">
-              <q-icon name="email" size="24px"/>
-            </div>
-            <div>
-              <h3>Correo Electrónico</h3>
-              <p>Actualiza tu email</p>
-            </div>
-          </q-card-section>
-
-          <q-separator/>
-
-          <q-card-section>
-            <div class="email-display">
-              <div class="email-value">{{ profile.email }}</div>
-              <q-btn
-                label="Cambiar correo"
-                color="primary"
-                flat
-                @click="modals.email = true"
-              />
-            </div>
-          </q-card-section>
-        </q-card>
-
         <!-- Card: Cambiar Contraseña -->
         <q-card class="section-card">
-          <q-card-section class="card-header">
-            <div class="header-icon">
-              <q-icon name="lock" size="24px"/>
+          <q-card-section class="card-header-compact">
+            <div class="header-icon-compact">
+              <q-icon name="lock" size="20px"/>
             </div>
-            <div>
-              <h3>Cambiar Contraseña</h3>
-              <p>Mantén tu cuenta segura</p>
+            <div class="header-text">
+              <h3>Seguridad</h3>
             </div>
           </q-card-section>
 
-          <q-separator/>
-
-          <q-card-section>
-            <q-form @submit.prevent="changePassword" class="simple-form">
+          <q-card-section class="card-content-compact">
+            <q-form @submit.prevent="changePassword" class="compact-form">
               <q-input
                 v-model="passwordForm.current_password"
                 label="Contraseña Actual"
                 :type="showPasswords.current ? 'text' : 'password'"
                 outlined
+                dense
                 :error="!!errors.current_password"
                 :error-message="errors.current_password"
-                :rules="[val => !!val || 'La contraseña actual es requerida']"
                 @update:model-value="errors.current_password = ''"
               >
                 <template v-slot:append>
                   <q-icon
                     :name="showPasswords.current ? 'visibility' : 'visibility_off'"
                     class="cursor-pointer"
+                    size="sm"
                     @click="showPasswords.current = !showPasswords.current"
                   />
                 </template>
               </q-input>
 
-              <q-input
-                v-model="passwordForm.new_password"
-                label="Nueva Contraseña"
-                :type="showPasswords.new ? 'text' : 'password'"
-                outlined
-                class="q-mt-md"
-                :error="!!errors.new_password"
-                :error-message="errors.new_password"
-                @update:model-value="validatePasswordStrength"
-              >
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPasswords.new ? 'visibility' : 'visibility_off'"
-                    class="cursor-pointer"
-                    @click="showPasswords.new = !showPasswords.new"
-                  />
-                </template>
-              </q-input>
+              <div class="input-row q-mt-sm">
+                <q-input
+                  v-model="passwordForm.new_password"
+                  label="Nueva Contraseña"
+                  :type="showPasswords.new ? 'text' : 'password'"
+                  outlined
+                  dense
+                  :error="!!errors.new_password"
+                  :error-message="errors.new_password"
+                  @update:model-value="validatePasswordStrength"
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="showPasswords.new ? 'visibility' : 'visibility_off'"
+                      class="cursor-pointer"
+                      size="sm"
+                      @click="showPasswords.new = !showPasswords.new"
+                    />
+                  </template>
+                </q-input>
+
+                <q-input
+                  v-model="passwordForm.confirm_password"
+                  label="Confirmar"
+                  :type="showPasswords.confirm ? 'text' : 'password'"
+                  outlined
+                  dense
+                  :error="!!errors.confirm_password"
+                  :error-message="errors.confirm_password"
+                  @update:model-value="errors.confirm_password = ''"
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="showPasswords.confirm ? 'visibility' : 'visibility_off'"
+                      class="cursor-pointer"
+                      size="sm"
+                      @click="showPasswords.confirm = !showPasswords.confirm"
+                    />
+                  </template>
+                </q-input>
+              </div>
 
               <!-- Password Strength Meter -->
-              <div v-if="passwordForm.new_password" class="password-strength q-mt-sm">
-                <div class="strength-bar">
+              <div v-if="passwordForm.new_password" class="password-strength-compact q-mt-sm">
+                <div class="strength-bar-compact">
                   <div
                     class="strength-fill"
                     :class="passwordStrength.class"
                     :style="{ width: passwordStrength.width }"
                   ></div>
                 </div>
-                <div class="strength-text" :class="passwordStrength.class">
+                <span class="strength-text-compact" :class="passwordStrength.class">
                   {{ passwordStrength.label }}
-                </div>
-                <ul v-if="passwordStrength.errors.length" class="strength-errors">
-                  <li v-for="(error, i) in passwordStrength.errors" :key="i">{{ error }}</li>
-                </ul>
+                </span>
               </div>
 
-              <q-input
-                v-model="passwordForm.confirm_password"
-                label="Confirmar Nueva Contraseña"
-                :type="showPasswords.confirm ? 'text' : 'password'"
-                outlined
-                class="q-mt-md"
-                :error="!!errors.confirm_password"
-                :error-message="errors.confirm_password"
-                :rules="[
-                  val => !!val || 'Confirma tu contraseña',
-                  val => val === passwordForm.new_password || 'Las contraseñas no coinciden'
-                ]"
-                @update:model-value="errors.confirm_password = ''"
-              >
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPasswords.confirm ? 'visibility' : 'visibility_off'"
-                    class="cursor-pointer"
-                    @click="showPasswords.confirm = !showPasswords.confirm"
-                  />
-                </template>
-              </q-input>
-
-              <div class="q-mt-lg">
+              <div class="q-mt-md flex justify-end">
                 <q-btn
-                  label="Cambiar Contraseña"
+                  label="Actualizar"
                   type="submit"
                   color="primary"
                   unelevated
+                  size="md"
                   :loading="loading.password"
                   :disable="!isPasswordFormValid || loading.password"
                 />
@@ -390,6 +387,44 @@ export default {
     hasProfileChanges () {
       return this.profileForm.first_name !== this.originalProfile.first_name ||
              this.profileForm.last_name !== this.originalProfile.last_name
+    },
+    isPasswordFormValid () {
+      return this.passwordForm.current_password &&
+             this.passwordForm.new_password &&
+             this.passwordForm.confirm_password &&
+             this.passwordForm.new_password === this.passwordForm.confirm_password &&
+             this.passwordStrength.score >= 2
+    },
+    passwordStrength () {
+      const password = this.passwordForm.new_password
+      if (!password) return { score: 0, label: '', class: '', width: '0%', errors: [] }
+
+      let score = 0
+      const errors = []
+
+      if (password.length >= 8) score++
+      else errors.push('Mínimo 8 caracteres')
+
+      if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++
+      else errors.push('Incluye mayúsculas y minúsculas')
+
+      if (/\d/.test(password)) score++
+      else errors.push('Incluye números')
+
+      if (/[^A-Za-z0-9]/.test(password)) score++
+      else errors.push('Incluye caracteres especiales')
+
+      const labels = ['Muy débil', 'Débil', 'Media', 'Fuerte', 'Muy fuerte']
+      const classes = ['weak', 'weak', 'medium', 'strong', 'strong']
+      const widths = ['20%', '40%', '60%', '80%', '100%']
+
+      return {
+        score,
+        label: labels[score] || '',
+        class: classes[score] || '',
+        width: widths[score] || '0%',
+        errors
+      }
     }
   },
   mounted () {
@@ -449,11 +484,8 @@ export default {
       }
     },
     getAvatarUrl (avatar) {
-      if (!avatar) return null
-      // Si es URL completa (de Google), retornar directamente
-      if (avatar.startsWith('http')) return avatar
-      // Si es path local, construir URL
-      return `${this.$api.defaults.baseURL}/storage/${avatar}`
+      // El backend ya retorna la URL completa (Google o Storage::url)
+      return avatar || null
     },
     triggerFileInput () {
       this.$refs.fileInput.click()
@@ -565,13 +597,18 @@ export default {
     /**
      * Cambiar contraseña
      */
+    validatePasswordStrength () {
+      // Trigger computed property update
+      this.errors.new_password = ''
+    },
     async changePassword () {
+      this.loading.password = true
+      this.errors = {}
       try {
-        this.loadingPassword = true
         await this.$api.post('/change-password', {
-          current_password: this.passwordForm.currentPassword,
-          password: this.passwordForm.newPassword,
-          password_confirmation: this.passwordForm.confirmPassword
+          current_password: this.passwordForm.current_password,
+          password: this.passwordForm.new_password,
+          password_confirmation: this.passwordForm.confirm_password
         })
 
         this.$q.notify({
@@ -582,18 +619,21 @@ export default {
 
         // Limpiar formulario
         this.passwordForm = {
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
+          current_password: '',
+          new_password: '',
+          confirm_password: ''
         }
       } catch (error) {
+        if (error.response?.status === 422) {
+          this.errors = error.response.data.errors || {}
+        }
         this.$q.notify({
           message: error.response?.data?.message || 'Error al cambiar contraseña',
           icon: 'warning',
           color: 'negative'
         })
       } finally {
-        this.loadingPassword = false
+        this.loading.password = false
       }
     },
 
@@ -782,72 +822,270 @@ export default {
 </script>
 
 <style scoped>
-/* Contenedor principal */
+/* Animated Background */
+.animated-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.body--dark .animated-bg {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%);
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  animation: float 20s infinite ease-in-out;
+}
+
+.orb-1 {
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
+  top: -10%;
+  right: -10%;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  bottom: -10%;
+  left: -10%;
+  animation-delay: 7s;
+}
+
+.orb-3 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: 14s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+/* Container */
 .profile-page {
-  background: #fafafa;
+  position: relative;
   min-height: 100vh;
-  padding: 24px;
+  padding: 32px;
+  z-index: 1;
 }
 
 .profile-container {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
+  position: relative;
+  z-index: 2;
 }
 
-/* Header */
-.profile-header {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
-  margin-bottom: 24px;
+/* Hero Header - Glass Morphism */
+.profile-hero {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  padding: 48px;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.6s ease-out;
+}
+
+.body--dark .profile-hero {
+  background: rgba(30, 30, 30, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-content {
   display: flex;
   align-items: center;
-  gap: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  gap: 32px;
 }
 
-.avatar-wrapper {
+/* Avatar Section */
+.avatar-section {
   position: relative;
+  animation: scaleIn 0.8s ease-out 0.2s both;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.avatar-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  background: var(--q-primary);
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.4;
+  animation: pulse 3s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
 }
 
 .user-avatar {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
 }
 
 .avatar-text {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 48px;
+  font-weight: 700;
+  color: white;
 }
 
 .avatar-upload-btn {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
+  bottom: 5px;
+  right: 5px;
+  z-index: 2;
+  transition: transform 0.3s ease;
 }
 
-.user-info h2 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 4px 0;
+.avatar-upload-btn:hover {
+  transform: scale(1.1);
 }
 
-.user-info p {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
+/* User Info */
+.user-info {
+  flex: 1;
+  animation: fadeInRight 0.8s ease-out 0.4s both;
 }
 
-/* Cards Grid */
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.user-name {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--q-primary);
+  margin: 0 0 12px 0;
+  letter-spacing: -0.5px;
+}
+
+.user-email {
+  font-size: 16px;
+  color: #64748b;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+}
+
+.body--dark .user-email {
+  color: #94a3b8;
+}
+
+.user-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Cards Grid - Compact */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+  gap: 20px;
+  animation: fadeInUp 0.8s ease-out 0.6s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .section-card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.body--dark .section-card {
+  background: rgba(30, 30, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
 }
 
 .section-card.full-width {
@@ -859,61 +1097,182 @@ export default {
   align-items: center;
   gap: 16px;
   padding: 24px !important;
+  position: relative;
+}
+
+.card-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--q-primary), transparent);
+  opacity: 0.3;
 }
 
 .header-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: #f0f0f0;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--q-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: white;
+  box-shadow: 0 4px 12px rgba(var(--q-primary-rgb), 0.3);
+  transition: transform 0.3s ease;
+}
+
+.section-card:hover .header-icon {
+  transform: rotate(5deg) scale(1.05);
 }
 
 .card-header h3 {
   font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-weight: 700;
+  color: #1e293b;
   margin: 0 0 4px 0;
+  letter-spacing: -0.3px;
+}
+
+.body--dark .card-header h3 {
+  color: #f1f5f9;
 }
 
 .card-header p {
   font-size: 13px;
-  color: #999;
+  color: #64748b;
   margin: 0;
 }
 
-/* Formularios */
-.simple-form {
+.body--dark .card-header p {
+  color: #94a3b8;
+}
+
+/* Compact Headers - Hero UI Style */
+.card-header-compact {
+  padding: 16px 20px !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon-compact {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--q-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.header-text h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.body--dark .header-text h3 {
+  color: #f1f5f9;
+}
+
+/* Compact Content */
+.card-content-compact {
+  padding: 20px !important;
+}
+
+.compact-form {
   max-width: 100%;
 }
 
-/* Email Display */
-.email-display {
+/* Input Row - Tailwind Style */
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.body--dark .input-label {
+  color: #94a3b8;
+}
+
+/* Email Display Compact */
+.email-display-compact {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(248, 250, 252, 0.5);
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-.email-value {
-  font-size: 15px;
-  color: #1a1a1a;
+.body--dark .email-display-compact {
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.email-value-compact {
+  font-size: 14px;
+  color: #1e293b;
   font-weight: 500;
 }
 
-/* Password Strength */
-.password-strength {
-  margin-top: 8px;
+.body--dark .email-value-compact {
+  color: #f1f5f9;
 }
 
-.strength-bar {
-  height: 4px;
-  background: #e0e0e0;
+/* Utility Classes */
+.flex {
+  display: flex;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+/* Password Strength - Compact */
+.password-strength-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.strength-bar-compact {
+  flex: 1;
+  height: 3px;
+  background: rgba(226, 232, 240, 0.5);
   border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 6px;
+}
+
+.body--dark .strength-bar-compact {
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.strength-text-compact {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .strength-fill {
@@ -1000,20 +1359,121 @@ export default {
   color: #999;
 }
 
+/* Social Items - Modern */
+.social-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.5);
+  transition: all 0.3s ease;
+}
+
+.body--dark .social-item {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.social-item:hover {
+  background: rgba(var(--q-primary-rgb), 0.05);
+  transform: translateX(4px);
+}
+
+.body--dark .social-item:hover {
+  background: rgba(var(--q-primary-rgb), 0.1);
+}
+
+.social-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.social-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.social-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.body--dark .social-name {
+  color: #f1f5f9;
+}
+
+.social-status {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.body--dark .social-status {
+  color: #94a3b8;
+}
+
+/* Buttons - Enhanced */
+:deep(.q-btn) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.q-btn:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+:deep(.q-btn.q-btn--unelevated) {
+  box-shadow: 0 4px 12px rgba(var(--q-primary-rgb), 0.3);
+}
+
+/* Input Fields - Modern */
+:deep(.q-field--outlined .q-field__control) {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+:deep(.q-field--outlined .q-field__control:hover) {
+  border-color: var(--q-primary);
+}
+
+:deep(.q-field--outlined.q-field--focused .q-field__control) {
+  box-shadow: 0 0 0 3px rgba(var(--q-primary-rgb), 0.1);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .profile-page {
-    padding: 16px;
+    padding: 20px;
   }
 
-  .profile-header {
+  .profile-hero {
+    padding: 32px 24px;
+  }
+
+  .hero-content {
     flex-direction: column;
     text-align: center;
-    padding: 24px;
+    gap: 24px;
+  }
+
+  .user-name {
+    font-size: 28px;
+  }
+
+  .user-badges {
+    justify-content: center;
   }
 
   .cards-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .input-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .social-item {
@@ -1024,6 +1484,38 @@ export default {
 
   .social-left {
     width: 100%;
+  }
+
+  .gradient-orb {
+    filter: blur(60px);
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-page {
+    padding: 16px;
+  }
+
+  .profile-hero {
+    padding: 24px 20px;
+  }
+
+  .user-avatar {
+    width: 100px !important;
+    height: 100px !important;
+  }
+
+  .avatar-glow {
+    width: 120px;
+    height: 120px;
+  }
+
+  .user-name {
+    font-size: 24px;
+  }
+
+  .avatar-text {
+    font-size: 40px;
   }
 }
 </style>
