@@ -30,7 +30,6 @@
             name="username"
             placeholder="Usuario o correo electrónico"
             dark
-            standout="bg-blue-grey-9"
             class="custom-input"
             @keyup.enter="loginAt"
             :rules="[val => !!val || 'El campo es requerido.']"
@@ -50,7 +49,6 @@
             placeholder="Contraseña"
             :type="showPassword ? 'text' : 'password'"
             dark
-            standout="bg-blue-grey-9"
             class="custom-input"
             @keyup.enter="loginAt"
             :rules="[val => !!val || 'El campo es requerido.']"
