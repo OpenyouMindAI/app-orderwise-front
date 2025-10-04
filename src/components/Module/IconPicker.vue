@@ -58,11 +58,9 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   selectedIcon: {
     type: String,
-    default: '',
-  },
+    default: ''
+  }
 })
-
-const emit = defineEmits(['select', 'cancel'])
 
 // State
 const search = ref('')
@@ -82,7 +80,7 @@ const categories = [
   'AV',
   'Maps',
   'Device',
-  'Hardware',
+  'Hardware'
 ]
 
 // Common Material Icons by category
@@ -109,7 +107,7 @@ const iconsByCategory = {
     'visibility',
     'visibility_off',
     'lock',
-    'lock_open',
+    'lock_open'
   ],
   Navigation: [
     'menu',
@@ -126,7 +124,7 @@ const iconsByCategory = {
     'more_vert',
     'more_horiz',
     'fullscreen',
-    'fullscreen_exit',
+    'fullscreen_exit'
   ],
   Content: [
     'add_box',
@@ -145,7 +143,7 @@ const iconsByCategory = {
     'archive',
     'backspace',
     'ballot',
-    'block',
+    'block'
   ],
   Communication: [
     'email',
@@ -162,7 +160,7 @@ const iconsByCategory = {
     'contact_support',
     'location_on',
     'vpn_key',
-    'alternate_email',
+    'alternate_email'
   ],
   Files: [
     'folder',
@@ -178,7 +176,7 @@ const iconsByCategory = {
     'description',
     'insert_drive_file',
     'backup',
-    'delete_forever',
+    'delete_forever'
   ],
   Social: [
     'group',
@@ -195,7 +193,7 @@ const iconsByCategory = {
     'share',
     'thumb_up',
     'thumb_down',
-    'whatshot',
+    'whatshot'
   ],
   Alerts: [
     'add_alert',
@@ -208,7 +206,7 @@ const iconsByCategory = {
     'help',
     'help_outline',
     'announcement',
-    'feedback',
+    'feedback'
   ],
   AV: [
     'play_arrow',
@@ -227,7 +225,7 @@ const iconsByCategory = {
     'movie',
     'videocam',
     'videocam_off',
-    'music_note',
+    'music_note'
   ],
   Maps: [
     'map',
@@ -244,7 +242,7 @@ const iconsByCategory = {
     'local_atm',
     'local_bar',
     'local_cafe',
-    'local_hospital',
+    'local_hospital'
   ],
   Device: [
     'devices',
@@ -263,7 +261,7 @@ const iconsByCategory = {
     'data_usage',
     'storage',
     'battery_full',
-    'battery_alert',
+    'battery_alert'
   ],
   Hardware: [
     'computer',
@@ -283,8 +281,8 @@ const iconsByCategory = {
     'memory',
     'usb',
     'dock',
-    'gamepad',
-  ],
+    'gamepad'
+  ]
 }
 
 // Flatten all icons for "All" category

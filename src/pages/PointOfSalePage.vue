@@ -777,10 +777,7 @@ const createInvoice = async () => {
       payments,
       voucherType: null
     }
-
-    console.log('📄 Payload de factura a enviar:', payload)
     await api.post('/invoices', payload)
-    console.log('✅ Factura creada exitosamente.')
   } catch (error) {
     console.error('❌ Error al crear la factura:', error)
     $q.notify({
@@ -912,7 +909,6 @@ const listenForTransfers = () => {
 
     const channel = echoPay.channel(channelName)
     channel.listen(eventName, (data) => {
-      console.log('Transfer payment received:', data)
 
       if (data?.payment) {
         // Obtener el monto solicitado (en centavos)
@@ -922,31 +918,19 @@ const listenForTransfers = () => {
         // Obtener el monto recibido
         const receivedAmount = parseFloat(data.payment.transaction_amount || 0)
 
-        console.log('💰 Validación de monto:')
-        console.log(`   Solicitado: ${requestedAmount.toFixed(2)} (${requestedAmountCents} centavos)`)
-        console.log(`   Recibido: ${receivedAmount.toFixed(2)}`)
-
         // Validar que los montos sean exactamente idénticos
         if (receivedAmount === requestedAmount) {
           transferPaymentDetails.value = data.payment // Guardar detalles del pago
           isWaitingForTransfer.value = false
-          console.log('✅ Transfer successful! Amounts match.')
           $q.notify({
             type: 'positive',
             message: `Pago recibido: ${receivedAmount.toFixed(2)}`,
             position: 'top'
           })
           completeOperation()
-        } else {
-          console.warn('❌ Transfer amount mismatch!')
-          console.warn(`   Diferencia: ${Math.abs(receivedAmount - requestedAmount).toFixed(2)}`)
-          // Los montos deben ser exactamente idénticos
-          console.log('🔄 Continuando esperando el monto exacto...')
         }
       }
     })
-
-    console.log('Listening for transfers on channel:', channelName, 'for event:', eventName)
   } catch (error) {
     console.error('Error in listenForTransfers:', error)
     isWaitingForTransfer.value = false
@@ -969,7 +953,6 @@ const stopListeningForTransfers = () => {
     if (qpayId && branchOffice?.id && echoPay) {
       const channelName = 'mercado-pago-payment'
       echoPay.leave(channelName)
-      console.log('Stopped listening on channel:', channelName)
     }
   } catch (error) {
     console.error('Error in stopListeningForTransfers:', error)
@@ -983,11 +966,9 @@ const stopListeningForTransfers = () => {
 const fetchClients = async () => {
   try {
     const { data } = await api.get('clients')
-    console.log('Clients from API:', data)
     clients.value = data
   } catch (error) {
     console.error('Error fetching clients:', error)
-    // Fallback data
     clients.value = [
       { id: 1, name: 'Juan Pérez', email: 'juan@email.com', users.phone_number: '123456789' },
       { id: 2, name: 'María García', email: 'maria@email.com', users.phone_number: '987654321' }
@@ -998,11 +979,7 @@ const fetchClients = async () => {
 const fetchPaymentMethods = async () => {
   try {
     const { data } = await api.get('payment-methods')
-    console.log('Payment Methods from API:', data)
-
-    // Filtrar solo métodos con acrónimo válido
     const validMethods = filterValidPaymentMethods(data)
-    console.log('Valid Payment Methods (with acronym):', validMethods)
 
     paymentMethods.value = data // Guardar todos los métodos (para referencia)
     validPaymentMethods.value = validMethods // Solo los válidos para mostrar
