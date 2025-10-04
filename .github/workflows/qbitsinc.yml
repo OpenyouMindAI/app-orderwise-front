@@ -55,4 +55,4 @@ jobs:
         run: |
           sudo apt-get update -qy
           sudo apt-get install -y lftp
-          lftp -e "set ssl:verify-certificate no; open $(cat ftp_host.txt); user $(cat ftp_username.txt) $(cat ftp_password.txt); mirror -X .* -X .*/ --reverse --verbose dist/pwa/ ./${{ env.BRANCH_NAME }}/; bye"
+          lftp -e "set ssl:verify-certificate no; open $(cat ftp_host.txt); user $(cat ftp_username.txt) $(cat ftp_password.txt); mirror -X .* -X .*/ --reverse --verbose dist/spa/ ./${{ env.BRANCH_NAME }}/; bye"
