@@ -39,7 +39,7 @@ jobs:
       - name: Build con variable de entorno
         run: |
           if [ "${{ env.BRANCH_NAME }}" == "develop" ]; then
-            echo "Ejecutando build con NODE_ENV=staging"
+            echo "Ejecutando build con NODE_ENV=development"
             npm run build-pwa-dev
           else
             echo "Ejecutando build con NODE_ENV=production"
