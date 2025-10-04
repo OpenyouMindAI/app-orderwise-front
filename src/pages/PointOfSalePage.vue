@@ -409,7 +409,7 @@ const clientSearch = ref('')
 const newClient = ref({
   name: '',
   email: '',
-  users.phone_number: ''
+  phone_number: ''
 })
 
 // Transfer State
@@ -852,14 +852,14 @@ const addNewClient = () => {
     id: newId,
     name: newClient.value.name.trim(),
     email: newClient.value.email.trim(),
-    users.phone_number: newClient.value.users.phone_number.trim()
+    phone_number: newClient.value.users.phone_number.trim()
   }
 
   clients.value.push(clientData)
   selectedClient.value = clientData
 
   // Reset form
-  newClient.value = { name: '', email: '', users.phone_number: '' }
+  newClient.value = { name: '', email: '', phone_number: '' }
   toggleClientDialog(false)
 
   $q.notify({
@@ -909,7 +909,6 @@ const listenForTransfers = () => {
 
     const channel = echoPay.channel(channelName)
     channel.listen(eventName, (data) => {
-
       if (data?.payment) {
         // Obtener el monto solicitado (en centavos)
         const requestedAmountCents = parseInt(inputValue.value, 10)
