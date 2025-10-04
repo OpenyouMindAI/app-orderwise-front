@@ -118,12 +118,15 @@
             </template>
           </button>
 
-          <button type="button" class="social-btn facebook-btn" @click="notify('Próximamente disponible', 'info', 'info')">
-            <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
-            </svg>
-            <span>Facebook</span>
-          </button>
+          <!-- <button type="button" class="social-btn facebook-btn" @click="handleFacebookLogin" :disabled="facebookLoading">
+            <q-spinner v-if="facebookLoading" color="white" size="18px"/>
+            <template v-else>
+              <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
+              </svg>
+              <span>Facebook</span>
+            </template>
+          </button> -->
         </div>
 
         <!-- Registro -->
@@ -161,7 +164,9 @@ export default {
       slide: 'style',
       showPassword: false,
       googleLoading: false,
+      facebookLoading: false,
       googleClient: null,
+      facebookSDKLoaded: false,
       /**
        * Email User
        * @type {String}
@@ -198,6 +203,7 @@ export default {
   mounted () {
     this.$q.dark.set(this.darkMode)
     this.loadGoogleScript()
+    this.loadFacebookSDK()
   },
   methods: {
     /**
@@ -401,6 +407,155 @@ export default {
         }
       } finally {
         this.googleLoading = false
+      }
+    },
+    /**
+     * Cargar Facebook SDK
+     */
+    loadFacebookSDK () {
+      // Verificar si ya está cargado
+      if (window.FB) {
+        this.facebookSDKLoaded = true
+        return
+      }
+
+      // Configurar callback cuando el SDK esté listo
+      window.fbAsyncInit = () => {
+        window.FB.init({
+          appId: process.env.FACEBOOK_APP_ID,
+          cookie: true,
+          xfbml: true,
+          version: 'v23.0'
+        })
+
+        // Marcar como cargado
+        this.facebookSDKLoaded = true
+        console.log('Facebook SDK loaded successfully')
+      }
+
+      // Cargar el script
+      const script = document.createElement('script')
+      script.id = 'facebook-jssdk'
+      script.src = 'https://connect.facebook.net/es_LA/sdk.js'
+      script.async = true
+      script.defer = true
+      script.crossOrigin = 'anonymous'
+
+      script.onerror = () => {
+        console.error('Error loading Facebook SDK')
+        notify('Error al cargar Facebook SDK', 'negative', 'warning')
+      }
+
+      document.body.appendChild(script)
+    },
+    /**
+     * Manejar login con Facebook
+     */
+    handleFacebookLogin () {
+      // Verificar si el SDK está cargado
+      if (!window.FB || !this.facebookSDKLoaded) {
+        notify('Cargando Facebook... Intenta de nuevo en un momento', 'warning', 'info')
+
+        // Intentar cargar el SDK si no está
+        if (!window.FB) {
+          this.loadFacebookSDK()
+        }
+        return
+      }
+
+      this.facebookLoading = true
+
+      console.log('Iniciando login con Facebook...')
+
+      window.FB.login((response) => {
+        console.log('Facebook login response:', response)
+
+        if (response.authResponse) {
+          console.log('Usuario autenticado, obteniendo información...')
+          // Usuario autenticado, obtener información
+          this.getFacebookUserInfo(response.authResponse.accessToken)
+        } else {
+          console.log('Usuario canceló el login o hubo un error')
+          // Usuario canceló el login
+          this.facebookLoading = false
+        }
+      }, { scope: 'public_profile,email' })
+    },
+    /**
+     * Obtener información del usuario de Facebook
+     */
+    getFacebookUserInfo (accessToken) {
+      console.log('Obteniendo información del usuario con accessToken:', accessToken)
+
+      window.FB.api('/me', { fields: 'id,name,email,picture' }, async (response) => {
+        console.log('Facebook API response:', response)
+
+        if (response && !response.error) {
+          console.log('Datos del usuario:', {
+            email: response.email,
+            name: response.name,
+            id: response.id,
+            picture: response.picture?.data?.url
+          })
+
+          // Autenticar con el backend
+          await this.authenticateWithFacebook(
+            response.email,
+            response.name,
+            response.id,
+            response.picture?.data?.url
+          )
+        } else {
+          console.error('Error en Facebook API:', response.error)
+          this.facebookLoading = false
+          notify('Error al obtener información de Facebook', 'negative', 'warning')
+        }
+      })
+    },
+    /**
+     * Autenticar con Facebook en el backend
+     */
+    async authenticateWithFacebook (email, name, facebookId, picture) {
+      try {
+        // Crear un credential con toda la información
+        const credential = btoa(JSON.stringify({
+          email,
+          name,
+          facebook_id: facebookId,
+          picture
+        }))
+
+        const result = await this.$api.post('/authentication/facebook', {
+          credential
+        })
+
+        if (result.data.access_token) {
+          // Usar el mismo método que el login normal
+          this.setSessionData(result.data)
+
+          notify('Inicio de sesión exitoso', 'positive', 'check_circle')
+
+          // Redirigir según el tipo de usuario
+          if (result.data.user.is_root) {
+            this.$router.push({ name: 'Billing' })
+          } else if (result.data.user?.roles?.length === 0) {
+            notify('Usuario no tiene permisos', 'negative', 'warning')
+          } else {
+            this.$router.push({ name: 'Tutorial' })
+          }
+        }
+      } catch (error) {
+        console.error('Facebook authentication error:', error)
+
+        if (error.response?.status === 404) {
+          notify('No hay un usuario registrado con ese email', 'negative', 'warning')
+        } else if (error.response?.status === 401) {
+          notify('No pudimos validar tu cuenta de Facebook. Inténtalo de nuevo.', 'negative', 'warning')
+        } else {
+          notify('Error al iniciar sesión con Facebook.', 'negative', 'warning')
+        }
+      } finally {
+        this.facebookLoading = false
       }
     },
     /**
