@@ -234,7 +234,7 @@
           </div>
           <div class="stat-info-compact">
             <div class="stat-label-compact">Ventas del Período</div>
-            <div class="stat-value-compact">{{ formatCurrencyCompact(totalsAmount.paid_sales) }}</div>
+            <div class="stat-value-compact">{{ formatCurrency(totalsAmount.paid_sales) }}</div>
             <div class="stat-description-compact">Total facturado en ventas</div>
           </div>
         </div>
@@ -252,7 +252,7 @@
           </div>
           <div class="stat-info-compact">
             <div class="stat-label-compact">Arqueos Realizados</div>
-            <div class="stat-value-compact">{{ formatCurrencyCompact(totalsAmount.sum_amount) }}</div>
+            <div class="stat-value-compact">{{ formatCurrency(totalsAmount.sum_amount) }}</div>
             <div class="stat-description-compact">Total retirado en arqueos</div>
           </div>
         </div>
@@ -274,7 +274,7 @@
           </div>
           <div class="stat-info-compact">
             <div class="stat-label-compact">Diferencia</div>
-            <div class="stat-value-compact">{{ formatCurrencyCompact(Math.abs(totalsAmount.difference_report || 0)) }}</div>
+            <div class="stat-value-compact">{{ formatCurrency(Math.abs(totalsAmount.difference_report || 0)) }}</div>
             <div class="stat-description-compact">{{ getDifferenceStatus().label }}</div>
           </div>
         </div>
@@ -284,23 +284,6 @@
         </div>
       </div>
 
-      <!-- Days Card -->
-      <div class="stat-card-compact stat-card-purple animate-scale-in" style="animation-delay: 0.4s;">
-        <div class="stat-card-bg">
-          <div class="stat-card-circle"></div>
-        </div>
-        <div class="stat-card-content-compact">
-          <div class="stat-icon-wrapper-compact purple">
-            <q-icon name="event_available" size="24px" />
-          </div>
-          <div class="stat-info-compact">
-            <div class="stat-label-compact">Días Consultados</div>
-            <div class="stat-value-compact">{{ daysData.length }}</div>
-            <div class="stat-description-compact">Días con movimientos</div>
-          </div>
-        </div>
-        <div class="stat-card-shine"></div>
-      </div>
     </div>
     <!-- Loading State -->
     <div v-if="loading" class="q-gutter-md">
@@ -588,173 +571,146 @@
       </q-card>
     </q-dialog>
 
-    <!-- Help Dialog -->
-    <q-dialog v-model="showHelp" maximized>
-      <q-card>
-        <q-card-section class="row items-center bg-primary text-white">
-          <div class="text-h6">📚 Guía de Uso - Comparación de Ventas vs Arqueos</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
+    <!-- Help Dialog - Elegant & Compact -->
+    <q-dialog v-model="showHelp" :maximized="$q.screen.lt.md">
+      <q-card class="help-dialog-card" style="width: 900px; max-width: 90vw;">
+        <!-- Header -->
+        <q-card-section class="help-header">
+          <div class="row items-center">
+            <q-icon name="help_outline" size="28px" class="q-mr-sm" />
+            <div>
+              <div class="help-title">Guía de Uso</div>
+              <div class="help-subtitle">Reporte de Ventas vs Arqueos</div>
+            </div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup color="white" />
+          </div>
         </q-card-section>
 
-        <q-card-section class="q-pa-lg" style="max-width: 900px; margin: 0 auto;">
-          <div class="q-gutter-lg">
-            <!-- What is this -->
-            <div>
-              <div class="text-h6 text-weight-bold q-mb-sm">🎯 ¿Para qué sirve este reporte?</div>
-              <p class="text-body1">
-                Este reporte te permite <strong>comparar las ventas del día con los arqueos realizados</strong>.
-                Es una herramienta de control para verificar que el dinero retirado coincida con las ventas facturadas.
-              </p>
-            </div>
-
-            <q-separator />
-
-            <!-- How to use -->
-            <div>
-              <div class="text-h6 text-weight-bold q-mb-sm">📖 ¿Cómo usar el reporte?</div>
-              <q-list bordered separator>
-                <q-item>
-                  <q-item-section avatar>
-                    <q-avatar color="primary" text-color="white" icon="filter_alt" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold">1. Selecciona el período</q-item-label>
-                    <q-item-label caption>
-                      Por defecto se muestra el mes actual. Puedes cambiar las fechas o usar los botones rápidos.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-item>
-                  <q-item-section avatar>
-                    <q-avatar color="positive" text-color="white" icon="store" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold">2. Filtra por sucursal</q-item-label>
-                    <q-item-label caption>
-                      Por defecto se muestra tu sucursal actual. Puedes agregar más sucursales si tienes permisos.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-item>
-                  <q-item-section avatar>
-                    <q-avatar color="blue" text-color="white" icon="visibility" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold">3. Revisa los totales</q-item-label>
-                    <q-item-label caption>
-                      En las tarjetas superiores verás: Ventas totales, Arqueos realizados, Diferencia y Días consultados.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-item>
-                  <q-item-section avatar>
-                    <q-avatar color="orange" text-color="white" icon="expand_more" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold">4. Expande cada día</q-item-label>
-                    <q-item-label caption>
-                      Haz clic en cualquier día para ver el detalle de cada arqueo realizado.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-
-            <q-separator />
-
-            <!-- Understanding the data -->
-            <div>
-              <div class="text-h6 text-weight-bold q-mb-sm">💡 Entendiendo los datos</div>
-              <div class="q-gutter-md">
-                <q-card flat bordered>
-                  <q-card-section>
-                    <div class="row items-center q-gutter-sm">
-                      <q-icon name="point_of_sale" size="32px" color="positive" />
-                      <div>
-                        <div class="text-weight-bold">Ventas del Período</div>
-                        <div class="text-caption">Total de dinero facturado en las ventas realizadas</div>
-                      </div>
-                    </div>
-                  </q-card-section>
-                </q-card>
-
-                <q-card flat bordered>
-                  <q-card-section>
-                    <div class="row items-center q-gutter-sm">
-                      <q-icon name="account_balance_wallet" size="32px" color="blue" />
-                      <div>
-                        <div class="text-weight-bold">Arqueos Realizados</div>
-                        <div class="text-caption">Total de dinero retirado según los arqueos de caja</div>
-                      </div>
-                    </div>
-                  </q-card-section>
-                </q-card>
-
-                <q-card flat bordered>
-                  <q-card-section>
-                    <div class="row items-center q-gutter-sm">
-                      <q-icon name="compare_arrows" size="32px" color="warning" />
-                      <div>
-                        <div class="text-weight-bold">Diferencia</div>
-                        <div class="text-caption">
-                          <strong>✅ Si es $0:</strong> Los arqueos coinciden con las ventas<br>
-                          <strong>⚠️ Si es positivo:</strong> Se retiró más de lo vendido<br>
-                          <strong>❌ Si es negativo:</strong> Falta dinero por arquear
-                        </div>
-                      </div>
-                    </div>
-                  </q-card-section>
-                </q-card>
+        <q-card-section class="q-pa-md">
+          <div class="row q-col-gutter-md">
+            <!-- Left Column: Video -->
+            <div class="col-12 col-md-5">
+              <div class="video-container">
+                <div class="video-placeholder">
+                  <q-icon name="play_circle" size="64px" color="primary" />
+                  <div class="text-subtitle2 q-mt-sm text-grey-7">Video Tutorial</div>
+                  <div class="text-caption text-grey-6">Próximamente disponible</div>
+                </div>
+                <!-- Aquí puedes agregar el iframe del video cuando esté disponible -->
+                <!-- <iframe src="URL_DEL_VIDEO" frameborder="0" allowfullscreen></iframe> -->
               </div>
             </div>
 
-            <q-separator />
+            <!-- Right Column: Instructions -->
+            <div class="col-12 col-md-7">
+              <q-scroll-area style="height: 400px;">
+                <div class="q-pr-md">
+                  <!-- Quick Guide -->
+                  <div class="help-section">
+                    <div class="help-section-title">
+                      <q-icon name="rocket_launch" color="primary" size="20px" />
+                      Inicio Rápido
+                    </div>
+                    <div class="help-steps">
+                      <div class="help-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                          <div class="step-title">Selecciona el período</div>
+                          <div class="step-desc">Usa los botones rápidos o elige fechas personalizadas</div>
+                        </div>
+                      </div>
+                      <div class="help-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                          <div class="step-title">Aplica filtros</div>
+                          <div class="step-desc">Filtra por sucursal o método de pago si lo necesitas</div>
+                        </div>
+                      </div>
+                      <div class="help-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                          <div class="step-title">Revisa los resultados</div>
+                          <div class="step-desc">Expande cada día para ver el detalle de arqueos</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-            <!-- Tips -->
-            <div>
-              <div class="text-h6 text-weight-bold q-mb-sm">💪 Consejos</div>
-              <q-list>
-                <q-item>
-                  <q-item-section avatar>
-                    <q-icon name="check_circle" color="positive" />
-                  </q-item-section>
-                  <q-item-section>
-                    Revisa este reporte al final de cada día para asegurar que todo cuadre
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section avatar>
-                    <q-icon name="check_circle" color="positive" />
-                  </q-item-section>
-                  <q-item-section>
-                    Si hay diferencias, expande el día y verifica cada arqueo individual
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section avatar>
-                    <q-icon name="check_circle" color="positive" />
-                  </q-item-section>
-                  <q-item-section>
-                    Usa los filtros de método de pago para revisar efectivo, tarjetas, etc. por separado
-                  </q-item-section>
-                </q-item>
-              </q-list>
+                  <q-separator class="q-my-md" />
+
+                  <!-- Understanding Cards -->
+                  <div class="help-section">
+                    <div class="help-section-title">
+                      <q-icon name="insights" color="primary" size="20px" />
+                      Entendiendo las Tarjetas
+                    </div>
+                    <div class="help-cards">
+                      <div class="help-card">
+                        <q-icon name="trending_up" color="positive" size="24px" />
+                        <div>
+                          <div class="help-card-title">Ventas del Período</div>
+                          <div class="help-card-desc">Total facturado en ventas</div>
+                        </div>
+                      </div>
+                      <div class="help-card">
+                        <q-icon name="account_balance_wallet" color="blue" size="24px" />
+                        <div>
+                          <div class="help-card-title">Arqueos Realizados</div>
+                          <div class="help-card-desc">Total retirado en arqueos</div>
+                        </div>
+                      </div>
+                      <div class="help-card">
+                        <q-icon name="compare_arrows" color="warning" size="24px" />
+                        <div>
+                          <div class="help-card-title">Diferencia</div>
+                          <div class="help-card-desc">
+                            <span class="text-positive">✓ $0 = Perfecto</span><br>
+                            <span class="text-warning">⚠ Positivo = Sobra</span><br>
+                            <span class="text-negative">✗ Negativo = Falta</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <q-separator class="q-my-md" />
+
+                  <!-- Tips -->
+                  <div class="help-section">
+                    <div class="help-section-title">
+                      <q-icon name="lightbulb" color="primary" size="20px" />
+                      Consejos Útiles
+                    </div>
+                    <div class="help-tips">
+                      <div class="help-tip">
+                        <q-icon name="check_circle" color="positive" size="18px" />
+                        <span>Revisa el reporte diariamente para detectar diferencias a tiempo</span>
+                      </div>
+                      <div class="help-tip">
+                        <q-icon name="check_circle" color="positive" size="18px" />
+                        <span>Usa los filtros para analizar por método de pago específico</span>
+                      </div>
+                      <div class="help-tip">
+                        <q-icon name="check_circle" color="positive" size="18px" />
+                        <span>Expande los días con diferencias para verificar cada arqueo</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </q-scroll-area>
             </div>
           </div>
         </q-card-section>
 
-        <q-card-actions align="center" class="q-pa-md">
+        <q-card-actions align="right" class="q-pa-md bg-grey-1">
           <q-btn
             unelevated
             color="primary"
             label="Entendido"
             icon="check"
             v-close-popup
-            size="lg"
+            no-caps
           />
         </q-card-actions>
       </q-card>
@@ -2290,12 +2246,13 @@ export default {
 }
 
 .stat-value-compact {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 3px;
   font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  line-height: 1.2;
+  line-height: 1.1;
+  word-break: break-all;
 }
 
 .stat-description-compact {
@@ -2423,6 +2380,146 @@ export default {
   50% {
     transform: translateY(-5px);
   }
+}
+
+/* Help Dialog Styles */
+.help-dialog-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.help-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 24px;
+}
+
+.help-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.help-subtitle {
+  font-size: 13px;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.video-container {
+  background: #f5f5f5;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-placeholder {
+  text-align: center;
+  padding: 20px;
+}
+
+.help-section {
+  margin-bottom: 20px;
+}
+
+.help-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.help-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.help-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.help-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.help-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+
+.help-card-desc {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.help-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.help-tip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.5;
 }
 
 /* Withdrawals List - Compact */
