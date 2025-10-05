@@ -1,392 +1,515 @@
 <template>
-  <!-- The q-page adapts its background color based on the current theme -->
-  <q-page padding>
-    <!-- Header using Quasar colors to respect dark mode -->
-    <div class="bg-primary text-white rounded-borders max-w-7xl mx-auto">
-      <!-- Use inline max-width to avoid relying on Tailwind utility classes -->
-      <div class="q-mx-auto q-px-md q-py-sm">
+  <q-page class="modern-page">
+    <!-- Animated Header with Gradient -->
+    <div class="header-card animate-slide-down">
+      <div class="header-gradient"></div>
+      <div class="header-content">
         <div class="row items-center justify-between">
-          <div class="col-xs-12 col-sm-12 col-md-8">
-            <div class="text-subtitle1 text-weight-bold">Reporte de Retiros por Día</div>
-            <div class="text-subtitle2">Gestiona y visualiza los retiros diarios de manera inteligente</div>
+          <div class="col">
+            <div class="flex items-center q-gutter-md">
+              <div class="icon-wrapper">
+                <q-icon name="analytics" size="48px" class="text-white" />
+              </div>
+              <div>
+                <div class="header-title">
+                  Comparación de Ventas vs Arqueos
+                </div>
+                <div class="header-subtitle">
+                  Control inteligente de caja • Verifica que todo cuadre perfectamente
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-auto">
+            <q-btn
+              unelevated
+              rounded
+              color="white"
+              text-color="primary"
+              icon="help_outline"
+              label="Ayuda"
+              @click="showHelp = true"
+              class="help-button"
+            />
           </div>
         </div>
       </div>
     </div>
 
-    <div class=" mx-auto q-mt-sm space-y-4 q-mt-md q-gutter-y-md">
-
-      <!-- Filters section using Quasar classes for dark mode -->
-      <q-expansion-item
-        icon="tune"
-        label="Filtros"
-        class="shadow-2 rounded-borders"
-        header-class="text-h6 text-weight-medium q-px-md q-py-sm"
-        default-opened
-      >
-        <q-card flat>
-          <q-card-section class="q-pa-md">
-            <div class="flex q-gutter-md">
-                <div class="row items-center justify-between">
-                  <div class="row items-center q-gutter-xs">
-                    <q-btn
-                      flat
-                      round
-                      size="sm"
-                      icon="chevron_left"
-                      @click="changeDate(-1)"
-                      color="primary"
-                    />
-
-                    <div class="row items-center">
-                      <q-input
-                        v-model="dateFrom"
-                        label="Fecha Desde"
-                        readonly
-                        outlined
-                        style="min-width: 150px;"
-                        class="q-mx-sm"
-                      >
-                        <template v-slot:append>
-                          <q-icon name="event" class="cursor-pointer">
-                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                              <q-date
-                                v-model="dateFrom"
-                                @update:model-value="loadData"
-                                mask="YYYY-MM-DD"
-                                color="primary"
-                              >
-                                <div class="row items-center justify-end q-pa-sm">
-                                  <q-btn v-close-popup label="Cerrar" color="primary" flat />
-                                </div>
-                              </q-date>
-                            </q-popup-proxy>
-                          </q-icon>
-                        </template>
-                      </q-input>
-
-                      <q-input
-                        v-model="dateTo"
-                        label="Fecha Hasta"
-                        readonly
-                        outlined
-                        style="min-width: 150px;"
-                        class="q-mx-sm"
-                      >
-                        <template v-slot:append>
-                          <q-icon name="event" class="cursor-pointer">
-                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                              <q-date
-                                v-model="dateTo"
-                                @update:model-value="loadData"
-                                mask="YYYY-MM-DD"
-                                color="primary"
-                              >
-                                <div class="row items-center justify-end q-pa-sm">
-                                  <q-btn v-close-popup label="Cerrar" color="primary" flat />
-                                </div>
-                              </q-date>
-                            </q-popup-proxy>
-                          </q-icon>
-                        </template>
-                      </q-input>
-                    </div>
-
-                    <q-btn
-                      flat
-                      round
-                      size="sm"
-                      icon="chevron_right"
-                      @click="changeDate(1)"
-                      color="primary"
-                    />
-                  </div>
-                </div>
-                <q-select
-                  v-model="filters.branch_office_ids"
-                  :options="branchOffices"
-                  option-value="id"
-                  option-label="name"
-                  label="Sucursales"
-                  multiple
-                  clearable
-                  use-chips
-                  outlined
-                  style="min-width: 200px;"
-                  @update:model-value="debouncedLoadData"
-                  :loading="loadingBranches"
-                />
-
-                <q-select
-                  v-model="filters.payment_method_ids"
-                  :options="paymentMethods"
-                  option-value="id"
-                  option-label="name"
-                  label="Métodos de Pago"
-                  multiple
-                  clearable
-                  use-chips
-                  outlined
-                  style="min-width: 200px;"
-                  @update:model-value="debouncedLoadData"
-                  :loading="loadingPaymentMethods"
-                />
-            </div>
-          </q-card-section>
-        </q-card>
-      </q-expansion-item>
-
-      <!-- Completely redesigned summary cards with gradients and better visual hierarchy -->
-      <div class="row q-col-gutter-x-xs justify-between">
-        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
-          <q-card class="text-positive shadow-2xl">
-            <q-card-section>
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalsAmount.paid_sales) }}</div>
-                  <div class="text-positive text-subtitle2 font-medium">Total ventas</div>
-                </div>
-                <q-icon name="trending_down" size="3rem" class="text-white/30" />
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
-          <q-card class="text-blue shadow-2xl">
-            <q-card-section>
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalsAmount.sum_amount) }}</div>
-                  <div class="text-blue text-subtitle2 font-medium">Total Retirado</div>
-                </div>
-                <q-icon name="trending_down" size="3rem" class="text-white/30" />
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
-          <q-card class="bg-gradient-to-br from-blue-500 to-blue-600 text-blue shadow-2xl border-0 overflow-hidden relative">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-            <q-card-section class="p-8 relative">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-subtitle1 font-bold mb-2">{{ formatCurrency(totalsAmount.difference_report) }}</div>
-                  <div class="text-blue text-subtitle2 font-medium">Diferencia</div>
-                </div>
-                <q-icon name="receipt_long" size="3rem" class="text-white/30" />
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
-            <q-card class="bg-gradient-to-br from-emerald-500 text-positive shadow-2xl border-0 overflow-hidden relative">
-              <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-              <q-card-section class="p-8 relative">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-subtitle1 font-bold mb-2">{{ daysData.length }}</div>
-                  <div class="text-positive text-subtitle2 font-medium">Días con Actividad</div>
-                </div>
-                <q-icon name="calendar_today" size="3rem" class="text-white/30" />
-              </div>
-            </q-card-section>
-          </q-card>
+    <!-- Modern Filters Card -->
+    <div class="filters-card-compact animate-fade-in">
+      <div class="filters-header-compact">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center q-gutter-sm">
+            <q-icon name="tune" size="20px" color="primary" />
+            <span class="filters-title-compact">Filtros</span>
+          </div>
+          <q-btn
+            flat
+            dense
+            round
+            :icon="showFilters ? 'expand_less' : 'expand_more'"
+            color="primary"
+            @click="showFilters = !showFilters"
+          >
+            <q-tooltip>{{ showFilters ? 'Ocultar filtros' : 'Mostrar filtros' }}</q-tooltip>
+          </q-btn>
         </div>
       </div>
-      <!-- Modern loading state with better skeletons -->
-      <div v-if="loading" class="space-y-6">
-        <q-skeleton height="80px" class="rounded-2xl" />
-        <q-skeleton height="300px" class="rounded-2xl" />
-      </div>
 
-      <!-- Empty state card respecting Quasar colors -->
-      <q-card v-else-if="!hasData" flat bordered class="text-center q-pa-xl shadow-2 rounded-borders">
-        <div class="q-mb-md">
-          <q-icon name="receipt_long" size="3rem" color="grey-5" />
-        </div>
-        <div class="text-h6 text-weight-bold q-mb-sm">No se encontraron retiros</div>
-        <div class="text-body2" style="max-width: 28rem; margin: 0 auto;">
-          No hay transacciones de retiro para el período seleccionado. Intenta ajustar las fechas o filtros.
-        </div>
-      </q-card>
-
-      <!-- Table with Quasar colors to respect dark mode -->
-      <q-table
-        v-else
-        :rows="daysData"
-        :columns="dayColumns"
-        row-key="day"
-        :pagination="{ rowsPerPage: 0 }"
-        class="shadow-2 rounded-borders"
-        table-header-class="bg-primary text-white"
-        flat
-        bordered
-        row-hover
-      >
-        <template v-slot:body="props">
-          <q-tr :props="props">
-            <q-td key="day" :props="props" class="q-py-md">
-              <div class="column q-gutter-xs">
-                <div class="text-body1 text-weight-bold text-uppercase">
-                  {{ formatDate(`${props.row.day} 00:00:00`) }}
-                </div>
-              </div>
-            </q-td>
-            <q-td key="paid_sales" :props="props" class="text-right q-py-md">
-              <div class="text-h6 text-weight-bold text-negative">{{ formatCurrency(props.row.paid_sales) }}</div>
-            </q-td>
-            <q-td key="count" :props="props" class="text-center q-py-md">
-              <q-chip
-                :color="props.row.count > 5 ? 'info' : 'primary'"
-                text-color="white"
-                size="md"
-                class="text-weight-medium"
-              >
-                {{ props.row.count }} retiros
-              </q-chip>
-            </q-td>
-            <q-td key="sum_amount" :props="props" class="text-right q-py-md">
-              <div class="text-h6 text-weight-bold text-negative">{{ formatCurrency(props.row.sum_amount) }}</div>
-            </q-td>
-            <q-td key="difference" :props="props" class="text-right q-py-md">
-              <div class="text-h6 text-weight-bold text-negative">{{ formatCurrency(props.row.difference_report) }}</div>
-            </q-td>
-            <q-td key="actions" :props="props" class="text-center q-py-md">
+      <q-slide-transition>
+        <div v-show="showFilters" class="filters-content-compact">
+        <!-- Compact Date Range -->
+        <div class="row q-col-gutter-sm items-center q-mb-sm">
+          <!-- Quick Date Buttons -->
+          <div class="col-auto">
+            <q-btn-group unelevated class="date-btn-group">
               <q-btn
-                flat
-                rounded
-                :icon="expandedRows.has(props.row.day) ? 'expand_less' : 'expand_more'"
-                @click="toggleExpanded(props.row.day)"
-                :color="expandedRows.has(props.row.day) ? 'primary' : 'grey-5'"
+                :unelevated="isCurrentMonth"
+                :outline="!isCurrentMonth"
+                :color="isCurrentMonth ? 'primary' : 'grey-4'"
+                :text-color="isCurrentMonth ? 'white' : 'grey-7'"
+                icon="today"
+                label="Mes Actual"
                 size="md"
+                @click="setCurrentMonth"
+                no-caps
+                class="date-filter-btn"
+              />
+              <q-btn
+                :unelevated="isPreviousMonth"
+                :outline="!isPreviousMonth"
+                :color="isPreviousMonth ? 'primary' : 'grey-4'"
+                :text-color="isPreviousMonth ? 'white' : 'grey-7'"
+                icon="event"
+                label="Mes Anterior"
+                size="md"
+                @click="setPreviousMonth"
+                no-caps
+                class="date-filter-btn"
+              />
+              <q-btn
+                :unelevated="isToday"
+                :outline="!isToday"
+                :color="isToday ? 'primary' : 'grey-4'"
+                :text-color="isToday ? 'white' : 'grey-7'"
+                icon="calendar_today"
+                label="Hoy"
+                size="md"
+                @click="setToday"
+                no-caps
+                class="date-filter-btn"
+              />
+            </q-btn-group>
+          </div>
+
+          <!-- Date Range Inputs -->
+          <div class="col-auto">
+            <div class="row q-gutter-xs items-center">
+              <q-input
+                v-model="dateFrom"
+                outlined
+                dense
+                readonly
+                bg-color="white"
+                class="date-input-compact"
               >
-                <q-tooltip>{{ expandedRows.has(props.row.day) ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
-              </q-btn>
-            </q-td>
-          </q-tr>
-
-          <!-- Expandable section with Quasar colors and Add button -->
-          <q-tr v-show="expandedRows.has(props.row.day)" :props="props">
-            <q-td colspan="100%" class="p-0">
-              <div class="q-pa-sm">
-                <div class="column q-gutter-md">
-                  <!-- Pagination info -->
-                  <!-- Comment out pagination until we refactor for new structure -->
-                  <!--
-                  <div v-if="props.row.count > itemsPerPage" class="row items-center justify-between q-mb-sm">
-                    <div class="text-caption text-grey-7">
-                      Mostrando {{ ((dayPagination[props.row.day]?.currentPage || 1) - 1) * itemsPerPage + 1 }} -
-                      {{ Math.min((dayPagination[props.row.day]?.currentPage || 1) * itemsPerPage, props.row.count) }}
-                      de {{ props.row.count }} retiros
-                    </div>
-                    <div class="row q-gutter-xs">
-                      <q-btn
-                        flat
-                        round
-                        size="sm"
-                        icon="chevron_left"
+                <template v-slot:prepend>
+                  <q-icon name="event" size="18px" color="primary" />
+                </template>
+                <template v-slot:append>
+                  <q-icon name="edit_calendar" size="16px" color="primary" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date
+                        v-model="dateFrom"
+                        @update:model-value="loadData"
+                        mask="YYYY-MM-DD"
                         color="primary"
-                        :disable="(dayPagination[props.row.day]?.currentPage || 1) === 1"
-                        @click="changePage(props.row.day, 'prev')"
-                      />
-                      <div class="text-caption text-center q-px-sm q-py-xs">
-                        {{ dayPagination[props.row.day]?.currentPage || 1 }} / {{ Math.ceil(props.row.count / itemsPerPage) }}
-                      </div>
-                      <q-btn
-                        flat
-                        round
-                        size="sm"
-                        icon="chevron_right"
-                        color="primary"
-                        :disable="(dayPagination[props.row.day]?.currentPage || 1) === Math.ceil(props.row.count / itemsPerPage)"
-                        @click="changePage(props.row.day, 'next')"
-                      />
-                    </div>
-                  </div>
-                  -->
-                  <!-- Paginated withdrawals -->
-                  <q-card
-                    v-for="cashbox in props.row.cashboxes" :key="cashbox.cashbox_user_id" class="q-mb-lg"
-                  >
-                    <div class="text-subtitle2 q-mb-sm flex justify-between q-pa-sm">
-                      <div class="text-subtitle1">
-                        <strong>{{ cashbox.cashbox.name }}</strong>
-                        <span v-if="cashbox.user" class="text-body2 q-ml-sm">({{ cashbox.user.name }})</span>
-                      </div>
-                      <q-btn
-                        flat
-                        round
-                        size="sm"
-                        color="primary"
-                        icon="add"
-                        @click="openCashflowModal(cashbox)"
-                      />
-                    </div>
-                    <q-card
-                      v-for="withdrawal in cashbox.withdrawals" :key="withdrawal.id"
-                      class="rounded-borders"
-                      bordered
-                      flat
-                      :elevation="1"
-                      style="border-left: 4px solid var(--q-negative);"
-                    >
-                      <q-card-section class="q-pa-md">
-                        <div class="row items-center justify-between">
-                          <div class="row items-center q-gutter-x-sm">
-                            <q-badge color="negative" text-color="white" class="text-body2">
-                              {{ withdrawal.time }}
-                            </q-badge>
-                            <div class="text-body1 text-weight-medium">
-                              {{ withdrawal.description }} -
-                            </div>
-                            <div class="text-body1 text-weight-medium">
-                              {{ withdrawal.payment_method_name }}
-                            </div>
-                          </div>
-
-                          <div class="row items-center q-gutter-x-sm">
-                            <div class="text-subtitle1 text-weight-bold">
-                              Monto: {{ formatCurrency(withdrawal.amount) }}
-                            </div>
-
-                            <q-input
-                              v-model.number="withdrawal.actual_amount"
-                              placeholder="Monto Contado"
-                              type="number"
-                              outlined
-                              dense
-                              style="width: 150px;"
-                              prefix="$"
-                            />
-
-                            <q-btn
-                              rounded
-                              color="primary"
-                              label="Guardar"
-                              icon="save"
-                              @click="updateWithdrawal(withdrawal)"
-                            />
-
-                            <q-btn
-                              v-if="withdrawal.images && withdrawal.images.length > 0"
-                              rounded
-                              color="blue-5"
-                              icon="photo"
-                              @click="openFileWithdrawal(withdrawal)"
-                            >
-                              <q-tooltip>Ver imagen ({{ withdrawal.images.length }})</q-tooltip>
-                            </q-btn>
-                          </div>
+                      >
+                        <div class="row items-center justify-end q-pa-sm">
+                          <q-btn v-close-popup label="OK" color="primary" flat size="sm" />
                         </div>
-                      </q-card-section>
-                    </q-card>
-                  </q-card>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+              <q-icon name="arrow_forward" size="16px" color="grey-5" />
+              <q-input
+                v-model="dateTo"
+                outlined
+                dense
+                readonly
+                bg-color="white"
+                class="date-input-compact"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="event" size="18px" color="primary" />
+                </template>
+                <template v-slot:append>
+                  <q-icon name="edit_calendar" size="16px" color="primary" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date
+                        v-model="dateTo"
+                        @update:model-value="loadData"
+                        mask="YYYY-MM-DD"
+                        color="primary"
+                      >
+                        <div class="row items-center justify-end q-pa-sm">
+                          <q-btn v-close-popup label="OK" color="primary" flat size="sm" />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Filters -->
+        <div class="row q-col-gutter-sm">
+          <!-- Branch Office Filter -->
+          <div class="col-12 col-sm-6">
+            <q-select
+              v-model="filters.branch_office_ids"
+              :options="branchOffices"
+              option-value="id"
+              option-label="name"
+              label="Sucursales"
+              multiple
+              clearable
+              use-chips
+              outlined
+              dense
+              bg-color="white"
+              class="filter-select-compact"
+              @update:model-value="debouncedLoadData"
+              :loading="loadingBranches"
+            >
+              <template v-slot:prepend>
+                <q-icon name="store" size="18px" color="primary" />
+              </template>
+            </q-select>
+          </div>
+
+          <!-- Payment Method Filter -->
+          <div class="col-12 col-sm-6">
+            <q-select
+              v-model="filters.payment_method_ids"
+              :options="paymentMethods"
+              option-value="id"
+              option-label="name"
+              label="Métodos de Pago"
+              multiple
+              clearable
+              use-chips
+              outlined
+              dense
+              bg-color="white"
+              class="filter-select-compact"
+              @update:model-value="debouncedLoadData"
+              :loading="loadingPaymentMethods"
+            >
+              <template v-slot:prepend>
+                <q-icon name="payment" size="18px" color="primary" />
+              </template>
+            </q-select>
+          </div>
+        </div>
+        </div>
+      </q-slide-transition>
+    </div>
+
+    <!-- Modern Summary Cards with Animations -->
+    <div class="stats-grid">
+      <!-- Sales Card -->
+      <div class="stat-card-compact stat-card-success animate-scale-in" style="animation-delay: 0.1s;">
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact success">
+            <q-icon name="trending_up" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Ventas del Período</div>
+            <div class="stat-value-compact">{{ formatCurrencyCompact(totalsAmount.paid_sales) }}</div>
+            <div class="stat-description-compact">Total facturado en ventas</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+      </div>
+
+      <!-- Withdrawals Card -->
+      <div class="stat-card-compact stat-card-info animate-scale-in" style="animation-delay: 0.2s;">
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact info">
+            <q-icon name="account_balance_wallet" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Arqueos Realizados</div>
+            <div class="stat-value-compact">{{ formatCurrencyCompact(totalsAmount.sum_amount) }}</div>
+            <div class="stat-description-compact">Total retirado en arqueos</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+      </div>
+
+      <!-- Difference Card with Dynamic Status -->
+      <div
+        class="stat-card-compact animate-scale-in"
+        :class="`stat-card-${getDifferenceStatus().colorClass}`"
+        style="animation-delay: 0.3s;"
+      >
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact" :class="getDifferenceStatus().colorClass">
+            <q-icon :name="getDifferenceStatus().iconName" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Diferencia</div>
+            <div class="stat-value-compact">{{ formatCurrencyCompact(Math.abs(totalsAmount.difference_report || 0)) }}</div>
+            <div class="stat-description-compact">{{ getDifferenceStatus().label }}</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+        <div v-if="Math.abs(totalsAmount.difference_report || 0) < 0.01" class="stat-badge-compact">
+          <q-icon name="verified" size="14px" /> Perfecto
+        </div>
+      </div>
+
+      <!-- Days Card -->
+      <div class="stat-card-compact stat-card-purple animate-scale-in" style="animation-delay: 0.4s;">
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact purple">
+            <q-icon name="event_available" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Días Consultados</div>
+            <div class="stat-value-compact">{{ daysData.length }}</div>
+            <div class="stat-description-compact">Días con movimientos</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+      </div>
+    </div>
+    <!-- Loading State -->
+    <div v-if="loading" class="q-gutter-md">
+      <q-skeleton height="100px" class="rounded-borders" />
+      <q-skeleton height="300px" class="rounded-borders" />
+    </div>
+
+    <!-- Empty State -->
+    <q-card v-else-if="!hasData" flat class="text-center q-pa-xl shadow-2 bg-white">
+      <q-icon name="search_off" size="80px" color="grey-4" />
+      <div class="text-h6 text-weight-bold q-mt-md q-mb-sm">No hay datos para mostrar</div>
+      <div class="text-body2 text-grey-7" style="max-width: 400px; margin: 0 auto;">
+        No se encontraron ventas ni arqueos en el período seleccionado.<br>
+        Intenta cambiar las fechas o los filtros.
+      </div>
+      <q-btn
+        outline
+        color="primary"
+        label="Ver mes actual"
+        icon="refresh"
+        class="q-mt-md"
+        @click="setCurrentMonth"
+      />
+    </q-card>
+
+    <!-- Daily Comparison Cards -->
+    <div v-else class="q-gutter-md">
+      <q-card
+        v-for="day in daysData"
+        :key="day.day"
+        class="shadow-2"
+      >
+        <!-- Day Header with Status -->
+        <q-card-section
+          class="cursor-pointer"
+          :class="getDayStatusClass(day)"
+          @click="toggleExpanded(day.day)"
+        >
+          <div class="row items-center justify-between">
+            <div class="col">
+              <div class="row items-center q-gutter-sm">
+                <q-icon
+                  :name="getDayStatusIcon(day)"
+                  size="32px"
+                  :color="getDayStatusColor(day)"
+                />
+                <div>
+                  <div class="text-subtitle1 text-weight-bold">
+                    {{ formatDate(`${day.day} 00:00:00`) }}
+                  </div>
+                  <div class="text-caption text-grey-7">
+                    {{ getDayStatusText(day) }}
+                  </div>
                 </div>
               </div>
-            </q-td>
-          </q-tr>
-        </template>
-      </q-table>
+            </div>
+
+            <div class="col-auto">
+              <div class="row q-gutter-md items-center">
+                <!-- Sales -->
+                <div class="text-right">
+                  <div class="text-caption text-grey-7">Ventas</div>
+                  <div class="text-h6 text-weight-bold text-positive">
+                    {{ formatCurrency(day.paid_sales) }}
+                  </div>
+                </div>
+
+                <!-- Withdrawals -->
+                <div class="text-right">
+                  <div class="text-caption text-grey-7">Arqueos</div>
+                  <div class="text-h6 text-weight-bold text-blue">
+                    {{ formatCurrency(day.sum_amount) }}
+                  </div>
+                </div>
+
+                <!-- Difference -->
+                <div class="text-right" style="min-width: 120px;">
+                  <div class="text-caption text-grey-7">Diferencia</div>
+                  <div
+                    class="text-h6 text-weight-bold"
+                    :class="getDifferenceClass(day.difference_report)"
+                  >
+                    {{ formatCurrency(Math.abs(day.difference_report || 0)) }}
+                  </div>
+                </div>
+
+                <!-- Expand Button -->
+                <q-btn
+                  flat
+                  round
+                  :icon="expandedRows.has(day.day) ? 'expand_less' : 'expand_more'"
+                  color="primary"
+                >
+                  <q-tooltip>{{ expandedRows.has(day.day) ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
+                </q-btn>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <!-- Expandable Details Section -->
+        <q-slide-transition>
+          <div v-show="expandedRows.has(day.day)">
+            <q-separator />
+            <q-card-section class="bg-grey-1">
+              <div class="q-gutter-md">
+                <!-- Cashbox Details -->
+                <div
+                  v-for="cashbox in day.cashboxes"
+                  :key="cashbox.cashbox_user_id"
+                  class="bg-white rounded-borders q-pa-md"
+                >
+                  <div class="row items-center justify-between q-mb-md">
+                    <div>
+                      <div class="text-subtitle1 text-weight-bold">
+                        🏦 {{ cashbox.cashbox.name }}
+                      </div>
+                      <div v-if="cashbox.user" class="text-caption text-grey-7">
+                        Cajero: {{ cashbox.user.name }}
+                      </div>
+                    </div>
+                    <q-btn
+                      outline
+                      color="primary"
+                      icon="add"
+                      label="Agregar Arqueo"
+                      size="sm"
+                      @click="openCashflowModal(cashbox)"
+                    />
+                  </div>
+
+                  <!-- Withdrawal Items - Compact Design -->
+                  <div class="withdrawals-list-compact">
+                    <div
+                      v-for="withdrawal in cashbox.withdrawals"
+                      :key="withdrawal.id"
+                      class="withdrawal-row"
+                    >
+                      <!-- Left: Time and Info -->
+                      <div class="withdrawal-info">
+                        <div class="withdrawal-time-compact">
+                          <q-icon name="schedule" size="14px" />
+                          {{ withdrawal.time }}
+                        </div>
+                        <div class="withdrawal-payment-compact">
+                          <q-icon name="credit_card" size="14px" />
+                          {{ withdrawal.payment_method_name || 'Sin método' }}
+                        </div>
+                      </div>
+
+                      <!-- Center: Amounts -->
+                      <div class="withdrawal-amounts-compact">
+                        <div class="amount-compact expected-compact">
+                          <span class="amount-label-compact">Esperado</span>
+                          <span class="amount-value-compact">{{ formatCurrency(withdrawal.amount) }}</span>
+                        </div>
+                        
+                        <q-icon name="arrow_forward" size="16px" color="grey-5" class="amount-arrow-compact" />
+                        
+                        <div class="amount-compact actual-compact">
+                          <span class="amount-label-compact">Contado</span>
+                          <q-input
+                            v-model.number="withdrawal.actual_amount"
+                            type="number"
+                            outlined
+                            dense
+                            class="amount-input-compact"
+                            prefix="$"
+                            placeholder="Monto"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Right: Actions -->
+                      <div class="withdrawal-actions-compact">
+                        <q-btn
+                          unelevated
+                          color="primary"
+                          icon="save"
+                          size="sm"
+                          round
+                          class="save-btn-compact"
+                          :loading="savingWithdrawalId === withdrawal.id"
+                          :disable="savingWithdrawalId === withdrawal.id"
+                          @click="updateWithdrawal(withdrawal)"
+                        >
+                          <q-tooltip>Guardar</q-tooltip>
+                        </q-btn>
+
+                        <q-btn
+                          v-if="withdrawal.images && withdrawal.images.length > 0"
+                          flat
+                          color="blue"
+                          icon="photo"
+                          size="sm"
+                          round
+                          @click="openFileWithdrawal(withdrawal)"
+                        >
+                          <q-tooltip>Ver imagen</q-tooltip>
+                        </q-btn>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </q-card-section>
+          </div>
+        </q-slide-transition>
+      </q-card>
     </div>
 
     <!-- Cashflow Modal -->
@@ -402,7 +525,7 @@
       :flow-type-options="[
         { label: 'Arqueo', value: 'withdrawal' }
       ]"
-      @cashflow-saved="onCashflowSaved"
+      @update:modelValue="onCashflowSaved"
     />
 
     <!-- Image Preview Dialog -->
@@ -460,6 +583,178 @@
             label="Cerrar"
             v-close-popup
             flat
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Help Dialog -->
+    <q-dialog v-model="showHelp" maximized>
+      <q-card>
+        <q-card-section class="row items-center bg-primary text-white">
+          <div class="text-h6">📚 Guía de Uso - Comparación de Ventas vs Arqueos</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="q-pa-lg" style="max-width: 900px; margin: 0 auto;">
+          <div class="q-gutter-lg">
+            <!-- What is this -->
+            <div>
+              <div class="text-h6 text-weight-bold q-mb-sm">🎯 ¿Para qué sirve este reporte?</div>
+              <p class="text-body1">
+                Este reporte te permite <strong>comparar las ventas del día con los arqueos realizados</strong>.
+                Es una herramienta de control para verificar que el dinero retirado coincida con las ventas facturadas.
+              </p>
+            </div>
+
+            <q-separator />
+
+            <!-- How to use -->
+            <div>
+              <div class="text-h6 text-weight-bold q-mb-sm">📖 ¿Cómo usar el reporte?</div>
+              <q-list bordered separator>
+                <q-item>
+                  <q-item-section avatar>
+                    <q-avatar color="primary" text-color="white" icon="filter_alt" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">1. Selecciona el período</q-item-label>
+                    <q-item-label caption>
+                      Por defecto se muestra el mes actual. Puedes cambiar las fechas o usar los botones rápidos.
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item>
+                  <q-item-section avatar>
+                    <q-avatar color="positive" text-color="white" icon="store" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">2. Filtra por sucursal</q-item-label>
+                    <q-item-label caption>
+                      Por defecto se muestra tu sucursal actual. Puedes agregar más sucursales si tienes permisos.
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item>
+                  <q-item-section avatar>
+                    <q-avatar color="blue" text-color="white" icon="visibility" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">3. Revisa los totales</q-item-label>
+                    <q-item-label caption>
+                      En las tarjetas superiores verás: Ventas totales, Arqueos realizados, Diferencia y Días consultados.
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item>
+                  <q-item-section avatar>
+                    <q-avatar color="orange" text-color="white" icon="expand_more" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">4. Expande cada día</q-item-label>
+                    <q-item-label caption>
+                      Haz clic en cualquier día para ver el detalle de cada arqueo realizado.
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+
+            <q-separator />
+
+            <!-- Understanding the data -->
+            <div>
+              <div class="text-h6 text-weight-bold q-mb-sm">💡 Entendiendo los datos</div>
+              <div class="q-gutter-md">
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="row items-center q-gutter-sm">
+                      <q-icon name="point_of_sale" size="32px" color="positive" />
+                      <div>
+                        <div class="text-weight-bold">Ventas del Período</div>
+                        <div class="text-caption">Total de dinero facturado en las ventas realizadas</div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="row items-center q-gutter-sm">
+                      <q-icon name="account_balance_wallet" size="32px" color="blue" />
+                      <div>
+                        <div class="text-weight-bold">Arqueos Realizados</div>
+                        <div class="text-caption">Total de dinero retirado según los arqueos de caja</div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+
+                <q-card flat bordered>
+                  <q-card-section>
+                    <div class="row items-center q-gutter-sm">
+                      <q-icon name="compare_arrows" size="32px" color="warning" />
+                      <div>
+                        <div class="text-weight-bold">Diferencia</div>
+                        <div class="text-caption">
+                          <strong>✅ Si es $0:</strong> Los arqueos coinciden con las ventas<br>
+                          <strong>⚠️ Si es positivo:</strong> Se retiró más de lo vendido<br>
+                          <strong>❌ Si es negativo:</strong> Falta dinero por arquear
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+
+            <q-separator />
+
+            <!-- Tips -->
+            <div>
+              <div class="text-h6 text-weight-bold q-mb-sm">💪 Consejos</div>
+              <q-list>
+                <q-item>
+                  <q-item-section avatar>
+                    <q-icon name="check_circle" color="positive" />
+                  </q-item-section>
+                  <q-item-section>
+                    Revisa este reporte al final de cada día para asegurar que todo cuadre
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section avatar>
+                    <q-icon name="check_circle" color="positive" />
+                  </q-item-section>
+                  <q-item-section>
+                    Si hay diferencias, expande el día y verifica cada arqueo individual
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section avatar>
+                    <q-icon name="check_circle" color="positive" />
+                  </q-item-section>
+                  <q-item-section>
+                    Usa los filtros de método de pago para revisar efectivo, tarjetas, etc. por separado
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="center" class="q-pa-md">
+          <q-btn
+            unelevated
+            color="primary"
+            label="Entendido"
+            icon="check"
+            v-close-popup
+            size="lg"
           />
         </q-card-actions>
       </q-card>
@@ -636,6 +931,12 @@ export default {
     const totalsAmount = ref({})
 
     /*
+     * Controls visibility of the help dialog
+     * @type {import('vue').Ref<boolean>}
+     */
+    const showHelp = ref(false)
+
+    /*
      * Controls visibility of the image preview modal
      * @type {import('vue').Ref<boolean>}
      */
@@ -665,6 +966,8 @@ export default {
      */
     const currentWithdrawal = ref(null)
     const cashflow = ref({})
+    const savingWithdrawalId = ref(null)
+    const showFilters = ref(true)
 
     /**
      * Computed property that calculates the total amount of all withdrawals
@@ -731,8 +1034,22 @@ export default {
 
     const isMounted = ref(false)
 
+    /**
+     * Sets default filters and dates on component mount
+     */
+    const initializeDefaults = () => {
+      // Set current month as default date range
+      setCurrentMonth()
+
+      // Set current branch office as default filter
+      if (branchOffice.value && branchOffice.value.id) {
+        filters.value.branch_office_ids = [branchOffice.value]
+      }
+    }
+
     onMounted(() => {
       isMounted.value = true
+      initializeDefaults()
       loadBranchOffices()
       loadPaymentMethods()
       loadData()
@@ -789,12 +1106,15 @@ export default {
     /**
      * Loads withdrawal data based on current filters and date range
      * @async
+     * @param {boolean} [showLoading=true] - Whether to show the loading indicator
      * @returns {Promise<void>}
      * @description Fetches withdrawal data from the API and updates the component state
      */
-    const loadData = async () => {
+    const loadData = async (showLoading = true) => {
       if (!isMounted.value) return
-      loading.value = true
+      if (showLoading) {
+        loading.value = true
+      }
 
       try {
         const params = {
@@ -830,7 +1150,7 @@ export default {
           daysData.value = []
         }
       } finally {
-        if (isMounted.value) {
+        if (isMounted.value && showLoading) {
           loading.value = false
         }
       }
@@ -850,6 +1170,159 @@ export default {
     const debouncedLoadData = () => {
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(loadData, 300)
+    }
+
+    /**
+     * Sets the date range to the current month
+     */
+    const setCurrentMonth = () => {
+      const now = new Date()
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+      dateFrom.value = formatDateForInput(firstDay)
+      dateTo.value = formatDateForInput(lastDay)
+      loadData()
+    }
+
+    /**
+     * Sets the date range to the previous month
+     */
+    const setPreviousMonth = () => {
+      const now = new Date()
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+
+      dateFrom.value = formatDateForInput(firstDay)
+      dateTo.value = formatDateForInput(lastDay)
+      loadData()
+    }
+
+    /**
+     * Sets the date range to today
+     */
+    const setToday = () => {
+      const today = new Date()
+      dateFrom.value = formatDateForInput(today)
+      dateTo.value = formatDateForInput(today)
+      loadData()
+    }
+
+    /**
+     * Computed property to check if current month is selected
+     */
+    const isCurrentMonth = computed(() => {
+      const now = new Date()
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+      return dateFrom.value === formatDateForInput(firstDay) &&
+             dateTo.value === formatDateForInput(lastDay)
+    })
+
+    /**
+     * Computed property to check if previous month is selected
+     */
+    const isPreviousMonth = computed(() => {
+      const now = new Date()
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+
+      return dateFrom.value === formatDateForInput(firstDay) &&
+             dateTo.value === formatDateForInput(lastDay)
+    })
+
+    /**
+     * Computed property to check if today is selected
+     */
+    const isToday = computed(() => {
+      const today = new Date()
+      const todayStr = formatDateForInput(today)
+
+      return dateFrom.value === todayStr && dateTo.value === todayStr
+    })
+
+    /**
+     * Gets the status information for the difference card
+     */
+    const getDifferenceStatus = () => {
+      const diff = totalsAmount.value.difference_report || 0
+
+      if (Math.abs(diff) < 0.01) {
+        return {
+          icon: '✅',
+          iconName: 'check_circle',
+          label: '¡Perfecto! Todo cuadra',
+          color: '#21BA45',
+          colorClass: 'positive'
+        }
+      } else if (diff > 0) {
+        return {
+          icon: '⚠️',
+          iconName: 'warning',
+          label: 'Se retiró más de lo vendido',
+          color: '#F2C037',
+          colorClass: 'warning'
+        }
+      } else {
+        return {
+          icon: '❌',
+          iconName: 'error',
+          label: 'Falta dinero por arquear',
+          color: '#C10015',
+          colorClass: 'negative'
+        }
+      }
+    }
+
+    /**
+     * Gets the status class for a day card
+     */
+    const getDayStatusClass = (day) => {
+      const diff = Math.abs(day.difference_report || 0)
+      if (diff < 0.01) return 'bg-green-1'
+      if (diff < 1000) return 'bg-orange-1'
+      return 'bg-red-1'
+    }
+
+    /**
+     * Gets the status icon for a day
+     */
+    const getDayStatusIcon = (day) => {
+      const diff = Math.abs(day.difference_report || 0)
+      if (diff < 0.01) return 'check_circle'
+      if (diff < 1000) return 'warning'
+      return 'error'
+    }
+
+    /**
+     * Gets the status color for a day
+     */
+    const getDayStatusColor = (day) => {
+      const diff = Math.abs(day.difference_report || 0)
+      if (diff < 0.01) return 'positive'
+      if (diff < 1000) return 'warning'
+      return 'negative'
+    }
+
+    /**
+     * Gets the status text for a day
+     */
+    const getDayStatusText = (day) => {
+      const diff = Math.abs(day.difference_report || 0)
+      if (diff < 0.01) return 'Todo coincide perfectamente'
+      if (diff < 1000) return `Diferencia menor: ${formatCurrency(diff)}`
+      return `Diferencia importante: ${formatCurrency(diff)}`
+    }
+
+    /**
+     * Gets the CSS class for difference display
+     */
+    const getDifferenceClass = (difference) => {
+      const diff = Math.abs(difference || 0)
+      if (diff < 0.01) return 'text-positive'
+      if (diff < 1000) return 'text-warning'
+      return 'text-negative'
     }
 
     /**
@@ -929,6 +1402,9 @@ export default {
           return
         }
 
+        // Set loading state for this specific withdrawal
+        savingWithdrawalId.value = withdrawal.id
+
         const payload = {
           id: withdrawal.id,
           description: withdrawal.description,
@@ -944,23 +1420,39 @@ export default {
         await api.put(`cashflow/${withdrawal.id}`, payload)
 
         // Update local data without reloading to maintain expanded state
-        const dayIndex = daysData.value.findIndex(day =>
-          day.withdrawals.some(w => w.id === withdrawal.id)
-        )
-        if (dayIndex >= 0) {
-          const withdrawalIndex = daysData.value[dayIndex].withdrawals.findIndex(w => w.id === withdrawal.id)
-          if (withdrawalIndex >= 0) {
-            // Update actual_amount instead of amount to preserve original amount for difference calculation
-            daysData.value[dayIndex].withdrawals[withdrawalIndex].actual_amount = newAmount
+        let found = false
+        for (const day of daysData.value) {
+          if (day.cashboxes && Array.isArray(day.cashboxes)) {
+            for (const cashbox of day.cashboxes) {
+              if (cashbox.withdrawals && Array.isArray(cashbox.withdrawals)) {
+                const withdrawalIndex = cashbox.withdrawals.findIndex(w => w.id === withdrawal.id)
+                if (withdrawalIndex >= 0) {
+                  // Update actual_amount to preserve original amount for difference calculation
+                  cashbox.withdrawals[withdrawalIndex].actual_amount = newAmount
+                  found = true
+                  break
+                }
+              }
+            }
           }
-        } else {
-          // Fallback: reload data if day not found
-          loadData()
+          if (found) break
         }
 
+        if (!found) {
+          // Fallback: reload data if withdrawal not found
+          await loadData(false)
+        } else {
+          // Reload data silently to update totals
+          await loadData(false)
+        }
+
+        // Show success notification
         $q.notify({
           type: 'positive',
-          message: 'Retiro actualizado exitosamente'
+          message: 'Retiro actualizado exitosamente',
+          icon: 'check_circle',
+          position: 'top-right',
+          timeout: 2000
         })
       } catch (error) {
         console.error('Error updating withdrawal:', error)
@@ -969,6 +1461,9 @@ export default {
           message: 'Error al actualizar el retiro',
           caption: error.response?.data?.message || error.message
         })
+      } finally {
+        // Clear loading state
+        savingWithdrawalId.value = null
       }
     }
 
@@ -1065,31 +1560,13 @@ export default {
      * @returns {void}
      * @description Updates the UI with the new cashflow data
      */
-    const onCashflowSaved = (newCashflow) => {
+    const onCashflowSaved = async (newCashflow) => {
       showCashflowModal.value = false
-      const currentSelectedDate = selectedDate.value
       selectedDate.value = null
-      if (newCashflow && currentSelectedDate) {
-        const dayIndex = daysData.value.findIndex(day => day.day === currentSelectedDate)
-        if (dayIndex >= 0) {
-          // Add new withdrawal to existing day
-          if (!daysData.value[dayIndex].withdrawals) {
-            daysData.value[dayIndex].withdrawals = []
-          }
-          daysData.value[dayIndex].withdrawals.push(newCashflow)
-          // Update counters
-          daysData.value[dayIndex].count = (daysData.value[dayIndex].count || 0) + 1
-          daysData.value[dayIndex].sum_amount = (daysData.value[dayIndex].sum_amount || 0) + parseFloat(newCashflow.amount || 0)
-        } else {
-          // Fallback: reload data if day not found
-          loadData()
-        }
-      } else {
-        // Fallback: reload data if no specific date
-        loadData()
-      }
-
       cashflow.value = {}
+
+      // Reload data silently to ensure all information is up to date
+      await loadData(false)
 
       $q.notify({
         type: 'positive',
@@ -1260,6 +1737,21 @@ export default {
     }
 
     /**
+     * Formats a number as compact currency (e.g., $1.2M, $135K)
+     * @param {number} amount - Number to format
+     * @returns {string} - Formatted compact currency string
+     */
+    function formatCurrencyCompact (amount) {
+      const num = amount || 0
+      if (num >= 1000000) {
+        return `$ ${(num / 1000000).toFixed(2)}M`
+      } else if (num >= 1000) {
+        return `$ ${(num / 1000).toFixed(1)}K`
+      }
+      return `$ ${num.toFixed(2)}`
+    }
+
+    /**
      * Formats a date string to a localized date format
      * @param {string} dateString - Date string to format
      * @returns {string} - Formatted date string in 'DD/MM/YYYY' format
@@ -1341,24 +1833,46 @@ export default {
       cashflow,
       filters,
       totalsAmount,
+      showHelp,
 
       // Computed
       totalAmount,
       totalWithdrawals,
       hasData,
       dayColumns,
+      isCurrentMonth,
+      isPreviousMonth,
+      isToday,
 
-      // Methods
+      // Date Methods
+      setCurrentMonth,
+      setPreviousMonth,
+      setToday,
+      changeDate,
+
+      // Status Methods
+      getDifferenceStatus,
+      getDayStatusClass,
+      getDayStatusIcon,
+      getDayStatusColor,
+      getDayStatusText,
+      getDifferenceClass,
+
+      // Data Methods
       loadData,
       debouncedLoadData,
-      changeDate,
       exportCSV,
       printReport,
+
+      // Formatting
       formatCurrency,
+      formatCurrencyCompact,
       formatDate,
       formatDateShort,
       calculateTotal,
       getDifferenceColor,
+
+      // Modal & UI
       showCashflowModal,
       selectedDate,
       expandedRows,
@@ -1367,12 +1881,17 @@ export default {
       getPaginatedWithdrawals,
       getTotalPages,
       changePage,
+      toggleExpanded,
+      // User & Branch
       userSession,
       branchOffice,
+
+      // Withdrawal Operations
       updateWithdrawal,
       openCashflowModal,
       onCashflowSaved,
-      toggleExpanded,
+      savingWithdrawalId,
+      showFilters,
 
       // Image preview
       showImagePreview,
@@ -1389,51 +1908,878 @@ export default {
 </script>
 
 <style scoped>
-/* Custom shadow that's not in Quasar by default */
-.shadow-2xl {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+/* Modern Page Layout */
+.modern-page {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+  min-height: 100vh;
+  padding: 24px;
 }
 
-/* Custom responsive grid utilities */
-@media (min-width: 600px) {
-  .col-xs-12 {
-    flex: 0 0 100%;
-    max-width: 100%;
+/* Header Card with Gradient */
+.header-card {
+  position: relative;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.header-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  opacity: 1;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+  padding: 15px;
+}
+
+.icon-wrapper {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  animation: float 3s ease-in-out infinite;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.help-button {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.help-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Filters Card - Compact Version */
+.filters-card-compact {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.filters-header-compact {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.filters-title-compact {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.filters-content-compact {
+  padding: 16px;
+}
+
+/* Date Filter Buttons */
+.date-btn-group {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.date-filter-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 110px;
+}
+
+.date-filter-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Compact Date Inputs */
+.date-input-compact {
+  width: 140px;
+  border-radius: 8px;
+}
+
+.date-input-compact :deep(.q-field__control) {
+  border-radius: 8px;
+  border: 1.5px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.date-input-compact :deep(.q-field__control):hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.date-input-compact :deep(.q-field__native) {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+/* Compact Filter Selects */
+.filter-select-compact :deep(.q-field__control) {
+  border-radius: 8px;
+  border: 1.5px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.filter-select-compact :deep(.q-field__control):hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.filter-select-compact :deep(.q-field__native) {
+  font-size: 13px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.filter-select-compact :deep(.q-chip) {
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.filter-section {
+  margin-bottom: 20px;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+/* Modern Date Pills */
+.date-pills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.date-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.date-pill:hover {
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.date-pill.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.pill-indicator {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: white;
+  border-radius: 2px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Modern Select */
+.modern-select {
+  transition: all 0.3s ease;
+}
+
+.modern-select:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+/* Stat Cards - Compact Version */
+.stat-card-compact {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.stat-card-compact:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-bg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  overflow: hidden;
+  opacity: 0.05;
+}
+
+.stat-card-circle {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.stat-card-success {
+  border-left: 4px solid #10b981;
+  color: #10b981;
+}
+
+.stat-card-info {
+  border-left: 4px solid #3b82f6;
+  color: #3b82f6;
+}
+
+.stat-card-warning {
+  border-left: 4px solid #f59e0b;
+  color: #f59e0b;
+}
+
+.stat-card-negative {
+  border-left: 4px solid #ef4444;
+  color: #ef4444;
+}
+
+.stat-card-positive {
+  border-left: 4px solid #10b981;
+  color: #10b981;
+}
+
+.stat-card-purple {
+  border-left: 4px solid #8b5cf6;
+  color: #8b5cf6;
+}
+
+.stat-card-content-compact {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.stat-icon-wrapper-compact {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.stat-icon-wrapper-compact.success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.25);
+}
+
+.stat-icon-wrapper-compact.info {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.25);
+}
+
+.stat-icon-wrapper-compact.warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.25);
+}
+
+.stat-icon-wrapper-compact.negative {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.25);
+}
+
+.stat-icon-wrapper-compact.positive {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.25);
+}
+
+.stat-icon-wrapper-compact.purple {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  box-shadow: 0 4px 8px rgba(139, 92, 246, 0.25);
+}
+
+.stat-card-compact:hover .stat-icon-wrapper-compact {
+  transform: scale(1.08) rotate(3deg);
+}
+
+.stat-info-compact {
+  flex: 1;
+}
+
+.stat-label-compact {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.stat-value-compact {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 3px;
+  font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1.2;
+}
+
+.stat-description-compact {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.stat-badge-compact {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  z-index: 2;
+}
+
+.stat-card-shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.stat-card:hover .stat-card-shine {
+  left: 100%;
+}
+
+.stat-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  animation: bounce 2s ease-in-out infinite;
+}
+
+/* Animations */
+@keyframes animate-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (min-width: 768px) {
-  .col-sm-6 {
-    flex: 0 0 50%;
-    max-width: 50%;
+.animate-slide-down {
+  animation: animate-slide-down 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes animate-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@media (min-width: 1024px) {
-  .col-md-8 {
-    flex: 0 0 66.666667%;
-    max-width: 66.666667%;
-  }
+.animate-fade-in {
+  animation: animate-fade-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
 
-  .col-md-4 {
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
+@keyframes animate-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-@media (min-width: 1280px) {
-  .col-lg-3 {
-    flex: 0 0 25%;
-    max-width: 25%;
+.animate-scale-in {
+  animation: animate-scale-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Withdrawals List - Compact */
+.withdrawals-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Withdrawal Row - Compact Design */
+.withdrawal-row {
+  display: grid;
+  grid-template-columns: 180px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+
+.withdrawal-row:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+/* Withdrawal Info - Compact */
+.withdrawal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.withdrawal-time-compact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 11px;
+  width: fit-content;
+}
+
+.withdrawal-payment-compact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Withdrawal Amounts - Compact */
+.withdrawal-amounts-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.amount-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.amount-label-compact {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.amount-value-compact {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.expected-compact {
+  padding: 6px 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.actual-compact {
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: 8px;
+  border: 1px solid #10b981;
+}
+
+.amount-arrow-compact {
+  flex-shrink: 0;
+}
+
+/* Amount Input - Compact */
+.amount-input-compact {
+  margin-top: 2px;
+}
+
+.amount-input-compact :deep(.q-field__control) {
+  background: white;
+  border: 1px solid #10b981;
+  border-radius: 6px;
+  min-height: 32px;
+}
+
+.amount-input-compact :deep(.q-field__native) {
+  font-size: 14px;
+  font-weight: 700;
+  color: #059669;
+  padding: 4px 8px;
+}
+
+.amount-input-compact :deep(.q-field__control):focus-within {
+  border-color: #059669;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+/* Withdrawal Actions - Compact */
+.withdrawal-actions-compact {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.save-btn-compact {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+.save-btn-compact:hover {
+  transform: scale(1.05);
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.4);
+}
+
+/* Responsive Withdrawals - Compact */
+@media (max-width: 768px) {
+  .withdrawal-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .withdrawal-amounts-compact {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .amount-arrow-compact {
+    transform: rotate(90deg);
+  }
+
+  .withdrawal-actions-compact {
+    justify-content: flex-end;
+  }
+}
+
+/* Day card hover effect */
+.cursor-pointer {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cursor-pointer:hover {
+  background-color: rgba(102, 126, 234, 0.03);
+}
+
+/* Status background colors */
+.bg-green-1 {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.bg-orange-1 {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.bg-red-1 {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+/* Modern Inputs */
+.modern-input :deep(.q-field__control) {
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid #e0e0e0;
+  background: white;
+}
+
+.modern-input :deep(.q-field__control):hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.modern-input :deep(.q-field__control):focus-within {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+  transform: translateY(-1px);
+}
+
+.modern-input :deep(.q-field__label) {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.modern-input :deep(.q-field__native) {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* Amount Input Special Style */
+.amount-input :deep(.q-field__control) {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #10b981;
+}
+
+.amount-input :deep(.q-field__control):hover {
+  border-color: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.amount-input :deep(.q-field__native) {
+  font-weight: 600;
+  color: #059669;
+  font-size: 15px;
+}
+
+/* Modern Select */
+.modern-select :deep(.q-field__control) {
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid #e0e0e0;
+  background: white;
+}
+
+.modern-select :deep(.q-field__control):hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.modern-select :deep(.q-field__control):focus-within {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.modern-select :deep(.q-chip) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+/* Modern Buttons */
+.modern-btn {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  padding: 8px 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.modern-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.modern-btn:active {
+  transform: translateY(0);
+}
+
+/* Save Button Special Style */
+.save-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.save-btn:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Modern Date Picker */
+.modern-date-picker :deep(.q-date__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.modern-date-picker :deep(.q-date__view) {
+  padding: 16px;
+}
+
+.modern-date-picker :deep(.q-btn) {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.modern-date-picker :deep(.q-btn:hover) {
+  transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modern-page {
+    padding: 16px;
+  }
+
+  .header-content {
+    padding: 24px;
+  }
+
+  .header-title {
+    font-size: 22px;
+  }
+
+  .icon-wrapper {
+    width: 60px;
+    height: 60px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .date-pills {
+    flex-direction: column;
+  }
+
+  .date-pill {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .amount-input {
+    width: 100% !important;
+  }
+
+  .modern-input {
+    width: 100% !important;
   }
 }
 
 /* Print styles */
 @media print {
   .q-toolbar,
-  .q-expansion-item,
-  .q-btn-toggle {
+  .q-btn,
+  .filters-card,
+  .help-button {
     display: none !important;
+  }
+
+  .modern-page {
+    background: white;
   }
 }
 </style>
