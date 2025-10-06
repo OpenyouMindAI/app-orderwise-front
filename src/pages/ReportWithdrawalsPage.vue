@@ -111,7 +111,6 @@
                 outlined
                 dense
                 readonly
-                bg-color="white"
                 class="date-input-compact"
               >
                 <template v-slot:prepend>
@@ -140,7 +139,6 @@
                 outlined
                 dense
                 readonly
-                bg-color="white"
                 class="date-input-compact"
               >
                 <template v-slot:prepend>
@@ -182,7 +180,6 @@
               use-chips
               outlined
               dense
-              bg-color="white"
               class="filter-select-compact"
               @update:model-value="debouncedLoadData"
               :loading="loadingBranches"
@@ -206,7 +203,6 @@
               use-chips
               outlined
               dense
-              bg-color="white"
               class="filter-select-compact"
               @update:model-value="debouncedLoadData"
               :loading="loadingPaymentMethods"
@@ -292,7 +288,7 @@
     </div>
 
     <!-- Empty State -->
-    <q-card v-else-if="!hasData" flat class="text-center q-pa-xl shadow-2 bg-white">
+    <q-card v-else-if="!hasData" flat class="text-center q-pa-xl shadow-2">
       <q-icon name="search_off" size="80px" color="grey-4" />
       <div class="text-h6 text-weight-bold q-mt-md q-mb-sm">No hay datos para mostrar</div>
       <div class="text-body2 text-grey-7" style="max-width: 400px; margin: 0 auto;">
@@ -319,7 +315,6 @@
         <!-- Day Header with Status -->
         <q-card-section
           class="cursor-pointer"
-          :class="getDayStatusClass(day)"
           @click="toggleExpanded(day.day)"
         >
           <div class="row items-center justify-between">
@@ -388,13 +383,13 @@
         <q-slide-transition>
           <div v-show="expandedRows.has(day.day)">
             <q-separator />
-            <q-card-section class="bg-grey-1">
+            <q-card-section class="expanded-section">
               <div class="q-gutter-md">
                 <!-- Cashbox Details -->
                 <div
                   v-for="cashbox in day.cashboxes"
                   :key="cashbox.cashbox_user_id"
-                  class="bg-white rounded-borders q-pa-md"
+                  class="cashbox-detail-card rounded-borders q-pa-md"
                 >
                   <div class="row items-center justify-between q-mb-md">
                     <div>
@@ -703,12 +698,13 @@
           </div>
         </q-card-section>
 
-        <q-card-actions align="right" class="q-pa-md bg-grey-1">
+        <q-card-actions align="right" class="q-pa-md">
           <q-btn
             unelevated
             color="primary"
             label="Entendido"
             icon="check"
+            style="border-radius: 12px;"
             v-close-popup
             no-caps
           />
@@ -1229,16 +1225,6 @@ export default {
           colorClass: 'negative'
         }
       }
-    }
-
-    /**
-     * Gets the status class for a day card
-     */
-    const getDayStatusClass = (day) => {
-      const diff = Math.abs(day.difference_report || 0)
-      if (diff < 0.01) return 'bg-green-1'
-      if (diff < 1000) return 'bg-orange-1'
-      return 'bg-red-1'
     }
 
     /**
@@ -1808,7 +1794,6 @@ export default {
 
       // Status Methods
       getDifferenceStatus,
-      getDayStatusClass,
       getDayStatusIcon,
       getDayStatusColor,
       getDayStatusText,
@@ -1866,7 +1851,7 @@ export default {
 <style scoped>
 /* Modern Page Layout */
 .modern-page {
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+  /* Sin background - usa el del MainLayout con orbes animados */
   min-height: 100vh;
   padding: 24px;
 }
@@ -1874,11 +1859,14 @@ export default {
 /* Header Card with Gradient */
 .header-card {
   position: relative;
-  background: white;
   border-radius: 20px;
   overflow: hidden;
   margin-bottom: 24px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.body--dark .header-card {
+  background: #1e293b;
 }
 
 .header-gradient {
@@ -1887,8 +1875,9 @@ export default {
   left: 0;
   right: 0;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   opacity: 1;
+  transition: background 0.3s ease;
 }
 
 .header-content {
@@ -1935,12 +1924,17 @@ export default {
 
 /* Filters Card - Compact Version */
 .filters-card-compact {
-  background: white;
   border-radius: 12px;
   margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.body--dark .filters-card-compact {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 .filters-header-compact {
@@ -1949,14 +1943,49 @@ export default {
   border-bottom: 1px solid #e0e0e0;
 }
 
+.body--dark .filters-header-compact {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-bottom-color: #334155;
+}
+
 .filters-title-compact {
   font-size: 14px;
   font-weight: 600;
   color: #2c3e50;
 }
 
+.body--dark .filters-title-compact {
+  color: #e2e8f0;
+}
+
 .filters-content-compact {
   padding: 16px;
+}
+
+/* Quasar Fields in Filters */
+.filters-card-compact :deep(.q-field__control) {
+  background: white;
+  border-radius: 8px;
+}
+
+.body--dark .filters-card-compact :deep(.q-field__control) {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+.filters-card-compact :deep(.q-field__native),
+.filters-card-compact :deep(.q-field__label) {
+  color: inherit;
+}
+
+.body--dark .filters-card-compact :deep(.q-field__native),
+.body--dark .filters-card-compact :deep(.q-field__label) {
+  color: #f1f5f9;
+}
+
+.body--dark .filters-card-compact :deep(.q-icon) {
+  color: #94a3b8;
 }
 
 /* Date Filter Buttons */
@@ -1964,6 +1993,10 @@ export default {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   overflow: hidden;
+}
+
+.body--dark .date-btn-group {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .date-filter-btn {
@@ -1981,7 +2014,7 @@ export default {
 
 /* Compact Date Inputs */
 .date-input-compact {
-  width: 140px;
+  width: 150px;
   border-radius: 8px;
 }
 
@@ -2063,6 +2096,12 @@ export default {
   outline: none;
 }
 
+.body--dark .date-pill {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
 .date-pill:hover {
   border-color: #667eea;
   color: #667eea;
@@ -2071,10 +2110,11 @@ export default {
 }
 
 .date-pill.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   border-color: transparent;
   color: white;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: background 0.3s ease;
 }
 
 .pill-indicator {
@@ -2109,13 +2149,17 @@ export default {
 /* Stat Cards - Compact Version */
 .stat-card-compact {
   position: relative;
-  background: white;
   border-radius: 12px;
   padding: 16px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.body--dark .stat-card-compact {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 .stat-card-compact:hover {
@@ -2386,12 +2430,18 @@ export default {
 .help-dialog-card {
   border-radius: 16px;
   overflow: hidden;
+  background: white;
+}
+
+.body--dark .help-dialog-card {
+  background: #1e293b;
 }
 
 .help-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   padding: 20px 24px;
+  transition: background 0.3s ease;
 }
 
 .help-title {
@@ -2416,6 +2466,11 @@ export default {
   justify-content: center;
 }
 
+.body--dark .video-container {
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
 .video-placeholder {
   text-align: center;
   padding: 20px;
@@ -2435,6 +2490,10 @@ export default {
   margin-bottom: 12px;
 }
 
+.body--dark .help-section-title {
+  color: #e2e8f0;
+}
+
 .help-steps {
   display: flex;
   flex-direction: column;
@@ -2451,10 +2510,11 @@ export default {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   display: flex;
   align-items: center;
+  transition: background 0.3s ease;
   justify-content: center;
   font-weight: 700;
   font-size: 14px;
@@ -2465,23 +2525,20 @@ export default {
   flex: 1;
 }
 
-.step-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 2px;
+.help-step-text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.body--dark .help-step-text {
+  color: #cbd5e1;
 }
 
 .step-desc {
   font-size: 12px;
   color: #6b7280;
-  line-height: 1.4;
-}
-
-.help-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .help-card {
@@ -2494,32 +2551,9 @@ export default {
   border: 1px solid #e5e7eb;
 }
 
-.help-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 2px;
-}
-
-.help-card-desc {
-  font-size: 11px;
-  color: #6b7280;
-  line-height: 1.5;
-}
-
-.help-tips {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.help-tip {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  font-size: 12px;
-  color: #4b5563;
-  line-height: 1.5;
+.body--dark .help-card {
+  background: #0f172a;
+  border-color: #334155;
 }
 
 /* Withdrawals List - Compact */
@@ -2527,6 +2561,26 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Expanded Section */
+.expanded-section {
+  background: #f9fafb;
+}
+
+.body--dark .expanded-section {
+  background: #0f172a;
+}
+
+/* Cashbox Detail Card */
+.cashbox-detail-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+.body--dark .cashbox-detail-card {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 /* Withdrawal Row - Compact Design */
@@ -2539,11 +2593,17 @@ export default {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 10px 14px;
+  margin-bottom: 8px;
   transition: all 0.2s ease;
 }
 
+.body--dark .withdrawal-row {
+  background: #334155;
+  border-color: #475569;
+}
+
 .withdrawal-row:hover {
-  border-color: #667eea;
+  border-color: var(--primary);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
@@ -2558,13 +2618,14 @@ export default {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   padding: 3px 8px;
   border-radius: 12px;
   font-weight: 600;
   font-size: 11px;
   width: fit-content;
+  transition: background 0.3s ease;
 }
 
 .withdrawal-payment-compact {
@@ -2574,6 +2635,10 @@ export default {
   color: #6b7280;
   font-size: 11px;
   font-weight: 500;
+}
+
+.body--dark .withdrawal-payment-compact {
+  color: #94a3b8;
 }
 
 /* Withdrawal Amounts - Compact */
@@ -2598,10 +2663,18 @@ export default {
   letter-spacing: 0.5px;
 }
 
+.body--dark .amount-label-compact {
+  color: #cbd5e1;
+}
+
 .amount-value-compact {
   font-size: 15px;
   font-weight: 700;
   color: #1f2937;
+}
+
+.body--dark .amount-value-compact {
+  color: #f1f5f9;
 }
 
 .expected-compact {
@@ -2611,11 +2684,21 @@ export default {
   border: 1px solid #e5e7eb;
 }
 
+.body--dark .expected-compact {
+  background: #1e293b;
+  border-color: #475569;
+}
+
 .actual-compact {
   padding: 6px 10px;
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   border-radius: 8px;
   border: 1px solid #10b981;
+}
+
+.body--dark .actual-compact {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-color: #10b981;
 }
 
 .amount-arrow-compact {
@@ -2632,6 +2715,11 @@ export default {
   border: 1px solid #10b981;
   border-radius: 6px;
   min-height: 32px;
+}
+
+.body--dark .amount-input-compact :deep(.q-field__control) {
+  background: #0f172a;
+  color: #f1f5f9;
 }
 
 .amount-input-compact :deep(.q-field__native) {
@@ -2714,6 +2802,12 @@ export default {
   background: white;
 }
 
+.body--dark .modern-input :deep(.q-field__control) {
+  background: #1e293b;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
 .modern-input :deep(.q-field__control):hover {
   border-color: #667eea;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
@@ -2760,6 +2854,12 @@ export default {
   background: white;
 }
 
+.body--dark .modern-select :deep(.q-field__control) {
+  background: #1e293b;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
 .modern-select :deep(.q-field__control):hover {
   border-color: #667eea;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
@@ -2771,10 +2871,11 @@ export default {
 }
 
 .modern-select :deep(.q-chip) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
   font-weight: 500;
   border-radius: 8px;
+  transition: background 0.3s ease;
 }
 
 /* Modern Buttons */

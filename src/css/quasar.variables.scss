@@ -12,8 +12,12 @@
 // to match your app's branding.
 // Tip: Use the "Theme Builder" on Quasar's documentation website.
 
-$primary   : #fd7e14;
-$secondary : #26A69A;
+// NOTA: Los colores primary y secondary ahora son dinámicos
+// y se actualizan mediante el sistema de temas en themeStore.js
+// El valor por defecto es púrpura, pero cambiará según el tema seleccionado
+
+$primary   : #667eea; // Valor por defecto - se sobrescribe dinámicamente
+$secondary : #764ba2; // Valor por defecto - se sobrescribe dinámicamente
 $accent    : #9C27B0;
 
 $dark      : #1D1D1D;

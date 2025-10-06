@@ -52,7 +52,7 @@
             dense
             round
             flat
-            color="orange"
+            color="primary"
             icon="edit"
             @click="openDialog('edit', props.row)"
           />
@@ -112,7 +112,7 @@
               <q-btn
                 type="submit"
                 label="Guardar"
-                color="orange"
+                color="primary"
                 :loading="submitting"
               />
             </q-card-actions>
@@ -139,7 +139,7 @@
           />
           <q-btn
             label="OK"
-            color="orange"
+            color="primary"
             @click="deleteBox(confirmDialog.box)"
           />
         </q-card-actions>

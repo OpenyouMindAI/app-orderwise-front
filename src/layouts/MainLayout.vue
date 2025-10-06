@@ -1,5 +1,8 @@
 <template>
   <q-layout view="hHh Lpr lff" class="modern-layout">
+    <!-- Theme Selector -->
+    <FloatingThemeSelector />
+
     <!-- Animated Background -->
     <div class="animated-bg">
       <div class="gradient-orb orb-1"></div>
@@ -389,15 +392,17 @@
 <script>
 import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
+import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
+import { useThemeStore } from 'src/stores/themeStore'
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent },
+  components: { NotificationComponent, FloatingThemeSelector },
   data () {
     return {
       logo,
@@ -694,10 +699,28 @@ export default {
      */
     loadingPage () {
       this.$q.dark.set(this.darkMode)
+      // Inicializar tema
+      this.initializeTheme()
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
       this.cuit = this.userSession?.company_session?.document_number
+    },
+    /**
+     * Inicializar sistema de temas
+     */
+    initializeTheme () {
+      try {
+        const themeStore = useThemeStore()
+        console.log('🎨 Inicializando tema desde MainLayout...')
+        themeStore.initTheme()
+
+        const savedTheme = localStorage.getItem('app-theme')
+        console.log('📦 Tema guardado en localStorage:', savedTheme)
+        console.log('🎨 Tema actual del store:', themeStore.currentTheme)
+      } catch (error) {
+        console.error('❌ Error al inicializar tema:', error)
+      }
     },
     /**
      * Change route
@@ -769,19 +792,21 @@ export default {
 .orb-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   top: -10%;
   right: -10%;
   animation-delay: 0s;
+  transition: background 0.5s ease;
 }
 
 .orb-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   bottom: -10%;
   left: -10%;
   animation-delay: 7s;
+  transition: background 0.5s ease;
 }
 
 .orb-3 {
@@ -807,18 +832,20 @@ export default {
 }
 
 .modern-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
   box-shadow: 0 2px 12px rgba(102, 126, 234, 0.15) !important;
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   z-index: 2000 !important;
+  transition: background 0.3s ease !important;
 }
 
 .body--dark .modern-header {
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%) !important;
   box-shadow: 0 2px 12px rgba(90, 103, 216, 0.25) !important;
+  filter: brightness(0.85);
 }
 
 .modern-toolbar {
@@ -837,12 +864,14 @@ export default {
 
 /* Drawer Styles */
 .modern-drawer-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  transition: background 0.3s ease;
 }
 
 .modern-drawer-footer {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   padding: 16px;
+  transition: background 0.3s ease;
 }
 
 /* Menu Items */
@@ -868,16 +897,18 @@ export default {
 }
 
 :deep(.my-menu-link) {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  color: #7c3aed;
+  background: var(--primary-light);
+  color: var(--primary);
   font-weight: 600;
-  border-left: 3px solid #7c3aed;
+  border-left: 3px solid var(--primary);
+  transition: all 0.3s ease;
 }
 
 /* Dialog Styles */
 .modern-dialog-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   padding: 24px;
+  transition: background 0.3s ease;
 }
 
 /* Buttons */
@@ -983,12 +1014,14 @@ export default {
 
 /* Profile Header */
 .profile-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   padding: 20px;
+  transition: background 0.3s ease;
 }
 
 .body--dark .profile-header {
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  filter: brightness(0.85);
 }
 
 .profile-header-content {

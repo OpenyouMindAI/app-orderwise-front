@@ -35,28 +35,30 @@
               @change="uploadAvatar"
             />
           </div>
-          
+
           <div class="user-info">
-            <h1 class="user-name">{{ profile.first_name }} {{ profile.last_name }}</h1>
+            <span class="user-name">{{ profile.first_name }} {{ profile.last_name }}</span>
             <p class="user-email">
               <q-icon name="email" size="18px" class="q-mr-xs" />
               {{ profile.email }}
             </p>
             <div class="user-badges">
-              <q-chip 
-                v-if="linkedAccounts.google" 
-                icon="check_circle" 
-                color="positive" 
-                text-color="white" 
+              <q-chip
+                v-if="linkedAccounts.google"
+                icon="check_circle"
+                color="positive"
+                text-color="white"
                 size="sm"
+                class="q-py-md"
               >
                 Google vinculado
               </q-chip>
-              <q-chip 
-                icon="verified_user" 
-                color="primary" 
-                text-color="white" 
+              <q-chip
+                icon="verified_user"
+                color="primary"
+                text-color="white"
                 size="sm"
+                class="q-py-md"
               >
                 Cuenta verificada
               </q-chip>
@@ -235,6 +237,41 @@
           </q-card-section>
         </q-card>
 
+        <!-- Card: Personalización -->
+        <q-card class="section-card full-width">
+          <q-card-section class="card-header">
+            <div class="header-icon">
+              <q-icon name="palette" size="24px"/>
+            </div>
+            <div>
+              <h3>Personalización</h3>
+              <p>Personaliza la apariencia de la aplicación</p>
+            </div>
+          </q-card-section>
+
+          <q-separator/>
+
+          <q-card-section>
+            <div class="social-item">
+              <div class="social-left">
+                <q-icon name="color_lens" size="32px" color="primary" />
+                <div class="social-text">
+                  <div class="social-name">Tema de Colores</div>
+                  <div class="social-status">Cambia la paleta de colores de la aplicación</div>
+                </div>
+              </div>
+              <q-btn
+                label="Cambiar Tema"
+                color="primary"
+                unelevated
+                @click="openThemeSelector"
+                icon="palette"
+                no-caps
+              />
+            </div>
+          </q-card-section>
+        </q-card>
+
         <!-- Card: Cuentas Vinculadas -->
         <q-card class="section-card full-width">
           <q-card-section class="card-header">
@@ -319,6 +356,7 @@
 <script>
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
+import { useThemeStore } from 'src/stores/themeStore'
 
 export default {
   name: 'ProfilePage',
@@ -812,6 +850,14 @@ export default {
           })
         }
       })
+    },
+
+    /**
+     * Abrir selector de temas
+     */
+    openThemeSelector () {
+      const themeStore = useThemeStore()
+      themeStore.showThemeSelectorModal()
     }
   }
 }
@@ -903,7 +949,7 @@ export default {
   backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 24px;
-  padding: 48px;
+  padding: 10px 48px;
   margin-bottom: 32px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   animation: slideDown 0.6s ease-out;
@@ -1020,7 +1066,7 @@ export default {
 }
 
 .user-name {
-  font-size: 36px;
+  font-size: 25px;
   font-weight: 700;
   color: var(--q-primary);
   margin: 0 0 12px 0;
@@ -1028,7 +1074,7 @@ export default {
 }
 
 .user-email {
-  font-size: 16px;
+  font-size: 14px;
   color: #64748b;
   margin: 0 0 16px 0;
   display: flex;

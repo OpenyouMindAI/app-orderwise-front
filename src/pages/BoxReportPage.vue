@@ -159,7 +159,7 @@
                   </q-tooltip>
                 </div>
                 <q-chip
-                  :color="paymentMethodTotals.payment_method_totals?.length ? 'white' : 'orange'"
+                  :color="paymentMethodTotals.payment_method_totals?.length ? 'white' : 'primary'"
                   :text-color="paymentMethodTotals.payment_method_totals?.length ? 'green-6' : 'white'"
                   :label="paymentMethodTotals.payment_method_totals?.length || 0"
                   size="sm"
@@ -234,7 +234,7 @@
               <div class="col-auto flex justify-center items-center q-gutter-x-md">
                 <div class="text-body1 text-bold">Total: {{ formatNumber(categoryTotalsTotals.category_total || 0) }}</div>
                 <q-chip
-                  :color="categoryTotalsTotals.categories_totals?.length ? 'white' : 'orange'"
+                  :color="categoryTotalsTotals.categories_totals?.length ? 'white' : 'primary'"
                   :text-color="categoryTotalsTotals.categories_totals?.length ? 'blue-6' : 'white'"
                   :label="categoryTotalsTotals.categories_totals?.length || 0"
                   size="sm"
@@ -302,7 +302,7 @@
                   </q-tooltip>
                 </div>
                 <q-chip
-                  :color="cashflowTotals.cashflow_total?.length ? 'white' : 'orange'"
+                  :color="cashflowTotals.cashflow_total?.length ? 'white' : 'primary'"
                   :text-color="cashflowTotals.cashflow_total?.length ? 'purple-6' : 'white'"
                   :label="cashflowTotals.cashflow_total?.length || 0"
                   size="sm"
@@ -361,7 +361,7 @@
           :default-opened="expandedCards.services"
           @show="expandedCards.services = true"
           @hide="expandedCards.services = false"
-          header-class="bg-orange-6 text-white expansion-header-compact"
+          header-class="bg-primary text-white expansion-header-compact"
           expand-icon-class="text-white"
         >
           <template v-slot:header>
@@ -373,8 +373,8 @@
               <div class="col-auto flex justify-center items-center q-gutter-x-md">
                 <div class="text-body1 text-bold">Total: {{ formatNumber(typeOfServicesTotals.payment_total || 0) }}</div>
                 <q-chip
-                  :color="typeOfServicesTotals.payment_method_totals?.length ? 'white' : 'orange'"
-                  :text-color="typeOfServicesTotals.payment_method_totals?.length ? 'orange-6' : 'white'"
+                  :color="typeOfServicesTotals.payment_method_totals?.length ? 'white' : 'primary'"
+                  :text-color="typeOfServicesTotals.payment_method_totals?.length ? 'primary' : 'white'"
                   :label="typeOfServicesTotals.payment_method_totals?.length || 0"
                   size="sm"
                   dense
@@ -393,7 +393,7 @@
                       <div class="text-caption text-grey-6">{{ getServicePercentage(service.payment_total).toFixed(1) }}% del total</div>
                     </div>
                     <div class="col-5 text-right">
-                      <div class="text-h6 text-weight-bold text-orange-8">
+                      <div class="text-h6 text-weight-bold text-primary">
                         {{ formatNumber(service.payment_total) }}
                       </div>
                     </div>
@@ -401,7 +401,7 @@
 
                   <q-linear-progress
                     :value="getServicePercentage(service.payment_total) / 100"
-                    color="orange-6"
+                    color="primary"
                     size="4px"
                     rounded
                     class="q-mt-xs"

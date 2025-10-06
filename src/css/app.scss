@@ -3,7 +3,8 @@
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 :root {
-  /* Paleta de colores moderna - Gradiente Púrpura */
+  /* Paleta de colores moderna - Gradiente Púrpura (valores por defecto) */
+  /* NOTA: Estos valores se sobrescriben dinámicamente por el sistema de temas */
   --primary: #667eea; /* Púrpura base del gradiente */
   --primary-light: rgba(102, 126, 234, 0.1);
   --primary-medium: rgba(102, 126, 234, 0.5);
@@ -13,6 +14,10 @@
   --secondary: #764ba2;
   --secondary-light: rgba(118, 75, 162, 0.1);
   --secondary-dark: #6d28d9;
+
+  /* Variables de Quasar - se sincronizan con el tema */
+  --q-primary: var(--primary);
+  --q-secondary: var(--secondary);
 
   /* Colores neutros elegantes */
   --background: #f8f8f8;
@@ -571,8 +576,94 @@ p {
     margin-bottom: var(--spacing-xs);
     margin-right: 0;
   }
+}
 
-  .grid-container {
-    grid-template-columns: 1fr;
-  }
+/* ============================================ */
+/* QUASAR THEME OVERRIDE - Forzar uso de variables CSS dinámicas */
+/* ============================================ */
+
+/* Sobrescribir todos los botones primary de Quasar */
+.q-btn.bg-primary,
+.q-btn--standard.bg-primary {
+  background: var(--primary) !important;
+}
+
+.q-btn.text-primary {
+  color: var(--primary) !important;
+}
+
+/* Chips */
+.q-chip.bg-primary {
+  background: var(--primary) !important;
+}
+
+.q-chip.text-primary {
+  color: var(--primary) !important;
+}
+
+/* Badges */
+.q-badge.bg-primary {
+  background: var(--primary) !important;
+}
+
+.q-badge.text-primary {
+  color: var(--primary) !important;
+}
+
+/* Linear Progress */
+.q-linear-progress__track {
+  opacity: 0.3;
+}
+
+.q-linear-progress__model--determinate {
+  background: var(--primary) !important;
+}
+
+/* Tabs */
+.q-tab--active {
+  color: var(--primary) !important;
+}
+
+.q-tabs__indicator {
+  background: var(--primary) !important;
+}
+
+/* Checkboxes y Radios */
+.q-checkbox__inner--truthy .q-checkbox__bg,
+.q-radio__inner--truthy .q-radio__bg {
+  color: var(--primary) !important;
+}
+
+/* Toggle */
+.q-toggle__inner--truthy .q-toggle__track {
+  background: var(--primary) !important;
+}
+
+/* Sliders */
+.q-slider__track-container--h .q-slider__track--active {
+  background: var(--primary) !important;
+}
+
+/* Expansion Items */
+.q-expansion-item__toggle-icon {
+  color: var(--primary) !important;
+}
+
+/* Input focus */
+.q-field--focused .q-field__control:before {
+  border-color: var(--primary) !important;
+}
+
+.q-field--focused .q-field__label {
+  color: var(--primary) !important;
+}
+
+/* Iconos primary */
+.q-icon.text-primary {
+  color: var(--primary) !important;
+}
+
+/* Spinner */
+.q-spinner-primary {
+  color: var(--primary) !important;
 }

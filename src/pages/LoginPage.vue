@@ -35,7 +35,7 @@
             :rules="[val => !!val || 'El campo es requerido.']"
           >
             <template v-slot:prepend>
-              <q-icon name="person" color="orange" size="20px"/>
+              <q-icon name="person" color="primary" size="20px"/>
             </template>
           </q-input>
         </div>
@@ -54,7 +54,7 @@
             :rules="[val => !!val || 'El campo es requerido.']"
           >
             <template v-slot:prepend>
-              <q-icon name="lock" color="orange" size="20px"/>
+              <q-icon name="lock" color="primary" size="20px"/>
             </template>
             <template v-slot:append>
               <q-icon
