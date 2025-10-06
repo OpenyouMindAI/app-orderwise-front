@@ -870,7 +870,6 @@ export default {
 
 .modern-drawer-footer {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  padding: 16px;
   transition: background 0.3s ease;
 }
 
@@ -987,7 +986,6 @@ export default {
 }
 
 .profile-avatar {
-  border: 2px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
 }
 
@@ -1002,7 +1000,7 @@ export default {
 
 .profile-card {
   min-width: 320px;
-  border-radius: 12px;
+  border-radius: 15px;
   overflow: hidden;
   border: none !important;
 }
@@ -1031,7 +1029,6 @@ export default {
 }
 
 .profile-avatar-large {
-  border: 3px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
