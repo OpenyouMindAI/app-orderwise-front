@@ -610,25 +610,19 @@ export default {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #1a2332;
+  background: transparent;
 }
 
-/* Fondo animado */
+/* Fondo animado - Igual al MainLayout */
 .animated-bg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #1a2332 0%, #2d3e50 50%, #1a2332 100%);
-  background-size: 400% 400%;
-  animation: gradientMove 15s ease infinite;
-}
-
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  z-index: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 /* Formas decorativas del fondo */
@@ -636,32 +630,32 @@ export default {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.15;
+  opacity: 0.3;
   animation: floatShape 20s ease-in-out infinite;
 }
 
 .shape-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  top: -150px;
-  left: -150px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  top: -10%;
+  right: -10%;
   animation-delay: 0s;
 }
 
 .shape-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, #f093fb, #f5576c);
-  bottom: -100px;
-  right: -100px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  bottom: -10%;
+  left: -10%;
   animation-delay: 7s;
 }
 
 .shape-3 {
-  width: 350px;
-  height: 350px;
-  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -671,15 +665,12 @@ export default {
 @keyframes floatShape {
   0%, 100% {
     transform: translate(0, 0) scale(1);
-    opacity: 0.15;
   }
   33% {
-    transform: translate(50px, -50px) scale(1.1);
-    opacity: 0.2;
+    transform: translate(30px, -50px) scale(1.1);
   }
   66% {
-    transform: translate(-30px, 30px) scale(0.9);
-    opacity: 0.1;
+    transform: translate(-20px, 20px) scale(0.9);
   }
 }
 
@@ -688,17 +679,17 @@ export default {
   position: relative;
   z-index: 10;
   width: 90%;
-  max-width: 460px;
-  padding: 20px 20px;
-  background: rgba(42, 56, 75, 0.85);
+  max-width: 440px;
+  padding: 24px 28px 20px;
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 20px 60px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 20px 60px rgba(102, 126, 234, 0.3),
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
   animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -716,12 +707,12 @@ export default {
 /* Logo */
 .logo-section {
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   animation: fadeInDown 0.6s ease-out 0.2s backwards;
 }
 
 .logo-img {
-  width: 220px;
+  width: 180px;
   max-width: 80%;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
 }
@@ -740,22 +731,25 @@ export default {
 /* Header */
 .header-section {
   text-align: center;
-  margin-bottom: 26px;
+  margin-bottom: 20px;
   animation: fadeIn 0.6s ease-out 0.3s backwards;
 }
 
 .welcome-title {
-  font-size: 32px;
-  font-weight: 400;
-  color: #e8eaed;
-  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 6px 0;
   letter-spacing: 0.5px;
   font-family: 'Roboto', sans-serif;
 }
 
 .welcome-subtitle {
-  font-size: 14px;
-  color: #9aa0a6;
+  font-size: 13px;
+  color: #6b7280;
   margin: 0;
   font-weight: 400;
   letter-spacing: 0.3px;
@@ -773,7 +767,7 @@ export default {
 
 /* Inputs */
 .input-container {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   animation: slideUp 0.5s ease-out backwards;
 }
 
@@ -792,36 +786,36 @@ export default {
 }
 
 .custom-input :deep(.q-field__control) {
-  height: 52px;
-  border-radius: 26px;
-  background: rgba(55, 71, 92, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  height: 48px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 20px;
 }
 
 .custom-input :deep(.q-field__control):hover {
-  background: rgba(60, 76, 97, 0.9);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: #ffffff;
+  border-color: #667eea;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
 }
 
 .custom-input :deep(.q-field__control):focus-within {
-  background: rgba(65, 81, 102, 0.95);
-  border-color: rgba(33, 150, 243, 0.5);
-  box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.15);
+  background: #ffffff;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
   transform: translateY(-1px);
 }
 
 .custom-input :deep(.q-field__native) {
-  color: #e8eaed;
+  color: #1f2937;
   font-size: 14px;
   padding-left: 8px;
 }
 
 .custom-input :deep(.q-field__native)::placeholder {
-  color: #9aa0a6;
+  color: #9ca3af;
 }
 
 /* Options */
@@ -829,49 +823,52 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 18px;
   animation: fadeIn 0.5s ease-out 0.7s backwards;
 }
 
 .remember-checkbox {
-  color: #e8eaed;
+  color: #374151;
 }
 
 .remember-checkbox :deep(.q-checkbox__label) {
   font-size: 14px;
-  color: #e8eaed;
+  color: #374151;
 }
 
 .forgot-password-link {
   font-size: 13px;
-  color: #2196f3;
+  color: #667eea;
   text-decoration: none;
   font-weight: 500;
   transition: all 0.2s ease;
 }
 
 .forgot-password-link:hover {
-  color: #42a5f5;
+  color: #764ba2;
   text-decoration: underline;
 }
 
 /* Botón Login */
 .login-btn {
   width: 100%;
-  height: 52px;
+  height: 48px;
   border-radius: 12px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  margin-bottom: 28px;
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s backwards;
   transition: all 0.3s ease;
+  border: none !important;
 }
 
 .login-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
 }
 
 .login-btn:active {
@@ -893,20 +890,20 @@ export default {
 .divider-container {
   display: flex;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   animation: fadeIn 0.5s ease-out 0.9s backwards;
 }
 
 .divider-line {
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #e5e7eb;
 }
 
 .divider-text {
   padding: 0 16px;
   font-size: 13px;
-  color: #9aa0a6;
+  color: #6b7280;
   font-weight: 400;
 }
 
@@ -915,7 +912,7 @@ export default {
   display: flex;
   flex-direction: row;
   gap: 12px;
-  margin-bottom: 28px;
+  margin-bottom: 18px;
   animation: fadeInUp 0.5s ease-out 1s backwards;
 }
 
@@ -936,7 +933,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 52px;
+  height: 46px;
   border: none;
   border-radius: 12px;
   font-size: 14px;
@@ -954,15 +951,16 @@ export default {
 }
 
 .google-btn {
-  background: rgba(55, 71, 92, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  color: #374151;
 }
 
 .google-btn:hover:not(:disabled) {
-  background: rgba(60, 76, 97, 0.9);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: #f9fafb;
+  border-color: #667eea;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
 }
 
 .google-btn:active:not(:disabled) {
@@ -1001,18 +999,18 @@ export default {
 
 .register-text {
   font-size: 14px;
-  color: #9aa0a6;
+  color: #6b7280;
 }
 
 .register-link {
-  color: #2196f3;
+  color: #667eea;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s ease;
 }
 
 .register-link:hover {
-  color: #42a5f5;
+  color: #764ba2;
   text-decoration: underline;
 }
 
@@ -1022,15 +1020,15 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
   animation: fadeIn 0.5s ease-out 1.2s backwards;
 }
 
 .footer-text {
   font-size: 12px;
-  color: #9aa0a6;
+  color: #9ca3af;
 }
 
 .qbits-logo {
