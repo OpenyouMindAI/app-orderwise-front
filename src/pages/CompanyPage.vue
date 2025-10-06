@@ -28,6 +28,16 @@
               </template>
             </q-input>
           </template>
+          <template v-slot:body-cell-address="props">
+            <q-td :props="props">
+              <div
+                class="address-cell"
+                :title="props.value || 'Sin dirección'"
+              >
+                {{ props.value || 'Sin dirección' }}
+              </div>
+            </q-td>
+          </template>
         </q-table>
       </div>
     </div>
@@ -95,37 +105,12 @@
                   :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
                 />
               </div>
-              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                <q-select
-                  v-model="company.business_type_id"
-                  filled
-                  label="Tipo de Empresa"
-                  :options="businessTypes"
-                  option-value="id"
-                  option-label="name"
-                  emit-value
-                  map-options
-                  lazy-rules
-                  :rules="[ val => val || 'Este campo es requerido']"
-                >
-                  <template v-slot:option="scope">
-                    <q-item v-bind="scope.itemProps">
-                      <q-item-section>
-                        <q-item-label>{{ scope.opt.name }}</q-item-label>
-                        <q-item-label caption>{{ scope.opt.description }}</q-item-label>
-                      </q-item-section>
-                    </q-item>
-                  </template>
-                </q-select>
-              </div>
-              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                <q-input
-                  v-model="company.address"
-                  filled
-                  label="Dirección"
-                  lazy-rules
-                  type="textarea"
-                  :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+              <!-- Sección de Dirección para Editar -->
+              <div class="col-12">
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
                 />
               </div>
             </div>
@@ -201,37 +186,12 @@
                   :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
                 />
               </div>
-              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                <q-select
-                  v-model="company.business_type_id"
-                  filled
-                  label="Tipo de Empresa"
-                  :options="businessTypes"
-                  option-value="id"
-                  option-label="name"
-                  emit-value
-                  map-options
-                  lazy-rules
-                  :rules="[ val => val || 'Este campo es requerido']"
-                >
-                  <template v-slot:option="scope">
-                    <q-item v-bind="scope.itemProps">
-                      <q-item-section>
-                        <q-item-label>{{ scope.opt.name }}</q-item-label>
-                        <q-item-label caption>{{ scope.opt.description }}</q-item-label>
-                      </q-item-section>
-                    </q-item>
-                  </template>
-                </q-select>
-              </div>
-              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                <q-input
-                  v-model="company.address"
-                  filled
-                  label="Dirección"
-                  lazy-rules
-                  type="textarea"
-                  :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+              <!-- Sección de Dirección para Agregar -->
+              <div class="col-12">
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
                 />
               </div>
             </div>
@@ -250,6 +210,7 @@ import { api } from 'src/boot/axios'
 import { notify, logo, setFiles } from 'src/const/mixins'
 import { onMounted, ref, watch } from 'vue'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 
 /**
  * Reactive reference to store the list of companies
@@ -284,7 +245,7 @@ const params = ref({
   paginate: true,
   sortBy: 'id',
   sortOrder: 'desc',
-  perPage: 1,
+  perPage: 20,
   dataSearch: {
     id: '',
     name: '',
@@ -346,6 +307,16 @@ const columns = [
     label: 'Correo electrónico',
     field: 'email',
     sortable: true
+  },
+  {
+    name: 'address',
+    align: 'left',
+    label: 'Dirección',
+    field: 'address',
+    sortable: true,
+    format: (val) => val || 'Sin dirección',
+    style: 'width: 250px; max-width: 250px;',
+    headerStyle: 'width: 250px; max-width: 250px;'
   }
 ]
 /**
@@ -359,6 +330,24 @@ const paginationConfig = ref({
   sortBy: 'id',
   sortOrder: 'desc'
 })
+
+/**
+ * Address component key for resetting
+ * @type {Number}
+ */
+const addressComponentKey = ref(0)
+
+/**
+ * Address object
+ * @type {Object}
+ */
+const address = ref(null)
+
+/**
+ * Formatted address string
+ * @type {String}
+ */
+const formattedAddress = ref('')
 
 /**
  * Sets the pagination configuration on component mount
@@ -395,7 +384,19 @@ const formDate = (data, put = false) => {
   const formData = new FormData()
   formData.append('file', file.value.file)
   formData.append('name', data.name)
-  formData.append('address', data.address)
+
+  // Agregar la dirección formateada
+  let addressToSend = ''
+  if (formattedAddress.value) {
+    addressToSend = formattedAddress.value
+  } else if (address.value && typeof address.value === 'object') {
+    // Si es un objeto, usar formattedAddress o convertir a string simple
+    addressToSend = address.value.formattedAddress || address.value.name || JSON.stringify(address.value)
+  } else if (data.address) {
+    addressToSend = data.address
+  }
+
+  formData.append('address', addressToSend)
   formData.append('document_number', data.document_number)
   formData.append('email', data.email)
   formData.append('phone_number', data.phone_number)
@@ -412,6 +413,10 @@ function closeModal () {
   openEditCompany.value = false
   company.value = {}
   file.value = {}
+  // Limpiar las variables de dirección
+  address.value = null
+  formattedAddress.value = ''
+  addressComponentKey.value += 1
 }
 /**
  * Searches for companies based on the filter data
@@ -482,6 +487,10 @@ async function saveCompany () {
     openAddCompany.value = false
     company.value = {}
     file.value = {}
+    // Limpiar las variables de dirección
+    address.value = null
+    formattedAddress.value = ''
+    addressComponentKey.value += 1
     notify('Empresa creada exitosamente', 'positive', 'check_circle')
   } catch (error) {
     notify(error.message, 'negative', 'warning')
@@ -500,6 +509,30 @@ function editCompany (event, row, index) {
   openEditCompany.value = true
   company.value = row
   file.value = { url: row.url }
+
+  // Actualizar la dirección cuando se selecciona una empresa
+  if (row.address) {
+    formattedAddress.value = row.address
+    // Crear objeto de dirección para AddressComponent
+    address.value = {
+      name: '',
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+      latitude: row.latitude || null,
+      longitude: row.longitude || null,
+      formattedAddress: row.address,
+      placeId: row.place_id || '',
+      types: []
+    }
+    company.value.address = row.address
+  } else {
+    formattedAddress.value = ''
+    address.value = null
+    company.value.address = ''
+  }
 }
 /**
  * Saves the changes of an edited company
@@ -513,6 +546,10 @@ async function saveEdit () {
     openEditCompany.value = false
     company.value = {}
     file.value = {}
+    // Limpiar las variables de dirección
+    address.value = null
+    formattedAddress.value = ''
+    addressComponentKey.value += 1
     notify('Empresa editada exitosamente', 'positive', 'check_circle')
   } catch (err) {
     notify(err.message, 'negative', 'warning')
@@ -539,4 +576,67 @@ async function deleteCompany () {
     visible.value = false
   }
 }
+
+/**
+ * Handle address selection from AddressComponent
+ * @param {Object} selectedAddress - The selected address object
+ */
+function handleAddressSelected (selectedAddress) {
+  // Si la dirección es nula, reiniciar el objeto de dirección
+  if (!selectedAddress) {
+    address.value = null
+    formattedAddress.value = ''
+    return
+  }
+
+  // Actualizar los campos de dirección para el formulario
+  address.value = selectedAddress
+
+  // Formatear la dirección para enviarla en la empresa
+  // El componente AddressComponent devuelve un objeto con la estructura específica
+  if (typeof selectedAddress === 'object' && selectedAddress !== null) {
+    // Priorizar formattedAddress si existe
+    if (selectedAddress.formattedAddress) {
+      formattedAddress.value = selectedAddress.formattedAddress
+    } else if (selectedAddress.name) {
+      // Si no hay formattedAddress, usar el name del lugar
+      formattedAddress.value = selectedAddress.name
+    } else {
+      // Construir dirección desde componentes disponibles
+      const addressParts = []
+      if (selectedAddress.street) addressParts.push(selectedAddress.street)
+      if (selectedAddress.city) addressParts.push(selectedAddress.city)
+      if (selectedAddress.state) addressParts.push(selectedAddress.state)
+      if (selectedAddress.country) addressParts.push(selectedAddress.country)
+      if (selectedAddress.zipCode) addressParts.push(selectedAddress.zipCode)
+
+      formattedAddress.value = addressParts.length > 0
+        ? addressParts.join(', ')
+        : JSON.stringify(selectedAddress)
+    }
+  } else if (typeof selectedAddress === 'string') {
+    // Si por alguna razón viene como string
+    formattedAddress.value = selectedAddress
+  } else {
+    // Fallback: convertir a string
+    formattedAddress.value = String(selectedAddress)
+  }
+
+  // Dirección procesada correctamente - no necesita reinicialización del componente
+}
 </script>
+
+<style scoped>
+.address-cell {
+  width: 250px;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+.address-cell:hover {
+  color: var(--q-primary);
+}
+</style>

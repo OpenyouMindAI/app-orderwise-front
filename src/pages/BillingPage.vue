@@ -502,7 +502,7 @@
                 </div>
               </div>
             </div>
-            <div class="col-12 q-col-gutter-xs q-mt-md row">
+           <div class="col-12 q-col-gutter-xs q-mt-md row">
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-select
                   filled
@@ -517,6 +517,14 @@
               </div>
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              </div>
+              <div class="col-12">
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
+                />
+
               </div>
               <div class="col-12" v-if="typeOfService.code !== 4">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
@@ -561,37 +569,37 @@
                   </q-btn>
                 </div>
               </div>
-            </div>
-            <div class="col-12">
-              <q-list separator bordered style="border-radius: 10px;">
-                <q-item v-if="tableSelected.length">
-                  <q-item-section>
-                    Mesas
-                  </q-item-section>
-                  <q-item-section side>
-                    {{ tableSelected.length }}
-                  </q-item-section>
-                </q-item>
-                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
-                  <q-item-section>
-                    TOTAL
-                  </q-item-section>
-                  <q-item-section v-if="coin" side class="text-white">
-                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section v-if="pendingPayment >= 0">
-                    TOTAL POR COBRAR
-                  </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
-                  </q-item-section>
-                </q-item>
-              </q-list>
+              <div class="col-12">
+                <q-list separator bordered style="border-radius: 10px;">
+                  <q-item v-if="tableSelected.length">
+                    <q-item-section>
+                      Mesas
+                    </q-item-section>
+                    <q-item-section side>
+                      {{ tableSelected.length }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                    <q-item-section>
+                      TOTAL
+                    </q-item-section>
+                    <q-item-section v-if="coin" side class="text-white">
+                      {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                    </q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section v-if="pendingPayment >= 0">
+                      TOTAL POR COBRAR
+                    </q-item-section>
+                    <q-item-section v-else>
+                      VUELTO
+                    </q-item-section>
+                    <q-item-section side v-if="coin">
+                      {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
             </div>
           </div>
         </div>
@@ -821,15 +829,15 @@
       :loading="loadingBilling"
       :user-session="userSession"
       :cash-box-state="cashBoxState"
+      :type-of-service="typeOfService"
+      :invoice-type="invoiceType"
       @update:show="dialogPayment = $event"
       @update:table-close="tableClose = $event"
-      @payment-add="handlePaymentAdd"
       @payment-update="handlePaymentUpdate"
       @payment-delete="handlePaymentDelete"
       @payment-check="handlePaymentCheck"
       @qr-payment="handleQRPayment"
       @action-click="handlePaymentAction"
-      @close-complete="onCloseComplete"
     />
 
     <q-dialog v-model="dialogTable">
@@ -900,8 +908,8 @@
         { label: 'Salida', value: 'credit' },
         { label: 'Arqueo', value: 'withdrawal' }
       ]"
-      @cashflow-saved="onCashflowSaved"
     />
+
     <q-dialog v-model="openAddClient" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
@@ -1048,6 +1056,7 @@
 </template>
 
 <script>
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -1074,6 +1083,7 @@ import {
 export default {
   name: 'BillingPage',
   components: {
+    AddressComponent,
     DrawerTable,
     PaymentModal,
     WaitByPaymentMp,
@@ -1201,6 +1211,23 @@ export default {
        */
       deliveryDate: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
       /**
+       * Delivery address
+       * @type {Object}
+       */
+      deliveryAddress: {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      },
+      /**
        * Format number
        * @type {Function}
        */
@@ -1210,6 +1237,21 @@ export default {
        * @type {Boolean}
        */
       searchInvoice: false,
+      /**
+       * Address component key
+       * @type {Number}
+       */
+      addressComponentKey: 0,
+      /**
+       * Address
+       * @type {Object}
+       */
+      address: null,
+      /**
+       * Formatted address
+       * @type {String}
+       */
+      formattedAddress: '',
       /**
        * Search
        * @type {String}
@@ -1523,6 +1565,14 @@ export default {
   watch: {
     client (client) {
       this.invoiceShare = { ...this.invoiceShare, client }
+      // Actualizar la dirección cuando se selecciona un cliente
+      if (client && client.address) {
+        this.formattedAddress = client.address
+        this.address = client.address
+      } else {
+        this.formattedAddress = ''
+        this.address = null
+      }
     },
     invoiceType (invoiceType) {
       this.invoiceShare = { ...this.invoiceShare, invoiceType }
@@ -1654,6 +1704,25 @@ export default {
   methods: {
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
+    },
+    /**
+     * Handle address selection from AddressComponent
+     * @param {Object} address - Selected address object
+     */
+    onAddressSelected (address) {
+      this.deliveryAddress = address || {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      }
     },
     /**
      * Select a product by index for keyboard navigation
@@ -2034,15 +2103,6 @@ export default {
      * @param {Object} data table selected
      */
     setTableSelected (data) {
-      console.log('=== TABLE SELECTION ===', {
-        selectedTables: data,
-        tablesCount: data?.length || 0,
-        tableIds: data?.map(table => table?.id || table) || [],
-        currentInvoice: {
-          id: this.invoice?.id,
-          status: this.invoice?.status
-        }
-      })
       this.tableSelected = data
     },
     /**
@@ -2082,10 +2142,6 @@ export default {
     /**
      * Handle payment modal events
      */
-    handlePaymentAdd (payment) {
-      // Payment is already added by the modal
-      this.payments = [...this.payments]
-    },
     handlePaymentUpdate ({ payment, payments }) {
       this.payments = payments
     },
@@ -2099,17 +2155,8 @@ export default {
       this.waitingPayment = true
     },
     handlePaymentAction ({ action, params, payments, tableClose }) {
-      console.log('=== PAYMENT ACTION RECEIVED ===', {
-        action,
-        params,
-        payments,
-        tableClose,
-        currentTableSelected: this.tableSelected,
-        totalBill: this.totalBill,
-        products: this.products
-      })
       this.payments = payments
-      this.tableClose = tableClose
+      // tableClose is now handled internally by PaymentModal
       switch (action) {
         case 'invoice':
           this.savePrintInvoice()
@@ -2121,9 +2168,6 @@ export default {
           this.saveWithoutPrint()
           break
       }
-    },
-    onCloseComplete () {
-      console.log('Payment modal closed successfully')
     },
     /**
      * Save without print
@@ -2157,7 +2201,7 @@ export default {
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
           const element = data[key]
-          console.log(element)
+          // Processing form data element
           if (typeof element !== 'object' && element) {
             formData.append(key, element)
           }
@@ -2324,14 +2368,7 @@ export default {
      * @param {Object} table  table data
      */
     async selectInvoice (table) {
-      console.log('=== SELECT INVOICE FROM TABLE ===', {
-        table,
-        tableId: table?.id,
-        tableName: table?.name,
-        invoices: table?.invoices,
-        invoiceToLoad: table?.invoices?.[0],
-        invoiceId: table?.invoices?.[0]?.id
-      })
+      // Selecting invoice from table
 
       loading(true)
       const invoiceOne = table.invoices[0]
@@ -2339,58 +2376,27 @@ export default {
       this.dialogTable = false
       loading(false)
 
-      console.log('=== INVOICE LOADED FROM TABLE ===', {
-        loadedInvoice: {
-          id: this.invoice?.id,
-          code: this.invoice?.code,
-          status: this.invoice?.status,
-          tables: this.invoice?.tables
-        },
-        productsLoaded: this.products?.length || 0,
-        paymentsLoaded: this.payments?.length || 0
-      })
+      // Invoice loaded from table
     },
     /**
      * Free table
      * @param {Object} table  table data
      */
     async freeTable (table) {
-      console.log('=== FREE TABLE INITIATED ===', {
-        table,
-        tableId: table?.id,
-        tableName: table?.name,
-        tableStatus: table?.status,
-        hasInvoices: !!(table?.invoices && table.invoices.length > 0),
-        invoicesCount: table?.invoices?.length || 0
-      })
+      // Freeing table
 
       try {
         await this.selectInvoice(table)
         this.tableClose = true
 
-        console.log('=== TABLE CLOSE ACTIVATED ===', {
-          tableClose: this.tableClose,
-          willOpenPaymentDialog: true,
-          currentInvoice: {
-            id: this.invoice?.id,
-            totalAmount: this.totalBill,
-            productsCount: this.products?.length || 0
-          }
-        })
+        // Table close activated
 
         setTimeout(() => {
           this.dialogPayment = true
-          console.log('=== PAYMENT DIALOG OPENED FOR TABLE CLOSE ===', {
-            dialogPayment: this.dialogPayment,
-            tableClose: this.tableClose,
-            tableId: table?.id
-          })
+          // Payment dialog opened for table close
         }, 200)
       } catch (error) {
-        console.log('=== ERROR FREEING TABLE ===', {
-          error: error.message,
-          tableId: table?.id
-        })
+        // Error freeing table
         notify(error.message, 'negative', 'warning')
       }
     },
@@ -2573,25 +2579,6 @@ export default {
      * Clear invoice
      */
     clear () {
-      console.log('=== CLEARING BILLING DATA STARTED ===', {
-        beforeClear: {
-          payments: this.payments,
-          productsCount: this.products?.length || 0,
-          tableSelected: this.tableSelected,
-          tableClose: this.tableClose,
-          invoiceDescription: this.invoiceDescription,
-          totalBill: this.totalBill,
-          dialogPayment: this.dialogPayment,
-          withoutPrint: this.withoutPrint,
-          invoicePrinter: this.invoicePrinter,
-          currentInvoice: {
-            id: this.invoice?.id,
-            code: this.invoice?.code,
-            status: this.invoice?.status
-          }
-        }
-      })
-
       this.payments = []
       this.products = []
       this.resetProductSelection()
@@ -2602,27 +2589,20 @@ export default {
       this.withoutPrint = false
       this.invoicePrinter = false
       this.tableClose = false
+
+      // Limpiar campos de dirección
+      this.address = null
+      this.formattedAddress = ''
+      // Reiniciar el componente AddressComponent incrementando su key
+      this.addressComponentKey += 1
+
       this.calculateTotal()
 
-      console.log('=== NAVIGATING TO BILLING PAGE ===', {
-        routeName: 'Billing',
-        timestamp: new Date().toISOString()
-      })
-
+      // Navigating to billing page
       this.$router.push({ name: 'Billing' })
       this.setInvoice({})
 
       setTimeout(() => {
-        console.log('=== CLEARING BILLING DATA COMPLETED ===', {
-          afterClear: {
-            payments: this.payments,
-            productsCount: this.products?.length || 0,
-            tableSelected: this.tableSelected,
-            tableClose: this.tableClose,
-            totalBill: this.totalBill,
-            invoice: this.invoice
-          }
-        })
         this.$refs.saveBill.resetValidation()
         this.getLocalStorage()
         this.invoice = null
@@ -2633,75 +2613,36 @@ export default {
      * @param {Object} data invoice saved
      */
     async printBill (data) {
-      console.log('=== PRINT BILL INITIATED ===', {
-        invoiceData: data,
-        withoutPrint: this.withoutPrint,
-        invoicePrinter: this.invoicePrinter,
-        tableClose: this.tableClose,
-        tableSelected: this.tableSelected
-      })
-
       const invoice = await this.getInvoiceOneRequest(data.id)
 
       if (!invoice) {
-        console.log('=== ERROR: Invoice not found ===', { invoiceId: data.id })
         notify('Error al obtener la factura', 'negative', 'warning')
         return
       }
 
-      console.log('=== INVOICE RETRIEVED FOR PRINT ===', {
-        invoice,
-        hasTableInfo: !!(invoice.tables && invoice.tables.length > 0),
-        tables: invoice.tables
-      })
-
       if (this.withoutPrint) {
-        console.log('=== SAVE WITHOUT PRINT - CLEARING DATA ===', {
-          tableClose: this.tableClose,
-          willClearTable: true
-        })
-        this.clear()
         this.withoutPrint = false
+        // Para guardar sin imprimir, limpiar inmediatamente
+        setTimeout(() => {
+          this.dialogPayment = false
+          this.clear()
+        }, 300)
         return
       }
+
       if (this.invoicePrinter) {
-        console.log('=== PRINTING TICKET ===', { invoice: invoice.id })
         await ticketPrint(invoice)
       } else {
-        console.log('=== PRINTING COMMAND ===', { invoice: invoice.id })
         await commandPrint(invoice)
       }
 
-      console.log('=== PRINT COMPLETED - CLEARING DATA ===', {
-        tableClose: this.tableClose,
-        willClearTable: true
-      })
-      this.clear()
+      // Don't clear automatically - let PaymentModal handle table close
     },
     /**
      * Set invoice model
      * @returns {Object}
      */
     setModelInvoice () {
-      console.log('=== CASHBOX STATE ===', this.cashBoxState)
-
-      // Datos de contexto para debug
-      console.log('=== MESA CONTEXT DATA ===', {
-        tableSelected: this.tableSelected,
-        tableClose: this.tableClose,
-        payments: this.payments,
-        totalBill: this.totalBill,
-        products: this.products?.length || 0,
-        userSession: {
-          id: this.userSession?.id,
-          name: this.userSession?.name
-        },
-        branchOffice: {
-          id: this.branchOffice?.id,
-          name: this.branchOffice?.name
-        }
-      })
-
       const invoiceModel = {
         ...this.invoice,
         tableClose: this.tableClose,
@@ -2717,6 +2658,7 @@ export default {
         exchange_rate: this.exchangeRate,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
+        address: this.formattedAddress,
         products: this.products,
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0),
@@ -2725,34 +2667,6 @@ export default {
         electronic_invoice: this.invoiceType?.bill,
         voucherType: this.invoiceType?.bill ? this.voucherType : null
       }
-
-      console.log('=== COMPLETE INVOICE MODEL TO SEND ===', {
-        invoiceModel,
-        tableInfo: {
-          tableIds: invoiceModel.tables,
-          willCloseTable: invoiceModel.tableClose
-        },
-        paymentInfo: {
-          paymentsCount: invoiceModel.payments?.length || 0,
-          paymentsData: invoiceModel.payments,
-          totalAmount: invoiceModel.total_amount
-        },
-        productsInfo: {
-          productsCount: invoiceModel.products?.length || 0,
-          productsList: invoiceModel.products?.map(p => ({
-            id: p.id,
-            name: p.name,
-            quantity: p.quantity,
-            price: p.price,
-            subtotal: p.subtotal
-          }))
-        },
-        cashboxInfo: {
-          cashboxId: invoiceModel.cashbox_user_id,
-          cashboxState: this.cashBoxState
-        }
-      })
-
       return invoiceModel
     },
     /**
@@ -2760,6 +2674,14 @@ export default {
      */
     setParamsBill () {
       if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
+
+      console.log('=== SET PARAMS BILL ===', {
+        invoiceType: this.invoiceType,
+        pendingPayment: this.pendingPayment,
+        withoutPayment: this.withoutPayment,
+        withServiceType: this.withServiceType,
+        products: this.products
+      })
 
       if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
@@ -2791,40 +2713,24 @@ export default {
         if (!params) return
 
         if (this.$route.query.id) {
-          console.log('=== UPDATING INVOICE ===', {
-            invoiceId: this.$route.query.id,
-            endpoint: `invoices/${this.$route.query.id}`,
-            method: 'PUT',
-            payload: params,
-            payloadSize: JSON.stringify(params).length
-          })
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
-          console.log('=== CREATING NEW INVOICE ===', {
-            endpoint: 'invoices',
-            method: 'POST',
-            payload: params,
-            payloadSize: JSON.stringify(params).length,
-            hasTableToClose: params.tableClose,
-            tablesInvolved: params.tables
-          })
           res = await this.$api.post('invoices', params)
         }
-
-        console.log('=== API RESPONSE RECEIVED ===', {
-          success: !!res,
-          data: res?.data,
-          invoiceCreated: res?.data?.data,
-          timestamp: new Date().toISOString()
-        })
         this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
+
+        // Cerrar modal y limpiar después de guardar exitoso
+        this.dialogPayment = false
+        if (!this.tableClose && !this.withoutPrint && !this.invoicePrinter) {
+          // Solo limpiar si no hay flags especiales activos
+          setTimeout(() => this.clear(), 500)
+        }
         this.setPagination({
           pagination: this.pagination,
           filter: undefined
         })
       } catch (error) {
-        console.log(error)
         notify(error.message, 'negative', 'warning')
       } finally {
         this.loadingBilling = false
@@ -3246,7 +3152,7 @@ export default {
             if (group.products && group.products.length > 0) {
               group.products.forEach(product => {
                 // Debug: Log product structure to understand the data
-                console.log('Product structure:', product)
+                // Processing product data
 
                 // Handle different possible property names
                 const productId = product.product_id || product.id || product.productId
@@ -3475,10 +3381,10 @@ export default {
         if (currentTotal < this.currentGroup.quantity) {
           selection.quantity++
         } else {
-          console.log('⚠️ Cannot increase - group limit reached')
+          // Group limit reached
         }
       } else {
-        console.log('❌ No selection found for product ID:', id)
+        // No selection found for product ID
       }
     },
 
@@ -3513,6 +3419,49 @@ export default {
       if (this.isCurrentGroupValid() && this.currentGroupIndex < this.currentPromo.promotion_details.length - 1) {
         this.currentGroupIndex++
       }
+    },
+    handleAddressSelected (address) {
+      // Si la dirección es nula, reiniciar el objeto de dirección
+      if (!address) {
+        this.address = {}
+        this.formattedAddress = ''
+        return
+      }
+
+      // Actualizar los campos de dirección para el formulario
+      this.address = address
+
+      // Formatear la dirección para enviarla en la factura
+      // El componente AddressComponent devuelve un objeto con la estructura específica
+      if (typeof address === 'object' && address !== null) {
+        // Priorizar formattedAddress si existe
+        if (address.formattedAddress) {
+          this.formattedAddress = address.formattedAddress
+        } else if (address.name) {
+          // Si no hay formattedAddress, usar el name del lugar
+          this.formattedAddress = address.name
+        } else {
+          // Construir dirección desde componentes disponibles
+          const addressParts = []
+          if (address.street) addressParts.push(address.street)
+          if (address.city) addressParts.push(address.city)
+          if (address.state) addressParts.push(address.state)
+          if (address.country) addressParts.push(address.country)
+          if (address.zipCode) addressParts.push(address.zipCode)
+
+          this.formattedAddress = addressParts.length > 0
+            ? addressParts.join(', ')
+            : JSON.stringify(address)
+        }
+      } else if (typeof address === 'string') {
+        // Si por alguna razón viene como string
+        this.formattedAddress = address
+      } else {
+        // Fallback: convertir a string
+        this.formattedAddress = String(address)
+      }
+
+      // Address processing completed
     },
 
     /**
@@ -3553,14 +3502,6 @@ export default {
         color: 'positive',
         icon: 'check_circle'
       })
-    },
-
-    /**
-     * Handle cashflow saved event
-     */
-    onCashflowSaved () {
-      // Refresh data if needed or show success message
-      console.log('Cashflow saved successfully')
     }
   }
 }
@@ -3647,8 +3588,6 @@ export default {
     font-size: 11px !important;
   }
 }
-</style>
-<style>
 
 .dropzone-card {
   border: 2px dashed #e0e0e0;

@@ -269,7 +269,6 @@
           <q-item
             v-if="
               validateRole(list.roles) &&
-              validateBusinessType(list) &&
               list.name != 'home'
             "
             v-ripple
@@ -406,7 +405,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateRole(module.roles) && this.validateBusinessType(module)
+              return this.validateRole(module.roles)
             }).length > 0
           )
         })
@@ -634,7 +633,11 @@ export default {
      */
     validateBusinessType (module) {
       const businessTypeModules = this.userSession?.company_session?.business_type?.modules || []
+
       if (this.userSession?.is_root) return true
+
+      if (businessTypeModules.length === 0) return true
+
       if (businessTypeModules.length > 0 && module) {
         return businessTypeModules.some((businessModule) => businessModule.id === module.id)
       }
