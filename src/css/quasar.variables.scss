@@ -8,23 +8,22 @@
 // Your own variables (that are declared here) and Quasar's own
 // ones will be available out of the box in your .vue/.scss/.sass files
 
-// Custom theme based on purple-to-teal gradient from brand image
-// Colors extracted from the geometric logo design
+// It's highly recommended to change the default colors
+// to match your app's branding.
+// Tip: Use the "Theme Builder" on Quasar's documentation website.
 
-$primary   : #7C3AED; // Purple from the logo
-$secondary : #14B8A6; // Teal from the logo  
-$accent    : #A855F7; // Light purple accent
+// NOTA: Los colores primary y secondary ahora son dinámicos
+// y se actualizan mediante el sistema de temas en themeStore.js
+// El valor por defecto es púrpura, pero cambiará según el tema seleccionado
 
-$dark      : #1E1B4B; // Deep purple dark
-$dark-page : #0F0A1E; // Very dark purple
+$primary   : #667eea; // Valor por defecto - se sobrescribe dinámicamente
+$secondary : #764ba2; // Valor por defecto - se sobrescribe dinámicamente
+$accent    : #9C27B0;
 
-$positive  : #10B981; // Emerald green
-$negative  : #EF4444; // Red
-$info      : #06B6D4; // Cyan
-$warning   : #F59E0B; // Amber
+$dark      : #1D1D1D;
+$dark-page : #121212;
 
-// Additional custom colors for the theme
-$purple-gradient-start: #7C3AED;
-$purple-gradient-end: #14B8A6;
-$glass-bg: rgba(124, 58, 237, 0.1);
-$glass-border: rgba(124, 58, 237, 0.2);
+$positive  : #21BA45;
+$negative  : #C10015;
+$info      : #31CCEC;
+$warning   : #F2C037;
