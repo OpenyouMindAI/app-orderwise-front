@@ -916,7 +916,7 @@
           <q-card-section class="row items-center q-py-sm bg-primary text-white">
             <div class="text-h6">Agregar cliente</div>
             <q-space />
-            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
+            <q-btn icon="close" flat round dense @click="closeAddClientModal" />
           </q-card-section>
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -977,12 +977,12 @@
                 label="Número de teléfono"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.address"
-                label="Dirección"
-                type="textarea"
+            <!-- Sección de Dirección -->
+            <div class="col-12">
+              <AddressComponent
+                :key="addressComponentKey"
+                :initial-address="address"
+                @address-selected="handleAddressSelectedForClient"
               />
             </div>
           </q-card-section>
@@ -2112,8 +2112,7 @@ export default {
       this.loadingClient = true
       this.$api.post('clients', this.clientAdded)
         .then(({ data }) => {
-          this.openAddClient = false
-          this.clientAdded = {}
+          this.closeAddClientModal()
           this.client = data
           this.loadingClient = false
           Notify.create({
@@ -3462,6 +3461,67 @@ export default {
       }
 
       // Address processing completed
+    },
+
+    /**
+     * Close add client modal and reset state
+     */
+    closeAddClientModal () {
+      this.openAddClient = false
+      this.clientAdded = {}
+      this.address = null
+      // Resetear el componente AddressComponent incrementando su key
+      this.addressComponentKey += 1
+    },
+
+    /**
+     * Handle address selection for client form
+     * @param {Object|String} address - The selected address
+     */
+    handleAddressSelectedForClient (address) {
+      console.log('Dirección seleccionada para cliente:', address)
+
+      // Si la dirección es nula, limpiar el campo
+      if (!address) {
+        this.clientAdded.address = ''
+        return
+      }
+
+      // Formatear la dirección para el cliente
+      if (typeof address === 'object' && address !== null) {
+        // Priorizar formattedAddress si existe
+        if (address.formattedAddress) {
+          this.clientAdded.address = address.formattedAddress
+        } else if (address.name) {
+          // Si no hay formattedAddress, usar el name del lugar
+          this.clientAdded.address = address.name
+        } else {
+          // Construir dirección desde componentes disponibles
+          const addressParts = []
+          if (address.street) addressParts.push(address.street)
+          if (address.city) addressParts.push(address.city)
+          if (address.state) addressParts.push(address.state)
+          if (address.country) addressParts.push(address.country)
+          if (address.zipCode) addressParts.push(address.zipCode)
+
+          this.clientAdded.address = addressParts.length > 0
+            ? addressParts.join(', ')
+            : JSON.stringify(address)
+        }
+
+        // Guardar coordenadas GPS si están disponibles
+        if (address.latitude && address.longitude) {
+          this.clientAdded.latitude = address.latitude
+          this.clientAdded.longitude = address.longitude
+          this.clientAdded.place_id = address.place_id || null
+        }
+      } else if (typeof address === 'string') {
+        // Si por alguna razón viene como string
+        this.clientAdded.address = address
+      } else {
+        // Fallback: convertir a string
+        this.clientAdded.address = String(address)
+      }
     },
 
     /**
