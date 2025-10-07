@@ -14,10 +14,20 @@
             size="17px"
             style="width: 100%"
             :label="paymentMethod.name"
-            v-for="paymentMethod in paymentMethods"
+            v-for="(paymentMethod, index) in paymentMethods.slice(0, 5)"
             :key="paymentMethod.id"
             @click="addPayment(paymentMethod)"
-          />
+            class="payment-method-btn"
+          >
+            <q-badge
+              v-if="index < 5 && $q.screen.gt.sm && !$q.platform.is.nativeMobile"
+              color="negative"
+              align="bottom"
+              floating
+            >
+              F{{ index + 2 }}
+            </q-badge>
+          </q-btn>
         </div>
 
         <!-- Payment Details -->
@@ -194,7 +204,7 @@
 </template>
 
 <script>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 
 export default {
@@ -521,6 +531,46 @@ export default {
       emit('update:show', false)
     }
 
+    // Keyboard shortcuts handler
+    const handleKeyboardShortcut = (event) => {
+      // Only handle when modal is open
+      if (!props.show) return
+
+      // Handle F2-F6 for payment methods
+      if (event.key >= 'F2' && event.key <= 'F6') {
+        event.preventDefault()
+
+        const keyNumber = parseInt(event.key.substring(1)) // Extract number from F2, F3, etc.
+        const methodIndex = keyNumber - 2 // F2 = index 0, F3 = index 1, etc.
+
+        if (methodIndex >= 0 && methodIndex < props.paymentMethods.length && methodIndex < 5) {
+          const paymentMethod = props.paymentMethods[methodIndex]
+          addPayment(paymentMethod)
+
+          // Show visual feedback
+          $q.notify({
+            message: `Método de pago: ${paymentMethod.name}`,
+            type: 'positive',
+            timeout: 1000,
+            position: 'top'
+          })
+        }
+      }
+    }
+
+    // Setup keyboard event listeners
+    onMounted(() => {
+      if (typeof window !== 'undefined') {
+        window.addEventListener('keydown', handleKeyboardShortcut)
+      }
+    })
+
+    onUnmounted(() => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('keydown', handleKeyboardShortcut)
+      }
+    })
+
     return {
       localPayments,
       totalPayment,
@@ -540,7 +590,8 @@ export default {
       closeModal,
       setModelInvoice,
       setParamsBill,
-      paymentModel
+      paymentModel,
+      handleKeyboardShortcut
     }
   }
 }
@@ -571,5 +622,17 @@ export default {
 
 .full-width {
   width: 100%;
+}
+
+.payment-method-btn {
+  position: relative;
+}
+
+.payment-method-btn .q-badge {
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 20px;
+  height: 16px;
+  line-height: 16px;
 }
 </style>
