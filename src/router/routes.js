@@ -315,6 +315,21 @@ const routes = [
     component: () => import('pages/LoginPage.vue')
   },
   {
+    path: '/register',
+    name: 'Register',
+    component: () => import('pages/RegisterPage.vue')
+  },
+  {
+    path: '/auth/callback',
+    name: 'OAuthCallback',
+    component: () => import('pages/OAuthCallback.vue')
+  },
+  {
+    path: '/auth/callback/:provider',
+    name: 'SocialCallback',
+    component: () => import('pages/SocialCallbackPage.vue')
+  },
+  {
     path: '/verifying/:access_token/:expires_in/:token_type/:redirect',
     name: 'VerifySession',
     meta: { requiresAuth: false },

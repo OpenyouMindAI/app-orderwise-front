@@ -1,123 +1,43 @@
 <template>
-  <div class="login-container">
+  <div class="register-container">
     <!-- Animated Background -->
     <div class="animated-bg">
       <!-- Floating Orbs -->
       <div class="orb orb-1"></div>
       <div class="orb orb-2"></div>
       <div class="orb orb-3"></div>
-      
+
       <!-- Grid Pattern -->
       <div class="grid-pattern"></div>
-      
+
       <!-- Particles -->
-      <div 
-        v-for="i in 30" 
-        :key="i" 
-        class="particle" 
+      <div
+        v-for="i in 30"
+        :key="i"
+        class="particle"
         :style="getParticleStyle(i)"
       ></div>
     </div>
 
-    <!-- Main Content -->
-    <div class="login-content">
-      <!-- Glass Card -->
+    <!-- Main content -->
+    <div class="register-content">
       <div class="glass-card" :class="{ 'card-focused': isCardFocused }">
-        <!-- Header Section -->
-        <div class="login-header">
+        <!-- Header -->
+        <div class="register-header">
           <div class="logo-container">
             <div class="logo-glow"></div>
-            <q-img 
-              :src="logo.color" 
+            <q-img
+              :src="logo.color"
               class="logo-img"
               @load="onLogoLoad"
             />
           </div>
-          
+
           <div class="welcome-text">
-            <div class="text-h4 text-weight-light text-grey-8 q-mb-xs">Bienvenido</div>
-            <div class="text-body1 text-grey-6">Accede a tu cuenta para continuar</div>
+            <div class="text-h4 text-weight-light text-grey-8 q-mb-xs">Crear Cuenta</div>
+            <div class="text-body1 text-grey-6">Únete a nuestra plataforma</div>
           </div>
         </div>
-
-        <!-- Login Form -->
-        <q-form @submit="loginAt" class="login-form">
-          <!-- Username Input -->
-          <q-input
-            v-model="username"
-            label="Usuario o correo electrónico"
-            class="hero-input q-mb-md"
-            outlined
-            rounded
-            @focus="focusedInput = 'username'"
-            @blur="focusedInput = null"
-            @keyup.enter="loginAt"
-            :rules="[val => !!val || 'El campo es requerido.']"
-          >
-            <template v-slot:prepend>
-              <q-icon name="person" color="primary" />
-            </template>
-          </q-input>
-
-          <!-- Password Input -->
-          <q-input
-            v-model="password"
-            label="Contraseña"
-            :type="showPassword ? 'text' : 'password'"
-            class="hero-input q-mb-md"
-            outlined
-            rounded
-            @focus="focusedInput = 'password'"
-            @blur="focusedInput = null"
-            @keyup.enter="loginAt"
-            :rules="[val => !!val || 'El campo es requerido.']"
-          >
-            <template v-slot:prepend>
-              <q-icon name="lock" color="primary" />
-            </template>
-            <template v-slot:append>
-              <q-btn
-                :icon="showPassword ? 'visibility_off' : 'visibility'"
-                flat
-                round
-                dense
-                @click="showPassword = !showPassword"
-                class="password-toggle"
-              />
-            </template>
-          </q-input>
-
-          <!-- Remember Me -->
-          <div class="remember-section">
-            <q-checkbox
-              v-model="remember"
-              label="Recordarme"
-              class="hero-checkbox"
-            />
-            <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
-          </div>
-
-          <!-- Login Button -->
-          <q-btn
-            type="submit"
-            class="hero-btn login-btn"
-            :loading="btnDisable"
-            no-caps
-            unelevated
-          >
-            <q-icon name="login" class="q-mr-sm" />
-            <span v-if="!btnDisable">Iniciar Sesión</span>
-            <span v-else>Iniciando...</span>
-          </q-btn>
-        </q-form>
-
-        <!-- Divider -->
-        <div class="divider-section">
-          <div class="divider-line"></div>
-          <span class="divider-text">O continúa con</span>
-          <div class="divider-line"></div>
-        </div>
-
         <!-- Social Buttons -->
         <div class="social-section">
           <q-btn
@@ -136,7 +56,7 @@
             </svg>
             <span class="social-text">Google</span>
           </q-btn>
-          
+
           <q-btn
             @click="loginWithFacebook"
             class="social-btn facebook-btn"
@@ -152,141 +72,185 @@
           </q-btn>
         </div>
 
-        <!-- Register Link -->
-        <div class="register-section">
-          <p class="register-text">
-            ¿No tienes cuenta?
-            <router-link to="/register" class="register-link">
-              Crear cuenta
-            </router-link>
-          </p>
+        <!-- Divider -->
+        <div class="divider-section">
+          <div class="divider-line"></div>
+          <span class="divider-text">o regístrate con email</span>
+          <div class="divider-line"></div>
         </div>
 
-        <!-- Footer -->
-        <div class="login-footer" v-if="!$q.screen.lt.sm">
-          <div class="footer-content">
-            <q-btn
-              round
-              flat
-              icon="android"
-              href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
-              target="_blank"
-              class="download-btn"
-              v-if="!$q.platform.is.nativeMobile"
-            />
-            <div class="powered-by">
-              <span class="powered-text">Powered by</span>
-              <a href="https://site.qbitsinc.com" target="_blank" class="qbits-link">
-                <q-img 
-                  :src="darkMode ? qBitsLogo.white : qBitsLogo.black"
-                  class="qbits-logo"
-                />
-              </a>
-            </div>
+        <!-- Registration Form -->
+        <q-form @submit="register" class="register-form">
+          <div class="form-row">
+            <q-input
+              v-model="form.name"
+              label="Nombre"
+              class="hero-input"
+              outlined
+              rounded
+              :rules="[val => !!val || 'El nombre es requerido']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="person" color="primary" />
+              </template>
+            </q-input>
+
+            <q-input
+              v-model="form.lastname"
+              label="Apellido"
+              class="hero-input"
+              outlined
+              rounded
+              :rules="[val => !!val || 'El apellido es requerido']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="person_outline" color="primary" />
+              </template>
+            </q-input>
           </div>
+
+          <q-input
+            v-model="form.username"
+            label="Nombre de usuario"
+            class="hero-input q-mb-md"
+            outlined
+            rounded
+            :rules="[val => !!val || 'El nombre de usuario es requerido']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="alternate_email" color="primary" />
+            </template>
+          </q-input>
+
+          <q-input
+            v-model="form.email"
+            label="Correo electrónico"
+            type="email"
+            class="hero-input q-mb-md"
+            outlined
+            rounded
+            :rules="[
+              val => !!val || 'El correo es requerido',
+              val => /.+@.+\..+/.test(val) || 'Correo inválido'
+            ]"
+          >
+            <template v-slot:prepend>
+              <q-icon name="email" color="primary" />
+            </template>
+          </q-input>
+
+          <q-input
+            v-model="form.password"
+            label="Contraseña"
+            :type="showPassword ? 'text' : 'password'"
+            class="hero-input q-mb-lg"
+            outlined
+            rounded
+            :rules="[
+              val => !!val || 'La contraseña es requerida',
+              val => val.length >= 8 || 'Mínimo 8 caracteres'
+            ]"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock" color="primary" />
+            </template>
+            <template v-slot:append>
+              <q-btn
+                :icon="showPassword ? 'visibility_off' : 'visibility'"
+                flat
+                round
+                dense
+                @click="showPassword = !showPassword"
+                class="password-toggle"
+              />
+            </template>
+          </q-input>
+
+          <!-- Register Button -->
+          <q-btn
+            type="submit"
+            class="hero-btn login-btn"
+            :loading="registerLoading"
+            no-caps
+            unelevated
+          >
+            <span v-if="!registerLoading">Crear Cuenta</span>
+            <span v-else>Creando cuenta...</span>
+          </q-btn>
+        </q-form>
+
+        <!-- Login Link -->
+        <div class="register-section">
+          <p class="register-text">
+            ¿Ya tienes cuenta?
+            <router-link to="/login" class="register-link">
+              Iniciar sesión
+            </router-link>
+          </p>
         </div>
       </div>
     </div>
   </div>
 </template>
+
 <script>
-import { logo, qBitsLogo } from 'src/const/mixins'
+import { logo } from 'src/const/mixins'
 import { Notify } from 'quasar'
-import { mapActions, mapState } from 'pinia'
-import { authentication } from 'stores/module-authentication'
-import { notify } from '../const/mixins'
-import { darkModeStore } from '../stores/darkModeStore'
-import { openSocialAuthPopup, handleSocialAuthSuccess, handleSocialAuthError, redirectToSocialAuth } from 'src/utils/socialAuth'
+import { api } from 'boot/axios'
+import { openSocialAuthPopup, handleSocialAuthSuccess, handleSocialAuthError, redirectToSocialAuth, testSocialAuthBackend } from 'src/utils/socialAuth'
+
 export default {
-  name: 'LoginPage',
+  name: 'RegisterPage',
   data () {
     return {
-      qBitsLogo,
-      remember: true,
-      dialog: false,
       logo,
-      slide: 'style',
       showPassword: false,
-      focusedInput: null,
-      isCardFocused: false,
-      particles: [],
-      /**
-       * Email User
-       * @type {String}
-       */
-      username: '',
-      /**
-       * Password User
-       * @type {String}
-       */
-      password: '',
-
-      btnDisable: false,
+      registerLoading: false,
       googleLoading: false,
       facebookLoading: false,
-      urlDownload: null,
-      messageError: {
-        'The user credentials were incorrect.':
-          'El usuario o contraseña son incorrectos.'
+      isCardFocused: false,
+      particles: [],
+      form: {
+        name: '',
+        lastname: '',
+        username: '',
+        email: '',
+        password: ''
       }
     }
   },
-  computed: {
-    /**
-     * Height window
-     * @returns {Number}
-     */
-    heightWindow () {
-      return screen.height
-    },
-    /**
-     * Dark mode
-     * @returns {Boolean}
-     */
-    ...mapState(darkModeStore, ['darkMode'])
-  },
   mounted () {
-    this.$q.dark.set(this.darkMode)
     this.initParticles()
     this.initCardFocus()
   },
   methods: {
-    /**
-     * Login app
-     */
-    async loginAt () {
+    async register () {
       try {
-        this.btnDisable = true
-        const data = await this.login({ username: this.username, password: this.password })
-        if (data.is_root) {
-          this.$router.push({ name: 'Billing' })
-          return
-        }
-        if (data?.roles?.length === 0) {
-          notify('Usuario no tiene permisos', 'negative', 'warning')
-          return
-        }
+        this.registerLoading = true
+
+        const response = await api.post('/authentication/register', this.form)
+
+        // Store token
+        localStorage.setItem('access_token', response.data.access_token)
+
+        Notify.create({
+          message: 'Cuenta creada exitosamente',
+          color: 'positive',
+          position: 'top',
+          icon: 'check_circle'
+        })
+
+        // Redirect to dashboard or tutorial
         this.$router.push({ name: 'Tutorial' })
-        this.btnDisable = false
       } catch (error) {
         Notify.create({
-          message: this.messageError[error?.message] || error.message,
+          message: error.response?.data?.message || 'Error al crear la cuenta',
           color: 'negative',
           position: 'top',
-          icon: 'warning',
-          timeout: 5000,
-          actions: [
-            {
-              label: 'OK',
-              color: 'white',
-              handler: () => {
-                this.btnDisable = false
-              }
-            }
-          ]
+          icon: 'error'
         })
       } finally {
-        this.btnDisable = false
+        this.registerLoading = false
       }
     },
 
@@ -354,14 +318,27 @@ export default {
     handleSocialAuthError,
     redirectToSocialAuth,
 
+    async testBackend () {
+      console.log('Testing backend connectivity...')
+      const result = await testSocialAuthBackend()
+      
+      this.$q.notify({
+        message: `Backend test: ${result.error ? 'Failed' : 'Success'}`,
+        color: result.error ? 'negative' : 'positive',
+        position: 'top',
+        timeout: 5000,
+        caption: JSON.stringify(result, null, 2)
+      })
+    },
+
     initParticles () {
       // Initialize particle positions and animations
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 50; i++) {
         this.particles.push({
           x: Math.random() * 100,
           y: Math.random() * 100,
           delay: Math.random() * 10,
-          duration: 15 + Math.random() * 25
+          duration: 10 + Math.random() * 20
         })
       }
     },
@@ -391,15 +368,14 @@ export default {
         animationDelay: `${particle.delay}s`,
         animationDuration: `${particle.duration}s`
       }
-    },
-
-    ...mapActions(authentication, ['login'])
+    }
   }
 }
 </script>
+
 <style scoped>
 /* Main Container */
-.login-container {
+.register-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -456,12 +432,6 @@ export default {
   animation-delay: -5s;
 }
 
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  33% { transform: translate(30px, -30px) rotate(120deg); }
-  66% { transform: translate(-20px, 20px) rotate(240deg); }
-}
-
 /* Grid Pattern */
 .grid-pattern {
   position: absolute;
@@ -469,10 +439,10 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: 
-    linear-gradient(rgba(124, 58, 237, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
+  background-image:
+    linear-gradient(rgba(124, 58, 237, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 58, 237, 0.08) 1px, transparent 1px);
+  background-size: 80px 80px;
   animation: grid-move 30s linear infinite;
 }
 
@@ -484,11 +454,18 @@ export default {
 /* Particles */
 .particle {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  background: rgba(124, 58, 237, 0.2);
+  width: 2px;
+  height: 2px;
+  background: rgba(124, 58, 237, 0.4);
   border-radius: 50%;
   animation: particle-float infinite linear;
+  box-shadow: 0 0 4px rgba(124, 58, 237, 0.3);
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(30px, -30px) rotate(120deg); }
+  66% { transform: translate(-20px, 20px) rotate(240deg); }
 }
 
 @keyframes particle-float {
@@ -509,23 +486,25 @@ export default {
 }
 
 /* Main Content */
-.login-content {
+.register-content {
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: 480px;
+  z-index: 1;
 }
 
 /* Glass Card */
 .glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(124, 58, 237, 0.1);
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 24px;
   padding: 40px;
   box-shadow: 
-    0 8px 32px rgba(124, 58, 237, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 15px 45px rgba(124, 58, 237, 0.15),
+    0 5px 15px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateY(20px);
   opacity: 0;
@@ -535,9 +514,10 @@ export default {
 .glass-card.card-focused {
   transform: translateY(0);
   box-shadow: 
-    0 12px 40px rgba(124, 58, 237, 0.15),
-    0 0 0 1px rgba(124, 58, 237, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 20px 60px rgba(124, 58, 237, 0.2),
+    0 8px 25px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(124, 58, 237, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 @keyframes card-enter {
@@ -548,7 +528,7 @@ export default {
 }
 
 /* Header Section */
-.login-header {
+.register-header {
   text-align: center;
   margin-bottom: 32px;
 }
@@ -566,7 +546,7 @@ export default {
   transform: translate(-50%, -50%);
   width: 120%;
   height: 120%;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, transparent 70%);
   border-radius: 50%;
   opacity: 0;
   transition: opacity 0.5s ease;
@@ -578,8 +558,8 @@ export default {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.6; }
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.25; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.4; }
 }
 
 .logo-img {
@@ -587,7 +567,7 @@ export default {
   max-width: 70vw;
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 4px 20px rgba(124, 58, 237, 0.3));
+  filter: drop-shadow(0 4px 20px rgba(124, 58, 237, 0.25));
 }
 
 .welcome-text {
@@ -605,31 +585,39 @@ export default {
   }
 }
 
-/* Usar tipografía por defecto de Quasar - se maneja con clases de utilidad */
-
 /* Form Styles */
-.login-form {
+.register-form {
   margin-bottom: 32px;
 }
 
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-row .hero-input {
+  flex: 1;
+}
+
 .hero-input :deep(.q-field__control) {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.8);
   border-color: rgba(124, 58, 237, 0.2);
   transition: all 0.3s ease;
 }
 
 .hero-input :deep(.q-field__control):hover {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   border-color: rgba(124, 58, 237, 0.4);
 }
 
 .hero-input :deep(.q-field--focused .q-field__control) {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border-color: #7C3AED;
 }
 
 .hero-input :deep(.q-field__label) {
-  color: rgba(55, 65, 81, 0.7);
+  color: rgba(55, 65, 81, 0.8);
 }
 
 .hero-input :deep(.q-field--focused .q-field__label) {
@@ -647,35 +635,6 @@ export default {
 
 .password-toggle:hover {
   color: #7C3AED;
-}
-
-/* Remember Section */
-.remember-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.hero-checkbox :deep(.q-checkbox__label) {
-  color: rgba(55, 65, 81, 0.8);
-  font-size: 0.875rem;
-}
-
-.hero-checkbox :deep(.q-checkbox__inner) {
-  color: #7C3AED;
-}
-
-.forgot-link {
-  color: #7C3AED;
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.forgot-link:hover {
-  color: #6D28D9;
 }
 
 /* Buttons */
@@ -716,11 +675,11 @@ export default {
 .divider-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.25), transparent);
 }
 
 .divider-text {
-  color: rgba(55, 65, 81, 0.6);
+  color: rgba(55, 65, 81, 0.7);
   font-size: 0.875rem;
   padding: 0 16px;
   white-space: nowrap;
@@ -738,7 +697,7 @@ export default {
   height: 56px;
   border-radius: 16px;
   border: 1px solid rgba(124, 58, 237, 0.2);
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.6);
   color: #374151;
   font-weight: 500;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -747,7 +706,7 @@ export default {
 }
 
 .social-btn:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.8);
   border-color: rgba(124, 58, 237, 0.3);
   transform: translateY(-2px);
 }
@@ -794,113 +753,16 @@ export default {
   color: #6D28D9;
 }
 
-/* Footer */
-.login-footer {
-  border-top: 1px solid rgba(124, 58, 237, 0.1);
-  padding-top: 24px;
-}
-
-.footer-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.download-btn {
-  color: rgba(55, 65, 81, 0.6);
-  transition: color 0.3s ease;
-}
-
-.download-btn:hover {
-  color: #7C3AED;
-}
-
-.powered-by {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.powered-text {
-  color: rgba(55, 65, 81, 0.6);
-  font-size: 0.75rem;
-}
-
-.qbits-link {
-  transition: transform 0.3s ease;
-}
-
-.qbits-link:hover {
-  transform: scale(1.1);
-}
-
-.qbits-logo {
-  width: 60px;
-  filter: brightness(0.8);
-}
-
-/* Responsive Design */
-@media (max-width: 600px) {
-  .login-container {
-    padding: 16px;
-  }
-  
-  .glass-card {
-    padding: 24px;
-    border-radius: 20px;
-  }
-  
-  .title {
-    font-size: 2rem;
-  }
-  
-  .social-section {
-    flex-direction: column;
-  }
-  
-  .footer-content {
-    flex-direction: column;
-    gap: 16px;
-  }
-}
-
-/* Dark Mode Enhancements */
-.body--dark .glass-card {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-.body--dark .hero-input :deep(.q-field__control) {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.body--dark .social-btn {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-/* Loading States */
-.hero-btn :deep(.q-spinner) {
-  color: currentColor;
-}
-
-/* Focus Styles */
-.hero-btn:focus-visible {
-  outline: 2px solid #1976d2;
-  outline-offset: 2px;
-}
-
-.hero-input :deep(.q-field--focused) {
-  outline: none;
-}
-
 /* Animation Delays for Staggered Entry */
 .hero-input:nth-of-type(1) { animation: slide-up 0.6s ease-out 0.8s both; }
 .hero-input:nth-of-type(2) { animation: slide-up 0.6s ease-out 0.9s both; }
-.remember-section { animation: slide-up 0.6s ease-out 1s both; }
-.login-btn { animation: slide-up 0.6s ease-out 1.1s both; }
-.divider-section { animation: slide-up 0.6s ease-out 1.2s both; }
-.social-section { animation: slide-up 0.6s ease-out 1.3s both; }
-.register-section { animation: slide-up 0.6s ease-out 1.4s both; }
+.hero-input:nth-of-type(3) { animation: slide-up 0.6s ease-out 1s both; }
+.hero-input:nth-of-type(4) { animation: slide-up 0.6s ease-out 1.1s both; }
+.hero-input:nth-of-type(5) { animation: slide-up 0.6s ease-out 1.2s both; }
+.login-btn { animation: slide-up 0.6s ease-out 1.3s both; }
+.divider-section { animation: slide-up 0.6s ease-out 1.4s both; }
+.social-section { animation: slide-up 0.6s ease-out 1.5s both; }
+.register-section { animation: slide-up 0.6s ease-out 1.6s both; }
 
 @keyframes slide-up {
   from {
@@ -911,5 +773,50 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Focus Styles */
+.hero-btn:focus-visible {
+  outline: 2px solid #7C3AED;
+  outline-offset: 2px;
+}
+
+.hero-input :deep(.q-field--focused) {
+  outline: none;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .register-container {
+    padding: 16px;
+  }
+  
+  .glass-card {
+    padding: 24px;
+    border-radius: 20px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .social-section {
+    flex-direction: column;
+  }
+}
+
+/* Dark Mode Enhancements */
+.body--dark .glass-card {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.body--dark .hero-input :deep(.q-field__control) {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.body--dark .social-btn {
+  background: rgba(0, 0, 0, 0.3);
 }
 </style>
