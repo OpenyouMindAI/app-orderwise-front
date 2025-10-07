@@ -7,10 +7,12 @@ let companyConfig = null
 export default boot(async ({ app }) => {
   try {
     const $store = authentication()
-    api.defaults.headers.common.authorization = `${$store?.token_type} ${$store?.access_token}`
-    const { data } = await api.get('company-configs')
-    app.config.globalProperties.$companyConfig = data.data
-    companyConfig = data.data
+    if ($store?.token_type) {
+      api.defaults.headers.common.authorization = `${$store?.token_type} ${$store?.access_token}`
+      const { data } = await api.get('company-configs')
+      app.config.globalProperties.$companyConfig = data.data
+      companyConfig = data.data
+    }
   } catch (error) {
     console.log(error)
   }

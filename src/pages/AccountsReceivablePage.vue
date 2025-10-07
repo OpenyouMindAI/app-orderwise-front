@@ -70,7 +70,7 @@
           </div>
           <div class="kpi-content">
             <div class="kpi-label">Saldo Pendiente</div>
-            <div class="kpi-value text-orange">{{ formatCurrency(globalKpis.balance) }}</div>
+            <div class="kpi-value text-primary">{{ formatCurrency(globalKpis.balance) }}</div>
             <div class="kpi-trend">
               <q-icon name="schedule" size="16px" />
               <span>Por cobrar</span>
@@ -140,8 +140,8 @@
             </template>
 
             <template #body-cell-balance="props">
-              <q-td :props="props" class="text-right bg-orange-1">
-                <div class="text-weight-bold text-orange" style="font-size: 16px;">
+              <q-td :props="props" class="text-right bg-primary-1">
+                <div class="text-weight-bold text-primary" style="font-size: 16px;">
                   {{ formatCurrency(props.row.balance) }}
                 </div>
               </q-td>
@@ -255,7 +255,7 @@
           </div>
           <div class="summary-content">
             <div class="summary-label">Saldo Actual</div>
-            <div class="summary-value text-orange">{{ formatCurrency(statement?.summary?.current_balance || 0) }}</div>
+            <div class="summary-value text-primary">{{ formatCurrency(statement?.summary?.current_balance || 0) }}</div>
           </div>
         </div>
       </div>
@@ -369,7 +369,7 @@
                   <span v-else class="text-grey-5">-</span>
                 </template>
                 <template v-else-if="props.col.name === 'running_balance'">
-                  <div class="text-weight-bold text-orange" style="font-size: 17px;">
+                  <div class="text-weight-bold text-primary" style="font-size: 17px;">
                     {{ formatCurrency(props.row.running_balance) }}
                   </div>
                   <div class="text-caption text-grey-7">Saldo</div>
@@ -471,7 +471,7 @@
                   </template>
                   <template v-else-if="col.name === 'running_balance'">
                     <div class="text-right">
-                      <div class="text-weight-bold text-orange" style="font-size: 14px;">
+                      <div class="text-weight-bold text-primary" style="font-size: 14px;">
                         {{ formatCurrency(props.row.running_balance) }}
                       </div>
                     </div>
@@ -566,7 +566,7 @@
 
               <!-- Fila expandida: Facturas afectadas por un pago -->
               <q-tr v-if="props.row.expanded && props.row.type === 'payment' && props.row.affected_invoices" :props="props">
-                <q-td colspan="100%" class="bg-orange-1">
+                <q-td colspan="100%" class="bg-primary-1">
                   <div class="q-pa-md">
                     <div class="row items-center q-mb-sm">
                       <q-icon name="receipt_long" color="negative" size="md" class="q-mr-sm" />
@@ -598,7 +598,7 @@
                               {{ formatCurrency(invoice.amount_applied) }}
                             </q-chip>
                           </td>
-                          <td class="text-right text-orange text-weight-bold">
+                          <td class="text-right text-primary text-weight-bold">
                             {{ formatCurrency(invoice.invoice_balance) }}
                           </td>
                           <td class="text-center">
@@ -2221,8 +2221,9 @@ body.body--dark .statement-table >>> .bg-blue-1 {
   background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%) !important;
 }
 
-body.body--dark .statement-table >>> .bg-orange-1 {
-  background: linear-gradient(135deg, #4a3520 0%, #5a4020 100%) !important;
+body.body--dark .statement-table >>> .bg-primary-1 {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%) !important;
+  opacity: 0.3;
 }
 
 body.body--dark .client-header {
@@ -2743,14 +2744,15 @@ body.body--dark .statement-table >>> .bg-blue-1 {
   border-left-color: #60a5fa;
 }
 
-.statement-table >>> .bg-orange-1 {
-  background: #fed7aa !important;
-  border-left: 3px solid #f97316;
+.statement-table >>> .bg-primary-1 {
+  background: var(--primary-light) !important;
+  border-left: 3px solid var(--primary);
 }
 
-body.body--dark .statement-table >>> .bg-orange-1 {
-  background: #7c2d12 !important;
-  border-left-color: #fb923c;
+body.body--dark .statement-table >>> .bg-primary-1 {
+  background: var(--primary-dark) !important;
+  opacity: 0.2;
+  border-left-color: var(--primary);
 }
 
 /* Tablas internas en expand - Compactas */
@@ -2788,7 +2790,7 @@ body.body--dark .statement-table >>> .q-markup-table td {
 
 /* Reducir padding en secciones expandidas */
 .statement-table >>> .bg-blue-1 .q-pa-md,
-.statement-table >>> .bg-orange-1 .q-pa-md {
+.statement-table >>> .bg-primary-1 .q-pa-md {
   padding: 12px !important;
 }
 

@@ -66,7 +66,26 @@ export const authentication = defineStore('authentication', {
         this.refresh_token = null
         this.userSession = null
         this.branchOffice = null
+
+        // Guardar tema antes de limpiar localStorage
+        const savedTheme = localStorage.getItem('app-theme')
+        const showThemeSelector = localStorage.getItem('show-theme-selector')
+
+        console.log('🔒 Cerrando sesión...')
+        console.log('💾 Tema guardado antes de limpiar:', savedTheme)
+
         localStorage.clear()
+
+        // Restaurar tema después de limpiar
+        if (savedTheme) {
+          localStorage.setItem('app-theme', savedTheme)
+          console.log('✅ Tema restaurado:', savedTheme)
+        }
+        if (showThemeSelector) {
+          localStorage.setItem('show-theme-selector', showThemeSelector)
+          console.log('✅ Preferencia de selector restaurada:', showThemeSelector)
+        }
+
         // localStorage.removeItem('client')
         // localStorage.removeItem('command')
         // localStorage.removeItem('products')
