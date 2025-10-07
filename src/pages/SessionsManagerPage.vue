@@ -77,7 +77,7 @@
         <q-badge color="red" class="q-pa-xs">
           Revocada
         </q-badge>
-        <q-badge color="orange" class="q-pa-xs">
+        <q-badge color="warning" class="q-pa-xs">
           <q-icon name="warning" size="xs" class="q-mr-xs" />
           Sospechoso
         </q-badge>
@@ -105,7 +105,7 @@
             <q-badge :color="getStatusColor(props.row.status)" class="q-pa-xs">
               {{ getStatusLabel(props.row.status) }}
             </q-badge>
-            <q-badge v-if="isSuspicious(props.row)" color="orange" class="q-ml-xs q-pa-xs">
+            <q-badge v-if="isSuspicious(props.row)" color="warning" class="q-ml-xs q-pa-xs">
               <q-icon name="warning" size="xs" />
               Sospechoso
             </q-badge>
@@ -218,7 +218,7 @@
             <q-badge :color="getStatusColor(session.status)" class="q-pa-xs">
               {{ getStatusLabel(session.status) }}
             </q-badge>
-            <q-badge v-if="isSuspicious(session)" color="orange" class="q-ml-xs q-pa-xs">
+            <q-badge v-if="isSuspicious(session)" color="warning" class="q-ml-xs q-pa-xs">
               <q-icon name="warning" size="xs" />
               Sospechoso
             </q-badge>
