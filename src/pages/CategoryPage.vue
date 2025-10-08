@@ -1,11 +1,39 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
+      <div class="col-12 text-right q-gutter-sm">
+        <!-- Botones modo edición -->
+        <template v-if="editingOrder">
+          <q-btn
+            color="negative"
+            icon="close"
+            label="Cancelar"
+            @click="cancelOrderEditing"
+            :disable="savingOrder"
+            outline
+          />
+          <q-btn
+            color="positive"
+            icon="save"
+            label="Guardar Secuencia"
+            @click="saveOrder"
+            :loading="savingOrder"
+          />
+        </template>
+        <!-- Botón modo normal -->
+        <template v-else>
+          <q-btn
+            color="primary"
+            icon="sort"
+            label="Editar Secuencia"
+            @click="startOrderEditing"
+          />
+        </template>
         <q-btn
           color="primary"
           @click="openAddCategory = true"
           icon="add_circle"
+          label="Agregar"
         />
       </div>
       <div class="col-12">
@@ -18,9 +46,10 @@
           :filter="filter"
           binary-state-sort
           v-model:pagination="paginationConfig"
-          @row-click="editCategory"
+          @row-click="handleRowClick"
           @request="setPagination"
           no-data-label="Registro no encontrado"
+          :class="{ 'table-editing-order': editingOrder }"
         >
           <template v-slot:loading>
             <q-inner-loading showing color="primary" />
@@ -32,47 +61,153 @@
               </template>
             </q-input>
           </template>
+          <template v-slot:body-cell-actions="props" v-if="editingOrder">
+            <q-td :props="props" class="q-gutter-xs">
+              <q-btn
+                size="sm"
+                round
+                icon="keyboard_arrow_up"
+                @click="moveUp(props.row)"
+                :disable="props.row.sort_order === 1"
+                color="positive"
+              >
+                <q-tooltip>Subir</q-tooltip>
+              </q-btn>
+              <q-btn
+                size="sm"
+                round
+                icon="keyboard_arrow_down"
+                @click="moveDown(props.row)"
+                :disable="isLast(props.row)"
+                color="positive"
+              >
+                <q-tooltip>Bajar</q-tooltip>
+              </q-btn>
+            </q-td>
+          </template>
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditCategory" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+    <q-dialog v-model="openEditCategory" persistent :maximized="$q.screen.lt.sm">
+      <q-card style="width: 900px; max-width: 95vw;">
         <q-form @submit="saveEdit">
           <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Modificar categoría</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="category.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-12">
-              <q-select
-                use-input
-                filled
-                label="Iva (%)"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="category.aliquot_type"
-                :options="aliquotTypes"
-                @filter="getAliquotTypes"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-toggle
-                v-model="category.show_catalog"
-                label="Mostrar en catálogo"
-                :true-value="1"
-                :false-value="0"
-              />
+          <q-card-section class="scroll" style="height: calc(100vh - 200px);">
+            <div class="row q-col-gutter-sm">
+              <!-- Datos básicos -->
+              <div class="col-md-8 col-xs-12">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                    <q-icon name="info" class="q-mr-sm" />
+                    Datos básicos
+                  </div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12">
+                      <q-input
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        filled
+                        v-model="category.name"
+                        autofocus
+                        label="Nombre"
+                        dense
+                      />
+                    </div>
+                    <div class="col-12">
+                      <q-select
+                        use-input
+                        filled
+                        label="Iva (%)"
+                        input-debounce="0"
+                        option-label="Desc"
+                        option-value="id"
+                        v-model="category.aliquot_type"
+                        :options="aliquotTypes"
+                        @filter="getAliquotTypes"
+                        dense
+                      />
+                    </div>
+                    <div class="col-12">
+                      <q-toggle
+                        v-model="category.show_catalog"
+                        label="Mostrar en catálogo"
+                        :true-value="1"
+                        :false-value="0"
+                      />
+                    </div>
+                  </div>
+                </q-card>
+              </div>
+
+              <!-- Sección de imagen -->
+              <div class="col-md-4 col-xs-12">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                    <q-icon name="image" class="q-mr-sm" />
+                    Imagen de la categoría
+                  </div>
+                  <q-card
+                    flat
+                    bordered
+                    class="dropzone-card q-mb-md"
+                    :class="{ 'dropzone-active': isDragOver }"
+                    @dragover.prevent="isDragOver = true"
+                    @dragleave.prevent="isDragOver = false"
+                    @drop.prevent="handleDrop"
+                  >
+                    <q-card-section class="text-center q-pa-lg q-gutter-y-md">
+                      <!-- Image Preview -->
+                      <div v-if="category.image">
+                        <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
+                        <q-card flat class="image-preview-card">
+                          <q-img
+                            :src="category.image.url"
+                            :ratio="1"
+                            class="rounded-borders"
+                          >
+                            <div class="absolute-top-right bg-transparent">
+                              <q-btn
+                                size="sm"
+                                icon="close"
+                                color="negative"
+                                round
+                                dense
+                                @click="deleteImage()"
+                              />
+                            </div>
+                          </q-img>
+                        </q-card>
+                      </div>
+                      <div v-else>
+                        <q-icon name="image" size="3rem" color="grey-5" class="q-mb-md" />
+                        <div class="text-body1 text-grey-7 q-mb-sm">
+                          Arrastra la imagen aquí
+                        </div>
+                        <div class="text-body2 text-grey-5 q-mb-md">
+                          o haz clic para seleccionar
+                        </div>
+                      </div>
+                      <q-btn
+                        color="primary"
+                        label="Seleccionar Imagen"
+                        @click="$refs.fileInputEdit.click()"
+                        unelevated
+                        size="sm"
+                      />
+                      <input
+                        ref="fileInputEdit"
+                        type="file"
+                        accept="image/*"
+                        style="display: none"
+                        @change="handleFileSelect"
+                      />
+                    </q-card-section>
+                  </q-card>
+                </q-card>
+              </div>
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
@@ -82,44 +217,126 @@
         </q-form>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddCategory" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+    <q-dialog v-model="openAddCategory" persistent :maximized="$q.screen.lt.sm">
+      <q-card style="width: 900px; max-width: 95vw;">
         <q-form @submit="saveCategory">
           <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Agregar categoría</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="category.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-12">
-              <q-select
-                use-input
-                filled
-                label="Iva (%)"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="category.aliquot_type"
-                :options="aliquotTypes"
-                @filter="getAliquotTypes"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-toggle
-                v-model="category.show_catalog"
-                label="Mostrar en catálogo"
-                :true-value="1"
-                :false-value="0"
-              />
+          <q-card-section class="scroll" style="height: calc(100vh - 200px);">
+            <div class="row q-col-gutter-sm">
+              <!-- Datos básicos -->
+              <div class="col-md-8 col-xs-12">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                    <q-icon name="info" class="q-mr-sm" />
+                    Datos básicos
+                  </div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12">
+                      <q-input
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        filled
+                        v-model="category.name"
+                        autofocus
+                        label="Nombre"
+                        dense
+                      />
+                    </div>
+                    <div class="col-12">
+                      <q-select
+                        use-input
+                        filled
+                        label="Iva (%)"
+                        input-debounce="0"
+                        option-label="Desc"
+                        option-value="id"
+                        v-model="category.aliquot_type"
+                        :options="aliquotTypes"
+                        @filter="getAliquotTypes"
+                        dense
+                      />
+                    </div>
+                    <div class="col-12">
+                      <q-toggle
+                        v-model="category.show_catalog"
+                        label="Mostrar en catálogo"
+                        :true-value="1"
+                        :false-value="0"
+                      />
+                    </div>
+                  </div>
+                </q-card>
+              </div>
+
+              <!-- Sección de imagen -->
+              <div class="col-md-4 col-xs-12">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                    <q-icon name="image" class="q-mr-sm" />
+                    Imagen de la categoría
+                  </div>
+                  <q-card
+                    flat
+                    bordered
+                    class="dropzone-card q-mb-md"
+                    :class="{ 'dropzone-active': isDragOver }"
+                    @dragover.prevent="isDragOver = true"
+                    @dragleave.prevent="isDragOver = false"
+                    @drop.prevent="handleDrop"
+                  >
+                    <q-card-section class="text-center q-pa-lg q-gutter-y-md">
+                      <!-- Image Preview -->
+                      <div v-if="category.image">
+                        <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
+                        <q-card flat class="image-preview-card">
+                          <q-img
+                            :src="category.image.url"
+                            :ratio="1"
+                            class="rounded-borders"
+                          >
+                            <div class="absolute-top-right bg-transparent">
+                              <q-btn
+                                size="sm"
+                                icon="close"
+                                color="negative"
+                                round
+                                dense
+                                @click="deleteImage()"
+                              />
+                            </div>
+                          </q-img>
+                        </q-card>
+                      </div>
+                      <div v-else>
+                        <q-icon name="image" size="3rem" color="grey-5" class="q-mb-md" />
+                        <div class="text-body1 text-grey-7 q-mb-sm">
+                          Arrastra la imagen aquí
+                        </div>
+                        <div class="text-body2 text-grey-5 q-mb-md">
+                          o haz clic para seleccionar
+                        </div>
+                      </div>
+                      <q-btn
+                        color="primary"
+                        label="Seleccionar Imagen"
+                        @click="$refs.fileInputAdd.click()"
+                        unelevated
+                        size="sm"
+                      />
+                      <input
+                        ref="fileInputAdd"
+                        type="file"
+                        accept="image/*"
+                        style="display: none"
+                        @change="handleFileSelect"
+                      />
+                    </q-card-section>
+                  </q-card>
+                </q-card>
+              </div>
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
@@ -143,8 +360,14 @@ export default {
       categories: [],
       aliquotTypes: [],
       category: {
-        show_catalog: 0
+        show_catalog: 0,
+        image: null,
+        sort_order: 1
       },
+      isDragOver: false,
+      editingOrder: false,
+      savingOrder: false,
+      originalCategories: [], // Estado original para cancelar
       filter: '',
       /**
        * Params search
@@ -163,13 +386,15 @@ export default {
       visible: false,
       openAddCategory: false,
       openEditCategory: null,
-      columns: [
+      baseColumns: [
         {
-          name: 'id',
-          align: 'left',
-          label: 'Código',
-          field: 'id',
-          sortable: true
+          name: 'position',
+          align: 'center',
+          label: 'Posición',
+          field: 'sort_order',
+          sortable: true,
+          style: 'width: 100px; font-weight: bold; background-color: #f0f8ff;',
+          headerStyle: 'background-color: #e3f2fd; font-weight: bold;'
         },
         {
           name: 'name',
@@ -215,7 +440,19 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession']),
+    columns () {
+      const cols = [...this.baseColumns]
+      if (this.editingOrder) {
+        cols.push({
+          name: 'actions',
+          align: 'center',
+          label: 'Reordenar',
+          field: 'actions'
+        })
+      }
+      return cols
+    }
   },
   methods: {
     /**
@@ -225,8 +462,99 @@ export default {
       this.openAddCategory = false
       this.openEditCategory = false
       this.category = {
-        show_catalog: 0
+        show_catalog: 0,
+        image: null
       }
+    },
+    /**
+     * Handle drag and drop
+     */
+    handleDrop (event) {
+      this.isDragOver = false
+      const files = Array.from(event.dataTransfer.files)
+      this.processFiles(files)
+    },
+    /**
+     * Handle file selection
+     */
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      this.processFiles(files)
+    },
+    /**
+     * Process image files
+     */
+    processFiles (files) {
+      const file = files[0] // Solo tomar la primera imagen para categorías
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          this.category.image = {
+            file,
+            url: e.target.result
+          }
+        }
+        reader.readAsDataURL(file)
+      } else {
+        Notify.create({
+          message: 'Por favor selecciona un archivo de imagen válido',
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
+    },
+    /**
+     * Delete category image
+     */
+    deleteImage () {
+      const image = this.category.image
+      if (image && image.id) {
+        // Imagen existente en BD - eliminar del servidor
+        this.$api.delete(`category-images/${image.id}`)
+          .then(() => {
+            this.category.image = null
+            Notify.create({
+              message: 'Imagen eliminada exitosamente',
+              icon: 'check_circle',
+              color: 'positive'
+            })
+          })
+          .catch(err => {
+            Notify.create({
+              message: err.message,
+              icon: 'warning',
+              color: 'negative'
+            })
+          })
+      } else {
+        // Imagen nueva (solo en memoria) - eliminar del objeto
+        this.category.image = null
+      }
+    },
+    /**
+     * Prepare data for API submission
+     */
+    modelData (data, isEdit = false) {
+      const formData = new FormData()
+
+      if (isEdit) {
+        formData.append('_method', 'put')
+      }
+
+      // Agregar campos básicos
+      formData.append('name', data.name || '')
+      formData.append('show_catalog', data.show_catalog || 0)
+
+      if (data.aliquot_type) {
+        formData.append('aliquot_type', JSON.stringify(data.aliquot_type))
+      }
+
+      // Agregar imagen si existe
+      if (data.image && data.image.file) {
+        formData.append('image', data.image.file)
+      }
+
+      return formData
     },
     /**
      * Search beneficiary
@@ -299,14 +627,12 @@ export default {
      */
     saveCategory () {
       this.visible = true
-      this.$api.post('categories', this.category)
+      this.$api.post('categories', this.modelData(this.category))
         .then(({ data }) => {
           this.getCategories()
           this.openAddCategory = false
           this.visible = false
-          this.category = {
-            show_catalog: 0
-          }
+          this.closeModal()
           Notify.create({
             message: 'Categoría creada exitosamente',
             icon: 'check_circle',
@@ -323,25 +649,42 @@ export default {
         })
     },
     /**
+     * Handle row click - only edit in normal mode
+     */
+    handleRowClick (event, row, index) {
+      console.log('🖱️ Row click detected:', { editingOrder: this.editingOrder, categoryName: row.name })
+      if (!this.editingOrder) {
+        console.log('✅ Opening edit modal for:', row.name)
+        this.editCategory(event, row, index)
+      } else {
+        console.log('❌ Row click ignored - in editing mode')
+      }
+    },
+    /**
      * View category
      */
     editCategory (event, row, index) {
       this.openEditCategory = true
-      this.category = row
+      this.category = {
+        ...row,
+        image: row.image_url ? {
+          id: row.image_id,
+          url: row.image_url,
+          file: null
+        } : null
+      }
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`categories/${this.category.id}`, this.category)
+      this.$api.post(`categories/${this.category.id}`, this.modelData(this.category, true))
         .then(({ data }) => {
           this.getCategories()
           this.openEditCategory = false
           this.visible = false
-          this.category = {
-            show_catalog: 0
-          }
+          this.closeModal()
           Notify.create({
             message: 'Categoría editada exitosamente',
             icon: 'check_circle',
@@ -367,9 +710,7 @@ export default {
           this.getCategories()
           this.openEditCategory = false
           this.visible = false
-          this.category = {
-            show_catalog: 0
-          }
+          this.closeModal()
           Notify.create({
             message: 'Categoría eliminada exitosamente',
             icon: 'check_circle',
@@ -384,7 +725,249 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Start order editing mode - saves original state
+     */
+    startOrderEditing () {
+      // Asegurar que todas las categorías tengan sort_order antes de empezar
+      this.ensureSortOrder()
+
+      // Guardar estado original para poder cancelar
+      this.originalCategories = JSON.parse(JSON.stringify(this.categories))
+      this.editingOrder = true
+
+      console.log('📋 Categories with sort_order:', this.categories.map(c => ({ name: c.name, sort_order: c.sort_order })))
+      Notify.create({
+        message: 'Modo de edición activado. Reordena las categorías y luego guarda o cancela los cambios.',
+        icon: 'info',
+        color: 'info',
+        timeout: 4000
+      })
+    },
+    /**
+     * Cancel order editing - restore original state
+     */
+    cancelOrderEditing () {
+      // Restaurar estado original
+      this.categories = JSON.parse(JSON.stringify(this.originalCategories))
+      this.originalCategories = []
+      this.editingOrder = false
+      Notify.create({
+        message: 'Cambios de orden cancelados. Se restauró el orden original.',
+        icon: 'undo',
+        color: 'warning',
+        timeout: 3000
+      })
+    },
+    /**
+     * Save all category order changes to API
+     */
+    async saveOrder () {
+      try {
+        this.savingOrder = true
+
+        // Preparar datos de orden para enviar al backend
+        const orderData = this.categories.map(category => ({
+          id: category.id,
+          sort_order: category.sort_order
+        }))
+
+        // Enviar al API
+        await this.$api.post('categories/update-order', {
+          categories: orderData
+        })
+
+        this.editingOrder = false
+        this.savingOrder = false
+        this.originalCategories = [] // Limpiar estado original
+
+        Notify.create({
+          message: 'Orden de categorías guardado exitosamente',
+          icon: 'check_circle',
+          color: 'positive',
+          timeout: 3000
+        })
+
+        // Recargar categorías para asegurar consistencia con backend
+        this.getCategories()
+      } catch (error) {
+        this.savingOrder = false
+        Notify.create({
+          message: error.message || 'Error al guardar el orden de las categorías',
+          icon: 'warning',
+          color: 'negative'
+        })
+
+        // En caso de error, restaurar estado original
+        this.cancelOrderEditing()
+      }
+    },
+    /**
+     * Move category up in order (only updates locally until save)
+     */
+    moveUp (category) {
+      console.log('🔼 moveUp called for:', category.name, 'current sort_order:', category.sort_order)
+
+      // Asegurar que todas las categorías tengan sort_order
+      this.ensureSortOrder()
+
+      const currentIndex = this.categories.findIndex(c => c.id === category.id)
+      if (currentIndex > 0) {
+        // Intercambiar con el elemento anterior
+        const prevCategory = this.categories[currentIndex - 1]
+        const tempOrder = category.sort_order
+        category.sort_order = prevCategory.sort_order
+        prevCategory.sort_order = tempOrder
+
+        // Reordenar array
+        this.categories.sort((a, b) => a.sort_order - b.sort_order)
+
+        console.log('✅ Moved up successfully. New order:', category.sort_order)
+      } else {
+        console.log('❌ Cannot move up - already at top')
+      }
+    },
+    /**
+     * Move category down in order (only updates locally until save)
+     */
+    moveDown (category) {
+      console.log('🔽 moveDown called for:', category.name, 'current sort_order:', category.sort_order)
+
+      // Asegurar que todas las categorías tengan sort_order
+      this.ensureSortOrder()
+
+      const currentIndex = this.categories.findIndex(c => c.id === category.id)
+      if (currentIndex < this.categories.length - 1) {
+        // Intercambiar con el elemento siguiente
+        const nextCategory = this.categories[currentIndex + 1]
+        const tempOrder = category.sort_order
+        category.sort_order = nextCategory.sort_order
+        nextCategory.sort_order = tempOrder
+
+        // Reordenar array
+        this.categories.sort((a, b) => a.sort_order - b.sort_order)
+
+        console.log('✅ Moved down successfully. New order:', category.sort_order)
+      } else {
+        console.log('❌ Cannot move down - already at bottom')
+      }
+    },
+    /**
+     * Check if category is last in order
+     */
+    isLast (category) {
+      const currentIndex = this.categories.findIndex(c => c.id === category.id)
+      return currentIndex >= this.categories.length - 1
+    },
+    /**
+     * Ensure all categories have sort_order values
+     */
+    ensureSortOrder () {
+      this.categories.forEach((category, index) => {
+        if (!category.sort_order) {
+          category.sort_order = index + 1
+        }
+      })
+      // Asegurar que estén ordenadas
+      this.categories.sort((a, b) => a.sort_order - b.sort_order)
     }
   }
 }
 </script>
+
+<style scoped>
+.dropzone-card {
+  border: 2px dashed #e0e0e0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.dropzone-card:hover,
+.dropzone-active {
+  border-color: #1976d2;
+  background-color: #f5f5f5;
+}
+
+.image-preview-card {
+  transition: transform 0.2s ease;
+  max-width: 200px;
+  margin: 0 auto;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.02);
+}
+
+.dropzone-card .q-card-section {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Estilos para modo de edición de orden */
+/* .table-editing-order {
+  border: 2px solid #1976d2;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.2);
+}
+
+.table-editing-order .q-table__top {
+  background-color: #e3f2fd;
+} */
+
+.table-editing-order tbody tr {
+  cursor: default !important;
+  transition: all 0.3s ease;
+}
+
+.table-editing-order tbody tr:hover {
+  background-color: #f5f5f5 !important;
+  transform: translateX(5px);
+}
+
+/* Estilos para columna de posición */
+.q-table tbody td:first-child,
+.q-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: #f0f8ff;
+  border-right: 3px solid #1976d2;
+}
+
+.q-table thead th:first-child {
+  background-color: #e3f2fd !important;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.q-table tbody td:first-child {
+  font-weight: bold;
+  font-size: 18px;
+  color: #1976d2;
+  text-align: center;
+}
+
+/* Animación para cambios de posición */
+.table-editing-order tbody tr {
+  animation: rowHighlight 0.5s ease-in-out;
+}
+
+@keyframes rowHighlight {
+  0% { background-color: #fff3cd; }
+  100% { background-color: transparent; }
+}
+
+/* Botones de acción mejorados */
+.table-editing-order .q-btn {
+  transition: all 0.2s ease;
+}
+
+.table-editing-order .q-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+</style>
