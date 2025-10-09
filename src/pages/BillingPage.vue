@@ -1860,15 +1860,17 @@ export default {
       }
     },
     listenPayments () {
-      const { company_session: companySession } = this.userSession
-      if (companySession?.company_config?.other?.qpay_id) {
-        const channel = this.$echoPay.channel('mercado-pago-payment')
-        channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}.${this.branchOffice.id}`, (data) => {
-          const paymentNotifier = usePaymentNotifier()
-          paymentNotifier.showPaymentNotification(data.payment)
-          this.showDetailsModal = paymentNotifier.showDetailsModal
-          this.currentPayment = paymentNotifier.currentPayment
-        })
+      if (this.branchOffice) {
+        const { company_session: companySession } = this.userSession
+        if (companySession?.company_config?.other?.qpay_id) {
+          const channel = this.$echoPay.channel('mercado-pago-payment')
+          channel.listen(`.mercado-pago-payment.${companySession.company_config.other.qpay_id}.${this.branchOffice.id}`, (data) => {
+            const paymentNotifier = usePaymentNotifier()
+            paymentNotifier.showPaymentNotification(data.payment)
+            this.showDetailsModal = paymentNotifier.showDetailsModal
+            this.currentPayment = paymentNotifier.currentPayment
+          })
+        }
       }
     },
     handleClick (event) {
@@ -2537,7 +2539,7 @@ export default {
       this.loadingSearch = true
       const invoice = await this.getInvoiceOneRequest(data)
       if (invoice) {
-        if (invoice.branch_office_id !== this.branchOffice.id) {
+        if (invoice.branch_office_id !== this.branchOffice?.id) {
           notify('Esta factura no pertenece a esta sucursal', 'negative', 'warning')
           this.$router.push({ name: 'Billing' })
           this.loadingSearch = false
@@ -3087,7 +3089,7 @@ export default {
         const response = await this.$api.get('cashboxes', {
           params: {
             dataEqualFilter: {
-              branch_office_id: this.branchOffice.id
+              branch_office_id: this.branchOffice?.id
             }
           }
         })
@@ -3095,7 +3097,7 @@ export default {
         const allBoxes = response.data || []
 
         this.availableCashBoxes = allBoxes
-          .filter(box => box.branch_office_id === this.branchOffice.id && !box.deleted_at)
+          .filter(box => box.branch_office_id === this.branchOffice?.id && !box.deleted_at)
           .map(box => ({
             ...box,
             open: box.current_session ? box.current_session.open : false
