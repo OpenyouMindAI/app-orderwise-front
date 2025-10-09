@@ -20,14 +20,14 @@ jobs:
           npm install --legacy-peer-deps
           npm run build
           cd ../..
-          npm install ./plugin/multi-display-manager
+          npm install ./plugin/multi-display-manager --legacy-peer-deps
       - name: Build printers
         run: |
           cd ./plugin/printers
           npm install --legacy-peer-deps
           npm run build
           cd ../..
-          npm install ./plugin/printers
+          npm install ./plugin/printers --legacy-peer-deps
       - name: Install npm dependencies
         run: npm install --legacy-peer-deps
       - name: Get branch name
