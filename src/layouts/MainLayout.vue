@@ -45,7 +45,7 @@
           round
           class="q-mr-sm"
           @click="screen"
-          v-if="hasMultipleScreen && $q.platform.is.nativeMobile"
+          v-if="hasMultipleScreens && $q.platform.is.nativeMobile"
         >
           <q-tooltip>Segunda pantalla</q-tooltip>
         </q-btn>
