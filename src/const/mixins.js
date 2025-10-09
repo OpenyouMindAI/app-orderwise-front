@@ -2,12 +2,20 @@ import { Loading, Notify, copyToClipboard, date } from 'quasar'
 
 export const BALANZA_PREFIXES = ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29']
 
-export const notify = (message, color, icon, position = 'top') => {
+export const notify = (message, color, icon, position = 'bottom') => {
   Notify.create({
     message,
     color,
     icon,
-    position
+    position,
+    timeout: 3000,
+    actions: [
+      {
+        icon: 'close',
+        color: 'white',
+        handler: () => { /* Cerrar notificación */ }
+      }
+    ]
   })
 }
 /**

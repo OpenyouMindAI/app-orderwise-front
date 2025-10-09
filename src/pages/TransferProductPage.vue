@@ -139,40 +139,90 @@
 
       <!-- Vista móvil: Cards compactas -->
       <div v-if="$q.platform.is.mobile" class="mobile-transfers-list">
-        <q-card
-          v-for="transfer in transfers"
-          :key="transfer.id"
-          flat
-          bordered
-          class="transfer-card-mobile q-mb-sm"
-          @touchstart="handleTouchStart($event, transfer)"
-          @touchend="handleTouchEnd()"
-          @touchmove="handleTouchEnd()"
-        >
-          <q-card-section class="q-pa-sm">
-            <div class="row items-center justify-between">
-              <div class="col">
-                <div class="text-weight-bold text-body2">#{{ transfer.id }}</div>
-                <div class="text-caption text-grey-7">{{ formatDate(transfer.created_at) }}</div>
+        <!-- Skeleton Loader -->
+        <template v-if="loading">
+          <q-card
+            v-for="i in 5"
+            :key="'skeleton-' + i"
+            flat
+            bordered
+            class="transfer-card-mobile q-mb-sm"
+          >
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center justify-between">
+                <div class="col">
+                  <q-skeleton type="text" width="60px" />
+                  <q-skeleton type="text" width="100px" class="q-mt-xs" />
+                </div>
+                <div class="col-auto">
+                  <q-skeleton type="rect" width="80px" height="24px" />
+                </div>
               </div>
-              <div class="col-auto">
-                <q-badge :color="getStatusColor(transfer.status)" class="q-pa-xs text-caption">
-                  {{ getStatusLabel(transfer.status) }}
-                </q-badge>
+              <div class="row q-mt-sm q-gutter-sm">
+                <q-skeleton type="text" width="45%" />
+                <q-skeleton type="text" width="45%" />
               </div>
+            </q-card-section>
+          </q-card>
+        </template>
+
+        <!-- Empty State -->
+        <template v-else-if="!transfers || transfers.length === 0">
+          <div class="empty-state q-pa-xl text-center">
+            <q-icon name="inventory_2" size="80px" color="grey-5" />
+            <div class="text-h6 text-grey-7 q-mt-md">No hay transferencias</div>
+            <div class="text-body2 text-grey-6 q-mt-xs">
+              Crea tu primera transferencia para comenzar
             </div>
-            <div class="row q-mt-xs text-caption">
-              <div class="col-6">
-                <q-icon name="store" size="xs" class="q-mr-xs" />
-                {{ transfer.origin_branch_office?.name }}
+            <q-btn
+              unelevated
+              color="primary"
+              label="Nueva Transferencia"
+              icon="add"
+              @click="currentView = 'form'"
+              class="q-mt-md"
+              no-caps
+            />
+          </div>
+        </template>
+
+        <!-- Lista de transferencias -->
+        <template v-else>
+          <q-card
+            v-for="transfer in transfers"
+            :key="transfer.id"
+            flat
+            bordered
+            class="transfer-card-mobile q-mb-sm"
+            @touchstart="handleTouchStart($event, transfer)"
+            @touchend="handleTouchEnd()"
+            @touchmove="handleTouchEnd()"
+          >
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center justify-between">
+                <div class="col">
+                  <div class="text-weight-bold text-body2">#{{ transfer.id }}</div>
+                  <div class="text-caption text-grey-7">{{ formatDate(transfer.created_at) }}</div>
+                </div>
+                <div class="col-auto">
+                  <q-badge :color="getStatusColor(transfer.status)" class="q-pa-xs text-caption">
+                    {{ getStatusLabel(transfer.status) }}
+                  </q-badge>
+                </div>
               </div>
-              <div class="col-6">
-                <q-icon name="arrow_forward" size="xs" class="q-mr-xs" />
-                {{ transfer.destination_branch_office?.name }}
+              <div class="row q-mt-xs text-caption">
+                <div class="col-6">
+                  <q-icon name="store" size="xs" class="q-mr-xs" />
+                  {{ transfer.origin_branch_office?.name }}
+                </div>
+                <div class="col-6">
+                  <q-icon name="arrow_forward" size="xs" class="q-mr-xs" />
+                  {{ transfer.destination_branch_office?.name }}
+                </div>
               </div>
-            </div>
-          </q-card-section>
-        </q-card>
+            </q-card-section>
+          </q-card>
+        </template>
       </div>
 
       <!-- Vista desktop: Tabla -->
@@ -2720,6 +2770,11 @@ export default {
         // MÓVIL NATIVO: Usar Capacitor Share + Filesystem
         if (this.$q.platform.is.nativeMobile || this.$q.platform.is.capacitor) {
           try {
+            // Verificar si Capacitor está disponible
+            if (!window.Capacitor) {
+              throw new Error('Capacitor not available')
+            }
+
             // Importar módulos de Capacitor dinámicamente
             const [shareModule, filesystemModule] = await Promise.all([
               import('@capacitor/share'),
@@ -2756,12 +2811,13 @@ export default {
           } catch (capacitorError) {
             console.error('Capacitor share error:', capacitorError)
 
-            // Si Capacitor no está disponible, intentar Web Share API
-            if (capacitorError.message && capacitorError.message.includes('Cannot find module')) {
-              await this.shareWithWebAPI(transfer, fileName)
-            } else if (!capacitorError.message || !capacitorError.message.toLowerCase().includes('cancel')) {
-              notify('Error al compartir: ' + (capacitorError.message || 'Error desconocido'), 'negative', 'warning')
+            // Si el usuario canceló, no mostrar error
+            if (capacitorError.message && capacitorError.message.toLowerCase().includes('cancel')) {
+              return
             }
+
+            // Si Capacitor no está disponible, usar Web Share API
+            await this.shareWithWebAPI(transfer, fileName)
           }
         } else {
           // WEB/DESKTOP: Usar Web Share API
@@ -3541,6 +3597,28 @@ body.body--dark .option-item:hover {
 
   .options-card .q-card-section {
     padding: 16px;
+  }
+}
+
+/* Empty State */
+.empty-state {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state .q-icon {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
   }
 }
 

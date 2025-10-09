@@ -7,6 +7,14 @@
       "style": "dark",
       "visible": false,
       "overlaysWebView": false
+    },
+    "GoogleAuth": {
+      "scopes": [
+        "profile",
+        "email"
+      ],
+      "serverClientId": "241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
     }
   },
   "android": {
