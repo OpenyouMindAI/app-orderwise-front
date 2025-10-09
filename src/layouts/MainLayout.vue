@@ -37,6 +37,7 @@
           </q-img>
         </div>
         <q-space />
+        <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
         <q-btn
           flat
           dense
@@ -44,8 +45,22 @@
           round
           class="q-mr-sm"
           @click="screen"
+          v-if="hasMultipleScreens && $q.platform.is.nativeMobile"
+        >
+          <q-tooltip>Segunda pantalla</q-tooltip>
+        </q-btn>
+        <!-- Botón de escaneo QR -->
+        <q-btn
+          flat
+          dense
+          icon="qr_code_scanner"
+          round
+          class="q-mr-sm"
           v-if="$q.platform.is.nativeMobile"
-        />
+          @click="openQrScanner"
+        >
+          <q-tooltip>Escanear QR</q-tooltip>
+        </q-btn>
         <q-btn flat dense icon="apps" round class="q-mr-sm">
           <q-tooltip class="text-body2">
             Herramientas
@@ -400,6 +415,13 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useThemeStore } from 'src/stores/themeStore'
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerAndroidScanningLibrary,
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint
+} from '@capacitor/barcode-scanner'
 export default {
   name: 'MainLayout',
   components: { NotificationComponent, FloatingThemeSelector },
@@ -429,7 +451,17 @@ export default {
        */
       leftDrawerOpen: false,
       miniState: false,
-      titleMenu: 'Opciones'
+      titleMenu: 'Opciones',
+      /**
+       * Has multiple screens
+       * @type {Boolean}
+       */
+      hasMultipleScreens: false,
+      /**
+       * Scanned QR code
+       * @type {String}
+       */
+      scannedCode: ''
     }
   },
   computed: {
@@ -459,8 +491,135 @@ export default {
   created () {
     this.loadingPage()
     this.getDataNotification()
+    this.checkMultipleScreens()
   },
   methods: {
+    /**
+     * Check if device has multiple screens
+     */
+    async checkMultipleScreens () {
+      try {
+        if (window.screen && window.screen.isExtended !== undefined) {
+          this.hasMultipleScreens = await window.screen.isExtended
+        } else if (this.$q.platform.is.nativeMobile) {
+          // En móvil nativo, verificar con el plugin
+          this.hasMultipleScreens = true
+        }
+      } catch (error) {
+        console.log('No se pudo detectar múltiples pantallas:', error)
+        this.hasMultipleScreens = false
+      }
+    },
+    /**
+     * Open QR scanner
+     */
+    async openQrScanner () {
+      try {
+        const result = await CapacitorBarcodeScanner.scanBarcode({
+          hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
+          scanInstructions: 'Escanear código QR',
+          scanButton: false,
+          scanText: 'Scan',
+          cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+          scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE,
+          android: {
+            scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING
+          }
+        })
+
+        if (result.ScanResult) {
+          await this.processQrCode(result.ScanResult)
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message !== 'User cancelled') {
+          notify('Error al escanear el código QR', 'negative', 'warning')
+        }
+      }
+    },
+    /**
+     * Process QR code
+     * @param {String} code QR code data
+     */
+    async processQrCode (code) {
+      if (!code) return
+
+      try {
+        loading(true)
+
+        // Detectar tipo de QR
+        const qrType = this.detectQrType(code)
+
+        switch (qrType) {
+          case 'transfer':
+            await this.handleTransferQr(code)
+            break
+          case 'product':
+            notify('Funcionalidad de productos próximamente', 'info', 'info')
+            break
+          case 'sale':
+            notify('Funcionalidad de ventas próximamente', 'info', 'info')
+            break
+          case 'purchase':
+            notify('Funcionalidad de compras próximamente', 'info', 'info')
+            break
+          default:
+            notify('Código QR no reconocido', 'warning', 'warning')
+        }
+      } catch (error) {
+        notify(error.message || 'Error al procesar el código QR', 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+    /**
+     * Detect QR type
+     * @param {String} code QR code
+     * @returns {String} type
+     */
+    detectQrType (code) {
+      // Detectar por prefijo o patrón
+      console.log(code)
+      if (code.includes('transfer_stock') || code.includes('TRANSFER_STOCK') || code.startsWith('T-')) {
+        return 'transfer'
+      } else if (code.includes('product') || code.includes('PRODUCT') || code.startsWith('P-')) {
+        return 'product'
+      } else if (code.includes('sale') || code.includes('SALE') || code.startsWith('S-')) {
+        return 'sale'
+      } else if (code.includes('purchase') || code.includes('PURCHASE') || code.startsWith('C-')) {
+        return 'purchase'
+      }
+
+      // Si es solo un número, asumir que es una transferencia
+      if (/^\d+$/.test(code)) {
+        return 'transfer'
+      }
+
+      return 'unknown'
+    },
+    /**
+     * Handle transfer QR
+     * @param {String} code transfer code
+     */
+    async handleTransferQr (code) {
+      // Extraer ID de la transferencia
+      const data = JSON.parse(code)
+      const transferId = data.id
+
+      if (!transferId) {
+        throw new Error('ID de transferencia no válido')
+      }
+
+      // Navegar a la página de transferencias con query params
+      this.$router.push({
+        name: 'TransferProduct',
+        query: {
+          view: 'options',
+          id: transferId
+        }
+      })
+
+      notify('Cargando opciones de transferencia...', 'info', 'info')
+    },
     async screen () {
       try {
         loading(true)

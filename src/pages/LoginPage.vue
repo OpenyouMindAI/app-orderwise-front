@@ -200,12 +200,47 @@ export default {
      */
     ...mapState(darkModeStore, ['darkMode'])
   },
-  mounted () {
+  async mounted () {
     this.$q.dark.set(this.darkMode)
     this.loadGoogleScript()
     this.loadFacebookSDK()
+
+    // Inicializar Google Auth para móvil si es Capacitor
+    if (this.$q.platform.is.nativeMobile && window.Capacitor) {
+      await this.initializeGoogleAuthMobile()
+    }
   },
   methods: {
+    /**
+     * Inicializar Google Auth para móvil
+     */
+    async initializeGoogleAuthMobile () {
+      try {
+        console.log('Initializing Google Auth for mobile...')
+        console.log('Platform info:', {
+          isNativeMobile: this.$q.platform.is.nativeMobile,
+          isCapacitor: this.$q.platform.is.capacitor,
+          hasCapacitor: !!window.Capacitor,
+          platform: this.$q.platform
+        })
+
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
+        console.log('Client ID:', clientId)
+
+        await GoogleAuth.initialize({
+          clientId,
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: true
+        })
+
+        console.log('Google Auth initialized successfully on mount')
+      } catch (error) {
+        console.error('Error initializing Google Auth on mount:', error)
+        console.error('Init error details:', error.message)
+      }
+    },
     /**
      * Cargar el script de Google Identity Services
      */
@@ -247,27 +282,98 @@ export default {
     /**
      * Manejar el clic en el botón de Google
      */
-    handleGoogleLogin () {
+    async handleGoogleLogin () {
       this.googleLoading = true
 
-      if (window.google && window.google.accounts) {
-        try {
-          // Intentar con One Tap primero
-          window.google.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              // Si One Tap no funciona, usar OAuth2 popup
-              console.log('One Tap not available, using OAuth2 popup')
-              this.openGoogleOAuthPopup()
-            }
-          })
-        } catch (error) {
-          console.error('Error with Google One Tap:', error)
-          // Fallback a OAuth2 popup
-          this.openGoogleOAuthPopup()
+      try {
+        // Detectar si es móvil nativo (Capacitor)
+        if (this.$q.platform.is.nativeMobile && window.Capacitor) {
+          await this.handleGoogleLoginMobile()
+        } else if (window.google && window.google.accounts) {
+          // Web: Usar Google Identity Services
+          try {
+            // Intentar con One Tap primero
+            window.google.accounts.id.prompt((notification) => {
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                // Si One Tap no funciona, usar OAuth2 popup
+                console.log('One Tap not available, using OAuth2 popup')
+                this.openGoogleOAuthPopup()
+              }
+            })
+          } catch (error) {
+            console.error('Error with Google One Tap:', error)
+            // Fallback a OAuth2 popup
+            this.openGoogleOAuthPopup()
+          }
+        } else {
+          this.googleLoading = false
+          notify('Google Sign-In no está disponible', 'negative', 'warning')
         }
-      } else {
+      } catch (error) {
         this.googleLoading = false
-        notify('Google Sign-In no está disponible', 'negative', 'warning')
+        console.error('Google login error:', error)
+        notify('Error al iniciar sesión con Google', 'negative', 'warning')
+      }
+    },
+    /**
+     * Manejar login de Google en móvil nativo
+     */
+    async handleGoogleLoginMobile () {
+      try {
+        // Importar el plugin de Google Auth de Capacitor
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+        console.log('GoogleAuth plugin loaded')
+        console.log('Attempting Google sign in...')
+
+        // Hacer login (ya está inicializado en mounted)
+        const result = await GoogleAuth.signIn()
+        console.log('Google sign in result:', result)
+
+        if (result && result.email) {
+          // Obtener información del usuario
+          const userInfo = {
+            email: result.email,
+            name: result.name || result.displayName,
+            sub: result.id,
+            picture: result.imageUrl
+          }
+
+          console.log('User info:', userInfo)
+
+          // Autenticar con el backend
+          await this.authenticateWithGoogle(userInfo.email, userInfo.name, userInfo.sub, userInfo.picture)
+        } else {
+          this.googleLoading = false
+          console.error('Invalid result from Google:', result)
+          notify('No se pudo obtener información de Google', 'negative', 'warning')
+        }
+      } catch (error) {
+        this.googleLoading = false
+        console.error('Mobile Google login error:', error)
+        console.error('Error message:', error.message)
+        console.error('Error code:', error.code)
+        console.error('Error name:', error.name)
+        console.error('Full error object:', JSON.stringify(error, null, 2))
+
+        // Si el usuario canceló, no mostrar error
+        if (error.message && (
+          error.message.toLowerCase().includes('cancel') ||
+          error.message.toLowerCase().includes('user_cancelled') ||
+          error.code === 12501 // Android cancel code
+        )) {
+          console.log('User cancelled login')
+          return
+        }
+
+        // Errores específicos
+        if (error.message && error.message.includes('Cannot find module')) {
+          notify('Plugin de Google no instalado correctamente', 'negative', 'warning')
+        } else if (error.message && error.message.includes('not initialized')) {
+          notify('Google Auth no está inicializado', 'negative', 'warning')
+        } else {
+          notify('Error al iniciar sesión con Google: ' + (error.message || 'Error desconocido'), 'negative', 'warning')
+        }
       }
     },
     /**
