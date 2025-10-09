@@ -410,6 +410,7 @@
                 </template>
                 <template v-else-if="props.col.name === 'actions'">
                   <div class="row q-gutter-xs no-wrap">
+                    <!-- Botones para Facturas -->
                     <q-btn
                       v-if="props.row.type === 'invoice'"
                       icon="visibility"
@@ -431,6 +432,18 @@
                       @click="openInvoicePaymentDialog(props.row.invoice)"
                     >
                       <q-tooltip>Pagar esta factura</q-tooltip>
+                    </q-btn>
+                    <!-- Botón para Pagos -->
+                    <q-btn
+                      v-if="props.row.type === 'payment'"
+                      icon="receipt_long"
+                      size="sm"
+                      round
+                      flat
+                      color="positive"
+                      @click="viewPaymentDetail(props.row.payment_id)"
+                    >
+                      <q-tooltip>Ver detalle del pago</q-tooltip>
                     </q-btn>
                   </div>
                 </template>
@@ -989,6 +1002,82 @@
     </q-dialog>
 
     <!-- ============================================ -->
+    <!-- DIALOG: DETALLE DE PAGO -->
+    <!-- ============================================ -->
+    <q-dialog v-model="paymentDetailDialog" :maximized="$q.screen.lt.sm">
+      <q-card class="payment-detail-card" style="min-width: 500px; max-width: 700px;">
+        <!-- Header -->
+        <q-card-section class="bg-positive text-white">
+          <div class="row items-center justify-between">
+            <div class="text-h6">
+              <q-icon name="receipt_long" size="28px" class="q-mr-sm" />
+              Detalle del Pago
+            </div>
+            <q-btn icon="close" flat round dense v-close-popup />
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section v-if="paymentDetail">
+          <!-- Payment Info -->
+          <div class="q-mb-md">
+            <div class="text-h6 text-positive q-mb-sm">
+              {{ formatCurrency(paymentDetail.total_amount) }}
+            </div>
+            <div class="text-caption text-grey-7">
+              <q-icon name="event" size="16px" />
+              {{ formatDateTime(paymentDetail.payment.date) }}
+            </div>
+            <div class="text-caption text-grey-7" v-if="paymentDetail.payment.reference">
+              <q-icon name="tag" size="16px" />
+              Ref: {{ paymentDetail.payment.reference }}
+            </div>
+            <div class="text-caption text-grey-7">
+              <q-icon name="payment" size="16px" />
+              {{ paymentDetail.payment.payment_method?.name }}
+            </div>
+            <q-badge v-if="paymentDetail.is_global_payment" color="info" class="q-mt-sm">
+              Pago Global ({{ paymentDetail.affected_invoices.length }} facturas)
+            </q-badge>
+          </div>
+
+          <q-separator class="q-my-md" />
+
+          <!-- Affected Invoices -->
+          <div class="text-subtitle2 q-mb-sm">Facturas Pagadas:</div>
+          <q-list bordered separator>
+            <q-item v-for="invoice in paymentDetail.affected_invoices" :key="invoice.invoice_id">
+              <q-item-section avatar>
+                <q-icon name="receipt" color="negative" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Factura #{{ invoice.invoice_id }}</q-item-label>
+                <q-item-label caption>
+                  Total: {{ formatCurrency(invoice.invoice_total) }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-item-label class="text-positive text-weight-bold">
+                  {{ formatCurrency(invoice.amount_applied) }}
+                </q-item-label>
+                <q-item-label caption>
+                  Saldo: {{ formatCurrency(invoice.invoice_balance) }}
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right">
+          <q-btn label="Cerrar" color="primary" flat v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- ============================================ -->
     <!-- DIALOG: FILTROS -->
     <!-- ============================================ -->
     <q-dialog v-model="filterDialog">
@@ -1354,7 +1443,7 @@ export default {
       selectedBranchOffice: null,
 
       /**
-       * List of branch offices available to the user
+       * List of branch offices available to the userSession
        * @type {Array<Object>}
        */
       availableBranchOffices: [],
@@ -1494,6 +1583,22 @@ export default {
       invoiceDetail: null,
 
       // ============================================
+      // PAYMENT DETAIL DIALOG
+      // ============================================
+
+      /**
+       * Controls visibility of payment detail dialog
+       * @type {Boolean}
+       */
+      paymentDetailDialog: false,
+
+      /**
+       * Payment detail data
+       * @type {Object|null}
+       */
+      paymentDetail: null,
+
+      // ============================================
       // TABLE COLUMNS
       // ============================================
 
@@ -1527,7 +1632,7 @@ export default {
   },
 
   computed: {
-    ...mapState(authentication, ['branchOffice', 'user']),
+    ...mapState(authentication, ['branchOffice', 'userSession']),
 
     /**
      * Validates if a global payment can be registered
@@ -1580,25 +1685,35 @@ export default {
     },
 
     /**
-     * Loads available branch offices based on user role
-     * If root: shows all branch offices
-     * If not: shows only assigned branch offices
+     * Loads available branch offices based on userSession role
+     * If root/superadmin: shows all branch offices
+     * If not: shows only assigned branch offices using dataEqualFilter
      */
     async loadBranchOffices () {
       try {
-        // Si es root o superadmin, mostrar todas las sucursales
-        if (this.user?.is_root || this.user?.is_superadmin) {
-          const { data: allBranchOffices } = await this.$api.get('branch-offices')
+        const params = {}
+
+        // Si NO es root ni superadmin, filtrar por sucursales asignadas
+        if (!this.userSession?.is_root && !this.userSession?.is_superadmin) {
+          params.dataEqualFilter = {
+            'branchOfficeUsers.user_id': this.userSession.id
+          }
+        }
+
+        console.log(this.userSession)
+
+        const { data } = await this.$api.get('branch-offices', { params })
+
+        // Si es root o superadmin, agregar opción "Todas las sucursales"
+        if (this.userSession?.is_root || this.userSession?.is_superadmin) {
           this.availableBranchOffices = [
             { id: null, name: 'Todas las sucursales' },
-            ...allBranchOffices
+            ...data
           ]
         } else {
-          // Para usuarios normales, obtener solo sus sucursales asignadas
-          const { data: userBranchOffices } = await this.$api.get(`users/${this.user.id}/branch-offices`)
-
-          if (userBranchOffices && userBranchOffices.length > 0) {
-            this.availableBranchOffices = userBranchOffices
+          // Para usuarios normales, mostrar solo sus sucursales asignadas
+          if (data && data.length > 0) {
+            this.availableBranchOffices = data
           } else {
             // Si no tiene sucursales asignadas, usar la sucursal actual
             if (this.branchOffice) {
@@ -1700,7 +1815,7 @@ export default {
           perPage: rowsPerPage,
           sortBy: sortBy || 'date',
           sortOrder: descending ? 'desc' : 'asc',
-          branch_office_id: this.branchOffice?.id,
+          branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
           transaction_type: this.transactionFilter !== 'all' ? this.transactionFilter : null
         }
 
@@ -1742,7 +1857,7 @@ export default {
       try {
         this.selectedClient = client
         this.transactionFilter = 'all'
-        
+
         // Reset pagination
         this.statementPagination = {
           sortBy: 'date',
@@ -1814,7 +1929,7 @@ export default {
 
         const { data } = await this.$api.post(`client-statement/clients/${this.paymentClient.id}/payments`, {
           ...this.paymentForm,
-          branch_office_id: this.branchOffice?.id
+          branch_office_id: this.selectedBranchOffice || this.branchOffice?.id
         })
 
         notify('Pago registrado y distribuido exitosamente', 'positive', 'check_circle')
@@ -1842,7 +1957,7 @@ export default {
           // Si estamos viendo el detalle del cliente, recargar su estado de cuenta
           const { data: updatedStatement } = await this.$api.get(`client-statement/clients/${clientId}`, {
             params: {
-              branch_office_id: this.branchOffice?.id
+              branch_office_id: this.selectedBranchOffice || this.branchOffice?.id
             }
           })
 
@@ -2061,6 +2176,24 @@ export default {
     },
 
     /**
+     * Shows complete payment details
+     * Loads all invoices affected by this payment
+     * @param {Number} paymentId - Payment ID to display
+     */
+    async viewPaymentDetail (paymentId) {
+      try {
+        loading(true)
+        const { data } = await this.$api.get(`client-statement/payments/${paymentId}`)
+        this.paymentDetail = data
+        this.paymentDetailDialog = true
+      } catch (error) {
+        notify('Error al cargar detalle del pago', 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+
+    /**
      * Prints the current invoice
      * Opens the browser's print dialog
      */
@@ -2144,7 +2277,7 @@ export default {
         loading(true)
         const { data } = await this.$api.get(`client-statement/clients/${this.selectedClient.id}/export-pdf`, {
           params: {
-            branch_office_id: this.branchOffice?.id
+            branch_office_id: this.selectedBranchOffice || this.branchOffice?.id
           },
           responseType: 'blob'
         })
@@ -2242,7 +2375,7 @@ export default {
           payment_method_id: this.invoicePaymentForm.payment_method_id,
           date: this.invoicePaymentForm.date,
           reference: this.invoicePaymentForm.reference,
-          branch_office_id: this.branchOffice?.id,
+          branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
           invoice_id: this.invoicePaymentData.id
         })
 
@@ -2256,7 +2389,7 @@ export default {
         // Refresh statement sin cambiar de vista
         const { data: updatedStatement } = await this.$api.get(`client-statement/clients/${clientId}`, {
           params: {
-            branch_office_id: this.branchOffice?.id
+            branch_office_id: this.selectedBranchOffice || this.branchOffice?.id
           }
         })
 
