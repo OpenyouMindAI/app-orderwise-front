@@ -17,19 +17,19 @@ jobs:
       - name: Build multi-display-manager
         run: |
           cd ./plugin/multi-display-manager
-          npm install
+          npm install --legacy-peer-deps
           npm run build
           cd ../..
           npm install ./plugin/multi-display-manager
       - name: Build printers
         run: |
           cd ./plugin/printers
-          npm install
+          npm install --legacy-peer-deps
           npm run build
           cd ../..
           npm install ./plugin/printers
       - name: Install npm dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
       - name: Get branch name
         id: get_branch
         run: echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
