@@ -119,9 +119,12 @@
             row-key="id"
             :loading="loading"
             :pagination="pagination"
-            @request="loadClients"
+            :filter="search"
+            @request="onRequest"
+            @update:pagination="pagination = $event"
             @row-click="viewClientStatement"
             class="cursor-pointer"
+            binary-state-sort
           >
             <template #body-cell-total_owed="props">
               <q-td :props="props" class="text-right">
@@ -306,6 +309,9 @@
             :columns="transactionColumns"
             row-key="date"
             :loading="loadingStatement"
+            :pagination="statementPagination"
+            @request="onStatementRequest"
+            @update:pagination="statementPagination = $event"
             flat
             bordered
             class="shadow-2 statement-table"
@@ -319,8 +325,36 @@
               </q-tr>
             </template>
 
+            <!-- Skeleton Loading for Statement -->
+            <template v-if="loadingStatement" #body>
+              <q-tr v-for="i in 10" :key="'skeleton-statement-' + i">
+                <q-td>
+                  <q-skeleton type="text" width="80px" />
+                  <q-skeleton type="text" width="60px" class="q-mt-xs" />
+                </q-td>
+                <q-td>
+                  <div class="row items-center">
+                    <q-skeleton type="QAvatar" size="24px" class="q-mr-sm" />
+                    <q-skeleton type="text" width="150px" />
+                  </div>
+                </q-td>
+                <q-td class="text-right">
+                  <q-skeleton type="text" width="80px" style="margin-left: auto;" />
+                </q-td>
+                <q-td class="text-right">
+                  <q-skeleton type="text" width="80px" style="margin-left: auto;" />
+                </q-td>
+                <q-td class="text-right">
+                  <q-skeleton type="text" width="90px" style="margin-left: auto;" />
+                </q-td>
+                <q-td class="text-center">
+                  <q-skeleton type="QBtn" />
+                </q-td>
+              </q-tr>
+            </template>
+
             <!-- Template unificado para todas las celdas -->
-            <template #body-cell="props">
+            <template v-else #body-cell="props">
               <q-td :props="props" :class="props.row.type === 'invoice' ? 'bg-red-1' : 'bg-green-1'">
                 <template v-if="props.col.name === 'description'">
                   <div class="row items-center no-wrap">
@@ -1247,6 +1281,8 @@ export default {
        * @type {Object}
        */
       pagination: {
+        sortBy: 'balance',
+        descending: true,
         page: 1,
         rowsPerPage: 25,
         rowsNumber: 0
@@ -1288,6 +1324,18 @@ export default {
        * @type {Array<Object>}
        */
       filteredTransactions: [],
+
+      /**
+       * Pagination for statement transactions
+       * @type {Object}
+       */
+      statementPagination: {
+        sortBy: 'date',
+        descending: true,
+        page: 1,
+        rowsPerPage: 25,
+        rowsNumber: 0
+      },
 
       // ============================================
       // FILTERS
@@ -1538,33 +1586,26 @@ export default {
      */
     async loadBranchOffices () {
       try {
-        // Obtener todas las sucursales
-        const { data: allBranchOffices } = await this.$api.get('branch-offices')
-
-        // Si es root, mostrar todas las sucursales
-        if (this.user?.is_root) {
+        // Si es root o superadmin, mostrar todas las sucursales
+        if (this.user?.is_root || this.user?.is_superadmin) {
+          const { data: allBranchOffices } = await this.$api.get('branch-offices')
           this.availableBranchOffices = [
             { id: null, name: 'Todas las sucursales' },
             ...allBranchOffices
           ]
         } else {
-          // Si no es root, obtener las sucursales asignadas al usuario
-          try {
-            const { data: userBranchOffices } = await this.$api.get('branch-offices')
+          // Para usuarios normales, obtener solo sus sucursales asignadas
+          const { data: userBranchOffices } = await this.$api.get(`users/${this.user.id}/branch-offices`)
 
-            // Filtrar solo las sucursales que el usuario tiene asignadas
-            if (userBranchOffices && userBranchOffices.length > 0) {
-              this.availableBranchOffices = allBranchOffices.filter(bo =>
-                userBranchOffices.some(ubo => ubo.id === bo.id)
-              )
+          if (userBranchOffices && userBranchOffices.length > 0) {
+            this.availableBranchOffices = userBranchOffices
+          } else {
+            // Si no tiene sucursales asignadas, usar la sucursal actual
+            if (this.branchOffice) {
+              this.availableBranchOffices = [this.branchOffice]
             } else {
-              // Si no tiene sucursales asignadas, mostrar todas
-              this.availableBranchOffices = allBranchOffices
+              this.availableBranchOffices = []
             }
-          } catch (error) {
-            console.error('Error loading user branch offices:', error)
-            // En caso de error, mostrar todas las sucursales
-            this.availableBranchOffices = allBranchOffices
           }
         }
 
@@ -1572,26 +1613,30 @@ export default {
         this.selectedBranchOffice = this.branchOffice?.id || null
       } catch (error) {
         console.error('Error loading branch offices:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Error al cargar las sucursales',
-          position: 'top'
-        })
+        // En caso de error, usar solo la sucursal actual del usuario
+        if (this.branchOffice) {
+          this.availableBranchOffices = [this.branchOffice]
+          this.selectedBranchOffice = this.branchOffice.id
+        }
+        notify('Error al cargar las sucursales', 'negative', 'warning')
       }
     },
 
     /**
-     * Loads the list of clients with pending balance
-     * Applies search, date, minimum balance and balance status filters
-     * @param {Object} paginationData - Pagination properties (optional)
+     * Handles table request events (pagination, sorting, filtering)
+     * @param {Object} props - Request properties from q-table
      */
-    async loadClients (paginationData) {
+    async onRequest (props) {
+      const { page, rowsPerPage, sortBy, descending } = props.pagination
+
       try {
         this.loading = true
 
         const params = {
-          perPage: paginationData?.pagination?.rowsPerPage || this.pagination.rowsPerPage,
-          page: paginationData?.pagination?.page || this.pagination.page,
+          page,
+          perPage: rowsPerPage,
+          sortBy: sortBy || 'balance',
+          sortOrder: descending ? 'desc' : 'asc',
           branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
           search: this.search,
           ...this.filters
@@ -1599,19 +1644,26 @@ export default {
 
         const { data } = await this.$api.get('client-statement/clients', { params })
 
-        this.clients = data.data
-        this.pagination.rowsNumber = data.total
+        this.clients = data.data || []
 
-        // Calculate global KPIs
-        this.globalKpis = {
-          total_owed: this.clients.reduce((sum, c) => sum + c.total_owed, 0),
-          total_paid: this.clients.reduce((sum, c) => sum + c.total_paid, 0),
-          balance: this.clients.reduce((sum, c) => sum + c.balance, 0),
-          client_count: this.clients.length
-        }
+        // Update pagination
+        this.pagination.page = page
+        this.pagination.rowsPerPage = rowsPerPage
+        this.pagination.sortBy = sortBy
+        this.pagination.descending = descending
+        this.pagination.rowsNumber = data.total || 0
 
-        if (paginationData) {
-          this.pagination = paginationData.pagination
+        // Calculate global KPIs from server response if available
+        if (data.kpis) {
+          this.globalKpis = data.kpis
+        } else {
+          // Fallback: calculate from current page data
+          this.globalKpis = {
+            total_owed: this.clients.reduce((sum, c) => sum + (c.total_owed || 0), 0),
+            total_paid: this.clients.reduce((sum, c) => sum + (c.total_paid || 0), 0),
+            balance: this.clients.reduce((sum, c) => sum + (c.balance || 0), 0),
+            client_count: data.total || this.clients.length
+          }
         }
       } catch (error) {
         notify(error.message || 'Error al cargar clientes', 'negative', 'warning')
@@ -1620,9 +1672,64 @@ export default {
       }
     },
 
+    /**
+     * Loads the list of clients with pending balance
+     * Wrapper method for initial load and filter changes
+     */
+    async loadClients () {
+      await this.onRequest({ pagination: this.pagination })
+    },
+
     searchClients () {
       this.pagination.page = 1
-      this.loadClients()
+      this.onRequest({ pagination: this.pagination })
+    },
+
+    /**
+     * Handles statement table request events (pagination, sorting)
+     * @param {Object} props - Request properties from q-table
+     */
+    async onStatementRequest (props) {
+      const { page, rowsPerPage, sortBy, descending } = props.pagination
+
+      try {
+        this.loadingStatement = true
+
+        const params = {
+          page,
+          perPage: rowsPerPage,
+          sortBy: sortBy || 'date',
+          sortOrder: descending ? 'desc' : 'asc',
+          branch_office_id: this.branchOffice?.id,
+          transaction_type: this.transactionFilter !== 'all' ? this.transactionFilter : null
+        }
+
+        const { data } = await this.$api.get(`client-statement/clients/${this.selectedClient.id}`, { params })
+
+        // Add expanded property to each transaction
+        if (data.transactions) {
+          data.transactions.forEach(t => {
+            t.expanded = false
+          })
+          this.filteredTransactions = data.transactions
+        }
+
+        // Update pagination
+        this.statementPagination.page = page
+        this.statementPagination.rowsPerPage = rowsPerPage
+        this.statementPagination.sortBy = sortBy
+        this.statementPagination.descending = descending
+        this.statementPagination.rowsNumber = data.total || 0
+
+        // Update summary if available
+        if (data.summary) {
+          this.statement = data
+        }
+      } catch (error) {
+        notify(error.message || 'Error al cargar transacciones', 'negative', 'warning')
+      } finally {
+        this.loadingStatement = false
+      }
     },
 
     /**
@@ -1633,27 +1740,22 @@ export default {
      */
     async viewClientStatement (event, client) {
       try {
-        this.loadingStatement = true
         this.selectedClient = client
-
-        const { data } = await this.$api.get(`client-statement/clients/${client.id}`, {
-          params: {
-            branch_office_id: this.branchOffice?.id
-          }
-        })
-
-        // Add expanded property to each transaction
-        data.transactions.forEach(t => {
-          t.expanded = false
-        })
-
-        this.statement = data
-        this.filteredTransactions = data.transactions
         this.transactionFilter = 'all'
+        
+        // Reset pagination
+        this.statementPagination = {
+          sortBy: 'date',
+          descending: true,
+          page: 1,
+          rowsPerPage: 25,
+          rowsNumber: 0
+        }
+
+        // Load first page
+        await this.onStatementRequest({ pagination: this.statementPagination })
       } catch (error) {
         notify(error.message || 'Error al cargar estado de cuenta', 'negative', 'warning')
-      } finally {
-        this.loadingStatement = false
       }
     },
 
@@ -2066,15 +2168,12 @@ export default {
     /**
      * Filters transactions by selected type
      * Types: 'all', 'invoice', 'payment'
+     * Now reloads from server with filter
      */
     filterTransactions () {
-      if (this.transactionFilter === 'all') {
-        this.filteredTransactions = this.statement?.transactions || []
-      } else {
-        this.filteredTransactions = (this.statement?.transactions || []).filter(
-          t => t.type === this.transactionFilter
-        )
-      }
+      // Reset to first page when filtering
+      this.statementPagination.page = 1
+      this.onStatementRequest({ pagination: this.statementPagination })
     },
 
     /**
