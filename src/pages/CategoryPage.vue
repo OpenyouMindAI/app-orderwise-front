@@ -907,27 +907,6 @@ export default {
   align-items: center;
 }
 
-/* Estilos para modo de edición de orden */
-/* .table-editing-order {
-  border: 2px solid #1976d2;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.2);
-}
-
-.table-editing-order .q-table__top {
-  background-color: #e3f2fd;
-} */
-
-.table-editing-order tbody tr {
-  cursor: default !important;
-  transition: all 0.3s ease;
-}
-
-.table-editing-order tbody tr:hover {
-  background-color: #f5f5f5 !important;
-  transform: translateX(5px);
-}
-
 /* Estilos para columna de posición */
 .q-table tbody td:first-child,
 .q-table thead th:first-child {
@@ -949,25 +928,5 @@ export default {
   font-size: 18px;
   color: #1976d2;
   text-align: center;
-}
-
-/* Animación para cambios de posición */
-.table-editing-order tbody tr {
-  animation: rowHighlight 0.5s ease-in-out;
-}
-
-@keyframes rowHighlight {
-  0% { background-color: #fff3cd; }
-  100% { background-color: transparent; }
-}
-
-/* Botones de acción mejorados */
-.table-editing-order .q-btn {
-  transition: all 0.2s ease;
-}
-
-.table-editing-order .q-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 </style>
