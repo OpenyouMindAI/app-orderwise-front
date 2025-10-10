@@ -116,7 +116,6 @@
 <script>
 import { mapActions, mapState } from 'pinia'
 import { useCommandStore } from 'src/stores/command'
-import { notify } from '../const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 export default {
   name: 'CustomerDisplay',
