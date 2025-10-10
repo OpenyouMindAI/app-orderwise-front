@@ -17,7 +17,6 @@
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
           <q-btn
-            v-if="isSuperAdmin"
             round
             color="primary"
             icon="add"
