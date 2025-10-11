@@ -1150,6 +1150,11 @@ export default {
        */
       invoiceShare: {},
       /**
+       * Debounce timer for invoice share
+       * @type {Number|null}
+       */
+      invoiceShareDebounceTimer: null,
+      /**
        * Document types
        * @type {Array}
        */
@@ -1601,15 +1606,42 @@ export default {
       },
       deep: true
     },
-    async invoiceShare (data) {
-      try {
-        await this.$api.post('invoice-details-event', {
-          invoice: data,
-          user_id: this.userSession.id
-        })
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
+    invoiceShare (data) {
+      // Limpiar el timer anterior si existe
+      if (this.invoiceShareDebounceTimer) {
+        clearTimeout(this.invoiceShareDebounceTimer)
       }
+
+      // Crear nuevo timer con debounce de 500ms
+      this.invoiceShareDebounceTimer = setTimeout(async () => {
+        try {
+          // Enviar solo los datos necesarios para la pantalla de detalles
+          const optimizedInvoice = {
+            client: {
+              name: data.client?.name || 'Cliente no especificado'
+            },
+            products: (data.products || []).map(product => ({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              amount: product.amount || product.quantity || 1,
+              subtotal: product.subtotal
+            })),
+            totalBill: data.totalBill || 0,
+            payments: (data.payments || []).map(payment => ({
+              name: payment.name || payment.payment_method?.name || 'Método de pago',
+              amount: payment.amount || 0
+            }))
+          }
+
+          await this.$api.post('invoice-details-event', {
+            invoice: optimizedInvoice,
+            user_id: this.userSession.id
+          })
+        } catch (error) {
+          notify(error.message, 'negative', 'warning')
+        }
+      }, 1000)
     },
     quantityDialog (data) {
       if (!data) {
@@ -1692,6 +1724,10 @@ export default {
     window.removeEventListener('keydown', () => {
       this.dialogPayment = true
     })
+    // Limpiar el timer de debounce si existe
+    if (this.invoiceShareDebounceTimer) {
+      clearTimeout(this.invoiceShareDebounceTimer)
+    }
   },
   created () {
     this.getLocalStorage()
