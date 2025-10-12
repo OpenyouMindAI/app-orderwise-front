@@ -1592,56 +1592,31 @@ export default {
       this.invoiceShare = { ...this.invoiceShare, totalPayment }
     },
     products (products) {
-      this.invoiceShare = {
-        ...this.invoiceShare,
-        totalBill: this.totalBill,
-        totalPayment: this.totalPayment,
-        products
+      // Debounce solo para productos (500ms)
+      if (this.invoiceShareDebounceTimer) {
+        clearTimeout(this.invoiceShareDebounceTimer)
       }
+
+      this.invoiceShareDebounceTimer = setTimeout(() => {
+        this.invoiceShare = {
+          ...this.invoiceShare,
+          totalBill: this.totalBill,
+          totalPayment: this.totalPayment,
+          products
+        }
+      }, 500)
     },
     payments: {
       handler (payments) {
         this.$forceUpdate()
+        // Sin debounce - inmediato para pagos
         this.invoiceShare = { ...this.invoiceShare, payments }
       },
       deep: true
     },
     invoiceShare (data) {
-      // Limpiar el timer anterior si existe
-      if (this.invoiceShareDebounceTimer) {
-        clearTimeout(this.invoiceShareDebounceTimer)
-      }
-
-      // Crear nuevo timer con debounce de 500ms
-      this.invoiceShareDebounceTimer = setTimeout(async () => {
-        try {
-          // Enviar solo los datos necesarios para la pantalla de detalles
-          const optimizedInvoice = {
-            client: {
-              name: data.client?.name || 'Cliente no especificado'
-            },
-            products: (data.products || []).map(product => ({
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              amount: product.amount || product.quantity || 1,
-              subtotal: product.subtotal
-            })),
-            totalBill: data.totalBill || 0,
-            payments: (data.payments || []).map(payment => ({
-              name: payment.name || payment.payment_method?.name || 'Método de pago',
-              amount: payment.amount || 0
-            }))
-          }
-
-          await this.$api.post('invoice-details-event', {
-            invoice: optimizedInvoice,
-            user_id: this.userSession.id
-          })
-        } catch (error) {
-          notify(error.message, 'negative', 'warning')
-        }
-      }, 1000)
+      // Enviar inmediatamente sin debounce adicional
+      this.sendInvoiceUpdate(data)
     },
     quantityDialog (data) {
       if (!data) {
@@ -1738,6 +1713,41 @@ export default {
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    /**
+     * Send invoice update to details screen
+     * @param {Object} data - Invoice data
+     * @returns {Promise<void>}
+     */
+    async sendInvoiceUpdate (data) {
+      try {
+        // Preparar datos optimizados para la pantalla de detalles
+        const optimizedInvoice = {
+          client: {
+            name: data.client?.name || 'Cliente no especificado'
+          },
+          products: (data.products || []).map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            amount: product.amount || product.quantity || 1,
+            subtotal: product.subtotal
+          })),
+          totalBill: data.totalBill || 0,
+          payments: (data.payments || []).map(payment => ({
+            name: payment.name || payment.payment_method?.name || 'Método de pago',
+            amount: payment.amount || 0
+          }))
+        }
+
+        // Enviar via backend
+        await this.$api.post('invoice-details-event', {
+          invoice: optimizedInvoice,
+          user_id: this.userSession.id
+        })
+      } catch (error) {
+        console.error('Error sending invoice update:', error)
+      }
+    },
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
     },
@@ -2616,6 +2626,12 @@ export default {
      * Clear invoice
      */
     clear () {
+      // Cancelar debounce pendiente
+      if (this.invoiceShareDebounceTimer) {
+        clearTimeout(this.invoiceShareDebounceTimer)
+        this.invoiceShareDebounceTimer = null
+      }
+
       this.payments = []
       this.products = []
       this.resetProductSelection()
@@ -2634,6 +2650,15 @@ export default {
       this.addressComponentKey += 1
 
       this.calculateTotal()
+
+      // Enviar actualización inmediata de factura vacía
+      this.invoiceShare = {
+        client: this.client,
+        products: [],
+        payments: [],
+        totalBill: 0,
+        totalPayment: 0
+      }
 
       // Navigating to billing page
       this.$router.push({ name: 'Billing' })

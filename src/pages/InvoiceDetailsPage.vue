@@ -32,7 +32,7 @@
                   <div class="product-quantity">x{{ product.amount }}</div>
                 </div>
                 <div class="product-pricing">
-                  <div class="product-subtotal">{{ formatCurrency(product.subtotal) }}</div>
+                  <div class="product-subtotal">{{ formatNumber(product.subtotal) }}</div>
                 </div>
               </div>
             </div>
@@ -50,7 +50,7 @@
                 >
                   <q-icon name="credit_card" size="14px" />
                   <span class="payment-name">{{ payment.name }}</span>
-                  <span class="payment-amount">{{ formatCurrency(payment.amount) }}</span>
+                  <span class="payment-amount">{{ formatNumber(payment.amount) }}</span>
                 </div>
               </div>
             </div>
@@ -58,7 +58,7 @@
             <!-- Total -->
             <div class="total-section">
               <span class="total-label">Total</span>
-              <span class="total-amount">{{ formatCurrency(total) }}</span>
+              <span class="total-amount">{{ formatNumber(total) }}</span>
             </div>
 
             <!-- Thank You Message -->
@@ -112,64 +112,87 @@
       </div>
 
       <!-- Success Modal -->
-      <q-dialog v-model="showSuccessModal" persistent>
-        <q-card class="success-modal">
-          <q-card-section class="success-content">
-            <!-- Success Animation -->
-            <div class="success-animation">
-              <div class="success-checkmark">
-                <div class="check-icon">
-                  <span class="icon-line line-tip"></span>
-                  <span class="icon-line line-long"></span>
-                  <div class="icon-circle"></div>
-                  <div class="icon-fix"></div>
-                </div>
-              </div>
+      <q-dialog v-model="showSuccessModal" persistent transition-show="scale" transition-hide="scale">
+        <q-card class="success-modal-modern">
+          <q-card-section class="text-center q-pt-xl q-pb-md relative-position">
+            <!-- Icono animado con círculos -->
+            <div class="success-icon-container">
+              <div class="success-circle-1"></div>
+              <div class="success-circle-2"></div>
+              <div class="success-circle-3"></div>
+              <q-avatar size="100px" class="success-avatar">
+                <q-icon name="check" size="60px" color="white" class="success-check-icon" />
+              </q-avatar>
             </div>
 
-            <!-- Success Message -->
-            <div class="success-message">
-              <h4 class="success-title">¡Compra Exitosa!</h4>
-              <p class="success-subtitle">Su pedido ha sido procesado correctamente</p>
+            <!-- Título con animación -->
+            <div class="text-h5 text-weight-bold q-mt-lg success-title">
+              ¡Compra Exitosa!
             </div>
+            <div class="text-body2 q-mt-xs success-subtitle" style="opacity: 0.7">
+              Su pedido ha sido procesado correctamente
+            </div>
+          </q-card-section>
 
-            <!-- Invoice Summary -->
+          <!-- Invoice Summary -->
+          <q-card-section class="q-px-lg q-pb-md q-pt-none">
             <div class="modal-invoice-summary">
               <div class="modal-customer">
-                <q-icon name="person" size="18px" />
-                <span>{{ customerName || 'Cliente' }}</span>
+                <q-icon name="person" size="20px" />
+                <span class="text-weight-medium">{{ previousCustomerName || 'Cliente' }}</span>
               </div>
+
+              <q-separator class="q-my-sm" />
 
               <div class="modal-total">
                 <span class="modal-total-label">Total Pagado</span>
-                <span class="modal-total-amount">{{ formatCurrency(previousTotal) }}</span>
+                <span class="modal-total-amount">{{ formatNumber(previousTotal) }}</span>
               </div>
 
-              <div v-if="previousPayments.length > 0" class="modal-payments">
+              <div v-if="previousPayments.length > 0" class="modal-payments q-mt-sm">
                 <div
                   v-for="(payment, index) in previousPayments"
                   :key="index"
                   class="modal-payment-item"
                 >
-                  <span>{{ payment.name }}</span>
-                  <span>{{ formatCurrency(payment.amount) }}</span>
+                  <q-icon name="credit_card" size="16px" />
+                  <span class="payment-name">{{ payment.name }}</span>
+                  <span class="payment-amount">{{ formatNumber(payment.amount) }}</span>
                 </div>
               </div>
             </div>
+          </q-card-section>
 
-            <!-- Countdown -->
-            <div class="modal-countdown">
-              <q-circular-progress
-                :value="countdownProgress"
-                size="40px"
-                :thickness="0.2"
-                color="primary"
-                track-color="grey-3"
-              >
-                <span class="countdown-text">{{ countdown }}</span>
-              </q-circular-progress>
+          <!-- Countdown y botón cerrar -->
+          <q-card-section class="q-px-lg q-pb-lg q-pt-none">
+            <div class="column q-gutter-y-sm items-center">
+              <div class="modal-countdown">
+                <q-circular-progress
+                  :value="countdownProgress"
+                  size="50px"
+                  :thickness="0.15"
+                  color="primary"
+                  track-color="grey-3"
+                >
+                  <span class="countdown-text">{{ countdown }}</span>
+                </q-circular-progress>
+              </div>
+              <q-btn
+                outline
+                label="Cerrar"
+                color="grey-8"
+                @click="closeSuccessModal"
+                class="full-width action-btn-close"
+                size="md"
+                no-caps
+              />
             </div>
           </q-card-section>
+
+          <!-- Confetti decorativo -->
+          <div class="confetti-container">
+            <div class="confetti" v-for="i in 20" :key="i" :style="{ left: (i * 5) + '%' }"></div>
+          </div>
         </q-card>
       </q-dialog>
     </q-page-container>
@@ -180,10 +203,13 @@
 import { mapActions, mapState } from 'pinia'
 import { useCommandStore } from 'src/stores/command'
 import { authentication } from 'src/stores/module-authentication'
+import { useThemeStore } from 'src/stores/themeStore'
+import { formatNumber } from 'src/const/mixins'
 export default {
   name: 'CustomerDisplay',
   data () {
     return {
+      formatNumber,
       /**
        * Customer name
        * @type {string}
@@ -214,12 +240,12 @@ export default {
        * Currency type
        * @type {String}
        */
-      currency: 'USD',
+      currency: 'PES',
       /**
        * Locale for number formatting
        * @type {string}
        */
-      locale: 'en-US',
+      locale: 'es-US',
       /**
        * Files for carousel
        * @type {Array}
@@ -249,7 +275,12 @@ export default {
        * Previous payments to detect invoice closure
        * @type {Array}
        */
-      previousPayments: []
+      previousPayments: [],
+      /**
+       * Previous customer name to detect invoice closure
+       * @type {String}
+       */
+      previousCustomerName: ''
     }
   },
   computed: {
@@ -264,6 +295,9 @@ export default {
     }
   },
   mounted () {
+    // Aplicar tema desde localStorage
+    this.initializeTheme()
+
     this.getInvoice()
     this.getAllProducts()
     this.setInvoiceChannel(this.invoice)
@@ -275,15 +309,51 @@ export default {
   },
   methods: {
     /**
-     * Format currency based on locale and currency type
-     * @param {number} value - Value to format
-     * @returns {string} Formatted currency string
+     * Initialize theme from localStorage
+     * @returns {void}
      */
-    formatCurrency (value) {
-      return new Intl.NumberFormat(this.locale, {
-        style: 'currency',
-        currency: this.currency
-      }).format(value)
+    initializeTheme () {
+      try {
+        const themeStore = useThemeStore()
+        const savedTheme = localStorage.getItem('app-theme')
+
+        // Aplicar dark mode
+        if (savedTheme) {
+          // Verificar si el tema es oscuro
+          const isDark = savedTheme.toLowerCase().includes('dark') ||
+                        savedTheme.toLowerCase().includes('oscuro')
+          this.$q.dark.set(isDark)
+        } else {
+          // Si no hay tema guardado, usar el modo del sistema
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          this.$q.dark.set(prefersDark)
+        }
+
+        // Aplicar colores del tema personalizado
+        if (savedTheme && themeStore.themes[savedTheme]) {
+          const theme = themeStore.themes[savedTheme]
+          const root = document.documentElement
+
+          // Aplicar variables CSS personalizadas
+          root.style.setProperty('--primary', theme.primary)
+          root.style.setProperty('--primary-dark', theme.primaryDark)
+          root.style.setProperty('--primary-light', theme.primaryLight)
+          root.style.setProperty('--secondary', theme.secondary)
+          root.style.setProperty('--secondary-dark', theme.secondaryDark)
+
+          // Aplicar colores de Quasar
+          if (this.$q && this.$q.colors) {
+            this.$q.colors.setBrand('primary', theme.primary)
+            this.$q.colors.setBrand('secondary', theme.secondary)
+          }
+
+          // También actualizar las variables de Quasar
+          root.style.setProperty('--q-primary', theme.primary)
+          root.style.setProperty('--q-secondary', theme.secondary)
+        }
+      } catch (error) {
+        console.error('Error al inicializar tema:', error)
+      }
     },
     /**
      * Get all products
@@ -300,13 +370,22 @@ export default {
     setInvoiceChannel (invoice) {
       const hasProducts = invoice.products && invoice.products.length > 0
       const hadProducts = this.products.length > 0
+      const hasPayments = invoice.payments && invoice.payments.length > 0
+      const currentTotal = invoice.totalBill || 0
+
+      // Guardar estado ANTES de cualquier verificación
+      // Solo guardar si hay datos válidos (productos, total y pagos)
+      if (hasProducts && currentTotal > 0 && hasPayments) {
+        this.previousTotal = currentTotal
+        this.previousPayments = [...invoice.payments]
+        this.previousCustomerName = invoice.client?.name || this.customerName
+      }
 
       // Detectar cuando se cierra una factura:
       // - Tenía productos antes
-      // - Ahora no tiene productos
-      // - Tenía un total mayor a 0
-      // - Tenía métodos de pago
-      if (hadProducts && !hasProducts && this.previousTotal > 0 && this.previousPayments.length > 0) {
+      // - Ahora no tiene productos (factura limpiada)
+      // - Tenemos datos guardados de la factura anterior
+      if (hadProducts && !hasProducts && this.previousTotal > 0) {
         // La factura se cerró exitosamente, mostrar modal con datos anteriores
         this.showSuccessAnimation()
       } else if (!hadProducts && hasProducts) {
@@ -316,16 +395,10 @@ export default {
         }
       }
 
-      // Guardar estado anterior antes de actualizar
-      if (hasProducts) {
-        this.previousTotal = invoice.totalBill || 0
-        this.previousPayments = invoice.payments || []
-      }
-
       // Actualizar datos actuales
       this.products = invoice.products || []
-      this.customerName = invoice.client?.name
-      this.total = invoice.totalBill || 0
+      this.customerName = invoice.client?.name || ''
+      this.total = currentTotal
       this.paymentMethods = invoice.payments || []
       this.setInvoice(invoice)
     },
@@ -371,16 +444,10 @@ export default {
      * @returns {void}
      */
     getInvoice () {
-      this.$echo.private('invoice-details').listen(`.NewInvoiceDetails_${this.userSession.id}`, async (event) => {
-        console.log(event)
+      this.$echo.private('invoice-details').listen(`.NewInvoiceDetails_${this.userSession.id}`, (event) => {
+        console.log('Invoice update:', event)
         this.setInvoiceChannel(event.invoice)
       })
-      // this.channel.onmessage = (event) => {
-      //   if (event.data.tipo === 'invoiceChanel') {
-      //     const invoice = JSON.parse(event.data.invoice)
-      //     this.setInvoiceChannel(invoice)
-      //   }
-      // }
     },
     ...mapActions(useCommandStore, ['setInvoice'])
   }
@@ -639,213 +706,157 @@ export default {
   object-fit: contain;
 }
 
-/* Success Modal */
-.success-modal {
-  min-width: 400px;
-  max-width: 500px;
-  border-radius: 12px;
+/* Success Modal - Modern Design */
+.success-modal-modern {
+  border-radius: 24px;
+  min-width: 360px;
+  max-width: 420px;
   overflow: hidden;
+  position: relative;
 }
 
-.success-content {
-  padding: 1.5rem;
-  text-align: center;
-}
-
-/* Success Animation */
-.success-animation {
-  margin-bottom: 1rem;
-}
-
-.success-checkmark {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: block;
-  stroke-width: 2;
-  stroke: #4caf50;
-  stroke-miterlimit: 10;
+/* Contenedor del icono con círculos animados */
+.success-icon-container {
+  position: relative;
+  display: inline-block;
   margin: 0 auto;
-  box-shadow: inset 0px 0px 0px #4caf50;
-  animation: fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;
-  position: relative;
 }
 
-.success-checkmark .check-icon {
-  width: 60px;
-  height: 60px;
-  position: relative;
-  border-radius: 50%;
-  box-sizing: content-box;
-  border: 3px solid #4caf50;
-}
-
-.success-checkmark .icon-line {
-  height: 5px;
-  background-color: #4caf50;
-  display: block;
-  border-radius: 2px;
+.success-circle-1,
+.success-circle-2,
+.success-circle-3 {
   position: absolute;
-  z-index: 10;
-}
-
-.success-checkmark .line-tip {
-  top: 34px;
-  left: 10px;
-  width: 18px;
-  transform: rotate(45deg);
-  animation: icon-line-tip 0.75s;
-}
-
-.success-checkmark .line-long {
-  top: 28px;
-  right: 6px;
-  width: 35px;
-  transform: rotate(-45deg);
-  animation: icon-line-long 0.75s;
-}
-
-.success-checkmark .icon-circle {
-  top: -3px;
-  left: -3px;
-  z-index: 10;
-  width: 60px;
-  height: 60px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
-  position: absolute;
-  box-sizing: content-box;
-  border: 3px solid rgba(76, 175, 80, 0.5);
+  border: 2px solid #21ba45;
+  opacity: 0;
 }
 
-.success-checkmark .icon-fix {
-  top: 6px;
-  width: 5px;
-  left: 19px;
+.success-circle-1 {
+  width: 100px;
+  height: 100px;
+  animation: ripple 1.5s ease-out;
+}
+
+.success-circle-2 {
+  width: 100px;
+  height: 100px;
+  animation: ripple 1.5s ease-out 0.2s;
+}
+
+.success-circle-3 {
+  width: 100px;
+  height: 100px;
+  animation: ripple 1.5s ease-out 0.4s;
+}
+
+@keyframes ripple {
+  0% {
+    width: 100px;
+    height: 100px;
+    opacity: 0.6;
+  }
+  100% {
+    width: 180px;
+    height: 180px;
+    opacity: 0;
+  }
+}
+
+/* Avatar con animación */
+.success-avatar {
+  background: linear-gradient(135deg, #21ba45 0%, #1a9e3a 100%) !important;
+  box-shadow: 0 8px 24px rgba(33, 186, 69, 0.4);
+  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  position: relative;
   z-index: 1;
-  height: 63px;
-  position: absolute;
-  transform: rotate(-45deg);
-  background-color: var(--q-dark);
 }
 
-@keyframes icon-line-tip {
+@keyframes bounceIn {
   0% {
-    width: 0;
-    left: 1px;
-    top: 19px;
-  }
-  54% {
-    width: 0;
-    left: 1px;
-    top: 19px;
-  }
-  70% {
-    width: 50px;
-    left: -8px;
-    top: 37px;
-  }
-  84% {
-    width: 17px;
-    left: 21px;
-    top: 48px;
-  }
-  100% {
-    width: 25px;
-    left: 14px;
-    top: 46px;
-  }
-}
-
-@keyframes icon-line-long {
-  0% {
-    width: 0;
-    right: 46px;
-    top: 54px;
-  }
-  65% {
-    width: 0;
-    right: 46px;
-    top: 54px;
-  }
-  84% {
-    width: 55px;
-    right: 0px;
-    top: 35px;
-  }
-  100% {
-    width: 47px;
-    right: 8px;
-    top: 38px;
-  }
-}
-
-@keyframes fill {
-  100% {
-    box-shadow: inset 0px 0px 0px 30px #4caf50;
-  }
-}
-
-@keyframes scale {
-  0%, 100% {
-    transform: none;
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
   }
   50% {
-    transform: scale3d(1.1, 1.1, 1);
+    transform: scale(1.1) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
   }
 }
 
-/* Success Message */
-.success-message {
-  margin-bottom: 1rem;
+/* Icono check con animación de dibujo */
+.success-check-icon {
+  animation: checkDraw 0.5s ease-out 0.3s both;
 }
 
+@keyframes checkDraw {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Título con animación */
 .success-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 0.35rem 0;
+  animation: slideUp 0.5s ease-out 0.4s both;
 }
 
 .success-subtitle {
-  font-size: 0.875rem;
-  opacity: 0.7;
-  margin: 0;
+  animation: slideUp 0.5s ease-out 0.5s both;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Modal Invoice Summary */
 .modal-invoice-summary {
   background: rgba(var(--q-primary-rgb), 0.08);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1rem;
-  margin-bottom: 1rem;
+  animation: slideUp 0.5s ease-out 0.6s both;
 }
 
 .modal-customer {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-  opacity: 0.8;
+  gap: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .modal-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  background: rgba(var(--q-primary-rgb), 0.12);
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
+  padding: 0.75rem 0;
 }
 
 .modal-total-label {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
 .modal-total-amount {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--q-primary);
 }
@@ -853,16 +864,27 @@ export default {
 .modal-payments {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
 }
 
 .modal-payment-item {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: rgba(var(--q-primary-rgb), 0.08);
-  border-radius: 4px;
-  font-size: 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.payment-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.payment-amount {
+  font-weight: 700;
+  color: var(--q-primary);
 }
 
 /* Modal Countdown */
@@ -870,13 +892,81 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 0.5rem;
+  animation: slideUp 0.5s ease-out 0.7s both;
 }
 
 .countdown-text {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--q-primary);
+}
+
+/* Botón cerrar */
+.action-btn-close {
+  border-radius: 12px !important;
+  transition: all 0.3s ease;
+  animation: slideUp 0.5s ease-out 0.8s both;
+  border-width: 2px !important;
+}
+
+.action-btn-close:hover {
+  transform: translateY(-2px);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.body--dark .action-btn-close:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Confetti decorativo */
+.confetti-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  top: -10px;
+  border-radius: 50%;
+  animation: confettiFall 3s ease-out forwards;
+  opacity: 0;
+}
+
+.confetti:nth-child(2n) {
+  background: linear-gradient(135deg, #21ba45 0%, #1a9e3a 100%);
+  animation-delay: 0.1s;
+}
+
+.confetti:nth-child(3n) {
+  background: linear-gradient(135deg, #f2c94c 0%, #f2994a 100%);
+  animation-delay: 0.2s;
+}
+
+.confetti:nth-child(4n) {
+  width: 6px;
+  height: 6px;
+  animation-delay: 0.15s;
+}
+
+@keyframes confettiFall {
+  0% {
+    top: -10px;
+    opacity: 1;
+    transform: translateX(0) rotate(0deg);
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+    transform: translateX(calc(var(--random-x, 0) * 50px)) rotate(360deg);
+  }
 }
 
 /* Custom Scrollbar */
