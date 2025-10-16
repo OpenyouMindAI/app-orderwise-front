@@ -253,9 +253,9 @@
                 <q-tooltip>Ver detalles</q-tooltip>
               </q-btn>
 
-              <!-- Verificar (si está en proceso) -->
+              <!-- Verificar (si está en proceso y es sucursal destino) -->
               <q-btn
-                v-if="props.row.status === 'in_process'"
+                v-if="props.row.status === 'in_process' && canVerifyTransferRow(props.row)"
                 flat
                 round
                 dense
@@ -297,9 +297,9 @@
 
                     <q-separator v-if="isSuperAdmin && !isTransferDelivered(props.row)" />
 
-                    <!-- Editar (solo admin y no entregada) -->
+                    <!-- Editar (solo sucursal origen o admin, y no entregada) -->
                     <q-item
-                      v-if="isSuperAdmin && !isTransferDelivered(props.row)"
+                      v-if="canEditTransferRow(props.row) && !isTransferDelivered(props.row)"
                       clickable
                       @click="editTransfer(props.row)"
                     >
@@ -377,6 +377,17 @@
 
             <!-- Vista de edición (transferencia no verificada) -->
             <div v-else>
+              <!-- Banner de advertencia si no puede editar -->
+              <q-banner v-if="editMode && !canEditTransfer" rounded class="bg-warning text-white q-mb-md">
+                <template v-slot:avatar>
+                  <q-icon name="lock" size="md" />
+                </template>
+                <div class="text-weight-bold">Solo lectura</div>
+                <div class="text-caption">
+                  Solo la sucursal origen puede editar esta transferencia.
+                </div>
+              </q-banner>
+
               <!-- Móvil: Layout compacto -->
               <div v-if="$q.platform.is.mobile" class="column q-gutter-sm">
                 <q-select
@@ -388,6 +399,7 @@
                   option-label="name"
                   option-value="id"
                   :rules="[val => !!val || 'Requerido']"
+                  :disable="editMode && !canEditTransfer"
                   @filter="getBranchOffice"
                 >
                   <template v-slot:prepend>
@@ -406,6 +418,7 @@
                     val => !!val || 'Requerido',
                     val => val.id !== currentTransfer?.origin_branch_office?.id || 'Debe ser diferente'
                   ]"
+                  :disable="editMode && !canEditTransfer"
                   @filter="getBranchOffice"
                 >
                   <template v-slot:prepend>
@@ -419,6 +432,7 @@
                   outlined
                   dense
                   rows="2"
+                  :disable="editMode && !canEditTransfer"
                 />
               </div>
 
@@ -433,6 +447,7 @@
                     option-label="name"
                     option-value="id"
                     :rules="[val => !!val || 'Este campo es obligatorio']"
+                    :disable="editMode && !canEditTransfer"
                     @filter="getBranchOffice"
                   />
                 </div>
@@ -448,6 +463,7 @@
                       val => !!val || 'Este campo es obligatorio',
                       val => val.id !== currentTransfer?.origin_branch_office?.id || 'La sucursal de destino debe ser diferente a la de origen'
                     ]"
+                    :disable="editMode && !canEditTransfer"
                     @filter="getBranchOffice"
                   />
                 </div>
@@ -458,6 +474,7 @@
                     type="textarea"
                     outlined
                     autogrow
+                    :disable="editMode && !canEditTransfer"
                   />
                 </div>
               </div>
@@ -910,6 +927,7 @@
                 unelevated
                 dense
                 class="full-width"
+                :disable="editMode && !canEditTransfer"
               />
               <q-card flat bordered class="bg-grey-2">
                 <q-card-section class="q-pa-sm">
@@ -930,6 +948,7 @@
                 label="Agregar producto"
                 @click="addProduct"
                 outline
+                :disable="editMode && !canEditTransfer"
               />
 
               <div class="text-subtitle1">
@@ -950,7 +969,7 @@
               label="Confirmar envío"
               color="primary"
               type="submit"
-              :disable="currentTransfer.products.length === 0"
+              :disable="currentTransfer.products.length === 0 || (editMode && !canEditTransfer)"
             />
           </q-card-actions>
           <q-card-section v-else>
@@ -1130,12 +1149,22 @@
       </div>
 
       <div class="verification-footer">
+        <!-- Banner si no puede verificar -->
+        <q-banner v-if="!canVerifyTransfer" rounded class="bg-warning text-white q-mb-sm">
+          <template v-slot:avatar>
+            <q-icon name="lock" size="sm" />
+          </template>
+          <div class="text-caption">
+            Solo la sucursal destino puede confirmar la recepción.
+          </div>
+        </q-banner>
+
         <q-btn
           label="Confirmar Recepción"
           color="primary"
           icon-right="check_circle"
           @click="confirmVerification"
-          :disable="!canConfirmVerification"
+          :disable="!canConfirmVerification || !canVerifyTransfer"
           class="full-width"
           unelevated
           size="lg"
@@ -1179,9 +1208,9 @@
               </q-item-section>
             </q-item>
 
-            <!-- Verificar (solo si está en proceso) -->
+            <!-- Verificar (solo si está en proceso y es sucursal destino) -->
             <q-item
-              v-if="currentTransfer.status === 'in_process'"
+              v-if="currentTransfer.status === 'in_process' && canVerifyTransfer"
               clickable
               v-ripple
               @click="openVerificationView(currentTransfer)"
@@ -1246,8 +1275,8 @@
               </q-item-section>
             </q-item>
 
-            <!-- Opciones de Admin -->
-            <template v-if="isSuperAdmin && !isTransferDelivered(currentTransfer)">
+            <!-- Opciones de Admin y Sucursal Origen -->
+            <template v-if="canEditTransfer && !isTransferDelivered(currentTransfer)">
               <q-separator class="q-my-md" />
 
               <!-- Editar -->
@@ -1654,7 +1683,7 @@
             <q-item-section>Compartir PDF</q-item-section>
           </q-item>
 
-          <q-item v-if="isSuperAdmin && selectedRow && !isTransferDelivered(selectedRow)" clickable v-close-popup @click="editTransfer(selectedRow)">
+          <q-item v-if="selectedRow && canEditTransferRow(selectedRow) && !isTransferDelivered(selectedRow)" clickable v-close-popup @click="editTransfer(selectedRow)">
             <q-item-section avatar>
               <q-icon name="edit" color="amber" />
             </q-item-section>
@@ -1953,6 +1982,41 @@ export default {
         p.received_quantity !== undefined &&
         p.received_quantity !== p.quantity
       ).length
+    },
+    /**
+     * Check if current user can edit the transfer (origin branch only)
+     * @returns {Boolean}
+     */
+    canEditTransfer () {
+      const store = authentication()
+      const user = store.userSession
+      
+      // Super admin y root pueden editar siempre
+      if (user?.is_superadmin || user?.is_root) {
+        return true
+      }
+      
+      // Solo la sucursal origen puede editar
+      if (!this.currentTransfer?.origin_branch_office_id) {
+        return false
+      }
+      
+      return user?.branch_office_id === this.currentTransfer.origin_branch_office_id
+    },
+    /**
+     * Check if current user can verify the transfer (destination branch only)
+     * @returns {Boolean}
+     */
+    canVerifyTransfer () {
+      const store = authentication()
+      const user = store.userSession
+      
+      // Solo la sucursal destino puede verificar
+      if (!this.currentTransfer?.destination_branch_office_id) {
+        return false
+      }
+      
+      return user?.branch_office_id === this.currentTransfer.destination_branch_office_id
     }
   },
 
@@ -2688,6 +2752,43 @@ export default {
      */
     isTransferDelivered (transfer) {
       return transfer.status === 'delivered' || transfer.verified_at !== null
+    },
+    /**
+     * Check if current user can edit a transfer row (origin branch only)
+     * @param {Object} transfer transfer data
+     * @returns {Boolean}
+     */
+    canEditTransferRow (transfer) {
+      const store = authentication()
+      const user = store.userSession
+
+      // Super admin y root pueden editar siempre
+      if (user?.is_superadmin || user?.is_root) {
+        return true
+      }
+
+      // Solo la sucursal origen puede editar
+      if (!transfer?.origin_branch_office_id) {
+        return false
+      }
+
+      return user?.branch_office_id === transfer.origin_branch_office_id
+    },
+    /**
+     * Check if current user can verify a transfer row (destination branch only)
+     * @param {Object} transfer transfer data
+     * @returns {Boolean}
+     */
+    canVerifyTransferRow (transfer) {
+      const store = authentication()
+      const user = store.userSession
+
+      // Solo la sucursal destino puede verificar
+      if (!transfer?.destination_branch_office_id) {
+        return false
+      }
+
+      return user?.branch_office_id === transfer.destination_branch_office_id
     },
     /**
      * Handle touch start for long press (mobile)
