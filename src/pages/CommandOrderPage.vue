@@ -892,9 +892,10 @@ watch(deliveryPerson, async (data) => {
 
 watch(validate, async (data) => {
   if (!data) {
-    if (role.value.seller) {
-      seller.value = userSession
-    }
+    // Removido el filtro automático por vendedor - los vendedores ven todas las comandas
+    // if (role.value.seller) {
+    //   seller.value = userSession
+    // }
     if (role.value.deliveryPerson) {
       deliveryPerson.value = userSession
     }
