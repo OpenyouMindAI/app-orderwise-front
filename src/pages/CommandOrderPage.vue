@@ -520,7 +520,6 @@
             v-model="seller"
             :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
             :options="sellers"
-            :readonly="!validate"
             v-if="!role.deliveryPerson"
             @filter="filterSellers"
           />
