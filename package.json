@@ -23,7 +23,7 @@
     "@capacitor/local-notifications": "^7.0.1",
     "@capacitor/share": "^7.0.2",
     "@capacitor/status-bar": "^7.0.1",
-    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
+    "@codetrix-studio/capacitor-google-auth": "^4.0.0",
     "@googlemaps/js-api-loader": "^1.16.10",
     "@quasar/extras": "^1.0.0",
     "axios": "^1.9.0",
