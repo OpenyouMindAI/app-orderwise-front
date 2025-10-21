@@ -1876,11 +1876,11 @@ export default {
       this.clear()
     },
     /**
-     * Set purchase model
-     * @returns {Object}
+     * Set purchase model with multimedia files
+     * @returns {FormData|Object}
      */
     setModelInvoice () {
-      return {
+      const purchaseData = {
         ...this.purchase,
         purchase_code: this.purchaseCode,
         provider_id: this.provider?.id,
@@ -1896,6 +1896,58 @@ export default {
         status: this.purchase?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0)
       }
+
+      // Si hay archivos multimedia, usar FormData
+      if (this.purchaseFiles.length > 0) {
+        return this.createPurchaseFormData(purchaseData)
+      }
+
+      // Si no hay archivos, retornar objeto JSON normal
+      return purchaseData
+    },
+
+    /**
+     * Create FormData with purchase data and multimedia files
+     * @param {Object} purchaseData
+     * @returns {FormData}
+     */
+    createPurchaseFormData (purchaseData) {
+      const formData = new FormData()
+
+      // Agregar método PUT/PATCH si es edición
+      if (this.$route.query.id) {
+        formData.append('_method', 'put')
+      }
+
+      // Agregar todos los campos de la compra
+      for (const key in purchaseData) {
+        if (Object.hasOwnProperty.call(purchaseData, key)) {
+          const value = purchaseData[key]
+
+          if (Array.isArray(value)) {
+            // Manejar arrays (products, payments)
+            formData.append(key, JSON.stringify(value))
+          } else if (value !== null && value !== undefined) {
+            formData.append(key, value)
+          }
+        }
+      }
+
+      // Agregar archivos multimedia nuevos
+      let fileIndex = 0
+      this.purchaseFiles.forEach((fileObj) => {
+        if (fileObj.isNew && fileObj.file) {
+          formData.append(`files[${fileIndex}]`, fileObj.file)
+          fileIndex++
+        }
+      })
+
+      // Agregar archivos eliminados para su procesamiento
+      if (this.deletedPurchaseFiles.length > 0) {
+        formData.append('deleted_files', JSON.stringify(this.deletedPurchaseFiles))
+      }
+
+      return formData
     },
     /**
      * Set params bill
@@ -1924,7 +1976,7 @@ export default {
     },
 
     /**
-     * Save bill and payments
+     * Save bill and payments with multimedia files
      */
     async saveBill () {
       try {
@@ -1932,18 +1984,21 @@ export default {
         const params = this.setParamsBill()
         if (!params) return
 
-        let savedPurchase
+        // Configurar headers apropiados si es FormData
+        const config = {}
+        if (params instanceof FormData) {
+          config.headers = {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+
         if (this.$route.query.id) {
-          savedPurchase = await this.$api.put(`purchases/${this.$route.query.id}`, params)
+          await this.$api.put(`purchases/${this.$route.query.id}`, params, config)
         } else {
-          savedPurchase = await this.$api.post('purchases', params)
+          await this.$api.post('purchases', params, config)
         }
 
-        // Send attachments if there are any
-        if (this.purchaseFiles.length > 0) {
-          await this.sendPurchaseAttachments(savedPurchase.data.id)
-        }
-
+        // Limpiar estado (incluye archivos)
         this.clear()
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
         this.setPagination({
@@ -2370,6 +2425,7 @@ export default {
     /**
      * Send purchase attachments
      * @param {Number} purchaseId
+     * @deprecated Este método ya no se usa. Los archivos se envían junto con los datos de la compra en el mismo endpoint
      */
     async sendPurchaseAttachments (purchaseId) {
       try {
