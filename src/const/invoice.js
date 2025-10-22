@@ -18,5 +18,9 @@ export const status = {
   delivered: {
     label: 'Entregado',
     color: 'info'
-  }
+  },
+  paid: {
+    label: 'Pagada',
+    color: 'blue-10'
+  } 
 }
