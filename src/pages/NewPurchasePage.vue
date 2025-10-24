@@ -236,6 +236,80 @@
               />
               <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+
+              <!-- Sección de archivos adjuntos -->
+              <q-card flat bordered class="q-mt-md">
+                <q-card-section class="q-pb-sm">
+                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                    <q-icon name="attachment" class="q-mr-sm" />
+                    Archivos Adjuntos
+                  </div>
+
+                  <!-- Dropzone simple - solo cuando no hay archivos -->
+                  <div
+                    v-if="purchaseFiles.length === 0"
+                    class="upload-zone"
+                    :class="{
+                      'upload-zone-active': isDragOverPurchase,
+                      'q-dark': $q.dark.isActive
+                    }"
+                    @dragover.prevent="isDragOverPurchase = true"
+                    @dragleave.prevent="isDragOverPurchase = false"
+                    @drop.prevent="handlePurchaseFileDrop"
+                    @click="openFileDialog"
+                  >
+                    <div class="upload-content">
+                      <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
+                      <div class="upload-text">
+                        Arrastra archivos aquí
+                      </div>
+                      <q-btn
+                        color="primary"
+                        label="SELECCIONAR"
+                        unelevated
+                        size="xs"
+                        class="q-mt-xs upload-btn"
+                        @click.stop="openFileDialog"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Input oculto para seleccionar archivos - SIEMPRE disponible -->
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,application/pdf"
+                    style="display: none"
+                    @change="handleFileSelect"
+                  />
+
+                  <!-- Botón pequeño para agregar más - solo cuando ya hay archivos -->
+                  <div v-if="purchaseFiles.length > 0" class="add-more-files">
+                    <q-btn
+                      round
+                      color="primary"
+                      icon="add"
+                      size="sm"
+                      class="add-files-btn"
+                      @click="openFileDialog"
+                    >
+                      <q-tooltip>Agregar más archivos</q-tooltip>
+                    </q-btn>
+                  </div>
+
+                  <!-- Vista de archivos adjuntos -->
+                  <div v-if="purchaseFiles.length > 0" class="q-mt-md">
+                    <div class="text-body2 text-primary q-mb-sm">
+                      Archivos adjuntos ({{ purchaseFiles.length }})
+                    </div>
+                    <file-component
+                      :files="purchaseFiles"
+                      @delete:files="handleDeletePurchaseFiles"
+                    />
+                  </div>
+                </q-card-section>
+              </q-card>
               <!-- <div class="flex q-mt-sm" v-if="purchase" style="gap: 15px;">
                 <q-btn
                   color="primary"
@@ -370,7 +444,7 @@
                           @keyup.enter="getOneProduct(product.barcode)"
                         >
                           <template v-slot:append v-if="$q.platform.is.nativeMobile">
-                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" />
                           </template>
                         </q-input>
                       </div>
@@ -552,7 +626,7 @@
                       <q-btn
                         color="primary"
                         label="Seleccionar Imágenes"
-                        @click="$refs.fileInput.click()"
+                        @click="openFileDialog"
                         unelevated
                       />
                       <input
@@ -900,20 +974,20 @@ import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
+import FileComponent from 'src/components/FileComponent.vue'
 export default {
-  name: 'BillingPage',
+  name: 'NewPurchasePage',
   components: {
     // StreamBarcodeReader,
-    WaitByPaymentMp
+    WaitByPaymentMp,
+    FileComponent
   },
   data () {
     return {
       waitingPayment: false,
       purchaseCode: null,
       loadingBilling: false,
-      paymentMethodCashFlow: null,
       loadingSearch: false,
-      documentTypes: [],
       /**
        * Invoice printer
        * @type {Boolean}
@@ -990,14 +1064,6 @@ export default {
        */
       purchase: null,
       /**
-       * Status table
-       * @type {Object}
-       */
-      statusTable: {
-        unoccupied: 'Libre',
-        busy: 'Ocupada'
-      },
-      /**
        * Category products filter
        * @type {Object}
        */
@@ -1063,25 +1129,10 @@ export default {
        */
       provider: null,
       /**
-       * Exchange
-       * @type {Boolean}
-       */
-      exchange: false,
-      /**
        * Exchange rate
        * @type {Number}
        */
-      exchangeRate: 0,
-      /**
-       * Scan dialog
-       * @type {Boolean}
-       */
-      modelScan: false,
-      /**
-       * Tables
-       * @type {Array}
-       */
-      tables: [],
+      exchangeRate: 1,
       /**
        * Pagination option
        * @type {Object}
@@ -1111,10 +1162,25 @@ export default {
 
       withServiceType: [4],
       /**
-       * Dialog scanner
+       * Scan dialog
        * @type {Boolean}
        */
-      dialogScanner: false,
+      modelScan: false,
+      /**
+       * Purchase files (attachments)
+       * @type {Array}
+       */
+      purchaseFiles: [],
+      /**
+       * Drag over state for purchase files
+       * @type {Boolean}
+       */
+      isDragOverPurchase: false,
+      /**
+       * Deleted purchase files
+       * @type {Array}
+       */
+      deletedPurchaseFiles: [],
       /**
        * Without print
        * @type {Boolean}
@@ -1125,11 +1191,6 @@ export default {
        */
       aliquotTypes: [],
       categoryAdd: null,
-      /**
-       * Loading living room
-       * @type {Boolean}
-       */
-      loadingLivingRoom: false,
       /**
        * Products list
        * @type {Array}
@@ -1182,6 +1243,7 @@ export default {
        */
       openAddProduct: false,
       addonsProducts: [],
+      addonsProductsOptions: [],
       /**
        * Loading products
        * @type {Boolean}
@@ -1432,19 +1494,6 @@ export default {
       this.$refs.saveBill.submit()
     },
     /**
-     * Save without print
-     */
-    savePrintInvoice () {
-      this.invoicePrinter = true
-      this.$refs.saveBill.submit()
-    },
-    /**
-     * Submit bill
-     */
-    submitBill () {
-      this.$refs.saveBill.submit()
-    },
-    /**
      * Payment success
      * @param {Object} data data payments
      */
@@ -1468,10 +1517,6 @@ export default {
           user_created_id: this.userSession.id
         })
       }
-    },
-    handleFileSelect (event) {
-      const files = Array.from(event.target.files)
-      this.processFiles(files)
     },
     processFiles (files) {
       files.forEach(file => {
@@ -1739,6 +1784,8 @@ export default {
         })
         this.invoiceDescription = purchase.description
         this.deliveryDate = purchase.delivery_date
+        // Load existing attachments
+        this.loadExistingAttachments(purchase.attachments || [])
         this.calculateTotal()
         this.search = ''
       } else {
@@ -1756,6 +1803,8 @@ export default {
       this.dialogPayment = false
       this.withoutPrint = false
       this.invoicePrinter = false
+      // Clear purchase files
+      this.clearPurchaseFiles()
       this.calculateTotal()
       this.$router.push({ name: 'NewPurchase' })
       setTimeout(() => {
@@ -1784,11 +1833,11 @@ export default {
       this.clear()
     },
     /**
-     * Set purchase model
-     * @returns {Object}
+     * Set purchase model with FormData
+     * @returns {FormData}
      */
     setModelInvoice () {
-      return {
+      const purchaseData = {
         ...this.purchase,
         purchase_code: this.purchaseCode,
         provider_id: this.provider?.id,
@@ -1804,6 +1853,53 @@ export default {
         status: this.purchase?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0)
       }
+
+      // Siempre usar FormData para consistencia
+      return this.createPurchaseFormData(purchaseData)
+    },
+
+    /**
+     * Create FormData with purchase data and multimedia files
+     * @param {Object} purchaseData
+     * @returns {FormData}
+     */
+    createPurchaseFormData (purchaseData) {
+      const formData = new FormData()
+
+      // Agregar método PUT/PATCH si es edición
+      if (this.$route.query.id) {
+        formData.append('_method', 'put')
+      }
+
+      // Agregar todos los campos de la compra
+      for (const key in purchaseData) {
+        if (Object.hasOwnProperty.call(purchaseData, key)) {
+          const value = purchaseData[key]
+
+          if (Array.isArray(value)) {
+            // Manejar arrays (products, payments)
+            formData.append(key, JSON.stringify(value))
+          } else if (value !== null && value !== undefined) {
+            formData.append(key, value)
+          }
+        }
+      }
+
+      // Agregar archivos multimedia nuevos
+      let fileIndex = 0
+      this.purchaseFiles.forEach((fileObj) => {
+        if (fileObj.isNew && fileObj.file) {
+          formData.append(`files[${fileIndex}]`, fileObj.file)
+          fileIndex++
+        }
+      })
+
+      // Agregar archivos eliminados para su procesamiento
+      if (this.deletedPurchaseFiles.length > 0) {
+        formData.append('deleted_files', JSON.stringify(this.deletedPurchaseFiles))
+      }
+
+      return formData
     },
     /**
      * Set params bill
@@ -1832,7 +1928,7 @@ export default {
     },
 
     /**
-     * Save bill and payments
+     * Save bill and payments with FormData
      */
     async saveBill () {
       try {
@@ -1840,11 +1936,20 @@ export default {
         const params = this.setParamsBill()
         if (!params) return
 
-        if (this.$route.query.id) {
-          await this.$api.put(`purchases/${this.$route.query.id}`, params)
-        } else {
-          await this.$api.post('purchases', params)
+        // Configurar headers para FormData
+        const config = {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
         }
+
+        if (this.$route.query.id) {
+          await this.$api.put(`purchases/${this.$route.query.id}`, params, config)
+        } else {
+          await this.$api.post('purchases', params, config)
+        }
+
+        // Limpiar estado (incluye archivos)
         this.clear()
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
         this.setPagination({
@@ -1986,22 +2091,6 @@ export default {
         notify(err.message, 'negative', 'warning')
       }
     },
-    deleteImageadd (image, index) {
-      if (image.tempId || image.id) {
-        if (image.id) {
-          this.$api.delete(`product-images/${image.id}`)
-            .then(() => {
-              this.product.images.splice(index, 1)
-            })
-            .catch(err => {
-              notify('Error al eliminar la imagen', 'negative')
-              console.error(err)
-            })
-        } else {
-          this.product.images.splice(index, 1)
-        }
-      }
-    },
     async getUnitOfMeasures () {
       try {
         const { data } = await this.$api.get('unit-of-measures')
@@ -2018,7 +2107,6 @@ export default {
     saveProduct () {
       this.visible = true
       const payload = this.modelData(this.product)
-      console.log(payload)
       this.$api.post('products', payload)
         .then(({ data }) => {
           this.openAddProduct = false
@@ -2083,12 +2171,6 @@ export default {
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
         this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
       }
-    },
-    addPriceLis () {
-      this.priceLists.push({
-        name: `Lista ${this.priceLists.length + 1}`,
-        price: null
-      })
     },
     modelData (data, put = false) {
       const formData = new FormData()
@@ -2168,7 +2250,271 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Open file dialog safely
+     */
+    openFileDialog () {
+      const input = this.$refs.fileInput
+      if (input) {
+        input.click()
+      } else {
+        console.error('File input ref not found')
+      }
+    },
+    /**
+     * Handle file select
+     * @param {Event} event
+     */
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      this.processPurchaseFiles(files)
+      event.target.value = '' // Reset input
+    },
+    /**
+     * Handle purchase file drop
+     * @param {Event} event
+     */
+    handlePurchaseFileDrop (event) {
+      this.isDragOverPurchase = false
+      const files = Array.from(event.dataTransfer.files)
+      this.processPurchaseFiles(files)
+    },
+    /**
+     * Process purchase files (images and PDFs)
+     * @param {Array} files
+     */
+    processPurchaseFiles (files) {
+      files.forEach(file => {
+        // Validate file type
+        const isValidImage = file.type.startsWith('image/')
+        const isValidPDF = file.type === 'application/pdf'
+
+        if (!isValidImage && !isValidPDF) {
+          this.$q.notify({
+            message: this.$t('newPurchasePage.invalidFileType'),
+            icon: 'warning',
+            color: 'negative'
+          })
+          return
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          this.$q.notify({
+            message: this.$t('newPurchasePage.fileTooLarge'),
+            icon: 'warning',
+            color: 'negative'
+          })
+          return
+        }
+
+        // Create file object
+        const fileObj = {
+          id: Date.now() + Math.random(), // Temporary ID
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: URL.createObjectURL(file),
+          file, // Store original file for upload
+          isNew: true
+        }
+
+        this.purchaseFiles.push(fileObj)
+      })
+    },
+    /**
+     * Handle delete purchase files
+     * @param {Array} deletedIds
+     */
+    handleDeletePurchaseFiles (deletedIds) {
+      if (deletedIds.length > 0) {
+        this.deletedPurchaseFiles.push(...deletedIds)
+      }
+    },
+    /**
+     * Load existing attachments
+     * @param {Array} attachments
+     */
+    loadExistingAttachments (attachments) {
+      this.purchaseFiles = attachments.map(attachment => ({
+        id: attachment.id,
+        name: attachment.name || attachment.original_name,
+        type: attachment.mime_type || attachment.type,
+        size: attachment.size,
+        url: attachment.url || attachment.path,
+        isNew: false // Mark as existing file
+      }))
+    },
+    /**
+     * Clear purchase files
+     */
+    clearPurchaseFiles () {
+      // Revoke URLs to prevent memory leaks
+      this.purchaseFiles.forEach(file => {
+        if (file.url && file.isNew) {
+          URL.revokeObjectURL(file.url)
+        }
+      })
+      this.purchaseFiles = []
+      this.deletedPurchaseFiles = []
+    },
+    /**
+     * Filter products for addons
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterProductsAddons (value, update) {
+      this.$api.get('products', {
+        params: {
+          dataSearch: {
+            name: value,
+            barcode: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.addonsProductsOptions = data
+          })
+        })
+        .catch(err => {
+          console.error('Error filtering addon products:', err)
+        })
     }
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.upload-zone {
+  background: rgba(25, 118, 210, 0.08);
+  border: 2px dashed var(--q-primary);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+
+  /* Tema claro */
+  .body--light & {
+    background: rgba(25, 118, 210, 0.08);
+    border-color: var(--q-primary);
+
+    .upload-text {
+      color: var(--q-dark);
+    }
+  }
+
+  /* Tema oscuro */
+  .body--dark & {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--q-primary);
+
+    .upload-text {
+      color: var(--q-text-color, white);
+    }
+  }
+
+  &:hover {
+    opacity: 1;
+    background: rgba(25, 118, 210, 0.12);
+    border-color: var(--q-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .body--dark &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &.upload-zone-active {
+    opacity: 1;
+    background: var(--q-primary-light, #4fc3f7);
+    border-color: var(--q-primary);
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .upload-content {
+    .upload-text {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--q-text-color);
+      transition: color 0.3s ease;
+    }
+
+    .upload-btn {
+      background: var(--q-primary);
+      color: white;
+      font-weight: 600;
+      padding: 6px 16px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      font-size: 11px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+      &:hover {
+        background: var(--q-primary-dark, #1565c0);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+}
+
+.add-more-files {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+
+  .add-files-btn {
+    background: var(--q-primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: var(--q-primary-dark, #1565c0);
+      transform: scale(1.05) translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    &:active {
+      transform: scale(1.02) translateY(0);
+    }
+  }
+}
+
+/* Responsive para dispositivos móviles */
+@media (max-width: 768px) {
+  .upload-zone {
+    min-height: 80px;
+    padding: 12px;
+
+    .upload-content {
+      .upload-text {
+        font-size: 12px;
+      }
+
+      .upload-btn {
+        padding: 4px 12px;
+        font-size: 10px;
+      }
+    }
+  }
+}
+</style>
