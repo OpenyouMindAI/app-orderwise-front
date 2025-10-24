@@ -242,21 +242,24 @@
                 <q-card-section class="q-pb-sm">
                   <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
                     <q-icon name="attachment" class="q-mr-sm" />
-                    File Attachments
+                    Archivos Adjuntos
                   </div>
 
                   <!-- Dropzone simple - solo cuando no hay archivos -->
                   <div
                     v-if="purchaseFiles.length === 0"
                     class="upload-zone"
-                    :class="{ 'upload-zone-active': isDragOverPurchase }"
+                    :class="{
+                      'upload-zone-active': isDragOverPurchase,
+                      'q-dark': $q.dark.isActive
+                    }"
                     @dragover.prevent="isDragOverPurchase = true"
                     @dragleave.prevent="isDragOverPurchase = false"
                     @drop.prevent="handlePurchaseFileDrop"
                     @click="openFileDialog"
                   >
                     <div class="upload-content">
-                      <q-icon name="cloud_upload" size="24px" color="white" class="q-mb-xs" />
+                      <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
                       <div class="upload-text">
                         Arrastra archivos aquí
                       </div>
@@ -441,7 +444,7 @@
                           @keyup.enter="getOneProduct(product.barcode)"
                         >
                           <template v-slot:append v-if="$q.platform.is.nativeMobile">
-                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" />
                           </template>
                         </q-input>
                       </div>
@@ -632,7 +635,7 @@
                         multiple
                         accept="image/*"
                         style="display: none"
-                        @change="handleProductFileSelect"
+                        @change="handleFileSelect"
                       />
                     </q-card-section>
                   </q-card>
@@ -973,7 +976,7 @@ import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import FileComponent from 'src/components/FileComponent.vue'
 export default {
-  name: 'BillingPage',
+  name: 'NewPurchasePage',
   components: {
     // StreamBarcodeReader,
     WaitByPaymentMp,
@@ -984,9 +987,7 @@ export default {
       waitingPayment: false,
       purchaseCode: null,
       loadingBilling: false,
-      paymentMethodCashFlow: null,
       loadingSearch: false,
-      documentTypes: [],
       /**
        * Invoice printer
        * @type {Boolean}
@@ -1063,14 +1064,6 @@ export default {
        */
       purchase: null,
       /**
-       * Status table
-       * @type {Object}
-       */
-      statusTable: {
-        unoccupied: 'Libre',
-        busy: 'Ocupada'
-      },
-      /**
        * Category products filter
        * @type {Object}
        */
@@ -1136,25 +1129,10 @@ export default {
        */
       provider: null,
       /**
-       * Exchange
-       * @type {Boolean}
-       */
-      exchange: false,
-      /**
        * Exchange rate
        * @type {Number}
        */
-      exchangeRate: 0,
-      /**
-       * Scan dialog
-       * @type {Boolean}
-       */
-      modelScan: false,
-      /**
-       * Tables
-       * @type {Array}
-       */
-      tables: [],
+      exchangeRate: 1,
       /**
        * Pagination option
        * @type {Object}
@@ -1184,10 +1162,10 @@ export default {
 
       withServiceType: [4],
       /**
-       * Dialog scanner
+       * Scan dialog
        * @type {Boolean}
        */
-      dialogScanner: false,
+      modelScan: false,
       /**
        * Purchase files (attachments)
        * @type {Array}
@@ -1213,11 +1191,6 @@ export default {
        */
       aliquotTypes: [],
       categoryAdd: null,
-      /**
-       * Loading living room
-       * @type {Boolean}
-       */
-      loadingLivingRoom: false,
       /**
        * Products list
        * @type {Array}
@@ -1270,6 +1243,7 @@ export default {
        */
       openAddProduct: false,
       addonsProducts: [],
+      addonsProductsOptions: [],
       /**
        * Loading products
        * @type {Boolean}
@@ -1520,19 +1494,6 @@ export default {
       this.$refs.saveBill.submit()
     },
     /**
-     * Save without print
-     */
-    savePrintInvoice () {
-      this.invoicePrinter = true
-      this.$refs.saveBill.submit()
-    },
-    /**
-     * Submit bill
-     */
-    submitBill () {
-      this.$refs.saveBill.submit()
-    },
-    /**
      * Payment success
      * @param {Object} data data payments
      */
@@ -1556,10 +1517,6 @@ export default {
           user_created_id: this.userSession.id
         })
       }
-    },
-    handleProductFileSelect (event) {
-      const files = Array.from(event.target.files)
-      this.processFiles(files)
     },
     processFiles (files) {
       files.forEach(file => {
@@ -1876,8 +1833,8 @@ export default {
       this.clear()
     },
     /**
-     * Set purchase model with multimedia files
-     * @returns {FormData|Object}
+     * Set purchase model with FormData
+     * @returns {FormData}
      */
     setModelInvoice () {
       const purchaseData = {
@@ -1897,13 +1854,8 @@ export default {
         payments: this.payments.filter(payment => payment.amount > 0)
       }
 
-      // Si hay archivos multimedia, usar FormData
-      if (this.purchaseFiles.length > 0) {
-        return this.createPurchaseFormData(purchaseData)
-      }
-
-      // Si no hay archivos, retornar objeto JSON normal
-      return purchaseData
+      // Siempre usar FormData para consistencia
+      return this.createPurchaseFormData(purchaseData)
     },
 
     /**
@@ -1976,7 +1928,7 @@ export default {
     },
 
     /**
-     * Save bill and payments with multimedia files
+     * Save bill and payments with FormData
      */
     async saveBill () {
       try {
@@ -1984,10 +1936,9 @@ export default {
         const params = this.setParamsBill()
         if (!params) return
 
-        // Configurar headers apropiados si es FormData
-        const config = {}
-        if (params instanceof FormData) {
-          config.headers = {
+        // Configurar headers para FormData
+        const config = {
+          headers: {
             'Content-Type': 'multipart/form-data'
           }
         }
@@ -2140,22 +2091,6 @@ export default {
         notify(err.message, 'negative', 'warning')
       }
     },
-    deleteImageadd (image, index) {
-      if (image.tempId || image.id) {
-        if (image.id) {
-          this.$api.delete(`product-images/${image.id}`)
-            .then(() => {
-              this.product.images.splice(index, 1)
-            })
-            .catch(err => {
-              notify('Error al eliminar la imagen', 'negative')
-              console.error(err)
-            })
-        } else {
-          this.product.images.splice(index, 1)
-        }
-      }
-    },
     async getUnitOfMeasures () {
       try {
         const { data } = await this.$api.get('unit-of-measures')
@@ -2172,7 +2107,6 @@ export default {
     saveProduct () {
       this.visible = true
       const payload = this.modelData(this.product)
-      console.log(payload)
       this.$api.post('products', payload)
         .then(({ data }) => {
           this.openAddProduct = false
@@ -2237,12 +2171,6 @@ export default {
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
         this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
       }
-    },
-    addPriceLis () {
-      this.priceLists.push({
-        name: `Lista ${this.priceLists.length + 1}`,
-        price: null
-      })
     },
     modelData (data, put = false) {
       const formData = new FormData()
@@ -2353,24 +2281,6 @@ export default {
       this.processPurchaseFiles(files)
     },
     /**
-     * Handle purchase image select
-     * @param {Event} event
-     */
-    handlePurchaseImageSelect (event) {
-      const files = Array.from(event.target.files)
-      this.processPurchaseFiles(files)
-      event.target.value = '' // Reset input
-    },
-    /**
-     * Handle purchase PDF select
-     * @param {Event} event
-     */
-    handlePurchasePdfSelect (event) {
-      const files = Array.from(event.target.files)
-      this.processPurchaseFiles(files)
-      event.target.value = '' // Reset input
-    },
-    /**
      * Process purchase files (images and PDFs)
      * @param {Array} files
      */
@@ -2423,43 +2333,6 @@ export default {
       }
     },
     /**
-     * Send purchase attachments
-     * @param {Number} purchaseId
-     * @deprecated Este método ya no se usa. Los archivos se envían junto con los datos de la compra en el mismo endpoint
-     */
-    async sendPurchaseAttachments (purchaseId) {
-      try {
-        const formData = new FormData()
-
-        // Add new files
-        this.purchaseFiles.forEach((fileObj, index) => {
-          if (fileObj.isNew && fileObj.file) {
-            formData.append(`files[${index}]`, fileObj.file)
-          }
-        })
-
-        // Add deleted files for removal
-        if (this.deletedPurchaseFiles.length > 0) {
-          formData.append('deleted_files', JSON.stringify(this.deletedPurchaseFiles))
-        }
-
-        // Send files to the purchase
-        await this.$api.post(`purchases/${purchaseId}/files`, formData)
-
-        this.$q.notify({
-          message: 'Archivos adjuntos guardados exitosamente',
-          icon: 'check_circle',
-          color: 'positive'
-        })
-      } catch (error) {
-        this.$q.notify({
-          message: 'Error al guardar archivos adjuntos: ' + error.message,
-          icon: 'warning',
-          color: 'negative'
-        })
-      }
-    },
-    /**
      * Load existing attachments
      * @param {Array} attachments
      */
@@ -2485,6 +2358,29 @@ export default {
       })
       this.purchaseFiles = []
       this.deletedPurchaseFiles = []
+    },
+    /**
+     * Filter products for addons
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    filterProductsAddons (value, update) {
+      this.$api.get('products', {
+        params: {
+          dataSearch: {
+            name: value,
+            barcode: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.addonsProductsOptions = data
+          })
+        })
+        .catch(err => {
+          console.error('Error filtering addon products:', err)
+        })
     }
   }
 }
@@ -2492,48 +2388,89 @@ export default {
 
 <style lang="scss" scoped>
 .upload-zone {
-  background: #2e2e2e;
-  border: 2px dashed #ffffff;
+  background: rgba(25, 118, 210, 0.08);
+  border: 2px dashed var(--q-primary);
   border-radius: 8px;
-  padding: 12px;
+  padding: 16px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-height: 80px;
+  min-height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.8;
+
+  /* Tema claro */
+  .body--light & {
+    background: rgba(25, 118, 210, 0.08);
+    border-color: var(--q-primary);
+
+    .upload-text {
+      color: var(--q-dark);
+    }
+  }
+
+  /* Tema oscuro */
+  .body--dark & {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--q-primary);
+
+    .upload-text {
+      color: var(--q-text-color, white);
+    }
+  }
 
   &:hover {
-    background: #3a3a3a;
-    border-color: #4fc3f7;
+    opacity: 1;
+    background: rgba(25, 118, 210, 0.12);
+    border-color: var(--q-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .body--dark &:hover {
+    background: rgba(255, 255, 255, 0.12);
   }
 
   &.upload-zone-active {
-    background: #3a3a3a;
-    border-color: #4fc3f7;
+    opacity: 1;
+    background: var(--q-primary-light, #4fc3f7);
+    border-color: var(--q-primary);
     transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   }
 
   .upload-content {
     .upload-text {
-      color: white;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
-      margin-bottom: 2px;
+      margin-bottom: 8px;
+      color: var(--q-text-color);
+      transition: color 0.3s ease;
     }
 
     .upload-btn {
-      background: #1976d2;
+      background: var(--q-primary);
       color: white;
       font-weight: 600;
-      padding: 4px 12px;
-      border-radius: 4px;
+      padding: 6px 16px;
+      border-radius: 6px;
       text-transform: uppercase;
-      font-size: 10px;
+      font-size: 11px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 
       &:hover {
-        background: #1565c0;
+        background: var(--q-primary-dark, #1565c0);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      &:active {
+        transform: translateY(0);
       }
     }
   }
@@ -2545,12 +2482,38 @@ export default {
   margin-bottom: 16px;
 
   .add-files-btn {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: var(--q-primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
 
     &:hover {
-      transform: scale(1.05);
-      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+      background: var(--q-primary-dark, #1565c0);
+      transform: scale(1.05) translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    &:active {
+      transform: scale(1.02) translateY(0);
+    }
+  }
+}
+
+/* Responsive para dispositivos móviles */
+@media (max-width: 768px) {
+  .upload-zone {
+    min-height: 80px;
+    padding: 12px;
+
+    .upload-content {
+      .upload-text {
+        font-size: 12px;
+      }
+
+      .upload-btn {
+        padding: 4px 12px;
+        font-size: 10px;
+      }
     }
   }
 }
