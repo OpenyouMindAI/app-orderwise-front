@@ -16,6 +16,12 @@
           label="Eliminar masivo"
         />
         <q-btn
+          color="teal"
+          @click="openQrDialog"
+          icon="qr_code"
+          label="Códigos QR"
+        />
+        <q-btn
           color="purple"
           @click="listPriceDialog = true"
           icon="list"
@@ -1008,6 +1014,117 @@
       @updated="handleBulkPriceUpdate"
       @close="listPriceDialog = false"
     />
+
+    <!-- QR Dialog -->
+    <q-dialog v-model="qrDialog" persistent>
+      <q-card style="width: 900px; max-width: 95vw;">
+        <q-card-section class="row items-center bg-teal text-white q-py-sm">
+          <q-icon name="qr_code" size="sm" class="q-mr-sm" />
+          <div class="text-h6">Códigos QR de Productos</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeQrDialog" />
+        </q-card-section>
+
+        <q-card-section v-if="!qrCodes.length">
+          <div class="text-center q-pa-lg">
+            <q-icon name="qr_code_scanner" size="4rem" color="grey-5" class="q-mb-md" />
+            <div class="text-h6 text-grey-7 q-mb-sm">
+              Selecciona productos para generar QR
+            </div>
+            <div class="text-body2 text-grey-6">
+              Puedes seleccionar productos específicos o generar QR para todos
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section v-else class="scroll" style="max-height: 60vh;">
+          <div class="row q-col-gutter-md">
+            <div
+              v-for="qr in qrCodes"
+              :key="qr.product_id"
+              class="col-xs-12 col-sm-6 col-md-4"
+            >
+              <q-card flat bordered class="q-pa-md text-center">
+                <div class="text-subtitle2 text-weight-bold q-mb-sm text-primary">
+                  {{ qr.product_name }}
+                </div>
+                <div class="text-caption text-grey-7 q-mb-sm" v-if="qr.barcode">
+                  Código: {{ qr.barcode }}
+                </div>
+                <q-img
+                  :src="`data:image/png;base64,${qr.qr_code}`"
+                  style="max-width: 200px; margin: 0 auto;"
+                  class="q-mb-md"
+                />
+                <div class="q-gutter-sm">
+                  <q-btn
+                    size="sm"
+                    color="positive"
+                    icon="download"
+                    label="Descargar"
+                    @click="downloadQr(qr)"
+                    unelevated
+                  />
+                  <q-btn
+                    size="sm"
+                    color="green"
+                    icon="share"
+                    label="WhatsApp"
+                    @click="shareQrWhatsApp(qr)"
+                    unelevated
+                  />
+                </div>
+              </q-card>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md q-gutter-sm">
+          <q-btn
+            color="secondary"
+            label="Cerrar"
+            @click="closeQrDialog"
+            v-if="qrCodes.length"
+            flat
+          />
+          <q-btn
+            color="green"
+            label="Compartir PDF"
+            icon="share"
+            @click="shareAllQrAsPdf"
+            :loading="loadingPdf"
+            v-if="qrCodes.length"
+            unelevated
+          />
+          <q-btn
+            color="orange"
+            label="Descargar PDF"
+            icon="picture_as_pdf"
+            @click="downloadAllQrAsPdf"
+            :loading="loadingPdf"
+            v-if="qrCodes.length"
+            unelevated
+          />
+          <q-btn
+            color="teal"
+            label="Generar QR seleccionados"
+            icon="qr_code"
+            @click="generateQrSelected"
+            :loading="loadingQr"
+            :disable="!selection.length"
+            v-if="!qrCodes.length"
+          />
+          <q-btn
+            color="teal"
+            label="Generar QR de todos"
+            icon="qr_code"
+            @click="generateQrAll"
+            :loading="loadingQr"
+            v-if="!qrCodes.length"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -1031,6 +1148,10 @@ export default {
   components: { StockProduct, PackProduct, BulkPriceDialog },
   data () {
     return {
+      qrDialog: false,
+      qrCodes: [],
+      loadingQr: false,
+      loadingPdf: false,
       originalProduct: null,
       listPriceDialog: false,
       dialogFilter: false,
@@ -1983,6 +2104,202 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Open QR dialog
+     */
+    openQrDialog () {
+      this.qrDialog = true
+      this.qrCodes = []
+    },
+    /**
+     * Close QR dialog
+     */
+    closeQrDialog () {
+      this.qrDialog = false
+      this.qrCodes = []
+    },
+    /**
+     * Generate QR for selected products
+     */
+    async generateQrSelected () {
+      if (!this.selection.length) {
+        notify('Selecciona al menos un producto', 'warning', 'warning')
+        return
+      }
+
+      try {
+        this.loadingQr = true
+        const productIds = this.selection.map(p => p.id)
+        const { data } = await this.$api.post('products/generate-qr', {
+          product_ids: productIds
+        })
+        this.qrCodes = data.qr_codes
+        notify('Códigos QR generados exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.loadingQr = false
+      }
+    },
+    /**
+     * Generate QR for all products
+     */
+    async generateQrAll () {
+      try {
+        this.loadingQr = true
+        const productIds = this.products.map(p => p.id)
+
+        if (!productIds.length) {
+          notify('No hay productos para generar QR', 'warning', 'warning')
+          return
+        }
+
+        const { data } = await this.$api.post('products/generate-qr', {
+          product_ids: productIds
+        })
+        this.qrCodes = data.qr_codes
+        notify('Códigos QR generados exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.loadingQr = false
+      }
+    },
+    /**
+     * Download QR code
+     */
+    downloadQr (qr) {
+      try {
+        const link = document.createElement('a')
+        link.href = `data:image/png;base64,${qr.qr_code}`
+        link.download = `QR-${qr.product_name.replace(/[^a-z0-9]/gi, '_')}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        notify('QR descargado exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify('Error al descargar el QR', 'negative', 'warning')
+      }
+    },
+    /**
+     * Share QR via WhatsApp
+     */
+    async shareQrWhatsApp (qr) {
+      try {
+        // Convert base64 to blob
+        const base64Response = await fetch(`data:image/png;base64,${qr.qr_code}`)
+        const blob = await base64Response.blob()
+
+        // Create file from blob
+        const file = new File([blob], `QR-${qr.product_name}.png`, { type: 'image/png' })
+
+        // Check if Web Share API is available
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `QR - ${qr.product_name}`,
+            text: `Código QR del producto: ${qr.product_name}${qr.barcode ? ` (${qr.barcode})` : ''}`,
+            files: [file]
+          })
+          notify('Compartido exitosamente', 'positive', 'check_circle')
+        } else {
+          // Fallback: Open WhatsApp Web with text
+          const text = encodeURIComponent(`Código QR del producto: ${qr.product_name}${qr.barcode ? ` (${qr.barcode})` : ''}`)
+          window.open(`https://wa.me/?text=${text}`, '_blank')
+          notify('Abre WhatsApp para compartir. Descarga el QR y envíalo manualmente.', 'info', 'info')
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          notify('Error al compartir por WhatsApp', 'negative', 'warning')
+        }
+      }
+    },
+    /**
+     * Download all QR codes as PDF
+     */
+    async downloadAllQrAsPdf () {
+      try {
+        this.loadingPdf = true
+        const productIds = this.qrCodes.map(qr => qr.product_id)
+
+        const response = await this.$api.post('products/generate-qr-pdf', {
+          product_ids: productIds
+        }, {
+          responseType: 'blob'
+        })
+
+        // Create download link
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const link = document.createElement('a')
+        link.href = window.URL.createObjectURL(blob)
+        link.download = `codigos-qr-productos-${new Date().getTime()}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(link.href)
+
+        notify('PDF descargado exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message || 'Error al generar PDF', 'negative', 'warning')
+      } finally {
+        this.loadingPdf = false
+      }
+    },
+    /**
+     * Share all QR codes as PDF via WhatsApp
+     */
+    async shareAllQrAsPdf () {
+      try {
+        this.loadingPdf = true
+        const productIds = this.qrCodes.map(qr => qr.product_id)
+
+        const response = await this.$api.post('products/generate-qr-pdf', {
+          product_ids: productIds
+        }, {
+          responseType: 'blob'
+        })
+
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const file = new File([blob], `codigos-qr-productos.pdf`, { type: 'application/pdf' })
+
+        // Try to share using Web Share API
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'Códigos QR de Productos',
+              text: `PDF con ${this.qrCodes.length} códigos QR de productos`,
+              files: [file]
+            })
+            notify('PDF compartido exitosamente', 'positive', 'check_circle')
+          } catch (shareError) {
+            // If share fails or is cancelled, download instead
+            if (shareError.name !== 'AbortError') {
+              const link = document.createElement('a')
+              link.href = window.URL.createObjectURL(blob)
+              link.download = `codigos-qr-productos-${new Date().getTime()}.pdf`
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              window.URL.revokeObjectURL(link.href)
+              notify('PDF descargado. Compártelo manualmente', 'info', 'info')
+            }
+          }
+        } else {
+          // Fallback: Download
+          const link = document.createElement('a')
+          link.href = window.URL.createObjectURL(blob)
+          link.download = `codigos-qr-productos-${new Date().getTime()}.pdf`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(link.href)
+          notify('PDF descargado. Compártelo manualmente por WhatsApp', 'info', 'info')
+        }
+      } catch (error) {
+        notify(error.message || 'Error al generar PDF', 'negative', 'warning')
+      } finally {
+        this.loadingPdf = false
+      }
     }
   }
 }
