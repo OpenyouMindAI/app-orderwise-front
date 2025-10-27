@@ -808,7 +808,9 @@ export default {
       try {
         const { data } = await this.$api.get(`public/categories/${params.company_id}`, {
           params: {
-            show_catalog: 1
+            dataFilter: {
+              show_catalog: 1
+            }
           }
         })
         this.categories = data

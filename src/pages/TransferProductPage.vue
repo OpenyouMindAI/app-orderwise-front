@@ -279,6 +279,20 @@
                 <q-tooltip>Más opciones</q-tooltip>
                 <q-menu auto-close>
                   <q-list style="min-width: 180px">
+                    <!-- Verificar (solo si está en proceso, es sucursal destino y no está verificada) -->
+                    <q-item
+                      v-if="props.row.status === 'in_process' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)"
+                      clickable
+                      @click="openVerificationView(props.row)"
+                    >
+                      <q-item-section avatar>
+                        <q-icon name="fact_check" color="positive" />
+                      </q-item-section>
+                      <q-item-section>Verificar recepción</q-item-section>
+                    </q-item>
+
+                    <q-separator v-if="props.row.status === 'in_process' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)" />
+
                     <!-- Descargar PDF -->
                     <q-item v-if="!$q.platform.is.mobile" clickable @click="downloadPdf(props.row)">
                       <q-item-section avatar>
@@ -295,7 +309,7 @@
                       <q-item-section>Compartir PDF</q-item-section>
                     </q-item>
 
-                    <q-separator v-if="isSuperAdmin && !isTransferDelivered(props.row)" />
+                    <q-separator v-if="(canEditTransferRow(props.row) || isSuperAdmin) && !isTransferDelivered(props.row)" />
 
                     <!-- Editar (solo sucursal origen o admin, y no entregada) -->
                     <q-item
@@ -2761,6 +2775,7 @@ export default {
     canEditTransferRow (transfer) {
       const store = authentication()
       const user = store.userSession
+      const branchOffice = store.branchOffice
 
       // Super admin y root pueden editar siempre
       if (user?.is_superadmin || user?.is_root) {
@@ -2772,7 +2787,7 @@ export default {
         return false
       }
 
-      return user?.branch_office_id === transfer.origin_branch_office_id
+      return branchOffice?.id === transfer.origin_branch_office_id
     },
     /**
      * Check if current user can verify a transfer row (destination branch only)
@@ -2781,14 +2796,14 @@ export default {
      */
     canVerifyTransferRow (transfer) {
       const store = authentication()
-      const user = store.userSession
+      const branchOffice = store.branchOffice
 
       // Solo la sucursal destino puede verificar
       if (!transfer?.destination_branch_office_id) {
         return false
       }
 
-      return user?.branch_office_id === transfer.destination_branch_office_id
+      return branchOffice?.id === transfer.destination_branch_office_id
     },
     /**
      * Handle touch start for long press (mobile)
