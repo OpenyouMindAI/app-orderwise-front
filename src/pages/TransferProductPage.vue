@@ -2775,6 +2775,7 @@ export default {
     canEditTransferRow (transfer) {
       const store = authentication()
       const user = store.userSession
+      const branchOffice = store.branchOffice
 
       // Super admin y root pueden editar siempre
       if (user?.is_superadmin || user?.is_root) {
@@ -2786,7 +2787,7 @@ export default {
         return false
       }
 
-      return user?.branch_office_id === transfer.origin_branch_office_id
+      return branchOffice?.id === transfer.origin_branch_office_id
     },
     /**
      * Check if current user can verify a transfer row (destination branch only)
@@ -2795,14 +2796,14 @@ export default {
      */
     canVerifyTransferRow (transfer) {
       const store = authentication()
-      const user = store.userSession
+      const branchOffice = store.branchOffice
 
       // Solo la sucursal destino puede verificar
       if (!transfer?.destination_branch_office_id) {
         return false
       }
 
-      return user?.branch_office_id === transfer.destination_branch_office_id
+      return branchOffice?.id === transfer.destination_branch_office_id
     },
     /**
      * Handle touch start for long press (mobile)
