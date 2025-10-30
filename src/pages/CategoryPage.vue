@@ -146,7 +146,7 @@
               <div class="col-md-4 col-xs-12">
                 <q-card flat bordered class="q-pa-md">
                   <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="image" class="q-mr-sm" />
+                    <q-icon name="images" class="q-mr-sm" />
                     Imagen de la categoría
                   </div>
                   <q-card
@@ -160,11 +160,13 @@
                   >
                     <q-card-section class="text-center q-pa-lg q-gutter-y-md">
                       <!-- Image Preview -->
-                      <div v-if="category.image">
+                      <div v-if="category.images.length > 0">
                         <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                        <q-card flat class="image-preview-card">
+                        <q-card flat class="images-preview-card">
                           <q-img
-                            :src="category.image.url"
+                            v-for="img in category.images"
+                            :key="img.id"
+                            :src="img.url"
                             :ratio="1"
                             class="rounded-borders"
                           >
@@ -182,7 +184,7 @@
                         </q-card>
                       </div>
                       <div v-else>
-                        <q-icon name="image" size="3rem" color="grey-5" class="q-mb-md" />
+                        <q-icon name="images" size="3rem" color="grey-5" class="q-mb-md" />
                         <div class="text-body1 text-grey-7 q-mb-sm">
                           Arrastra la imagen aquí
                         </div>
@@ -200,7 +202,7 @@
                       <input
                         ref="fileInputEdit"
                         type="file"
-                        accept="image/*"
+                        accept="images/*"
                         style="display: none"
                         @change="handleFileSelect"
                       />
@@ -275,7 +277,7 @@
               <div class="col-md-4 col-xs-12">
                 <q-card flat bordered class="q-pa-md">
                   <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="image" class="q-mr-sm" />
+                    <q-icon name="images" class="q-mr-sm" />
                     Imagen de la categoría
                   </div>
                   <q-card
@@ -289,11 +291,11 @@
                   >
                     <q-card-section class="text-center q-pa-lg q-gutter-y-md">
                       <!-- Image Preview -->
-                      <div v-if="category.image">
+                      <div v-if="category.images">
                         <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                        <q-card flat class="image-preview-card">
+                        <q-card flat class="images-preview-card">
                           <q-img
-                            :src="category.image.url"
+                            :src="category.images.url"
                             :ratio="1"
                             class="rounded-borders"
                           >
@@ -311,7 +313,7 @@
                         </q-card>
                       </div>
                       <div v-else>
-                        <q-icon name="image" size="3rem" color="grey-5" class="q-mb-md" />
+                        <q-icon name="images" size="3rem" color="grey-5" class="q-mb-md" />
                         <div class="text-body1 text-grey-7 q-mb-sm">
                           Arrastra la imagen aquí
                         </div>
@@ -329,7 +331,7 @@
                       <input
                         ref="fileInputAdd"
                         type="file"
-                        accept="image/*"
+                        accept="images/*"
                         style="display: none"
                         @change="handleFileSelect"
                       />
@@ -361,7 +363,7 @@ export default {
       aliquotTypes: [],
       category: {
         show_catalog: 0,
-        image: null,
+        images: [],
         sort_order: 1
       },
       isDragOver: false,
@@ -375,8 +377,8 @@ export default {
        */
       params: {
         paginate: true,
-        sortBy: 'id',
-        sortOrder: 'desc',
+        sortBy: 'sort_order',
+        sortOrder: 'asc',
         perPage: 1,
         dataSearch: {
           id: '',
@@ -388,7 +390,7 @@ export default {
       openEditCategory: null,
       baseColumns: [
         {
-          name: 'position',
+          name: 'sort_order',
           align: 'center',
           label: 'Posición',
           field: 'sort_order',
@@ -423,8 +425,8 @@ export default {
         rowsPerPage: 20,
         rowsNumber: 20,
         paginate: true,
-        sortBy: 'id',
-        sortOrder: 'desc'
+        sortBy: 'sort_order',
+        sortOrder: 'asc'
       }
     }
   },
@@ -463,7 +465,7 @@ export default {
       this.openEditCategory = false
       this.category = {
         show_catalog: 0,
-        image: null
+        images: []
       }
     },
     /**
@@ -482,17 +484,17 @@ export default {
       this.processFiles(files)
     },
     /**
-     * Process image files
+     * Process images files
      */
     processFiles (files) {
       const file = files[0] // Solo tomar la primera imagen para categorías
       if (file && file.type.startsWith('image/')) {
         const reader = new FileReader()
         reader.onload = (e) => {
-          this.category.image = {
+          this.category.images = [{
             file,
             url: e.target.result
-          }
+          }]
         }
         reader.readAsDataURL(file)
       } else {
@@ -504,15 +506,15 @@ export default {
       }
     },
     /**
-     * Delete category image
+     * Delete category images
      */
     deleteImage () {
-      const image = this.category.image
-      if (image && image.id) {
+      const images = this.category.images
+      if (images && images.id) {
         // Imagen existente en BD - eliminar del servidor
-        this.$api.delete(`category-images/${image.id}`)
+        this.$api.delete(`files/${images.id}`)
           .then(() => {
-            this.category.image = null
+            this.category.images = []
             Notify.create({
               message: 'Imagen eliminada exitosamente',
               icon: 'check_circle',
@@ -528,7 +530,7 @@ export default {
           })
       } else {
         // Imagen nueva (solo en memoria) - eliminar del objeto
-        this.category.image = null
+        this.category.images = []
       }
     },
     /**
@@ -550,8 +552,8 @@ export default {
       }
 
       // Agregar imagen si existe
-      if (data.image && data.image.file) {
-        formData.append('image', data.image.file)
+      if (data?.images && data.images[0]?.file) {
+        formData.append('images', data.images[0].file)
       }
 
       return formData
@@ -652,9 +654,7 @@ export default {
      * Handle row click - only edit in normal mode
      */
     handleRowClick (event, row, index) {
-      console.log('🖱️ Row click detected:', { editingOrder: this.editingOrder, categoryName: row.name })
       if (!this.editingOrder) {
-        console.log('✅ Opening edit modal for:', row.name)
         this.editCategory(event, row, index)
       } else {
         console.log('❌ Row click ignored - in editing mode')
@@ -665,14 +665,7 @@ export default {
      */
     editCategory (event, row, index) {
       this.openEditCategory = true
-      this.category = {
-        ...row,
-        image: row.image_url ? {
-          id: row.image_id,
-          url: row.image_url,
-          file: null
-        } : null
-      }
+      this.category = row
     },
     /**
      * Save edit
@@ -737,7 +730,6 @@ export default {
       this.originalCategories = JSON.parse(JSON.stringify(this.categories))
       this.editingOrder = true
 
-      console.log('📋 Categories with sort_order:', this.categories.map(c => ({ name: c.name, sort_order: c.sort_order })))
       Notify.create({
         message: 'Modo de edición activado. Reordena las categorías y luego guarda o cancela los cambios.',
         icon: 'info',
@@ -889,13 +881,13 @@ export default {
   background-color: #f5f5f5;
 }
 
-.image-preview-card {
+.images-preview-card {
   transition: transform 0.2s ease;
   max-width: 200px;
   margin: 0 auto;
 }
 
-.image-preview-card:hover {
+.images-preview-card:hover {
   transform: scale(1.02);
 }
 

@@ -1,1661 +1,2772 @@
 <template>
-  <q-page padding :class="$q.screen.lt.sm ? 'q-pb-xl q-mb-lg' : 'items-center column'">
-    <div class="relative full-width q-mt-sm" style="height: calc(100vh - 190px);" v-if="tab === 'scanner' && isTable">
-      <qrcode-stream @detect="getCodeQr"/>
-      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" class="text-center">
-        <div class="scanner">
-          <div class="light"></div>
-        </div>
-      </div>
-    </div>
-    <div v-if="tab !== 'scanner'" class="column" style="max-width: 600px;">
-      <div class="flex full-width justify-center items-center">
-        <q-img
-          :src="menu?.banner_url || company?.url"
-          style="max-height: 250px; max-width: 500px; min-width: 45vw;"
-        />
-      </div>
-      <div class="text-subtitle1 text-center q-mt-md" v-html="menu?.description"/>
-    </div>
-    <div style="max-width: 600px;" class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
-      <div class="col-12">
-        <q-input
-          outlined
-          rounded
-          label="Buscar"
-          dense
-          type="search"
-          debounce="500"
-          class="full-width"
-          v-model="filter"
+  <q-page class="command-page">
+    <!-- Vista 1: Lista de productos con banner -->
+    <div v-if="currentView === 'catalog'" class="command-container q-pa-md">
+      <!-- Banner del comercio -->
+      <div class="banner-container" v-if="companyBanner && !isSearching">
+        <q-carousel
+          v-if="companyBanner.length > 1"
+          v-model="bannerSlide"
+          animated
+          navigation
+          infinite
+          :autoplay="5000"
+          arrows
+          transition-prev="slide-right"
+          transition-next="slide-left"
+          class="banner-carousel"
         >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-      </div>
-      <div class="col-12">
-        <q-tabs
-          v-model="category"
-          class="text-teal"
-          v-if="categories.length"
-        >
-          <q-tab
-            name="all"
-            label="Todos"
-          />
-          <q-tab
-            :name="cat.id"
-            :label="cat.name"
-            :key="cat.id"
-            class="q-pa-md"
-            v-for="cat in categories"
-          />
-        </q-tabs>
-        <q-skeleton type="text" height="60px" v-else/>
-      </div>
-      <div class="col-12" style="max-width: 600px;">
-        <div v-if="loadingPage" class="row q-col-gutter-sm">
-          <div
-            class="col-xs-6 col-sm-4 col-md-3"
-            v-for="i in 20" :key="i"
+          <q-carousel-slide
+            v-for="(banner, index) in companyBanner"
+            :key="index"
+            :name="index"
+            class="q-pa-none"
           >
-            <SkeletonCard class="full-width"/>
+            <q-img
+              :src="banner"
+              class="banner-image"
+              :ratio="16/9"
+            />
+          </q-carousel-slide>
+        </q-carousel>
+        <q-img
+          v-else
+          :src="companyBanner[0]"
+          class="banner-image"
+          :ratio="16/9"
+        />
+      </div>
+      <!-- Categorías -->
+      <div class="q-mt-lg q-mb-md" v-if="!isSearching">
+        <div class="text-subtitle2 text-white text-weight-medium q-mb-sm">Meal Category</div>
+        <div class="category-scroll">
+          <!-- Categoría All -->
+          <div
+            class="category-item"
+            :class="{ 'category-item-active': selectedCategory === 'all' }"
+            @click="selectedCategory = 'all'"
+          >
+            <div class="category-icon">
+              <q-icon name="restaurant_menu" size="24px" />
+            </div>
+            <div class="category-name">All</div>
+          </div>
+
+          <!-- Categorías con/sin imágenes -->
+          <div
+            v-for="category in categories"
+            :key="category.id"
+            class="category-item"
+            :class="{ 'category-item-active': selectedCategory === category.id }"
+            @click="selectCategory(category)"
+          >
+            <div class="category-icon" v-if="category.images && category.images.length > 0">
+              <q-img
+                :src="category.images[0].url"
+                :ratio="1"
+                class="category-image"
+              />
+            </div>
+            <div class="category-icon" v-else>
+              <q-icon name="category" size="24px" />
+            </div>
+            <div class="category-name">{{ category.name }}</div>
           </div>
         </div>
-        <q-table
-          row-key="name"
-          dense
-          grid
-          :rows="allProducts"
-          :columns="productColumns"
-          :loading="loadingPage"
-          :filter="filter"
-          :pagination="pagination"
-          v-else
-        >
-          <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-4 col-md-4 col-lg-4" style="padding: 2px;">
-              <q-card
-                :class="findProduct(products, props.row) && 'shadow-20'"
-                :style="`${findProduct(products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
-                @click="openProductDetails(props.row)"
-              >
-                <q-img
-                  fit="fill"
-                  no-native-menu
-                  :src="props.row?.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                  style="height: 180px;"
-                  spinner-color="primary"
-                >
-                <div class="absolute-full column items-center justify-center text-center">
-                  <div class="text-bold text-body2 p-a-none">
-                      {{ props.row.name.slice(0, 20) }}
-                    </div>
-                    <span class="text-caption">
-                      {{ formatNumber(props.row.price) }} $
-                    </span>
-                    <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 7px; right: 7px;">
-                      Sin stock
-                    </q-badge>
-                  </div>
-                </q-img>
-              </q-card>
-            </div>
-          </template>
-          <template v-slot:loading>
-            <q-inner-loading showing color="secondary"/>
-          </template>
-        </q-table>
       </div>
-    </div>
-    <div v-else-if="tab === 'orders'">
-      <div class="text-h6 text-bold">
-        Lista de pedidos
-      </div>
-      <q-table
-        row-key="id"
-        dense
-        grid
-        style="max-height: calc(100vh - 162px); overflow: auto;"
-        :rows="invoices"
-        binary-state-sort
-        no-data-label="Registro no encontrado"
-        v-model:pagination="invoicePagination"
-        @request="setPagination"
-      >
-        <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-6">
-            <q-card
-              class="my-card q-mt-sm"
-              style="width: 100%; border-radius: 10px;"
-            >
-              <q-card-section horizontal class="full-height">
-                <q-card-section class="col-xl-11 col-lg-11 col-md-11 col-sm-10 col-xs-10">
-                  <div class="flex justify-between">
-                    <div class="flex justify-between items-center full-width">
-                      <span class="text-subtitle2 text-bold">
-                        Nro {{ props.row.code }}
-                      </span>
-                      <span class="text-subtitle2 text-semibold">
-                        $ {{ formatNumber(props.row.total) }}
-                      </span>
-                    </div>
-                    <div class="flex justify-between items-center full-width">
-                      <span>
-                        {{ props.row?.client?.name }}
-                      </span>
-                      <q-badge
-                        :color="status[props.row.status].color"
-                        :label="status[props.row.status].label"
-                        rounded
-                      />
-                    </div>
-                    <div class="flex justify-between items-center full-width">
-                      <span>
-                        {{ formatDate(props.row.created_at, 'DD-MM-YYYY') }}
-                      </span>
-                      <span>
-                        {{ formatDate(props.row.created_at, 'HH:mm:ss') }}
-                      </span>
-                    </div>
-                  </div>
-                </q-card-section>
-                <q-card-actions align="center" class="q-pt-none">
-                  <q-btn color="primary" icon="more_vert" round flat dense>
-                    <q-menu fit>
-                      <q-list style="min-width: 250px">
-                        <q-item clickable v-ripple @click="printTicket(props.row)">
-                          <q-item-section avatar>
-                            <q-icon color="primary" name="receipt" />
-                          </q-item-section>
-                          <q-item-section>Imprimir comanda</q-item-section>
-                        </q-item>
-                        <q-item clickable v-ripple @click="printBill(props.row)">
-                          <q-item-section avatar>
-                            <q-icon color="primary" name="print" />
-                          </q-item-section>
-                          <q-item-section>
-                            {{ `Imprimir ${props.row.billing ? 'factura' : 'comprobante'}` }}
-                          </q-item-section>
-                        </q-item>
-                        <q-item
-                          v-if="!props.row.billing && props.row.status !== 'cancelled'"
-                          clickable
-                          v-ripple
-                          @click="setInvoiceElectronic(props.row)"
-                        >
-                          <q-item-section avatar>
-                            <q-icon color="primary" name="send" />
-                          </q-item-section>
-                          <q-item-section>
-                            Generar factura
-                          </q-item-section>
-                        </q-item>
-                        <q-item clickable v-ripple @click="openPaid(props.row)">
-                          <q-item-section avatar>
-                            <q-icon color="primary" name="payments" />
-                          </q-item-section>
-                          <q-item-section>
-                            Cobrar ticket
-                          </q-item-section>
-                        </q-item>
-                        <!-- <q-item clickable v-ripple>
-                          <q-item-section avatar>
-                            <q-icon color="primary" name="visibility" />
-                          </q-item-section>
-                          <q-item-section>
-                           Ver detalles
-                          </q-item-section>
-                        </q-item> -->
-                      </q-list>
-                    </q-menu>
-                  </q-btn>
-                </q-card-actions>
-              </q-card-section>
-            </q-card>
-          </div>
-        </template>
-      </q-table>
-    </div>
-    <div v-else-if="tab === 'command'" class="q-mt-sm" style="max-width: 600px;">
-      <q-select
-        use-input
-        filled
-        dense
-        label="Cliente"
-        input-debounce="0"
-        option-value="id"
-        v-model="client"
-        :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-        :options="clients"
-        :rules="[val => !!val || 'El campo es requerido.']"
-        @filter="filterClients"
-      >
-        <template v-slot:append>
-          <q-btn
-            color="primary"
-            round
-            icon="add_circle"
-            @click.stop.prevent="(openAddClient = true)"
-            size="sm"
-          />
-        </template>
-      </q-select>
-      <q-table
-        dense
-        grid
-        row-key="name"
-        :rows="products"
-        v-model:pagination="pagination"
-      >
-        <template v-slot:item="props">
-          <div class="column items-center q-pa-xs col-xs-12 col-sm-12 col-md-12">
-            <q-card
-              class="my-card q-mt-sm"
-              style="max-width: 90vw; width: 500px; border-radius: 20px;"
-            >
-              <q-card-section horizontal class="full-height">
-                <q-img
-                  class="col-4"
-                  style="max-height: 132px;"
-                  :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
-                />
-                <q-card-section class="q-pa-sm column col-8">
-                  <q-card-section class="q-pa-sm col">
-                    <span class="text-body2 text-uppercase text-bold">
-                      {{ props.row.name.slice(0, 20) }}
-                    </span>
-                    <q-badge
-                    floating
-                    rounded
-                    color="secondary"
-                  >
-                    <q-icon
-                      :name="props.row.observation ? 'edit' : 'add'"
-                      size="sm"
-                    />
-                    <q-popup-proxy>
-                      <q-card class="bg-white" style="width: 400px; max-width: 80vw;">
-                        <q-card-section class="q-py-sm text-h6 bg-primary text-white">
-                          Observación
-                        </q-card-section>
-                        <q-card-section class="text-body2">
-                          <q-input
-                            filled
-                            autofocus
-                            type="textarea"
-                            v-model="props.row.observation"
-                          />
-                        </q-card-section>
-                        <q-card-actions align="right">
-                          <q-btn
-                            color="primary"
-                            icon="check_circle"
-                            v-close-popup
-                          />
-                        </q-card-actions>
-                      </q-card>
-                    </q-popup-proxy>
-                  </q-badge>
-                    <p class="text-subtitle2 text-grey">
-                      $ {{ formatNumber(props.row.price) }}
-                    </p>
-                  </q-card-section>
-                  <q-card-actions class="q-pa-none">
-                    <div class="flex justify-between items-center full-width">
-                      <div style="width: 10%;">
-                        <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
-                      </div>
-                      <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
-                        <div>
-                          <q-btn icon="remove" round size="sm" color="primary" @click="() => {
-                              props.row.amount -= 1
-                              calculate(props.row)
-                            }"
-                          />
-                        </div>
-                        <q-input
-                          rounded
-                          outlined
-                          dense
-                          label="Cantidad"
-                          type="number"
-                          style="width: 50%;"
-                          v-model.number="props.row.amount"
-                          @update:model-value="calculate(props.row)"
-                        />
-                        <div>
-                            <q-btn icon="add" round size="sm" color="primary" @click="() => {
-                                props.row.amount += 1
-                                calculate(props.row)
-                            }"/>
-                        </div>
-                      </div>
-                    </div>
-                  </q-card-actions>
-                </q-card-section>
-              </q-card-section>
-            </q-card>
-          </div>
-        </template>
-        <template v-slot:no-data>
-          <div class="full-width column flex-center justify-center">
-            <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
-            <span class="text-subtitle2 text-center">
-              No hay productos en la orden
-            </span>
-          </div>
-        </template>
-      </q-table>
-    </div>
-    <q-page-sticky position="bottom-right" :offset="[15, 10]">
-      <div class="flex q-gutter-sm">
-        <q-btn
-          v-if="isCurrentlyOpen && totalBill > 0"
-          rounded
-          stack
-          color="primary"
-          class="button-baseline"
-          :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
-          :label="formatNumber(totalBill)"
-          :loading="billLoading"
-          @click="saveBill"
-        />
-        <q-btn
-          rounded
-          stack
-          color="secondary"
-          class="q-ml-sm"
-          icon="table_bar"
-          :label="tables?.length > 0 ? tables?.map(table => table.name).join(', ') : 'Mesas'"
-          :loading="billLoading"
-          @click="dialogTable = true"
-          v-if="isTable && isCurrentlyOpen"
-        />
-        <schedule-status
-          :schedule="menu?.schedule"
-          @update:isCurrentlyOpen="(data) => isCurrentlyOpen = data"
-        />
-      </div>
-    </q-page-sticky>
-    <q-dialog v-model="detailProduct">
-      <q-card
-        :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
-      >
-        <SlideComponent :slides="product.images" styles="height: 200px;"/>
-        <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
-          <q-card-section class="column q-pb-none">
-            <div class="flex justify-between full-width">
-              <span class="text-body2 text-uppercase text-bold">
-                {{ product?.name }}
-              </span>
-              <span class="text-body2 q-mt-sm">
-                $ {{ formatNumber(product?.price) }}
-              </span>
-            </div>
-            <div v-if="product.description">
-              <q-input
-                type="textarea"
-                v-model="product.description"
-                readonly
-                autogrow
+
+      <!-- Productos Populares -->
+      <div>
+        <div class="flex justify-between items-center q-mb-md">
+          <span class="text-subtitle2 text-white text-weight-medium">Populares</span>
+        </div>
+
+        <!-- Grid de Productos -->
+        <div class="products-grid">
+          <div
+            v-for="product in displayedProducts"
+            :key="product.id"
+            class="product-card"
+            @click="handleProductClick(product)"
+            @click.right.prevent="openProductDetails(product)"
+            v-touch-hold="() => openProductDetails(product)"
+          >
+            <div class="product-image-container">
+              <q-img
+                v-if="product.images?.[0]?.url"
+                :src="product.images[0].url"
+                class="product-image"
+                :ratio="1"
               />
-            </div>
-            <div class="flex justify-between items-center q-mt-sm">
-              <q-btn
-                icon="remove"
-                color="primary"
-                round
-                flat
-                size="lg"
-                @click="addTemporalProducts(product, product.amount -= 1)"
-              />
-              <q-input
-                borderless
-                dense
-                type="number"
-                style="width: 40px;"
-                input-class="text-center"
-                v-model.number="product.amount"
-                @update:model-value="(value) => addTemporalProducts(product, value)"
-              />
-              <q-btn
-                icon="add"
-                color="primary"
-                round
-                flat
-                size="lg"
-                @click="addTemporalProducts(product, product.amount += 1)"
-              />
-            </div>
-          </q-card-section>
-          <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
-            <div class="col-12 bg-grey-2 q-pa-sm text-dark">
-              <span class="text-subtitle2">+ Adicionales</span>
-            </div>
-          </q-card-section>
-          <q-card-section class="q-pt-none">
-            <div
-              class="flex justify-between full-width items-center"
-              v-for="addon in product.product_addons" :key="addon.id"
-            >
-              <div class="column">
-                <span class="text-body2 text-uppercase text-bold">
-                  {{ addon.name }}
-                </span>
-                <span class="text-subtitle2 text-grey">
-                  {{ formatNumber(addon.price) }}$
-                </span>
+              <div v-else class="product-no-image">
+                <q-icon name="restaurant" size="60px" color="grey-6" />
               </div>
-              <div class="flex justify-between items-center q-gutter-xs">
+              <!-- Badge "En Carrito" -->
+              <div v-if="getProductInCart(product)" class="in-cart-badge">
+                <q-icon name="shopping_cart" size="14px" />
+                <span>En Carrito</span>
+              </div>
+              <q-btn
+                :icon="product.is_favorite ? 'favorite' : 'favorite_border'"
+                :color="product.is_favorite ? 'red' : 'white'"
+                flat
+                round
+                dense
+                size="sm"
+                class="favorite-btn"
+                @click.stop="toggleFavorite(product)"
+              />
+            </div>
+            <div class="product-info">
+              <div class="product-name">
+                {{ product.name?.toUpperCase() }}
+              </div>
+              <div class="product-description text-grey-5">
+                {{ product.description?.toUpperCase() || 'Delicioso producto' }}
+              </div>
+
+              <!-- Rating -->
+              <div class="product-rating-new" @click.stop="openRatingDialog(product)">
+                <q-icon
+                  v-for="i in 5"
+                  :key="i"
+                  name="star"
+                  size="16px"
+                  :color="i <= (product.average_rating || 0) ? 'orange' : 'grey-5'"
+                />
+              </div>
+
+              <!-- Precio -->
+              <q-chip
+                class="product-price-chip"
+                color="red"
+                text-color="white"
+                size="md"
+                dense
+              >
+                ${{ formatNumber(product.price) }}
+              </q-chip>
+
+              <!-- Botones de Cantidad o Agregar -->
+              <div v-if="getProductInCart(product)" class="quantity-controls" @click.stop>
                 <q-btn
                   icon="remove"
-                  color="primary"
                   round
-                  flat
-                  size="sm"
-                  @click="addTemporalProducts(addon, addon.amount -= 1)"
-                />
-                <q-input
-                  borderless
                   dense
-                  type="number"
-                  style="width: 30px;"
-                  input-class="text-center"
-                  v-model.number="addon.amount"
-                  @update:model-value="(value) => addTemporalProducts(product, value)"
+                  color="orange"
+                  size="sm"
+                  @click="updateQuantity(getProductInCart(product), -1)"
                 />
+                <span class="quantity-text">{{ getProductInCart(product).amount }}</span>
                 <q-btn
                   icon="add"
-                  color="primary"
                   round
-                  flat
+                  dense
+                  color="orange"
                   size="sm"
-                  @click="addTemporalProducts(addon, addon.amount += 1)"
+                  @click="updateQuantity(getProductInCart(product), 1)"
                 />
               </div>
+              <q-btn
+                v-else
+                label="Agregar"
+                icon="add_shopping_cart"
+                color="orange"
+                class="add-to-cart-btn"
+                rounded
+                dense
+                @click.stop="handleProductClick(product)"
+              />
             </div>
-            <q-separator class="q-mt-md"/>
-          </q-card-section>
-          <q-card-section class="q-pt-none">
-            <q-input
-              type="textarea"
-              label="Observación"
-              filled
-              v-model="observation"
-            />
-          </q-card-section>
+          </div>
+        </div>
+
+        <!-- Skeleton Loading -->
+        <div v-if="loading && currentPage === 1" class="products-grid q-mt-md">
+          <div v-for="i in 4" :key="i">
+            <q-skeleton height="200px" class="product-card" />
+          </div>
+        </div>
+
+        <!-- Infinite Scroll -->
+        <q-infinite-scroll
+          v-if="!loading || currentPage > 1"
+          @load="onLoadMore"
+          :offset="250"
+        >
+          <template v-slot:loading>
+            <div class="row justify-center q-my-md">
+              <q-spinner-dots color="orange" size="40px" />
+            </div>
+          </template>
+        </q-infinite-scroll>
+
+        <!-- Mensaje de fin -->
+        <div v-if="!hasMoreProducts && products.length > 0" class="text-center q-my-md">
+          <span class="text-grey-5">No hay más productos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vista del Carrito -->
+    <div v-else-if="currentView === 'cart'" class="cart-container">
+      <div class="text-h5 text-white text-weight-medium q-px-md q-pt-md q-pb-sm">Mi Orden</div>
+
+      <div v-if="cartProducts.length === 0" class="text-center q-py-xl">
+        <q-icon name="shopping_cart" size="100px" color="grey-6" />
+        <div class="text-grey-5 q-mt-md">Tu carrito está vacío</div>
+        <q-btn
+          label="Explorar Menú"
+          color="orange"
+          class="q-mt-lg"
+          @click="$router.push({ query: { view: 'catalog' } })"
+          rounded
+          unelevated
+        />
+      </div>
+
+      <div v-else class="cart-content">
+        <!-- Items del carrito -->
+        <div class="cart-items q-px-md">
+          <div
+            v-for="item in cartProducts"
+            :key="item.id"
+            class="cart-item"
+          >
+            <div class="cart-item-image">
+              <q-img
+                v-if="item.images?.[0]?.url"
+                :src="item.images[0].url"
+                :ratio="1"
+              />
+              <div v-else class="cart-item-no-image">
+                <q-icon name="restaurant" size="40px" color="grey-6" />
+              </div>
+            </div>
+            <div class="cart-item-info">
+              <div class="cart-item-name">{{ item.name }}</div>
+              <div class="cart-item-observation" v-if="item.observation">{{ item.observation }}</div>
+              <div class="cart-item-price">${{ formatNumber(item.price) }}</div>
+            </div>
+            <div class="cart-item-actions">
+              <div class="cart-item-quantity">
+                <q-btn
+                  icon="remove"
+                  unelevated
+                  dense
+                  size="sm"
+                  color="grey-8"
+                  round
+                  @click="updateQuantity(item, -1)"
+                />
+                <span class="quantity-value">{{ item.amount }}</span>
+                <q-btn
+                  icon="add"
+                  unelevated
+                  dense
+                  size="sm"
+                  round
+                  color="grey-8"
+                  @click="updateQuantity(item, 1)"
+                />
+              </div>
+              <q-btn
+                icon="delete"
+                flat
+                dense
+                size="sm"
+                color="red"
+                @click="removeFromCart(item)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Total y Botón -->
+        <div class="cart-footer">
+          <div class="cart-total">
+            <span class="total-label">Total</span>
+            <span class="total-amount">${{ formatNumber(totalAmount) }}</span>
+          </div>
+
+          <!-- Botón de Mesas -->
+          <q-btn
+            :label="selectedTables.length > 0 ? `Mesas: ${selectedTables.map(t => t.name).join(', ')}` : 'Seleccionar Mesas'"
+            color="grey-8"
+            size="md"
+            class="q-mb-sm"
+            unelevated
+            icon="table_bar"
+            @click="openTableDialog"
+          />
+
+          <q-btn
+            label="PROCESAR ORDEN"
+            color="orange"
+            size="md"
+            class="process-order-btn"
+            unelevated
+            @click="processOrder"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Vista de Órdenes -->
+    <div v-else-if="currentView === 'orders'" class="orders-container q-pa-md">
+      <div class="text-h5 text-white q-mb-md">Mis Órdenes</div>
+
+      <q-card
+        v-for="order in orders"
+        :key="order.id"
+        class="bg-grey-9 text-white q-mb-sm"
+        flat
+        @click="openOrderDetails(order)"
+      >
+        <q-card-section>
+          <div class="flex justify-between items-center">
+            <div>
+              <div class="text-subtitle2">Orden #{{ order.code }}</div>
+              <div class="text-caption text-grey-5">{{ formatDate(order.created_at) }}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-weight-bold text-orange">${{ formatNumber(order.total) }}</div>
+              <q-badge :color="getStatusColor(order.status)" :label="getStatusLabel(order.status)" />
+            </div>
+          </div>
         </q-card-section>
+      </q-card>
+
+      <!-- Skeleton Loading -->
+      <div v-if="loadingOrders && ordersCurrentPage === 1">
+        <q-skeleton v-for="i in 4" :key="i" height="80px" class="q-mb-sm" />
+      </div>
+
+      <!-- Infinite Scroll -->
+      <q-infinite-scroll
+        v-if="!loadingOrders || ordersCurrentPage > 1"
+        @load="onLoadMoreOrders"
+        :offset="250"
+      >
+        <template v-slot:loading>
+          <div class="row justify-center q-my-md">
+            <q-spinner-dots color="orange" size="40px" />
+          </div>
+        </template>
+      </q-infinite-scroll>
+
+      <!-- Mensaje de fin -->
+      <div v-if="!hasMoreOrders && orders.length > 0" class="text-center q-my-md">
+        <span class="text-grey-5">No hay más órdenes</span>
+      </div>
+
+      <div v-if="orders.length === 0 && !loadingOrders" class="text-center q-py-xl">
+        <q-icon name="receipt_long" size="100px" color="grey-6" />
+        <div class="text-grey-5 q-mt-md">No tienes órdenes</div>
+      </div>
+    </div>
+
+    <!-- Vista de Favoritos -->
+    <div v-else-if="currentView === 'favorites'" class="favorites-container q-pa-md">
+      <div class="text-h5 text-white q-mb-md">Mis Favoritos</div>
+
+      <div class="products-grid">
+        <div
+          v-for="product in favoriteProducts"
+          :key="product.id"
+          class="product-card"
+          @click="handleProductClick(product)"
+          @click.right.prevent="openProductDetails(product)"
+          v-touch-hold="() => openProductDetails(product)"
+        >
+          <div class="product-image-container">
+            <q-img
+              v-if="product.images?.[0]?.url"
+              :src="product.images[0].url"
+              class="product-image"
+              :ratio="1"
+            />
+            <div v-else class="product-no-image">
+              <q-icon name="restaurant" size="60px" color="grey-6" />
+            </div>
+            <!-- Badge "En Carrito" -->
+            <div v-if="getProductInCart(product)" class="in-cart-badge">
+              <q-icon name="shopping_cart" size="14px" />
+              <span>En Carrito</span>
+            </div>
+            <q-btn
+              icon="favorite"
+              color="red"
+              flat
+              round
+              dense
+              size="sm"
+              class="favorite-btn"
+              @click.stop="toggleFavorite(product)"
+            />
+          </div>
+          <div class="product-info">
+            <div class="product-name">{{ product.name?.toUpperCase() }}</div>
+            <div class="product-description text-grey-5">{{ product?.description?.toUpperCase() || 'Delicioso producto' }}</div>
+
+            <!-- Rating -->
+            <div class="product-rating-new" @click.stop="openRatingDialog(product)">
+              <q-icon
+                v-for="i in 5"
+                :key="i"
+                name="star"
+                size="16px"
+                :color="i <= (product.average_rating || 0) ? 'orange' : 'grey-5'"
+              />
+            </div>
+
+            <!-- Precio -->
+            <q-chip
+              class="product-price-chip"
+              color="red"
+              text-color="white"
+              size="md"
+              dense
+            >
+              ${{ formatNumber(product.price) }}
+            </q-chip>
+
+            <!-- Botones de Cantidad o Agregar -->
+            <div v-if="getProductInCart(product)" class="quantity-controls" @click.stop>
+              <q-btn
+                icon="remove"
+                round
+                dense
+                color="orange"
+                size="sm"
+                @click="updateQuantity(getProductInCart(product), -1)"
+              />
+              <span class="quantity-text">{{ getProductInCart(product).amount }}</span>
+              <q-btn
+                icon="add"
+                round
+                dense
+                color="orange"
+                size="sm"
+                @click="updateQuantity(getProductInCart(product), 1)"
+              />
+            </div>
+            <q-btn
+              v-else
+              label="Agregar"
+              icon="add_shopping_cart"
+              color="orange"
+              class="add-to-cart-btn"
+              rounded
+              dense
+              @click.stop="handleProductClick(product)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="favoriteProducts.length === 0" class="text-center q-py-xl">
+        <q-icon name="favorite_border" size="100px" color="grey-6" />
+        <div class="text-grey-5 q-mt-md">No tienes favoritos</div>
+        <q-btn
+          label="Explorar Menú"
+          color="orange"
+          class="q-mt-lg"
+          @click="$router.push({ query: { view: 'catalog' } })"
+          rounded
+        />
+      </div>
+    </div>
+
+    <!-- Modal de Búsqueda -->
+    <q-dialog v-model="searchDialog" position="top">
+      <q-card class="search-dialog-card">
+        <q-card-section class="q-pa-md">
+          <div class="text-h6 text-white q-mb-md">Buscar productos</div>
+          <q-input
+            v-model="searchQuery"
+            placeholder="Buscar por nombre, descripción o categoría..."
+            dark
+            outlined
+            autofocus
+            @keyup.enter="performSearch"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" color="grey-5" />
+            </template>
+            <template v-slot:append>
+              <q-icon
+                v-if="searchQuery"
+                name="close"
+                color="grey-5"
+                class="cursor-pointer"
+                @click="searchQuery = ''"
+              />
+            </template>
+          </q-input>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            label="Cancelar"
+            flat
+            color="grey-5"
+            v-close-popup
+          />
+          <q-btn
+            label="Buscar"
+            unelevated
+            color="orange"
+            @click="performSearch"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Diálogo de Detalle de Orden -->
+    <q-dialog
+      v-model="orderDetailDialog"
+      position="bottom"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card class="order-detail-card" v-if="selectedOrder">
+        <!-- Header -->
+        <div class="order-detail-header">
+          <q-btn
+            icon="arrow_back"
+            flat
+            round
+            dense
+            color="white"
+            @click="orderDetailDialog = false"
+          />
+          <div class="order-detail-title text-white">
+            <div class="text-h6">Orden #{{ selectedOrder.code }}</div>
+            <div class="text-caption">{{ formatDate(selectedOrder.created_at) }}</div>
+          </div>
+          <q-badge :color="getStatusColor(selectedOrder.status)" :label="getStatusLabel(selectedOrder.status)" />
+        </div>
+
+        <q-card-section class="order-detail-content">
+          <!-- Cliente -->
+          <div class="compact-section">
+            <div class="compact-title">
+              <q-icon name="person" size="16px" color="orange" />
+              <span>Cliente</span>
+            </div>
+            <div class="compact-info">
+              <div class="compact-row">
+                <span class="compact-label">Nombre:</span>
+                <span class="compact-value">{{ selectedOrder.client?.name }}</span>
+              </div>
+              <div class="compact-row" v-if="selectedOrder.client?.document_number">
+                <span class="compact-label">Documento:</span>
+                <span class="compact-value">{{ selectedOrder.client.document_number }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mesas -->
+          <div class="compact-section" v-if="selectedOrder.tables?.length > 0">
+            <div class="compact-title">
+              <q-icon name="table_bar" size="16px" color="orange" />
+              <span>Mesas</span>
+            </div>
+            <div class="compact-tables">
+              <q-chip
+                v-for="table in selectedOrder.tables"
+                :key="table.id"
+                color="orange"
+                text-color="white"
+                size="sm"
+                icon="table_bar"
+              >
+                {{ table.name }}
+              </q-chip>
+            </div>
+          </div>
+
+          <!-- Productos -->
+          <div class="compact-section">
+            <div class="compact-title">
+              <q-icon name="shopping_bag" size="16px" color="orange" />
+              <span>Productos ({{ selectedOrder.products?.length }})</span>
+            </div>
+            <div class="compact-products">
+              <div
+                v-for="product in selectedOrder.products"
+                :key="product.id"
+                class="compact-product"
+              >
+                <div class="compact-product-image">
+                  <q-img
+                    v-if="product.images?.[0]?.url"
+                    :src="product.images[0].url"
+                    :ratio="1"
+                  />
+                  <q-icon v-else name="restaurant" size="32px" color="grey-6" />
+                </div>
+                <div class="compact-product-info">
+                  <div class="compact-product-name">{{ product.name }}</div>
+                  <div class="compact-product-meta">
+                    Cantidad: {{ product.pivot.amount }} · Precio: ${{ formatNumber(product.pivot.price) }}
+                  </div>
+                </div>
+                <div class="compact-product-total">
+                  ${{ formatNumber(product.pivot.amount * product.pivot.price) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total -->
+          <div class="compact-total">
+            <span>Total:</span>
+            <span class="compact-total-amount">${{ formatNumber(selectedOrder.total) }}</span>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Diálogo de Selección de Mesas -->
+    <q-dialog
+      v-model="tableDialog"
+      position="bottom"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card class="table-dialog-card">
+        <!-- Header -->
+        <div class="table-dialog-header">
+          <q-btn
+            icon="arrow_back"
+            flat
+            round
+            dense
+            color="white"
+            @click="tableDialog = false"
+          />
+          <div class="table-dialog-title text-white">
+            <div class="text-h6">Seleccionar Mesas</div>
+            <div class="text-caption" v-if="selectedTables.length > 0">
+              {{ selectedTables.length }} mesa(s) seleccionada(s)
+            </div>
+          </div>
+          <q-btn
+            label="Confirmar"
+            color="orange"
+            unelevated
+            dense
+            @click="confirmTables"
+            v-if="selectedTables.length > 0"
+          />
+        </div>
+
+        <q-card-section class="table-dialog-content">
+          <!-- Tabs de Salones -->
+          <div class="room-tabs">
+            <q-btn
+              v-for="room in livingRooms"
+              :key="room.id"
+              :label="room.name"
+              :color="selectedRoom?.id === room.id ? 'orange' : 'grey'"
+              :unelevated="selectedRoom?.id === room.id"
+              :outline="selectedRoom?.id !== room.id"
+              class="room-tab"
+              @click="changeRoom(room)"
+            />
+          </div>
+
+          <!-- Loading -->
+          <div v-if="loadingTables" class="text-center q-py-xl">
+            <q-spinner color="orange" size="50px" />
+          </div>
+
+          <!-- Grid de Mesas -->
+          <div v-else class="tables-grid">
+            <div
+              v-for="table in roomTables"
+              :key="table.id"
+              class="table-card"
+              :class="{ 'table-selected': isTableSelected(table), 'table-occupied': table.invoices?.length > 0 }"
+              @click="table.invoices?.length === 0 && toggleTable(table)"
+            >
+              <q-icon
+                name="table_bar"
+                size="32px"
+                :color="isTableSelected(table) ? 'orange' : 'white'"
+              />
+              <div class="table-name">{{ table.name }}</div>
+              <div class="table-status" v-if="table.invoices?.length > 0">
+                Ocupada
+              </div>
+              <q-icon
+                v-if="isTableSelected(table)"
+                name="check_circle"
+                size="20px"
+                color="orange"
+                class="table-check"
+              />
+            </div>
+          </div>
+
+          <!-- Sin mesas -->
+          <div v-if="!loadingTables && roomTables.length === 0" class="text-center q-py-xl">
+            <q-icon name="table_bar" size="80px" color="grey-6" />
+            <div class="text-grey-5 q-mt-md">No hay mesas en este salón</div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Vista 2: Detalle del producto -->
+    <q-dialog
+      v-model="productDialog"
+      position="bottom"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card class="product-detail-card">
+        <!-- Header -->
+        <q-toolbar class="product-detail-header">
+          <q-btn
+            icon="arrow_back"
+            flat
+            round
+            dense
+            color="white"
+            @click="productDialog = false"
+          />
+          <q-space />
+          <q-btn
+            :icon="selectedProduct?.is_favorite ? 'favorite' : 'favorite_border'"
+            :color="selectedProduct?.is_favorite ? 'red' : 'white'"
+            flat
+            round
+            dense
+            @click="toggleFavorite(selectedProduct)"
+          />
+        </q-toolbar>
+
+        <!-- Carrusel de imágenes del producto -->
+        <div class="product-detail-image-container">
+          <!-- Gradiente superior -->
+          <div class="image-gradient-overlay"></div>
+          <q-carousel
+            v-if="selectedProduct?.images?.length > 1"
+            v-model="productSlide"
+            animated
+            navigation
+            infinite
+            arrows
+            transition-prev="slide-right"
+            transition-next="slide-left"
+            class="product-carousel"
+          >
+            <q-carousel-slide
+              v-for="(image, index) in selectedProduct.images"
+              :key="index"
+              :name="index"
+              class="q-pa-none"
+            >
+              <q-img
+                :src="image.url"
+                class="product-detail-image"
+                :ratio="1"
+              />
+            </q-carousel-slide>
+          </q-carousel>
+          <q-img
+            v-else-if="selectedProduct?.images?.[0]?.url"
+            :src="selectedProduct.images[0].url"
+            class="product-detail-image"
+            :ratio="1"
+          />
+          <div v-else class="product-detail-no-image">
+            <q-icon name="restaurant" size="120px" color="grey-6" />
+          </div>
+        </div>
+
+        <!-- Información del producto -->
+        <q-card-section class="product-detail-info">
+          <div class="text-h5 text-white text-weight-medium">{{ selectedProduct?.name }}</div>
+          <div class="text-caption text-grey-5 q-mt-xs">{{ selectedProduct?.category?.name }}</div>
+
+          <!-- Rating y precio -->
+          <div class="flex items-center justify-between q-mt-md">
+            <div class="product-rating-large">
+              <q-icon v-for="i in 5" :key="i" name="star" size="18px" color="orange" />
+            </div>
+            <div class="product-detail-price">${{ formatNumber(selectedProduct?.price) }}</div>
+          </div>
+
+          <!-- Descripción -->
+          <div class="q-mt-lg" v-if="selectedProduct?.description">
+            <div class="text-body2 text-grey-4">
+              {{ selectedProduct?.description }}
+            </div>
+          </div>
+
+          <!-- Observaciones -->
+          <div class="q-mt-lg">
+            <div class="text-subtitle2 text-white q-mb-sm">Observaciones</div>
+            <q-input
+              v-model="productObservation"
+              filled
+              dark
+              type="textarea"
+              placeholder="Ej: Sin cebolla, término medio..."
+              rows="3"
+              class="observation-input"
+            />
+          </div>
+
+          <!-- Selector de cantidad -->
+          <div class="quantity-selector q-mt-lg">
+            <q-btn
+              round
+              flat
+              icon="remove"
+              color="white"
+              size="md"
+              @click="productQuantity = Math.max(1, productQuantity - 1)"
+            />
+            <div class="quantity-display">
+              <span class="text-h6 text-white">{{ String(productQuantity).padStart(2, '0') }}</span>
+            </div>
+            <q-btn
+              round
+              flat
+              icon="add"
+              color="white"
+              size="md"
+              @click="productQuantity++"
+            />
+          </div>
+        </q-card-section>
+
+        <!-- Botón Order Now -->
+        <q-card-actions class="q-pa-md">
+          <q-btn
+            label="Order Now"
+            color="orange"
+            size="lg"
+            class="full-width order-btn"
+            rounded
+            @click="addToCart(selectedProduct, productQuantity, productObservation)"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Vista 3: Vista de categoría con banner -->
+    <q-dialog
+      v-model="categoryDialog"
+      position="bottom"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card class="category-detail-card">
+        <!-- Header -->
+        <!-- Banner con imagen de fondo -->
+        <div class="category-banner-container" v-if="selectedCategoryData?.images?.length">
+          <!-- Botón atrás -->
+          <q-btn
+            icon="arrow_back"
+            flat
+            round
+            dense
+            color="white"
+            class="category-back-btn"
+            @click="categoryDialog = false"
+          />
+          <!-- Avatar del usuario -->
+          <q-avatar size="50px" class="category-user-avatar" v-if="userSession">
+            <img :src="getUserAvatar()" />
+          </q-avatar>
+          <!-- Gradiente superior para los botones -->
+          <div class="category-gradient-top"></div>
+          <!-- Gradiente inferior para desvanecer la imagen -->
+          <div class="category-gradient-bottom"></div>
+          <q-carousel
+            v-if="selectedCategoryData.images.length > 1"
+            v-model="categorySlide"
+            animated
+            navigation
+            infinite
+            arrows
+            transition-prev="slide-right"
+            transition-next="slide-left"
+            class="category-carousel"
+          >
+            <q-carousel-slide
+              v-for="(image, index) in selectedCategoryData.images"
+              :key="index"
+              :name="index"
+              class="q-pa-none"
+            >
+              <q-img
+                :src="image.url"
+                class="category-banner-image"
+                :ratio="16/9"
+              />
+              <div class="category-banner-overlay">
+                <div class="category-banner-text">
+                  <div class="text-h4 text-white text-weight-bold">{{ selectedCategoryData.name }}</div>
+                  <div class="text-h6 text-white q-mt-xs">{{ selectedCategoryData.name }}</div>
+                  <div class="text-body2 text-grey-4 q-mt-xs" v-if="selectedCategoryData.description">
+                    {{ selectedCategoryData.description }}
+                  </div>
+                </div>
+              </div>
+            </q-carousel-slide>
+          </q-carousel>
+          <div v-else class="category-banner-single">
+            <q-img
+              :src="selectedCategoryData.images[0].url"
+              class="category-banner-image"
+              :ratio="16/9"
+            />
+          </div>
+          <div class="category-banner-overlay">
+            <div class="category-banner-text">
+              <div class="text-h4 text-white text-weight-bold">
+                {{ selectedCategoryData.name }}
+              </div>
+              <div
+                class="text-body2 text-grey-4 q-mt-xs"
+                v-if="selectedCategoryData.description">
+                {{ selectedCategoryData.description }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Productos de la categoría -->
+        <q-card-section class="category-products q-pa-md">
+          <div class="products-grid">
+            <div
+              v-for="product in categoryProducts"
+              :key="product.id"
+              class="product-card"
+              @click="openProductDetails(product)"
+            >
+              <div class="product-image-container">
+                <q-img
+                  v-if="product.images?.[0]?.url"
+                  :src="product.images[0].url"
+                  class="product-image"
+                  :ratio="1"
+                />
+                <div v-else class="product-no-image">
+                  <q-icon name="restaurant" size="60px" color="grey-6" />
+                </div>
+                <q-badge
+                  v-if="getProductInCart(product)"
+                  color="green"
+                  floating
+                  class="cart-badge-product"
+                >
+                  {{ getProductInCart(product).amount }}
+                </q-badge>
+              </div>
+              <div class="product-info">
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-description">{{ product.category?.name }}</div>
+                <div class="product-footer">
+                  <div class="product-rating">
+                    <q-icon v-for="i in 5" :key="i" name="star" size="10px" color="orange" />
+                  </div>
+                  <div class="product-price">${{ formatNumber(product.price) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog de Rating -->
+    <q-dialog v-model="showRatingDialog">
+      <q-card class="rating-dialog" style="min-width: 350px">
+        <q-card-section class="bg-grey-9 text-white">
+          <div class="text-h6">Calificar Producto</div>
+          <div class="text-caption">{{ selectedProduct?.name }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-lg">
+          <div class="text-center q-mb-md">
+            <div class="text-subtitle2 q-mb-sm">Tu calificación</div>
+            <div class="rating-stars-large">
+              <q-icon
+                v-for="i in 5"
+                :key="i"
+                name="star"
+                size="40px"
+                :color="i <= productRatingValue ? 'orange' : 'grey-5'"
+                class="cursor-pointer"
+                @click="productRatingValue = i"
+              />
+            </div>
+          </div>
+
+          <q-input
+            v-model="productRatingComment"
+            type="textarea"
+            label="Comentario (opcional)"
+            filled
+            rows="3"
+            maxlength="500"
+            counter
+            class="q-mt-md"
+          />
+        </q-card-section>
+
         <q-card-actions align="right">
           <q-btn
-            color="negative"
-            label="Cerrar"
-            icon="close"
-            @click="() => {
-              detailProduct = false
-              product = null
-            }"
+            label="Cancelar"
+            color="grey"
+            flat
+            @click="showRatingDialog = false"
           />
           <q-btn
-            color="primary"
-            label="Agregar"
-            icon="add_shopping_cart"
-            @click="addCar"
+            label="Guardar"
+            color="orange"
+            @click="submitRating"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogTable" maximized>
-      <drawer-table
-        ref="drawerTable"
-        :free-table="false"
-        :tablesSelected="tableSelected"
-        @update:tableSelected="setTableSelected"
-        @update:invoice="freeTable"
+
+    <!-- Botón flotante del carrito -->
+    <!-- <q-page-sticky position="bottom-right" :offset="[18, 18]" v-if="cartItemsCount > 0">
+      <q-btn
+        fab
+        icon="shopping_cart"
+        color="orange"
+        @click="$router.push({ query: { ...$route.query, view: 'cart' } })"
+        class="cart-fab"
       >
-        <template v-slot:top>
-          <q-card-section class="flex items-center justify-between bg-primary text-white q-py-sm">
-            <span class="text-h6">Seleccionar mesa</span>
-            <q-btn flat round dense @click="dialogTable = false" icon="close" class="q-ml-sm"/>
-          </q-card-section>
-        </template>
-      </drawer-table>
-    </q-dialog>
-    <q-dialog v-model="dialogPayment" :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
-        <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
-          <span class="text-h6">Desglose de pago</span>
-          <q-btn flat icon="close" round size="md" v-close-popup/>
-        </q-card-section>
-        <q-card-section class="row q-col-gutter-md q-px-sm">
-          <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 q-gutter-xs grid justify-between">
-            <q-btn
-              color="secondary"
-              style="width: 48%"
-              :label="paymentMethod.name"
-              v-for="paymentMethod in paymentMethods"
-              :key="paymentMethod.id"
-              v-show="paymentMethod.acronym !== 'MPQA'"
-              @click="addPayment(paymentMethod)"
-            />
-          </div>
-          <div class="col-xs-12 col-sm-12 col-md-8 col-lg-8 q-gutter-xs row">
-            <div class="col-12">
-              <q-markup-table>
-                <thead>
-                  <tr>
-                    <th class="text-left" colspan="4">
-                      <div class="flex q-gutter-x-md justify-between items-center">
-                        <span class="text-subtitle2 text-uppercase">
-                          {{ invoiceOne.invoice_type.name }} Nro {{ invoiceOne?.code }}
-                        </span>
-                        <span class="text-subtitle2 text-uppercase" v-if="invoiceOne?.tables?.length">
-                          Mesas: {{ invoiceOne?.tables?.map(table => table.name).join(', ') }}
-                        </span>
-                        <q-toggle v-model="tableClose" label="Cerrar mesa" v-if="invoiceOne?.tables?.length"/>
-                      </div>
-                    </th>
-                  </tr>
-                  <tr>
-                    <th class="text-left">M. de pago</th>
-                    <th class="text-left">Referencia</th>
-                    <th class="text-right">Monto</th>
-                    <th class="text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(payment, index) in payments" :key="payment.id">
-                    <td class="text-left">
-                      {{ payment.name }}
-                    </td>
-                    <td class="text-left">
-                      <span v-if="payment.reference"> {{ payment.reference }}</span>
-                      <span v-else>-</span>
-                      <q-popup-edit
-                        v-model="payment.reference"
-                        auto-save
-                        v-slot="scope"
-                      >
-                        <q-input
-                          v-model="scope.value"
-                          autofocus
-                          @keyup.enter="scope.set"
-                        />
-                      </q-popup-edit>
-                    </td>
-                    <td class="text-right">
-                      {{ formatNumber(payment.amount) }}
-                      <q-popup-edit
-                        v-model.number="payment.amount"
-                        auto-save
-                        v-slot="scope"
-                      >
-                        <q-input
-                          v-model="scope.value"
-                          autofocus
-                          @keyup.enter="scope.set"
-                        />
-                      </q-popup-edit>
-                    </td>
-                    <q-td class="text-center q-gutter-x-xs">
-                      <q-btn
-                        icon="delete"
-                        color="negative"
-                        rounded
-                        dense
-                        @click="deletePayment(index)"
-                      />
-                      <q-btn
-                        v-if="payment.acronym === 'MPQA'"
-                        rounded
-                        dense
-                        icon="qr_code"
-                        color="secondary"
-                        @click="waitingPayment = true"
-                      />
-                    </q-td>
-                  </tr>
-                  <tr>
-                    <th colspan="4">
-                      <span class="text-subtitle2 text-uppercase">
-                        Restante a pagar:
-                        <span v-if="coin">{{ coin.symbol }}</span>{{ formatNumber(pendingPayment) }}
-                      </span>
-                    </th>
-                  </tr>
-                </tbody>
-              </q-markup-table>
-            </div>
-          </div>
-          <div class="col-12">
-            <q-expansion-item
-              icon="list"
-              label="Artículos"
-              :caption="`Total: ${formatNumber(invoiceOne.total)}`"
-              style="border-radius: 10px"
-              class="shadow-1 overflow-hidden"
-              default-opened
-            >
-              <q-card>
-                <q-card-section class="q-py-sm q-pt-none scroll" style="max-height: 250px">
-                  <div v-for="product in invoiceOne.products" :key="product.id" class="col-12 column">
-                    <div class="full-width flex items-center justify-between">
-                      <div class="flex q-gutter-sm items-center">
-                        <file-component
-                          :files="[product.images[0]]"
-                          image-style="height: 50px; width: 50px; border-radius: 10px;"
-                          only-view
-                        />
-                        <span class="text-body1">
-                          {{ product.name.slice(0, 15) }}
-                          <q-tooltip class="text-subtitle1">
-                            {{ product.name }}
-                          </q-tooltip>
-                        </span>
-                      </div>
-                      <span class="text-bold">
-                        {{ formatNumber(product.pivot.amount) }}
-                      </span>
-                      <span class="text-bold">
-                        {{ formatNumber(product.pivot.amount * product.pivot.price) }}
-                      </span>
-                    </div>
-                    <q-separator class="q-mt-sm" />
-                  </div>
-                </q-card-section>
-              </q-card>
-            </q-expansion-item>
-          </div>
-        </q-card-section>
-        <q-card-actions align="center" class="q-gutter-y-sm">
-          <q-btn
-            :label="`Guardar e imprimir ${invoiceOne.billing ? 'factura' : 'comprobante'}`"
-            @click="submitBill('printBill')"
-            color="secondary"
-            :class="$q.screen.lt.sm ? 'full-width' : ''"
-            :loading="loadingBilling"
-          />
-          <q-btn
-            label="Guardar e imprimir comanda"
-            @click="submitBill('printCommand')"
-            color="warning"
-            :class="$q.screen.lt.sm ? 'full-width' : ''"
-            :loading="loadingBilling"
-          />
-          <q-btn
-            label="Guardar sin imprimir"
-            @click="submitBill('withoutPrint')"
-            color="primary"
-            :class="$q.screen.lt.sm ? 'full-width' : ''"
-            :loading="loadingBilling"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.md">
-      <q-card :style="$q.screen.lt.md ? '' : 'width: 700px; max-width: 80vw;'">
-        <q-form @submit="saveClient" class="column full-height">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Agregar cliente</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
-          </q-card-section>
-          <q-card-section class="row q-col-gutter-sm col">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.document_number"
-                autofocus
-                label="Número de documento"
-                :rules="[val => !!val || 'El campo es requerido.']"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="clientAdded.name"
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.phone_number"
-                label="Número de teléfono"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.address"
-                label="Dirección"
-                type="textarea"
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
+        <q-badge color="red" floating rounded>
+          {{ cartItemsCount }}
+        </q-badge>
+      </q-btn>
+    </q-page-sticky> -->
+
+    <!-- Scanner de productos -->
+    <!-- <ProductScanner
+      @product-found="handleProductFound"
+      @product-not-found="handleProductNotFound"
+    /> -->
   </q-page>
 </template>
+
 <script>
-import { Notify } from 'quasar'
-import { QrcodeStream } from 'vue-qrcode-reader'
-import { formatNumber, loading, notify } from '../const/mixins'
-import SkeletonCard from '../components/SkeletonCard.vue'
-import SlideComponent from '../components/SlideComponent.vue'
 import { mapState } from 'pinia'
-import { authentication } from 'src/stores/module-authentication'
-import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import { useCommandStore } from 'src/stores/command'
-import { commandPrint, ticketPrint } from 'src/const/printers'
-import { formatDate } from 'src/const/mixins'
-import FileComponent from 'src/components/FileComponent.vue'
-import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
+import { authentication } from 'src/stores/module-authentication'
+// import ProductScanner from 'src/components/Catalog/ProductScanner.vue'
+import { formatNumber, formatDate } from 'src/const/mixins'
+
 export default {
-  name: 'CommandPage',
+  name: 'CommandPageNew',
   components: {
-    QrcodeStream,
-    SkeletonCard,
-    SlideComponent,
-    DrawerTable,
-    FileComponent,
-    ScheduleStatus
+    // ProductScanner
   },
   data () {
     return {
-      formatDate,
-      status,
-      observation: null,
-      coin: null,
-      tableClose: true,
-      loadingBilling: false,
-      dialogPayment: false,
-      company: null,
-      isCurrentlyOpen: false,
-      /**
-       * Pagination option
-       * @type {Object}
-       */
-      invoicePagination: {
-        rowsPerPage: 10,
-        rowsNumber: 10,
-        paginate: true,
-        sortBy: 'id',
-        sortOrder: 'desc'
-      },
-      /**
-       * Clients
-       * @type {Array}
-       */
-      clients: [],
-      paymentMethods: [],
-      payments: [],
-      /**
-       * Client
-       * @type {Object}
-       */
-      client: null,
-      /**
-       * Filter
-       * @type {String}
-       */
-      filter: null,
-      /**
-       * Client added
-       * @type {Object}
-       */
-      clientAdded: {},
-      /**
-       * Temporal products
-       * @type {Array}
-       */
-      temporalProducts: [],
-      /**
-       * Open add client
-       * @type {Boolean}
-       */
-      openAddClient: false,
-      /**
-       * Loading client
-       * @type {Boolean}
-       */
-      loadingClient: false,
-      /**
-       * Slide
-       * @type {Number}
-       */
-      slide: 1,
-      /**
-       * Dialog table
-       * @type {Boolean}
-       */
-      dialogTable: false,
-      /**
-       * Details product
-       * @type {Boolean}
-       */
-      detailProduct: false,
-      /**
-       * Loading table
-       * @type {Boolean}
-       */
-      loadingTable: false,
-      /**
-       * Product
-       * @type {Object}
-       */
-      product: null,
-      /**
-       * Bill loading
-       * @type {Boolean}
-       */
-      billLoading: false,
-      /**
-       * Format number
-       * @type {Function}
-       */
-      formatNumber,
-      /**
-       * Table
-       * @type {Object}
-       */
-      tables: [],
-      /**
-       * Loading page
-       * @type {Boolean}
-       */
-      loadingPage: false,
-      /**
-       * Category selected
-       * @type {Object}
-       */
-      category: null,
-      /**
-       * Categories
-       * @type {Array}
-       */
+      bannerSlide: 0,
+      productSlide: 0,
+      categorySlide: 0,
+      selectedCategory: 'all',
+      selectedCategoryData: null,
       categories: [],
-      /**
-       * Total bill
-       * @type {Number}
-       */
-      totalBill: 0,
-      /**
-       * Products
-       * @type {Array}
-       */
       products: [],
-      /**
-       * Columns
-       * @type {Array}
-       */
-      columns: [
-        {
-          name: 'name',
-          required: true,
-          label: 'Descripción',
-          align: 'left',
-          field: row => row.name,
-          sortable: true
-        },
-        { name: 'amount', align: 'right', label: 'Cantidad', field: 'amount', sortable: true },
-        { name: 'price', align: 'right', label: 'Precio', field: 'price', sortable: true },
-        { name: 'subtotal', align: 'right', label: 'Subtotal', field: 'subtotal', sortable: true },
-        { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
-      ],
-      /**
-       * Pagination option
-       * @type {Object}
-       */
-      pagination: { rowsPerPage: 50 },
-      /**
-       * All products
-       * @type {Array}
-       */
-      allProducts: [],
-      /**
-       * Invoices list
-       * @type {Array}
-       */
-      invoices: [],
-      /**
-       * Table selected
-       * @type {Array}
-       */
-      tableSelected: [],
-      /**
-       * Is table
-       * @type {Number}
-       */
-      isTable: 1,
-      invoiceOne: null,
-      menu: null,
-      /**
-       * Product columns
-       * @type {Array}
-       */
-      productColumns: [
-        {
-          name: 'barcode',
-          align: 'left',
-          label: 'Código',
-          field: 'barcode',
-          sortable: true
-        },
-        {
-          name: 'name',
-          required: true,
-          label: 'Descripción',
-          align: 'left',
-          field: row => row.name,
-          sortable: true
-        },
-        {
-          name: 'category',
-          align: 'right',
-          label: 'Categoría',
-          field: row => row.category.name,
-          sortable: true
-        },
-        {
-          name: 'price',
-          align: 'right',
-          label: 'Precio',
-          field: 'price',
-          sortable: true
-        }
-      ]
-    }
-  },
-  created () {
-    this.isTable = this.userSession?.company_session?.company_config?.is_table
-    this.client = this.userSession?.company_session?.company_config?.client
-    this.coin = this.userSession?.company_session?.company_config?.coin
-    this.menu = this.userSession?.company_session?.company_config?.other?.menu
-    this.company = this.userSession?.company_session
-    this.getCategories()
-    this.setPagination({ pagination: this.invoicePagination })
-    this.category = this.$route.query.category || 'all'
-    this.calculateTotal()
-    this.getPaymentMethods()
-  },
-  watch: {
-    observation (data) {
-      if (typeof data === 'string') {
-        this.product.observation = data
-        this.addTemporalProducts(this.product, this.product.amount)
-      }
-    },
-    /**
-     * Dialog payment
-     * @param {Object} data data payment
-     */
-    dialogPayment (data) {
-      if (!data) {
-        this.payments = []
-        this.totalBill = 0
-      }
-    },
-    category (data) {
-      this.$router.push({
-        path: 'command',
-        query: {
-          tab: this.tab,
-          category: data || 'all'
-        }
-      })
-      this.getAllProducts()
-    },
-    table (table) {
-      const store = useCommandStore()
-      store.setCommands({ table })
-    },
-    products (products) {
-      const store = useCommandStore()
-      store.setCommands({ products })
-    },
-    filter (data) {
-      this.setQueryParams({
-        filter: data
-      })
-    },
-    tab (data) {
-      if (data === 'orders') { this.setPagination({ pagination: this.invoicePagination }) }
+      featuredProduct: null,
+      loading: false,
+      showAllProducts: false,
+      productDialog: false,
+      categoryDialog: false,
+      selectedProduct: null,
+      productQuantity: 1,
+      productObservation: '',
+      productRatingValue: 0,
+      productRatingComment: '',
+      showRatingDialog: false,
+      orders: [],
+      favoriteProducts: [],
+      formatNumber,
+      formatDate,
+      companyBanner: [],
+      searchDialog: false,
+      searchQuery: '',
+      currentPage: 1,
+      pageSize: 100,
+      totalProducts: 0,
+      hasMoreProducts: true,
+      ordersCurrentPage: 1,
+      ordersPageSize: 100,
+      totalOrders: 0,
+      hasMoreOrders: true,
+      loadingOrders: false,
+      orderDetailDialog: false,
+      selectedOrder: null,
+      tableDialog: false,
+      livingRooms: [],
+      selectedRoom: null,
+      roomTables: [],
+      selectedTables: [],
+      loadingTables: false
     }
   },
   computed: {
-    tab () {
-      return this.$route.query.tab ?? 'menu'
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    company () {
+      return this.userSession?.company_session
     },
-    /**
-     * Pending payment
-     * @returns {Number}
-     */
-    pendingPayment () {
-      return this.totalBill - this.totalPayment
+    greeting () {
+      const hour = new Date().getHours()
+      const name = this.userSession?.name?.split(' ')[0] || 'Usuario'
+      if (hour < 12) return `Buenos días, ${name}!`
+      if (hour < 18) return `Buenas tardes, ${name}!`
+      return `Buenas noches, ${name}!`
     },
-    /**
-     * Total payment
-     * @returns {Number}
-     */
-    totalPayment () {
-      let totalPayment = 0
-      this.payments.forEach((payment) => {
-        totalPayment = totalPayment + payment.amount
-      })
-      return totalPayment
+    currentView () {
+      return this.$route.query.view || 'catalog'
     },
-    ...mapState(authentication, ['userSession', 'branchOffice'])
+    searchQueryFromUrl () {
+      return this.$route.query.search || ''
+    },
+    isSearching () {
+      return !!this.searchQueryFromUrl
+    },
+    cartProducts () {
+      const store = useCommandStore()
+      return store?.command?.products || []
+    },
+    cartItemsCount () {
+      return this.cartProducts.length
+    },
+    totalAmount () {
+      return this.cartProducts.reduce((sum, item) => sum + (item.subtotal || 0), 0)
+    },
+    displayedProducts () {
+      // La búsqueda y paginación se manejan en el backend
+      // Solo retornamos los productos tal cual vienen
+      return this.products
+    },
+    categoryProducts () {
+      return this.products.filter(p => p.category_id === this.selectedCategoryData?.id)
+    }
+  },
+  watch: {
+    selectedCategory () {
+      this.loadProducts()
+    },
+    currentView (newView) {
+      if (newView === 'orders' && this.userSession) {
+        this.loadOrders()
+      } else if (newView === 'favorites' && this.userSession) {
+        this.loadFavorites()
+      }
+    },
+    searchQueryFromUrl (newVal) {
+      this.searchQuery = newVal
+      // Cuando cambia la búsqueda, recargar productos
+      this.loadProducts()
+    }
+  },
+  created () {
+    this.loadCategories()
+    this.loadProducts()
+    this.loadCompanyBanner()
+    if (this.currentView === 'orders' && this.userSession) {
+      this.loadOrders()
+    }
+    if (this.currentView === 'favorites' && this.userSession) {
+      this.loadFavorites()
+    }
   },
   methods: {
-    async submitBill (options) {
-      try {
-        loading(true)
-        await this.$api.put(`invoices/${this.invoiceOne.id}`, {
-          ...this.invoiceOne,
-          tableClose: this.tableClose,
-          status: this.tableClose ? 'delivered' : this.invoiceOne.status,
-          payments: this.payments
-        })
-        switch (options) {
-          case 'printBill':
-            this.printBill(this.invoiceOne)
-            break
-          case 'printCommand':
-            this.printTicket(this.invoiceOne)
-            break
-          case 'withoutPrint':
-            break
-        }
-        this.dialogPayment = false
-        this.dialogTable = false
-        this.setPagination({
-          pagination: this.invoicePagination
-        })
-        notify('Se ha guardado exitosamente', 'positive', 'check_circle')
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
+    getUserAvatar () {
+      const user = this.userSession?.user || this.userSession
+      if (user?.avatar_url) {
+        return user.avatar_url
       }
+      const name = user?.name || 'U'
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ff9800&color=fff&size=128&bold=true`
     },
 
-    async printBill (data) {
-      await ticketPrint(data)
+    openSearchDialog () {
+      this.searchQuery = this.searchQueryFromUrl
+      this.searchDialog = true
     },
 
-    async printTicket (data) {
-      await commandPrint(data)
-    },
-    /**
-     * Delete invoice payment
-     * @param {Number} index value index payments
-     */
-    deletePayment (index) {
-      this.payments.splice(index, 1)
-    },
-    /**
-     * Valid stock product
-     * @param {Object} data data
-     * @param {Number} amount amount
-     */
-    validStockProduct (data, amount) {
-      const stock = data.is_bundle ? data.bundle_stock : data.normal_stock
-      if (!data.skip_stock) {
-        return stock >= amount
-      }
-      return true
-    },
-    /**
-     * Set payments
-     * @param {Array} invoicePayments invoice payments
-     */
-    setPayments (invoicePayments) {
-      invoicePayments?.forEach(payment => {
-        this.payments.push({
-          id: payment.payment_method_id,
-          payment_method_id: payment.payment_method_id,
-          name: payment.payment_method.name,
-          amount: payment.amount,
-          reference: payment.reference,
-          coin_id: payment.coin_id
-        })
-      })
-    },
-    /**
-     * Free table
-     * @param {Object} table  table data
-     */
-    async freeTable (table) {
-      try {
-        loading(true)
-        const invoiceOne = table.invoices[0]
-        const { data } = await this.$api.get(`invoices/${invoiceOne.id}`)
-        this.openPaid(data.data)
-        loading(false)
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Open paid
-     * @param {Object} data data
-     */
-    openPaid (data) {
-      this.invoiceOne = data
-      this.totalBill = data.total
-      this.pendingPayment = data.total - data.total_payments
-      this.setPayments(data.invoice_payments)
-      this.dialogPayment = true
-    },
-    /**
-     * Get all payment-methods
-     */
-    async getPaymentMethods () {
-      try {
-        const { data } = await this.$api.get('payment-methods')
-        this.paymentMethods = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Set invoice electronic
-     * @param {Object} invoice invoice
-     */
-    async setInvoiceElectronic (invoice) {
-      try {
-        loading(true)
-        const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
-        if (data.electronic_invoice?.fields?.error) {
-          notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
-        } else {
-          notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')
-          this.printBill(data)
-          this.getInvoices(this.invoicePagination)
-        }
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    /**
-     * Set data pagination emit event
-     * @param  {Object} data value pagination
-     */
-    setPagination (data) {
-      const params = {
-        sortOrder: data.pagination.descending ? 'asc' : 'desc',
-        page: data.pagination.page,
-        sortBy: data.pagination.sortBy,
-        perPage: data.pagination.rowsPerPage,
-        dataEqualFilter: {
-          seller_id: this.userSession.id
-        },
-        paginate: true
-      }
-      this.invoicePagination = data.pagination
-      this.getInvoices(params)
-    },
-    /**
-     * Add bill payment
-     * @param {Object} data data payments
-     */
-    addPayment (data) {
-      if (this.pendingPayment > 0) {
-        this.payments.push({
-          name: data.name,
-          acronym: data.acronym,
-          amount: this.pendingPayment,
-          reference: null,
-          coin_id: this.coin.id,
-          payment_method_id: data.id,
-          user_created_id: this.userSession.id
-        })
-      }
-    },
-    /**
-     * Add product to car
-     */
-    addCar () {
-      this.temporalProducts.forEach(product => this.validateProduct(product))
-      this.notifyProductCar(this.products)
-      this.detailProduct = false
-      this.temporalProducts = []
-      this.observation = null
-      this.product = {
-        amount: 1
-      }
-    },
-    /**
-     * Open product details
-     * @param {Object} product
-     */
-    openProductDetails (product) {
-      this.detailProduct = true
-      this.product = product
-      this.product.amount = 1
-      this.addTemporalProducts(product, product.amount)
-      if (product.product_addons && product.product_addons.length > 0) {
-        this.product.product_addons = product.product_addons.map(addon => {
-          addon.amount = 0
-          return addon
-        })
-      }
-    },
-    /**
-     * Save clients
-     */
-    saveClient () {
-      this.loadingClient = true
-      this.$api.post('clients', this.clientAdded)
-        .then(({ data }) => {
-          this.openAddClient = false
-          this.clientAdded = {}
-          this.client = data
-          this.loadingClient = false
-          Notify.create({
-            message: 'Cliente creado exitosamente',
-            icon: 'check_circle',
-            color: 'positive'
-          })
-        })
-        .catch(err => {
-          this.loadingClient = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
-    /**
-     * After save bill
-     */
-    afterSaveBill () {
-      this.tables = []
-      this.client = this.userSession?.company_session?.company_config?.client
-      this.clientAdded = {}
-      this.products = []
-      this.tableSelected = []
-      this.setQueryParams({ tab: 'menu' })
-      this.totalBill = 0
-      notify('Pedido creado exitosamente', 'positive', 'check_circle')
-    },
-    /**
-     * Set table selected
-     * @param {Object} data table selected
-     */
-    async setTableSelected (data) {
-      this.tableSelected = data
-      if (data.length > 0) {
-        await this.getTable(data)
-        this.dialogTable = false
-      }
-    },
-
-    /**
-     * Select category
-     * @param {String} value user Session Value filter
-     * @param {Callback} update update options
-     */
-    filterClients (value, update) {
-      this.$api.get('clients', {
-        params: {
-          sortBy: 'id',
-          sortOrder: 'desc',
-          dataSearch: {
-            name: value,
-            document_number: value
+    performSearch () {
+      if (this.searchQuery.trim()) {
+        this.$router.push({
+          query: {
+            ...this.$route.query,
+            search: this.searchQuery.trim()
           }
-        }
-      })
-        .then(({ data }) => {
-          update(() => {
-            this.clients = data
-          })
         })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
-    /**
-     * Get categories
-     */
-    async getInvoices (params) {
-      try {
-        loading(true)
-        const { data } = await this.$api.get('invoices', { params })
-        this.invoices = data.data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    /**
-     * Save bill and payments
-     */
-    async saveBill () {
-      if (this.tab !== 'command') {
-        this.setQueryParams({ tab: 'command' })
-        return
-      }
-
-      if (!this.tables?.length && this.isTable) {
-        notify('No se puede crear pedido sin mesa', 'negative', 'warning')
-        return
-      }
-
-      if (this.products.length === 0) {
-        notify('No se puede crear pedido sin productos', 'negative', 'warning')
-        return
-      }
-
-      if (!this.client) {
-        notify('No se puede crear pedido sin cliente', 'negative', 'warning')
-        return
-      }
-
-      try {
-        this.billLoading = true
-        await this.$api.post('command-orders', {
-          seller_id: this.userSession?.id,
-          client_id: this.client?.id,
-          products: this.products,
-          branch_office_id: this.branchOffice?.id,
-          tables: this.isTable ? this.tables?.map(table => table.id) : [],
-          company_id: this.userSession?.company_session_id,
-          code: 2
-        })
-        this.afterSaveBill()
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        this.billLoading = false
-      }
-    },
-    /**
-     * Delete product in table
-     * @param {Object} product props table products
-     */
-    deleteProduct (product) {
-      const index = this.products.map(productOne => productOne.id).indexOf(product.row.id)
-      this.products.splice(index, 1)
-      this.calculateTotal()
-    },
-    /**
-     * Calculate the total
-     */
-    calculateTotal () {
-      let total = 0
-      this.products.forEach(product => {
-        total += product.subtotal
-      })
-      this.totalBill = total
-    },
-    /**
-     * Calculate the total and subtotal
-     * @param {Object} data props products
-     */
-    calculate (data) {
-      data.subtotal = data.price * data.amount
-      this.calculateTotal()
-    },
-    addTemporalProducts (data, amount) {
-      const findProduct = this.findProduct(this.temporalProducts, data)
-      if (findProduct) {
-        findProduct.amount = amount
-        findProduct.observation = data.observation
       } else {
-        this.temporalProducts.push({
-          ...data,
-          amount
-        })
+        this.clearSearch()
       }
+      this.searchDialog = false
     },
-    /**
-     * Find product
-     * @param {Array} products products
-     * @param {Object} product product
-     */
-    findProduct (products, product) {
-      if (products) {
-        return products.find(productOne => productOne.id === product.id)
-      }
-      return false
-    },
-    /**
-     * Validate products
-     * @param {*} data product selected
-     */
-    validateProduct (data) {
-      const findProduct = this.findProduct(this.products, data)
 
-      if (!this.validStockProduct(data, 1)) {
-        notify(
-          `No hay stock suficiente para ${data.name}`,
-          'negative',
-          'warning'
-        )
-        return
-      }
+    clearSearch () {
+      this.searchQuery = ''
+      const query = { ...this.$route.query }
+      delete query.search
+      this.$router.push({ query })
+    },
 
-      if (findProduct) {
-        findProduct.amount += data.amount
-        findProduct.product_id = findProduct.id
-        findProduct.observation = data.observation
-        this.calculate(findProduct)
-      } else {
-        data.subtotal = 0
-        data.product_id = data.id
-        this.products = [
-          ...this.products,
-          data
-        ]
-        this.calculate(data)
+    loadCompanyBanner () {
+      if (this.company) {
+        this.companyBanner = this.company.company_config?.other?.menu?.banner_url
+          ? [this.company.company_config.other.menu.banner_url]
+          : [this.company.url]
       }
     },
-    /**
-     * Set query params
-     * @param {Object} query query params
-     */
-    setQueryParams (query) {
-      this.$router.push({
-        path: 'command',
-        query: {
-          ...this.$route.query,
-          ...query
-        }
-      })
-    },
-    /**
-     * Notify product car
-     */
-    notifyProductCar () {
-      Notify.create({
-        position: 'top',
-        message: '¡Producto añadido con éxito! ¡Listo para confirmar su orden!',
-        actions: [
-          {
-            label: 'Ver orden',
-            color: 'white',
-            handler: () => this.setQueryParams({ tab: 'command' })
-          }
-        ],
-        icon: 'info',
-        color: 'positive'
-      })
-    },
-    /**
-     * Get all tables
-     */
-    getAllProducts () {
-      this.loadingPage = true
-      this.$api.get('products', {
-        params: {
-          sortOrder: 'desc',
-          sortBy: 'sold',
-          stock: true,
-          withStock: true,
-          branch_office_id: this.branchOffice?.id,
-          dataEqualFilter: {
-            category_id: this.category === 'all' ? null : this.category,
-            show_catalog: 1,
-            'category.show_catalog': 1
-          }
-        }
-      })
-        .then(({ data }) => {
-          this.allProducts = data
-          this.loadingPage = false
-        })
-        .catch(err => {
-          this.loadingPage = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
-    getParams (url) {
-      const urlObj = new URL(url.replace('#', '?'))
-      console.log(urlObj)
-      const params = new URLSearchParams(urlObj.search)
-      return params.get('p')
-    },
-    getCodeQr (code) {
-      const newCode = code[0]
-      const data = this.getParams(newCode.rawValue)
-      console.log(atob(data))
-      const { id } = JSON.parse(atob(data))
-      this.getTable([id])
-    },
-    /**
-     * Get table
-     * @param {Object} code code
-     */
-    async getTable (id) {
+
+    async loadCategories () {
       try {
-        this.loadingTable = true
-        const { data } = await this.$api.get('tables', {
+        const { data } = await this.$api.get('categories', {
           params: {
-            whereIn: {
-              id
+            sortBy: 'sort_order',
+            sortOrder: 'asc',
+            dataFilter: {
+              show_catalog: 1
             }
           }
         })
-        this.loadingTable = false
-        if (data.find(table => table.status === 'busy')) {
-          notify('La mesa está ocupada', 'negative', 'warning')
-          return
-        }
-        this.tables = data
-        this.setQueryParams({ tab: 'menu' })
+        this.categories = data
       } catch (error) {
-        this.tables = []
-        this.loadingTable = false
-        notify(error.message, 'negative', 'warning')
+        console.error('Error loading categories:', error)
       }
     },
-    /**
-     * Select category
-     * @param {String} value Value filter
-     * @param {Callback} update update options
-     */
-    getCategories () {
-      this.$api.get('categories', {
-        params: {
-          dataFilter: {
-            show_catalog: 1
+
+    async loadProducts (reset = true) {
+      try {
+        if (reset) {
+          this.currentPage = 1
+          this.products = []
+          this.hasMoreProducts = true
+        }
+
+        if (!this.hasMoreProducts) return
+
+        this.loading = true
+        const params = {
+          stock: true,
+          paginate: true,
+          withStock: true,
+          sortOrder: 'desc',
+          sortBy: 'sold',
+          branch_office_id: this.branchOffice?.id,
+          with: 'ratings',
+          page: this.currentPage,
+          perPage: this.pageSize,
+          dataEqualFilter: {
+            show_catalog: 1,
+            'category.show_catalog': 1
+          },
+          dataSearch: {
+            name: '',
+            description: '',
+            barcode: ''
           }
         }
+
+        // Si hay búsqueda, agregar al dataSearch
+        if (this.searchQueryFromUrl) {
+          params.dataSearch.name = this.searchQueryFromUrl
+          params.dataSearch.description = this.searchQueryFromUrl
+          params.dataSearch.barcode = this.searchQueryFromUrl
+        }
+
+        if (this.selectedCategory !== 'all') {
+          params.dataEqualFilter.category_id = this.selectedCategory
+        }
+
+        const { data } = await this.$api.get('products', { params })
+
+        if (reset) {
+          this.products = data?.data || data
+        } else {
+          this.products = [...this.products, ...data?.data || data]
+        }
+        console.log(data.total)
+        this.totalProducts = data?.total || data.length
+        this.hasMoreProducts = data?.data?.length === this.pageSize
+
+        if (this.products.length > 0 && !this.featuredProduct) {
+          this.featuredProduct = this.products[0]
+        }
+      } catch (error) {
+        console.error('Error loading products:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async loadMoreProducts () {
+      if (this.loading || !this.hasMoreProducts) return
+
+      this.currentPage++
+      await this.loadProducts(false)
+    },
+
+    async onLoadMore (index, done) {
+      if (!this.hasMoreProducts) {
+        done()
+        return
+      }
+
+      await this.loadMoreProducts()
+      done()
+    },
+
+    selectCategory (category) {
+      this.selectedCategory = category.id
+      this.selectedCategoryData = category
+
+      // Si la categoría tiene imágenes, mostrar la vista de categoría
+      if (category.images && category.images.length > 0) {
+        this.categorySlide = 0
+        this.categoryDialog = true
+      } else {
+        // Si no tiene imágenes, solo filtrar productos
+        this.loadProducts()
+      }
+    },
+
+    handleProductClick (product) {
+      // Si tiene addons, abrir el detalle
+      if (product.addons && product.addons.length > 0) {
+        this.openProductDetails(product)
+        return
+      }
+
+      // Si no tiene addons, agregar directamente al carrito
+      this.addToCart(product, 1, '')
+    },
+
+    openProductDetails (product) {
+      this.selectedProduct = product
+      this.productQuantity = 1
+      this.productObservation = ''
+      this.productDialog = true
+    },
+
+    addToCart (product, quantity = 1, observation = '') {
+      const store = useCommandStore()
+      const products = [...(store.command?.products || [])]
+
+      const existingProduct = products.find(p => p.id === product.id)
+
+      if (existingProduct) {
+        existingProduct.amount += quantity
+        existingProduct.subtotal = existingProduct.amount * existingProduct.price
+        if (observation) {
+          existingProduct.observation = observation
+        }
+      } else {
+        products.push({
+          ...product,
+          amount: quantity,
+          subtotal: quantity * product.price,
+          observation,
+          product_id: product.id
+        })
+      }
+
+      store.setCommands({ products })
+
+      this.productDialog = false
+
+      this.$q.notify({
+        type: 'positive',
+        message: 'Producto agregado al carrito',
+        position: 'top',
+        timeout: 1500,
+        icon: 'shopping_cart'
       })
-        .then(({ data }) => {
-          this.categories = data
+    },
+
+    getProductInCart (product) {
+      return this.cartProducts.find(p => p.id === product.id)
+    },
+
+    handleProductFound (product) {
+      this.openProductDetails(product)
+    },
+
+    handleProductNotFound (code) {
+      this.$q.notify({
+        type: 'warning',
+        message: `Producto con código ${code} no encontrado`,
+        position: 'top'
+      })
+    },
+
+    async toggleFavorite (product) {
+      try {
+        const { data } = await this.$api.post('product-favorites', {
+          product_id: product.id
         })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+
+        product.is_favorite = data.is_favorite
+
+        // Actualizar contador
+        if (data.is_favorite) {
+          product.favorites_count = (product.favorites_count || 0) + 1
+        } else {
+          product.favorites_count = Math.max(0, (product.favorites_count || 0) - 1)
+        }
+
+        this.$q.notify({
+          type: 'positive',
+          message: data.message,
+          position: 'top',
+          timeout: 1500
         })
+
+        // Recargar favoritos si estamos en esa vista
+        if (this.currentView === 'favorites') {
+          this.loadFavorites()
+        }
+      } catch (error) {
+        console.error('Error toggling favorite:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al actualizar favorito',
+          position: 'top'
+        })
+      }
+    },
+
+    openRatingDialog (product) {
+      this.selectedProduct = product
+      this.productRatingValue = product.user_rating || 0
+      this.productRatingComment = ''
+      this.showRatingDialog = true
+    },
+
+    async submitRating () {
+      if (this.productRatingValue === 0) {
+        this.$q.notify({
+          type: 'warning',
+          message: 'Por favor selecciona una calificación',
+          position: 'top'
+        })
+        return
+      }
+
+      try {
+        const { data } = await this.$api.post('product-ratings', {
+          product_id: this.selectedProduct.id,
+          rating: this.productRatingValue,
+          comment: this.productRatingComment
+        })
+
+        // Actualizar producto con nuevos datos
+        this.selectedProduct.average_rating = data.product.average_rating
+        this.selectedProduct.ratings_count = data.product.ratings_count
+        this.selectedProduct.user_rating = this.productRatingValue
+
+        // Actualizar en la lista de productos
+        const productIndex = this.products.findIndex(p => p.id === this.selectedProduct.id)
+        if (productIndex !== -1) {
+          this.products[productIndex].average_rating = data.product.average_rating
+          this.products[productIndex].ratings_count = data.product.ratings_count
+          this.products[productIndex].user_rating = this.productRatingValue
+        }
+
+        this.showRatingDialog = false
+
+        this.$q.notify({
+          type: 'positive',
+          message: 'Calificación guardada exitosamente',
+          position: 'top'
+        })
+      } catch (error) {
+        console.error('Error rating product:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al guardar calificación',
+          position: 'top'
+        })
+      }
+    },
+
+    async loadFavorites () {
+      try {
+        const { data } = await this.$api.get('product-favorites', {
+          params: {
+            with: 'product.ratings'
+          }
+        })
+        this.favoriteProducts = data.map(f => f.product)
+      } catch (error) {
+        console.error('Error loading favorites:', error)
+      }
+    },
+
+    updateQuantity (item, delta) {
+      const store = useCommandStore()
+      const products = [...(store.command?.products || [])]
+      const product = products.find(p => p.id === item.id)
+
+      if (product) {
+        product.amount = Math.max(1, product.amount + delta)
+        product.subtotal = product.amount * product.price
+        store.setCommands({ products })
+      }
+    },
+
+    removeFromCart (item) {
+      const store = useCommandStore()
+      const products = (store.command?.products || []).filter(p => p.id !== item.id)
+      store.setCommands({ products })
+    },
+
+    async processOrder () {
+      // Validación: Usuario debe estar logueado
+      if (!this.userSession) {
+        this.$q.notify({
+          type: 'warning',
+          message: 'Debes iniciar sesión para procesar la orden',
+          position: 'top'
+        })
+        return
+      }
+
+      // Validación: Debe haber productos en el carrito
+      if (this.cartProducts.length === 0) {
+        this.$q.notify({
+          type: 'warning',
+          message: 'No se puede crear pedido sin productos',
+          position: 'top'
+        })
+        return
+      }
+
+      // Obtener cliente default de la configuración
+      const client = this.userSession?.company_session?.company_config?.client
+
+      if (!client) {
+        this.$q.notify({
+          type: 'warning',
+          message: 'No se puede crear pedido sin cliente configurado',
+          position: 'top'
+        })
+        return
+      }
+
+      try {
+        this.$q.loading.show({
+          message: 'Procesando orden...'
+        })
+
+        // Preparar productos para enviar al backend
+        const products = this.cartProducts.map(product => ({
+          id: product.id,
+          amount: product.amount,
+          price: product.price,
+          subtotal: product.subtotal,
+          observation: product.observation || ''
+        }))
+
+        // Crear la orden
+        await this.$api.post('command-orders', {
+          seller_id: this.userSession?.id,
+          client_id: client?.id,
+          products,
+          branch_office_id: this.branchOffice?.id,
+          tables: this.selectedTables.map(table => table.id),
+          company_id: this.userSession?.company_session_id,
+          code: 2
+        })
+
+        // Limpiar carrito y mesas después de crear la orden
+        const store = useCommandStore()
+        store.setCommands({ products: [] })
+        this.selectedTables = []
+
+        // Mostrar notificación de éxito
+        this.$q.notify({
+          type: 'positive',
+          message: 'Pedido creado exitosamente',
+          position: 'top',
+          icon: 'check_circle'
+        })
+
+        // Cambiar a vista de órdenes
+        this.$router.push({
+          query: {
+            ...this.$route.query,
+            view: 'orders'
+          }
+        })
+
+        // Recargar órdenes
+        this.loadOrders()
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: error.message || 'Error al procesar la orden',
+          position: 'top',
+          icon: 'warning'
+        })
+      } finally {
+        this.$q.loading.hide()
+      }
+    },
+
+    async loadOrders (reset = true) {
+      try {
+        if (reset) {
+          this.ordersCurrentPage = 1
+          this.orders = []
+          this.hasMoreOrders = true
+        }
+
+        if (!this.hasMoreOrders) return
+
+        this.loadingOrders = true
+        const { data } = await this.$api.get('invoices', {
+          params: {
+            client_id: this.userSession.id,
+            paginate: true,
+            page: this.ordersCurrentPage,
+            perPage: this.ordersPageSize,
+            sortOrder: 'desc',
+            sortBy: 'id'
+          }
+        })
+
+        if (reset) {
+          this.orders = data?.data || data
+        } else {
+          this.orders = [...this.orders, ...(data?.data || data)]
+        }
+
+        this.totalOrders = data?.total || data.length
+        this.hasMoreOrders = (data?.data || data).length === this.ordersPageSize
+      } catch (error) {
+        console.error('Error loading orders:', error)
+      } finally {
+        this.loadingOrders = false
+      }
+    },
+
+    async loadMoreOrders () {
+      if (this.loadingOrders || !this.hasMoreOrders) return
+
+      this.ordersCurrentPage++
+      await this.loadOrders(false)
+    },
+
+    async onLoadMoreOrders (index, done) {
+      if (!this.hasMoreOrders) {
+        done()
+        return
+      }
+
+      await this.loadMoreOrders()
+      done()
+    },
+
+    async openOrderDetails (order) {
+      try {
+        this.$q.loading.show()
+        // Cargar detalles completos de la orden
+        const { data } = await this.$api.get(`invoices/${order.id}`)
+        this.selectedOrder = data.data
+        this.orderDetailDialog = true
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al cargar detalles de la orden',
+          position: 'top'
+        })
+      } finally {
+        this.$q.loading.hide()
+      }
+    },
+
+    getStatusColor (status) {
+      const statusColors = {
+        1: 'warning',
+        2: 'positive',
+        3: 'negative'
+      }
+      return statusColors[status] || 'grey'
+    },
+
+    getStatusLabel (status) {
+      const statusLabels = {
+        pending: 'Pendiente',
+        paid: 'Pagado',
+        cancelled: 'Cancelado'
+      }
+      return statusLabels[status] || 'Desconocido'
+    },
+
+    async openTableDialog () {
+      this.tableDialog = true
+      await this.loadLivingRooms()
+    },
+
+    async loadLivingRooms () {
+      try {
+        this.loadingTables = true
+        const { data } = await this.$api.get('living-rooms')
+        this.livingRooms = data
+        if (this.livingRooms.length > 0) {
+          this.selectedRoom = this.livingRooms[0]
+          await this.loadTablesForRoom(this.selectedRoom.id)
+        }
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al cargar salones',
+          position: 'top'
+        })
+      } finally {
+        this.loadingTables = false
+      }
+    },
+
+    async loadTablesForRoom (roomId) {
+      try {
+        this.loadingTables = true
+        const { data } = await this.$api.get('tables', {
+          params: {
+            dataEqualFilter: {
+              living_room_id: roomId
+            }
+          }
+        })
+        this.roomTables = data
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al cargar mesas',
+          position: 'top'
+        })
+      } finally {
+        this.loadingTables = false
+      }
+    },
+
+    async changeRoom (room) {
+      this.selectedRoom = room
+      await this.loadTablesForRoom(room.id)
+    },
+
+    toggleTable (table) {
+      const index = this.selectedTables.findIndex(t => t.id === table.id)
+      if (index > -1) {
+        this.selectedTables.splice(index, 1)
+      } else {
+        this.selectedTables.push(table)
+      }
+    },
+
+    isTableSelected (table) {
+      return this.selectedTables.some(t => t.id === table.id)
+    },
+
+    confirmTables () {
+      this.tableDialog = false
+      this.$q.notify({
+        type: 'positive',
+        message: `${this.selectedTables.length} mesa(s) seleccionada(s)`,
+        position: 'top'
+      })
     }
   }
 }
 </script>
-<style>
-  .scanner {
-    width: 250px;
-    height: 250px;
-    border: 4px solid #000;
-    border-radius: 10px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0px 0px 10px white;
-    background-image: url('/images/qr.png');
-    background-size: cover;
-    opacity: 0.3;
+
+<style scoped>
+.command-page {
+  background: linear-gradient(180deg, #1a1d29 0%, #252836 100%);
+  min-height: 100vh;
+}
+
+.command-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding-bottom: 80px;
+}
+
+/* Banner */
+.banner-container {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.banner-carousel,
+.banner-image {
+  border-radius: 16px;
+}
+
+/* Producto Destacado */
+.featured-card {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.featured-card:hover {
+  transform: translateY(-4px);
+}
+
+.featured-image-container {
+  width: 140px;
+  height: 105px;
+  border-radius: 12px;
+  overflow: hidden;
+  float: left;
+  margin-right: 16px;
+}
+
+.featured-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.featured-info {
+  padding-top: 8px;
+}
+
+.featured-price {
+  margin-top: 8px;
+  display: flex;
+  align-items: baseline;
+}
+
+/* Categorías */
+.category-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  padding-top: 4px;
+}
+
+.category-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.category-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.category-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 80px;
+  cursor: pointer;
+}
+
+.category-item:active {
+  opacity: 0.8;
+}
+
+.category-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  overflow: hidden;
+}
+
+.category-item-active .category-icon {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  border-color: #ff6b6b;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+.category-icon .q-icon {
+  color: #8e8e93;
+}
+
+.category-item-active .category-icon .q-icon {
+  color: white;
+}
+
+.category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.category-name {
+  color: #8e8e93;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+
+.category-item-active .category-name {
+  color: white;
+  font-weight: 600;
+}
+
+/* Botón See More */
+.see-more-btn {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Grid de Productos */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.product-card {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.product-card:active {
+  opacity: 0.9;
+}
+
+.product-image-container {
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  position: relative;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+}
+
+.cart-badge-product {
+  top: 8px;
+  right: 8px;
+}
+
+.product-info {
+  padding: 12px 12px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.product-name {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.product-description {
+  color: #8e8e93;
+  font-size: 11px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.product-footer-new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.product-rating-new {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* Controles de Cantidad */
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  padding: 6px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.quantity-text {
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Botón Agregar */
+.add-to-cart-btn {
+  margin-top: 10px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+.product-price {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.product-price-chip {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 12px;
+  text-align: center !important;
+}
+
+/* Detalle de Orden */
+.order-detail-card {
+  background: linear-gradient(180deg, #1a1d29 0%, #252836 100%);
+  height: 100%;
+}
+
+.order-detail-header {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.order-detail-title {
+  flex: 1;
+}
+
+.order-detail-content {
+  padding: 8px;
+  max-height: calc(100vh - 70px);
+  overflow-y: auto;
+}
+
+/* Secciones Compactas */
+.compact-section {
+  margin-bottom: 12px;
+}
+
+.compact-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: orange;
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding-left: 4px;
+}
+
+/* Info Cliente */
+.compact-info {
+  padding-left: 4px;
+}
+
+.compact-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  color: white;
+}
+
+.compact-label {
+  color: #8e8e93;
+}
+
+.compact-value {
+  font-weight: 500;
+}
+
+/* Mesas */
+.compact-tables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 4px;
+}
+
+/* Productos Compactos */
+.compact-products {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compact-product {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.compact-product-image {
+  width: 45px;
+  height: 45px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.compact-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.compact-product-name {
+  color: white;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-product-meta {
+  color: #8e8e93;
+  font-size: 12px;
+}
+
+.compact-product-total {
+  color: orange;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Total Compacto */
+.compact-total {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.compact-total-amount {
+  font-size: 20px;
+}
+
+/* Diálogo de Mesas */
+.table-dialog-card {
+  background: linear-gradient(180deg, #1a1d29 0%, #252836 100%);
+  height: 100%;
+}
+
+.table-dialog-header {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.table-dialog-title {
+  flex: 1;
+}
+
+.table-dialog-content {
+  padding: 12px;
+  max-height: calc(100vh - 70px);
+  overflow-y: auto;
+}
+
+/* Tabs de Salones */
+.room-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.room-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.room-tab {
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+/* Grid de Mesas */
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.table-card {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  border-radius: 12px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  min-height: 80px;
+  border: 2px solid transparent;
+}
+
+.table-card:hover:not(.table-occupied) {
+  transform: translateY(-2px);
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.table-card.table-selected {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  border-color: orange;
+}
+
+.table-card.table-occupied {
+  background: linear-gradient(135deg, #424242 0%, #303030 100%);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.table-name {
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+
+.table-status {
+  color: #ff5252;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.table-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* Detalle del Producto */
+.product-detail-card {
+  background: linear-gradient(180deg, #1a1d29 0%, #252836 100%);
+  height: 100%;
+}
+
+.product-detail-header {
+  background: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.product-detail-image-container {
+  width: 100%;
+  height: 50vh;
+  max-height: 500px;
+  position: relative;
+}
+
+/* Gradiente oscuro superior sobre la imagen */
+.image-gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.product-carousel,
+.product-detail-image {
+  width: 100%;
+  height: 100%;
+}
+
+.product-detail-no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+}
+
+.product-detail-info {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  border-radius: 24px 24px 0 0;
+  margin-top: -24px;
+  position: relative;
+  z-index: 5;
+}
+
+.product-rating-large {
+  display: flex;
+  gap: 4px;
+}
+
+.product-detail-price {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.observation-input {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.quantity-selector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.quantity-display {
+  min-width: 60px;
+  text-align: center;
+}
+
+.order-btn {
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: none;
+  padding: 14px 0;
+}
+
+/* Vista de Categoría */
+.category-detail-card {
+  background: linear-gradient(180deg, #1a1d29 0%, #252836 100%);
+  height: 100%;
+}
+
+.category-detail-header {
+  background: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.category-banner-container {
+  width: 100%;
+  height: 45vh;
+  max-height: 400px;
+  position: relative;
+  overflow: visible;
+}
+
+.category-gradient-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.category-gradient-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  background: linear-gradient(
+    to top,
+    #252836 0%,
+    #252836 3%,
+    rgba(37, 40, 54, 0.98) 8%,
+    rgba(37, 40, 54, 0.95) 15%,
+    rgba(37, 40, 54, 0.85) 25%,
+    rgba(37, 40, 54, 0.7) 40%,
+    rgba(37, 40, 54, 0.5) 55%,
+    rgba(37, 40, 54, 0.3) 70%,
+    rgba(37, 40, 54, 0.15) 85%,
+    transparent 100%
+  );
+  z-index: 4;
+  pointer-events: none;
+}
+
+.category-carousel,
+.category-banner-single {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.category-banner-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.category-back-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.category-user-avatar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+}
+
+.category-banner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 24px 40px 24px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0,0,0,0.3) 50%,
+    rgba(0,0,0,0.7) 80%,
+     rgba(0,0,0,0.85) 100%);
+  z-index: 1;
+}
+
+.category-banner-text {
+  text-align: center;
+  max-width: 90%;
+  z-index: 1;
+}
+
+.category-products {
+  background: linear-gradient(
+    to top,
+    transparent 0%,
+    rgba(37, 40, 54, 0.3) 90px,
+    rgba(37, 40, 54, 0.7) 150px,
+    #252836 250px,
+    #252836 100%
+  );
+  border-radius: 0;
+  position: relative;
+  z-index: 2;
+  min-height: 60vh;
+}
+
+/* Botón flotante del carrito */
+.cart-fab {
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+}
+
+/* Vistas de Carrito, Órdenes y Favoritos */
+.cart-container,
+.orders-container,
+.favorites-container {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Carrito Mejorado */
+.cart-content {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 166px);
+}
+
+.cart-items {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.cart-item {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.cart-item-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cart-item-no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cart-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-item-name {
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-item-observation {
+  color: #8e8e93;
+  font-size: 12px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-item-price {
+  color: #ff9800;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cart-item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-item-quantity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 20px;
+}
+
+.quantity-value {
+  color: white;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.cart-footer {
+  background: linear-gradient(135deg, #2d3142 0%, #1f2233 100%);
+  padding: 20px 16px;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.total-label {
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.total-amount {
+  color: #ff9800;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+}
+
+.process-order-btn {
+  width: 100%;
+  border-radius: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.rounded-borders {
+  border-radius: 8px;
+}
+
+/* Badge "En Carrito" */
+.in-cart-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+  z-index: 2;
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
   }
-  @keyframes scan {
-    0% {
-      transform: translateY(10px);
-    }
-    100% {
-      transform: translateY(230px);
-    }
+  50% {
+    box-shadow: 0 4px 16px rgba(76, 175, 80, 0.6);
   }
-  .light {
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    background: red;
-    top: 0;
-    animation: scan 1.5s infinite alternate;
-  }
-  .scanner::before {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    clip-path: polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%);
-  }
-  .button-baseline {
-    background-color: rgb(253, 126, 20); /* Verde */
-    animation: titilar 2s infinite ease-in-out;
-  }
-  @keyframes titilar {
-    0% {
-      box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
-    }
-    50% {
-      box-shadow: 0 0 20px rgba(253, 126, 20, 0.7);
-    }
-    100% {
-      box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
-    }
-  }
+}
+
+/* Botón de Favorito */
+.favorite-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 2;
+}
+
+/* Rating Interactivo */
+.product-rating {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.product-rating:active {
+  opacity: 0.8;
+}
+
+/* Dialog de Rating */
+.rating-dialog {
+  background: linear-gradient(180deg, #1a1d29 0%, #252836 100%);
+}
+
+.rating-stars-large {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rating-stars-large .q-icon:active {
+  opacity: 0.7;
+}
 </style>

@@ -292,12 +292,6 @@ const routes = [
     component: () => import('layouts/MobileLayout.vue'),
     children: [
       {
-        path: 'command',
-        meta: { requiresAuth: true },
-        name: 'Command',
-        component: () => import('pages/CommandPage.vue')
-      },
-      {
         path: 'catalog/:company_id/:branch_office_id',
         name: 'Catalog',
         component: () => import('pages/CatalogPage.vue')
@@ -306,6 +300,29 @@ const routes = [
         path: 'menu',
         name: 'Menu',
         component: () => import('pages/MenuPage.vue')
+      }
+    ]
+  },
+  {
+    path: '/catalog-new',
+    component: () => import('layouts/CatalogLayout.vue'),
+    children: [
+      {
+        path: ':company_id/:branch_office_id',
+        name: 'CatalogNew',
+        component: () => import('pages/CatalogPageNew.vue')
+      }
+    ]
+  },
+  {
+    path: '/command',
+    component: () => import('layouts/CatalogLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Command',
+        meta: { requiresAuth: true },
+        component: () => import('pages/CommandPage.vue')
       }
     ]
   },
