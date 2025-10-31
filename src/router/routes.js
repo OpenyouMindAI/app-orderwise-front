@@ -304,17 +304,6 @@ const routes = [
     ]
   },
   {
-    path: '/catalog-new',
-    component: () => import('layouts/CatalogLayout.vue'),
-    children: [
-      {
-        path: ':company_id/:branch_office_id',
-        name: 'CatalogNew',
-        component: () => import('pages/CatalogPageNew.vue')
-      }
-    ]
-  },
-  {
     path: '/command',
     component: () => import('layouts/CatalogLayout.vue'),
     children: [
