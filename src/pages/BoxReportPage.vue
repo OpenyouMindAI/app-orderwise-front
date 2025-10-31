@@ -789,12 +789,12 @@
 
     <!-- Enhanced Filter Dialog -->
     <q-dialog v-model="dialogFilter" position="right" full-height>
-      <q-card style="width: 400px; max-width: 90vw" class="column full-height">
+      <q-card style="min-width: 400px; max-width: 90vw" class="full-height">
         <q-card-section class="bg-primary text-white">
           <div class="text-h6">🔍 Filtros de Búsqueda</div>
         </q-card-section>
 
-        <q-card-section class="col q-gutter-md">
+        <q-card-section class="col q-col-gutter-xs" style="max-height: calc(100vh - 180px); overflow-y: auto;">
           <!-- Date Range -->
           <div>
             <div class="text-subtitle2 q-mb-sm">📅 Período</div>
