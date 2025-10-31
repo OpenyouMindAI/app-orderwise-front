@@ -197,7 +197,13 @@
 
           <q-card flat>
             <q-card-section class="dense-content" style="max-height: 600px; overflow-y: auto; padding: 8px;">
-              <div v-if="paymentMethodTotals.payment_method_totals?.length">
+              <!-- Skeleton mientras carga -->
+              <div v-if="loadingPaymentMethods" class="q-pa-md">
+                <q-skeleton type="rect" height="80px" class="q-mb-sm"/>
+                <q-skeleton type="rect" height="80px" class="q-mb-sm"/>
+                <q-skeleton type="rect" height="80px"/>
+              </div>
+              <div v-else-if="paymentMethodTotals.payment_method_totals?.length">
                 <div v-for="method in paymentMethodTotals.payment_method_totals" :key="method.id" class="payment-method-detailed q-mb-sm">
                   <!-- Header del método de pago -->
                   <div class="row items-center justify-between no-wrap q-mb-xs q-pa-xs">
@@ -382,7 +388,13 @@
 
           <q-card flat>
             <q-card-section class="dense-content" style="max-height: 350px; overflow-y: auto; padding: 12px;">
-              <div v-if="categoryTotalsTotals.categories_totals?.length">
+              <!-- Skeleton mientras carga -->
+              <div v-if="loadingCategories" class="q-pa-md">
+                <q-skeleton type="rect" height="60px" class="q-mb-sm"/>
+                <q-skeleton type="rect" height="60px" class="q-mb-sm"/>
+                <q-skeleton type="rect" height="60px"/>
+              </div>
+              <div v-else-if="categoryTotalsTotals.categories_totals?.length">
                 <div v-for="category in categoryTotalsTotals.categories_totals" :key="category.id" class="category-compact q-mb-sm">
                   <div class="row items-center justify-between no-wrap q-mb-xs">
                     <div class="col-7">
@@ -450,7 +462,14 @@
 
           <q-card flat>
             <q-card-section class="dense-content" style="max-height: 350px; overflow-y: auto; padding: 12px;">
-              <div v-if="cashflowTotals.cashflow_total?.length">
+              <!-- Skeleton mientras carga -->
+              <div v-if="loadingCashflow" class="q-pa-md">
+                <q-skeleton type="rect" height="50px" class="q-mb-xs"/>
+                <q-skeleton type="rect" height="50px" class="q-mb-xs"/>
+                <q-skeleton type="rect" height="50px" class="q-mb-xs"/>
+                <q-skeleton type="rect" height="50px"/>
+              </div>
+              <div v-else-if="cashflowTotals.cashflow_total?.length">
                 <!-- Compact Cash Flow Items -->
                 <div class="q-gutter-xs">
                   <div
@@ -521,7 +540,13 @@
 
           <q-card flat>
             <q-card-section class="dense-content" style="max-height: 350px; overflow-y: auto; padding: 12px;">
-              <div v-if="typeOfServicesTotals.payment_method_totals?.length">
+              <!-- Skeleton mientras carga -->
+              <div v-if="loadingServices" class="q-pa-md">
+                <q-skeleton type="rect" height="60px" class="q-mb-sm"/>
+                <q-skeleton type="rect" height="60px" class="q-mb-sm"/>
+                <q-skeleton type="rect" height="60px"/>
+              </div>
+              <div v-else-if="typeOfServicesTotals.payment_method_totals?.length">
                 <div v-for="service in typeOfServicesTotals.payment_method_totals" :key="service.id" class="service-compact q-mb-sm">
                   <div class="row items-center justify-between no-wrap">
                     <div class="col-7">
@@ -1045,6 +1070,12 @@ export default {
   data () {
     return {
       loading: false,
+      loadingPaymentMethods: false,
+      loadingCategories: false,
+      loadingCashflow: false,
+      loadingServices: false,
+      loadingPaymentTotals: false,
+      isInitialLoad: true,
       cashBoxUser: null,
       cashFlowDetailsDialog: false,
       cashFlowLoading: false,
@@ -1172,7 +1203,8 @@ export default {
       }
     },
     branchOffice (data) {
-      if (data) {
+      // No ejecutar durante la carga inicial
+      if (data && !this.isInitialLoad) {
         this.filterDate()
       }
     },
@@ -1180,18 +1212,31 @@ export default {
       if (!data) {
         this.seller = this.userSession
       }
-      this.filterDate()
+      // No ejecutar durante la carga inicial
+      if (!this.isInitialLoad) {
+        this.filterDate()
+      }
     }
   },
 
-  created () {
+  async created () {
     this.setPermissions()
-    this.getBranchOffices().then(() => {
-      if (this.branchOffice) {
-        this.branchOfficeSelect = [this.branchOffice]
-        this.appliedBranchOfficeSelect = [this.branchOffice]
+    await this.getBranchOffices()
+    if (this.branchOffice) {
+      this.branchOfficeSelect = [this.branchOffice]
+      this.appliedBranchOfficeSelect = [this.branchOffice]
+
+      // Cargar turno actual sin aplicar filtro todavía
+      const shiftLoaded = await this.loadCurrentShift(false)
+
+      // Ahora aplicar el filtro una sola vez con el turno ya cargado
+      if (shiftLoaded) {
+        this.filterDate()
       }
-    })
+
+      // Desactivar bandera de carga inicial
+      this.isInitialLoad = false
+    }
   },
 
   computed: {
@@ -1393,9 +1438,9 @@ export default {
     },
 
     /**
-     * Load current shift (turno en curso) and apply filter
+     * Load current shift (turno en curso) - without applying filter
      */
-    async loadCurrentShift () {
+    async loadCurrentShift (applyFilter = true) {
       try {
         const today = formatDate(Date.now(), 'YYYY-MM-DD')
         const params = {
@@ -1411,8 +1456,6 @@ export default {
 
         const { data } = await this.$api.get('cashier-boxes', { params })
 
-        console.log(data)
-
         if (data && data.length > 0) {
           // Si es vendedor, tomar el primero (su turno)
           // Si es admin, mostrar todos los turnos del día
@@ -1424,22 +1467,31 @@ export default {
             this.cashBoxUsers = data
             this.cashBoxUser = data[0] // Seleccionar el primero por defecto
           }
-          // Aplicar el filtro con el turno cargado
-          this.filterDate()
+          // Aplicar el filtro con el turno cargado solo si se solicita
+          if (applyFilter) {
+            this.filterDate()
+          }
+          return true
         } else {
-          this.$q.notify({
-            message: 'No hay turnos abiertos para hoy',
-            color: 'warning',
-            icon: 'info'
-          })
+          if (applyFilter) {
+            this.$q.notify({
+              message: 'No hay turnos abiertos para hoy',
+              color: 'warning',
+              icon: 'info'
+            })
+          }
+          return false
         }
       } catch (error) {
         console.error('Error loading current shift:', error)
-        this.$q.notify({
-          message: 'Error al cargar el turno en curso',
-          color: 'negative',
-          icon: 'warning'
-        })
+        if (applyFilter) {
+          this.$q.notify({
+            message: 'Error al cargar el turno en curso',
+            color: 'negative',
+            icon: 'warning'
+          })
+        }
+        return false
       }
     },
 
@@ -1484,24 +1536,39 @@ export default {
 
     async filterDate () {
       if (!this.branchOffice?.id) return
-      this.appliedBranchOfficeSelect = [...this.branchOfficeSelect] // Actualiza con el valor seleccionado del filtro
+      this.appliedBranchOfficeSelect = [...this.branchOfficeSelect]
       this.params = this.formatFilter()
       this.params.cashbox_user_id = this.cashBoxUser?.id || null
-      this.loading = true
       this.dialogFilter = false
-      try {
-        await Promise.all([
-          this.getCategoryTotals(this.params),
-          this.getPaymentMethodTotals(this.params),
-          this.getPaymentTotals(this.params),
-          this.getCashflowTotals(this.params),
-          this.getTypeOfServicesTotals(this.params)
-        ])
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        this.loading = false
-      }
+
+      // Carga progresiva: cada sección se carga independientemente
+      // Esto permite mostrar datos a medida que están disponibles
+      this.loadingPaymentMethods = true
+      this.loadingCategories = true
+      this.loadingCashflow = true
+      this.loadingServices = true
+      this.loadingPaymentTotals = true
+
+      // Cargar cada sección de forma independiente (no esperar a todas)
+      this.getPaymentMethodTotals(this.params).finally(() => {
+        this.loadingPaymentMethods = false
+      })
+
+      this.getCategoryTotals(this.params).finally(() => {
+        this.loadingCategories = false
+      })
+
+      this.getCashflowTotals(this.params).finally(() => {
+        this.loadingCashflow = false
+      })
+
+      this.getTypeOfServicesTotals(this.params).finally(() => {
+        this.loadingServices = false
+      })
+
+      this.getPaymentTotals(this.params).finally(() => {
+        this.loadingPaymentTotals = false
+      })
     },
 
     async getCashflowTotals (params) {
