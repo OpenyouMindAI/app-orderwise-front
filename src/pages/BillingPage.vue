@@ -2781,7 +2781,7 @@ export default {
         } else {
           res = await this.$api.post('invoices', params)
         }
-        this.printBill(res.data.data)
+        await this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
 
         // Cerrar modal y limpiar después de guardar exitoso
