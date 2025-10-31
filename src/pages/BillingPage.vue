@@ -2639,9 +2639,8 @@ export default {
       this.invoiceDescription = ''
       this.deliveryDate = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
-      this.withoutPrint = false
-      this.invoicePrinter = false
       this.tableClose = false
+      // Note: withoutPrint and invoicePrinter are reset by printBill() function
 
       // Limpiar campos de dirección
       this.address = null
