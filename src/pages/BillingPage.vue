@@ -2694,10 +2694,13 @@ export default {
 
       if (this.invoicePrinter) {
         await ticketPrint(invoice)
-        this.invoicePrinter = false // Reset flag after printing
       } else {
         await commandPrint(invoice)
       }
+
+      // Reset flags after printing completes
+      this.invoicePrinter = false
+      this.withoutPrint = false
     },
     /**
      * Set invoice model
