@@ -22,11 +22,13 @@
     <!-- Quick Date Buttons -->
     <div class="row q-mb-lg q-mt-lg full-width justify-between items-center">
       <div class="row q-gutter-sm">
+        <!-- Filtros de fecha -->
         <q-btn
           :color="panel === 'day' && isToday ? 'primary' : 'grey-5'"
           :text-color="panel === 'day' && isToday ? 'white' : 'grey-8'"
           label="Hoy"
           rounded
+          size="sm"
           @click="selectQuickDate('today')"
         />
         <q-btn
@@ -34,6 +36,7 @@
           :text-color="panel === 'day' && isYesterday ? 'white' : 'grey-8'"
           label="Ayer"
           rounded
+          size="sm"
           @click="selectQuickDate('yesterday')"
         />
         <q-btn
@@ -41,7 +44,30 @@
           :text-color="panel === 'between' ? 'white' : 'grey-8'"
           label="Este mes"
           rounded
+          size="sm"
           @click="selectQuickDate('month')"
+        />
+
+        <q-separator vertical inset class="q-mx-sm"/>
+
+        <!-- Filtros de turno -->
+        <q-btn
+          :color="cashBoxUser ? 'green' : 'grey-5'"
+          :text-color="cashBoxUser ? 'white' : 'grey-8'"
+          icon="schedule"
+          label="Mi turno"
+          rounded
+          size="sm"
+          @click="loadCurrentShift"
+        />
+        <q-btn
+          color="grey-5"
+          text-color="grey-8"
+          icon="clear"
+          label="Sin turno"
+          rounded
+          size="sm"
+          @click="clearShift"
         />
       </div>
       <q-chip v-if="from && to" color="secondary" text-color="white">
@@ -170,40 +196,150 @@
           </template>
 
           <q-card flat>
-            <q-card-section class="dense-content" style="max-height: 350px; overflow-y: auto; padding: 12px;">
+            <q-card-section class="dense-content" style="max-height: 600px; overflow-y: auto; padding: 8px;">
               <div v-if="paymentMethodTotals.payment_method_totals?.length">
-                <div v-for="method in paymentMethodTotals.payment_method_totals" :key="method.id" class="payment-method-compact q-mb-sm">
-                  <div class="row items-center justify-between no-wrap">
-                    <div class="col-7">
-                      <div class="text-weight-bold text-body2">{{ method.payment_method_name }}</div>
+                <div v-for="method in paymentMethodTotals.payment_method_totals" :key="method.id" class="payment-method-detailed q-mb-sm">
+                  <!-- Header del método de pago -->
+                  <div class="row items-center justify-between no-wrap q-mb-xs q-pa-xs">
+                    <div class="col">
+                      <div class="text-weight-bold text-subtitle1 text-green-7">{{ method.payment_method_name }}</div>
+                    </div>
+                    <div class="col-auto">
+                      <q-chip
+                        :color="method.total >= 0 ? 'green' : 'red'"
+                        text-color="white"
+                        size="sm"
+                        dense
+                        class="text-weight-bold"
+                      >
+                        {{ formatNumber(method.total) }}
+                      </q-chip>
                     </div>
                   </div>
 
-                  <!-- Compact Cash Flow Display -->
-                  <div class="cash-flow-compact q-pa-xs rounded-borders q-mt-xs cursor-pointer" @click="openPaymentDetailsDialog(method)">
-                    <div class="row q-gutter-xs text-center">
-                      <div class="col">
-                        <div class="text-caption text-grey-7">Ventas</div>
-                        <div class="text-body2 text-weight-bold text-positive">
-                          {{ formatNumberCompact(method.sales) }}
-                        </div>
-                      </div>
-                      <div class="col">
-                        <div class="text-caption text-grey-7">Flujo</div>
-                        <div class="text-body2 text-weight-bold text-primary">
-                          {{ formatNumberCompact(method.flow) }}
-                        </div>
-                      </div>
-                      <div class="col">
-                        <div class="text-caption text-grey-7">Saldo</div>
-                        <div class="text-body2 text-weight-bold" :class="getBalanceColor(method.balance)">
-                          {{ formatNumberCompact(method.balance) }}
-                        </div>
-                      </div>
+                  <!-- Desglose detallado -->
+                  <div class="detailed-breakdown q-pa-xs rounded-borders">
+                    <q-list dense separator class="compact-list">
+                      <!-- Inicio de caja (solo para efectivo) -->
+                      <q-item v-if="method.is_efectivo" class="compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-grey-7">Inicio de caja</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-body2 text-weight-bold text-blue-7">
+                            {{ formatNumber(method.init_cashbox) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <!-- Ventas -->
+                      <q-item class="compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-grey-7">Ventas</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-body2 text-weight-bold text-positive">
+                            {{ formatNumber(method.sales) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <!-- Entradas -->
+                      <q-item class="compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-grey-7">Entradas</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-body2 text-weight-bold text-teal-7">
+                            {{ formatNumber(method.cash_in) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <!-- Salidas -->
+                      <q-item class="compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-grey-7">Salidas</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-body2 text-weight-bold text-negative">
+                            {{ formatNumber(method.cash_out) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <!-- Arqueo -->
+                      <q-item class="compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-grey-7">Arqueo</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-body2 text-weight-bold text-orange-7">
+                            {{ formatNumber(method.withdrawal) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <!-- Total -->
+                      <q-item class="bg-grey-2 compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-weight-bold text-grey-8">TOTAL</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-subtitle2 text-weight-bold" :class="method.total >= 0 ? 'text-positive' : 'text-negative'">
+                            {{ formatNumber(method.total) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <!-- Cierre de caja (solo para efectivo) -->
+                      <q-item v-if="method.is_efectivo" class="compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-grey-7">Cierre de caja</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-body2 text-weight-bold text-indigo-7">
+                            {{ formatNumber(method.close_cashbox) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <!-- Diferencia (solo para efectivo) -->
+                      <q-item v-if="method.is_efectivo" class="bg-amber-1 compact-item">
+                        <q-item-section>
+                          <q-item-label class="text-caption text-weight-bold text-grey-8">
+                            <q-icon name="compare_arrows" size="xs" class="q-mr-xs"/>
+                            DIFERENCIA
+                          </q-item-label>
+                          <q-item-label caption class="text-grey-7" style="font-size: 10px;">
+                            {{ method.difference >= 0 ? 'Sobrante' : 'Faltante' }}
+                          </q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-item-label class="text-subtitle2 text-weight-bold" :class="method.difference >= 0 ? 'text-positive' : 'text-negative'">
+                            {{ formatNumber(method.difference) }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+
+                    <!-- Botón para ver detalles -->
+                    <div class="q-mt-xs">
+                      <q-btn
+                        flat
+                        dense
+                        size="xs"
+                        color="primary"
+                        icon="visibility"
+                        label="Ver detalles"
+                        @click="openPaymentDetailsDialog(method)"
+                        class="full-width"
+                        style="font-size: 11px;"
+                      />
                     </div>
                   </div>
 
-                  <!-- <q-separator v-if="method !== paymentMethodTotals.payment_method_totals[paymentMethodTotals.payment_method_totals.length - 1]" class="q-my-sm"/> -->
+                  <q-separator v-if="method !== paymentMethodTotals.payment_method_totals[paymentMethodTotals.payment_method_totals.length - 1]" class="q-my-xs"/>
                 </div>
               </div>
               <div v-else class="text-center q-pa-md text-grey-6">
@@ -1052,8 +1188,8 @@ export default {
     this.setPermissions()
     this.getBranchOffices().then(() => {
       if (this.branchOffice) {
-        this.branchOfficeSelect = [this.branchOffice] // Mantén la inicialización de branchOfficeSelect si es necesario
-        this.appliedBranchOfficeSelect = [this.branchOffice] // Inicializa appliedBranchOfficeSelect con la sucursal actual
+        this.branchOfficeSelect = [this.branchOffice]
+        this.appliedBranchOfficeSelect = [this.branchOffice]
       }
     })
   },
@@ -1254,6 +1390,66 @@ export default {
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
+    },
+
+    /**
+     * Load current shift (turno en curso) and apply filter
+     */
+    async loadCurrentShift () {
+      try {
+        const today = formatDate(Date.now(), 'YYYY-MM-DD')
+        const params = {
+          status: 'open',
+          branch_office_id: this.branchOffice?.id,
+          day: today // Solo turnos de hoy
+        }
+
+        // Si NO es root o super admin, filtrar solo por sus turnos
+        if (!this.userSession?.is_root && !this.validate) {
+          params.cashier_id = this.userSession?.id
+        }
+
+        const { data } = await this.$api.get('cashier-boxes', { params })
+
+        console.log(data)
+
+        if (data && data.length > 0) {
+          // Si es vendedor, tomar el primero (su turno)
+          // Si es admin, mostrar todos los turnos del día
+          if (!this.userSession?.is_root && !this.validate) {
+            this.cashBoxUser = data[0]
+            this.cashBoxUsers = [data[0]]
+          } else {
+            // Para admins, mostrar lista de turnos abiertos hoy
+            this.cashBoxUsers = data
+            this.cashBoxUser = data[0] // Seleccionar el primero por defecto
+          }
+          // Aplicar el filtro con el turno cargado
+          this.filterDate()
+        } else {
+          this.$q.notify({
+            message: 'No hay turnos abiertos para hoy',
+            color: 'warning',
+            icon: 'info'
+          })
+        }
+      } catch (error) {
+        console.error('Error loading current shift:', error)
+        this.$q.notify({
+          message: 'Error al cargar el turno en curso',
+          color: 'negative',
+          icon: 'warning'
+        })
+      }
+    },
+
+    /**
+     * Clear shift filter
+     */
+    clearShift () {
+      this.cashBoxUser = null
+      this.cashBoxUsers = []
+      this.filterDate()
     },
 
     formatFilter () {
@@ -1752,6 +1948,47 @@ export default {
   background: rgba(76, 175, 80, 0.03);
   border-radius: 6px;
   padding: 8px;
+}
+
+.payment-method-detailed {
+  background: rgba(76, 175, 80, 0.02);
+  border-radius: 8px;
+  padding: 6px;
+  border: 1px solid rgba(76, 175, 80, 0.15);
+  transition: all 0.2s ease;
+}
+
+.payment-method-detailed:hover {
+  background: rgba(76, 175, 80, 0.05);
+  box-shadow: 0 1px 4px rgba(76, 175, 80, 0.2);
+}
+
+.detailed-breakdown {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.compact-list {
+  padding: 0;
+}
+
+.compact-item {
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+}
+
+.compact-item .q-item__section {
+  padding: 0 !important;
+}
+
+.breakdown-item {
+  text-align: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.breakdown-item:hover {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .category-compact {
