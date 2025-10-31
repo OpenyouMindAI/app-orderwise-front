@@ -2694,11 +2694,10 @@ export default {
 
       if (this.invoicePrinter) {
         await ticketPrint(invoice)
+        this.invoicePrinter = false // Reset flag after printing
       } else {
         await commandPrint(invoice)
       }
-
-      // Don't clear automatically - let PaymentModal handle table close
     },
     /**
      * Set invoice model
@@ -2784,8 +2783,8 @@ export default {
 
         // Cerrar modal y limpiar después de guardar exitoso
         this.dialogPayment = false
-        if (!this.tableClose && !this.withoutPrint && !this.invoicePrinter) {
-          // Solo limpiar si no hay flags especiales activos
+        if (!this.tableClose) {
+          // Limpiar siempre después de facturar exitosamente, excepto si viene de mesa
           setTimeout(() => this.clear(), 500)
         }
         this.setPagination({
