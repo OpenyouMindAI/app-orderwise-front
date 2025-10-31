@@ -578,6 +578,160 @@
         </q-expansion-item>
       </div>
 
+      <!-- Cash vs Credit Payment Breakdown -->
+      <div class="col-12">
+        <q-expansion-item
+          class="report-expansion shadow-4"
+          :default-opened="expandedCards.paymentBreakdown"
+          @show="expandedCards.paymentBreakdown = true"
+          @hide="expandedCards.paymentBreakdown = false"
+          header-class="bg-teal-6 text-white expansion-header-compact"
+          expand-icon-class="text-white"
+        >
+          <template v-slot:header>
+            <div class="row items-center full-width">
+              <q-icon name="account_balance" size="sm" class="q-mr-sm"/>
+              <div class="col">
+                <div class="text-subtitle1 text-weight-bold">💰 Desglose: Contado vs Cuenta Corriente</div>
+              </div>
+              <div class="col-auto flex justify-center items-center q-gutter-x-md">
+                <div class="text-body1 text-bold">
+                  Total: {{ formatNumber(paymentMethodTotals.payment_total || 0) }}
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <q-card flat>
+            <q-card-section class="dense-content" style="padding: 12px;">
+              <!-- Summary Cards -->
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-12 col-md-4">
+                  <q-card class="bg-green-1" flat bordered>
+                    <q-card-section class="text-center q-pa-md">
+                      <q-icon name="point_of_sale" color="green-7" size="lg"/>
+                      <div class="text-h5 text-weight-bold text-green-8 q-mt-sm">
+                        {{ formatNumber(getTotalCashPayments()) }}
+                      </div>
+                      <div class="text-subtitle2 text-green-7">Pagos de Contado</div>
+                      <div class="text-caption text-grey-7">
+                        {{ getCashPaymentPercentage().toFixed(1) }}% del total
+                      </div>
+                    </q-card-section>
+                  </q-card>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <q-card class="bg-orange-1" flat bordered>
+                    <q-card-section class="text-center q-pa-md">
+                      <q-icon name="credit_card" color="orange-7" size="lg"/>
+                      <div class="text-h5 text-weight-bold text-orange-8 q-mt-sm">
+                        {{ formatNumber(getTotalCreditPayments()) }}
+                      </div>
+                      <div class="text-subtitle2 text-orange-7">Pagos Cuenta Corriente</div>
+                      <div class="text-caption text-grey-7">
+                        {{ getCreditPaymentPercentage().toFixed(1) }}% del total
+                      </div>
+                    </q-card-section>
+                  </q-card>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <q-card class="bg-blue-1" flat bordered>
+                    <q-card-section class="text-center q-pa-md">
+                      <q-icon name="payments" color="blue-7" size="lg"/>
+                      <div class="text-h5 text-weight-bold text-blue-8 q-mt-sm">
+                        {{ formatNumber(paymentMethodTotals.payment_total || 0) }}
+                      </div>
+                      <div class="text-subtitle2 text-blue-7">Total General</div>
+                      <div class="text-caption text-grey-7">
+                        100% de los pagos
+                      </div>
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </div>
+
+              <!-- Detailed Breakdown by Payment Method -->
+              <div v-if="paymentMethodTotals.payment_method_totals?.length">
+                <div class="text-subtitle1 text-weight-bold q-mb-md">📋 Desglose por Método de Pago</div>
+                <div v-for="method in paymentMethodTotals.payment_method_totals" :key="method.payment_method_id" class="q-mb-md">
+                  <q-card flat bordered>
+                    <q-card-section class="q-pa-sm">
+                      <div class="row items-center justify-between q-mb-sm">
+                        <div class="text-weight-bold text-body1">{{ method.payment_method_name }}</div>
+                        <div class="text-weight-bold text-h6 text-primary">
+                          {{ formatNumber(method.sales) }}
+                        </div>
+                      </div>
+
+                      <div class="row q-col-gutter-sm">
+                        <div class="col-6">
+                          <div class="bg-green-1 rounded-borders q-pa-sm">
+                            <div class="row items-center justify-between">
+                              <div class="col">
+                                <div class="text-caption text-grey-7">💵 Contado</div>
+                                <div class="text-body1 text-weight-bold text-green-8">
+                                  {{ formatNumber(method.cash_sales || 0) }}
+                                </div>
+                              </div>
+                              <div class="col-auto">
+                                <q-circular-progress
+                                  :value="getMethodCashPercentage(method)"
+                                  size="40px"
+                                  :thickness="0.15"
+                                  color="green-7"
+                                  track-color="grey-3"
+                                  class="q-ma-sm"
+                                >
+                                  <div class="text-caption text-weight-bold">
+                                    {{ getMethodCashPercentage(method).toFixed(0) }}%
+                                  </div>
+                                </q-circular-progress>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="col-6">
+                          <div class="bg-orange-1 rounded-borders q-pa-sm">
+                            <div class="row items-center justify-between">
+                              <div class="col">
+                                <div class="text-caption text-grey-7">💳 Cta. Corriente</div>
+                                <div class="text-body1 text-weight-bold text-orange-8">
+                                  {{ formatNumber(method.credit_sales || 0) }}
+                                </div>
+                              </div>
+                              <div class="col-auto">
+                                <q-circular-progress
+                                  :value="getMethodCreditPercentage(method)"
+                                  size="40px"
+                                  :thickness="0.15"
+                                  color="orange-7"
+                                  track-color="grey-3"
+                                  class="q-ma-sm"
+                                >
+                                  <div class="text-caption text-weight-bold">
+                                    {{ getMethodCreditPercentage(method).toFixed(0) }}%
+                                  </div>
+                                </q-circular-progress>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </div>
+              <div v-else class="text-center q-pa-md text-grey-6">
+                <q-icon name="info" size="md"/>
+                <div class="text-body2 q-mt-sm">No hay datos de pagos</div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
+      </div>
       <!-- Fiscal Report with Print Button -->
       <div class="col-12">
         <q-expansion-item
@@ -1180,6 +1334,7 @@ export default {
       // Expansion state management
       expandedCards: {
         paymentMethods: true,
+        paymentBreakdown: true,
         categories: true,
         cashFlow: true,
         services: true,
@@ -1349,6 +1504,45 @@ export default {
       if (balance > 0) return 'text-positive'
       if (balance < 0) return 'text-negative'
       return 'text-grey-6'
+    },
+
+    // Cash vs Credit Payment Methods
+    getTotalCashPayments () {
+      if (!this.paymentMethodTotals.payment_method_totals) return 0
+      return this.paymentMethodTotals.payment_method_totals.reduce((sum, method) => {
+        return sum + (method.cash_sales || 0)
+      }, 0)
+    },
+
+    getTotalCreditPayments () {
+      if (!this.paymentMethodTotals.payment_method_totals) return 0
+      return this.paymentMethodTotals.payment_method_totals.reduce((sum, method) => {
+        return sum + (method.credit_sales || 0)
+      }, 0)
+    },
+
+    getCashPaymentPercentage () {
+      const total = this.paymentMethodTotals.payment_total || 0
+      if (total === 0) return 0
+      return (this.getTotalCashPayments() / total) * 100
+    },
+
+    getCreditPaymentPercentage () {
+      const total = this.paymentMethodTotals.payment_total || 0
+      if (total === 0) return 0
+      return (this.getTotalCreditPayments() / total) * 100
+    },
+
+    getMethodCashPercentage (method) {
+      const total = method.sales || 0
+      if (total === 0) return 0
+      return ((method.cash_sales || 0) / total) * 100
+    },
+
+    getMethodCreditPercentage (method) {
+      const total = method.sales || 0
+      if (total === 0) return 0
+      return ((method.credit_sales || 0) / total) * 100
     },
 
     getTotalProfit () {

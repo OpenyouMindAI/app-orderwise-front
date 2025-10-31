@@ -133,6 +133,10 @@ export default configure(function (/* ctx */) {
       contentScripts: [
         'my-content-script'
       ]
+    },
+
+    bin: {
+      linuxAndroidStudio: '/snap/android-studio/current/bin/studio.sh'
     }
   }
 })
