@@ -2003,7 +2003,7 @@ export default {
      */
     canEditTransfer () {
       const store = authentication()
-      const user = store.userSession
+      const user = store.branchOffice
 
       // Super admin y root pueden editar siempre
       if (user?.is_superadmin || user?.is_root) {
@@ -2015,7 +2015,7 @@ export default {
         return false
       }
 
-      return user?.branch_office_id === this.currentTransfer.origin_branch_office_id
+      return user?.id === this.currentTransfer.origin_branch_office_id
     },
     /**
      * Check if current user can verify the transfer (destination branch only)
