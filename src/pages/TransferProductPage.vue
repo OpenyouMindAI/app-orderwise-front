@@ -1199,7 +1199,7 @@
         <!-- Opciones -->
         <q-card-section class="q-pa-lg">
           <div class="text-h6 q-mb-md">¿Qué deseas hacer?</div>
-          
+
           <q-list class="options-list">
             <!-- Ver Detalle -->
             <q-item
@@ -2004,17 +2004,17 @@ export default {
     canEditTransfer () {
       const store = authentication()
       const user = store.userSession
-      
+
       // Super admin y root pueden editar siempre
       if (user?.is_superadmin || user?.is_root) {
         return true
       }
-      
+
       // Solo la sucursal origen puede editar
       if (!this.currentTransfer?.origin_branch_office_id) {
         return false
       }
-      
+
       return user?.branch_office_id === this.currentTransfer.origin_branch_office_id
     },
     /**
@@ -2023,14 +2023,14 @@ export default {
      */
     canVerifyTransfer () {
       const store = authentication()
-      const user = store.userSession
-      
+      const user = store.branchOffice
+
       // Solo la sucursal destino puede verificar
       if (!this.currentTransfer?.destination_branch_office_id) {
         return false
       }
-      
-      return user?.branch_office_id === this.currentTransfer.destination_branch_office_id
+
+      return user?.id === this.currentTransfer.destination_branch_office_id
     }
   },
 
