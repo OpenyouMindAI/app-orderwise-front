@@ -319,7 +319,7 @@
                           type="number"
                           @focus="e => e.target.select()"
                           v-model.number="scope.value"
-                          :model-value="Number(scope.value).toFixed(3)"
+                          :model-value="Number(scope.value).toFixed(2)"
                           autofocus
                           @keyup.enter="scope.set"
                         />
@@ -528,6 +528,82 @@
               </div>
               <div class="col-12" v-if="typeOfService.code !== 4">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+              </div>
+
+              <!-- Sección de archivos adjuntos - Solo para pedidos (code === 5) -->
+              <div class="col-12" v-if="typeOfService && typeOfService.code === 5">
+                <q-card flat bordered class="q-mt-md">
+                  <q-card-section class="q-pb-sm">
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                      <q-icon name="attachment" class="q-mr-sm" />
+                      Archivos Adjuntos
+                    </div>
+
+                    <!-- Dropzone simple - solo cuando no hay archivos -->
+                    <div
+                      v-if="invoiceFiles.length === 0"
+                      class="upload-zone"
+                      :class="{
+                        'upload-zone-active': isDragOverInvoice,
+                        'q-dark': $q.dark.isActive
+                      }"
+                      @dragover.prevent="isDragOverInvoice = true"
+                      @dragleave.prevent="isDragOverInvoice = false"
+                      @drop.prevent="handleInvoiceFileDrop"
+                      @click="openFileDialog"
+                    >
+                      <div class="upload-content">
+                        <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
+                        <div class="upload-text">
+                          Arrastra archivos aquí
+                        </div>
+                        <q-btn
+                          color="primary"
+                          label="SELECCIONAR"
+                          unelevated
+                          size="xs"
+                          class="q-mt-xs upload-btn"
+                          @click.stop="openFileDialog"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Input oculto para seleccionar archivos - SIEMPRE disponible -->
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,application/pdf"
+                      style="display: none"
+                      @change="handleFileSelect"
+                    />
+
+                    <!-- Botón pequeño para agregar más - solo cuando ya hay archivos -->
+                    <div v-if="invoiceFiles.length > 0" class="add-more-files">
+                      <q-btn
+                        round
+                        color="primary"
+                        icon="add"
+                        size="sm"
+                        class="add-files-btn"
+                        @click="openFileDialog"
+                      >
+                        <q-tooltip>Agregar más archivos</q-tooltip>
+                      </q-btn>
+                    </div>
+
+                    <!-- Vista de archivos adjuntos -->
+                    <div v-if="invoiceFiles.length > 0" class="q-mt-md">
+                      <div class="text-body2 text-primary q-mb-sm">
+                        Archivos adjuntos ({{ invoiceFiles.length }})
+                      </div>
+                      <file-component
+                        :files="invoiceFiles"
+                        @delete:files="handleDeleteInvoiceFiles"
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
               </div>
               <div class="col-12">
                 <div class="flex q-mt-sm" v-if="invoice" style="gap: 15px;">
@@ -1072,6 +1148,7 @@ import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
 import PaymentModal from 'src/components/PaymentModal.vue'
 import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
+import FileComponent from 'src/components/FileComponent.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1090,7 +1167,8 @@ export default {
     BarcodeScanner,
     CashBoxDialog,
     TransferMpDialog,
-    CashflowModal
+    CashflowModal,
+    FileComponent
   },
   data () {
     return {
@@ -1453,6 +1531,21 @@ export default {
        * @type {Boolean}
        */
       withoutPrint: false,
+      /**
+       * Invoice files (attachments)
+       * @type {Array}
+       */
+      invoiceFiles: [],
+      /**
+       * Drag over state for invoice files
+       * @type {Boolean}
+       */
+      isDragOverInvoice: false,
+      /**
+       * Deleted invoice files
+       * @type {Array}
+       */
+      deletedInvoiceFiles: [],
       /**
        * Loading living room
        * @type {Boolean}
@@ -2648,6 +2741,9 @@ export default {
       // Reiniciar el componente AddressComponent incrementando su key
       this.addressComponentKey += 1
 
+      // Limpiar archivos adjuntos
+      this.clearInvoiceFiles()
+
       this.calculateTotal()
 
       // Enviar actualización inmediata de factura vacía
@@ -2775,11 +2871,19 @@ export default {
         let res = null
         if (!params) return
 
+        // Paso 1: Guardar factura con datos JSON
         if (this.$route.query.id) {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
           res = await this.$api.post('invoices', params)
         }
+
+        // Paso 2: Si hay archivos adjuntos y es tipo pedido (code === 5), enviarlos
+        const invoiceId = res.data.data?.id
+        if (invoiceId && this.invoiceFiles.length > 0 && this.typeOfService?.code === 5) {
+          await this.uploadInvoiceFiles(invoiceId)
+        }
+
         await this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
 
@@ -2797,6 +2901,49 @@ export default {
         notify(error.message, 'negative', 'warning')
       } finally {
         this.loadingBilling = false
+      }
+    },
+
+    /**
+     * Upload invoice files to server
+     * @param {Number} invoiceId - ID de la factura creada
+     */
+    async uploadInvoiceFiles (invoiceId) {
+      try {
+        const formData = new FormData()
+
+        // Agregar archivos nuevos
+        let fileIndex = 0
+        this.invoiceFiles.forEach((fileObj) => {
+          if (fileObj.isNew && fileObj.file) {
+            formData.append(`files[${fileIndex}]`, fileObj.file)
+            fileIndex++
+          }
+        })
+
+        // Agregar archivos eliminados (si aplica en edición)
+        if (this.deletedInvoiceFiles.length > 0) {
+          formData.append('deleted_files', JSON.stringify(this.deletedInvoiceFiles))
+        }
+
+        // Configurar headers para FormData
+        const config = {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+
+        // Enviar archivos al endpoint específico
+        await this.$api.post(`invoices/${invoiceId}/attachments`, formData, config)
+
+        console.log(`✅ Archivos adjuntos subidos para factura ${invoiceId}`)
+      } catch (error) {
+        console.error('Error al subir archivos:', error)
+        this.$q.notify({
+          message: 'La factura se guardó pero hubo un error al subir los archivos adjuntos',
+          icon: 'warning',
+          color: 'warning'
+        })
       }
     },
     /**
@@ -3626,6 +3773,104 @@ export default {
         color: 'positive',
         icon: 'check_circle'
       })
+    },
+
+    /**
+     * Open file dialog safely
+     */
+    openFileDialog () {
+      const input = this.$refs.fileInput
+      if (input) {
+        input.click()
+      }
+    },
+
+    /**
+     * Handle file select
+     * @param {Event} event
+     */
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      this.processInvoiceFiles(files)
+      event.target.value = '' // Reset input
+    },
+
+    /**
+     * Handle invoice file drop
+     * @param {Event} event
+     */
+    handleInvoiceFileDrop (event) {
+      this.isDragOverInvoice = false
+      const files = Array.from(event.dataTransfer.files)
+      this.processInvoiceFiles(files)
+    },
+
+    /**
+     * Process invoice files (images and PDFs)
+     * @param {Array} files
+     */
+    processInvoiceFiles (files) {
+      files.forEach(file => {
+        // Validate file type
+        const isValidImage = file.type.startsWith('image/')
+        const isValidPDF = file.type === 'application/pdf'
+
+        if (!isValidImage && !isValidPDF) {
+          this.$q.notify({
+            message: 'Solo se permiten imágenes y archivos PDF',
+            icon: 'warning',
+            color: 'negative'
+          })
+          return
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          this.$q.notify({
+            message: 'El archivo es muy grande (máximo 10MB)',
+            icon: 'warning',
+            color: 'negative'
+          })
+          return
+        }
+
+        // Create file object
+        const fileObj = {
+          id: Date.now() + Math.random(), // Temporary ID
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: URL.createObjectURL(file),
+          file, // Store original file for upload
+          isNew: true
+        }
+
+        this.invoiceFiles.push(fileObj)
+      })
+    },
+
+    /**
+     * Handle delete invoice files
+     * @param {Array} deletedIds
+     */
+    handleDeleteInvoiceFiles (deletedIds) {
+      if (deletedIds.length > 0) {
+        this.deletedInvoiceFiles.push(...deletedIds)
+      }
+    },
+
+    /**
+     * Clear invoice files
+     */
+    clearInvoiceFiles () {
+      // Revoke URLs to prevent memory leaks
+      this.invoiceFiles.forEach(file => {
+        if (file.url && file.isNew) {
+          URL.revokeObjectURL(file.url)
+        }
+      })
+      this.invoiceFiles = []
+      this.deletedInvoiceFiles = []
     }
   }
 }
@@ -3910,6 +4155,95 @@ export default {
 .modern-nav-btn--success:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Upload Zone Styles */
+.upload-zone {
+  background: rgba(25, 118, 210, 0.08);
+  border: 2px dashed var(--q-primary);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+}
+
+.upload-zone:hover {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.12);
+  border-color: var(--q-primary);
+}
+
+.upload-zone-active {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.15);
+  border-color: var(--q-primary);
+  transform: scale(1.02);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: var(--q-primary);
+  font-weight: 500;
+}
+
+.upload-btn {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.add-more-files {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.add-files-btn {
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+  transition: all 0.3s ease;
+}
+
+.add-files-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+}
+
+/* Dark mode support */
+.body--dark .upload-zone {
+  background: rgba(144, 202, 249, 0.1);
+  border-color: #90caf9;
+}
+
+.body--dark .upload-zone:hover {
+  background: rgba(144, 202, 249, 0.15);
+}
+
+.body--dark .upload-text {
+  color: #90caf9;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .upload-zone {
+    min-height: 80px;
+    padding: 12px;
+  }
+
+  .upload-text {
+    font-size: 12px;
+  }
 }
 
 </style>
