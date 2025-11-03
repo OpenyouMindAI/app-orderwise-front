@@ -534,9 +534,25 @@
               <div class="col-12" v-if="typeOfService && typeOfService.code === 5">
                 <q-card flat bordered class="q-mt-md">
                   <q-card-section class="q-pb-sm">
-                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                      <q-icon name="attachment" class="q-mr-sm" />
-                      Archivos Adjuntos
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center justify-between">
+                      <div class="flex items-center">
+                        <q-icon name="attachment" class="q-mr-sm" />
+                        Archivos Adjuntos
+                      </div>
+
+                      <!-- Botón para agregar archivos - visible cuando ya hay archivos -->
+                      <q-btn
+                        v-if="invoiceFiles.length > 0"
+                        round
+                        color="primary"
+                        text-color="white"
+                        icon="add"
+                        size="sm"
+                        unelevated
+                        @click="openFileDialog"
+                      >
+                        <q-tooltip>Agregar más archivos</q-tooltip>
+                      </q-btn>
                     </div>
 
                     <!-- Dropzone simple - solo cuando no hay archivos -->
@@ -547,6 +563,7 @@
                         'upload-zone-active': isDragOverInvoice,
                         'q-dark': $q.dark.isActive
                       }"
+                      @dragenter.prevent="isDragOverInvoice = true"
                       @dragover.prevent="isDragOverInvoice = true"
                       @dragleave.prevent="isDragOverInvoice = false"
                       @drop.prevent="handleInvoiceFileDrop"
@@ -577,20 +594,6 @@
                       style="display: none"
                       @change="handleFileSelect"
                     />
-
-                    <!-- Botón pequeño para agregar más - solo cuando ya hay archivos -->
-                    <div v-if="invoiceFiles.length > 0" class="add-more-files">
-                      <q-btn
-                        round
-                        color="primary"
-                        icon="add"
-                        size="sm"
-                        class="add-files-btn"
-                        @click="openFileDialog"
-                      >
-                        <q-tooltip>Agregar más archivos</q-tooltip>
-                      </q-btn>
-                    </div>
 
                     <!-- Vista de archivos adjuntos -->
                     <div v-if="invoiceFiles.length > 0" class="q-mt-md">
@@ -3835,59 +3838,15 @@ export default {
         // Validate file size (max 10MB)
         const maxSize = 10 * 1024 * 1024 // 10MB
 
-        // Si el tamaño es 0 o muy pequeño, intentar leer el archivo
-        if (file.size === 0 || file.size < 100) {
-          // Usar FileReader para validar tamaño real
-          const reader = new FileReader()
-
-          reader.onerror = () => {
-            this.$q.notify({
-              message: `Error al leer "${file.name}". Intenta subirlo nuevamente`,
-              icon: 'error',
-              color: 'negative',
-              position: 'top'
-            })
-          }
-
-          reader.onload = (e) => {
-            if (!e.target.result) {
-              this.$q.notify({
-                message: `No se pudo leer "${file.name}"`,
-                icon: 'error',
-                color: 'negative',
-                position: 'top'
-              })
-              return
-            }
-
-            const actualSize = e.target.result.byteLength
-            const actualSizeMB = (actualSize / (1024 * 1024)).toFixed(2)
-
-            if (actualSize > maxSize) {
-              this.$q.notify({
-                message: `"${file.name}" es muy grande (${actualSizeMB}MB). Máximo permitido: 10MB`,
-                icon: 'warning',
-                color: 'negative',
-                position: 'top',
-                timeout: 3000
-              })
-            } else {
-              // Archivo válido, agregarlo
-              this.addValidatedFile(file)
-              this.$q.notify({
-                message: `"${file.name}" agregado exitosamente`,
-                icon: 'check_circle',
-                color: 'positive',
-                position: 'top',
-                timeout: 2000
-              })
-            }
-          }
-
-          reader.readAsArrayBuffer(file)
-          return // Salir y esperar a que el reader termine
+        // Si el tamaño es 0, aceptar el archivo sin validación
+        // (Algunos navegadores como Brave reportan size=0 en drag & drop)
+        if (file.size === 0) {
+          this.addValidatedFile(file)
+          acceptedCount++
+          return
         }
 
+        // Validar tamaño para archivos con size conocido
         const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2)
 
         if (file.size > maxSize) {
@@ -4298,22 +4257,6 @@ export default {
 .upload-btn {
   margin-top: 8px;
   font-weight: 600;
-}
-
-.add-more-files {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-
-.add-files-btn {
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
-  transition: all 0.3s ease;
-}
-
-.add-files-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
 }
 
 /* Dark mode support */
