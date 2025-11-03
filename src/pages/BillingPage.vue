@@ -1009,10 +1009,10 @@
               filled
               v-model.number="quantity"
               :model-value="Number(quantity).toFixed(3)"
-              autofocus
               label="Cantidad"
               type="number"
               style="width: 50%;"
+              @focus="e => e.target.select()"
               @update:model-value="updateValues('quantity')"
             />
             <q-input
@@ -1022,6 +1022,8 @@
               label="Importe"
               type="number"
               style="width: 50%;"
+              autofocus
+              @focus="e => e.target.select()"
               @update:model-value="updateValues('currentAmount')"
             />
           </q-card-section>
