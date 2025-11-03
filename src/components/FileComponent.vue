@@ -7,26 +7,32 @@
     />
     <div class="flex flex-wrap justify-start items-center full-width q-gutter-y-sm">
       <div v-for="(f, index) in fileAll" :key="index">
-        <q-card v-if="f.type === 'application/pdf'" class="my-card" style="width: 310px" @click="openPdf(f)">
-          <q-img src="image/pdf.png" :style="imageStyle">
-            <div class="absolute-full text-h6 text-bold flex flex-center">
-              {{ f.type }}
+        <div
+          v-if="f.type === 'application/pdf'"
+          class="pdf-container q-ml-xs"
+          style="width: 210px; height: 150px; margin-top: 10px; position: relative; cursor: pointer;"
+          @click="openPdf(f)"
+        >
+          <div class="pdf-content bg-grey-3">
+            <q-icon name="picture_as_pdf" size="48px" color="red-7" />
+            <div class="text-caption text-center q-mt-xs text-grey-8 pdf-name">
+              {{ f.name }}
             </div>
-            <q-btn
-              v-if="!onlyView"
-              class="all-pointer-events absolute material-symbols-outlined"
-              icon="delete"
-              color="negative"
-              style="top: 2px; right: 1px"
-              push
-              dense
-              round
-              @click.prevent.stop="alertDialogFile(index, f)"
-            >
-              <q-tooltip>Eliminar documento</q-tooltip>
-            </q-btn>
-          </q-img>
-        </q-card>
+          </div>
+          <q-btn
+            v-if="!onlyView"
+            class="all-pointer-events absolute material-symbols-outlined"
+            icon="delete"
+            color="negative"
+            style="top: 2px; right: 1px"
+            push
+            dense
+            round
+            @click.prevent.stop="alertDialogFile(index, f)"
+          >
+            <q-tooltip>Eliminar documento</q-tooltip>
+          </q-btn>
+        </div>
         <q-img
           v-else
           :ref="
@@ -385,4 +391,29 @@ export default {
 
       + div > .image-gallery__image
         z-index: 2001
+
+.pdf-container
+  border-radius: 3%/3%
+  overflow: hidden
+  transition: all 0.2s ease
+
+  &:hover
+    transform: scale(1.02)
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2)
+
+  .pdf-content
+    width: 100%
+    height: 100%
+    display: flex
+    flex-direction: column
+    align-items: center
+    justify-content: center
+    border-radius: 3%/3%
+
+  .pdf-name
+    max-width: 180px
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+    padding: 0 8px
 </style>

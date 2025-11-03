@@ -2910,33 +2910,48 @@ export default {
      */
     async uploadInvoiceFiles (invoiceId) {
       try {
-        const formData = new FormData()
+        // Subir cada archivo individualmente
+        const uploadPromises = []
 
-        // Agregar archivos nuevos
-        let fileIndex = 0
         this.invoiceFiles.forEach((fileObj) => {
           if (fileObj.isNew && fileObj.file) {
-            formData.append(`files[${fileIndex}]`, fileObj.file)
-            fileIndex++
+            const formData = new FormData()
+
+            // Estructura requerida por el backend
+            formData.append('file', fileObj.file)
+            formData.append('fileable_type', 'App\\Models\\Invoice')
+            formData.append('fileable_id', invoiceId)
+
+            // Configurar headers para FormData
+            const config = {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            }
+
+            // Agregar promesa de upload
+            uploadPromises.push(
+              this.$api.post('files', formData, config)
+            )
           }
         })
 
-        // Agregar archivos eliminados (si aplica en edición)
+        // Eliminar archivos existentes marcados para eliminación (solo en edición)
         if (this.deletedInvoiceFiles.length > 0) {
-          formData.append('deleted_files', JSON.stringify(this.deletedInvoiceFiles))
+          this.deletedInvoiceFiles.forEach((fileId) => {
+            // Verificar que sea un ID real antes de intentar eliminar
+            if (Number.isInteger(fileId) && fileId > 0) {
+              uploadPromises.push(
+                this.$api.delete(`files/${fileId}`)
+              )
+            }
+          })
         }
 
-        // Configurar headers para FormData
-        const config = {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        // Ejecutar todas las subidas en paralelo
+        await Promise.all(uploadPromises)
 
-        // Enviar archivos al endpoint específico
-        await this.$api.post(`invoices/${invoiceId}/attachments`, formData, config)
-
-        console.log(`✅ Archivos adjuntos subidos para factura ${invoiceId}`)
+        console.log(`✅ ${uploadPromises.length} archivo(s) procesado(s) para factura ${invoiceId}`)
       } catch (error) {
         console.error('Error al subir archivos:', error)
         this.$q.notify({
@@ -3855,7 +3870,15 @@ export default {
      */
     handleDeleteInvoiceFiles (deletedIds) {
       if (deletedIds.length > 0) {
-        this.deletedInvoiceFiles.push(...deletedIds)
+        // Solo agregar IDs reales (enteros) de archivos existentes en el servidor
+        // Los IDs temporales (con decimales) no deben enviarse al backend
+        const realIds = deletedIds.filter(id => {
+          return Number.isInteger(id) && id > 0
+        })
+
+        if (realIds.length > 0) {
+          this.deletedInvoiceFiles.push(...realIds)
+        }
       }
     },
 
