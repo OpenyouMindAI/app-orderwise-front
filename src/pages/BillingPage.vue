@@ -2834,14 +2834,6 @@ export default {
     setParamsBill () {
       if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
 
-      console.log('=== SET PARAMS BILL ===', {
-        invoiceType: this.invoiceType,
-        pendingPayment: this.pendingPayment,
-        withoutPayment: this.withoutPayment,
-        withServiceType: this.withServiceType,
-        products: this.products
-      })
-
       if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
@@ -2950,8 +2942,6 @@ export default {
 
         // Ejecutar todas las subidas en paralelo
         await Promise.all(uploadPromises)
-
-        console.log(`✅ ${uploadPromises.length} archivo(s) procesado(s) para factura ${invoiceId}`)
       } catch (error) {
         console.error('Error al subir archivos:', error)
         this.$q.notify({
@@ -3705,8 +3695,6 @@ export default {
      * @param {Object|String} address - The selected address
      */
     handleAddressSelectedForClient (address) {
-      console.log('Dirección seleccionada para cliente:', address)
-
       // Si la dirección es nula, limpiar el campo
       if (!address) {
         this.clientAdded.address = ''
@@ -3825,6 +3813,9 @@ export default {
      * @param {Array} files
      */
     processInvoiceFiles (files) {
+      let acceptedCount = 0
+      let rejectedCount = 0
+
       files.forEach(file => {
         // Validate file type
         const isValidImage = file.type.startsWith('image/')
@@ -3832,36 +3823,118 @@ export default {
 
         if (!isValidImage && !isValidPDF) {
           this.$q.notify({
-            message: 'Solo se permiten imágenes y archivos PDF',
+            message: `"${file.name}" no es un formato válido. Solo se permiten imágenes y archivos PDF`,
             icon: 'warning',
-            color: 'negative'
+            color: 'negative',
+            position: 'top'
           })
+          rejectedCount++
           return
         }
 
         // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
+        const maxSize = 10 * 1024 * 1024 // 10MB
+
+        // Si el tamaño es 0 o muy pequeño, intentar leer el archivo
+        if (file.size === 0 || file.size < 100) {
+          // Usar FileReader para validar tamaño real
+          const reader = new FileReader()
+
+          reader.onerror = () => {
+            this.$q.notify({
+              message: `Error al leer "${file.name}". Intenta subirlo nuevamente`,
+              icon: 'error',
+              color: 'negative',
+              position: 'top'
+            })
+          }
+
+          reader.onload = (e) => {
+            if (!e.target.result) {
+              this.$q.notify({
+                message: `No se pudo leer "${file.name}"`,
+                icon: 'error',
+                color: 'negative',
+                position: 'top'
+              })
+              return
+            }
+
+            const actualSize = e.target.result.byteLength
+            const actualSizeMB = (actualSize / (1024 * 1024)).toFixed(2)
+
+            if (actualSize > maxSize) {
+              this.$q.notify({
+                message: `"${file.name}" es muy grande (${actualSizeMB}MB). Máximo permitido: 10MB`,
+                icon: 'warning',
+                color: 'negative',
+                position: 'top',
+                timeout: 3000
+              })
+            } else {
+              // Archivo válido, agregarlo
+              this.addValidatedFile(file)
+              this.$q.notify({
+                message: `"${file.name}" agregado exitosamente`,
+                icon: 'check_circle',
+                color: 'positive',
+                position: 'top',
+                timeout: 2000
+              })
+            }
+          }
+
+          reader.readAsArrayBuffer(file)
+          return // Salir y esperar a que el reader termine
+        }
+
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2)
+
+        if (file.size > maxSize) {
           this.$q.notify({
-            message: 'El archivo es muy grande (máximo 10MB)',
+            message: `"${file.name}" es muy grande (${fileSizeMB}MB). Máximo permitido: 10MB`,
             icon: 'warning',
-            color: 'negative'
+            color: 'negative',
+            position: 'top',
+            timeout: 3000
           })
+          rejectedCount++
           return
         }
 
-        // Create file object
-        const fileObj = {
-          id: Date.now() + Math.random(), // Temporary ID
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: URL.createObjectURL(file),
-          file, // Store original file for upload
-          isNew: true
-        }
-
-        this.invoiceFiles.push(fileObj)
+        // Archivo con tamaño válido, agregarlo directamente
+        this.addValidatedFile(file)
+        acceptedCount++
       })
+
+      // Notificación de éxito si se agregaron archivos
+      if (acceptedCount > 0) {
+        this.$q.notify({
+          message: `${acceptedCount} archivo(s) agregado(s) exitosamente`,
+          icon: 'check_circle',
+          color: 'positive',
+          position: 'top',
+          timeout: 2000
+        })
+      }
+    },
+
+    /**
+     * Add validated file to the list
+     * @param {File} file
+     */
+    addValidatedFile (file) {
+      const fileObj = {
+        id: Date.now() + Math.random(), // Temporary ID
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: URL.createObjectURL(file),
+        file, // Store original file for upload
+        isNew: true
+      }
+
+      this.invoiceFiles.push(fileObj)
     },
 
     /**
