@@ -435,9 +435,9 @@
                           <span class="amount-label-compact">Esperado</span>
                           <span class="amount-value-compact">{{ formatCurrency(withdrawal.amount) }}</span>
                         </div>
-                        
+
                         <q-icon name="arrow_forward" size="16px" color="grey-5" class="amount-arrow-compact" />
-                        
+
                         <div class="amount-compact actual-compact">
                           <span class="amount-label-compact">Contado</span>
                           <q-input

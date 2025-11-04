@@ -349,7 +349,7 @@
                         v-for="(file, index) in invoice.invoice_files"
                         :key="index"
                         class="invoice-file-item"
-                        @click="viewImage(file)"
+                        @click="openGallery(index)"
                       >
                         <div class="invoice-file-wrapper">
                           <!-- Imagen -->
@@ -717,12 +717,20 @@
     <q-inner-loading :showing="visibleLoading">
       <q-knob
         :step="10"
-        v-model="loadingDownload"
         show-value
-        size="90px"
-        class="q-ma-md"
+        v-model="loadingDownload"
+        class="text-white q-ma-md"
       />
     </q-inner-loading>
+
+    <!-- Image Gallery -->
+    <ImageGalleryComponent
+      v-model="showGallery"
+      :images="invoice && invoice.invoice_files ? invoice.invoice_files : []"
+      :initial-index="selectedFileIndex"
+      :loop="true"
+      :show-thumbnails="true"
+    />
   </q-page>
 </template>
 
@@ -734,7 +742,12 @@ import { formatNumber, loading, notify } from 'src/const/mixins'
 import { status } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
 import { commandPrint, invoicePrint, ticketPrint } from 'src/const/printers'
+import ImageGalleryComponent from 'src/components/ImageGalleryComponent.vue'
+
 export default {
+  components: {
+    ImageGalleryComponent
+  },
   data () {
     return {
       panel: 'day',
@@ -869,6 +882,16 @@ export default {
        * @type {Object}
        */
       openEditInvoice: null,
+      /**
+       * Show gallery dialog
+       * @type {Boolean}
+       */
+      showGallery: false,
+      /**
+       * Selected file index for gallery
+       * @type {Number}
+       */
+      selectedFileIndex: 0,
       /**
        * Table columns
        * @type {Array}
@@ -1550,24 +1573,12 @@ export default {
       console.log('📊 Cantidad total:', this.invoice.invoice_files.length)
     },
     /**
-     * View file in dialog (image or PDF)
-     * @param {Object} file file data
+     * Opens the gallery at a specific file index
+     * @param {Number} index - Index of the file to display
      */
-    viewImage (file) {
-      const isPDF = file.name && file.name.toLowerCase().endsWith('.pdf')
-
-      if (isPDF) {
-        // Abrir PDF en nueva pestaña
-        window.open(file.url, '_blank')
-      } else {
-        // Mostrar imagen en diálogo
-        this.$q.dialog({
-          message: `<img src="${file.url}" style="width: 100%; max-width: 600px; border-radius: 8px;" />`,
-          html: true,
-          fullWidth: true,
-          class: 'invoice-image-dialog'
-        })
-      }
+    openGallery (index = 0) {
+      this.selectedFileIndex = index
+      this.showGallery = true
     },
     /**
      * Model product
