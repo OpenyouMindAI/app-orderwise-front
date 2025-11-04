@@ -2972,6 +2972,10 @@ export default {
      * @returns {Object}
      */
     setModelInvoice () {
+      // Determinar si es cuenta corriente (CC) o contado
+      const isCuentaCorriente = this.invoiceType?.acronym_serie === 'CC'
+      const paymentType = isCuentaCorriente ? 'credit' : 'cash'
+
       const invoiceModel = {
         ...this.invoice,
         tableClose: this.tableClose,
@@ -2990,7 +2994,10 @@ export default {
         address: this.formattedAddress,
         products: this.products,
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
-        payments: this.payments.filter(payment => payment.amount > 0),
+        payments: this.payments.filter(payment => payment.amount > 0).map(payment => ({
+          ...payment,
+          payment_type: paymentType
+        })),
         total_amount: this.totalBill,
         tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,

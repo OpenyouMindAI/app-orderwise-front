@@ -55,7 +55,7 @@
           :color="cashBoxUser ? 'green' : 'grey-5'"
           :text-color="cashBoxUser ? 'white' : 'grey-8'"
           icon="schedule"
-          label="Mi turno"
+          label="Turno en curso"
           rounded
           size="sm"
           @click="loadCurrentShift"
@@ -64,7 +64,7 @@
           color="grey-5"
           text-color="grey-8"
           icon="clear"
-          label="Sin turno"
+          label="Todos los turnos"
           rounded
           size="sm"
           @click="clearShift"
@@ -177,21 +177,6 @@
               <div class="col">
                 <div class="text-subtitle1 text-weight-bold">💳 Métodos de Pago</div>
               </div>
-              <div class="col-auto flex justify-center items-center q-gutter-x-md">
-                <div class="text-body1 text-bold" @click.stop="paymentDetailsModal">
-                  Total: {{ formatNumber(paymentMethodTotals.payment_total || 0) }}
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    Ver detalles de pagos
-                  </q-tooltip>
-                </div>
-                <q-chip
-                  :color="paymentMethodTotals.payment_method_totals?.length ? 'white' : 'primary'"
-                  :text-color="paymentMethodTotals.payment_method_totals?.length ? 'green-6' : 'white'"
-                  :label="paymentMethodTotals.payment_method_totals?.length || 0"
-                  size="sm"
-                  dense
-                />
-              </div>
             </div>
           </template>
 
@@ -210,17 +195,6 @@
                     <div class="col">
                       <div class="text-weight-bold text-subtitle1 text-green-7">{{ method.payment_method_name }}</div>
                     </div>
-                    <div class="col-auto">
-                      <q-chip
-                        :color="method.total >= 0 ? 'green' : 'red'"
-                        text-color="white"
-                        size="sm"
-                        dense
-                        class="text-weight-bold"
-                      >
-                        {{ formatNumber(method.total) }}
-                      </q-chip>
-                    </div>
                   </div>
 
                   <!-- Desglose detallado -->
@@ -233,7 +207,7 @@
                         </q-item-section>
                         <q-item-section side>
                           <q-item-label class="text-body2 text-weight-bold text-blue-7">
-                            {{ formatNumber(method.init_cashbox) }}
+                            + {{ formatNumber(method.init_cashbox) }}
                           </q-item-label>
                         </q-item-section>
                       </q-item>
@@ -245,7 +219,7 @@
                         </q-item-section>
                         <q-item-section side>
                           <q-item-label class="text-body2 text-weight-bold text-positive">
-                            {{ formatNumber(method.sales) }}
+                            + {{ formatNumber(method.sales) }}
                           </q-item-label>
                         </q-item-section>
                       </q-item>
@@ -257,7 +231,7 @@
                         </q-item-section>
                         <q-item-section side>
                           <q-item-label class="text-body2 text-weight-bold text-teal-7">
-                            {{ formatNumber(method.cash_in) }}
+                            + {{ formatNumber(method.cash_in) }}
                           </q-item-label>
                         </q-item-section>
                       </q-item>
@@ -269,7 +243,7 @@
                         </q-item-section>
                         <q-item-section side>
                           <q-item-label class="text-body2 text-weight-bold text-negative">
-                            {{ formatNumber(method.cash_out) }}
+                            - {{ formatNumber(method.cash_out) }}
                           </q-item-label>
                         </q-item-section>
                       </q-item>
@@ -281,7 +255,7 @@
                         </q-item-section>
                         <q-item-section side>
                           <q-item-label class="text-body2 text-weight-bold text-orange-7">
-                            {{ formatNumber(method.withdrawal) }}
+                            - {{ formatNumber(method.withdrawal) }}
                           </q-item-label>
                         </q-item-section>
                       </q-item>
@@ -293,15 +267,15 @@
                         </q-item-section>
                         <q-item-section side>
                           <q-item-label class="text-subtitle2 text-weight-bold" :class="method.total >= 0 ? 'text-positive' : 'text-negative'">
-                            {{ formatNumber(method.total) }}
+                            {{ method.total >= 0 ? '+' : '-' }} {{ formatNumber(Math.abs(method.total)) }}
                           </q-item-label>
                         </q-item-section>
                       </q-item>
 
                       <!-- Cierre de caja (solo para efectivo) -->
-                      <q-item v-if="method.is_efectivo" class="compact-item">
+                      <q-item v-if="method.is_efectivo && method.close_cashbox > 0" class="compact-item">
                         <q-item-section>
-                          <q-item-label class="text-caption text-grey-7">Cierre de caja</q-item-label>
+                          <q-item-label class="text-caption text-grey-7">Cierre de caja (conteo físico)</q-item-label>
                         </q-item-section>
                         <q-item-section side>
                           <q-item-label class="text-body2 text-weight-bold text-indigo-7">
@@ -311,19 +285,19 @@
                       </q-item>
 
                       <!-- Diferencia (solo para efectivo) -->
-                      <q-item v-if="method.is_efectivo" class="bg-amber-1 compact-item">
+                      <q-item v-if="method.is_efectivo && method.close_cashbox > 0" class="bg-amber-1 compact-item">
                         <q-item-section>
                           <q-item-label class="text-caption text-weight-bold text-grey-8">
                             <q-icon name="compare_arrows" size="xs" class="q-mr-xs"/>
                             DIFERENCIA
                           </q-item-label>
                           <q-item-label caption class="text-grey-7" style="font-size: 10px;">
-                            {{ method.difference >= 0 ? 'Sobrante' : 'Faltante' }}
+                            {{ method.difference < 0 ? 'Sobrante' : method.difference < 0 ? 'Faltante' : 'Sin diferencia' }}
                           </q-item-label>
                         </q-item-section>
                         <q-item-section side>
-                          <q-item-label class="text-subtitle2 text-weight-bold" :class="method.difference >= 0 ? 'text-positive' : 'text-negative'">
-                            {{ formatNumber(method.difference) }}
+                          <q-item-label class="text-subtitle2 text-weight-bold" :class="method.difference < 0 ? 'text-positive' : method.difference > 0 ? 'text-negative' : 'text-grey-7'">
+                            {{ method.difference < 0 ? '+' : method.difference > 0 ? '-' : '' }} {{ formatNumber(Math.abs(method.difference)) }}
                           </q-item-label>
                         </q-item-section>
                       </q-item>
@@ -493,7 +467,7 @@
                       </div>
                       <div class="col-5 text-right">
                         <div class="text-body1 text-weight-bold" :class="cashFlow.type_cashflow === 'debit' || cashFlow.type_cashflow === 'init_cashbox' ? 'text-positive' : 'text-negative'">
-                          {{ formatNumberCompact(cashFlow.totals) }}
+                          {{ cashFlow.type_cashflow === 'debit' || cashFlow.type_cashflow === 'init_cashbox' ? '+' : '-' }} {{ formatNumberCompact(cashFlow.totals) }}
                         </div>
                       </div>
                     </div>
@@ -594,11 +568,6 @@
               <div class="col">
                 <div class="text-subtitle1 text-weight-bold">💰 Desglose: Contado vs Cuenta Corriente</div>
               </div>
-              <div class="col-auto flex justify-center items-center q-gutter-x-md">
-                <div class="text-body1 text-bold">
-                  Total: {{ formatNumber(paymentMethodTotals.payment_total || 0) }}
-                </div>
-              </div>
             </div>
           </template>
 
@@ -641,7 +610,7 @@
                     <q-card-section class="text-center q-pa-md">
                       <q-icon name="payments" color="blue-7" size="lg"/>
                       <div class="text-h5 text-weight-bold text-blue-8 q-mt-sm">
-                        {{ formatNumber(paymentMethodTotals.payment_total || 0) }}
+                        {{ formatNumber(Number(getTotalCreditPayments() + Number(getTotalCreditPayments()))) }}
                       </div>
                       <div class="text-subtitle2 text-blue-7">Total General</div>
                       <div class="text-caption text-grey-7">
