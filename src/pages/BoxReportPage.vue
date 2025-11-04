@@ -1443,7 +1443,7 @@ export default {
       window.open(pdfUrl, '_blank')
     },
 
-    selectQuickDate (period) {
+    async selectQuickDate (period) {
       const today = new Date()
 
       switch (period) {
@@ -1452,6 +1452,8 @@ export default {
           this.day = date.formatDate(today, 'YYYY-MM-DD')
           this.fromHours = null
           this.toHours = null
+          // Cargar turno abierto automáticamente cuando se selecciona "Hoy"
+          await this.loadCurrentShift(false)
           break
         }
         case 'yesterday': {
@@ -1460,6 +1462,9 @@ export default {
           this.day = date.formatDate(yesterday, 'YYYY-MM-DD')
           this.fromHours = null
           this.toHours = null
+          // Limpiar turno para mostrar totalizado del día
+          this.cashBoxUser = null
+          this.cashBoxUsers = []
           console.log(yesterday, this.day)
           break
         }
@@ -1468,6 +1473,9 @@ export default {
           const weekStart = date.startOfDate(today, 'month')
           this.from = date.formatDate(weekStart, 'YYYY-MM-DD')
           this.to = date.formatDate(today, 'YYYY-MM-DD')
+          // Limpiar turno para mostrar totalizado del rango
+          this.cashBoxUser = null
+          this.cashBoxUsers = []
           break
         }
       }
@@ -1637,6 +1645,20 @@ export default {
     async loadCurrentShift (applyFilter = true) {
       try {
         const today = formatDate(Date.now(), 'YYYY-MM-DD')
+
+        // Verificar si la fecha seleccionada es hoy
+        const isToday = this.panel === 'day' && this.day === today
+
+        // Si no es hoy, no cargar turno y mostrar mensaje
+        if (!isToday && applyFilter) {
+          this.$q.notify({
+            message: 'El turno solo está disponible para el día actual',
+            color: 'warning',
+            icon: 'info'
+          })
+          return false
+        }
+
         const params = {
           status: 'open',
           branch_office_id: this.branchOffice?.id,
@@ -1731,6 +1753,17 @@ export default {
     async filterDate () {
       if (!this.branchOffice?.id) return
       this.appliedBranchOfficeSelect = [...this.branchOfficeSelect]
+
+      // Verificar si la fecha seleccionada es hoy
+      const today = date.formatDate(new Date(), 'YYYY-MM-DD')
+      const isToday = this.panel === 'day' && this.day === today
+
+      // Si NO es hoy, limpiar el turno para mostrar totalizado
+      if (!isToday && this.cashBoxUser) {
+        this.cashBoxUser = null
+        this.cashBoxUsers = []
+      }
+
       this.params = this.formatFilter()
       this.params.cashbox_user_id = this.cashBoxUser?.id || null
       this.dialogFilter = false
