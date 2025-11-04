@@ -5,10 +5,10 @@
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
-      <div style="display: grid; grid-template-columns: 7fr 5fr; gap: 1rem;">
+      <div class="billing-panel-container">
         <div>
           <!-- Panel de facturación -->
-          <div class="row q-col-gutter-xs">
+          <div class="row q-col-gutter-sm">
             <!-- Selectores principales -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;" class="col-12">
               <!-- Select cliente -->
@@ -525,7 +525,7 @@
                 </div>
               </div>
             </div>
-           <div class="col-12 q-col-gutter-xs q-mt-md row">
+            <div class="col-12 q-col-gutter-xs q-mt-md row">
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-select
                   filled
@@ -707,11 +707,13 @@
           <!-- Productos con scroll -->
           <div
             ref="productsScrollContainer"
+            class="product-container-scroll"
             style="flex: 1; overflow-y: auto; padding: 0.5rem;"
             @scroll="handleProductsScroll"
           >
-            <!-- Grid de productos -->
-            <div v-if="allProducts.length > 0" class="row q-col-gutter-xs">
+            <!-- Grid de productos y skeleton juntos -->
+            <div class="row q-col-gutter-xs">
+              <!-- Productos existentes -->
               <div
                 v-for="product in allProducts"
                 :key="product.id"
@@ -736,12 +738,11 @@
                   </q-img>
                 </q-card>
               </div>
-            </div>
 
-            <!-- Skeleton loader para carga inicial o más productos -->
-            <div v-if="loadingProducts" class="row" style="width: 100%;">
+              <!-- Skeleton loader en la misma fila -->
               <div
-                v-for="n in (allProducts.length === 0 ? 12 : 6)"
+                v-if="loadingProducts"
+                v-for="n in skeletonCount"
                 :key="`skeleton-${n}`"
                 class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
                 style="padding: 1px;"
@@ -1708,6 +1709,30 @@ export default {
         return total + ((payment.amount - (payment.discount_amount || 0)) || 0)
       }, 0)
       return this.totalBill - totalPayments
+    },
+    /**
+     * Calcula cuántos skeletons mostrar para llenar espacios vacíos en el grid
+     */
+    skeletonCount () {
+      // Si no hay productos, mostrar 12 skeletons (carga inicial)
+      if (this.allProducts.length === 0) {
+        return 12
+      }
+
+      // Detectar productos por fila según breakpoint (basado en col-xs-4, col-md-3, col-lg-2)
+      let productsPerRow = 6 // Default: col-lg-2 y col-xl-2 = 12/2 = 6
+
+      if (this.$q.screen.xs || this.$q.screen.sm) {
+        productsPerRow = 3 // col-xs-4 y col-sm-4 = 12/4 = 3
+      } else if (this.$q.screen.md) {
+        productsPerRow = 4 // col-md-3 = 12/3 = 4
+      }
+
+      // Calcular cuántos espacios vacíos quedan en la última fila
+      const emptySpaces = productsPerRow - (this.allProducts.length % productsPerRow)
+
+      // Si emptySpaces es igual a productsPerRow, significa que la última fila está completa
+      return emptySpaces === productsPerRow ? productsPerRow : emptySpaces
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice'])
@@ -4423,24 +4448,39 @@ export default {
 }
 
 .billing-panel-container {
-  height: calc(100vh - 300px);
-  overflow-y: scroll;
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 1rem;
 }
 
 /* Responsive: Móvil no aplica altura fija */
 @media (max-width: 599px) {
   .billing-panel-container {
-    height: auto;
-    overflow-y: visible;
+    grid-template-columns: 1fr;
   }
 }
 
-.billing-panel-container::-webkit-scrollbar-track {
+@media (min-width: 1440px) {
+  .billing-panel-container {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* .billing-panel-container::-webkit-scrollbar-track {
+  background: transparent;
+} */
+
+/* Thumb translúcido */
+/* .billing-panel-container::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+} */
+
+.product-container-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
 /* Thumb translúcido */
-.billing-panel-container::-webkit-scrollbar-thumb { /* color semitransparente */
+.product-container-scroll::-webkit-scrollbar-thumb {
   border-radius: 4px;
 }
 
