@@ -90,7 +90,8 @@
             </q-btn>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
+        <!-- TODO: aplicar esta clase billing-panel-container-->
+        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm ">
           <div class="row q-col-gutter-sm">
             <div class="col-xl-3 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex justify-between">
               <q-input
@@ -648,37 +649,7 @@
                   </q-btn>
                 </div>
               </div>
-              <div class="col-12">
-                <q-list separator bordered style="border-radius: 10px;">
-                  <q-item v-if="tableSelected.length">
-                    <q-item-section>
-                      Mesas
-                    </q-item-section>
-                    <q-item-section side>
-                      {{ tableSelected.length }}
-                    </q-item-section>
-                  </q-item>
-                  <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
-                    <q-item-section>
-                      TOTAL
-                    </q-item-section>
-                    <q-item-section v-if="coin" side class="text-white">
-                      {{ coin.symbol }} {{ formatNumber(totalBill) }}
-                    </q-item-section>
-                  </q-item>
-                  <q-item>
-                    <q-item-section v-if="pendingPayment >= 0">
-                      TOTAL POR COBRAR
-                    </q-item-section>
-                    <q-item-section v-else>
-                      VUELTO
-                    </q-item-section>
-                    <q-item-section side v-if="coin">
-                      {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </div>
+
             </div>
           </div>
         </div>
@@ -749,6 +720,37 @@
               <q-inner-loading showing color="primary" />
             </template>
           </q-table>
+          <div class="col-xs-12 col-sm-5 col-md-5 col-lg-6 col-xl-6 q-col-gutter-sm" style="position: absolute; bottom: 0; right: 0; z-index: 10000000;">
+            <q-list separator bordered style="border-radius: 10px;">
+              <q-item v-if="tableSelected.length">
+                <q-item-section>
+                  Mesas
+                </q-item-section>
+                <q-item-section side>
+                  {{ tableSelected.length }}
+                </q-item-section>
+              </q-item>
+              <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                <q-item-section>
+                  TOTAL
+                </q-item-section>
+                <q-item-section v-if="coin" side class="text-white">
+                  {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section v-if="pendingPayment >= 0">
+                  TOTAL POR COBRAR
+                </q-item-section>
+                <q-item-section v-else>
+                  VUELTO
+                </q-item-section>
+                <q-item-section side v-if="coin">
+                  {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
         </div>
       </div>
     </q-form>
@@ -4283,6 +4285,28 @@ export default {
   .upload-text {
     font-size: 12px;
   }
+}
+
+.billing-panel-container {
+  height: calc(100vh - 300px);
+  overflow-y: scroll;
+}
+
+/* Responsive: Móvil no aplica altura fija */
+@media (max-width: 599px) {
+  .billing-panel-container {
+    height: auto;
+    overflow-y: visible;
+  }
+}
+
+.billing-panel-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Thumb translúcido */
+.billing-panel-container::-webkit-scrollbar-thumb { /* color semitransparente */
+  border-radius: 4px;
 }
 
 </style>
