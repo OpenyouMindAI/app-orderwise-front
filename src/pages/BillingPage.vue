@@ -675,74 +675,96 @@
             </div>
           </div>
         </div>
-        <div ref="productsSection">
-          <q-table
-            v-model:pagination="pagination"
-            row-key="name"
-            id="pop-products"
-            dense
-            grid
-            style="max-height: calc(100vh - 190px); overflow: auto;"
-            binary-state-sort
-            :loading="loadingProducts"
-            :rows="allProducts"
-            :columns="productColumns"
-            :filter="filter"
-            no-data-label="Registro no encontrado"
-            @request="setPagination"
-          >
-            <template v-slot:top>
-              <div class="row full-width q-col-gutter-xs">
-                <div class="col-6">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    clearable
-                    label="Categorías"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="category"
-                    :options="categories"
-                    @filter="filterCategories"
-                  />
-                </div>
-                <div class="col-6">
-                  <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
-                    <template v-slot:append>
-                      <q-icon name="search" />
-                    </template>
-                  </q-input>
-                </div>
+        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 150px);">
+          <!-- Filtros fijos arriba -->
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+            <div class="row q-col-gutter-xs">
+              <div class="col-6">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  clearable
+                  label="Categorías"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="category"
+                  :options="categories"
+                  @filter="filterCategories"
+                />
               </div>
-            </template>
-            <template v-slot:item="props">
-              <div class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
-                <q-card class="my-card" style="border-radius: 10px;">
+              <div class="col-6">
+                <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
+                  <template v-slot:append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </div>
+            </div>
+          </div>
+
+          <!-- Productos con scroll -->
+          <div
+            ref="productsScrollContainer"
+            style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+            @scroll="handleProductsScroll"
+          >
+            <!-- Grid de productos -->
+            <div v-if="allProducts.length > 0" class="row q-col-gutter-xs">
+              <div
+                v-for="product in allProducts"
+                :key="product.id"
+                class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                style="padding: 1px;"
+              >
+                <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
                   <q-img
                     style="height: 150px; width: 100%; border-radius: 10px;"
-                    :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                    @click="props.row.is_promotion ? openPromoDialog(props.row) : validateProduct(props.row, true)"
+                    :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                    @click="product.is_promotion ? openPromoDialog(product) : validateProduct(product, true)"
                   >
                     <div class="absolute-full text-body2 flex flex-center text-bold text-center">
-                      {{ props.row.name }}
-                      <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
+                      {{ product.name }}
+                      <q-badge v-if="!validStockProduct(product, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
                     <q-tooltip class="text-body2">
-                      {{props.row.name}}
+                      {{ product.name }}
                     </q-tooltip>
                   </q-img>
                 </q-card>
               </div>
-            </template>
-            <template v-slot:loading>
-              <q-inner-loading showing color="primary" />
-            </template>
-          </q-table>
-          <div style="position: absolute; bottom: 0; right: 0; z-index: 10000000;">
+            </div>
+
+            <!-- Skeleton loader para carga inicial o más productos -->
+            <div v-if="loadingProducts" class="row" style="width: 100%;">
+              <div
+                v-for="n in (allProducts.length === 0 ? 12 : 6)"
+                :key="`skeleton-${n}`"
+                class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                style="padding: 1px;"
+              >
+                <q-card class="my-card" style="border-radius: 10px;">
+                  <q-skeleton
+                    height="150px"
+                    width="100%"
+                    style="border-radius: 10px;"
+                  />
+                </q-card>
+              </div>
+            </div>
+
+            <!-- Mensaje cuando no hay productos -->
+            <div v-if="!loadingProducts && allProducts.length === 0" class="text-center q-pa-lg text-grey">
+              <q-icon name="inventory_2" size="3rem" />
+              <div class="text-h6 q-mt-md">No se encontraron productos</div>
+            </div>
+          </div>
+
+          <!-- Total fijo abajo -->
+          <div style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
             <q-list separator bordered style="border-radius: 10px;">
               <q-item v-if="tableSelected.length">
                 <q-item-section>
@@ -1611,7 +1633,9 @@ export default {
       /**
        * Products columns
        * @type {Array}
+       * @deprecated Ya no se usa - Removido q-table, ahora se usa grid directo con v-for
        */
+      /* COMENTADO - Ya no necesario después de implementar scroll infinito
       productColumns: [
         {
           name: 'barcode',
@@ -1643,6 +1667,7 @@ export default {
           sortable: true
         }
       ],
+      */ // FIN COMENTADO - productColumns obsoleto
       voucherTypes: [],
       /**
        * Voucher type
@@ -1745,23 +1770,14 @@ export default {
       }
     },
     category () {
-      this.setPagination({
-        pagination: this.pagination,
-        filter: undefined
-      })
+      this.reloadProducts()
     },
     filter () {
-      this.setPagination({
-        pagination: this.pagination,
-        filter: undefined
-      })
+      this.reloadProducts()
     },
     branchOffice (data) {
       if (data) {
-        this.setPagination({
-          pagination: this.pagination,
-          filter: undefined
-        })
+        this.reloadProducts()
       }
     }
   },
@@ -1769,10 +1785,7 @@ export default {
     /**
      * Get products with pagination
      */
-    this.setPagination({
-      pagination: this.pagination,
-      filter: undefined
-    })
+    this.reloadProducts()
     /**
      * Init keywords button
      */
@@ -2247,15 +2260,23 @@ export default {
       }
     },
     /**
-     * Set data pagination emit event
-     * @param  {Object} data value pagination
+     * Recarga productos desde página 1 (usado por watchers y cambios de filtros)
+     * Reemplaza el antiguo setPagination con una API más simple
      */
-    setPagination (data) {
+    reloadProducts () {
+      console.log('🔄 Recargando productos desde página 1')
+
+      // Actualizar objeto pagination para resetear a página 1
+      this.pagination = {
+        ...this.pagination,
+        page: 1
+      }
+
       const params = {
         sortOrder: 'desc',
         sortBy: 'sold',
-        page: data.pagination.page,
-        perPage: data.pagination.rowsPerPage,
+        page: 1, // Siempre página 1 para recargas
+        perPage: this.pagination.rowsPerPage,
         paginate: true,
         dataSearch: {
           name: this.filter,
@@ -2263,8 +2284,9 @@ export default {
           barcode: this.filter
         }
       }
-      this.pagination = data.pagination
-      this.getAllProducts(params)
+
+      // false = carga inicial (reemplaza productos, no append)
+      this.getAllProducts(params, false)
     },
     /**
      * Set table selected
@@ -2595,8 +2617,15 @@ export default {
      * Get all products
      * @param {Object} params params to search
      */
-    getAllProducts (params) {
+    getAllProducts (params, append = false) {
       this.loadingProducts = true
+
+      console.log(`${append ? '➕' : '🔄'} ${append ? 'Agregando' : 'Cargando'} productos:`, {
+        pagina: params.page,
+        porPagina: params.perPage,
+        append
+      })
+
       this.$api.get('products', {
         params: {
           ...params,
@@ -2609,7 +2638,7 @@ export default {
         }
       })
         .then(({ data }) => {
-          this.allProducts = data.data.map(product => ({
+          const newProducts = data.data.map(product => ({
             ...product,
             product_price_lists: [
               ...(product.product_price_lists || []),
@@ -2619,17 +2648,103 @@ export default {
               }
             ]
           }))
+
+          const prevCount = this.allProducts.length
+
+          if (append) {
+            // Scroll infinito: agregar productos al final
+            this.allProducts = [...this.allProducts, ...newProducts]
+            console.log('✓ Productos agregados:', {
+              nuevos: newProducts.length,
+              anterior: prevCount,
+              actual: this.allProducts.length,
+              total: data.total
+            })
+          } else {
+            // Carga inicial: reemplazar productos
+            this.allProducts = newProducts
+            console.log('✓ Productos cargados:', {
+              cantidad: newProducts.length,
+              total: data.total
+            })
+          }
+
           this.pagination.rowsNumber = data.total
-          this.fetchPromotions()
+
+          if (!append) {
+            // Solo cargar promociones en la carga inicial
+            this.fetchPromotions()
+          } else {
+            this.loadingProducts = false
+          }
         })
         .catch(err => {
           this.loadingProducts = false
+          console.error('❌ Error cargando productos:', err.message)
           Notify.create({
             message: err.message,
             icon: 'warning',
             color: 'negative'
           })
         })
+    },
+    /**
+     * Maneja el scroll infinito de productos
+     */
+    handleProductsScroll (event) {
+      const container = event.target
+      const scrollTop = container.scrollTop
+      const scrollHeight = container.scrollHeight
+      const clientHeight = container.clientHeight
+
+      // Detectar si está cerca del fondo (100px antes del final)
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100
+
+      // Solo continuar si está cerca del fondo y no está cargando
+      if (!isNearBottom || this.loadingProducts) {
+        return
+      }
+
+      // Verificar si hay más productos por cargar
+      const currentProductsCount = this.allProducts.length
+      const totalProducts = this.pagination.rowsNumber
+
+      // Si ya se cargaron todos los productos, no hacer nada
+      if (currentProductsCount >= totalProducts) {
+        console.log('✓ Todos los productos ya están cargados:', {
+          cargados: currentProductsCount,
+          total: totalProducts
+        })
+        return
+      }
+
+      // Calcular la siguiente página
+      const currentPage = Math.floor(currentProductsCount / this.pagination.rowsPerPage)
+      const nextPage = currentPage + 1
+
+      console.log('📦 Cargando más productos:', {
+        paginaActual: currentPage,
+        proximaPagina: nextPage,
+        productosCargados: currentProductsCount,
+        totalProductos: totalProducts,
+        restantes: totalProducts - currentProductsCount
+      })
+
+      // Cargar más productos
+      const params = {
+        sortOrder: 'desc',
+        sortBy: 'sold',
+        page: nextPage,
+        perPage: this.pagination.rowsPerPage,
+        paginate: true,
+        dataSearch: {
+          name: this.filter,
+          code: this.filter,
+          barcode: this.filter
+        }
+      }
+
+      this.getAllProducts(params, true)
     },
     sumCostPromotion (data) {
       return (data ?? [])
@@ -2912,10 +3027,8 @@ export default {
           // Limpiar siempre después de facturar exitosamente, excepto si viene de mesa
           setTimeout(() => this.clear(), 500)
         }
-        this.setPagination({
-          pagination: this.pagination,
-          filter: undefined
-        })
+        // Recargar productos para actualizar stock después de la venta
+        this.reloadProducts()
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
