@@ -384,22 +384,6 @@
                   </q-card-section>
                 </q-card>
               </div>
-
-              <!-- DEBUG: Mostrar siempre para verificar -->
-              <div class="col-12" v-else-if="false">
-                <q-card flat bordered class="q-pa-md bg-orange-1">
-                  <div class="text-subtitle2 text-orange-8">
-                    🔍 DEBUG: No hay imágenes
-                    <br>
-                    invoice existe: {{ !!invoice }}
-                    <br>
-                    invoice_files existe: {{ invoice && !!invoice.invoice_files }}
-                    <br>
-                    Cantidad: {{ invoice && invoice.invoice_files ? invoice.invoice_files.length : 0 }}
-                  </div>
-                </q-card>
-              </div>
-
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
@@ -1058,7 +1042,6 @@ export default {
   },
   computed: {
     visibleLoading () {
-      console.log(this.loadingDownload)
       return this.loadingDownload > 0
     },
     totalBill () {
@@ -1544,33 +1527,11 @@ export default {
      * @param {Number} index index
      */
     editInvoice (event, row, index) {
-      // 🎨 DEMO: 2 archivos para previsualización (1 imagen + 1 PDF) - ELIMINAR EN PRODUCCIÓN
-      const mockFiles = [
-        {
-          id: 1,
-          url: 'https://picsum.photos/seed/invoice1/400/400',
-          name: 'Factura_Original.jpg',
-          type: 'image/jpeg'
-        },
-        {
-          id: 2,
-          url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          name: 'Comprobante_Pago.pdf',
-          type: 'application/pdf'
-        }
-      ]
-
-      // Asignar invoice con las imágenes incluidas
       this.invoice = {
-        ...row,
-        invoice_files: mockFiles
+        ...row
       }
 
       this.openEditInvoice = true
-
-      console.log('📸 Invoice completo:', this.invoice)
-      console.log('📄 Archivos (imágenes + PDFs):', this.invoice.invoice_files)
-      console.log('📊 Cantidad total:', this.invoice.invoice_files.length)
     },
     /**
      * Opens the gallery at a specific file index
