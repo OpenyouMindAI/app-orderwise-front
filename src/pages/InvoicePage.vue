@@ -324,6 +324,82 @@
               </div>
             </div>
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+              <!-- Sección de Archivos Adjuntos (Solo visualización) -->
+              <div class="col-12" v-if="invoice && invoice.invoice_files && invoice.invoice_files.length > 0">
+                <q-card flat bordered>
+                  <q-card-section class="q-pb-none">
+                    <div class="row items-center q-mb-sm">
+                      <div class="col">
+                        <div class="text-subtitle2 text-weight-medium text-grey-8">
+                          <q-icon name="attach_file" size="20px" class="q-mr-xs" />
+                          Archivos Adjuntos
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <q-chip dense color="primary" text-color="white" size="sm">
+                          {{ invoice.invoice_files.length }}
+                        </q-chip>
+                      </div>
+                    </div>
+                  </q-card-section>
+
+                  <q-card-section class="q-pt-sm">
+                    <div class="invoice-files-grid">
+                      <div
+                        v-for="(file, index) in invoice.invoice_files"
+                        :key="index"
+                        class="invoice-file-item"
+                        @click="viewImage(file)"
+                      >
+                        <div class="invoice-file-wrapper">
+                          <!-- Imagen -->
+                          <q-img
+                            v-if="!file.name || !file.name.toLowerCase().endsWith('.pdf')"
+                            :src="file.url"
+                            :ratio="1"
+                            fit="cover"
+                            class="invoice-file-image"
+                            loading="lazy"
+                          >
+                            <template v-slot:loading>
+                              <q-spinner color="primary" size="24px" />
+                            </template>
+                          </q-img>
+
+                          <!-- PDF Icon -->
+                          <div v-else class="invoice-pdf-icon">
+                            <q-icon name="picture_as_pdf" size="48px" color="red-7" />
+                            <div class="invoice-pdf-name">{{ file.name }}</div>
+                          </div>
+
+                          <div class="invoice-file-overlay">
+                            <q-icon :name="file.name && file.name.toLowerCase().endsWith('.pdf') ? 'visibility' : 'search'" size="32px" color="white" />
+                          </div>
+                          <div class="invoice-file-number">
+                            #{{ index + 1 }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+
+              <!-- DEBUG: Mostrar siempre para verificar -->
+              <div class="col-12" v-else-if="false">
+                <q-card flat bordered class="q-pa-md bg-orange-1">
+                  <div class="text-subtitle2 text-orange-8">
+                    🔍 DEBUG: No hay imágenes
+                    <br>
+                    invoice existe: {{ !!invoice }}
+                    <br>
+                    invoice_files existe: {{ invoice && !!invoice.invoice_files }}
+                    <br>
+                    Cantidad: {{ invoice && invoice.invoice_files ? invoice.invoice_files.length : 0 }}
+                  </div>
+                </q-card>
+              </div>
+
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
@@ -1445,8 +1521,53 @@ export default {
      * @param {Number} index index
      */
     editInvoice (event, row, index) {
+      // 🎨 DEMO: 2 archivos para previsualización (1 imagen + 1 PDF) - ELIMINAR EN PRODUCCIÓN
+      const mockFiles = [
+        {
+          id: 1,
+          url: 'https://picsum.photos/seed/invoice1/400/400',
+          name: 'Factura_Original.jpg',
+          type: 'image/jpeg'
+        },
+        {
+          id: 2,
+          url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          name: 'Comprobante_Pago.pdf',
+          type: 'application/pdf'
+        }
+      ]
+
+      // Asignar invoice con las imágenes incluidas
+      this.invoice = {
+        ...row,
+        invoice_files: mockFiles
+      }
+
       this.openEditInvoice = true
-      this.invoice = row
+
+      console.log('📸 Invoice completo:', this.invoice)
+      console.log('📄 Archivos (imágenes + PDFs):', this.invoice.invoice_files)
+      console.log('📊 Cantidad total:', this.invoice.invoice_files.length)
+    },
+    /**
+     * View file in dialog (image or PDF)
+     * @param {Object} file file data
+     */
+    viewImage (file) {
+      const isPDF = file.name && file.name.toLowerCase().endsWith('.pdf')
+
+      if (isPDF) {
+        // Abrir PDF en nueva pestaña
+        window.open(file.url, '_blank')
+      } else {
+        // Mostrar imagen en diálogo
+        this.$q.dialog({
+          message: `<img src="${file.url}" style="width: 100%; max-width: 600px; border-radius: 8px;" />`,
+          html: true,
+          fullWidth: true,
+          class: 'invoice-image-dialog'
+        })
+      }
     },
     /**
      * Model product
@@ -1553,3 +1674,147 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Grid responsivo de archivos adjuntos */
+.invoice-files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Item individual de archivo */
+.invoice-file-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+}
+
+/* Wrapper para efectos */
+.invoice-file-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover effect - elevación */
+.invoice-file-item:hover .invoice-file-wrapper {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Imagen */
+.invoice-file-image {
+  border-radius: 8px;
+}
+
+/* Overlay oscuro en hover */
+.invoice-file-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 8px;
+}
+
+.invoice-file-item:hover .invoice-file-overlay {
+  opacity: 1;
+}
+
+/* Número de archivo */
+.invoice-file-number {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+  z-index: 1;
+}
+
+/* PDF Icon Container */
+.invoice-pdf-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  border-radius: 8px;
+  padding: 12px;
+  gap: 8px;
+}
+
+/* PDF Filename */
+.invoice-pdf-name {
+  font-size: 9px;
+  font-weight: 500;
+  color: #616161;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+/* Responsive - móvil */
+@media (max-width: 600px) {
+  .invoice-files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 6px;
+  }
+}
+
+/* Responsive - tablet */
+@media (min-width: 601px) and (max-width: 960px) {
+  .invoice-files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+}
+
+/* Scroll personalizado */
+.invoice-files-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 3px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-thumb:hover {
+  background: #9e9e9e;
+}
+</style>
