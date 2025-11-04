@@ -1,8 +1,5 @@
 <template>
   <div class="modern-container q-pa-md">
-    <!-- ============================================ -->
-    <!-- VISTA 1: LISTA DE CLIENTES CON SALDO -->
-    <!-- ============================================ -->
     <div v-if="!selectedClient" class="fade-in">
       <!-- Header con gradiente -->
       <div class="modern-header">
@@ -390,6 +387,10 @@
                   <div class="text-weight-medium">{{ formatDate(props.row.date) }}</div>
                   <div class="text-caption text-grey-7">{{ formatTime(props.row.date) }}</div>
                 </template>
+                <template v-else-if="props.col.name === 'delivery_date'">
+                  <div class="text-weight-medium">{{ formatDate(props.row.delivery_date) }}</div>
+                  <div class="text-caption text-grey-7">{{ formatTime(props.row.delivery_date) }}</div>
+                </template>
                 <template v-else-if="props.col.name === 'debit'">
                   <span v-if="props.row.debit > 0" class="text-negative text-weight-bold" style="font-size: 16px;">
                     {{ formatCurrency(props.row.debit) }}
@@ -499,6 +500,10 @@
                   <template v-else-if="col.name === 'date'">
                     <div class="text-weight-medium" style="font-size: 12px;">{{ formatDate(props.row.date) }}</div>
                     <div class="text-caption text-grey-7" style="font-size: 10px;">{{ formatTime(props.row.date) }}</div>
+                  </template>
+                  <template v-else-if="col.name === 'delivery_date'">
+                    <div class="text-weight-medium">{{ formatDate(props.row.delivery_date) }}</div>
+                    <div class="text-caption text-grey-7">{{ formatTime(props.row.delivery_date) }}</div>
                   </template>
                   <template v-else-if="col.name === 'debit'">
                     <div class="text-right">
@@ -1327,10 +1332,6 @@ export default {
     return {
       formatNumber,
 
-      // ============================================
-      // CURRENT VIEW
-      // ============================================
-
       /**
        * Selected client to view their account statement
        * @type {Object|null}
@@ -1622,6 +1623,7 @@ export default {
        */
       transactionColumns: [
         { name: 'date', align: 'left', label: 'Fecha', field: 'date' },
+        { name: 'delivery_date', align: 'left', label: 'Fecha Entrega', field: 'delivery_date' },
         { name: 'description', align: 'left', label: 'Descripción', field: 'description' },
         { name: 'debit', align: 'right', label: 'Cargo', field: 'debit' },
         { name: 'credit', align: 'right', label: 'Abono', field: 'credit' },
