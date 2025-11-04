@@ -4,7 +4,7 @@
       <span class="text-subtitle1">Factura número: </span>
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
+    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
       <div class="billing-panel-container">
         <div>
           <!-- Panel de facturación -->
@@ -675,7 +675,7 @@
             </div>
           </div>
         </div>
-        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 150px);">
+        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
           <!-- Filtros fijos arriba -->
           <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
             <div class="row q-col-gutter-xs">
@@ -4454,7 +4454,7 @@ export default {
 
 .billing-panel-container {
   display: grid;
-  grid-template-columns: 58.333% 41.667%;
+  grid-template-columns: calc(58.333% - 0.5rem) calc(41.666% - 0.5rem);
   gap: 1rem;
 }
 
@@ -4467,7 +4467,7 @@ export default {
 
 @media (min-width: 1440px) {
   .billing-panel-container {
-    grid-template-columns: 50% 50%;
+    grid-template-columns: calc(50% - 0.5rem) calc(50% - 0.5rem);
   }
 }
 
