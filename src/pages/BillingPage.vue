@@ -5,94 +5,116 @@
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
-      <div class="row q-col-gutter-x-md">
-        <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-12" id="select-client">
-            <q-select
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              use-input
-              filled
-              dense
-              label="Cliente"
-              input-debounce="0"
-              option-value="id"
-              v-model="client"
-              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-              :options="clients"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterClients"
-            >
-              <template v-slot:append>
-                <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
-              </template>
-            </q-select>
-          </div>
-          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-6">
-            <q-select
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              use-input
-              filled
-              dense
-              label="Tipo de factura"
-              input-debounce="0"
-              option-label="name"
-              option-value="id"
-              v-model="invoiceType"
-              :options="invoiceTypes"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterInvoiceTypes"
-            />
-          </div>
-          <div v-if="invoiceType.bill" class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
-            <q-select
-              v-model="voucherType"
-              use-input
-              filled
-              dense
-              label="Tipo de factura (Arca)"
-              input-debounce="0"
-              option-label="Desc"
-              option-value="id"
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              :options="voucherTypes"
-              :rules="[(val) => !!val || 'El campo es requerido.']"
-              @filter="getVoucherTypes"
-            />
-          </div>
-          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
-            <q-select
-              use-input
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              filled
-              dense
-              label="Tipo de servicio"
-              input-debounce="0"
-              option-label="name"
-              option-value="id"
-              v-model="typeOfService"
-              :options="typeOfServices"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterTypeOfServices"
-            />
-          </div>
-          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6" v-if="openCashBox">
-            <q-btn
-              style="border-radius: 10px; padding: 5px 15px"
-              dense
-              :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
-              :color="isUserBoxOpen ? 'negative' : 'primary'"
-              :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
-              @click="handleCashBoxButtonClick"
-            >
-              <q-tooltip class="text-body2" anchor="bottom middle">
-                {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
-              </q-tooltip>
-            </q-btn>
-          </div>
-        </div>
-        <!-- TODO: aplicar esta clase billing-panel-container-->
-        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm ">
-          <div class="row q-col-gutter-sm">
+      <div style="display: grid; grid-template-columns: 7fr 5fr; gap: 1rem;">
+        <div>
+          <!-- Panel de facturación -->
+          <div class="row q-col-gutter-xs">
+            <!-- Selectores principales -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;" class="col-12">
+              <!-- Select cliente -->
+              <div id="select-client">
+                <q-select
+                  filled
+                  dense
+                  v-model="client"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-value="id"
+                  :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                  :options="clients"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="filterClients"
+                  label="Cliente"
+                >
+                  <template v-slot:append>
+                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Select tipo de factura -->
+              <div>
+                <q-select
+                  filled
+                  dense
+                  v-model="invoiceType"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-label="name"
+                  option-value="id"
+                  :options="invoiceTypes"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="filterInvoiceTypes"
+                  label="Tipo de factura"
+                />
+              </div>
+
+              <!-- Select tipo de factura (Arca) -->
+              <div v-if="invoiceType.bill">
+                <q-select
+                  filled
+                  dense
+                  v-model="voucherType"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-value="id"
+                  option-label="Desc"
+                  :options="voucherTypes"
+                  :rules="[(val) => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="getVoucherTypes"
+                  label="Tipo de factura (Arca)"
+                />
+              </div>
+
+              <!-- Select tipo de servicio -->
+              <div>
+                <q-select
+                  filled
+                  dense
+                  v-model="typeOfService"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-value="id"
+                  option-label="name"
+                  :options="typeOfServices"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="filterTypeOfServices"
+                  label="Tipo de servicio"
+                />
+              </div>
+
+              <!-- Boton de caja -->
+              <div v-if="openCashBox">
+                <q-btn
+                  style="border-radius: 10px; padding: 5px 15px; width: 100%; height: 40px;"
+                  dense
+                  :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                  :color="isUserBoxOpen ? 'negative' : 'primary'"
+                  :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+                  @click="handleCashBoxButtonClick"
+                >
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+                  </q-tooltip>
+                </q-btn>
+              </div>
+            </div>
             <div class="col-xl-3 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex justify-between">
               <q-input
                 filled
@@ -653,7 +675,7 @@
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-6 col-xl-6" ref="productsSection">
+        <div ref="productsSection">
           <q-table
             v-model:pagination="pagination"
             row-key="name"
@@ -720,7 +742,7 @@
               <q-inner-loading showing color="primary" />
             </template>
           </q-table>
-          <div class="col-xs-12 col-sm-5 col-md-5 col-lg-6 col-xl-6 q-col-gutter-sm" style="position: absolute; bottom: 0; right: 0; z-index: 10000000;">
+          <div style="position: absolute; bottom: 0; right: 0; z-index: 10000000;">
             <q-list separator bordered style="border-radius: 10px;">
               <q-item v-if="tableSelected.length">
                 <q-item-section>
