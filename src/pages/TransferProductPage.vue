@@ -77,6 +77,37 @@
           <q-badge v-if="activeFiltersCount > 0" color="red" floating>{{ activeFiltersCount }}</q-badge>
           <span class="gt-xs q-ml-sm">Filtros</span>
         </q-btn>
+
+        <q-btn
+          unelevated
+          color="secondary"
+          icon="view_column"
+          class="filter-btn q-ml-sm"
+        >
+          <span class="gt-xs q-ml-sm">Columnas</span>
+          <q-menu>
+            <q-list style="min-width: 200px">
+              <q-item-label header>Columnas Visibles</q-item-label>
+              <q-item
+                v-for="col in columns.filter(c => !c.required)"
+                :key="col.name"
+                tag="label"
+                dense
+              >
+                <q-item-section side>
+                  <q-checkbox
+                    v-model="visibleColumns"
+                    :val="col.name"
+                    @update:model-value="saveColumnPreferences"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ col.label }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
       </div>
 
       <!-- Chips de filtros activos -->
@@ -136,10 +167,10 @@
         />
       </div>
 
-      <!-- Vista móvil: Cards compactas -->
+      <!-- Vista móvil: Cards -->
       <div v-if="$q.platform.is.mobile" class="mobile-transfers-list">
-        <!-- Skeleton Loader -->
-        <template v-if="loading">
+        <!-- Loading skeleton -->
+        <template v-if="pagination.loading">
           <q-card
             v-for="i in 5"
             :key="'skeleton-' + i"
@@ -229,8 +260,10 @@
         v-else
         :rows="transfers"
         :columns="columns"
+        :visible-columns="visibleColumns"
         row-key="id"
         :filter="filters.search"
+        :loading="pagination.loading"
         binary-state-sort
         flat
         bordered
@@ -267,6 +300,20 @@
                 <q-tooltip>Verificar recepción</q-tooltip>
               </q-btn>
 
+              <!-- Crear Devolución (si tiene productos faltantes y no tiene devolución) -->
+              <q-btn
+                v-if="hasMissingProducts(props.row) && !props.row.return_transfer"
+                flat
+                round
+                dense
+                color="warning"
+                icon="undo"
+                @click="createReturnFromRow(props.row)"
+                size="sm"
+              >
+                <q-tooltip>Crear devolución</q-tooltip>
+              </q-btn>
+
               <!-- Menú de más opciones -->
               <q-btn
                 flat
@@ -292,6 +339,20 @@
                     </q-item>
 
                     <q-separator v-if="props.row.status === 'in_process' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)" />
+
+                    <!-- Crear Devolución (si tiene productos faltantes y no tiene devolución) -->
+                    <q-item
+                      v-if="hasMissingProducts(props.row) && !props.row.return_transfer"
+                      clickable
+                      @click="createReturnFromRow(props.row)"
+                    >
+                      <q-item-section avatar>
+                        <q-icon name="undo" color="warning" />
+                      </q-item-section>
+                      <q-item-section>Crear devolución</q-item-section>
+                    </q-item>
+
+                    <q-separator v-if="hasMissingProducts(props.row) && !props.row.return_transfer" />
 
                     <!-- Descargar PDF -->
                     <q-item v-if="!$q.platform.is.mobile" clickable @click="downloadPdf(props.row)">
@@ -338,6 +399,88 @@
                 </q-menu>
               </q-btn>
             </div>
+          </q-td>
+        </template>
+        <template v-slot:body-cell-verified_by="props">
+          <q-td :props="props">
+            <div v-if="props.row.verified_by">
+              <q-icon name="person" size="xs" class="q-mr-xs" />
+              {{ props.row.verified_by?.name || 'N/A' }}
+            </div>
+            <div v-else class="text-grey-6">
+              <q-icon name="pending" size="xs" class="q-mr-xs" />
+              Pendiente
+            </div>
+          </q-td>
+        </template>
+        <template v-slot:body-cell-observations="props">
+          <q-td :props="props">
+            <div class="ellipsis" style="max-width: 200px;">
+              {{ props.row.observations || '-' }}
+            </div>
+          </q-td>
+        </template>
+        <template v-slot:body-cell-return_info="props">
+          <q-td :props="props">
+            <!-- CASO 1: Es una devolución de otra transferencia -->
+            <div v-if="props.row.return_transfer_id && props.row.original_transfer">
+              <q-badge
+                color="warning"
+                class="q-pa-xs cursor-pointer"
+                @click="navigateToTransfer(props.row.original_transfer.id)"
+              >
+                <q-icon name="undo" size="xs" class="q-mr-xs" />
+                Devolución de {{ props.row.original_transfer.transfer_number }}
+              </q-badge>
+              <q-tooltip>
+                Click para ver la transferencia original {{ props.row.original_transfer.transfer_number }}
+              </q-tooltip>
+            </div>
+            <!-- CASO 2: Tiene productos faltantes -->
+            <div v-else-if="hasMissingProducts(props.row)">
+              <!-- Ya tiene devolución creada -->
+              <div v-if="props.row.return_transfer">
+                <q-badge
+                  color="positive"
+                  class="q-pa-xs cursor-pointer"
+                  @click="navigateToTransfer(props.row.return_transfer.id)"
+                >
+                  <q-icon name="check_circle" size="xs" class="q-mr-xs" />
+                  Devolución: {{ props.row.return_transfer.transfer_number }}
+                </q-badge>
+                <q-tooltip>
+                  {{ getMissingProductsCount(props.row) }} productos faltantes<br>
+                  Click para ver la devolución {{ props.row.return_transfer.transfer_number }}
+                </q-tooltip>
+              </div>
+              <!-- No tiene devolución creada -->
+              <div v-else>
+                <q-badge color="negative" class="q-pa-xs">
+                  <q-icon name="warning" size="xs" class="q-mr-xs" />
+                  Sin devolución ({{ getMissingProductsCount(props.row) }})
+                </q-badge>
+                <q-tooltip>
+                  {{ getMissingProductsCount(props.row) }} productos faltantes<br>
+                  No se ha creado devolución
+                </q-tooltip>
+              </div>
+            </div>
+            <!-- CASO 3: Transferencia completa con devolución -->
+            <div v-else-if="props.row.return_transfer">
+              <q-badge
+                color="info"
+                class="q-pa-xs cursor-pointer"
+                @click="navigateToTransfer(props.row.return_transfer.id)"
+              >
+                <q-icon name="assignment_return" size="xs" class="q-mr-xs" />
+                Devolución: {{ props.row.return_transfer.transfer_number }}
+              </q-badge>
+              <q-tooltip>
+                Click para ver la devolución {{ props.row.return_transfer.transfer_number }}
+              </q-tooltip>
+            </div>
+            <!-- CASO 4: Sin productos faltantes ni devolución -->
+            <div v-else class="text-grey-6">-</div>
           </q-td>
         </template>
         <template v-slot:body-cell-status="props">
@@ -1199,7 +1342,7 @@
         <!-- Opciones -->
         <q-card-section class="q-pa-lg">
           <div class="text-h6 q-mb-md">¿Qué deseas hacer?</div>
-          
+
           <q-list class="options-list">
             <!-- Ver Detalle -->
             <q-item
@@ -1238,6 +1381,28 @@
               <q-item-section>
                 <q-item-label class="text-weight-medium">Verificar Recepción</q-item-label>
                 <q-item-label caption>Confirmar productos recibidos</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-icon name="chevron_right" color="grey-5" />
+              </q-item-section>
+            </q-item>
+
+            <!-- Crear Devolución (solo si está verificada y faltan productos) -->
+            <q-item
+              v-if="canCreateReturn"
+              clickable
+              v-ripple
+              @click="createReturnTransfer"
+              class="option-item"
+            >
+              <q-item-section avatar>
+                <q-avatar color="warning" text-color="white">
+                  <q-icon name="undo" />
+                </q-avatar>
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">Crear Devolución</q-item-label>
+                <q-item-label caption>Generar transferencia de productos faltantes</q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-icon name="chevron_right" color="grey-5" />
@@ -1550,6 +1715,67 @@
       </q-card>
     </q-dialog>
 
+    <!-- Diálogo de Devolución por Productos Faltantes -->
+    <q-dialog v-model="showReturnDialog" persistent transition-show="scale" transition-hide="scale">
+      <q-card style="min-width: 350px; max-width: 500px">
+        <q-card-section class="bg-warning text-white">
+          <div class="text-h6">
+            <q-icon name="warning" size="sm" class="q-mr-sm"/>
+            Productos Faltantes Detectados
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-body1 q-mb-md">
+            Se detectaron <strong>{{ missingProducts.length }}</strong> producto(s) con cantidades faltantes en esta transferencia.
+          </div>
+
+          <q-list bordered separator class="rounded-borders q-mb-md">
+            <q-item v-for="product in missingProducts" :key="product.id" dense>
+              <q-item-section>
+                <q-item-label>{{ product.name }}</q-item-label>
+                <q-item-label caption>
+                  Esperado: {{ product.pivot.quantity }} | Recibido: {{ product.received_quantity }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge color="negative" :label="`-${product.missing_quantity}`" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <q-banner class="bg-blue-1 text-blue-9 rounded-borders">
+            <template v-slot:avatar>
+              <q-icon name="info" color="blue" />
+            </template>
+            ¿Desea crear una devolución automática con los productos faltantes?
+            <div class="text-caption q-mt-xs">
+              Se creará una nueva transferencia desde <strong>{{ currentTransfer.destination_branch_office?.name }}</strong>
+              hacia <strong>{{ currentTransfer.origin_branch_office?.name }}</strong> con la cantidad faltante.
+            </div>
+          </q-banner>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            flat
+            label="No, continuar"
+            color="grey-7"
+            @click="closeReturnDialog"
+            :disable="creatingReturn"
+          />
+          <q-btn
+            unelevated
+            label="Sí, crear devolución"
+            color="primary"
+            icon-right="undo"
+            @click="createReturnTransfer"
+            :loading="creatingReturn"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <!-- Drawer de Filtros -->
     <q-drawer
       v-model="showFiltersDrawer"
@@ -1690,6 +1916,13 @@
             <q-item-section>Verificar recepción</q-item-section>
           </q-item>
 
+          <q-item v-if="selectedRow && hasMissingProducts(selectedRow) && !selectedRow.return_transfer" clickable v-close-popup @click="createReturnFromRow(selectedRow)">
+            <q-item-section avatar>
+              <q-icon name="undo" color="warning" />
+            </q-item-section>
+            <q-item-section>Crear devolución</q-item-section>
+          </q-item>
+
           <q-item clickable v-close-popup @click="sharePdf(selectedRow)">
             <q-item-section avatar>
               <q-icon name="share" color="secondary" />
@@ -1812,13 +2045,21 @@ export default {
        * @type {Array}
        */
       columns: [
-        { name: 'id', align: 'left', label: 'Nº Documento', field: 'id', sortable: true },
+        { name: 'transfer_number', align: 'left', label: 'Nº Documento', field: 'transfer_number', sortable: true, required: true },
         { name: 'created_at', align: 'left', label: 'Fecha', field: 'created_at', sortable: true, format: v => formatDate(v) },
-        { name: 'origin_branch_office', align: 'left', label: 'Origen', field: 'origin_branch_office', sortable: true, format: v => v.name },
-        { name: 'destination_branch_office', align: 'left', label: 'Destino', field: 'destination_branch_office', sortable: true, format: v => v.name },
+        { name: 'origin_branch_office', align: 'left', label: 'Origen', field: 'origin_branch_office', sortable: true, format: v => v?.name },
+        { name: 'destination_branch_office', align: 'left', label: 'Destino', field: 'destination_branch_office', sortable: true, format: v => v?.name },
+        { name: 'verified_by', align: 'left', label: 'Recibido por', field: 'verified_by', sortable: false },
+        { name: 'observations', align: 'left', label: 'Descripción', field: 'observations', sortable: false },
+        { name: 'return_info', align: 'center', label: 'Devolución', field: 'return_transfer_id', sortable: false },
         { name: 'status', align: 'center', label: 'Estado', field: 'status', sortable: true },
-        { name: 'actions', align: 'center', label: 'Acciones', field: 'actions', sortable: false }
+        { name: 'actions', align: 'center', label: 'Acciones', field: 'actions', sortable: false, required: true }
       ],
+      /**
+       * Visible columns (persisted in localStorage)
+       * @type {Array}
+       */
+      visibleColumns: [],
       /**
        * Show row menu (mobile long press)
        * @type {Boolean}
@@ -1919,7 +2160,22 @@ export default {
        * Created transfer data
        * @type {Object|null}
        */
-      createdTransfer: null
+      createdTransfer: null,
+      /**
+       * Show return dialog after verification
+       * @type {Boolean}
+       */
+      showReturnDialog: false,
+      /**
+       * Missing products for return
+       * @type {Array}
+       */
+      missingProducts: [],
+      /**
+       * Creating return transfer
+       * @type {Boolean}
+       */
+      creatingReturn: false
     }
   },
   computed: {
@@ -2003,19 +2259,19 @@ export default {
      */
     canEditTransfer () {
       const store = authentication()
-      const user = store.userSession
-      
+      const user = store.branchOffice
+
       // Super admin y root pueden editar siempre
       if (user?.is_superadmin || user?.is_root) {
         return true
       }
-      
+
       // Solo la sucursal origen puede editar
       if (!this.currentTransfer?.origin_branch_office_id) {
         return false
       }
-      
-      return user?.branch_office_id === this.currentTransfer.origin_branch_office_id
+
+      return user?.id === this.currentTransfer.origin_branch_office_id
     },
     /**
      * Check if current user can verify the transfer (destination branch only)
@@ -2023,14 +2279,39 @@ export default {
      */
     canVerifyTransfer () {
       const store = authentication()
-      const user = store.userSession
-      
+      const user = store.branchOffice
+
       // Solo la sucursal destino puede verificar
       if (!this.currentTransfer?.destination_branch_office_id) {
         return false
       }
-      
-      return user?.branch_office_id === this.currentTransfer.destination_branch_office_id
+
+      return user?.id === this.currentTransfer.destination_branch_office_id
+    },
+    /**
+     * Check if transfer can have a return created
+     * @returns {Boolean}
+     */
+    canCreateReturn () {
+      if (!this.currentTransfer || this.currentTransfer.status !== 'verified') {
+        return false
+      }
+
+      // Verificar si ya tiene una devolución creada
+      if (this.currentTransfer.return_transfer) {
+        return false
+      }
+
+      // Verificar si hay productos con cantidades faltantes
+      if (!this.currentTransfer.products || this.currentTransfer.products.length === 0) {
+        return false
+      }
+
+      return this.currentTransfer.products.some(p => {
+        const received = p.pivot?.received_quantity ?? 0
+        const ordered = p.pivot?.quantity ?? 0
+        return received < ordered
+      })
     }
   },
 
@@ -2046,6 +2327,7 @@ export default {
   },
 
   mounted () {
+    this.loadColumnPreferences()
     this.getTransfers(this.params)
     this.loadBranchOffices()
     this.initializeFromQueryParams()
@@ -2676,9 +2958,23 @@ export default {
 
         await api.post(`transfer-stocks/${this.currentTransfer.id}/verify`, { products })
         notify('Verificación completada exitosamente', 'positive', 'check_circle')
-        this.currentView = 'list'
-        this.$router.push({ query: {} }).catch(() => {})
-        this.getTransfers(this.params)
+
+        // Detectar productos faltantes
+        this.missingProducts = this.verificationProducts.filter(p => {
+          return p.received_quantity < p.pivot.quantity
+        }).map(p => ({
+          ...p,
+          missing_quantity: p.pivot.quantity - p.received_quantity
+        }))
+
+        // Si hay productos faltantes, mostrar diálogo de devolución
+        if (this.missingProducts.length > 0) {
+          this.showReturnDialog = true
+        } else {
+          this.currentView = 'list'
+          this.$router.push({ query: {} }).catch(() => {})
+          this.getTransfers(this.params)
+        }
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
@@ -3225,6 +3521,151 @@ export default {
         return
       }
       item[field]--
+    },
+    /**
+     * Create return transfer with missing products
+     */
+    async createReturnTransfer () {
+      try {
+        this.creatingReturn = true
+        loading(true)
+
+        await api.post(`transfer-stocks/${this.currentTransfer.id}/create-return`)
+
+        notify('Devolución creada exitosamente', 'positive', 'check_circle')
+        this.showReturnDialog = false
+        this.currentView = 'list'
+        this.$router.push({ query: {} }).catch(() => {})
+        this.getTransfers(this.params)
+      } catch (error) {
+        notify(error.response?.data?.error || error.message, 'negative', 'warning')
+      } finally {
+        this.creatingReturn = false
+        loading(false)
+      }
+    },
+    /**
+     * Create return transfer from table row
+     * @param {Object} transfer transfer data
+     */
+    async createReturnFromRow (transfer) {
+      try {
+        loading(true)
+
+        // Confirmar acción
+        const confirmed = await new Promise((resolve) => {
+          this.$q.dialog({
+            title: 'Crear Devolución',
+            message: `¿Desea crear una devolución automática para la transferencia #${transfer.transfer_number}?`,
+            html: true,
+            ok: {
+              label: 'Sí, crear',
+              color: 'primary',
+              unelevated: true
+            },
+            cancel: {
+              label: 'Cancelar',
+              color: 'grey-7',
+              flat: true
+            }
+          }).onOk(() => resolve(true))
+            .onCancel(() => resolve(false))
+        })
+
+        if (!confirmed) {
+          loading(false)
+          return
+        }
+
+        await api.post(`transfer-stocks/${transfer.id}/create-return`)
+
+        notify('Devolución creada exitosamente', 'positive', 'check_circle')
+        this.getTransfers(this.params)
+      } catch (error) {
+        notify(error.response?.data?.error || error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+    /**
+     * Close return dialog without creating return
+     */
+    closeReturnDialog () {
+      this.showReturnDialog = false
+      this.missingProducts = []
+      this.currentView = 'list'
+      this.$router.push({ query: {} }).catch(() => {})
+      this.getTransfers(this.params)
+    },
+    /**
+     * Check if transfer has missing products
+     * @param {Object} transfer transfer data
+     * @returns {Boolean}
+     */
+    hasMissingProducts (transfer) {
+      if (!transfer || !transfer.products || transfer.status !== 'delivered') {
+        return false
+      }
+
+      return transfer.products.some(p => {
+        const received = p.pivot?.received_quantity ?? 0
+        const ordered = p.pivot?.quantity ?? 0
+        return received < ordered
+      })
+    },
+    /**
+     * Get count of missing products
+     * @param {Object} transfer transfer data
+     * @returns {Number}
+     */
+    getMissingProductsCount (transfer) {
+      if (!transfer || !transfer.products) {
+        return 0
+      }
+
+      return transfer.products.filter(p => {
+        const received = p.pivot?.received_quantity ?? 0
+        const ordered = p.pivot?.quantity ?? 0
+        return received < ordered
+      }).length
+    },
+    /**
+     * Load column preferences from localStorage
+     */
+    loadColumnPreferences () {
+      const saved = localStorage.getItem('transferStockVisibleColumns')
+      if (saved) {
+        try {
+          this.visibleColumns = JSON.parse(saved)
+        } catch (e) {
+          // Si hay error, usar todas las columnas por defecto
+          this.visibleColumns = this.columns.map(c => c.name)
+        }
+      } else {
+        // Primera vez: mostrar todas las columnas
+        this.visibleColumns = this.columns.map(c => c.name)
+      }
+    },
+    /**
+     * Save column preferences to localStorage
+     */
+    saveColumnPreferences () {
+      localStorage.setItem('transferStockVisibleColumns', JSON.stringify(this.visibleColumns))
+    },
+    /**
+     * Navigate to transfer detail
+     * @param {Number} transferId transfer ID
+     */
+    async navigateToTransfer (transferId) {
+      try {
+        loading(true)
+        const { data } = await api.get(`transfer-stocks/${transferId}`)
+        this.viewTransfer(data)
+      } catch (error) {
+        notify('Error al cargar la transferencia', 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
     }
   }
 }
