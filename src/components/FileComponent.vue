@@ -10,7 +10,7 @@
         <div
           v-if="f.type === 'application/pdf'"
           class="pdf-container q-ml-xs"
-          style="width: 210px; height: 150px; margin-top: 10px; position: relative; cursor: pointer;"
+          style="width: 120px; height: 120px; margin-top: 10px; position: relative; cursor: pointer;"
           @click="openPdf(f)"
         >
           <div class="pdf-content bg-grey-3">
@@ -40,10 +40,11 @@
               thumbRef[index] = el
             }
           "
-          style="width: 210px; height: 150px; margin-top: 10px"
+          style="width: 120px; height: 120px; margin-top: 10px"
           class="q-ml-xs image-gallery__image"
           :style="imageStyle"
           :src="f[nameImage]"
+          fit="cover"
           @click="zoomImage(index)"
         >
           <div class="absolute-full text-h5 text-bold flex flex-center">
@@ -120,7 +121,7 @@ export default {
     },
     imageStyle: {
       type: String,
-      default: 'max-height: 150px; max-width: 300px;'
+      default: 'object-fit: cover; border-radius: 8px;'
     },
     /**
      * Files all
@@ -368,8 +369,15 @@ export default {
 <style lang="sass">
 .image-gallery
   &__image
-    border-radius: 3%/3%
+    border-radius: 8px
     cursor: pointer
+    object-fit: cover
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
+    transition: all 0.2s ease
+
+    &:hover
+      transform: scale(1.05)
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2)
 
     &-full
       width: 800px
@@ -393,13 +401,14 @@ export default {
         z-index: 2001
 
 .pdf-container
-  border-radius: 3%/3%
+  border-radius: 8px
   overflow: hidden
   transition: all 0.2s ease
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
 
   &:hover
-    transform: scale(1.02)
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2)
+    transform: scale(1.05)
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2)
 
   .pdf-content
     width: 100%
@@ -408,12 +417,13 @@ export default {
     flex-direction: column
     align-items: center
     justify-content: center
-    border-radius: 3%/3%
+    border-radius: 8px
 
   .pdf-name
-    max-width: 180px
+    max-width: 100px
     overflow: hidden
     text-overflow: ellipsis
     white-space: nowrap
-    padding: 0 8px
+    padding: 0 4px
+    font-size: 10px
 </style>

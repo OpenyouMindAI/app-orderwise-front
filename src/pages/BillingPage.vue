@@ -740,21 +740,22 @@
               </div>
 
               <!-- Skeleton loader en la misma fila -->
-              <div
-                v-if="loadingProducts"
-                v-for="n in skeletonCount"
-                :key="`skeleton-${n}`"
-                class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
-                style="padding: 1px;"
-              >
-                <q-card class="my-card" style="border-radius: 10px;">
-                  <q-skeleton
-                    height="150px"
-                    width="100%"
-                    style="border-radius: 10px;"
-                  />
-                </q-card>
-              </div>
+              <template v-if="loadingProducts">
+                <div
+                  v-for="n in skeletonCount"
+                  :key="`skeleton-${n}`"
+                  class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                  style="padding: 1px;"
+                >
+                  <q-card class="my-card" style="border-radius: 10px;">
+                    <q-skeleton
+                      height="150px"
+                      width="100%"
+                      style="border-radius: 10px;"
+                    />
+                  </q-card>
+                </div>
+              </template>
             </div>
 
             <!-- Mensaje cuando no hay productos -->
@@ -4030,8 +4031,12 @@ export default {
 
       // Notificación de éxito si se agregaron archivos
       if (acceptedCount > 0) {
+        const message = rejectedCount > 0
+          ? `${acceptedCount} archivo(s) agregado(s), ${rejectedCount} rechazado(s)`
+          : `${acceptedCount} archivo(s) agregado(s) exitosamente`
+
         this.$q.notify({
-          message: `${acceptedCount} archivo(s) agregado(s) exitosamente`,
+          message,
           icon: 'check_circle',
           color: 'positive',
           position: 'top',
@@ -4449,7 +4454,7 @@ export default {
 
 .billing-panel-container {
   display: grid;
-  grid-template-columns: 7fr 5fr;
+  grid-template-columns: 58.333% 41.667%;
   gap: 1rem;
 }
 
@@ -4462,18 +4467,9 @@ export default {
 
 @media (min-width: 1440px) {
   .billing-panel-container {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 50% 50%;
   }
 }
-
-/* .billing-panel-container::-webkit-scrollbar-track {
-  background: transparent;
-} */
-
-/* Thumb translúcido */
-/* .billing-panel-container::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-} */
 
 .product-container-scroll::-webkit-scrollbar-track {
   background: transparent;
