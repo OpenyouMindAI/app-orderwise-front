@@ -4,7 +4,7 @@
       <span class="text-subtitle1">Factura número: </span>
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
+    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
       <div class="billing-panel-container">
         <div>
           <!-- Panel de facturación -->
@@ -99,23 +99,9 @@
                 />
               </div>
 
-              <!-- Boton de caja -->
-              <div v-if="openCashBox">
-                <q-btn
-                  style="border-radius: 10px; padding: 5px 15px; width: 100%; height: 40px;"
-                  dense
-                  :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
-                  :color="isUserBoxOpen ? 'negative' : 'primary'"
-                  :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
-                  @click="handleCashBoxButtonClick"
-                >
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
-                  </q-tooltip>
-                </q-btn>
-              </div>
+              <!-- Espacio donde estaba el boton de caja - ahora vacío -->
             </div>
-            <div class="col-xl-3 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex justify-between">
+            <div class="col-12" style="width: 100% !important;">
               <q-input
                 filled
                 dense
@@ -123,13 +109,13 @@
                 autofocus
                 label="Código"
                 ref="barcode"
-                :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
+                style="width: 100% !important; max-width: none !important;"
                 @keyup.enter="processBarcode(barcode)"
                 @focus="scanner = false"
                 @blur="scanner = true"
               />
               <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
+                style="border-radius: 10px; padding: 5px 15px; margin-top: 8px;"
                 color="primary"
                 icon="qr_code_scanner"
                 label="Escanear"
@@ -143,29 +129,8 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="justify-start col-xl-9 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                label="Cobrar"
-                icon="payments"
-                color="positive"
-                id="payments"
-                dense
-                :disable="products.length <= 0"
-                @click="dialogPayment = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F1
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobrar
-                </q-tooltip>
-              </q-btn>
+            <!-- Botón Mesas -->
+            <div class="col-12 q-mt-sm">
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
                 color="primary"
@@ -186,60 +151,6 @@
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
                   Seleccionar mesas
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                icon="payments"
-                color="info"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
-                style="border-radius: 10px; padding: 5px 15px"
-                @click="cashflow = true"
-              >
-                <q-badge
-                  color="swap_horiz"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F11
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Entrada y salida de dinero
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
-                icon="search"
-                color="teal"
-                dense
-                @click="searchInvoice = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F12
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Buscar factura
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                icon="delete"
-                color="negative"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Borrar factura
                 </q-tooltip>
               </q-btn>
             </div>
@@ -675,7 +586,109 @@
             </div>
           </div>
         </div>
-        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 150px);">
+        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
+
+          <!-- Botones de acción arriba de todo -->
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+            <div class="flex q-gutter-sm justify-start">
+              <!-- Abrir/Cerrar caja -->
+              <q-btn
+                v-if="openCashBox"
+                style="border-radius: 10px; padding: 5px 15px;"
+                dense
+                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                :color="isUserBoxOpen ? 'negative' : 'primary'"
+                :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+                @click="handleCashBoxButtonClick"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Cobrar -->
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                label="Cobrar"
+                icon="payments"
+                color="positive"
+                dense
+                :disable="products.length <= 0"
+                @click="dialogPayment = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F1
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Cobrar
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Entrada/Salida -->
+              <q-btn
+                icon="payments"
+                color="info"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
+                style="border-radius: 10px; padding: 5px 15px"
+                @click="cashflow = true"
+              >
+                <q-badge
+                  color="swap_horiz"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F11
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Entrada y salida de dinero
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Buscar -->
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
+                icon="search"
+                color="teal"
+                dense
+                @click="searchInvoice = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F12
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Buscar factura
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Borrar -->
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                icon="delete"
+                color="negative"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
+                @click="clear"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Borrar factura
+                </q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+
           <!-- Filtros fijos arriba -->
           <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
             <div class="row q-col-gutter-xs">
@@ -4463,7 +4476,7 @@ export default {
 
 .billing-panel-container {
   display: grid;
-  grid-template-columns: 58.333% 41.667%;
+  grid-template-columns: calc(58.333% - 0.5rem) calc(41.666% - 0.5rem);
   gap: 1rem;
 }
 
@@ -4476,7 +4489,7 @@ export default {
 
 @media (min-width: 1440px) {
   .billing-panel-container {
-    grid-template-columns: 50% 50%;
+    grid-template-columns: calc(50% - 0.5rem) calc(50% - 0.5rem);
   }
 }
 
