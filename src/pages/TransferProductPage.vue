@@ -286,9 +286,9 @@
                 <q-tooltip>Ver detalles</q-tooltip>
               </q-btn>
 
-              <!-- Verificar (si está en proceso y es sucursal destino) -->
+              <!-- Verificar (si llegó y es sucursal destino) -->
               <q-btn
-                v-if="props.row.status === 'in_process' && canVerifyTransferRow(props.row)"
+                v-if="props.row.status === 'arrived' && canVerifyTransferRow(props.row)"
                 flat
                 round
                 dense
@@ -326,9 +326,9 @@
                 <q-tooltip>Más opciones</q-tooltip>
                 <q-menu auto-close>
                   <q-list style="min-width: 180px">
-                    <!-- Verificar (solo si está en proceso, es sucursal destino y no está verificada) -->
+                    <!-- Verificar (solo si llegó, es sucursal destino y no está verificada) -->
                     <q-item
-                      v-if="props.row.status === 'in_process' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)"
+                      v-if="props.row.status === 'arrived' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)"
                       clickable
                       @click="openVerificationView(props.row)"
                     >
@@ -338,7 +338,7 @@
                       <q-item-section>Verificar recepción</q-item-section>
                     </q-item>
 
-                    <q-separator v-if="props.row.status === 'in_process' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)" />
+                    <q-separator v-if="props.row.status === 'arrived' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)" />
 
                     <!-- Crear Devolución (si tiene productos faltantes y no tiene devolución) -->
                     <q-item
@@ -1365,9 +1365,9 @@
               </q-item-section>
             </q-item>
 
-            <!-- Verificar (solo si está en proceso y es sucursal destino) -->
+            <!-- Verificar (solo si llegó y es sucursal destino) -->
             <q-item
-              v-if="currentTransfer.status === 'in_process' && canVerifyTransfer"
+              v-if="currentTransfer.status === 'arrived' && canVerifyTransfer"
               clickable
               v-ripple
               @click="openVerificationView(currentTransfer)"
@@ -1909,7 +1909,7 @@
             <q-item-section>Ver detalle</q-item-section>
           </q-item>
 
-          <q-item v-if="selectedRow && selectedRow.status === 'in_process'" clickable v-close-popup @click="openVerificationView(selectedRow)">
+          <q-item v-if="selectedRow && selectedRow.status === 'arrived'" clickable v-close-popup @click="openVerificationView(selectedRow)">
             <q-item-section avatar>
               <q-icon name="fact_check" color="positive" />
             </q-item-section>
@@ -2030,9 +2030,12 @@ export default {
        * @type {Array}
        */
       statusOptions: [
-        { label: 'En Proceso', value: 'in_process' },
-        { label: 'Entregado', value: 'delivered' },
-        { label: 'Cancelado', value: 'cancelled' }
+        { label: 'Pendiente', value: 'pending' },
+        { label: 'Aceptada', value: 'accepted' },
+        { label: 'En Tránsito', value: 'in_transit' },
+        { label: 'Llegó', value: 'arrived' },
+        { label: 'Entregada', value: 'delivered' },
+        { label: 'Cancelada', value: 'cancelled' }
       ],
 
       /**
@@ -2591,7 +2594,7 @@ export default {
         origin_branch_office_id: data.origin_branch_office.id,
         destination_branch_office_id: data.destination_branch_office.id,
         observations: data.observations,
-        status: 'in_process',
+        status: 'pending',
         products: data.products.map(p => ({
           product_id: p.product.id,
           quantity: p.quantity,
@@ -2718,7 +2721,10 @@ export default {
      */
     getStatusColor (status) {
       switch (status) {
-        case 'in_process': return 'blue'
+        case 'pending': return 'orange'
+        case 'accepted': return 'blue'
+        case 'in_transit': return 'purple'
+        case 'arrived': return 'teal'
         case 'delivered': return 'green'
         case 'cancelled': return 'red'
         default: return 'grey'
@@ -2731,9 +2737,12 @@ export default {
      */
     getStatusLabel (status) {
       switch (status) {
-        case 'in_process': return 'En Proceso'
-        case 'delivered': return 'Entregado'
-        case 'cancelled': return 'Cancelado'
+        case 'pending': return 'Pendiente'
+        case 'accepted': return 'Aceptada'
+        case 'in_transit': return 'En Tránsito'
+        case 'arrived': return 'Llegó'
+        case 'delivered': return 'Entregada'
+        case 'cancelled': return 'Cancelada'
         default: return status
       }
     },
@@ -3404,7 +3413,10 @@ export default {
      */
     getStatusIcon (status) {
       switch (status) {
-        case 'in_process': return 'local_shipping'
+        case 'pending': return 'schedule'
+        case 'accepted': return 'thumb_up'
+        case 'in_transit': return 'local_shipping'
+        case 'arrived': return 'place'
         case 'delivered': return 'check_circle'
         case 'cancelled': return 'cancel'
         default: return 'circle'
@@ -3417,7 +3429,10 @@ export default {
      */
     getStatusTimelineColor (status) {
       switch (status) {
-        case 'in_process': return 'blue'
+        case 'pending': return 'orange'
+        case 'accepted': return 'blue'
+        case 'in_transit': return 'purple'
+        case 'arrived': return 'teal'
         case 'delivered': return 'positive'
         case 'cancelled': return 'negative'
         default: return 'grey'

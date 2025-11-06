@@ -152,7 +152,7 @@ export default {
           name: 'address',
           align: 'left',
           label: 'Dirección',
-          field: 'address',
+          field: row => row.address?.formattedAddress || row.address?.name || (typeof row.address === 'string' ? row.address : 'Sin dirección'),
           sortable: true
         }
       ],
@@ -243,10 +243,10 @@ export default {
      */
     saveBranchOffice () {
       this.visible = true
-      // Preparar datos incluyendo dirección
+      // Preparar datos incluyendo dirección completa con coordenadas
       const branchOfficeData = {
         ...this.branchOffice,
-        address: this.formattedAddress || this.branchOffice.address || ''
+        address: this.address || this.branchOffice.address || null
       }
       this.$api.post('branch-offices', branchOfficeData)
         .then(({ data }) => {
@@ -281,8 +281,15 @@ export default {
       this.branchOffice = row
       // Cargar dirección existente
       if (row.address) {
-        this.formattedAddress = row.address
-        this.address = { formattedAddress: row.address }
+        // Si address es un objeto JSON, usarlo directamente
+        if (typeof row.address === 'object') {
+          this.address = row.address
+          this.formattedAddress = row.address.formattedAddress || row.address.name || ''
+        } else {
+          // Si es string (datos antiguos), convertir a objeto
+          this.formattedAddress = row.address
+          this.address = { formattedAddress: row.address }
+        }
       }
       this.addressComponentKey += 1
     },
@@ -291,10 +298,10 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      // Preparar datos incluyendo dirección
+      // Preparar datos incluyendo dirección completa con coordenadas
       const branchOfficeData = {
         ...this.branchOffice,
-        address: this.formattedAddress || this.branchOffice.address || ''
+        address: this.address || this.branchOffice.address || null
       }
       this.$api.put(`branch-offices/${this.branchOffice?.id}`, branchOfficeData)
         .then(({ data }) => {

@@ -213,6 +213,19 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/TransferProductPage.vue')
       },
+      // Logistics Routes - Uber Style
+      {
+        path: 'courier/tray',
+        name: 'CourierTray',
+        meta: { requiresAuth: true },
+        component: () => import('pages/CourierTrayPage.vue')
+      },
+      {
+        path: 'courier/transport/:id',
+        name: 'ActiveTransport',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ActiveTransportPage.vue')
+      },
       {
         path: 'inventory-count',
         name: 'InventoryCount',
