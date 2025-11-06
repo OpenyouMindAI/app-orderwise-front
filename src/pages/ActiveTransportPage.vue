@@ -195,7 +195,10 @@ const locationInterval = ref(null)
 const courierMarker = ref(null)
 const originMarker = ref(null)
 const destinationMarker = ref(null)
+const allMarkers = ref([])
 const routePath = ref(null)
+const futureRoutes = ref([])
+const completedRoutes = ref([])
 
 // Google Maps route data
 const routeDistance = ref(null) // en metros
@@ -213,7 +216,11 @@ const distance = computed(() => {
   if (routeDistance.value) {
     return (routeDistance.value / 1000).toFixed(1) // convertir metros a km
   }
-  return deliveryRun.value?.total_distance_km?.toFixed(1) || '10.5'
+  const totalDistance = deliveryRun.value?.total_distance_km
+  if (totalDistance && typeof totalDistance === 'number') {
+    return totalDistance.toFixed(1)
+  }
+  return '0.0'
 })
 
 const progress = computed(() => {
@@ -312,61 +319,111 @@ async function initializeMap () {
 }
 
 function addMapMarkers () {
-  const origin = transfer.value?.origin_branch_office
-  const destination = transfer.value?.destination_branch_office
+  // Limpiar marcadores anteriores
+  allMarkers.value.forEach(marker => marker.setMap(null))
+  allMarkers.value = []
 
-  console.log('Adding markers - Origin:', origin)
-  console.log('Adding markers - Destination:', destination)
+  // Obtener todas las transferencias del delivery run
+  const transfers = deliveryRun.value?.delivery_run_transfers || []
+  
+  console.log('Adding markers for', transfers.length, 'transfers')
 
-  // Get coordinates from address object or direct properties
-  const originLat = origin?.address?.latitude || origin?.latitude
-  const originLng = origin?.address?.longitude || origin?.longitude
-  const destLat = destination?.address?.latitude || destination?.latitude
-  const destLng = destination?.address?.longitude || destination?.longitude
+  // Obtener transferencias pendientes para identificar la siguiente
+  const pendingTransfers = transfers.filter(t => t.delivery_status === 'pending' || t.delivery_status === 'arrived')
 
-  // Origin marker (green)
-  if (originLat && originLng) {
-    originMarker.value = new google.maps.Marker({
-      position: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
-      map: map.value,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: '#4CAF50',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 2
-      },
-      label: {
-        text: 'A',
-        color: 'white',
-        fontSize: '12px',
-        fontWeight: 'bold'
+  // Agregar marcadores para cada transferencia
+  transfers.forEach((drt, index) => {
+    const transferData = drt.transfer_stock
+    const origin = transferData?.origin_branch_office
+    const destination = transferData?.destination_branch_office
+
+    // Get coordinates
+    const originLat = origin?.address?.latitude || origin?.latitude
+    const originLng = origin?.address?.longitude || origin?.longitude
+    const destLat = destination?.address?.latitude || destination?.latitude
+    const destLng = destination?.address?.longitude || destination?.longitude
+
+    // Determinar color y tamaño según estado
+    let color = '#9E9E9E' // Gris por defecto (futuro)
+    let scale = 10
+    let strokeWeight = 2
+    
+    if (drt.delivery_status === 'delivered') {
+      color = '#4CAF50' // Verde - completado
+      scale = 9
+    } else if (drt.delivery_status === 'arrived') {
+      color = '#FF9800' // Naranja - esperando verificación
+      scale = 12
+      strokeWeight = 3
+    } else if (drt.delivery_status === 'pending') {
+      // El primer pending es el siguiente destino (azul brillante)
+      const firstPending = pendingTransfers[0]
+      if (drt.id === firstPending?.id) {
+        color = '#2979FF' // Azul brillante - siguiente destino
+        scale = 12
+        strokeWeight = 3
+      } else {
+        color = '#9E9E9E' // Gris - destinos futuros
+        scale = 9
       }
-    })
-  }
+    }
 
-  // Destination marker (blue)
-  if (destLat && destLng) {
-    destinationMarker.value = new google.maps.Marker({
-      position: { lat: parseFloat(destLat), lng: parseFloat(destLng) },
-      map: map.value,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: '#2196F3',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 2
-      },
-      label: {
-        text: 'B',
-        color: 'white',
-        fontSize: '12px',
-        fontWeight: 'bold'
+    // Marcador de destino
+    if (destLat && destLng) {
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(destLat), lng: parseFloat(destLng) },
+        map: map.value,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: scale,
+          fillColor: color,
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: strokeWeight
+        },
+        label: {
+          text: (index + 1).toString(),
+          color: 'white',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        },
+        title: destination?.name || `Destino ${index + 1}`
+      })
+
+      allMarkers.value.push(marker)
+
+      // Si es la transferencia actual, guardar referencia
+      if (transferData.id === transfer.value?.id) {
+        destinationMarker.value = marker
       }
-    })
-  }
+    }
+
+    // Marcador de origen (solo para la primera transferencia)
+    if (index === 0 && originLat && originLng) {
+      const originMarkerObj = new google.maps.Marker({
+        position: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+        map: map.value,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 11,
+          fillColor: '#FF9800', // Naranja - origen
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 3
+        },
+        label: {
+          text: 'O',
+          color: 'white',
+          fontSize: '13px',
+          fontWeight: 'bold'
+        },
+        title: origin?.name || 'Origen'
+      })
+
+      allMarkers.value.push(originMarkerObj)
+      originMarker.value = originMarkerObj
+    }
+  })
 
   // Courier marker (will be updated with GPS)
   courierMarker.value = new google.maps.Marker({
@@ -382,110 +439,304 @@ function addMapMarkers () {
     }
   })
 
-  // Adjust map bounds to show all markers
-  if (originLat && destLat) {
+  // Ajustar bounds para mostrar todos los marcadores
+  if (allMarkers.value.length > 0) {
     const bounds = new google.maps.LatLngBounds()
-    bounds.extend({ lat: parseFloat(originLat), lng: parseFloat(originLng) })
-    bounds.extend({ lat: parseFloat(destLat), lng: parseFloat(destLng) })
+    allMarkers.value.forEach(marker => {
+      bounds.extend(marker.getPosition())
+    })
     map.value.fitBounds(bounds)
   }
 }
 
 async function drawRoute () {
-  const origin = transfer.value?.origin_branch_office
-  const destination = transfer.value?.destination_branch_office
+  console.log('=== DRAWING ROUTES ===')
 
-  console.log('Drawing route - Origin:', origin)
-  console.log('Drawing route - Destination:', destination)
+  // Limpiar rutas anteriores
+  if (routePath.value) {
+    routePath.value.setMap(null)
+  }
+  futureRoutes.value.forEach(route => route.setMap(null))
+  futureRoutes.value = []
+  completedRoutes.value.forEach(route => route.setMap(null))
+  completedRoutes.value = []
 
-  // Get coordinates from address object or direct properties
-  const originLat = origin?.address?.latitude || origin?.latitude
-  const originLng = origin?.address?.longitude || origin?.longitude
-  const destLat = destination?.address?.latitude || destination?.latitude
-  const destLng = destination?.address?.longitude || destination?.longitude
+  // Obtener todas las transferencias
+  const transfers = deliveryRun.value?.delivery_run_transfers || []
+  console.log('Total transfers:', transfers.length)
+  console.log('All transfers:', transfers.map(t => ({
+    id: t.id,
+    sort_order: t.sort_order,
+    status: t.delivery_status,
+    destination: t.transfer_stock?.destination_branch_office?.name
+  })))
 
-  if (!originLat || !destLat) {
-    console.error('Missing coordinates for route')
-    $q.notify({
-      type: 'warning',
-      message: 'Las sucursales no tienen coordenadas configuradas',
-      position: 'top'
+  const completedTransfers = transfers.filter(t => t.delivery_status === 'delivered')
+  const pendingTransfers = transfers.filter(t => t.delivery_status === 'pending' || t.delivery_status === 'arrived')
+  
+  console.log('Completed transfers:', completedTransfers.length)
+  console.log('Pending transfers:', pendingTransfers.length)
+
+  const directionsService = new google.maps.DirectionsService()
+
+  // 0. DIBUJAR RUTAS COMPLETADAS (VERDE) - Ruta secuencial optimizada
+  if (completedTransfers.length > 0) {
+    console.log(`Drawing ${completedTransfers.length} completed route segments...`)
+
+    // Obtener el origen real (de la primera transferencia del delivery run completo)
+    const allTransfersSorted = [...transfers].sort((a, b) => a.sort_order - b.sort_order)
+    const firstTransferEver = allTransfersSorted[0]?.transfer_stock
+    const realOrigin = firstTransferEver?.origin_branch_office
+
+    // Construir la secuencia de puntos completados
+    const completedPoints = []
+    
+    // Agregar origen
+    if (realOrigin) {
+      const originLat = realOrigin?.address?.latitude || realOrigin?.latitude
+      const originLng = realOrigin?.address?.longitude || realOrigin?.longitude
+      if (originLat && originLng) {
+        completedPoints.push({
+          lat: parseFloat(originLat),
+          lng: parseFloat(originLng),
+          name: realOrigin?.name || 'Origen'
+        })
+      }
+    }
+
+    // Agregar destinos completados en orden
+    completedTransfers.forEach(drt => {
+      const dest = drt.transfer_stock?.destination_branch_office
+      const destLat = dest?.address?.latitude || dest?.latitude
+      const destLng = dest?.address?.longitude || dest?.longitude
+      if (destLat && destLng) {
+        completedPoints.push({
+          lat: parseFloat(destLat),
+          lng: parseFloat(destLng),
+          name: dest?.name || 'Destino'
+        })
+      }
     })
+
+    console.log('Completed route points:', completedPoints.map(p => p.name))
+
+    // Dibujar rutas entre cada par de puntos consecutivos
+    for (let i = 0; i < completedPoints.length - 1; i++) {
+      const from = completedPoints[i]
+      const to = completedPoints[i + 1]
+
+      try {
+        const result = await directionsService.route({
+          origin: { lat: from.lat, lng: from.lng },
+          destination: { lat: to.lat, lng: to.lng },
+          travelMode: google.maps.TravelMode.DRIVING
+        })
+
+        const completedRenderer = new google.maps.DirectionsRenderer({
+          map: map.value,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#4CAF50', // VERDE - Ruta completada
+            strokeWeight: 5,
+            strokeOpacity: 0.8
+          }
+        })
+
+        completedRenderer.setDirections(result)
+        completedRoutes.value.push(completedRenderer)
+        console.log(`✅ RUTA COMPLETADA ${i + 1} DIBUJADA (VERDE)`, {
+          from: from.name,
+          to: to.name
+        })
+      } catch (error) {
+        console.error(`❌ Error drawing completed route ${i + 1}:`, error)
+      }
+    }
+  }
+
+  if (pendingTransfers.length === 0) {
+    console.log('No pending transfers to draw route')
     return
   }
 
-  const directionsService = new google.maps.DirectionsService()
-  const directionsRenderer = new google.maps.DirectionsRenderer({
-    map: map.value,
-    suppressMarkers: true,
-    polylineOptions: {
-      strokeColor: '#4285F4',
-      strokeWeight: 5,
-      strokeOpacity: 0.8
-    }
-  })
+  // 1. DIBUJAR RUTA ACTUAL (AZUL BRILLANTE) - Desde último completado o origen
+  const firstPending = pendingTransfers[0].transfer_stock
+  const firstPendingDest = firstPending?.destination_branch_office
 
-  try {
-    const result = await directionsService.route({
-      origin: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
-      destination: { lat: parseFloat(destLat), lng: parseFloat(destLng) },
-      travelMode: google.maps.TravelMode.DRIVING
-    })
+  // Si hay entregas completadas, el origen es el último destino completado
+  let currentOrigin
+  if (completedTransfers.length > 0) {
+    const lastCompleted = completedTransfers[completedTransfers.length - 1].transfer_stock
+    currentOrigin = lastCompleted?.destination_branch_office
+    console.log('Starting from last completed destination:', currentOrigin?.name)
+  } else {
+    currentOrigin = firstPending?.origin_branch_office
+    console.log('Starting from origin:', currentOrigin?.name)
+  }
 
-    directionsRenderer.setDirections(result)
-    routePath.value = directionsRenderer
+  console.log('Next destination:', firstPendingDest?.name)
 
-    // Extraer distancia y duración de la ruta
-    if (result.routes && result.routes.length > 0) {
-      const route = result.routes[0]
-      if (route.legs && route.legs.length > 0) {
+  const originLat = currentOrigin?.address?.latitude || currentOrigin?.latitude
+  const originLng = currentOrigin?.address?.longitude || currentOrigin?.longitude
+  const firstDestLat = firstPendingDest?.address?.latitude || firstPendingDest?.latitude
+  const firstDestLng = firstPendingDest?.address?.longitude || firstPendingDest?.longitude
+
+  console.log('Current origin coords:', { lat: originLat, lng: originLng })
+  console.log('Next dest coords:', { lat: firstDestLat, lng: firstDestLng })
+
+  if (originLat && originLng && firstDestLat && firstDestLng) {
+    try {
+      const result = await directionsService.route({
+        origin: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+        destination: { lat: parseFloat(firstDestLat), lng: parseFloat(firstDestLng) },
+        travelMode: google.maps.TravelMode.DRIVING
+      })
+
+      console.log('Calling Google Maps Directions API for current route...')
+      
+      const currentRouteRenderer = new google.maps.DirectionsRenderer({
+        map: map.value,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: '#2979FF', // AZUL BRILLANTE - Ruta actual
+          strokeWeight: 6,
+          strokeOpacity: 1
+        }
+      })
+
+      currentRouteRenderer.setDirections(result)
+      routePath.value = currentRouteRenderer
+
+      console.log('✅ RUTA ACTUAL DIBUJADA (AZUL)')
+
+      // Calcular distancia y duración
+      if (result.routes && result.routes.length > 0) {
+        const route = result.routes[0]
         const leg = route.legs[0]
-        routeDistance.value = leg.distance.value // metros
-        routeDuration.value = leg.duration.value // segundos
+        routeDistance.value = leg.distance.value
+        routeDuration.value = leg.duration.value
 
-        console.log('Route info:', {
+        console.log('Current route:', {
           distance: leg.distance.text,
-          duration: leg.duration.text,
-          distanceMeters: leg.distance.value,
-          durationSeconds: leg.duration.value
+          duration: leg.duration.text
         })
+      }
 
-        // Enviar al backend para actualizar el delivery run
-        await updateRouteInfo()
+      // Enviar al backend
+      await updateRouteInfo()
+    } catch (error) {
+      console.error('❌ Error drawing current route:', error)
+    }
+  } else {
+    console.log('❌ Missing coordinates for current route')
+  }
+
+  // 2. DIBUJAR RUTAS FUTURAS (GRIS) - Del primer destino a los siguientes
+  if (pendingTransfers.length > 1) {
+    console.log(`Drawing ${pendingTransfers.length - 1} future routes...`)
+    
+    for (let i = 0; i < pendingTransfers.length - 1; i++) {
+      const currentTransfer = pendingTransfers[i].transfer_stock
+      const nextTransfer = pendingTransfers[i + 1].transfer_stock
+
+      const currentDest = currentTransfer?.destination_branch_office
+      const nextDest = nextTransfer?.destination_branch_office
+
+      const currentLat = currentDest?.address?.latitude || currentDest?.latitude
+      const currentLng = currentDest?.address?.longitude || currentDest?.longitude
+      const nextLat = nextDest?.address?.latitude || nextDest?.latitude
+      const nextLng = nextDest?.address?.longitude || nextDest?.longitude
+
+      console.log(`Future route ${i + 1}:`, currentDest?.name, '→', nextDest?.name)
+      console.log(`Coords: (${currentLat}, ${currentLng}) → (${nextLat}, ${nextLng})`)
+
+      if (currentLat && currentLng && nextLat && nextLng) {
+        try {
+          const result = await directionsService.route({
+            origin: { lat: parseFloat(currentLat), lng: parseFloat(currentLng) },
+            destination: { lat: parseFloat(nextLat), lng: parseFloat(nextLng) },
+            travelMode: google.maps.TravelMode.DRIVING
+          })
+
+          const futureRenderer = new google.maps.DirectionsRenderer({
+            map: map.value,
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#9E9E9E', // GRIS - Rutas futuras
+              strokeWeight: 4,
+              strokeOpacity: 0.7
+            },
+            preserveViewport: true
+          })
+
+          futureRenderer.setDirections(result)
+          futureRoutes.value.push(futureRenderer)
+
+          console.log(`✅ RUTA FUTURA ${i + 1} DIBUJADA (GRIS)`)
+        } catch (error) {
+          console.error(`❌ Error drawing future route ${i + 1}:`, error)
+        }
+      } else {
+        console.log(`❌ Missing coordinates for future route ${i + 1}`)
       }
     }
-  } catch (error) {
-    console.error('Error drawing route:', error)
   }
+  
+  console.log('=== ROUTES DRAWING COMPLETED ===')
 }
 
 async function startLocationTracking () {
   try {
-    // Request permissions
-    const permission = await Geolocation.requestPermissions()
+    // Detectar si estamos en navegador o app móvil
+    const isNativePlatform = $q.platform.is.capacitor || $q.platform.is.cordova
 
-    if (permission.location !== 'granted') {
-      $q.notify({
-        type: 'warning',
-        message: 'Se requieren permisos de ubicación',
-        position: 'top'
-      })
-      return
-    }
+    if (isNativePlatform) {
+      // Usar Capacitor Geolocation para móvil
+      const { Geolocation } = await import('@capacitor/geolocation')
+      
+      const permission = await Geolocation.requestPermissions()
 
-    // Start watching position
-    watchId.value = await Geolocation.watchPosition(
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      },
-      (position) => {
-        if (position) {
-          updateCourierPosition(position)
-        }
+      if (permission.location !== 'granted') {
+        $q.notify({
+          type: 'warning',
+          message: 'Se requieren permisos de ubicación',
+          position: 'top'
+        })
+        return
       }
-    )
+
+      watchId.value = await Geolocation.watchPosition(
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        },
+        (position) => {
+          if (position) {
+            updateCourierPosition(position)
+          }
+        }
+      )
+    } else {
+      // Usar Geolocation API del navegador
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation no soportada en este navegador')
+      }
+
+      watchId.value = navigator.geolocation.watchPosition(
+        (position) => {
+          updateCourierPosition(position)
+        },
+        (error) => {
+          console.error('Geolocation error:', error)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      )
+    }
 
     // Send location to server every 5 seconds
     locationInterval.value = setInterval(() => {
@@ -504,7 +755,7 @@ async function startLocationTracking () {
     console.error('Error starting location tracking:', error)
     $q.notify({
       type: 'negative',
-      message: 'Error al iniciar GPS tracking',
+      message: 'Error al iniciar GPS tracking: ' + error.message,
       position: 'top'
     })
   }
@@ -580,14 +831,19 @@ async function sendLocationToServer () {
   if (!currentPosition.value) return
 
   try {
+    // Limitar accuracy a un máximo razonable (100km)
+    const accuracy = currentPosition.value.accuracy
+      ? Math.min(currentPosition.value.accuracy, 100000)
+      : null
+
     await api.post(`/delivery-runs/${route.params.id}/locations`, {
       latitude: currentPosition.value.latitude,
       longitude: currentPosition.value.longitude,
-      accuracy: currentPosition.value.accuracy,
+      accuracy: accuracy,
       altitude: currentPosition.value.altitude,
       heading: currentPosition.value.heading,
       speed: currentPosition.value.speed,
-      device_type: 'mobile'
+      device_type: $q.platform.is.capacitor ? 'mobile' : 'web'
     })
   } catch (error) {
     console.error('Error sending location:', error)
@@ -596,7 +852,18 @@ async function sendLocationToServer () {
 
 function stopLocationTracking () {
   if (watchId.value) {
-    Geolocation.clearWatch({ id: watchId.value })
+    const isNativePlatform = $q.platform.is.capacitor || $q.platform.is.cordova
+    
+    if (isNativePlatform) {
+      // Capacitor Geolocation
+      import('@capacitor/geolocation').then(({ Geolocation }) => {
+        Geolocation.clearWatch({ id: watchId.value })
+      })
+    } else {
+      // Browser Geolocation API
+      navigator.geolocation.clearWatch(watchId.value)
+    }
+    
     watchId.value = null
   }
 

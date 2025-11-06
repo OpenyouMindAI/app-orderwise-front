@@ -129,12 +129,22 @@
         :key="transfer.id"
         dark
         class="bg-grey-9 q-mb-md"
+        :class="{ 'border-primary': isSelected(transfer.id) }"
         style="border-radius: 16px;"
+        :style="isSelected(transfer.id) ? 'border: 2px solid #1976d2;' : ''"
       >
         <!-- Header: Transfer Number & Route -->
         <q-card-section class="q-pb-sm">
           <div class="row items-center justify-between">
-            <div class="text-h6">Transferencia #{{ transfer.transfer_number }}</div>
+            <div class="row items-center">
+              <q-checkbox
+                :model-value="isSelected(transfer.id)"
+                @update:model-value="toggleSelection(transfer)"
+                color="primary"
+                class="q-mr-sm"
+              />
+              <div class="text-h6">Transferencia #{{ transfer.transfer_number }}</div>
+            </div>
             <div class="text-caption text-grey-5">
               {{ calculateDistance(transfer) }} km • {{ calculateTime(transfer) }} min
             </div>
@@ -277,11 +287,13 @@ const $q = useQuasar()
 
 const transfers = ref([])
 const acceptedTransfers = ref([])
+const selectedTransfers = ref([])
 const loading = ref(false)
 const acceptingId = ref(null)
 const showAcceptedDialog = ref(false)
 const acceptedTransfer = ref(null)
 const startingTransport = ref(false)
+const optimizingRoute = ref(false)
 const hasActiveRun = ref(false)
 
 onMounted(async () => {
@@ -514,12 +526,106 @@ function calculateTime (transfer) {
   // Calcular tiempo estimado basado en distancia (promedio 40 km/h en ciudad)
   const distance = calculateDistance(transfer)
   if (distance === '-') return '-'
-  
+
   const avgSpeed = 40 // km/h promedio en ciudad
   const timeInHours = distance / avgSpeed
   const timeInMinutes = Math.round(timeInHours * 60)
-  
+
   return timeInMinutes
+}
+
+function isSelected (transferId) {
+  return selectedTransfers.value.some(t => t.id === transferId)
+}
+
+function toggleSelection (transfer) {
+  const index = selectedTransfers.value.findIndex(t => t.id === transfer.id)
+  if (index > -1) {
+    selectedTransfers.value.splice(index, 1)
+  } else {
+    selectedTransfers.value.push(transfer)
+  }
+}
+
+async function startMultipleTransfers () {
+  if (selectedTransfers.value.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'Selecciona al menos una transferencia',
+      position: 'top'
+    })
+    return
+  }
+
+  optimizingRoute.value = true
+
+  try {
+    // Optimizar ruta usando Google Maps
+    const optimizedOrder = await optimizeRoute(selectedTransfers.value)
+
+    // Crear delivery run con las transferencias en orden óptimo
+    const response = await api.post('/delivery-runs/start-transport', {
+      transfer_ids: optimizedOrder.map(t => t.id)
+    })
+
+    const deliveryRun = response.data.delivery_run
+
+    $q.notify({
+      type: 'positive',
+      message: `Ruta optimizada: ${optimizedOrder.length} entregas. Ahorro estimado: ${optimizedOrder.savings || 0} min`,
+      position: 'top',
+      timeout: 3000
+    })
+
+    // Navigate to active transport page
+    router.push({
+      name: 'ActiveTransport',
+      params: { id: deliveryRun.id }
+    })
+  } catch (error) {
+    console.error('Error starting multiple transfers:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Error al iniciar viaje',
+      position: 'top'
+    })
+  } finally {
+    optimizingRoute.value = false
+  }
+}
+
+async function optimizeRoute (transfers) {
+  // Implementar algoritmo de optimización de ruta
+  // Usaremos el problema del viajante (TSP) simplificado
+  
+  if (transfers.length <= 1) {
+    return transfers
+  }
+
+  try {
+    // Llamar al backend para optimizar con Google Maps Distance Matrix
+    const response = await api.post('/delivery-runs/optimize-route', {
+      transfers: transfers.map(t => ({
+        id: t.id,
+        origin: {
+          lat: t.origin_branch_office?.address?.latitude,
+          lng: t.origin_branch_office?.address?.longitude,
+          name: t.origin_branch_office?.name
+        },
+        destination: {
+          lat: t.destination_branch_office?.address?.latitude,
+          lng: t.destination_branch_office?.address?.longitude,
+          name: t.destination_branch_office?.name
+        }
+      }))
+    })
+
+    return response.data.optimized_transfers
+  } catch (error) {
+    console.error('Error optimizing route:', error)
+    // Si falla, retornar orden original
+    return transfers
+  }
 }
 
 function getFormattedAddress (address) {
