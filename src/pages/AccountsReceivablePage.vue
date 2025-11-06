@@ -331,7 +331,7 @@
                       class="q-mr-sm"
                     />
                     <q-btn
-                      v-if="props.row.type === 'invoice' && props.row.invoice.invoicePayments?.length > 0"
+                      v-if="props.row.type === 'invoice' && props.row.invoice.invoice_payments?.length > 0"
                       size="sm"
                       flat
                       dense
@@ -424,7 +424,7 @@
                         class="q-mr-xs"
                       />
                       <q-btn
-                        v-if="(props.row.type === 'invoice' && props.row.invoice.invoicePayments?.length > 0) || (props.row.type === 'payment' && props.row.affected_invoices?.length > 0)"
+                        v-if="(props.row.type === 'invoice' && props.row.invoice.invoice_payments?.length > 0) || (props.row.type === 'payment' && props.row.affected_invoices?.length > 0)"
                         size="xs"
                         flat
                         dense
@@ -529,7 +529,7 @@
                     <div class="row items-center q-mb-sm">
                       <q-icon name="payments" color="positive" size="md" class="q-mr-sm" />
                       <div class="text-subtitle1 text-weight-bold text-positive">
-                        Pagos aplicados a esta factura ({{ props.row.invoice.invoicePayments?.length || 0 }})
+                        Pagos aplicados a esta factura ({{ props.row.invoice.invoice_payments?.length || 0 }})
                       </div>
                     </div>
                     <q-markup-table dense flat bordered class="shadow-2">
@@ -543,12 +543,12 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr v-for="payment in props.row.invoice.invoicePayments" :key="payment.id" class="bg-white">
+                        <tr v-for="payment in props.row.invoice.invoice_payments" :key="payment.id" class="bg-white">
                           <td class="text-weight-medium">{{ formatDate(payment.created_at) }}</td>
                           <td class="text-grey-7">{{ formatTime(payment.created_at) }}</td>
                           <td>
                             <q-chip dense color="positive" text-color="white" size="sm">
-                              {{ payment.paymentMethod?.name }}
+                              {{ payment.payment_method?.name }}
                             </q-chip>
                           </td>
                           <td class="text-grey-7">{{ payment.reference || '-' }}</td>
@@ -742,7 +742,7 @@
               </div>
               <div class="receipt-row">
                 <span class="receipt-label">Método de Pago:</span>
-                <span class="receipt-value">{{ paymentReceipt?.payment?.paymentMethod?.name || getPaymentMethodName(paymentReceipt?.payment?.payment_method_id) }}</span>
+                <span class="receipt-value">{{ paymentReceipt?.payment?.payment_method?.name || getPaymentMethodName(paymentReceipt?.payment?.payment_method_id) }}</span>
               </div>
             </div>
           </div>
@@ -902,30 +902,49 @@
           </div>
 
           <!-- Pagos Aplicados -->
-          <div class="detail-section" v-if="selectedInvoice.invoicePayments?.length > 0">
+          <div class="detail-section" v-if="selectedInvoice.invoice_payments?.length > 0">
             <div class="detail-section-title">
               <q-icon name="payments" size="20px" />
               Pagos Aplicados
-              <q-badge color="positive" :label="selectedInvoice.invoicePayments?.length || 0" />
+              <q-badge color="positive" :label="selectedInvoice.invoice_payments?.length || 0" />
             </div>
-            <div class="payments-list">
-              <div
-                v-for="payment in selectedInvoice.invoicePayments"
-                :key="payment.id"
-                class="payment-item"
-              >
-                <div class="payment-icon">
-                  <q-icon name="check_circle" color="positive" size="24px" />
-                </div>
-                <div class="payment-info">
-                  <div class="payment-method">{{ payment.paymentMethod?.name }}</div>
-                  <div class="payment-date">{{ formatDateTime(payment.created_at) }}</div>
-                  <div class="payment-ref" v-if="payment.reference">Ref: {{ payment.reference }}</div>
-                </div>
-                <div class="payment-amount">
-                  {{ formatCurrency(payment.amount) }}
-                </div>
-              </div>
+            <div class="products-table">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Método de Pago</th>
+                    <th>Fecha</th>
+                    <th>Referencia</th>
+                    <th class="text-right">Monto</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="payment in selectedInvoice.invoice_payments" :key="payment.id">
+                    <td>
+                      <div class="row items-center no-wrap">
+                        <q-icon name="check_circle" color="positive" size="18px" class="q-mr-sm" />
+                        <span>{{ payment.payment_method?.name }}</span>
+                      </div>
+                    </td>
+                    <td>{{ formatDateTime(payment.created_at) }}</td>
+                    <td>{{ payment.reference || '-' }}</td>
+                    <td class="text-right text-weight-bold text-positive">{{ formatCurrency(payment.amount) }}</td>
+                    <td class="text-center">
+                      <q-btn
+                        icon="delete"
+                        size="sm"
+                        round
+                        flat
+                        color="negative"
+                        @click="confirmDeletePayment(payment)"
+                      >
+                        <q-tooltip>Eliminar pago</q-tooltip>
+                      </q-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </q-card-section>
@@ -1892,7 +1911,7 @@ export default {
               ` : ''}
               <div class="info-row">
                 <span class="label">Método de Pago:</span>
-                <span class="value">${receiptData.payment?.paymentMethod?.name || this.getPaymentMethodName(receiptData.payment?.payment_method_id)}</span>
+                <span class="value">${receiptData.payment?.payment_method?.name || this.getPaymentMethodName(receiptData.payment?.payment_method_id)}</span>
               </div>
             </div>
 
@@ -1953,6 +1972,58 @@ export default {
         this.invoiceDetailDialog = true
       } catch (error) {
         notify('Error al cargar detalle de factura', 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+
+    /**
+     * Confirms deletion of a payment
+     * Shows confirmation dialog before deleting
+     * @param {Object} payment - Payment to delete
+     */
+    confirmDeletePayment (payment) {
+      this.$q.dialog({
+        title: 'Confirmar Eliminación',
+        message: `¿Está seguro de eliminar este pago de ${this.formatCurrency(payment.amount)}?`,
+        cancel: {
+          label: 'Cancelar',
+          color: 'grey-7',
+          flat: true
+        },
+        ok: {
+          label: 'Eliminar',
+          color: 'negative',
+          unelevated: true
+        },
+        persistent: true
+      }).onOk(async () => {
+        await this.deletePayment(payment)
+      })
+    },
+
+    /**
+     * Deletes a payment from an invoice
+     * Refreshes invoice detail after deletion
+     * @param {Object} payment - Payment to delete
+     */
+    async deletePayment (payment) {
+      try {
+        loading(true)
+        await this.$api.delete(`invoice-payments/${payment.id}`)
+
+        notify('Pago eliminado correctamente', 'positive', 'check_circle')
+
+        // Recargar el detalle de la factura
+        await this.viewInvoiceDetail({ id: this.selectedInvoice.id })
+
+        // Si estamos viendo el estado de cuenta del cliente, recargarlo también
+        if (this.selectedClient) {
+          await this.viewClientStatement(null, this.selectedClient)
+        }
+      } catch (error) {
+        notify('Error al eliminar el pago', 'negative', 'warning')
+        console.error('Error deleting payment:', error)
       } finally {
         loading(false)
       }
