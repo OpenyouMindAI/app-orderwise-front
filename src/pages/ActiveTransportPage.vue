@@ -258,17 +258,12 @@ async function loadDeliveryRun () {
     const response = await api.get(`/delivery-runs/${route.params.id}`)
     deliveryRun.value = response.data.delivery_run
 
-    console.log('Delivery Run loaded:', deliveryRun.value)
-
     // Get first pending or arrived transfer (camelCase from backend)
     const transfers = deliveryRun.value.delivery_run_transfers || []
     const activeTransfer = transfers.find(t => t.delivery_status === 'pending' || t.delivery_status === 'arrived')
 
     if (activeTransfer) {
       transfer.value = activeTransfer.transfer_stock
-      console.log('Transfer loaded:', transfer.value)
-      console.log('Origin:', transfer.value?.origin_branch_office)
-      console.log('Destination:', transfer.value?.destination_branch_office)
 
       // Si ya está en estado arrived, mostrar QR y iniciar polling
       if (activeTransfer.delivery_status === 'arrived') {
@@ -325,8 +320,6 @@ function addMapMarkers () {
 
   // Obtener todas las transferencias del delivery run
   const transfers = deliveryRun.value?.delivery_run_transfers || []
-  
-  console.log('Adding markers for', transfers.length, 'transfers')
 
   // Obtener transferencias pendientes para identificar la siguiente
   const pendingTransfers = transfers.filter(t => t.delivery_status === 'pending' || t.delivery_status === 'arrived')
@@ -347,7 +340,6 @@ function addMapMarkers () {
     let color = '#9E9E9E' // Gris por defecto (futuro)
     let scale = 10
     let strokeWeight = 2
-    
     if (drt.delivery_status === 'delivered') {
       color = '#4CAF50' // Verde - completado
       scale = 9
@@ -375,11 +367,11 @@ function addMapMarkers () {
         map: map.value,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: scale,
+          scale,
           fillColor: color,
           fillOpacity: 1,
           strokeColor: '#fff',
-          strokeWeight: strokeWeight
+          strokeWeight
         },
         label: {
           text: (index + 1).toString(),
@@ -450,8 +442,6 @@ function addMapMarkers () {
 }
 
 async function drawRoute () {
-  console.log('=== DRAWING ROUTES ===')
-
   // Limpiar rutas anteriores
   if (routePath.value) {
     routePath.value.setMap(null)
@@ -463,26 +453,13 @@ async function drawRoute () {
 
   // Obtener todas las transferencias
   const transfers = deliveryRun.value?.delivery_run_transfers || []
-  console.log('Total transfers:', transfers.length)
-  console.log('All transfers:', transfers.map(t => ({
-    id: t.id,
-    sort_order: t.sort_order,
-    status: t.delivery_status,
-    destination: t.transfer_stock?.destination_branch_office?.name
-  })))
-
   const completedTransfers = transfers.filter(t => t.delivery_status === 'delivered')
   const pendingTransfers = transfers.filter(t => t.delivery_status === 'pending' || t.delivery_status === 'arrived')
-  
-  console.log('Completed transfers:', completedTransfers.length)
-  console.log('Pending transfers:', pendingTransfers.length)
 
   const directionsService = new google.maps.DirectionsService()
 
   // 0. DIBUJAR RUTAS COMPLETADAS (VERDE) - Ruta secuencial optimizada
   if (completedTransfers.length > 0) {
-    console.log(`Drawing ${completedTransfers.length} completed route segments...`)
-
     // Obtener el origen real (de la primera transferencia del delivery run completo)
     const allTransfersSorted = [...transfers].sort((a, b) => a.sort_order - b.sort_order)
     const firstTransferEver = allTransfersSorted[0]?.transfer_stock
@@ -518,8 +495,6 @@ async function drawRoute () {
       }
     })
 
-    console.log('Completed route points:', completedPoints.map(p => p.name))
-
     // Dibujar rutas entre cada par de puntos consecutivos
     for (let i = 0; i < completedPoints.length - 1; i++) {
       const from = completedPoints[i]
@@ -544,18 +519,13 @@ async function drawRoute () {
 
         completedRenderer.setDirections(result)
         completedRoutes.value.push(completedRenderer)
-        console.log(`✅ RUTA COMPLETADA ${i + 1} DIBUJADA (VERDE)`, {
-          from: from.name,
-          to: to.name
-        })
       } catch (error) {
-        console.error(`❌ Error drawing completed route ${i + 1}:`, error)
+        console.error('Error drawing completed route:', error)
       }
     }
   }
 
   if (pendingTransfers.length === 0) {
-    console.log('No pending transfers to draw route')
     return
   }
 
@@ -568,21 +538,14 @@ async function drawRoute () {
   if (completedTransfers.length > 0) {
     const lastCompleted = completedTransfers[completedTransfers.length - 1].transfer_stock
     currentOrigin = lastCompleted?.destination_branch_office
-    console.log('Starting from last completed destination:', currentOrigin?.name)
   } else {
     currentOrigin = firstPending?.origin_branch_office
-    console.log('Starting from origin:', currentOrigin?.name)
   }
-
-  console.log('Next destination:', firstPendingDest?.name)
 
   const originLat = currentOrigin?.address?.latitude || currentOrigin?.latitude
   const originLng = currentOrigin?.address?.longitude || currentOrigin?.longitude
   const firstDestLat = firstPendingDest?.address?.latitude || firstPendingDest?.latitude
   const firstDestLng = firstPendingDest?.address?.longitude || firstPendingDest?.longitude
-
-  console.log('Current origin coords:', { lat: originLat, lng: originLng })
-  console.log('Next dest coords:', { lat: firstDestLat, lng: firstDestLng })
 
   if (originLat && originLng && firstDestLat && firstDestLng) {
     try {
@@ -592,8 +555,6 @@ async function drawRoute () {
         travelMode: google.maps.TravelMode.DRIVING
       })
 
-      console.log('Calling Google Maps Directions API for current route...')
-      
       const currentRouteRenderer = new google.maps.DirectionsRenderer({
         map: map.value,
         suppressMarkers: true,
@@ -607,34 +568,23 @@ async function drawRoute () {
       currentRouteRenderer.setDirections(result)
       routePath.value = currentRouteRenderer
 
-      console.log('✅ RUTA ACTUAL DIBUJADA (AZUL)')
-
       // Calcular distancia y duración
       if (result.routes && result.routes.length > 0) {
         const route = result.routes[0]
         const leg = route.legs[0]
         routeDistance.value = leg.distance.value
         routeDuration.value = leg.duration.value
-
-        console.log('Current route:', {
-          distance: leg.distance.text,
-          duration: leg.duration.text
-        })
       }
 
       // Enviar al backend
       await updateRouteInfo()
     } catch (error) {
-      console.error('❌ Error drawing current route:', error)
+      console.error('Error drawing current route:', error)
     }
-  } else {
-    console.log('❌ Missing coordinates for current route')
   }
 
   // 2. DIBUJAR RUTAS FUTURAS (GRIS) - Del primer destino a los siguientes
   if (pendingTransfers.length > 1) {
-    console.log(`Drawing ${pendingTransfers.length - 1} future routes...`)
-    
     for (let i = 0; i < pendingTransfers.length - 1; i++) {
       const currentTransfer = pendingTransfers[i].transfer_stock
       const nextTransfer = pendingTransfers[i + 1].transfer_stock
@@ -646,9 +596,6 @@ async function drawRoute () {
       const currentLng = currentDest?.address?.longitude || currentDest?.longitude
       const nextLat = nextDest?.address?.latitude || nextDest?.latitude
       const nextLng = nextDest?.address?.longitude || nextDest?.longitude
-
-      console.log(`Future route ${i + 1}:`, currentDest?.name, '→', nextDest?.name)
-      console.log(`Coords: (${currentLat}, ${currentLng}) → (${nextLat}, ${nextLng})`)
 
       if (currentLat && currentLng && nextLat && nextLng) {
         try {
@@ -671,18 +618,12 @@ async function drawRoute () {
 
           futureRenderer.setDirections(result)
           futureRoutes.value.push(futureRenderer)
-
-          console.log(`✅ RUTA FUTURA ${i + 1} DIBUJADA (GRIS)`)
         } catch (error) {
-          console.error(`❌ Error drawing future route ${i + 1}:`, error)
+          console.error('Error drawing future route:', error)
         }
-      } else {
-        console.log(`❌ Missing coordinates for future route ${i + 1}`)
       }
     }
   }
-  
-  console.log('=== ROUTES DRAWING COMPLETED ===')
 }
 
 async function startLocationTracking () {
@@ -883,8 +824,6 @@ async function updateRouteInfo () {
       total_distance_km: (routeDistance.value / 1000).toFixed(2),
       estimated_duration_minutes: Math.ceil(routeDuration.value / 60)
     })
-
-    console.log('Route info updated in backend')
   } catch (error) {
     console.error('Error updating route info:', error)
   }
@@ -930,8 +869,6 @@ function startListeningForVerification () {
   const channel = echo.channel(`delivery-run.${route.params.id}`)
   
   channel.listen('.transfer.verified', async (event) => {
-    console.log('Transfer verified event received:', event)
-
     if (event.transfer_stock_id === transfer.value.id) {
       $q.notify({
         type: 'positive',
