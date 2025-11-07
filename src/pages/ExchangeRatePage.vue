@@ -53,9 +53,11 @@
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="exchangeRate.symbol"
+                v-model="exchangeRate.amount"
+                type="number"
+                step="0.01"
                 autofocus
-                label="Símbolo"
+                label="Monto"
               />
             </div>
           </q-card-section>
@@ -89,9 +91,11 @@
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
-                v-model="exchangeRate.symbol"
+                v-model="exchangeRate.amount"
+                type="number"
+                step="0.01"
                 autofocus
-                label="Símbolo"
+                label="Monto"
               />
             </div>
           </q-card-section>
@@ -146,10 +150,10 @@ export default {
           sortable: true
         },
         {
-          name: 'symbol',
-          align: 'left',
-          label: 'Símbolo',
-          field: 'symbol',
+          name: 'amount',
+          align: 'right',
+          label: 'Monto',
+          field: 'amount',
           sortable: true
         }
       ],
