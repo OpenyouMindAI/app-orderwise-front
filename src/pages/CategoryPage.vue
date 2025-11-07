@@ -66,6 +66,20 @@
                 @filter="getAliquotTypes"
               />
             </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                clearable
+                label="Impresora"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                v-model="category.printer"
+                :options="printers"
+                @filter="getPrinters"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
                 v-model="category.show_catalog"
@@ -113,6 +127,20 @@
                 @filter="getAliquotTypes"
               />
             </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                clearable
+                label="Impresora"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                v-model="category.printer"
+                :options="printers"
+                @filter="getPrinters"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
                 v-model="category.show_catalog"
@@ -142,6 +170,7 @@ export default {
     return {
       categories: [],
       aliquotTypes: [],
+      printers: [],
       category: {
         show_catalog: 0
       },
@@ -192,6 +221,14 @@ export default {
           label: 'Mostrar en catálogo',
           field: 'show_catalog',
           format: row => row ? 'Si' : 'No'
+        },
+        {
+          name: 'printer',
+          align: 'left',
+          label: 'Impresora',
+          field: 'printer',
+          format: row => row?.name || '-',
+          sortable: true
         }
       ],
       paginationConfig: {
@@ -260,6 +297,27 @@ export default {
         })
     },
     /**
+     * Get printers
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getPrinters (value, update) {
+      try {
+        const { data } = await this.$api.get('printers', {
+          params: {
+            dataSearch: {
+              name: value
+            }
+          }
+        })
+        update(() => {
+          this.printers = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
      * Select category
      * @param {String} value Value filter
      * @param {Callback} update update options
@@ -299,7 +357,11 @@ export default {
      */
     saveCategory () {
       this.visible = true
-      this.$api.post('categories', this.category)
+      const categoryData = {
+        ...this.category,
+        printer_id: this.category.printer?.id || null
+      }
+      this.$api.post('categories', categoryData)
         .then(({ data }) => {
           this.getCategories()
           this.openAddCategory = false
@@ -334,7 +396,11 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.put(`categories/${this.category.id}`, this.category)
+      const categoryData = {
+        ...this.category,
+        printer_id: this.category.printer?.id || null
+      }
+      this.$api.put(`categories/${this.category.id}`, categoryData)
         .then(({ data }) => {
           this.getCategories()
           this.openEditCategory = false
