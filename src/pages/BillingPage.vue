@@ -449,18 +449,17 @@
                   @filter="getCoins"
                 />
               </div>
-              <div class="col-6" v-if="typeOfService.code !== 4">
+              <div class="col-6" v-if="typeOfService.code !== '4'">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12">
+              <div class="col-12" v-if="typeOfService.code !== '4'">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
-
               </div>
-              <div class="col-12" v-if="typeOfService.code !== 4">
+              <div class="col-12">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
@@ -582,7 +581,6 @@
                   </q-btn>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -971,6 +969,7 @@
       :cash-box-state="cashBoxState"
       :type-of-service="typeOfService"
       :invoice-type="invoiceType"
+      :exchange-rate="exchangeRate"
       @update:show="dialogPayment = $event"
       @update:table-close="tableClose = $event"
       @payment-update="handlePaymentUpdate"
@@ -1535,11 +1534,6 @@ export default {
        */
       exchange: false,
       /**
-       * Exchange rate
-       * @type {Number}
-       */
-      exchangeRate: 0,
-      /**
        * Scan dialog
        * @type {Boolean}
        */
@@ -1637,6 +1631,11 @@ export default {
        * @type {Array}
        */
       categories: [],
+      /**
+       * Exchange rate
+       * @type {Object}
+       */
+      exchangeRate: null,
       /**
        * Loading products
        * @type {Boolean}
@@ -1882,6 +1881,7 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     this.listenPayments()
+    this.getExchangeRates()
     this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
@@ -3001,7 +3001,7 @@ export default {
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
         cashbox_user_id: this.cashBoxState?.id,
-        exchange_rate: this.exchangeRate,
+        exchange_rate: this.exchangeRate?.amount || 0,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,

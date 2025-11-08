@@ -96,120 +96,50 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="scroll" style="height: calc(100vh - 200px);">
-            <div class="row q-col-gutter-sm">
-              <!-- Datos básicos -->
-              <div class="col-md-8 col-xs-12">
-                <q-card flat bordered class="q-pa-md">
-                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="info" class="q-mr-sm" />
-                    Datos básicos
-                  </div>
-                  <div class="row q-col-gutter-sm">
-                    <div class="col-12">
-                      <q-input
-                        :rules="[val => !!val || 'El campo es requerido.']"
-                        filled
-                        v-model="category.name"
-                        autofocus
-                        label="Nombre"
-                        dense
-                      />
-                    </div>
-                    <div class="col-12">
-                      <q-select
-                        use-input
-                        filled
-                        label="Iva (%)"
-                        input-debounce="0"
-                        option-label="Desc"
-                        option-value="id"
-                        v-model="category.aliquot_type"
-                        :options="aliquotTypes"
-                        @filter="getAliquotTypes"
-                        dense
-                      />
-                    </div>
-                    <div class="col-12">
-                      <q-toggle
-                        v-model="category.show_catalog"
-                        label="Mostrar en catálogo"
-                        :true-value="1"
-                        :false-value="0"
-                      />
-                    </div>
-                  </div>
-                </q-card>
-              </div>
-
-              <!-- Sección de imagen -->
-              <div class="col-md-4 col-xs-12">
-                <q-card flat bordered class="q-pa-md">
-                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="images" class="q-mr-sm" />
-                    Imagen de la categoría
-                  </div>
-                  <q-card
-                    flat
-                    bordered
-                    class="dropzone-card q-mb-md"
-                    :class="{ 'dropzone-active': isDragOver }"
-                    @dragover.prevent="isDragOver = true"
-                    @dragleave.prevent="isDragOver = false"
-                    @drop.prevent="handleDrop"
-                  >
-                    <q-card-section class="text-center q-pa-lg q-gutter-y-md">
-                      <!-- Image Preview -->
-                      <div v-if="category.images.length > 0">
-                        <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                        <q-card flat class="images-preview-card">
-                          <q-img
-                            v-for="img in category.images"
-                            :key="img.id"
-                            :src="img.url"
-                            :ratio="1"
-                            class="rounded-borders"
-                          >
-                            <div class="absolute-top-right bg-transparent">
-                              <q-btn
-                                size="sm"
-                                icon="close"
-                                color="negative"
-                                round
-                                dense
-                                @click="deleteImage()"
-                              />
-                            </div>
-                          </q-img>
-                        </q-card>
-                      </div>
-                      <div v-else>
-                        <q-icon name="images" size="3rem" color="grey-5" class="q-mb-md" />
-                        <div class="text-body1 text-grey-7 q-mb-sm">
-                          Arrastra la imagen aquí
-                        </div>
-                        <div class="text-body2 text-grey-5 q-mb-md">
-                          o haz clic para seleccionar
-                        </div>
-                      </div>
-                      <q-btn
-                        color="primary"
-                        label="Seleccionar Imagen"
-                        @click="$refs.fileInputEdit.click()"
-                        unelevated
-                        size="sm"
-                      />
-                      <input
-                        ref="fileInputEdit"
-                        type="file"
-                        accept="images/*"
-                        style="display: none"
-                        @change="handleFileSelect"
-                      />
-                    </q-card-section>
-                  </q-card>
-                </q-card>
-              </div>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="category.name"
+                autofocus
+                label="Nombre"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                label="Iva (%)"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="category.aliquot_type"
+                :options="aliquotTypes"
+                @filter="getAliquotTypes"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                clearable
+                label="Impresora"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                v-model="category.printer"
+                :options="printers"
+                @filter="getPrinters"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-toggle
+                v-model="category.show_catalog"
+                label="Mostrar en catálogo"
+                :true-value="1"
+                :false-value="0"
+              />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
@@ -227,118 +157,50 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="scroll" style="height: calc(100vh - 200px);">
-            <div class="row q-col-gutter-sm">
-              <!-- Datos básicos -->
-              <div class="col-md-8 col-xs-12">
-                <q-card flat bordered class="q-pa-md">
-                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="info" class="q-mr-sm" />
-                    Datos básicos
-                  </div>
-                  <div class="row q-col-gutter-sm">
-                    <div class="col-12">
-                      <q-input
-                        :rules="[val => !!val || 'El campo es requerido.']"
-                        filled
-                        v-model="category.name"
-                        autofocus
-                        label="Nombre"
-                        dense
-                      />
-                    </div>
-                    <div class="col-12">
-                      <q-select
-                        use-input
-                        filled
-                        label="Iva (%)"
-                        input-debounce="0"
-                        option-label="Desc"
-                        option-value="id"
-                        v-model="category.aliquot_type"
-                        :options="aliquotTypes"
-                        @filter="getAliquotTypes"
-                        dense
-                      />
-                    </div>
-                    <div class="col-12">
-                      <q-toggle
-                        v-model="category.show_catalog"
-                        label="Mostrar en catálogo"
-                        :true-value="1"
-                        :false-value="0"
-                      />
-                    </div>
-                  </div>
-                </q-card>
-              </div>
-
-              <!-- Sección de imagen -->
-              <div class="col-md-4 col-xs-12">
-                <q-card flat bordered class="q-pa-md">
-                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="images" class="q-mr-sm" />
-                    Imagen de la categoría
-                  </div>
-                  <q-card
-                    flat
-                    bordered
-                    class="dropzone-card q-mb-md"
-                    :class="{ 'dropzone-active': isDragOver }"
-                    @dragover.prevent="isDragOver = true"
-                    @dragleave.prevent="isDragOver = false"
-                    @drop.prevent="handleDrop"
-                  >
-                    <q-card-section class="text-center q-pa-lg q-gutter-y-md">
-                      <!-- Image Preview -->
-                      <div v-if="category.images">
-                        <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                        <q-card flat class="images-preview-card">
-                          <q-img
-                            :src="category.images.url"
-                            :ratio="1"
-                            class="rounded-borders"
-                          >
-                            <div class="absolute-top-right bg-transparent">
-                              <q-btn
-                                size="sm"
-                                icon="close"
-                                color="negative"
-                                round
-                                dense
-                                @click="deleteImage()"
-                              />
-                            </div>
-                          </q-img>
-                        </q-card>
-                      </div>
-                      <div v-else>
-                        <q-icon name="images" size="3rem" color="grey-5" class="q-mb-md" />
-                        <div class="text-body1 text-grey-7 q-mb-sm">
-                          Arrastra la imagen aquí
-                        </div>
-                        <div class="text-body2 text-grey-5 q-mb-md">
-                          o haz clic para seleccionar
-                        </div>
-                      </div>
-                      <q-btn
-                        color="primary"
-                        label="Seleccionar Imagen"
-                        @click="$refs.fileInputAdd.click()"
-                        unelevated
-                        size="sm"
-                      />
-                      <input
-                        ref="fileInputAdd"
-                        type="file"
-                        accept="images/*"
-                        style="display: none"
-                        @change="handleFileSelect"
-                      />
-                    </q-card-section>
-                  </q-card>
-                </q-card>
-              </div>
+          <q-card-section class="row q-col-gutter-sm">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="category.name"
+                autofocus
+                label="Nombre"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                label="Iva (%)"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="category.aliquot_type"
+                :options="aliquotTypes"
+                @filter="getAliquotTypes"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                clearable
+                label="Impresora"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                v-model="category.printer"
+                :options="printers"
+                @filter="getPrinters"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-toggle
+                v-model="category.show_catalog"
+                label="Mostrar en catálogo"
+                :true-value="1"
+                :false-value="0"
+              />
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
@@ -361,6 +223,7 @@ export default {
     return {
       categories: [],
       aliquotTypes: [],
+      printers: [],
       category: {
         show_catalog: 0,
         images: [],
@@ -419,6 +282,14 @@ export default {
           label: 'Mostrar en catálogo',
           field: 'show_catalog',
           format: row => row ? 'Si' : 'No'
+        },
+        {
+          name: 'printer',
+          align: 'left',
+          label: 'Impresora',
+          field: 'printer',
+          format: row => row?.name || '-',
+          sortable: true
         }
       ],
       paginationConfig: {
@@ -590,6 +461,27 @@ export default {
         })
     },
     /**
+     * Get printers
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getPrinters (value, update) {
+      try {
+        const { data } = await this.$api.get('printers', {
+          params: {
+            dataSearch: {
+              name: value
+            }
+          }
+        })
+        update(() => {
+          this.printers = data
+        })
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
      * Select category
      * @param {String} value Value filter
      * @param {Callback} update update options
@@ -629,7 +521,11 @@ export default {
      */
     saveCategory () {
       this.visible = true
-      this.$api.post('categories', this.modelData(this.category))
+      const categoryData = {
+        ...this.category,
+        printer_id: this.category.printer?.id || null
+      }
+      this.$api.post('categories', categoryData)
         .then(({ data }) => {
           this.getCategories()
           this.openAddCategory = false
@@ -672,7 +568,11 @@ export default {
      */
     saveEdit () {
       this.visible = true
-      this.$api.post(`categories/${this.category.id}`, this.modelData(this.category, true))
+      const categoryData = {
+        ...this.category,
+        printer_id: this.category.printer?.id || null
+      }
+      this.$api.put(`categories/${this.category.id}`, categoryData)
         .then(({ data }) => {
           this.getCategories()
           this.openEditCategory = false
