@@ -9,8 +9,10 @@ import { notify } from 'src/const/mixins'
 export const printTicket = async (data, printer) => {
   try {
     await api.get(`print/${data.id}`, {
-      printer: printer.name,
-      type: 'ticket'
+      params: {
+        printer: printer.name,
+        type: 'ticket'
+      }
     })
   } catch (error) {
     notify(error.message, 'negative', 'warning')
@@ -25,8 +27,10 @@ export const printTicket = async (data, printer) => {
 export const printCommand = async (data, printer) => {
   try {
     await api.get(`print/${data.id}`, {
-      printer: printer.name,
-      type: 'command'
+      params: {
+        printer: printer.name,
+        type: 'command'
+      }
     })
   } catch (error) {
     notify(error.message, 'negative', 'warning')

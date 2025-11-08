@@ -622,6 +622,7 @@
       :loading="saving"
       :user-session="userSession"
       :type-of-service="{code: 1}"
+      :exchange-rate="exchangeRate"
       :invoice-type="{acronym_serie: 'T'}"
       @update:show="showPaymentDialog = $event"
       @update:table-close="tableClose = $event"
@@ -711,6 +712,7 @@ export default {
       invoicePayments: [],
       tableClose: false,
       coin: null,
+      exchangeRate: null,
 
       // Status mapping for display
       statusMap: {
@@ -755,6 +757,7 @@ export default {
 
   async created () {
     this.getLocalStorage()
+    await this.getExchangeRates()
     await this.getLivingRooms()
     await this.getInvoiceTypes()
     await this.getTypeOfServices()
@@ -768,6 +771,30 @@ export default {
     getLocalStorage () {
       const { company_session: companySession } = this.userSession
       this.coin = companySession?.company_config?.coin
+    },
+    /**
+     * Get exchange rate
+     */
+    getExchangeRates () {
+      this.$api.get('exchange-rates', {
+        params: {
+          paginate: true,
+          perPage: 1,
+          page: 1,
+          sortBy: 'id',
+          sortOrder: 'desc'
+        }
+      })
+        .then(({ data }) => {
+          this.exchangeRate = data?.data?.[0]
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     },
 
     // Payment Modal Methods

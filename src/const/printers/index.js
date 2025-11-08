@@ -5,6 +5,7 @@ import { notify } from '../mixins'
 import { sendCommand, sendTicket, sendInvoice } from './preview'
 import { directCommandPrint as directCommandPrintBluetooth, directTicketPrint as directTicketPrintBluetooth } from './bluetooth'
 import { printCommandUsb, printTicketUsb } from './usb'
+import { printCommand } from './usb/windows'
 
 /**
  * Get config
@@ -28,21 +29,26 @@ const getConfig = async () => {
 
 export const commandPrint = async (data, printer = null) => {
   try {
+    const info = await Device.getInfo()
     const { device, user } = await getConfig()
     if (!companyConfig?.other?.directPrint) {
       await sendCommand(data, user)
       return
     }
     const printerSelected = printer || companyConfig.printer
-    if (printerSelected.type === 'USB') {
-      printCommandUsb(data, companyConfig?.other?.printer)
+    if (info.name === printerSelected.device) {
+      if (printerSelected.type === 'USB') {
+        printCommandUsb(data, companyConfig?.other?.printer)
+      } else {
+        directCommandPrintBluetooth(
+          printerSelected,
+          data,
+          device,
+          companyConfig?.other?.printer
+        )
+      }
     } else {
-      directCommandPrintBluetooth(
-        printerSelected,
-        data,
-        device,
-        companyConfig?.other?.printer
-      )
+      printCommand(data, printerSelected)
     }
   } catch (error) {
     notify(error.message, 'negative', 'warning')
