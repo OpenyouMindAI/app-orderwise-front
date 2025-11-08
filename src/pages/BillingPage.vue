@@ -787,12 +787,34 @@
                   {{ tableSelected.length }}
                 </q-item-section>
               </q-item>
+              <!-- Tasa de cambio -->
+              <q-item v-if="exchangeRate" class="bg-blue-1">
+                <q-item-section>
+                  <div class="text-subtitle2 text-weight-medium">Tasa de cambio</div>
+                  <div class="text-caption text-grey-7">
+                    1 {{ coin?.symbol || '' }} = {{ exchangeRate.amount }} {{ exchangeRate.coin?.symbol || '' }}
+                  </div>
+                </q-item-section>
+              </q-item>
               <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
                 <q-item-section>
                   TOTAL
                 </q-item-section>
                 <q-item-section v-if="coin" side class="text-white">
-                  {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                  <div style="display: flex; align-items: center; gap: 7px">
+                    <span>
+                      {{ coin.symbol }}
+                    </span>
+                    <span>
+                      {{ formatNumber(totalBill) }}
+                    </span>
+                    <span v-if="exchangeRate">
+                      |
+                    </span>
+                    <span v-if="exchangeRate">
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
+                    </span>
+                  </div>
                 </q-item-section>
               </q-item>
               <q-item>
@@ -803,7 +825,20 @@
                   VUELTO
                 </q-item-section>
                 <q-item-section side v-if="coin">
-                  {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                  <div style="display: flex; align-items: center; gap: 7px">
+                    <span>
+                      {{ coin.symbol }}
+                    </span>
+                    <span>
+                      {{ formatNumber(Math.abs(pendingPayment)) }}
+                    </span>
+                    <span v-if="exchangeRate">
+                      |
+                    </span>
+                    <span v-if="exchangeRate">
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
+                    </span>
+                  </div>
                 </q-item-section>
               </q-item>
             </q-list>
@@ -1887,6 +1922,22 @@ export default {
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    async getExchangeRates () {
+      try {
+        const { data } = await this.$api.get('exchange-rates', {
+          params: {
+            sortOrder: 'desc',
+            sortBy: 'id',
+            paginate: true,
+            perPage: 1,
+            page: 1
+          }
+        })
+        this.exchangeRate = data?.data?.[0]
+      } catch (error) {
+        console.error('Error getting exchange rates:', error)
+      }
+    },
     /**
      * Send invoice update to details screen
      * @param {Object} data - Invoice data
