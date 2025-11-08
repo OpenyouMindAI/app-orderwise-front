@@ -50,13 +50,36 @@
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="exchangeRate.coin_id"
+                :options="coins"
+                option-value="id"
+                option-label="name"
+                emit-value
+                map-options
+                label="Moneda"
+              >
+                <template v-slot:selected-item="scope">
+                  <span>{{ scope.opt.symbol }} - {{ scope.opt.name }}</span>
+                </template>
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.symbol }} - {{ scope.opt.name }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="exchangeRate.amount"
                 type="number"
                 step="0.01"
-                autofocus
                 label="Monto"
               />
             </div>
@@ -88,13 +111,36 @@
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-select
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                v-model="exchangeRate.coin_id"
+                :options="coins"
+                option-value="id"
+                option-label="name"
+                emit-value
+                map-options
+                label="Moneda"
+              >
+                <template v-slot:selected-item="scope">
+                  <span>{{ scope.opt.symbol }} - {{ scope.opt.name }}</span>
+                </template>
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.symbol }} - {{ scope.opt.name }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="exchangeRate.amount"
                 type="number"
                 step="0.01"
-                autofocus
                 label="Monto"
               />
             </div>
@@ -111,11 +157,13 @@
 
 <script>
 import { Notify } from 'quasar'
+import { formatDate } from 'src/const/mixins';
 export default {
   data () {
     return {
       exchangeRates: [],
       exchangeRate: {},
+      coins: [],
       filter: '',
       /**
        * Params search
@@ -128,7 +176,8 @@ export default {
         perPage: 1,
         dataSearch: {
           id: '',
-          name: ''
+          name: '',
+          created_at: ''
         }
       },
       visible: false,
@@ -150,11 +199,34 @@ export default {
           sortable: true
         },
         {
+          name: 'coin',
+          align: 'left',
+          label: 'Moneda',
+          field: row => row.coin ? `${row.coin.symbol} - ${row.coin.name}` : '',
+          sortable: true
+        },
+        {
           name: 'amount',
           align: 'right',
           label: 'Monto',
           field: 'amount',
           sortable: true
+        },
+        {
+          name: 'created_at',
+          align: 'right',
+          label: 'Fecha',
+          field: 'created_at',
+          format: (value) => formatDate(value, 'DD/MM/YYYY'),
+          sortable: true
+        },
+        {
+          name: 'created_at',
+          align: 'right',
+          label: 'Hora',
+          field: 'created_at',
+          format: (value) => formatDate(value, 'HH:mm:ss'),
+          sortable: false
         }
       ],
       paginationConfig: {
@@ -167,6 +239,7 @@ export default {
     }
   },
   mounted () {
+    this.getCoins()
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
@@ -178,6 +251,26 @@ export default {
     }
   },
   methods: {
+    /**
+     * Get coins
+     */
+    getCoins () {
+      this.$api.get('coins', {
+        params: {
+          paginate: false
+        }
+      })
+        .then(({ data }) => {
+          this.coins = data
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
     /**
      * Close all modals
      */
@@ -260,7 +353,10 @@ export default {
      */
     editExchangeRate (event, row, index) {
       this.openEditExchangeRate = true
-      this.exchangeRate = row
+      this.exchangeRate = {
+        ...row,
+        coin_id: row.coin_id || row.coin?.id
+      }
     },
     /**
      * Save edit
