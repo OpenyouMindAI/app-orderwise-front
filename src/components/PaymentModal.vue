@@ -35,6 +35,7 @@
           <q-markup-table class="q-mb-md">
             <thead>
               <tr>
+                <th class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">✅</th>
                 <th class="text-left">Método de pago</th>
                 <th class="text-left">Referencia</th>
                 <th class="text-right">Monto</th>
@@ -45,6 +46,9 @@
             </thead>
             <tbody>
               <tr v-for="(payment, index) in localPayments" :key="payment.id || index">
+                <td class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">
+                  <q-checkbox v-model="payment.checked" />
+                </td>
                 <td class="text-left">{{ payment.name }}</td>
                 <td class="text-left">
                   <span v-if="payment.reference">{{ payment.reference }}</span>
