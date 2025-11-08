@@ -7,7 +7,7 @@
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
       <div class="row q-col-gutter-x-md">
         <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-12" id="select-client">
+          <div class="col-xl-2 col-lg-3 col-md-3 col-sm-6 col-xs-12" id="select-client">
             <q-select
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
               use-input
@@ -43,7 +43,7 @@
               @filter="filterInvoiceTypes"
             />
           </div>
-          <div v-if="invoiceType.bill" class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
+          <div v-if="invoiceType.bill" class="col-xl-2 col-lg-2 col-md-2 col-sm-3 col-xs-6">
             <q-select
               v-model="voucherType"
               use-input
@@ -59,7 +59,7 @@
               @filter="getVoucherTypes"
             />
           </div>
-          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
             <q-select
               use-input
               :hide-dropdown-icon="$q.platform.is.nativeMobile"
@@ -75,9 +75,9 @@
               @filter="filterTypeOfServices"
             />
           </div>
-          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6" v-if="openCashBox">
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-3 col-xs-6" v-if="openCashBox">
             <q-btn
-              style="border-radius: 10px; padding: 5px 15px"
+              style="border-radius: 10px; padding: 5px 15px; margin-top: 4px;"
               dense
               :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
               :color="isUserBoxOpen ? 'negative' : 'primary'"
@@ -503,7 +503,7 @@
               </div>
             </div>
            <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <div class="col-6" v-if="typeOfService.code !== 4">
+              <div class="col-6" v-if="typeOfService.code !== '4'">
                 <q-select
                   filled
                   dense
@@ -515,18 +515,17 @@
                   @filter="getCoins"
                 />
               </div>
-              <div class="col-6" v-if="typeOfService.code !== 4">
+              <div class="col-6" v-if="typeOfService.code !== '4'">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12">
+              <div class="col-12" v-if="typeOfService.code !== '4'">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
-
               </div>
-              <div class="col-12" v-if="typeOfService.code !== 4">
+              <div class="col-12">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
               <div class="col-12">
@@ -571,6 +570,14 @@
               </div>
               <div class="col-12">
                 <q-list separator bordered style="border-radius: 10px;">
+                  <q-item v-if="exchangeRate">
+                    <q-item-section>
+                      Tasa del dia
+                    </q-item-section>
+                    <q-item-section side>
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(exchangeRate.amount) }}
+                    </q-item-section>
+                  </q-item>
                   <q-item v-if="tableSelected.length">
                     <q-item-section>
                       Mesas
