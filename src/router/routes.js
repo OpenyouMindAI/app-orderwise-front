@@ -284,6 +284,12 @@ const routes = [
         name: 'Notification',
         meta: { requiresAuth: true },
         component: () => import('src/pages/NotificationPage.vue')
+      },
+      {
+        path: 'exchange-rates',
+        name: 'ExchangeRate',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/ExchangeRatePage.vue')
       }
     ]
   },

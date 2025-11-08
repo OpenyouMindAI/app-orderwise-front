@@ -584,7 +584,15 @@
                       TOTAL
                     </q-item-section>
                     <q-item-section v-if="coin" side class="text-white">
-                      {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                      <div  style="display: flex; gap: 10px;">
+                        <span>
+                          {{ coin.symbol }} {{ formatNumber(totalBill) }}
+                        </span>
+                        <span v-if="exchangeRate">|</span>
+                        <span v-if="exchangeRate">
+                          {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
+                        </span>
+                      </div>
                     </q-item-section>
                   </q-item>
                   <q-item>
@@ -595,7 +603,15 @@
                       VUELTO
                     </q-item-section>
                     <q-item-section side v-if="coin">
-                      {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                      <div style="display: flex; gap: 10px;">
+                        <span>
+                          {{ coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+                        </span>
+                        <span v-if="exchangeRate">|</span>
+                        <span v-if="exchangeRate">
+                          {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
+                        </span>
+                      </div>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -831,6 +847,7 @@
       :cash-box-state="cashBoxState"
       :type-of-service="typeOfService"
       :invoice-type="invoiceType"
+      :exchange-rate="exchangeRate"
       @update:show="dialogPayment = $event"
       @update:table-close="tableClose = $event"
       @payment-update="handlePaymentUpdate"
@@ -1386,11 +1403,6 @@ export default {
        */
       exchange: false,
       /**
-       * Exchange rate
-       * @type {Number}
-       */
-      exchangeRate: 0,
-      /**
        * Scan dialog
        * @type {Boolean}
        */
@@ -1473,6 +1485,11 @@ export default {
        * @type {Array}
        */
       categories: [],
+      /**
+       * Exchange rate
+       * @type {Object}
+       */
+      exchangeRate: null,
       /**
        * Loading products
        * @type {Boolean}
@@ -1697,11 +1714,40 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     this.listenPayments()
+    this.getExchangeRates()
     this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    /**
+     * Get exchange rate
+     */
+    getExchangeRates () {
+      this.$api.get('exchange-rates', {
+        params: {
+          paginate: true,
+          perPage: 1,
+          page: 1,
+          sortBy: 'id',
+          sortOrder: 'desc'
+        }
+      })
+        .then(({ data }) => {
+          this.exchangeRate = data?.data?.[0]
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+    /**
+     * Set permissions by user
+     * @param {Array} data - Array of permissions
+     */
     setPermissionsByUser (data) {
       return this.userSession.roles.some(role => data.includes(role.acronym))
     },
@@ -2655,7 +2701,7 @@ export default {
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
         cashbox_user_id: this.cashBoxState?.id,
-        exchange_rate: this.exchangeRate,
+        exchange_rate: this.exchangeRate?.amount || 0,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,
