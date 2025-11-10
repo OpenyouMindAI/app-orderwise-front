@@ -714,6 +714,10 @@ export default {
       coin: null,
       exchangeRate: null,
 
+      // Cashbox state
+      cashBoxState: null,
+      isUserBoxOpen: false,
+
       // Status mapping for display
       statusMap: {
         unoccupied: 'Desocupada',
@@ -758,6 +762,7 @@ export default {
   async created () {
     this.getLocalStorage()
     await this.getExchangeRates()
+    await this.checkCashBoxStatus()
     await this.getLivingRooms()
     await this.getInvoiceTypes()
     await this.getTypeOfServices()
@@ -795,6 +800,51 @@ export default {
             color: 'negative'
           })
         })
+    },
+
+    /**
+     * Check cashbox status for current user
+     */
+    async checkCashBoxStatus () {
+      try {
+        const { data } = await this.$api.get('cashier-init', {
+          params: {
+            branch_office_id: this.branchOffice?.id
+          }
+        })
+
+        if (data && data.status === 'open') {
+          this.isUserBoxOpen = true
+          this.cashBoxState = {
+            id: data.id,
+            cashbox_id: data.cashbox_id,
+            user_id: data.user_id,
+            init_balance: parseFloat(data.init_balance),
+            init_date: data.init_date,
+            status: data.status,
+            close_date: data.close_date,
+            end_balance: data.end_balance,
+            user_close_id: data.user_close_id
+          }
+        } else {
+          // Respuesta exitosa pero sin sesión activa
+          this.isUserBoxOpen = false
+          this.cashBoxState = null
+        }
+      } catch (error) {
+        if (error.response?.status === 404 ||
+            error.message?.includes('No query results for model') ||
+            error.message?.includes('CashboxUser')) {
+          // 404 o sin datos es comportamiento normal - no hay sesión activa
+          this.isUserBoxOpen = false
+          this.cashBoxState = null
+        } else {
+          // Error real del servidor
+          console.error('❌ Error checking cashbox status:', error)
+          this.isUserBoxOpen = false
+          this.cashBoxState = null
+        }
+      }
     },
 
     // Payment Modal Methods
@@ -1365,6 +1415,7 @@ export default {
             type_of_service_id: this.selectedInvoice.type_of_service_id,
             invoice_type_id: this.selectedInvoice.invoice_type_id,
             user_created_id: this.userSession.id,
+            cashbox_user_id: this.cashBoxState?.id,
             exchange_rate: this.selectedInvoice.exchange_rate,
             delivery_date: this.selectedInvoice.delivery_date,
             branch_office_id: this.selectedInvoice.branch_office_id,
@@ -1416,6 +1467,7 @@ export default {
             type_of_service_id: typeOfService.id,
             invoice_type_id: invoiceType.id,
             user_created_id: this.userSession.id,
+            cashbox_user_id: this.cashBoxState?.id,
             exchange_rate: 0,
             delivery_date: date.formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
             branch_office_id: this.branchOffice?.id,
