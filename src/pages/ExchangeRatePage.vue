@@ -157,7 +157,7 @@
 
 <script>
 import { Notify } from 'quasar'
-import { formatDate } from 'src/const/mixins';
+import { formatDate } from 'src/const/mixins'
 export default {
   data () {
     return {
@@ -173,7 +173,7 @@ export default {
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc',
-        perPage: 1,
+        perPage: 20,
         dataSearch: {
           id: '',
           name: '',

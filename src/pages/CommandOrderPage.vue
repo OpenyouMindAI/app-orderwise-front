@@ -308,6 +308,74 @@
             <div
               :class="`col-sm-12 col-md-5 col-lg-5 q-gutter-y-sm ${$q.screen.lt.sm ? 'full-width' : ''}`"
             >
+              <!-- Sección de Archivos Adjuntos (Solo visualización) -->
+              <div v-if="invoice && invoice.invoice_files && invoice.invoice_files.length > 0">
+                <q-card flat bordered>
+                  <q-card-section class="q-pb-none">
+                    <div class="row items-center q-mb-sm">
+                      <div class="col">
+                        <div class="text-subtitle2 text-weight-medium">
+                          <q-icon name="attach_file" size="20px" class="q-mr-xs" />
+                          Archivos Adjuntos
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <q-chip dense color="primary" text-color="white" size="sm">
+                          {{ invoice.invoice_files.length }}
+                        </q-chip>
+                      </div>
+                    </div>
+                  </q-card-section>
+
+                  <q-card-section class="q-pt-sm">
+                    <div class="invoice-files-grid">
+                      <div
+                        v-for="(file, index) in invoice.invoice_files"
+                        :key="index"
+                        class="invoice-file-item"
+                        @click="openGallery(index)"
+                      >
+                        <div class="invoice-file-wrapper">
+                          <!-- Imagen -->
+                          <q-img
+                            v-if="!file.name || !file.name.toLowerCase().endsWith('.pdf')"
+                            :src="file.url"
+                            :ratio="1"
+                            fit="cover"
+                            class="invoice-file-image"
+                            loading="lazy"
+                          >
+                            <template v-slot:error>
+                              <div class="absolute-full flex flex-center bg-grey-3">
+                                <q-icon name="broken_image" size="32px" color="grey-5" />
+                              </div>
+                            </template>
+                          </q-img>
+
+                          <!-- PDF -->
+                          <div v-else class="invoice-pdf-preview">
+                            <q-icon name="picture_as_pdf" size="40px" color="red-6" />
+                            <div class="invoice-pdf-name">
+                              {{ file.name }}
+                            </div>
+                          </div>
+
+                          <!-- Overlay hover -->
+                          <div class="invoice-file-overlay">
+                            <q-icon name="visibility" size="24px" color="white" />
+                          </div>
+
+                          <!-- Badge de número -->
+                          <div class="invoice-file-badge">
+                            {{ index + 1 }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+
               <q-expansion-item
                 v-if="role.deliveryPerson || visibleBranchOffice"
                 icon="payments"
@@ -601,6 +669,16 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Image Gallery Preview -->
+    <ImageGalleryPreview
+      v-if="invoice && invoice.invoice_files && invoice.invoice_files.length > 0"
+      v-model="showGallery"
+      :images="invoice.invoice_files"
+      :initial-index="selectedFileIndex"
+      :loop="true"
+      :show-thumbnails="true"
+    />
   </q-page>
 </template>
 
@@ -614,6 +692,7 @@ import { useRoute, useRouter } from 'vue-router'
 import FileComponent from 'src/components/FileComponent.vue'
 import { commandPrint } from 'src/const/printers'
 import { useQuasar } from 'quasar'
+import ImageGalleryPreview from 'src/components/ImageGalleryComponent.vue'
 
 const store = authentication()
 
@@ -702,6 +781,16 @@ const typeOfServices = ref([])
  * @type {Boolean}
  */
 const openEditInvoice = ref(false)
+/**
+ * Show gallery dialog
+ * @type {Boolean}
+ */
+const showGallery = ref(false)
+/**
+ * Selected file index for gallery
+ * @type {Number}
+ */
+const selectedFileIndex = ref(0)
 /**
  * Select category
  * @type {Object}
@@ -949,6 +1038,15 @@ const showInvoices = (data) => {
   }, 100)
 }
 
+/**
+ * Opens the gallery at a specific file index
+ * @param {Number} index - Index of the file to display
+ */
+const openGallery = (index = 0) => {
+  selectedFileIndex.value = index
+  showGallery.value = true
+}
+
 const getInvoiceOne = async (id) => {
   try {
     loading(true)
@@ -1033,69 +1131,40 @@ const getCategories = async () => {
     const { data } = await api.get('categories')
     categories.value = data
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
 
-/**
- * Get all invoices
- */
 const getTypeOfServices = async () => {
   try {
     const { data } = await api.get('type-of-services')
     typeOfServices.value = data
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
 /**
- * Get all invoices
+ * Get invoice types
  */
 const getInvoiceTypes = async () => {
   try {
     const { data } = await api.get('invoice-types')
     invoiceTypes.value = data
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
 
-/**
- * Save edit
- */
-const saveEdit = async () => {
-  try {
-    loadingEdit.value = true
-    delete invoice.value.products
-    await api.put(`invoices/${invoice.value.id}`, {
-      ...invoice.value,
-      invoice_type_id: invoice.value?.invoice_type?.id,
-      delivery_person_id: invoice.value?.delivery_person?.id
-    })
-    notify('Factura editada exitosamente', 'positive', 'check_circle')
-    getInvoices(params.value)
-    openEditInvoice.value = false
-  } catch (error) {
-    notify(error.message, 'negative', 'warning')
-  } finally {
-    loadingEdit.value = false
-  }
-}
-/**
- * Change status
- * @param {Object} data invoice
- * @param {Number} index index status
- */
 const nextStatus = async (data, index) => {
   try {
     await api.put(`invoice-status-command/${data.id}`, { status: statuses.value[index].value })
     getInvoices(params.value)
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
 /**
- * Change status
+ * Change status invoice
  * @param {Object} data invoice
  * @param {Number} index index status
  */
@@ -1133,6 +1202,119 @@ const togglePromotionDetails = (promotionId) => {
 .column-command {
   width: 350px;
   overflow-y: auto;
+}
+
+/* Estilos para grid de archivos adjuntos */
+.invoice-files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 12px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.invoice-file-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.invoice-file-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.invoice-file-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.invoice-file-image {
+  width: 100%;
+  height: 100%;
+}
+
+.invoice-file-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.invoice-file-item:hover .invoice-file-overlay {
+  opacity: 1;
+}
+
+.invoice-file-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.invoice-pdf-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  border-radius: 8px;
+  padding: 12px;
+  gap: 8px;
+}
+
+.invoice-pdf-name {
+  font-size: 9px;
+  font-weight: 500;
+  color: #616161;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Scrollbar para el grid */
+.invoice-files-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 3px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-thumb:hover {
+  background: #9e9e9e;
 }
 
 </style>
