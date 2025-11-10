@@ -565,13 +565,9 @@ export default {
         // Close the modal
         emit('update:show', false)
 
-        // Navigate to main billing page if we have router access
-        if (window.location.pathname.includes('table-control')) {
-          // For TableControlPage, we need to refresh the tables view
-          setTimeout(() => {
-            window.location.reload()
-          }, 500)
-        }
+        // NOTE: Removed window.location.reload() because TableControlPage
+        // handles the table update internally via refreshTables() method.
+        // The reload was causing the page to refresh before print operations completed.
       } catch (error) {
         console.error('Error handling table close:', error)
       }

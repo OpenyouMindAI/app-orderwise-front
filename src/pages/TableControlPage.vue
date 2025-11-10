@@ -352,7 +352,7 @@
                 option-label="name"
                 option-value="id"
                 class="category-select"
-                @update:model-value="filterByCategory"
+                @update:model-value="filterProducts"
                 clearable
                 @filter="getCategories"
                 use-input
@@ -448,7 +448,7 @@
           <q-btn
             label="Guardar"
             color="primary"
-            @click="saveInvoice"
+            @click="handleSaveButton"
             :loading="saving"
           />
         </q-card-actions>
@@ -473,7 +473,7 @@
             </p>
             <q-select
               v-model="targetRoom"
-              :options="roomOptionsForTransfer"
+              :options="roomOptions"
               option-label="name"
               option-value="id"
               label="Sala de Destino"
@@ -642,6 +642,9 @@ import { loading, formatNumber } from 'src/const/mixins'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import PaymentModal from 'src/components/PaymentModal.vue'
 
+// Debug mode flag - set to false in production
+const DEBUG_MODE = process.env.NODE_ENV !== 'production'
+
 export default {
   components: {
     DraggableResizableContainer,
@@ -656,7 +659,6 @@ export default {
       users: [],
       clients: [],
       categoryOptions: [],
-      tablesSelected: [],
       selectedRoom: null,
       currentTables: [],
       livingRooms: [],
@@ -700,7 +702,6 @@ export default {
       targetTable: null,
       targetRoom: null,
       transferring: false,
-      availableRooms: [],
       availableTablesForTransfer: [],
 
       // Print state
@@ -742,14 +743,6 @@ export default {
         width: `${this.canvasWidth * 30}px`,
         height: `${this.canvasHeight * 30}px`
       }
-    },
-
-    roomOptionsForTransfer () {
-      return this.livingRooms.map(room => ({
-        ...room,
-        label: room.name,
-        value: room.id
-      }))
     }
   },
 
@@ -897,17 +890,13 @@ export default {
         // Set tableClose first
         this.tableClose = tableClose
 
-        // Add payments to the invoice save
-        const success = await this.saveInvoiceWithPayments(params, action)
+        if (DEBUG_MODE) console.log('💳 Procesando acción de pago:', { action, tableClose })
 
-        if (success && tableClose) {
-          this.clearInvoiceAndCloseModal()
-        } else if (success) {
-          this.showPaymentDialog = false
-          this.invoicePayments = []
-        }
+        // Add payments to the invoice save
+        // saveInvoiceWithPayments now handles modal close and refresh AFTER printing
+        await this.saveInvoiceWithPayments(params, action)
       } catch (error) {
-        console.error('Error in payment action:', error)
+        console.error('❌ Error in payment action:', error)
       } finally {
         this.saving = false
       }
@@ -915,23 +904,84 @@ export default {
 
     async saveInvoiceWithPayments (params, action = 'save') {
       try {
+        if (DEBUG_MODE) {
+          console.log('📋 saveInvoiceWithPayments llamado con:', { action, tableClose: this.tableClose, hasInvoice: !!this.selectedInvoice })
+        }
+
         // Use existing saveInvoice logic but include payments
         this.invoicePayments = params.payments || []
         // DON'T override tableClose - it's already set in handlePaymentAction
         // this.tableClose = params.tableClose || false
         const invoiceToProcess = { ...this.selectedInvoice } // ← GUARDAR COPIA
-        const result = await this.saveInvoice()
 
-        // Handle printing based on action
-        if (result && action === 'invoice') {
-          await ticketPrint(invoiceToProcess)
-        } else if (result && action === 'command') {
-          await commandPrint(invoiceToProcess)
+        if (DEBUG_MODE) {
+          console.log('📄 Invoice a procesar:', {
+            id: invoiceToProcess?.id,
+            code: invoiceToProcess?.code,
+            hasProducts: invoiceToProcess?.products?.length || 0
+          })
         }
 
+        // Skip modal close in saveInvoice - we'll handle it after printing
+        const result = await this.saveInvoice(true)
+
+        if (!result) {
+          if (DEBUG_MODE) console.error('❌ saveInvoice falló, no se procede con impresión')
+          return false
+        }
+
+        if (DEBUG_MODE) {
+          console.log('✅ Factura guardada, procesando impresión...')
+          console.log('🔍 Valor de action:', action, 'Tipo:', typeof action)
+        }
+
+        // Handle printing based on action (BEFORE closing modal)
+        if (action === 'invoice') {
+          if (DEBUG_MODE) console.log('🖨️ Imprimiendo FACTURA (ticketPrint)...')
+          try {
+            await ticketPrint(invoiceToProcess)
+            if (DEBUG_MODE) console.log('✅ ticketPrint completado')
+          } catch (printError) {
+            console.error('❌ Error en ticketPrint:', printError)
+            this.$q.notify({
+              message: 'Error al imprimir factura: ' + printError.message,
+              type: 'warning',
+              icon: 'warning'
+            })
+          }
+        } else if (action === 'command') {
+          if (DEBUG_MODE) console.log('🖨️ Imprimiendo COMANDA (commandPrint)...')
+          try {
+            await commandPrint(invoiceToProcess)
+            if (DEBUG_MODE) console.log('✅ commandPrint completado')
+          } catch (printError) {
+            console.error('❌ Error en commandPrint:', printError)
+            this.$q.notify({
+              message: 'Error al imprimir comanda: ' + printError.message,
+              type: 'warning',
+              icon: 'warning'
+            })
+          }
+        } else {
+          if (DEBUG_MODE) console.log('ℹ️ No se imprime (action=' + action + ')')
+        }
+
+        if (DEBUG_MODE) console.log('✅ Impresión completada, actualizando estado de mesas...')
+
+        // NOW we can close modal and refresh tables
+        if (this.tableClose) {
+          if (DEBUG_MODE) console.log('🔄 Llamando clearInvoiceAndCloseModal...')
+          this.clearInvoiceAndCloseModal()
+        } else {
+          if (DEBUG_MODE) console.log('🔄 Solo cerrando modal de pago...')
+          this.showPaymentDialog = false
+          this.invoicePayments = []
+        }
+
+        if (DEBUG_MODE) console.log('✅ Proceso completado')
         return result
       } catch (error) {
-        console.error('Error saving invoice with payments:', error)
+        console.error('❌ Error saving invoice with payments:', error)
         return false
       }
     },
@@ -940,14 +990,12 @@ export default {
       this.showPaymentDialog = false
 
       if (this.tableClose) {
+        if (DEBUG_MODE) console.log('🔄 Cerrando mesa y actualizando estado...')
         // Free the table first
         if (this.selectedInvoice) {
           this.freeTableAfterClose(this.selectedInvoice)
         }
-        // Clear all invoice data and close modal
-
-        this.invoiceProducts = []
-        this.selectedInvoice = null
+        // Clear invoice payments and close modal (closeInvoiceModal handles the rest)
         this.invoicePayments = []
         this.closeInvoiceModal()
         this.refreshTables()
@@ -1074,9 +1122,14 @@ export default {
       }
     },
 
+    // Helper method to get invoice from table (avoids duplication)
+    getInvoiceFromTable (table) {
+      return table.invoices && table.invoices.length > 0 ? table.invoices[0] : null
+    },
+
     openInvoiceModal (table) {
       this.selectedTable = table
-      this.selectedInvoice = table.invoices && table.invoices.length > 0 ? table.invoices[0] : null
+      this.selectedInvoice = this.getInvoiceFromTable(table)
       this.invoiceProducts = this.selectedInvoice ? [...this.selectedInvoice.products] : []
       this.showInvoiceModal = true
       this.activeTab = 'order'
@@ -1103,7 +1156,7 @@ export default {
     // Quick actions from table view
     quickTransfer (table) {
       this.selectedTable = table
-      this.selectedInvoice = table.invoices && table.invoices.length > 0 ? table.invoices[0] : null
+      this.selectedInvoice = this.getInvoiceFromTable(table)
       if (this.selectedInvoice) {
         this.openTransferDialog()
       }
@@ -1112,12 +1165,10 @@ export default {
     async quickPrint (invoice, type) {
       this.selectedInvoice = invoice
       loading(true)
-      if (this.selectedInvoice) {
-        if (type === 'comanda') {
-          await commandPrint(this.selectedInvoice)
-        } else {
-          await ticketPrint(this.selectedInvoice)
-        }
+      if (type === 'comanda') {
+        await commandPrint(invoice)
+      } else {
+        await ticketPrint(invoice)
       }
       loading(false)
     },
@@ -1265,14 +1316,6 @@ export default {
       }
     },
 
-    searchProducts () {
-      this.filterProducts()
-    },
-
-    filterByCategory () {
-      this.filterProducts()
-    },
-
     filterProducts () {
       this.loadProducts(1, () => {}, {
         barcode: this.productSearch,
@@ -1281,7 +1324,7 @@ export default {
     },
 
     quickAddProduct (product) {
-      this.addProductToInvoice(product, '')
+      this.addProductToInvoice(product)
     },
 
     addProductWithNote (product) {
@@ -1316,7 +1359,7 @@ export default {
       this.cancelNote()
     },
 
-    addProductToInvoice (product, note = '') {
+    addProductToInvoice (product, note = null) {
       // Check if product already exists in invoice
       const existingIndex = this.invoiceProducts.findIndex(p => p.id === product.id)
 
@@ -1399,7 +1442,13 @@ export default {
       }
     },
 
-    async saveInvoice () {
+    async handleSaveButton () {
+      // Called directly from "Guardar" button - always close modal and refresh
+      await this.saveInvoice(false)
+      // saveInvoice already handles closing modal and refreshing tables
+    },
+
+    async saveInvoice (skipModalClose = false) {
       this.saving = true
       try {
         // Update existing invoice
@@ -1481,7 +1530,7 @@ export default {
             total_amount: this.calculateTotal(),
             tables: [this.selectedTable.id],
             electronic_invoice: invoiceType?.bill,
-            voucherType: invoiceType?.bill ? null : null
+            voucherType: null
           }
 
           // Sending invoice creation request
@@ -1497,9 +1546,11 @@ export default {
           color: 'positive'
         })
 
-        // Close modal and refresh tables after successful save
-        this.closeInvoiceModal()
-        this.refreshTables()
+        // Only close modal and refresh if not skipping (i.e., not called from payment flow)
+        if (!skipModalClose) {
+          this.closeInvoiceModal()
+          this.refreshTables()
+        }
         return true
       } catch (err) {
         Notify.create({
@@ -1534,10 +1585,6 @@ export default {
         }
         this.previousFocus = null
       })
-    },
-
-    formatPrice (price) {
-      return (price / 100).toFixed(2)
     },
 
     startPan (event) {
