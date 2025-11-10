@@ -1,10 +1,10 @@
 <template>
   <div class="modern-container q-pa-md">
     <!-- ============================================ -->
-    <!-- VISTA 1: LISTA DE CLIENTES CON SALDO -->
+    <!-- VIEW 1: CLIENT LIST WITH PENDING BALANCE -->
     <!-- ============================================ -->
     <div v-if="!selectedClient" class="fade-in">
-      <!-- Header con gradiente -->
+      <!-- Header with gradient -->
       <div class="modern-header">
         <div class="header-content">
           <div class="header-title-section">
@@ -34,7 +34,7 @@
         </div>
       </div>
 
-      <!-- KPIs Globales - Estilo Moderno -->
+      <!-- Global KPIs - Modern Style -->
       <div class="kpi-grid">
         <div class="kpi-card kpi-danger hover-lift">
           <div class="kpi-icon-wrapper gradient-danger">
@@ -93,7 +93,7 @@
         </div>
       </div>
 
-      <!-- Tabla de Clientes -->
+      <!-- Clients Table -->
       <q-card>
         <q-card-section>
           <div class="row items-center q-mb-md">
@@ -179,10 +179,10 @@
     </div>
 
     <!-- ============================================ -->
-    <!-- VISTA 2: ESTADO DE CUENTA DEL CLIENTE -->
+    <!-- VIEW 2: CLIENT ACCOUNT STATEMENT -->
     <!-- ============================================ -->
     <div v-else class="fade-in">
-      <!-- Header del Cliente - Moderno -->
+      <!-- Client Header - Modern -->
       <div class="client-header">
         <div class="client-header-content">
           <div class="client-info-section">
@@ -227,7 +227,7 @@
         </div>
       </div>
 
-      <!-- Resumen del Cliente - Compacto -->
+      <!-- Client Summary - Compact -->
       <div class="client-summary-grid">
         <div class="summary-card summary-danger hover-lift">
           <div class="summary-icon gradient-danger">
@@ -260,7 +260,7 @@
         </div>
       </div>
 
-      <!-- Tabla de Movimientos (Estilo Banco) -->
+      <!-- Transactions Table (Bank Style) -->
       <div class="statement-container">
         <q-card class="modern-card">
           <div class="table-header">
@@ -319,7 +319,7 @@
               </q-tr>
             </template>
 
-            <!-- Template unificado para todas las celdas -->
+            <!-- Unified template for all cells -->
             <template #body-cell="props">
               <q-td :props="props" :class="props.row.type === 'invoice' ? 'bg-red-1' : 'bg-green-1'">
                 <template v-if="props.col.name === 'description'">
@@ -331,7 +331,7 @@
                       class="q-mr-sm"
                     />
                     <q-btn
-                      v-if="props.row.type === 'invoice' && props.row.invoice.invoicePayments?.length > 0"
+                      v-if="props.row.type === 'invoice' && props.row.invoice.invoice_payments?.length > 0"
                       size="sm"
                       flat
                       dense
@@ -406,7 +406,7 @@
               </q-td>
             </template>
 
-            <!-- Fila expandida para mostrar pagos de la factura -->
+            <!-- Expanded row to show invoice payments -->
             <template #body="props">
               <q-tr :props="props">
                 <q-td
@@ -424,7 +424,7 @@
                         class="q-mr-xs"
                       />
                       <q-btn
-                        v-if="(props.row.type === 'invoice' && props.row.invoice.invoicePayments?.length > 0) || (props.row.type === 'payment' && props.row.affected_invoices?.length > 0)"
+                        v-if="(props.row.type === 'invoice' && props.row.invoice.invoice_payments?.length > 0) || (props.row.type === 'payment' && props.row.affected_invoices?.length > 0)"
                         size="xs"
                         flat
                         dense
@@ -522,14 +522,14 @@
                 </q-td>
               </q-tr>
 
-              <!-- Fila expandida: Pagos de una factura -->
+              <!-- Expanded row: Invoice payments -->
               <q-tr v-if="props.row.expanded && props.row.type === 'invoice'" :props="props">
                 <q-td colspan="100%" class="bg-blue-1">
                   <div class="q-pa-md">
                     <div class="row items-center q-mb-sm">
                       <q-icon name="payments" color="positive" size="md" class="q-mr-sm" />
                       <div class="text-subtitle1 text-weight-bold text-positive">
-                        Pagos aplicados a esta factura ({{ props.row.invoice.invoicePayments?.length || 0 }})
+                        Pagos aplicados a esta factura ({{ props.row.invoice.invoice_payments?.length || 0 }})
                       </div>
                     </div>
                     <q-markup-table dense flat bordered class="shadow-2">
@@ -543,12 +543,12 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr v-for="payment in props.row.invoice.invoicePayments" :key="payment.id" class="bg-white">
+                        <tr v-for="payment in props.row.invoice.invoice_payments" :key="payment.id" class="bg-white">
                           <td class="text-weight-medium">{{ formatDate(payment.created_at) }}</td>
                           <td class="text-grey-7">{{ formatTime(payment.created_at) }}</td>
                           <td>
                             <q-chip dense color="positive" text-color="white" size="sm">
-                              {{ payment.paymentMethod?.name }}
+                              {{ payment.payment_method?.name }}
                             </q-chip>
                           </td>
                           <td class="text-grey-7">{{ payment.reference || '-' }}</td>
@@ -564,7 +564,7 @@
                 </q-td>
               </q-tr>
 
-              <!-- Fila expandida: Facturas afectadas por un pago -->
+              <!-- Expanded row: Invoices affected by a payment -->
               <q-tr v-if="props.row.expanded && props.row.type === 'payment' && props.row.affected_invoices" :props="props">
                 <q-td colspan="100%" class="bg-orange-1">
                   <div class="q-pa-md">
@@ -626,7 +626,7 @@
     </div>
 
     <!-- ============================================ -->
-    <!-- DIALOG: REGISTRAR PAGO GLOBAL -->
+    <!-- DIALOG: REGISTER GLOBAL PAYMENT -->
     <!-- ============================================ -->
     <q-dialog v-model="paymentDialog" persistent>
       <q-card style="width: 500px; max-width: 90vw;">
@@ -698,7 +698,7 @@
     </q-dialog>
 
     <!-- ============================================ -->
-    <!-- DIALOG: COMPROBANTE DE PAGO -->
+    <!-- DIALOG: PAYMENT RECEIPT -->
     <!-- ============================================ -->
     <q-dialog v-model="paymentReceiptDialog" persistent>
       <q-card class="payment-receipt-card">
@@ -715,7 +715,7 @@
         <q-separator />
 
         <q-card-section class="receipt-content">
-          <!-- Información del Cliente -->
+          <!-- Client Information -->
           <div class="receipt-section">
             <div class="receipt-section-title">Cliente</div>
             <div class="receipt-info">
@@ -724,7 +724,7 @@
             </div>
           </div>
 
-          <!-- Información del Pago -->
+          <!-- Payment Information -->
           <div class="receipt-section">
             <div class="receipt-section-title">Detalles del Pago</div>
             <div class="receipt-details">
@@ -742,12 +742,12 @@
               </div>
               <div class="receipt-row">
                 <span class="receipt-label">Método de Pago:</span>
-                <span class="receipt-value">{{ paymentReceipt?.payment?.paymentMethod?.name || getPaymentMethodName(paymentReceipt?.payment?.payment_method_id) }}</span>
+                <span class="receipt-value">{{ paymentReceipt?.payment?.payment_method?.name || getPaymentMethodName(paymentReceipt?.payment?.payment_method_id) }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Distribución del Pago -->
+          <!-- Payment Distribution -->
           <div class="receipt-section">
             <div class="receipt-section-title">
               Distribución del Pago
@@ -799,7 +799,7 @@
     </q-dialog>
 
     <!-- ============================================ -->
-    <!-- DIALOG: DETALLE DE FACTURA -->
+    <!-- DIALOG: INVOICE DETAIL -->
     <!-- ============================================ -->
     <q-dialog v-model="invoiceDetailDialog" :maximized="$q.screen.lt.sm">
       <q-card class="invoice-detail-card">
@@ -825,9 +825,9 @@
         <q-separator />
 
         <q-card-section class="invoice-detail-content" v-if="selectedInvoice">
-          <!-- Información General y Totales -->
+          <!-- General Information and Totals -->
           <div class="row q-col-gutter-md q-mb-md">
-            <!-- Cliente y Fechas -->
+            <!-- Client and Dates -->
             <div class="col-12 col-md-6">
               <div class="detail-card">
                 <div class="detail-card-title">
@@ -849,7 +849,7 @@
               </div>
             </div>
 
-            <!-- Totales -->
+            <!-- Totals -->
             <div class="col-12 col-md-6">
               <div class="detail-card totals-card">
                 <div class="detail-card-title">
@@ -872,7 +872,7 @@
             </div>
           </div>
 
-          <!-- Productos -->
+          <!-- Products -->
           <div class="detail-section">
             <div class="detail-section-title">
               <q-icon name="inventory_2" size="20px" />
@@ -901,31 +901,50 @@
             </div>
           </div>
 
-          <!-- Pagos Aplicados -->
-          <div class="detail-section" v-if="selectedInvoice.invoicePayments?.length > 0">
+          <!-- Applied Payments -->
+          <div class="detail-section" v-if="selectedInvoice.invoice_payments?.length > 0">
             <div class="detail-section-title">
               <q-icon name="payments" size="20px" />
               Pagos Aplicados
-              <q-badge color="positive" :label="selectedInvoice.invoicePayments?.length || 0" />
+              <q-badge color="positive" :label="selectedInvoice.invoice_payments?.length || 0" />
             </div>
-            <div class="payments-list">
-              <div
-                v-for="payment in selectedInvoice.invoicePayments"
-                :key="payment.id"
-                class="payment-item"
-              >
-                <div class="payment-icon">
-                  <q-icon name="check_circle" color="positive" size="24px" />
-                </div>
-                <div class="payment-info">
-                  <div class="payment-method">{{ payment.paymentMethod?.name }}</div>
-                  <div class="payment-date">{{ formatDateTime(payment.created_at) }}</div>
-                  <div class="payment-ref" v-if="payment.reference">Ref: {{ payment.reference }}</div>
-                </div>
-                <div class="payment-amount">
-                  {{ formatCurrency(payment.amount) }}
-                </div>
-              </div>
+            <div class="products-table">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Método de Pago</th>
+                    <th>Fecha</th>
+                    <th>Referencia</th>
+                    <th class="text-right">Monto</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="payment in selectedInvoice.invoice_payments" :key="payment.id">
+                    <td>
+                      <div class="row items-center no-wrap">
+                        <q-icon name="check_circle" color="positive" size="18px" class="q-mr-sm" />
+                        <span>{{ payment.payment_method?.name }}</span>
+                      </div>
+                    </td>
+                    <td>{{ formatDateTime(payment.created_at) }}</td>
+                    <td>{{ payment.reference || '-' }}</td>
+                    <td class="text-right text-weight-bold text-positive">{{ formatCurrency(payment.amount) }}</td>
+                    <td class="text-center">
+                      <q-btn
+                        icon="delete"
+                        size="sm"
+                        round
+                        flat
+                        color="negative"
+                        @click="confirmDeletePayment(payment)"
+                      >
+                        <q-tooltip>Eliminar pago</q-tooltip>
+                      </q-btn>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </q-card-section>
@@ -955,7 +974,7 @@
     </q-dialog>
 
     <!-- ============================================ -->
-    <!-- DIALOG: FILTROS -->
+    <!-- DIALOG: FILTERS -->
     <!-- ============================================ -->
     <q-dialog v-model="filterDialog">
       <q-card class="filter-dialog">
@@ -977,7 +996,7 @@
         <q-separator />
 
         <q-card-section class="filter-content">
-          <!-- Sucursal -->
+          <!-- Branch Office -->
           <div class="filter-group">
             <label class="filter-label">
               <q-icon name="store" size="18px" />
@@ -997,7 +1016,7 @@
             />
           </div>
 
-          <!-- Estado de Cuenta -->
+          <!-- Account Status -->
           <div class="filter-group">
             <label class="filter-label">
               <q-icon name="account_balance" size="18px" />
@@ -1037,7 +1056,7 @@
             </div>
           </div>
 
-          <!-- Buscar Cliente -->
+          <!-- Search Client -->
           <div class="filter-group">
             <label class="filter-label">
               <q-icon name="search" size="18px" />
@@ -1053,7 +1072,7 @@
             />
           </div>
 
-          <!-- Rango de Fechas -->
+          <!-- Date Range -->
           <div class="filter-group">
             <label class="filter-label">
               <q-icon name="event" size="18px" />
@@ -1083,7 +1102,7 @@
             </div>
           </div>
 
-          <!-- Saldo Mínimo -->
+          <!-- Minimum Balance -->
           <div class="filter-group">
             <label class="filter-label">
               <q-icon name="attach_money" size="18px" />
@@ -1124,7 +1143,7 @@
     </q-dialog>
 
     <!-- ============================================ -->
-    <!-- DIALOG: PAGO ESPECÍFICO DE FACTURA -->
+    <!-- DIALOG: SPECIFIC INVOICE PAYMENT -->
     <!-- ============================================ -->
     <q-dialog v-model="invoicePaymentDialog" persistent>
       <q-card style="width: 500px; max-width: 90vw;">
@@ -1538,37 +1557,37 @@ export default {
      */
     async loadBranchOffices () {
       try {
-        // Obtener todas las sucursales
+        // Get all branch offices
         const { data: allBranchOffices } = await this.$api.get('branch-offices')
 
-        // Si es root, mostrar todas las sucursales
+        // If root, show all branch offices
         if (this.user?.is_root) {
           this.availableBranchOffices = [
             { id: null, name: 'Todas las sucursales' },
             ...allBranchOffices
           ]
         } else {
-          // Si no es root, obtener las sucursales asignadas al usuario
+          // If not root, get branch offices assigned to the user
           try {
             const { data: userBranchOffices } = await this.$api.get('branch-offices')
 
-            // Filtrar solo las sucursales que el usuario tiene asignadas
+            // Filter only branch offices assigned to the user
             if (userBranchOffices && userBranchOffices.length > 0) {
               this.availableBranchOffices = allBranchOffices.filter(bo =>
                 userBranchOffices.some(ubo => ubo.id === bo.id)
               )
             } else {
-              // Si no tiene sucursales asignadas, mostrar todas
+              // If no branch offices assigned, show all
               this.availableBranchOffices = allBranchOffices
             }
           } catch (error) {
             console.error('Error loading user branch offices:', error)
-            // En caso de error, mostrar todas las sucursales
+            // In case of error, show all branch offices
             this.availableBranchOffices = allBranchOffices
           }
         }
 
-        // Establecer la sucursal seleccionada por defecto
+        // Set default selected branch office
         this.selectedBranchOffice = this.branchOffice?.id || null
       } catch (error) {
         console.error('Error loading branch offices:', error)
@@ -1717,10 +1736,10 @@ export default {
 
         notify('Pago registrado y distribuido exitosamente', 'positive', 'check_circle')
 
-        // Guardar referencia del cliente antes de cerrar el dialog
+        // Save client reference before closing dialog
         const clientId = this.paymentClient.id
 
-        // Guardar datos del pago para el comprobante
+        // Save payment data for receipt
         this.paymentReceipt = {
           payment: data.payment,
           distributed_payments: data.distributed_payments,
@@ -1730,21 +1749,21 @@ export default {
 
         this.closePaymentDialog()
 
-        // Mostrar dialog de confirmación DESPUÉS de cerrar el dialog de pago
+        // Show confirmation dialog AFTER closing payment dialog
         setTimeout(() => {
           this.paymentReceiptDialog = true
         }, 300)
 
-        // Refresh data sin cambiar de vista
+        // Refresh data without changing view
         if (this.selectedClient) {
-          // Si estamos viendo el detalle del cliente, recargar su estado de cuenta
+          // If viewing client detail, reload their account statement
           const { data: updatedStatement } = await this.$api.get(`client-statement/clients/${clientId}`, {
             params: {
               branch_office_id: this.branchOffice?.id
             }
           })
 
-          // Agregar propiedad expanded a cada transacción
+          // Add expanded property to each transaction
           updatedStatement.transactions.forEach(t => {
             t.expanded = false
           })
@@ -1753,7 +1772,7 @@ export default {
           this.filteredTransactions = updatedStatement.transactions
           this.transactionFilter = 'all'
         } else {
-          // Si estamos en la lista, solo recargar la lista
+          // If in list view, just reload the list
           this.loadClients()
         }
       } catch (error) {
@@ -1783,11 +1802,11 @@ export default {
       try {
         loading(true)
 
-        // Construir el objeto de recibo desde la fila
+        // Build receipt object from row
         const payment = row.payment
         const affectedInvoices = row.affected_invoices || []
 
-        // Crear estructura de comprobante
+        // Create receipt structure
         const receipt = {
           payment,
           distributed_payments: affectedInvoices.map(inv => ({
@@ -1798,7 +1817,7 @@ export default {
           total_amount: row.credit || 0
         }
 
-        // Generar comprobante
+        // Generate receipt
         await this.generatePrintableReceipt(receipt)
 
         notify('Comprobante generado', 'positive', 'check')
@@ -1827,11 +1846,11 @@ export default {
       try {
         loading(true)
 
-        // Por ahora, generar un reporte simple con los datos disponibles
-        // TODO: Implementar endpoint en el backend para generar PDF profesional
+        // For now, generate a simple report with available data
+        // TODO: Implement backend endpoint to generate professional PDF
         notify('Generando comprobante...', 'info', 'info')
 
-        // Crear contenido HTML para imprimir
+        // Create HTML content for printing
         const printWindow = window.open('', '_blank')
         const paymentId = receiptData.payment?.id || 'N/A'
         const paymentDate = receiptData.payment?.date || this.formatDate(receiptData.payment?.created_at) || new Date().toLocaleDateString()
@@ -1892,7 +1911,7 @@ export default {
               ` : ''}
               <div class="info-row">
                 <span class="label">Método de Pago:</span>
-                <span class="value">${receiptData.payment?.paymentMethod?.name || this.getPaymentMethodName(receiptData.payment?.payment_method_id)}</span>
+                <span class="value">${receiptData.payment?.payment_method?.name || this.getPaymentMethodName(receiptData.payment?.payment_method_id)}</span>
               </div>
             </div>
 
@@ -1959,12 +1978,64 @@ export default {
     },
 
     /**
+     * Confirms deletion of a payment
+     * Shows confirmation dialog before deleting
+     * @param {Object} payment - Payment to delete
+     */
+    confirmDeletePayment (payment) {
+      this.$q.dialog({
+        title: 'Confirmar Eliminación',
+        message: `¿Está seguro de eliminar este pago de ${this.formatCurrency(payment.amount)}?`,
+        cancel: {
+          label: 'Cancelar',
+          color: 'grey-7',
+          flat: true
+        },
+        ok: {
+          label: 'Eliminar',
+          color: 'negative',
+          unelevated: true
+        },
+        persistent: true
+      }).onOk(async () => {
+        await this.deletePayment(payment)
+      })
+    },
+
+    /**
+     * Deletes a payment from an invoice
+     * Refreshes invoice detail after deletion
+     * @param {Object} payment - Payment to delete
+     */
+    async deletePayment (payment) {
+      try {
+        loading(true)
+        await this.$api.delete(`invoice-payments/${payment.id}`)
+
+        notify('Pago eliminado correctamente', 'positive', 'check_circle')
+
+        // Reload invoice detail
+        await this.viewInvoiceDetail({ id: this.selectedInvoice.id })
+
+        // If viewing client account statement, reload it too
+        if (this.selectedClient) {
+          await this.viewClientStatement(null, this.selectedClient)
+        }
+      } catch (error) {
+        notify('Error al eliminar el pago', 'negative', 'warning')
+        console.error('Error deleting payment:', error)
+      } finally {
+        loading(false)
+      }
+    },
+
+    /**
      * Prints the current invoice
      * Opens the browser's print dialog
      */
     printInvoice () {
-      // Aquí puedes implementar la impresión de la factura
-      // Por ahora, abrimos la vista de impresión del navegador
+      // Here you can implement invoice printing
+      // For now, we open the browser's print view
       window.print()
     },
 
@@ -2149,19 +2220,19 @@ export default {
 
         notify('Pago registrado exitosamente', 'positive', 'check_circle')
 
-        // Guardar referencia del cliente antes de cerrar el dialog
+        // Save client reference before closing dialog
         const clientId = this.selectedClient.id
 
         this.closeInvoicePaymentDialog()
 
-        // Refresh statement sin cambiar de vista
+        // Refresh statement without changing view
         const { data: updatedStatement } = await this.$api.get(`client-statement/clients/${clientId}`, {
           params: {
             branch_office_id: this.branchOffice?.id
           }
         })
 
-        // Agregar propiedad expanded a cada transacción
+        // Add expanded property to each transaction
         updatedStatement.transactions.forEach(t => {
           t.expanded = false
         })
@@ -2233,7 +2304,7 @@ body.body--dark .branch-badge {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Animaciones */
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -2258,7 +2329,7 @@ body.body--dark .branch-badge {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-/* Header Moderno */
+/* Modern Header */
 .modern-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 24px;
@@ -2353,7 +2424,7 @@ body.body--dark .branch-badge {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* KPI Cards - Estilo HeroUI - Compacto */
+/* KPI Cards - HeroUI Style - Compact */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -2447,7 +2518,7 @@ body.body--dark .branch-badge {
   font-weight: 500;
 }
 
-/* Client Header - Moderno y Compacto */
+/* Client Header - Modern and Compact */
 .client-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 16px;
@@ -2533,7 +2604,7 @@ body.body--dark .branch-badge {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Client Summary Grid - Compacto */
+/* Client Summary Grid - Compact */
 .client-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2595,7 +2666,7 @@ body.body--dark .branch-badge {
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Gradientes */
+/* Gradients */
 .gradient-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
@@ -2616,7 +2687,7 @@ body.body--dark .branch-badge {
   background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
 }
 
-/* Tabla moderna */
+/* Modern table */
 .cursor-pointer {
   cursor: pointer;
 }
@@ -2663,7 +2734,7 @@ body.body--dark .table-title {
   transform: translateY(-2px);
 }
 
-/* Estilos para la tabla de estado de cuenta - Minimalista y Compacta */
+/* Account statement table styles - Minimalist and Compact */
 .statement-table {
   border-radius: 12px;
   overflow: hidden;
@@ -2699,7 +2770,7 @@ body.body--dark .statement-table >>> tbody td {
   border-bottom-color: #334155;
 }
 
-/* Filas de facturas - Rojo vibrante */
+/* Invoice rows - Vibrant red */
 .statement-table >>> .bg-red-1 {
   background: #fee2e2 !important;
   border-left: 3px solid #ef4444;
@@ -2711,7 +2782,7 @@ body.body--dark .statement-table >>> .bg-red-1 {
   border-left-color: #dc2626;
 }
 
-/* Filas de pagos - Verde vibrante */
+/* Payment rows - Vibrant green */
 .statement-table >>> .bg-green-1 {
   background: #dcfce7 !important;
   border-left: 3px solid #22c55e;
@@ -2723,7 +2794,7 @@ body.body--dark .statement-table >>> .bg-green-1 {
   border-left-color: #16a34a;
 }
 
-/* Hover effect - Minimalista */
+/* Hover effect - Minimalist */
 .statement-table >>> tbody tr:hover td {
   background-color: rgba(0, 0, 0, 0.02);
 }
@@ -2732,7 +2803,7 @@ body.body--dark .statement-table >>> tbody tr:hover td {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Sección expandida - Minimalista */
+/* Expanded section - Minimalist */
 .statement-table >>> .bg-blue-1 {
   background: #dbeafe !important;
   border-left: 3px solid #3b82f6;
@@ -2753,7 +2824,7 @@ body.body--dark .statement-table >>> .bg-orange-1 {
   border-left-color: #fb923c;
 }
 
-/* Tablas internas en expand - Compactas */
+/* Inner tables in expand - Compact */
 .statement-table >>> .q-markup-table {
   border-radius: 8px;
   overflow: hidden;
@@ -2786,14 +2857,14 @@ body.body--dark .statement-table >>> .q-markup-table td {
   border-bottom-color: #334155;
 }
 
-/* Reducir padding en secciones expandidas */
+/* Reduce padding in expanded sections */
 .statement-table >>> .bg-blue-1 .q-pa-md,
 .statement-table >>> .bg-orange-1 .q-pa-md {
   padding: 12px !important;
 }
 
 /* ============================================ */
-/* INVOICE DETAIL DIALOG - Detalle de Factura */
+/* INVOICE DETAIL DIALOG - Invoice Detail */
 /* ============================================ */
 
 .invoice-detail-card {
@@ -3048,7 +3119,7 @@ body.body--dark .invoice-detail-actions {
 }
 
 /* ============================================ */
-/* PAYMENT RECEIPT DIALOG - Comprobante de Pago */
+/* PAYMENT RECEIPT DIALOG - Payment Receipt */
 /* ============================================ */
 
 .payment-receipt-card {
@@ -3202,7 +3273,7 @@ body.body--dark .receipt-actions {
 }
 
 /* ============================================ */
-/* FILTER DIALOG - Minimalista y Moderno */
+/* FILTER DIALOG - Minimalist and Modern */
 /* ============================================ */
 
 .filter-dialog {
