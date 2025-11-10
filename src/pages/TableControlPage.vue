@@ -417,7 +417,7 @@
             </div>
             <div v-if="!loadingProducts && filteredProducts.length === 0" class="empty-products-search">
               <q-icon name="search_off" size="3rem" class="empty-search-icon" />
-              <p>No se encontraron productos</p>
+              <p>{{ emptyProductsMessage }}</p>
             </div>
           </q-tab-panel>
         </q-tab-panels>
@@ -688,6 +688,7 @@ export default {
       selectedCategory: null,
       filteredProducts: [],
       loadingProducts: false,
+      searchTimer: null,
 
       // Note dialog state
       showNoteDialog: false,
@@ -743,12 +744,33 @@ export default {
         width: `${this.canvasWidth * 30}px`,
         height: `${this.canvasHeight * 30}px`
       }
+    },
+
+    emptyProductsMessage () {
+      if (this.productSearch || this.selectedCategory) {
+        return 'No se encontraron productos con los filtros aplicados'
+      }
+      return 'No hay productos disponibles'
     }
   },
 
   watch: {
-    selectedCategory (val) {
+    selectedCategory (newVal, oldVal) {
+      // Reset products when category changes
       this.filteredProducts = []
+      this.lastPageRequest = 0
+
+      // Reload products with new category filter
+      if (newVal !== oldVal) {
+        this.filterProducts()
+      }
+    },
+
+    activeTab (newTab) {
+      // Load products when switching to products tab if empty
+      if (newTab === 'products' && this.filteredProducts.length === 0) {
+        this.loadProducts(1, () => {}, {})
+      }
     }
   },
 
@@ -1317,10 +1339,30 @@ export default {
     },
 
     filterProducts () {
-      this.loadProducts(1, () => {}, {
-        barcode: this.productSearch,
-        name: this.productSearch
-      })
+      // Clear any existing timer to debounce search
+      if (this.searchTimer) {
+        clearTimeout(this.searchTimer)
+      }
+
+      // If search is empty, load all products
+      if (!this.productSearch || this.productSearch.trim() === '') {
+        this.filteredProducts = []
+        this.lastPageRequest = 0
+        this.loadProducts(1, () => {}, {})
+        return
+      }
+
+      // Debounce search to avoid excessive API calls
+      this.searchTimer = setTimeout(() => {
+        // Clear products before filtering to avoid accumulation
+        this.filteredProducts = []
+        this.lastPageRequest = 0
+
+        this.loadProducts(1, () => {}, {
+          barcode: this.productSearch,
+          name: this.productSearch
+        })
+      }, 400) // 400ms delay
     },
 
     quickAddProduct (product) {
@@ -2543,7 +2585,6 @@ body.body--dark {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 1rem;
-  flex: 1;
 }
 
 .product-card {
@@ -2557,6 +2598,7 @@ body.body--dark {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  height: 100%;
 }
 
 .product-card:hover {
@@ -2591,6 +2633,7 @@ body.body--dark {
   flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0.3rem;
   margin-bottom: 0.8rem;
 }
