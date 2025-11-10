@@ -111,6 +111,12 @@
               />
                 <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="client.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
             <!-- Sección de Dirección para Editar -->
             <div class="col-12">
               <AddressComponent
@@ -195,6 +201,12 @@
                 label="Número de teléfono"
               />
                 <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="client.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
             </div>
             <!-- Sección de Dirección para Agregar -->
             <div class="col-12">
@@ -345,7 +357,8 @@ export default {
         phone_number: '',
         address: '',
         condition_iva_receptor: null,
-        document_type: null
+        document_type: null,
+        is_credit: false
       }
       this.role = null
 
@@ -366,7 +379,8 @@ export default {
         phone_number: '',
         address: '',
         condition_iva_receptor: null,
-        document_type: null
+        document_type: null,
+        is_credit: false
       }
       this.role = null
       this.address = null

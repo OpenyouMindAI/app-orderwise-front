@@ -457,6 +457,12 @@
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="client.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
                 v-model="client.address"
@@ -728,7 +734,9 @@ export default {
        * Client form data
        * @type {Object}
        */
-      client: {},
+      client: {
+        is_credit: false
+      },
       /**
        * Edit tab
        * @type {String}
@@ -1347,6 +1355,9 @@ export default {
       this.openAddInvoice = false
       this.openEditInvoice = false
       this.coin = {}
+      this.client = {
+        is_credit: false
+      }
     },
     /**
      * Search beneficiary

@@ -321,6 +321,11 @@
               v-model="newClient.users.phone_number"
               label="Teléfono"
               outlined
+              class="q-mb-md input-style"
+            />
+            <q-checkbox
+              v-model="newClient.is_credit"
+              label="¿Maneja cuenta corriente?"
               class="input-style"
             />
           </q-card-section>
@@ -409,7 +414,11 @@ const clientSearch = ref('')
 const newClient = ref({
   name: '',
   email: '',
-  phone_number: ''
+  phone_number: '',
+  is_credit: false,
+  users: {
+    phone_number: ''
+  }
 })
 
 // Transfer State
@@ -852,14 +861,23 @@ const addNewClient = () => {
     id: newId,
     name: newClient.value.name.trim(),
     email: newClient.value.email.trim(),
-    phone_number: newClient.value.users.phone_number.trim()
+    phone_number: newClient.value.users.phone_number.trim(),
+    is_credit: newClient.value.is_credit || false
   }
 
   clients.value.push(clientData)
   selectedClient.value = clientData
 
   // Reset form
-  newClient.value = { name: '', email: '', phone_number: '' }
+  newClient.value = {
+    name: '',
+    email: '',
+    phone_number: '',
+    is_credit: false,
+    users: {
+      phone_number: ''
+    }
+  }
   toggleClientDialog(false)
 
   $q.notify({

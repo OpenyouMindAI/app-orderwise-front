@@ -1117,6 +1117,12 @@
                 label="Número de teléfono"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="clientAdded.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
             <!-- Sección de Dirección -->
             <div class="col-12">
               <AddressComponent
@@ -3872,7 +3878,9 @@ export default {
      */
     closeAddClientModal () {
       this.openAddClient = false
-      this.clientAdded = {}
+      this.clientAdded = {
+        is_credit: false
+      }
       this.address = null
       // Resetear el componente AddressComponent incrementando su key
       this.addressComponentKey += 1
