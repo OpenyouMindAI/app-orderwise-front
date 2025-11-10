@@ -174,11 +174,7 @@
                 />
               </div>
               <div class="col-6">
-                <q-input label="Cliente" filled v-model="invoice.client.name" readonly dense>
-                  <template v-slot:append>
-                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
-                  </template>
-                </q-input>
+                <q-input label="Cliente" filled v-model="invoice.client.name" readonly dense/>
               </div>
               <div class="col-6" v-if="invoice.seller">
                 <q-input label="Vendedor" filled v-model="invoice.seller.name" readonly dense/>
@@ -413,70 +409,6 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddClient" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveClient">
-          <q-card-section class="row items-center q-py-sm text-white bg-primary">
-            <div class="text-h6">Agregar cliente</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
-          </q-card-section>
-          <q-card-section class="row">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.document_number"
-                label="Número de documento"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                autofocus
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="client.name"
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="client.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.phone_number"
-                label="Número de teléfono"
-                :rules="[val => !!val || 'El campo es requerido.']"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-checkbox
-                v-model="client.is_credit"
-                label="¿Maneja cuenta corriente?"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.address"
-                label="Dirección"
-                type="textarea"
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" icon="save" label="Guardar" type="submit" :loading="loadingClient"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
     <q-dialog
       v-model="dialogFilter"
       position="right"
@@ -689,11 +621,6 @@ export default {
        */
       dialogFilter: false,
       /**
-       * Loading client status
-       * @type {Boolean}
-       */
-      loadingClient: false,
-      /**
        * Visible columns
        * @type {Array}
        */
@@ -717,11 +644,6 @@ export default {
        * @type {Function}
        */
       formatNumber,
-      /**
-       * Dialog client status
-       * @type {Boolean}
-       */
-      openAddClient: false,
       printers: [],
       /**
        * Taxe translate
@@ -729,13 +651,6 @@ export default {
        */
       taxeTranslate: {
         percentage: '%'
-      },
-      /**
-       * Client form data
-       * @type {Object}
-       */
-      client: {
-        is_credit: false
       },
       /**
        * Edit tab
@@ -1355,9 +1270,6 @@ export default {
       this.openAddInvoice = false
       this.openEditInvoice = false
       this.coin = {}
-      this.client = {
-        is_credit: false
-      }
     },
     /**
      * Search beneficiary
@@ -1473,23 +1385,6 @@ export default {
         }
       }
       return data
-    },
-    /**
-     * Save clients
-     */
-    saveClient () {
-      this.loadingClient = true
-      this.$api.put(`clients/${this.invoice.client.id}`, this.client)
-        .then(({ data }) => {
-          this.openAddClient = false
-          this.loadingClient = false
-          this.invoice.client = data
-          notify('Cliente guardado exitosamente', 'positive', 'check_circle')
-        })
-        .catch(err => {
-          this.loadingClient = false
-          notify(err.message, 'negative', 'warning')
-        })
     },
     /**
      * Edit invoice
