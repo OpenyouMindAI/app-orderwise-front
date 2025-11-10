@@ -141,6 +141,7 @@
         />
       </div>
     </div>
+    <!-- Command Modal -->
     <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal" @before-show="storeActiveElement" @hide="restoreFocus">
       <q-card class="invoice-card">
         <q-card-section class="invoice-header bg-primary text-white">
@@ -211,15 +212,24 @@
           <q-tab name="order" label="Pedido" icon="restaurant" />
           <q-tab name="products" label="Productos" icon="add_shopping_cart" />
         </q-tabs>
-
+        <div class="customer-section q-px-md q-pt-md">
+          <q-select
+            :hide-dropdown-icon="$q.platform.is.nativeMobile"
+            use-input
+            filled
+            dense
+            label="Cliente"
+            input-debounce="0"
+            option-value="id"
+            v-model="client"
+            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+            :options="clients"
+            @filter="filterClients"
+          />
+        </div>
         <q-separator />
         <q-tab-panels v-model="activeTab" class="invoice-body">
           <q-tab-panel name="order">
-            <div v-if="selectedInvoice?.client" class="customer-section">
-              <div class="customer-info">
-                <span class="customer-name">Cliente: {{ selectedInvoice.client.name }}</span>
-              </div>
-            </div>
             <div class="products-section column q-gutter-y-sm q-pb-sm">
               <span class="text-h6">
                 <q-icon name="restaurant" />
@@ -658,6 +668,7 @@ export default {
       typeOfServices: [],
       users: [],
       clients: [],
+      client: null,
       categoryOptions: [],
       selectedRoom: null,
       currentTables: [],
@@ -770,6 +781,14 @@ export default {
       // Load products when switching to products tab if empty
       if (newTab === 'products' && this.filteredProducts.length === 0) {
         this.loadProducts(1, () => {}, {})
+      }
+    },
+
+    client (client) {
+      // Update selectedInvoice when client changes
+      if (this.selectedInvoice) {
+        this.selectedInvoice.client = client
+        this.selectedInvoice.client_id = client?.id || null
       }
     }
   },
@@ -1153,6 +1172,7 @@ export default {
       this.selectedTable = table
       this.selectedInvoice = this.getInvoiceFromTable(table)
       this.invoiceProducts = this.selectedInvoice ? [...this.selectedInvoice.products] : []
+      this.client = this.selectedInvoice?.client || null
       this.showInvoiceModal = true
       this.activeTab = 'order'
     },
@@ -1161,6 +1181,7 @@ export default {
       this.selectedTable = table
       this.selectedInvoice = null
       this.invoiceProducts = []
+      this.client = null
       this.showInvoiceModal = true
       this.activeTab = 'products'
     },
@@ -1170,6 +1191,7 @@ export default {
       this.selectedTable = null
       this.selectedInvoice = null
       this.invoiceProducts = []
+      this.client = null
       this.activeTab = 'order'
       this.productSearch = ''
       this.selectedCategory = null
@@ -1482,6 +1504,31 @@ export default {
       } catch (error) {
         console.error('Error fetching clients:', error)
       }
+    },
+
+    filterClients (value, update) {
+      this.$api.get('clients', {
+        params: {
+          sortBy: 'id',
+          sortOrder: 'desc',
+          dataSearch: {
+            name: value,
+            document_number: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.clients = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
     },
 
     async handleSaveButton () {
@@ -2369,6 +2416,10 @@ body.body--dark {
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: 1rem;
+}
+
+.customer-section {
+  padding: 0.5rem 1rem;
 }
 
 .customer-info {
