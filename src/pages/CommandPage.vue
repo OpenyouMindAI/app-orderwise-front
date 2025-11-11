@@ -314,24 +314,106 @@
 
     <!-- Vista de Órdenes -->
     <div v-else-if="currentView === 'orders'" class="orders-container q-pa-md">
-      <div class="text-h5 text-white q-mb-md">Mis Órdenes</div>
+      <div class="orders-header q-mb-md">
+        <div class="text-h5 text-white">Órdenes de Hoy</div>
+        <div class="text-caption text-grey-5">{{ formatDate(new Date()) }} - {{ userSession?.name }}</div>
+        <!-- Resumen del día -->
+        <div class="day-summary q-mt-md">
+          <div class="summary-card">
+            <div class="summary-icon">
+              <q-icon name="receipt_long" size="24px" color="orange" />
+            </div>
+            <div class="summary-info">
+              <div class="summary-number">{{ orders.length }}</div>
+              <div class="summary-label">Órdenes</div>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon">
+              <q-icon name="attach_money" size="24px" color="green" />
+            </div>
+            <div class="summary-info">
+              <div
+                class="summary-number"
+                :class="{ 'large-amount': todayTotal.toString().length > 8 }"
+              >
+                ${{ formatNumber(todayTotal) }}
+              </div>
+              <div class="summary-label">Total</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <q-card
         v-for="order in orders"
         :key="order.id"
-        class="bg-grey-9 text-white q-mb-sm"
+        class="order-card bg-grey-9 text-white q-mb-sm"
         flat
         @click="openOrderDetails(order)"
       >
         <q-card-section>
-          <div class="flex justify-between items-center">
-            <div>
-              <div class="text-subtitle2">Orden #{{ order.code }}</div>
-              <div class="text-caption text-grey-5">{{ formatDate(order.created_at) }}</div>
+          <div class="flex justify-between items-center q-mb-sm">
+            <div class="order-info">
+              <div class="text-subtitle2 text-weight-medium">Orden #{{ order.code }}</div>
+              <div class="text-caption text-grey-5">
+                <q-icon name="schedule" size="14px" class="q-mr-xs" />
+                {{ formatTime(order.created_at) }}
+              </div>
             </div>
-            <div class="text-right">
-              <div class="text-weight-bold text-orange">${{ formatNumber(order.total) }}</div>
-              <q-badge :color="getStatusColor(order.status)" :label="getStatusLabel(order.status)" />
+            <div class="order-status text-right">
+              <div class="text-h6 text-weight-bold text-orange">${{ formatNumber(order.total) }}</div>
+              <q-badge
+                :color="getStatusColor(order.status)"
+                :label="getStatusLabel(order.status)"
+                class="q-mt-xs"
+              />
+            </div>
+          </div>
+
+          <!-- BOTONES DE IMPRESIÓN -->
+          <div class="print-buttons-container q-mt-sm">
+            <div class="flex justify-end q-gutter-sm">
+              <q-btn
+                icon="print"
+                color="orange"
+                size="sm"
+                round
+                dense
+                @click.stop="printCommand(order)"
+                class="print-button"
+              >
+                <q-tooltip class="bg-orange text-white">Imprimir Comanda</q-tooltip>
+              </q-btn>
+              <q-btn
+                icon="receipt_long"
+                color="green"
+                size="sm"
+                round
+                dense
+                @click.stop="printTicket(order)"
+                class="print-button"
+              >
+                <q-tooltip class="bg-green text-white">Imprimir Ticket</q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+
+          <!-- Información adicional de la orden -->
+          <div class="order-details">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center text-caption text-grey-4">
+                <q-icon name="person" size="14px" class="q-mr-xs" />
+                {{ order.client?.name || 'Cliente' }}
+              </div>
+              <div class="flex items-center text-caption text-grey-4" v-if="order.tables?.length > 0">
+                <q-icon name="table_bar" size="14px" class="q-mr-xs" />
+                Mesa {{ order.tables.map(t => t.name).join(', ') }}
+              </div>
+            </div>
+            <div class="text-caption text-grey-4 q-mt-xs" v-if="order.products?.length">
+              <q-icon name="shopping_bag" size="14px" class="q-mr-xs" />
+              {{ order.products.length }} producto{{ order.products.length !== 1 ? 's' : '' }}
             </div>
           </div>
         </q-card-section>
@@ -360,9 +442,18 @@
         <span class="text-grey-5">No hay más órdenes</span>
       </div>
 
-      <div v-if="orders.length === 0 && !loadingOrders" class="text-center q-py-xl">
+      <div v-if="orders.length === 0 && !loadingOrders" class="empty-orders text-center q-py-xl">
         <q-icon name="receipt_long" size="100px" color="grey-6" />
-        <div class="text-grey-5 q-mt-md">No tienes órdenes</div>
+        <div class="text-h6 text-grey-5 q-mt-md">No hay órdenes hoy</div>
+        <div class="text-body2 text-grey-6 q-mt-sm">Las órdenes que realices aparecerán aquí</div>
+        <q-btn
+          label="Explorar Menú"
+          color="orange"
+          class="q-mt-lg"
+          @click="$router.push({ query: { view: 'catalog' } })"
+          rounded
+          unelevated
+        />
       </div>
     </div>
 
@@ -1070,6 +1161,7 @@ import { useCommandStore } from 'src/stores/command'
 import { authentication } from 'src/stores/module-authentication'
 // import ProductScanner from 'src/components/Catalog/ProductScanner.vue'
 import { formatNumber, formatDate } from 'src/const/mixins'
+import { commandPrint, ticketPrint } from 'src/const/printers'
 
 export default {
   name: 'CommandPageNew',
@@ -1157,6 +1249,9 @@ export default {
       // La búsqueda y paginación se manejan en el backend
       // Solo retornamos los productos tal cual vienen
       return this.products
+    },
+    todayTotal () {
+      return this.orders.reduce((sum, order) => sum + (parseFloat(order.total) || 0), 0)
     },
     categoryProducts () {
       return this.products.filter(p => p.category_id === this.selectedCategoryData?.id)
@@ -1301,7 +1396,6 @@ export default {
         } else {
           this.products = [...this.products, ...data?.data || data]
         }
-        console.log(data.total)
         this.totalProducts = data?.total || data.length
         this.hasMoreProducts = data?.data?.length === this.pageSize
 
@@ -1640,6 +1734,11 @@ export default {
         if (!this.hasMoreOrders) return
 
         this.loadingOrders = true
+
+        // Obtener fecha de hoy para filtrar
+        const today = new Date()
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
         const { data } = await this.$api.get('invoices', {
           params: {
             client_id: this.userSession.id,
@@ -1647,7 +1746,11 @@ export default {
             page: this.ordersCurrentPage,
             perPage: this.ordersPageSize,
             sortOrder: 'desc',
-            sortBy: 'id'
+            sortBy: 'created_at',
+            // Filtrar solo órdenes de hoy
+            dateFrom: startOfDay.toISOString().split('T')[0],
+            dateTo: endOfDay.toISOString().split('T')[0],
+            with: 'client,tables,products'
           }
         })
 
@@ -1661,6 +1764,11 @@ export default {
         this.hasMoreOrders = (data?.data || data).length === this.ordersPageSize
       } catch (error) {
         console.error('Error loading orders:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Error al cargar órdenes del día',
+          position: 'top'
+        })
       } finally {
         this.loadingOrders = false
       }
@@ -1791,6 +1899,50 @@ export default {
         message: `${this.selectedTables.length} mesa(s) seleccionada(s)`,
         position: 'top'
       })
+    },
+
+    formatTime (dateString) {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      return date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+    },
+
+    /**
+     * Print command for order
+     * @param {Object} order order data
+     */
+    async printCommand (order) {
+      try {
+        commandPrint(order)
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: error.message || 'Error al imprimir comanda',
+          position: 'top',
+          icon: 'warning'
+        })
+      }
+    },
+
+    /**
+     * Print ticket for order
+     * @param {Object} order order data
+     */
+    async printTicket (order) {
+      try {
+        ticketPrint(order)
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: error.message || 'Error al imprimir ticket',
+          position: 'top',
+          icon: 'warning'
+        })
+      }
     }
   }
 }
@@ -2768,5 +2920,123 @@ export default {
 
 .rating-stars-large .q-icon:active {
   opacity: 0.7;
+}
+
+/* Orders Section Styles */
+.orders-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding-bottom: 80px;
+}
+
+.orders-header {
+  text-align: center;
+}
+
+.day-summary {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 12px;
+  flex: 1;
+  min-width: 140px;
+  max-width: none;
+}
+
+.summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.summary-info {
+  text-align: left;
+}
+
+.summary-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  word-break: break-all;
+  line-height: 1.2;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #8e8e93;
+  margin-top: 2px;
+}
+
+.order-card {
+  border-radius: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.order-info {
+  flex: 1;
+}
+
+.order-status {
+  text-align: right;
+}
+
+.order-details {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.empty-orders {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  padding: 40px 20px;
+  margin: 20px 0;
+}
+
+/* Responsive adjustments for large amounts */
+@media (max-width: 480px) {
+  .summary-card {
+    min-width: 120px;
+    padding: 12px;
+  }
+
+  .summary-number {
+    font-size: 16px;
+  }
+
+  .summary-icon {
+    width: 35px;
+    height: 35px;
+  }
+}
+
+/* Special handling for very large numbers */
+.summary-number.large-amount {
+  font-size: 16px;
+}
+
+@media (min-width: 481px) {
+  .summary-number.large-amount {
+    font-size: 17px;
+  }
 }
 </style>
