@@ -1797,7 +1797,7 @@ export default {
             return false
           }
 
-          const sellerId = this.users[0]?.id || this.userSession.id
+          const sellerId = this.userSession?.id || this.users[0]?.id
           // If field enabled (editing), use tempClient (can be null if cleared)
           // Otherwise use client (original), or default client if none selected
           const clientId = this.clientFieldEnabled
