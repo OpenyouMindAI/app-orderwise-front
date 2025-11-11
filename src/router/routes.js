@@ -213,7 +213,7 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/TransferProductPage.vue')
       },
-      // Logistics Routes - Uber Style
+      // Logistics Routes - Uber Style (Transfer Stocks)
       {
         path: 'courier/tray',
         name: 'CourierTray',
@@ -225,6 +225,19 @@ const routes = [
         name: 'ActiveTransport',
         meta: { requiresAuth: true },
         component: () => import('pages/ActiveTransportPage.vue')
+      },
+      // Invoice Delivery Routes - Own Delivery System
+      {
+        path: 'delivery/tray',
+        name: 'InvoiceDeliveryTray',
+        meta: { requiresAuth: true },
+        component: () => import('pages/InvoiceDeliveryTrayPage.vue')
+      },
+      {
+        path: 'delivery/active/:id',
+        name: 'ActiveInvoiceDelivery',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ActiveInvoiceDeliveryPage.vue')
       },
       {
         path: 'inventory-count',

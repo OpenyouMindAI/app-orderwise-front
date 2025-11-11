@@ -311,9 +311,8 @@ export default {
           name: 'address',
           align: 'left',
           label: 'Dirección',
-          field: 'address',
+          field: row => row.address?.formattedAddress || row.address?.name || (typeof row.address === 'string' ? row.address : 'Sin dirección'),
           sortable: true,
-          format: (val) => val || 'Sin dirección',
           style: 'width: 250px; max-width: 250px;',
           headerStyle: 'width: 250px; max-width: 250px;'
         }
@@ -516,33 +515,8 @@ export default {
         clientData.document_type = JSON.stringify(clientData.document_type)
       }
 
-      // Agregar la dirección formateada
-      if (this.formattedAddress) {
-        clientData.address = this.formattedAddress
-      } else if (this.address && typeof this.address === 'object') {
-        // Si es un objeto, usar formattedAddress o convertir a string simple
-        clientData.address = this.address.formattedAddress || this.address.name || JSON.stringify(this.address)
-      } else if (this.client.address) {
-        clientData.address = this.client.address
-      }
-
-      // Adjuntar datos geográficos si están disponibles
-      if (this.address && typeof this.address === 'object') {
-        if (this.address.latitude !== undefined && this.address.latitude !== null) {
-          clientData.latitude = this.address.latitude
-        }
-        if (this.address.longitude !== undefined && this.address.longitude !== null) {
-          clientData.longitude = this.address.longitude
-        }
-        if (this.address.placeId) {
-          clientData.place_id = this.address.placeId
-        }
-      }
-
-      // Debug: Log de datos antes de enviar
-      console.log('📊 Datos a enviar:', JSON.stringify(clientData, null, 2))
-      console.log('📧 Email:', clientData.email)
-      console.log('📍 Dirección:', clientData.address)
+      // Guardar dirección como objeto JSON (igual que BranchOfficePage)
+      clientData.address = this.address || this.client.address || null
 
       this.$api.post('clients', clientData)
         .then(({ data }) => {
@@ -626,28 +600,8 @@ export default {
       // Preparar datos del cliente con dirección formateada
       const clientData = { ...this.client }
 
-      // Agregar la dirección formateada
-      if (this.formattedAddress) {
-        clientData.address = this.formattedAddress
-      } else if (this.address && typeof this.address === 'object') {
-        // Si es un objeto, usar formattedAddress o convertir a string simple
-        clientData.address = this.address.formattedAddress || this.address.name || JSON.stringify(this.address)
-      } else if (this.client.address) {
-        clientData.address = this.client.address
-      }
-
-      // Adjuntar datos geográficos si están disponibles
-      if (this.address && typeof this.address === 'object') {
-        if (this.address.latitude !== undefined && this.address.latitude !== null) {
-          clientData.latitude = this.address.latitude
-        }
-        if (this.address.longitude !== undefined && this.address.longitude !== null) {
-          clientData.longitude = this.address.longitude
-        }
-        if (this.address.placeId) {
-          clientData.place_id = this.address.placeId
-        }
-      }
+      // Guardar dirección como objeto JSON (igual que BranchOfficePage)
+      clientData.address = this.address || this.client.address || null
 
       this.$api.put(`clients/${this.client.id}`, clientData)
         .then(({ data }) => {

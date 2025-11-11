@@ -1,13 +1,6 @@
 <template>
   <q-page class="bg-dark text-white">
     <!-- Header -->
-    <q-header elevated class="bg-dark">
-      <q-toolbar>
-        <q-btn flat round dense icon="arrow_back" @click="$router.back()" />
-        <q-toolbar-title>Transferencias Disponibles</q-toolbar-title>
-        <q-btn flat round dense icon="close" @click="$router.push('/')" />
-      </q-toolbar>
-    </q-header>
 
     <!-- Loading State -->
     <div v-if="loading" class="q-pa-md">
@@ -305,7 +298,7 @@ onMounted(async () => {
 
 async function checkActiveRun () {
   try {
-    const response = await api.get('/delivery-runs/active')
+    const response = await api.get('/invoice-delivery-runs/active')
     if (response.data.delivery_run) {
       hasActiveRun.value = true
       // Redirect to active transport

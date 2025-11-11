@@ -395,7 +395,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-page-container class="main-content">
+    <q-page-container>
       <router-view />
     </q-page-container>
     <q-inner-loading :showing="visibleLoading">

@@ -116,6 +116,14 @@ export const authentication = defineStore('authentication', {
       this.token_type = data.token_type
       this.expires_In = data.expires_in
       this.refresh_token = data.refresh_token
+
+      // Calculate token expiration time
+      if (data.expires_in) {
+        // expires_in is in seconds, convert to milliseconds and add to current time
+        this.setTimeOut = Date.now() + (data.expires_in * 1000)
+        console.log('🔐 Token expira en:', new Date(this.setTimeOut).toLocaleString())
+      }
+
       api.defaults.headers.common.authorization = `${this.token_type} ${this.access_token}`
     },
     /**
