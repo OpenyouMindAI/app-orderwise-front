@@ -1500,7 +1500,7 @@ export default {
             return false
           }
 
-          const sellerId = this.users[0]?.id || this.userSession.id
+          const sellerId = this.userSession?.id || this.users[0]?.id
           const finalConsumerClient = this.clients.find(c => c.name.toUpperCase() === 'CONSUMIDOR FINAL')
           const clientId = finalConsumerClient?.id || this.clients[0]?.id || null
 
