@@ -371,6 +371,34 @@
             </div>
           </div>
 
+          <!-- BOTONES DE IMPRESIÓN -->
+          <div class="print-buttons-container q-mt-sm">
+            <div class="flex justify-end q-gutter-sm">
+              <q-btn
+                icon="print"
+                color="orange"
+                size="sm"
+                round
+                dense
+                @click.stop="printCommand(order)"
+                class="print-button"
+              >
+                <q-tooltip class="bg-orange text-white">Imprimir Comanda</q-tooltip>
+              </q-btn>
+              <q-btn
+                icon="receipt_long"
+                color="green"
+                size="sm"
+                round
+                dense
+                @click.stop="printTicket(order)"
+                class="print-button"
+              >
+                <q-tooltip class="bg-green text-white">Imprimir Ticket</q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+
           <!-- Información adicional de la orden -->
           <div class="order-details">
             <div class="flex items-center justify-between">
@@ -1133,6 +1161,7 @@ import { useCommandStore } from 'src/stores/command'
 import { authentication } from 'src/stores/module-authentication'
 // import ProductScanner from 'src/components/Catalog/ProductScanner.vue'
 import { formatNumber, formatDate } from 'src/const/mixins'
+import { commandPrint, ticketPrint } from 'src/const/printers'
 
 export default {
   name: 'CommandPageNew',
@@ -1880,6 +1909,40 @@ export default {
         minute: '2-digit',
         hour12: false
       })
+    },
+
+    /**
+     * Print command for order
+     * @param {Object} order order data
+     */
+    async printCommand (order) {
+      try {
+        commandPrint(order)
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: error.message || 'Error al imprimir comanda',
+          position: 'top',
+          icon: 'warning'
+        })
+      }
+    },
+
+    /**
+     * Print ticket for order
+     * @param {Object} order order data
+     */
+    async printTicket (order) {
+      try {
+        ticketPrint(order)
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: error.message || 'Error al imprimir ticket',
+          position: 'top',
+          icon: 'warning'
+        })
+      }
     }
   }
 }
