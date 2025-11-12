@@ -1,6 +1,6 @@
 <template>
   <q-page class="bg-dark">
-    <div id="map" ref="mapContainer" style="width: 100%; height: 100vh; position: absolute; top: 0; left: 0;"></div>
+    <div id="map" ref="mapContainer" style="width: 100%; height: calc(100vh - 62px); position: absolute; top: 0; left: 0;"></div>
 
     <!-- Loading Overlay -->
     <div v-if="!map" class="absolute-full flex flex-center bg-dark" style="z-index: 2000;">
@@ -356,7 +356,7 @@ async function loadPaymentMethods () {
     }))
     // Set default to first method
     if (paymentMethods.value.length > 0) {
-      newPayment.value.payment_method_id = paymentMethods.value[0].value
+      payment.value.payment_method_id = paymentMethods.value[0].value
     }
   } catch (error) {
     console.error('Error loading payment methods:', error)

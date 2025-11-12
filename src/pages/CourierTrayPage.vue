@@ -9,11 +9,6 @@
 
     <!-- Content -->
     <div v-else class="q-pa-md">
-      <!-- Debug Info -->
-      <div class="text-caption text-grey-5 q-mb-md">
-        Debug: Aceptadas={{ acceptedTransfers.length }}, Disponibles={{ transfers.length }}
-      </div>
-
       <!-- Mis Transferencias Aceptadas -->
       <div v-if="acceptedTransfers.length > 0" class="q-mb-lg">
         <div class="text-h6 q-mb-md">

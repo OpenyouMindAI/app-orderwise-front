@@ -46,7 +46,7 @@
         <div class="row items-center justify-center q-pa-xs" style="cursor: pointer;" @click="showDetails = !showDetails">
           <q-icon :name="showDetails ? 'expand_more' : 'expand_less'" size="20px" color="grey-5" />
         </div>
-        
+
         <q-slide-transition>
           <div v-show="showDetails">
         <q-card-section class="q-pa-sm q-pt-none">
@@ -467,7 +467,7 @@ async function drawRoute () {
 
     // Construir la secuencia de puntos completados
     const completedPoints = []
-    
+
     // Agregar origen
     if (realOrigin) {
       const originLat = realOrigin?.address?.latitude || realOrigin?.latitude
@@ -634,7 +634,7 @@ async function startLocationTracking () {
     if (isNativePlatform) {
       // Usar Capacitor Geolocation para móvil
       const { Geolocation } = await import('@capacitor/geolocation')
-      
+
       const permission = await Geolocation.requestPermissions()
 
       if (permission.location !== 'granted') {
@@ -780,7 +780,7 @@ async function sendLocationToServer () {
     await api.post(`/delivery-runs/${route.params.id}/locations`, {
       latitude: currentPosition.value.latitude,
       longitude: currentPosition.value.longitude,
-      accuracy: accuracy,
+      accuracy,
       altitude: currentPosition.value.altitude,
       heading: currentPosition.value.heading,
       speed: currentPosition.value.speed,
@@ -794,7 +794,7 @@ async function sendLocationToServer () {
 function stopLocationTracking () {
   if (watchId.value) {
     const isNativePlatform = $q.platform.is.capacitor || $q.platform.is.cordova
-    
+
     if (isNativePlatform) {
       // Capacitor Geolocation
       import('@capacitor/geolocation').then(({ Geolocation }) => {
@@ -804,7 +804,7 @@ function stopLocationTracking () {
       // Browser Geolocation API
       navigator.geolocation.clearWatch(watchId.value)
     }
-    
+
     watchId.value = null
   }
 
@@ -867,7 +867,7 @@ async function markArrived () {
 function startListeningForVerification () {
   // Escuchar eventos Pusher en lugar de polling
   const channel = echo.channel(`delivery-run.${route.params.id}`)
-  
+
   channel.listen('.transfer.verified', async (event) => {
     if (event.transfer_stock_id === transfer.value.id) {
       $q.notify({
@@ -907,7 +907,7 @@ function startListeningForVerification () {
         // Resetear estado y cargar siguiente transferencia
         arrived.value = false
         qrCodeData.value = null
-        
+
         // Recargar delivery run y siguiente transferencia
         await loadDeliveryRun()
         if (transfer.value) {

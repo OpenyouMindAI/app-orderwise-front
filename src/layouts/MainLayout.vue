@@ -319,7 +319,8 @@
           <q-item
             v-if="
               validateRole(list.roles) &&
-              list.name != 'home'
+              list.name != 'home' &&
+              list.visible !== false
             "
             v-ripple
             clickable

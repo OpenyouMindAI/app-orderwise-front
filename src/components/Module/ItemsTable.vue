@@ -98,6 +98,21 @@
         </q-td>
       </template>
 
+      <!-- Visible column -->
+      <template #body-cell-visible="props">
+        <q-td :props="props">
+          <q-chip
+            :color="props.value !== false ? 'green' : 'grey'"
+            :text-color="props.value !== false ? 'white' : 'white'"
+            dense
+            size="sm"
+          >
+            <q-icon :name="props.value !== false ? 'visibility' : 'visibility_off'" size="16px" class="q-mr-xs" />
+            {{ props.value !== false ? 'Visible' : 'Oculto' }}
+          </q-chip>
+        </q-td>
+      </template>
+
       <!-- Roles column -->
       <template #body-cell-roles="props">
         <q-td :props="props">
@@ -241,14 +256,21 @@ const columns = [
     label: 'Position',
     field: 'position',
     align: 'center',
-    sortable: true,
+    sortable: true
+  },
+  {
+    name: 'visible',
+    label: 'Visible',
+    field: 'visible',
+    align: 'center',
+    sortable: true
   },
   {
     name: 'roles',
     label: 'Roles',
     field: 'roles',
     align: 'left',
-    sortable: false,
+    sortable: false
   },
   {
     name: 'timestamps',

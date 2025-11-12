@@ -1247,6 +1247,7 @@ const visibleBranchOffice = userSession.is_root || userSession.is_super_admin
  */
 const interval = ref(null)
 const role = ref({})
+const isRefreshing = ref(false) // Flag para evitar peticiones simultáneas
 
 const validate = ref(true)
 
@@ -1365,7 +1366,19 @@ const loadInvoices = async (status, silent = false) => {
 }
 
 onUnmounted(() => {
-  clearInterval(interval.value)
+  // Limpiar todos los intervalos para evitar "Too Many Attempts"
+  if (interval.value) {
+    clearInterval(interval.value)
+    interval.value = null
+  }
+  if (trackingInterval.value) {
+    clearInterval(trackingInterval.value)
+    trackingInterval.value = null
+  }
+  if (allDriversInterval.value) {
+    clearInterval(allDriversInterval.value)
+    allDriversInterval.value = null
+  }
 })
 
 watch(code, async (cat) => {
@@ -1446,10 +1459,10 @@ const setPermissions = () => {
     deliveryPerson: setPermissionsByUser(['DP'])
   }
 
-  // Auto-refresh every 20 seconds without loading indicator
+  // Auto-refresh every 30 seconds without loading indicator (aumentado para evitar Too Many Attempts)
   interval.value = setInterval(() => {
     refreshInvoicesSilently()
-  }, 20000)
+  }, 30000)
 }
 
 const setPermissionsByUser = (data) => {
@@ -1506,7 +1519,22 @@ const getInvoices = async (dataFilter = {}) => {
  * Refresh invoices silently (without loading indicator)
  */
 const refreshInvoicesSilently = async () => {
-  statuses.value.forEach((column) => loadInvoices(column, true))
+  // Evitar múltiples peticiones simultáneas
+  if (isRefreshing.value) {
+    return
+  }
+
+  try {
+    isRefreshing.value = true
+    // Cargar todas las columnas en paralelo
+    await Promise.all(
+      statuses.value.map((column) => loadInvoices(column, true))
+    )
+  } catch (error) {
+    console.error('Error en refresh silencioso:', error)
+  } finally {
+    isRefreshing.value = false
+  }
 }
 /**
  * Filter clients
@@ -2161,9 +2189,15 @@ function startTrackingUpdates (deliveryRunId) {
     clearInterval(trackingInterval.value)
   }
 
-  // Update every 5 seconds
+  // Update every 10 seconds (aumentado de 5 a 10 para reducir carga)
   trackingInterval.value = setInterval(async () => {
     try {
+      // Solo actualizar si el mapa está visible
+      if (!showTrackingMap.value) {
+        stopTrackingUpdates()
+        return
+      }
+
       const response = await api.get(`/invoice-delivery-runs/${deliveryRunId}`)
       const newData = response.data.delivery_run
 
@@ -2191,8 +2225,13 @@ function startTrackingUpdates (deliveryRunId) {
       }
     } catch (error) {
       console.error('Error updating tracking:', error)
+      // Si hay error, detener actualizaciones para evitar acumulación
+      if (error.response && error.response.status === 429) {
+        console.warn('Too many requests, stopping tracking updates')
+        stopTrackingUpdates()
+      }
     }
-  }, 5000)
+  }, 10000)
 }
 
 /**
@@ -2425,9 +2464,15 @@ function startAllDriversUpdates () {
     clearInterval(allDriversInterval.value)
   }
 
-  // Update every 10 seconds
+  // Update every 15 seconds (aumentado de 10 a 15 para reducir carga)
   allDriversInterval.value = setInterval(async () => {
     try {
+      // Solo actualizar si el mapa está visible
+      if (!showAllDriversMap.value) {
+        stopAllDriversUpdates()
+        return
+      }
+
       const response = await api.get('/invoice-delivery-runs/all-active')
       const newData = response.data.delivery_runs || []
 
@@ -2481,8 +2526,13 @@ function startAllDriversUpdates () {
       })
     } catch (error) {
       console.error('Error updating all drivers:', error)
+      // Si hay error 429, detener actualizaciones
+      if (error.response && error.response.status === 429) {
+        console.warn('Too many requests, stopping all drivers updates')
+        stopAllDriversUpdates()
+      }
     }
-  }, 10000)
+  }, 15000)
 }
 
 /**
