@@ -75,6 +75,19 @@
               @filter="filterTypeOfServices"
             />
           </div>
+          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
+            <q-input
+              filled
+              dense
+              v-model="invoiceCreatedAt"
+              label="Fecha de factura"
+              type="datetime-local"
+            >
+              <template v-slot:prepend>
+                <q-icon name="event" />
+              </template>
+            </q-input>
+          </div>
           <div class="col-xl-2 col-lg-2 col-md-2 col-sm-3 col-xs-6" v-if="openCashBox">
             <q-btn
               style="border-radius: 10px; padding: 5px 15px; margin-top: 4px;"
@@ -1235,6 +1248,11 @@ export default {
        * @type {Boolean}
        */
       cashflow: false,
+      /**
+       * Invoice created at (custom date)
+       * @type {String}
+       */
+      invoiceCreatedAt: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
       /**
        * Delivery date
        * @type {String}
@@ -2645,6 +2663,7 @@ export default {
       this.resetProductSelection()
       this.tableSelected = []
       this.invoiceDescription = ''
+      this.invoiceCreatedAt = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.deliveryDate = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
       this.withoutPrint = false
@@ -2717,6 +2736,7 @@ export default {
         user_created_id: this.userSession.id,
         cashbox_user_id: this.cashBoxState?.id,
         exchange_rate: this.exchangeRate?.amount || 0,
+        created_at: this.invoiceCreatedAt,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,

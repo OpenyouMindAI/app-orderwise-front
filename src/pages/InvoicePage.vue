@@ -91,8 +91,8 @@
         <template v-slot:body-cell-status="props">
           <q-td :props="props" v-if="props.value">
             <q-badge
-              :color="status[props.value].color"
-              :label="status[props.value].label"
+              :color="status[props.value]?.color"
+              :label="status[props.value]?.label"
               class="q-pa-sm"
             />
           </q-td>
