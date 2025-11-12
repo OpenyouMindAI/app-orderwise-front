@@ -83,9 +83,9 @@
                 <div class="table-gloss-effect"></div>
                 <div class="table-info-overlay">
                   <span class="table-name-text">{{ table.name }}</span>
-                  <span class="table-capacity-text">
-                    <q-icon name="person" class="capacity-icon" />
-                    {{ table.capacity || 4 }}
+                  <span v-if="table.status === 'busy' && getInvoiceFromTable(table)?.client" class="table-client-text">
+                    <q-icon name="account_circle" class="client-icon" />
+                    {{ getInvoiceFromTable(table).client.name }}
                   </span>
                 </div>
                 <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
@@ -141,6 +141,7 @@
         />
       </div>
     </div>
+    <!-- Invoice Modal -->
     <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal" @before-show="storeActiveElement" @hide="restoreFocus">
       <q-card class="invoice-card">
         <q-card-section class="invoice-header bg-primary text-white">
@@ -211,15 +212,45 @@
           <q-tab name="order" label="Pedido" icon="restaurant" />
           <q-tab name="products" label="Productos" icon="add_shopping_cart" />
         </q-tabs>
-
+        <div class="customer-section q-px-md q-pt-md row q-col-gutter-sm items-center">
+          <div class="col">
+            <q-select
+              ref="clientSelect"
+              filled
+              dense
+              v-model="tempClient"
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
+              :hide-dropdown-icon="$q.platform.is.nativeMobile"
+              option-value="id"
+              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+              :options="clients"
+              hide-bottom-space
+              :disable="!clientFieldEnabled"
+              @filter="filterClients"
+              @focus="handleClientFocus"
+              label="Cliente"
+            />
+          </div>
+          <div class="col-auto">
+            <q-btn
+              style="padding: 1px 6px !important; border-radius: var(--border-radius-md);"
+              :icon="clientFieldEnabled ? 'add' : 'edit'"
+              color="primary"
+              size="md"
+              @click.stop.prevent="toggleClientField"
+            >
+              <q-tooltip>
+                {{ clientFieldEnabled ? 'Agregar nuevo cliente' : 'Editar cliente' }}
+              </q-tooltip>
+            </q-btn>
+          </div>
+        </div>
         <q-separator />
         <q-tab-panels v-model="activeTab" class="invoice-body">
           <q-tab-panel name="order">
-            <div v-if="selectedInvoice?.client" class="customer-section">
-              <div class="customer-info">
-                <span class="customer-name">Cliente: {{ selectedInvoice.client.name }}</span>
-              </div>
-            </div>
             <div class="products-section column q-gutter-y-sm q-pb-sm">
               <span class="text-h6">
                 <q-icon name="restaurant" />
@@ -450,6 +481,7 @@
             color="primary"
             @click="handleSaveButton"
             :loading="saving"
+            :disable="!invoiceProducts || invoiceProducts.length === 0"
           />
         </q-card-actions>
       </q-card>
@@ -526,6 +558,9 @@
                     <q-item-label>{{ scope.opt.name }}</q-item-label>
                     <q-item-label caption>
                       {{ scope.opt.capacity }} personas - {{ getTableStatusLabel(scope.opt.status) }}
+                      <span v-if="scope.opt.status === 'busy' && getInvoiceFromTable(scope.opt)?.client">
+                        - Cliente: {{ getInvoiceFromTable(scope.opt).client.name }}
+                      </span>
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -610,6 +645,104 @@
       </q-card>
     </q-dialog>
 
+    <!-- Add Client Modal -->
+    <q-dialog v-model="openAddClient" persistent>
+      <q-card style="width: 700px; max-width: 80vw;">
+        <q-form @submit="saveClient">
+          <q-card-section class="row items-center q-py-sm bg-primary text-white">
+            <div class="text-h6">Agregar cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="(openAddClient = false)" />
+          </q-card-section>
+          <q-card-section class="row q-col-gutter-sm">
+            <!-- Required field -->
+            <div class="col-12">
+              <q-input
+                :rules="[val => !!val || 'El campo es requerido.']"
+                filled
+                autofocus
+                v-model="clientAdded.name"
+                label="Nombre *"
+                hint="Campo obligatorio"
+              />
+            </div>
+
+            <!-- Optional fields -->
+            <div class="col-12">
+              <div class="text-caption text-grey-7 q-mb-sm">Información adicional (opcional)</div>
+            </div>
+
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-select
+                use-input
+                filled
+                dense
+                label="Tipo de documento"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="clientAdded.document_type"
+                :options="documentTypes"
+                @filter="getDocumentTypes"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                dense
+                v-model="clientAdded.document_number"
+                label="Número de documento"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                dense
+                v-model="clientAdded.email"
+                type="email"
+                label="Correo"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                dense
+                v-model="clientAdded.phone_number"
+                label="Teléfono"
+              />
+            </div>
+            <div class="col-12">
+              <q-select
+                use-input
+                filled
+                dense
+                label="Condición de IVA"
+                input-debounce="0"
+                option-label="name"
+                option-value="code"
+                v-model="clientAdded.condition_iva_receptor"
+                :options="conditionIvaReceptors"
+                @filter="getConditionIvaReceptor"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                filled
+                dense
+                v-model="clientAdded.address"
+                label="Dirección"
+                type="textarea"
+                rows="2"
+              />
+            </div>
+          </q-card-section>
+          <q-card-actions align="right" class="text-primary">
+            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+
     <!-- Payment Modal -->
     <PaymentModal
       :show="showPaymentDialog"
@@ -638,12 +771,10 @@ import { Notify, date } from 'quasar'
 import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
-import { loading, formatNumber } from 'src/const/mixins'
+import { loading, formatNumber, notify } from 'src/const/mixins'
 import { commandPrint, ticketPrint } from 'src/const/printers'
+import { apiArca } from 'src/boot/axios'
 import PaymentModal from 'src/components/PaymentModal.vue'
-
-// Debug mode flag - set to false in production
-const DEBUG_MODE = process.env.NODE_ENV !== 'production'
 
 export default {
   components: {
@@ -658,6 +789,16 @@ export default {
       typeOfServices: [],
       users: [],
       clients: [],
+      client: null,
+      defaultClient: null,
+      tempClient: null,
+      clientFieldEnabled: false,
+      // Add client modal state
+      openAddClient: false,
+      clientAdded: {},
+      documentTypes: [],
+      conditionIvaReceptors: [],
+      loadingClient: false,
       categoryOptions: [],
       selectedRoom: null,
       currentTables: [],
@@ -674,7 +815,7 @@ export default {
       startPanX: 0,
       startPanY: 0,
 
-      // Modal state
+      // Invoice modal state
       showInvoiceModal: false,
       selectedTable: null,
       selectedInvoice: null,
@@ -720,7 +861,7 @@ export default {
       cashBoxState: null,
       isUserBoxOpen: false,
 
-      // Status mapping for display
+      // Table status display labels
       statusMap: {
         unoccupied: 'Desocupada',
         busy: 'Ocupada'
@@ -771,6 +912,14 @@ export default {
       if (newTab === 'products' && this.filteredProducts.length === 0) {
         this.loadProducts(1, () => {}, {})
       }
+    },
+
+    client (client) {
+      // Update selectedInvoice when client changes
+      if (this.selectedInvoice) {
+        this.selectedInvoice.client = client
+        this.selectedInvoice.client_id = client?.id || null
+      }
     }
   },
 
@@ -791,6 +940,7 @@ export default {
     getLocalStorage () {
       const { company_session: companySession } = this.userSession
       this.coin = companySession?.company_config?.coin
+      this.defaultClient = companySession?.company_config?.client
     },
     /**
      * Get exchange rate
@@ -842,7 +992,7 @@ export default {
             user_close_id: data.user_close_id
           }
         } else {
-          // Respuesta exitosa pero sin sesión activa
+          // Successful response but no active session
           this.isUserBoxOpen = false
           this.cashBoxState = null
         }
@@ -850,12 +1000,11 @@ export default {
         if (error.response?.status === 404 ||
             error.message?.includes('No query results for model') ||
             error.message?.includes('CashboxUser')) {
-          // 404 o sin datos es comportamiento normal - no hay sesión activa
+          // 404 or no data is normal behavior - no active session
           this.isUserBoxOpen = false
           this.cashBoxState = null
         } else {
-          // Error real del servidor
-          console.error('❌ Error checking cashbox status:', error)
+          // Actual server error
           this.isUserBoxOpen = false
           this.cashBoxState = null
         }
@@ -912,13 +1061,11 @@ export default {
         // Set tableClose first
         this.tableClose = tableClose
 
-        if (DEBUG_MODE) console.log('💳 Procesando acción de pago:', { action, tableClose })
-
         // Add payments to the invoice save
         // saveInvoiceWithPayments now handles modal close and refresh AFTER printing
         await this.saveInvoiceWithPayments(params, action)
       } catch (error) {
-        console.error('❌ Error in payment action:', error)
+        // Error handled by saveInvoiceWithPayments
       } finally {
         this.saving = false
       }
@@ -926,84 +1073,52 @@ export default {
 
     async saveInvoiceWithPayments (params, action = 'save') {
       try {
-        if (DEBUG_MODE) {
-          console.log('📋 saveInvoiceWithPayments llamado con:', { action, tableClose: this.tableClose, hasInvoice: !!this.selectedInvoice })
-        }
-
         // Use existing saveInvoice logic but include payments
         this.invoicePayments = params.payments || []
         // DON'T override tableClose - it's already set in handlePaymentAction
         // this.tableClose = params.tableClose || false
-        const invoiceToProcess = { ...this.selectedInvoice } // ← GUARDAR COPIA
-
-        if (DEBUG_MODE) {
-          console.log('📄 Invoice a procesar:', {
-            id: invoiceToProcess?.id,
-            code: invoiceToProcess?.code,
-            hasProducts: invoiceToProcess?.products?.length || 0
-          })
-        }
+        const invoiceToProcess = { ...this.selectedInvoice } // Save copy
 
         // Skip modal close in saveInvoice - we'll handle it after printing
         const result = await this.saveInvoice(true)
 
         if (!result) {
-          if (DEBUG_MODE) console.error('❌ saveInvoice falló, no se procede con impresión')
           return false
-        }
-
-        if (DEBUG_MODE) {
-          console.log('✅ Factura guardada, procesando impresión...')
-          console.log('🔍 Valor de action:', action, 'Tipo:', typeof action)
         }
 
         // Handle printing based on action (BEFORE closing modal)
         if (action === 'invoice') {
-          if (DEBUG_MODE) console.log('🖨️ Imprimiendo FACTURA (ticketPrint)...')
           try {
             await ticketPrint(invoiceToProcess)
-            if (DEBUG_MODE) console.log('✅ ticketPrint completado')
           } catch (printError) {
-            console.error('❌ Error en ticketPrint:', printError)
             this.$q.notify({
               message: 'Error al imprimir factura: ' + printError.message,
               type: 'warning',
-              icon: 'warning'
+              position: 'top'
             })
           }
         } else if (action === 'command') {
-          if (DEBUG_MODE) console.log('🖨️ Imprimiendo COMANDA (commandPrint)...')
           try {
             await commandPrint(invoiceToProcess)
-            if (DEBUG_MODE) console.log('✅ commandPrint completado')
           } catch (printError) {
-            console.error('❌ Error en commandPrint:', printError)
             this.$q.notify({
               message: 'Error al imprimir comanda: ' + printError.message,
               type: 'warning',
-              icon: 'warning'
+              position: 'top'
             })
           }
-        } else {
-          if (DEBUG_MODE) console.log('ℹ️ No se imprime (action=' + action + ')')
         }
-
-        if (DEBUG_MODE) console.log('✅ Impresión completada, actualizando estado de mesas...')
 
         // NOW we can close modal and refresh tables
         if (this.tableClose) {
-          if (DEBUG_MODE) console.log('🔄 Llamando clearInvoiceAndCloseModal...')
           this.clearInvoiceAndCloseModal()
         } else {
-          if (DEBUG_MODE) console.log('🔄 Solo cerrando modal de pago...')
           this.showPaymentDialog = false
           this.invoicePayments = []
         }
 
-        if (DEBUG_MODE) console.log('✅ Proceso completado')
         return result
       } catch (error) {
-        console.error('❌ Error saving invoice with payments:', error)
         return false
       }
     },
@@ -1012,7 +1127,6 @@ export default {
       this.showPaymentDialog = false
 
       if (this.tableClose) {
-        if (DEBUG_MODE) console.log('🔄 Cerrando mesa y actualizando estado...')
         // Free the table first
         if (this.selectedInvoice) {
           this.freeTableAfterClose(this.selectedInvoice)
@@ -1048,13 +1162,9 @@ export default {
             ...this.selectedTable,
             status: 'unoccupied'
           })
-        } else {
-          console.error('=== NO TABLE ID FOUND TO FREE ===')
         }
       } catch (error) {
-        console.error('=== ERROR FREEING TABLE (BACKEND ISSUE) ===', error)
-        // TODO: Backend needs to handle table freeing properly
-        // For now, we'll continue with the flow since the frontend logic is correct
+        // Continue with flow even if backend error occurs
       }
     },
 
@@ -1153,6 +1263,11 @@ export default {
       this.selectedTable = table
       this.selectedInvoice = this.getInvoiceFromTable(table)
       this.invoiceProducts = this.selectedInvoice ? [...this.selectedInvoice.products] : []
+      this.client = this.selectedInvoice?.client || null
+      this.tempClient = this.client ? { ...this.client } : null // Load client from start to display it
+      // Clear payment state from previous operations
+      this.invoicePayments = []
+      this.tableClose = false
       this.showInvoiceModal = true
       this.activeTab = 'order'
     },
@@ -1161,15 +1276,28 @@ export default {
       this.selectedTable = table
       this.selectedInvoice = null
       this.invoiceProducts = []
+      this.client = null
+      this.tempClient = null
+      this.clientFieldEnabled = false
+      // Clear payment state from previous operations
+      this.invoicePayments = []
+      this.tableClose = false
       this.showInvoiceModal = true
       this.activeTab = 'products'
     },
 
     closeInvoiceModal () {
+      // Don't update client - discard tempClient
       this.showInvoiceModal = false
       this.selectedTable = null
       this.selectedInvoice = null
       this.invoiceProducts = []
+      this.client = null
+      this.tempClient = null
+      this.clientFieldEnabled = false
+      // Clear payment state
+      this.invoicePayments = []
+      this.tableClose = false
       this.activeTab = 'order'
       this.productSearch = ''
       this.selectedCategory = null
@@ -1452,7 +1580,7 @@ export default {
         const { data } = await this.$api.get('invoice-types')
         this.invoiceTypes = data
       } catch (error) {
-        console.error('Error fetching invoice types:', error)
+        // Error handled silently
       }
     },
 
@@ -1461,7 +1589,7 @@ export default {
         const { data } = await this.$api.get('type-of-services')
         this.typeOfServices = data
       } catch (error) {
-        console.error('Error fetching type of services:', error)
+        // Error handled silently
       }
     },
 
@@ -1470,7 +1598,7 @@ export default {
         const { data } = await this.$api.get('users')
         this.users = data
       } catch (error) {
-        console.error('Error fetching users:', error)
+        // Error handled silently
       }
     },
 
@@ -1480,17 +1608,142 @@ export default {
         const clientList = Array.isArray(data) ? data : data?.data
         this.clients = clientList || []
       } catch (error) {
-        console.error('Error fetching clients:', error)
+        // Error handled silently
       }
     },
 
+    filterClients (value, update) {
+      this.$api.get('clients', {
+        params: {
+          sortBy: 'id',
+          sortOrder: 'desc',
+          dataSearch: {
+            name: value,
+            document_number: value
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            this.clients = data
+          })
+        })
+        .catch(err => {
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+
+    handleClientFocus () {
+      // Clear field and open dropdown automatically
+      this.tempClient = null
+      this.$nextTick(() => {
+        if (this.$refs.clientSelect) {
+          this.$refs.clientSelect.showPopup()
+        }
+      })
+    },
+
+    toggleClientField () {
+      if (!this.clientFieldEnabled) {
+        // Enable field for editing
+        this.clientFieldEnabled = true
+        // Focus on field after enabling it
+        this.$nextTick(() => {
+          if (this.$refs.clientSelect) {
+            this.$refs.clientSelect.focus()
+          }
+        })
+      } else {
+        // Open modal to add new client
+        this.openAddClient = true
+      }
+    },
+
+    async getDocumentTypes (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/document-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.documentTypes = data
+        })
+      } catch (err) {
+        notify('A ocurrido un error con la conexión con el ARCA', 'negative', 'warning')
+      }
+    },
+
+    async getConditionIvaReceptor (value, update) {
+      try {
+        const { data } = await apiArca.get('metadata/condition-iva-receptors', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        update(() => {
+          this.conditionIvaReceptors = data
+        })
+      } catch (err) {
+        notify('A ocurrido un error con la conexión con el ARCA', 'negative', 'warning')
+      }
+    },
+
+    saveClient () {
+      this.loadingClient = true
+      this.$api.post('clients', this.clientAdded)
+        .then(({ data }) => {
+          this.openAddClient = false
+          this.clientAdded = {}
+          this.client = data
+          this.loadingClient = false
+          Notify.create({
+            message: 'Cliente creado exitosamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        })
+        .catch(err => {
+          this.loadingClient = false
+          Notify.create({
+            message: err.message,
+            icon: 'warning',
+            color: 'negative'
+          })
+        })
+    },
+
     async handleSaveButton () {
-      // Called directly from "Guardar" button - always close modal and refresh
+      // Called directly from "Save" button - always close modal and refresh
+      // Ensure no payment data is sent when using regular save button
+      this.invoicePayments = []
+      this.tableClose = false
       await this.saveInvoice(false)
       // saveInvoice already handles closing modal and refreshing tables
     },
 
     async saveInvoice (skipModalClose = false) {
+      // Validate that there is at least one product
+      if (!this.invoiceProducts || this.invoiceProducts.length === 0) {
+        Notify.create({
+          message: 'Debe agregar al menos un producto al pedido',
+          color: 'negative',
+          icon: 'warning',
+          position: 'top'
+        })
+        return false
+      }
+
       this.saving = true
       try {
         // Update existing invoice
@@ -1499,7 +1752,9 @@ export default {
           const invoiceToUpdate = this.selectedInvoice
           const updateParams = {
             tableClose: this.tableClose,
-            client_id: this.selectedInvoice.client_id,
+            client_id: this.clientFieldEnabled
+              ? (this.tempClient?.id || this.defaultClient?.id || null)
+              : (this.client?.id || this.selectedInvoice.client_id || this.defaultClient?.id),
             seller_id: this.selectedInvoice.seller_id,
             coin_id: this.selectedInvoice.coin_id,
             description: this.selectedInvoice.description,
@@ -1543,8 +1798,11 @@ export default {
           }
 
           const sellerId = this.userSession?.id || this.users[0]?.id
-          const finalConsumerClient = this.clients.find(c => c.name.toUpperCase() === 'CONSUMIDOR FINAL')
-          const clientId = finalConsumerClient?.id || this.clients[0]?.id || null
+          // If field enabled (editing), use tempClient (can be null if cleared)
+          // Otherwise use client (original), or default client if none selected
+          const clientId = this.clientFieldEnabled
+            ? (this.tempClient?.id || this.defaultClient?.id || null)
+            : (this.client?.id || this.defaultClient?.id || null)
 
           // Creating new invoice
 
@@ -1588,6 +1846,11 @@ export default {
           color: 'positive'
         })
 
+        // Update client only if edited
+        if (this.tempClient) {
+          this.client = this.tempClient
+        }
+
         // Only close modal and refresh if not skipping (i.e., not called from payment flow)
         if (!skipModalClose) {
           this.closeInvoiceModal()
@@ -1630,14 +1893,14 @@ export default {
     },
 
     startPan (event) {
-      // Si el evento se origina en una mesa o sus elementos internos, no iniciar el paneo.
-      // Esto permite que los eventos de clic en las mesas y sus botones funcionen correctamente.
+      // If event originates from a table or its internal elements, don't start panning.
+      // This allows click events on tables and their buttons to work correctly.
       if (event.target.closest('.draggable-resizable-vue')) {
         return
       }
 
-      // NO llamamos a preventDefault aquí para permitir que los eventos táctiles
-      // se conviertan en clics cuando sea necesario
+      // DO NOT call preventDefault here to allow touch events
+      // to convert to clicks when necessary
 
       this.isPanning = true
       const touch = event.touches ? event.touches[0] : event
@@ -1653,8 +1916,8 @@ export default {
       this.panX = touch.clientX - this.startPanX
       this.panY = touch.clientY - this.startPanY
 
-      // Solo prevenir el comportamiento por defecto cuando realmente estamos paneando
-      // Esto evita el scroll del navegador pero permite los clics normales
+      // Only prevent default behavior when actually panning
+      // This prevents browser scroll but allows normal clicks
       event.preventDefault()
     },
 
@@ -2041,6 +2304,7 @@ body.body--dark {
 }
 
 .table-info-overlay {
+  width: 100%;
   z-index: 2;
   text-align: center;
   display: flex;
@@ -2065,6 +2329,23 @@ body.body--dark {
 
 .capacity-icon {
   font-size: 0.8rem;
+}
+
+.table-client-text {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.7rem;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.client-icon {
+  font-size: 0.8rem;
+  flex-shrink: 0;
 }
 
 .table-status-indicator {
@@ -2369,6 +2650,10 @@ body.body--dark {
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: 1rem;
+}
+
+.customer-section {
+  padding: 0.5rem 1rem;
 }
 
 .customer-info {
