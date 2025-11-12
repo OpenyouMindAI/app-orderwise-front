@@ -1009,6 +1009,12 @@
                 type="textarea"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="clientAdded.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
@@ -1295,7 +1301,9 @@ export default {
        * Client added data form
        * @type {Object}
        */
-      clientAdded: {},
+      clientAdded: {
+        is_credit: false
+      },
       /**
        * Invoice data
        * @type {Object}

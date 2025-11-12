@@ -119,6 +119,12 @@
                 @address-selected="handleAddressSelected"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="client.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn icon="delete" color="negative" label="Eliminar" @click="deleteClient" :loading="visible" />
@@ -202,6 +208,12 @@
                 :key="addressComponentKey"
                 :initial-address="address"
                 @address-selected="handleAddressSelected"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="client.is_credit"
+                label="¿Maneja cuenta corriente?"
               />
             </div>
           </q-card-section>
@@ -345,7 +357,8 @@ export default {
         phone_number: '',
         address: '',
         condition_iva_receptor: null,
-        document_type: null
+        document_type: null,
+        is_credit: false
       }
       this.role = null
 
@@ -366,7 +379,8 @@ export default {
         phone_number: '',
         address: '',
         condition_iva_receptor: null,
-        document_type: null
+        document_type: null,
+        is_credit: false
       }
       this.role = null
       this.address = null
