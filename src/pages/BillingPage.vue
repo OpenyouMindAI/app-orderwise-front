@@ -1085,48 +1085,83 @@
     />
 
     <q-dialog v-model="openAddClient" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+      <q-card style="width: 900px; max-width: 95vw;" class="client-form-card">
         <q-form @submit="saveClient">
-          <q-card-section class="row items-center q-py-sm bg-primary text-white">
-            <div class="text-h6">Agregar cliente</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeAddClientModal" />
+          <!-- Header con estilo naranja -->
+          <q-card-section class="client-form-header">
+            <div class="text-h6 text-white">Agregar cliente</div>
+            <q-btn icon="close" flat round dense @click="closeAddClientModal" class="text-white" />
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                autofocus
-                label="Tipo de documento"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="clientAdded.document_type"
-                :options="documentTypes"
-                @filter="getDocumentTypes"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+
+          <!-- Body con tema oscuro -->
+          <q-card-section class="client-form-body">
+            <!-- Nombre - Campo principal con asterisco rojo -->
+            <div class="form-field-wrapper">
               <q-input
-                filled
-                v-model="clientAdded.document_number"
-                label="Número de documento"
-              />
-                <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
+                outlined
                 v-model="clientAdded.name"
-                label="Nombre"
+                label="Nombre *"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                class="client-form-input client-form-name-input"
+                autofocus
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+
+            <!-- Información adicional -->
+            <div class="text-grey-5 q-mb-md">Información adicional (opcional)</div>
+
+            <!-- Fila 1: Tipo de documento y Número -->
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-6">
+                <q-select
+                  outlined
+                  use-input
+                  label="Tipo de documento"
+                  input-debounce="0"
+                  option-label="Desc"
+                  option-value="id"
+                  v-model="clientAdded.document_type"
+                  :options="documentTypes"
+                  @filter="getDocumentTypes"
+                  class="client-form-input"
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  outlined
+                  v-model="clientAdded.document_number"
+                  label="Número de documento"
+                  class="client-form-input"
+                />
+              </div>
+            </div>
+
+            <!-- Fila 2: Correo y Teléfono -->
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-6">
+                <q-input
+                  outlined
+                  v-model="clientAdded.email"
+                  type="email"
+                  label="Correo"
+                  class="client-form-input"
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  outlined
+                  v-model="clientAdded.phone_number"
+                  label="Teléfono"
+                  class="client-form-input"
+                />
+              </div>
+            </div>
+
+            <!-- Condición de IVA -->
+            <div class="form-field-wrapper">
               <q-select
+                outlined
                 use-input
-                filled
                 label="Condición de IVA"
                 input-debounce="0"
                 option-label="name"
@@ -1134,30 +1169,20 @@
                 v-model="clientAdded.condition_iva_receptor"
                 :options="conditionIvaReceptors"
                 @filter="getConditionIvaReceptor"
+                class="client-form-input"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.phone_number"
-                label="Número de teléfono"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+
+            <!-- Checkbox cuenta corriente -->
+            <div class="form-field-wrapper">
               <q-checkbox
                 v-model="clientAdded.is_credit"
                 label="¿Maneja cuenta corriente?"
+                class="client-form-checkbox"
               />
             </div>
-            <!-- Sección de Dirección -->
+
+            <!-- Sección de Dirección - MANTENER IGUAL -->
             <div class="col-12">
               <AddressComponent
                 :key="addressComponentKey"
@@ -1166,9 +1191,19 @@
               />
             </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
-          </q-card-actions>
+
+          <!-- Botón guardar mejorado -->
+          <div class="client-form-actions-improved">
+            <q-btn
+              icon="save"
+              color="primary"
+              label="GUARDAR"
+              type="submit"
+              :loading="loadingClient"
+              size="lg"
+              class="client-form-save-btn"
+            />
+          </div>
         </q-form>
       </q-card>
     </q-dialog>
@@ -4559,6 +4594,334 @@ export default {
 /* Thumb translúcido */
 .product-container-scroll::-webkit-scrollbar-thumb {
   border-radius: 4px;
+}
+
+/* Estilos para el formulario moderno de cliente */
+.client-form-card {
+  background: white !important;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--q-separator-color);
+}
+
+.body--dark .client-form-card {
+  background: #1e1e1e !important;
+}
+
+.client-form-header {
+  background: var(--q-primary) !important;
+  padding: 20px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.client-form-header .text-h6 {
+  font-weight: 700;
+  font-size: 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.client-form-body {
+  background: white;
+  padding: 32px;
+  padding-bottom: 24px;
+  position: relative;
+  color: #333;
+}
+
+.body--dark .client-form-body {
+  background: #1e1e1e;
+  color: white;
+}
+
+.client-form-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--q-primary), #00bcd4, var(--q-primary));
+}
+
+.form-field-wrapper {
+  margin-bottom: 12px;
+}
+
+.client-form-input {
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.client-form-input :deep(.q-field__control) {
+  border-radius: 12px !important;
+  min-height: 60px;
+  border: none !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #f8f9fa;
+  position: relative;
+  color: #333;
+}
+
+.client-form-input :deep(.q-field__control):before {
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+.client-form-input :deep(.q-field__control):after {
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+/* Estilos globales para TODOS los inputs - incluyendo AddressComponent */
+:deep(.q-field__control) {
+  border-radius: 12px !important;
+}
+
+:deep(.q-input .q-field__control) {
+  border-radius: 12px !important;
+}
+
+:deep(.q-select .q-field__control) {
+  border-radius: 12px !important;
+}
+
+.body--dark .client-form-input :deep(.q-field__control) {
+  background: #2a2a2a;
+  color: white;
+}
+
+.client-form-input :deep(.q-field__control):hover {
+  border-color: var(--q-primary);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.client-form-input :deep(.q-field__native) {
+  color: inherit !important;
+  font-weight: 500;
+  padding: 12px 20px 8px 20px; /* Más padding arriba para dar espacio al label */
+}
+
+/* Labels mejorados con más espacio */
+.client-form-input :deep(.q-field__label) {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  left: 20px;
+  top: 8px !important; /* Más espacio arriba para separar del texto */
+  transition: all 0.3s ease;
+  color: #6b7280 !important;
+}
+
+.body--dark .client-form-input :deep(.q-field__label) {
+  color: #9ca3af !important;
+}
+
+/* Focus effects mejorados */
+.client-form-input :deep(.q-field--focused .q-field__control) {
+  border-color: var(--q-primary) !important;
+  box-shadow: 0 0 0 4px var(--q-primary-alpha, rgba(25, 118, 210, 0.15));
+  transform: scale(1.02);
+}
+
+.client-form-input :deep(.q-field--focused .q-field__label) {
+  color: var(--q-primary) !important;
+  transform: translateY(-32px) scale(0.85); /* Ajustado para el nuevo espaciado */
+  font-weight: 700;
+}
+
+/* Estilos adicionales para mejor presentación */
+.form-field-wrapper {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.text-grey-5 {
+  color: #6b7280 !important;
+  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.body--dark .text-grey-5 {
+  color: #9ca3af !important;
+}
+
+.client-form-input :deep(.q-field__control):before {
+  border-color: var(--q-separator-color) !important;
+}
+
+/* Bordes en tema claro */
+.body--light .client-form-input :deep(.q-field__control):before {
+  border-color: #e0e0e0 !important;
+}
+
+/* Bordes en tema oscuro */
+.body--dark .client-form-input :deep(.q-field__control):before {
+  border-color: #616161 !important;
+}
+
+.client-form-input :deep(.q-field__control):hover:before {
+  border-color: var(--q-primary) !important;
+}
+
+.client-form-input :deep(.q-field--focused .q-field__control):before,
+.client-form-input :deep(.q-field--focused .q-field__control):after {
+  border-color: var(--q-primary) !important;
+}
+
+/* Campo nombre con asterisco rojo */
+.client-form-input :deep(.q-field--error .q-field__label) {
+  color: #f44336 !important;
+}
+
+.client-form-input :deep(.q-field--error .q-field__control):before {
+  border-color: #f44336 !important;
+}
+
+/* Select dropdown */
+.client-form-input :deep(.q-field__append) {
+  color: #b0b0b0;
+}
+
+.client-form-actions-improved {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 32px;
+  background: white;
+  margin-top: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .client-form-actions-improved {
+  background: #1e1e1e;
+}
+
+/* Campo nombre más elegante y destacado */
+.client-form-name-input {
+  margin-bottom: 24px;
+}
+
+.client-form-name-input :deep(.q-field__control) {
+  min-height: 64px !important;
+  font-size: 18px;
+  border: 3px solid var(--q-primary);
+  border-radius: 16px;
+  background: #f0f8ff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.body--dark .client-form-name-input :deep(.q-field__control) {
+  background: #2a2a2a;
+}
+
+.client-form-name-input :deep(.q-field__native) {
+  font-size: 18px !important;
+  font-weight: 600;
+  padding: 0 24px;
+}
+
+.client-form-name-input :deep(.q-field__label) {
+  font-size: 16px !important;
+  font-weight: 700;
+  left: 24px;
+  color: var(--q-primary) !important;
+}
+
+.client-form-name-input :deep(.q-field--focused .q-field__control) {
+  border-color: var(--q-primary) !important;
+  box-shadow: 0 0 0 6px var(--q-primary-alpha, rgba(25, 118, 210, 0.15));
+  transform: scale(1.03);
+}
+
+.client-form-save-btn {
+  background: var(--q-primary) !important;
+  color: white !important;
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 120px;
+  height: 40px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form-save-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.client-form-save-btn:hover::before {
+  left: 100%;
+}
+
+.client-form-save-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Checkbox styling */
+.client-form-checkbox {
+  color: #b0b0b0;
+}
+
+.client-form-checkbox :deep(.q-checkbox__inner) {
+  color: var(--q-primary);
+}
+
+.client-form-checkbox :deep(.q-checkbox__label) {
+  color: #b0b0b0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .client-form-actions-improved {
+    position: static;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 0 20px 20px;
+  }
+  .client-form-body {
+    padding: 16px;
+    padding-bottom: 16px;
+  }
 }
 
 </style>
