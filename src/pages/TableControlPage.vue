@@ -311,7 +311,8 @@
                       >
                         <q-tooltip>Agregar nota</q-tooltip>
                       </q-btn>
-                      <q-btn
+                                            <q-btn
+                        v-if="isUserAdmin"
                         icon="delete"
                         size="sm"
                         round
@@ -879,6 +880,12 @@ export default {
 
   computed: {
     ...mapState(authentication, ['userSession', 'branchOffice']),
+
+    isUserAdmin () {
+      return this.userSession?.is_root ||
+      this.userSession?.is_super_admin ||
+      false
+    },
 
     roomOptions () {
       return this.livingRooms.map(room => ({
