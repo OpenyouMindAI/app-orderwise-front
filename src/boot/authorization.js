@@ -19,8 +19,8 @@ const isTokenExpired = ($store) => {
     return true
   }
 
-  // Check if user session has company_session
-  if (!$store.userSession.company_session_id && !$store.userSession.is_root) {
+  // Check if user session has company_session (excepto para super admin recién registrado)
+  if (!$store.userSession.company_session_id && !$store.userSession.is_root && !$store.userSession.is_super_admin) {
     return true
   }
 
@@ -38,13 +38,26 @@ const isTokenExpired = ($store) => {
 
 const validModule = ($store, to, next) => {
   const user = $store.userSession
-  const modules = user?.roles[0]?.modules
-  if (user.is_root) return next()
+
+  // Si es root, permitir acceso
+  if (user?.is_root || user?.is_super_admin) return next()
+
+  // Si no tiene roles o módulos, permitir acceso (usuario recién registrado)
+  if (!user?.roles || user.roles.length === 0) return next()
+
+  const modules = user.roles[0]?.modules
+
+  // Si no tiene módulos definidos, permitir acceso
+  if (!modules || modules.length === 0) return next()
 
   if (user?.company_session_id) {
-    const moduleFind = modules?.find((module) => module.link === to.name)
-    if (!moduleFind) return next({ name: modules[0].link })
+    const moduleFind = modules.find((module) => module.link === to.name)
+    if (!moduleFind && modules[0]?.link) {
+      return next({ name: modules[0].link })
+    }
   }
+
+  return next()
 }
 
 const modeleExcept = ['Profile', 'ChangeCompany']

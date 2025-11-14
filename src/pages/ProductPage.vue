@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
+    <div class="row q-col-gutter-md">
       <div class="col-12 text-right q-gutter-sm">
         <q-btn
           color="blue"

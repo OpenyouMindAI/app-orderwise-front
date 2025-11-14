@@ -131,7 +131,7 @@
 
         <!-- Registro -->
         <div class="register-container">
-          <span class="register-text">¿No tienes cuenta? <a href="#" class="register-link">Crear cuenta</a></span>
+          <span class="register-text">¿No tienes cuenta? <router-link to="/register" class="register-link">Crear cuenta</router-link></span>
         </div>
       </q-form>
 

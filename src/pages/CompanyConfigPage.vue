@@ -640,7 +640,7 @@ const loading = ref(false)
 const store = authentication()
 const { branchOffice } = storeToRefs(store)
 const userSession = store.userSession
-const company = ref(userSession.company_session)
+const company = ref(userSession.company_session || {})
 
 // Company config
 const companyConfig = ref({
@@ -670,7 +670,7 @@ const fileBanner = ref({
 const configFiles = ref([...companyConfig?.value?.files])
 
 const file = ref({
-  url: userSession.company_session.url
+  url: userSession?.company_session?.url
 })
 
 // Address component variables

@@ -402,6 +402,7 @@
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
+
   </q-layout>
 </template>
 
