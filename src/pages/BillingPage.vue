@@ -2369,6 +2369,7 @@ export default {
     filterCategories (value, update) {
       this.$api.get('categories', {
         params: {
+          branch_office_id: this.branchOffice?.id,
           dataSearch: {
             name: value
           }

@@ -80,6 +80,46 @@
                 @filter="getPrinters"
               />
             </div>
+            <div class="col-12">
+              <div class="row items-center q-mb-sm">
+                <div class="col">
+                  <label class="text-subtitle2">Sucursales</label>
+                </div>
+                <div class="col-auto">
+                  <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    color="primary"
+                    label="Seleccionar todas"
+                    @click="selectAllBranchOffices"
+                  />
+                </div>
+              </div>
+              <q-select
+                filled
+                multiple
+                use-chips
+                label="Seleccionar sucursales"
+                option-label="name"
+                option-value="id"
+                v-model="selectedBranchOffices"
+                :options="branchOffices"
+                emit-value
+                map-options
+              >
+                <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
+                  <q-item v-bind="itemProps">
+                    <q-item-section side>
+                      <q-checkbox :model-value="selected" @update:model-value="toggleOption(opt)" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ opt.name }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
                 v-model="category.show_catalog"
@@ -141,6 +181,46 @@
                 @filter="getPrinters"
               />
             </div>
+            <div class="col-12">
+              <div class="row items-center q-mb-sm">
+                <div class="col">
+                  <label class="text-subtitle2">Sucursales</label>
+                </div>
+                <div class="col-auto">
+                  <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    color="primary"
+                    label="Seleccionar todas"
+                    @click="selectAllBranchOffices"
+                  />
+                </div>
+              </div>
+              <q-select
+                filled
+                multiple
+                use-chips
+                label="Seleccionar sucursales"
+                option-label="name"
+                option-value="id"
+                v-model="selectedBranchOffices"
+                :options="branchOffices"
+                emit-value
+                map-options
+              >
+                <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
+                  <q-item v-bind="itemProps">
+                    <q-item-section side>
+                      <q-checkbox :model-value="selected" @update:model-value="toggleOption(opt)" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ opt.name }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
                 v-model="category.show_catalog"
@@ -171,6 +251,8 @@ export default {
       categories: [],
       aliquotTypes: [],
       printers: [],
+      branchOffices: [],
+      selectedBranchOffices: [],
       category: {
         show_catalog: 0
       },
@@ -245,6 +327,7 @@ export default {
       pagination: this.paginationConfig,
       filter: undefined
     })
+    this.getBranchOffices()
   },
   watch: {
     filter (data) {
@@ -264,6 +347,7 @@ export default {
       this.category = {
         show_catalog: 0
       }
+      this.selectedBranchOffices = []
     },
     /**
      * Search beneficiary
@@ -295,6 +379,27 @@ export default {
             color: 'negative'
           })
         })
+    },
+    /**
+     * Get branch offices
+     */
+    async getBranchOffices () {
+      try {
+        const { data } = await this.$api.get('branch-offices', {
+          params: {
+            paginate: false
+          }
+        })
+        this.branchOffices = data
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Select all branch offices
+     */
+    selectAllBranchOffices () {
+      this.selectedBranchOffices = this.branchOffices.map(bo => bo.id)
     },
     /**
      * Get printers
@@ -359,7 +464,8 @@ export default {
       this.visible = true
       const categoryData = {
         ...this.category,
-        printer_id: this.category.printer?.id || null
+        printer_id: this.category.printer?.id || null,
+        branch_office_ids: this.selectedBranchOffices
       }
       this.$api.post('categories', categoryData)
         .then(({ data }) => {
@@ -390,6 +496,8 @@ export default {
     editCategory (event, row, index) {
       this.openEditCategory = true
       this.category = row
+      // Cargar las sucursales seleccionadas
+      this.selectedBranchOffices = row.branch_offices?.map(bo => bo.id) || []
     },
     /**
      * Save edit
@@ -398,7 +506,8 @@ export default {
       this.visible = true
       const categoryData = {
         ...this.category,
-        printer_id: this.category.printer?.id || null
+        printer_id: this.category.printer?.id || null,
+        branch_office_ids: this.selectedBranchOffices
       }
       this.$api.put(`categories/${this.category.id}`, categoryData)
         .then(({ data }) => {

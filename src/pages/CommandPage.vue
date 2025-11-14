@@ -1587,6 +1587,7 @@ export default {
     getCategories () {
       this.$api.get('categories', {
         params: {
+          branch_office_id: this.branchOffice?.id,
           dataFilter: {
             show_catalog: 1
           }

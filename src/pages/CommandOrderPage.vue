@@ -1030,7 +1030,11 @@ const getBranchOffices = async () => {
  */
 const getCategories = async () => {
   try {
-    const { data } = await api.get('categories')
+    const { data } = await api.get('categories', {
+      params: {
+        branch_office_id: branchOffice.value?.id
+      }
+    })
     categories.value = data
   } catch (error) {
     console.log(error)

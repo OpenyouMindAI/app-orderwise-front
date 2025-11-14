@@ -1424,6 +1424,7 @@ export default {
       this.$api.get('categories', {
         params: {
           paginate: false,
+          branch_office_id: this.branchOffice?.id,
           dataSearch: { name: value }
         }
       }).then(({ data }) => {
@@ -1437,6 +1438,7 @@ export default {
       this.$api.get('categories', {
         params: {
           paginate: false,
+          branch_office_id: this.branchOffice?.id,
           dataSearch: { name: value }
         }
       }).then(({ data }) => {
