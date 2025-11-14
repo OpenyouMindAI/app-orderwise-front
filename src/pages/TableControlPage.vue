@@ -883,7 +883,7 @@ export default {
 
     isUserAdmin () {
       return this.userSession?.is_root ||
-      this.userSession?.roles?.some(r => r?.acronym === 'SAM') ||
+      this.userSession?.is_super_admin ||
       false
     },
 
