@@ -1190,6 +1190,12 @@
                 @address-selected="handleAddressSelectedForClient"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="clientAdded.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
           </q-card-section>
 
           <!-- Botón guardar mejorado -->
@@ -1430,6 +1436,11 @@ export default {
        */
       cashflow: false,
       /**
+       * Invoice created at (custom date)
+       * @type {String}
+       */
+      invoiceCreatedAt: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
+      /**
        * Delivery date
        * @type {String}
        */
@@ -1495,7 +1506,9 @@ export default {
        * Client added data form
        * @type {Object}
        */
-      clientAdded: {},
+      clientAdded: {
+        is_credit: false
+      },
       /**
        * Invoice data
        * @type {Object}
@@ -2612,6 +2625,7 @@ export default {
     filterCategories (value, update) {
       this.$api.get('categories', {
         params: {
+          branch_office_id: this.branchOffice?.id,
           dataSearch: {
             name: value
           }
@@ -3005,6 +3019,7 @@ export default {
       this.resetProductSelection()
       this.tableSelected = []
       this.invoiceDescription = ''
+      this.invoiceCreatedAt = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.deliveryDate = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
       this.tableClose = false
@@ -3094,6 +3109,7 @@ export default {
         user_created_id: this.userSession.id,
         cashbox_user_id: this.cashBoxState?.id,
         exchange_rate: this.exchangeRate?.amount || 0,
+        created_at: this.invoiceCreatedAt,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,

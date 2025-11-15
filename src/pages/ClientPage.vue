@@ -147,6 +147,12 @@
                 @address-selected="handleAddressSelected"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="client.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
           </q-card-section>
 
           <!-- Botones de acción -->
@@ -277,6 +283,12 @@
                 :key="addressComponentKey"
                 :initial-address="address"
                 @address-selected="handleAddressSelected"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="client.is_credit"
+                label="¿Maneja cuenta corriente?"
               />
             </div>
           </q-card-section>

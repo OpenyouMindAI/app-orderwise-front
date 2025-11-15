@@ -388,6 +388,16 @@
                   <p class="checkbox-description">Permitir arqueo de caja</p>
                 </div>
               </div>
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <q-checkbox
+                    v-model="companyConfig.other.categories_by_branch"
+                    label="Categorías por sucursal"
+                    color="primary"
+                  />
+                  <p class="checkbox-description">Filtrar categorías diferentes por sucursal</p>
+                </div>
+              </div>
             </div>
 
             <div class="step-actions">
@@ -652,7 +662,10 @@ const companyConfig = ref({
   coin: company.value?.company_config?.coin,
   priceList: company.value?.company_config?.price_list,
   printer: company.value?.company_config?.printer,
-  other: company.value?.company_config?.other || {},
+  other: {
+    ...(company.value?.company_config?.other || {}),
+    categories_by_branch: company.value?.company_config?.other?.categories_by_branch ?? false
+  },
   point_of_sale: company.value?.company_config?.point_of_sale,
   files: company.value?.company_config?.files || [],
   partial_billing: company.value?.company_config?.partial_billing || false,

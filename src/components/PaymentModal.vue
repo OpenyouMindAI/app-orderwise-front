@@ -45,6 +45,7 @@
           <q-markup-table class="q-mb-md">
             <thead>
               <tr>
+                <th class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">✅</th>
                 <th class="text-left">Método de pago</th>
                 <th class="text-left">Referencia</th>
                 <th class="text-right">Monto</th>
@@ -55,6 +56,9 @@
             </thead>
             <tbody>
               <tr v-for="(payment, index) in localPayments" :key="payment.id || index">
+                <td class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">
+                  <q-checkbox v-model="payment.checked" />
+                </td>
                 <td class="text-left">{{ payment.name }}</td>
                 <td class="text-left">
                   <span v-if="payment.reference">{{ payment.reference }}</span>
@@ -571,13 +575,9 @@ export default {
         // Close the modal
         emit('update:show', false)
 
-        // Navigate to main billing page if we have router access
-        if (window.location.pathname.includes('table-control')) {
-          // For TableControlPage, we need to refresh the tables view
-          setTimeout(() => {
-            window.location.reload()
-          }, 500)
-        }
+        // NOTE: Removed window.location.reload() because TableControlPage
+        // handles the table update internally via refreshTables() method.
+        // The reload was causing the page to refresh before print operations completed.
       } catch (error) {
         console.error('Error handling table close:', error)
       }
