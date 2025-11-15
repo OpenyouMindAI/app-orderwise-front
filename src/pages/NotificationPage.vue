@@ -43,13 +43,18 @@
       </div>
 
       <div class="notifications-list">
-        <div v-if="filteredItems.length === 0" class="empty-state">
+        <div v-if="loading && items.length === 0" class="loading-state">
+          <q-spinner-dots color="primary" size="50px" />
+          <div class="text-body1 text-grey-6 q-mt-md">Cargando notificaciones...</div>
+        </div>
+
+        <div v-else-if="items.length === 0" class="empty-state">
           <q-icon name="notifications_none" size="4rem" color="grey-5" />
           <div class="text-h6 text-grey-6 q-mt-md">No hay notificaciones</div>
           <div class="text-body2 text-grey-5">No se encontraron notificaciones con los filtros aplicados</div>
         </div>
 
-        <div v-for="notification in filteredItems" :key="notification.id" class="notification-card">
+        <div v-for="notification in items" :key="notification.id" class="notification-card">
           <q-card flat class="modern-card" @click="handleNotificationClick(notification)">
             <q-card-section class="notification-header">
               <div class="notification-icon">
@@ -131,6 +136,26 @@
               />
             </q-card-actions>
           </q-card>
+        </div>
+      </div>
+
+      <!-- Paginación -->
+      <div v-if="pagination.total > 0" class="pagination-section">
+        <div class="pagination-info">
+          <span class="text-body2 text-grey-7">
+            Mostrando {{ items.length }} de {{ pagination.total }} notificaciones
+          </span>
+        </div>
+        <div class="pagination-actions">
+          <q-btn
+            v-if="pagination.current_page < pagination.last_page"
+            color="primary"
+            label="Cargar más"
+            icon-right="expand_more"
+            :loading="loading"
+            @click="loadMore"
+            class="load-more-btn"
+          />
         </div>
       </div>
 
@@ -412,8 +437,16 @@ export default defineComponent({
     const search = ref('')
     const typeFilter = ref(null)
     const severityFilter = ref(null)
+    const loading = ref(false)
     const route = useRoute()
     const router = useRouter()
+    
+    const pagination = ref({
+      current_page: 1,
+      last_page: 1,
+      per_page: 15,
+      total: 0
+    })
 
     watch(route, () => {
       if (route.query.id) {
@@ -496,12 +529,14 @@ export default defineComponent({
       })
     }
 
-    const fetchItems = async () => {
+    const fetchItems = async (page = 1, append = false) => {
+      loading.value = true
       try {
         const params = {
+          page: page,
+          per_page: pagination.value.per_page,
           search: search.value || null,
-          type: typeFilter.value || null,
-          severity: severityFilter.value?.value || null
+          type: typeFilter.value || null
         }
 
         Object.keys(params).forEach(key => {
@@ -512,12 +547,20 @@ export default defineComponent({
 
         const { data } = await api.get('notifications', { params })
 
-        let notifications = data
-        if (!Array.isArray(notifications)) {
-          notifications = [notifications].filter(Boolean)
+        // Actualizar paginación
+        pagination.value = {
+          current_page: data.current_page,
+          last_page: data.last_page,
+          per_page: data.per_page,
+          total: data.total
         }
 
-        items.value = notifications
+        // Actualizar items
+        if (append) {
+          items.value = [...items.value, ...data.data]
+        } else {
+          items.value = data.data
+        }
 
         if (route.query.id) {
           if (items.value.length > 0) {
@@ -532,50 +575,35 @@ export default defineComponent({
           message: 'Error cargando notificaciones',
           position: 'top'
         })
-        items.value = []
+        if (!append) {
+          items.value = []
+        }
+      } finally {
+        loading.value = false
       }
     }
 
-    const filteredItems = computed(() => {
-      let filtered = items.value
-
-      if (search.value) {
-        const searchTerm = search.value.toLowerCase()
-        filtered = filtered.filter(item => {
-          const message = item.data?.message?.toLowerCase() || ''
-          const errorType = item.data?.error_type?.toLowerCase() || ''
-          const exception = item.data?.exception?.toLowerCase() || ''
-          return message.includes(searchTerm) ||
-             errorType.includes(searchTerm) ||
-             exception.includes(searchTerm)
-        })
+    const loadMore = async () => {
+      if (pagination.value.current_page < pagination.value.last_page) {
+        await fetchItems(pagination.value.current_page + 1, true)
       }
+    }
 
-      if (typeFilter.value) {
-        filtered = filtered.filter(item =>
-          item.data?.error_type === typeFilter.value
-        )
-      }
-
-      if (severityFilter.value?.value) {
-        filtered = filtered.filter(item =>
-          item.data?.error_type === severityFilter.value.value
-        )
-      }
-
-      return filtered
-    })
+    // Filtros ahora se aplican en el backend, no necesitamos computed
 
     const handleSearchChange = () => {
-      fetchItems()
+      pagination.value.current_page = 1
+      fetchItems(1, false)
     }
 
     const handleTypeFilterChange = () => {
-      fetchItems()
+      pagination.value.current_page = 1
+      fetchItems(1, false)
     }
 
     const handleRefresh = () => {
-      fetchItems()
+      pagination.value.current_page = 1
+      fetchItems(1, false)
     }
 
     const handleNotificationClick = (notification) => {
@@ -645,12 +673,13 @@ export default defineComponent({
     fetchItems()
 
     return {
-      filteredItems,
       items,
       selected,
       drawer,
       search,
       typeFilter,
+      loading,
+      pagination,
       typeToggleOptions,
       getErrorColor,
       getErrorIcon,
@@ -668,7 +697,8 @@ export default defineComponent({
       parseResponseBody,
       getFormattedTrace,
       getStatusColor,
-      goToLog
+      goToLog,
+      loadMore
     }
   }
 })
@@ -814,6 +844,42 @@ export default defineComponent({
     justify-content: center;
     padding: 60px 20px;
     text-align: center;
+  }
+
+  /* Estado de carga */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  /* Sección de paginación */
+  .pagination-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 20px;
+    margin-top: 24px;
+    border-top: 1px solid rgba(229, 231, 235, 0.5);
+  }
+
+  .pagination-info {
+    text-align: center;
+  }
+
+  .pagination-actions {
+    display: flex;
+    justify-content: center;
+  }
+
+  .load-more-btn {
+    border-radius: 12px;
+    padding: 8px 24px;
+    min-width: 150px;
   }
 
   /* Estilos del drawer mejorados */
