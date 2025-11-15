@@ -1668,11 +1668,11 @@ export default {
           message: 'Procesando orden...'
         })
 
-        // Preparar productos para enviar al backend
         const products = this.cartProducts.map(product => ({
           id: product.id,
           amount: product.amount,
           price: product.price,
+          cost: product.cost || 0,
           subtotal: product.subtotal,
           observation: product.observation || ''
         }))
@@ -1734,23 +1734,16 @@ export default {
         if (!this.hasMoreOrders) return
 
         this.loadingOrders = true
-
-        // Obtener fecha de hoy para filtrar
-        const today = new Date()
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
         const { data } = await this.$api.get('invoices', {
           params: {
-            client_id: this.userSession.id,
             paginate: true,
             page: this.ordersCurrentPage,
             perPage: this.ordersPageSize,
             sortOrder: 'desc',
-            sortBy: 'created_at',
-            // Filtrar solo órdenes de hoy
-            dateFrom: startOfDay.toISOString().split('T')[0],
-            dateTo: endOfDay.toISOString().split('T')[0],
-            with: 'client,tables,products'
+            sortBy: 'id',
+            dataFilter: {
+              seller_id: this.userSession.id
+            }
           }
         })
 

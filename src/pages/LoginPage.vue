@@ -209,6 +209,9 @@ export default {
     if (this.$q.platform.is.nativeMobile && window.Capacitor) {
       await this.initializeGoogleAuthMobile()
     }
+
+    // Auto-login si existen username y password en query params
+    await this.checkAutoLogin()
   },
   methods: {
     /**
@@ -239,6 +242,46 @@ export default {
       } catch (error) {
         console.error('Error initializing Google Auth on mount:', error)
         console.error('Init error details:', error.message)
+      }
+    },
+    /**
+     * Verificar y ejecutar auto-login si existen parámetros en la URL
+     */
+    async checkAutoLogin () {
+      try {
+        // Obtener parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search)
+        const username = urlParams.get('username')
+        const password = urlParams.get('password')
+
+        // Solo ejecutar auto-login si ambos parámetros existen
+        if (username && password) {
+          console.log('Auto-login detectado con parámetros de URL')
+
+          // Asignar valores a los campos
+          this.username = username
+          this.password = password
+
+          // Mostrar loading
+          this.$q.loading.show({
+            message: 'Iniciando sesión automáticamente...'
+          })
+
+          // Esperar un momento para que se vea el loading
+          await new Promise(resolve => setTimeout(resolve, 500))
+
+          // Ejecutar login
+          await this.loginAt()
+
+          // Limpiar parámetros de la URL por seguridad
+          const cleanUrl = window.location.origin + window.location.pathname
+          window.history.replaceState({}, document.title, cleanUrl)
+        }
+      } catch (error) {
+        console.error('Error en auto-login:', error)
+        notify('Error al iniciar sesión automáticamente', 'negative', 'warning')
+      } finally {
+        this.$q.loading.hide()
       }
     },
     /**

@@ -956,6 +956,9 @@ export default {
       const { company_session: companySession } = this.userSession
       this.coin = companySession?.company_config?.coin
       this.defaultClient = companySession?.company_config?.client
+      this.client = this.defaultClient
+      this.tempClient = this.defaultClient
+      console.log(this.tempClient)
     },
     /**
      * Get exchange rate
@@ -1291,10 +1294,9 @@ export default {
       this.selectedTable = table
       this.selectedInvoice = null
       this.invoiceProducts = []
-      this.client = null
-      this.tempClient = null
+      this.client = this.defaultClient
+      this.tempClient = this.defaultClient
       this.clientFieldEnabled = false
-      // Clear payment state from previous operations
       this.invoicePayments = []
       this.tableClose = false
       this.showInvoiceModal = true
