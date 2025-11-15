@@ -4,95 +4,104 @@
       <span class="text-subtitle1">Factura número: </span>
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
-      <div class="row q-col-gutter-x-md">
-        <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-12" id="select-client">
-            <q-select
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              use-input
-              filled
-              dense
-              label="Cliente"
-              input-debounce="0"
-              option-value="id"
-              v-model="client"
-              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-              :options="clients"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterClients"
-            >
-              <template v-slot:append>
-                <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
-              </template>
-            </q-select>
-          </div>
-          <div class="col-xl-2 col-lg-2 col-md-3 col-sm-6 col-xs-6">
-            <q-select
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              use-input
-              filled
-              dense
-              label="Tipo de factura"
-              input-debounce="0"
-              option-label="name"
-              option-value="id"
-              v-model="invoiceType"
-              :options="invoiceTypes"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterInvoiceTypes"
-            />
-          </div>
-          <div v-if="invoiceType.bill" class="col-xl-2 col-lg-2 col-md-2 col-sm-4 col-xs-6">
-            <q-select
-              v-model="voucherType"
-              use-input
-              filled
-              dense
-              label="Tipo de factura (Arca)"
-              input-debounce="0"
-              option-label="Desc"
-              option-value="id"
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              :options="voucherTypes"
-              :rules="[(val) => !!val || 'El campo es requerido.']"
-              @filter="getVoucherTypes"
-            />
-          </div>
-          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6">
-            <q-select
-              use-input
-              :hide-dropdown-icon="$q.platform.is.nativeMobile"
-              filled
-              dense
-              label="Tipo de servicio"
-              input-debounce="0"
-              option-label="name"
-              option-value="id"
-              v-model="typeOfService"
-              :options="typeOfServices"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterTypeOfServices"
-            />
-          </div>
-          <div class="col-xl-2 col-lg-2 col-md-2 col-sm-6 col-xs-6" v-if="openCashBox">
-            <q-btn
-              style="border-radius: 10px; padding: 5px 15px"
-              dense
-              :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
-              :color="isUserBoxOpen ? 'negative' : 'primary'"
-              :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
-              @click="handleCashBoxButtonClick"
-            >
-              <q-tooltip class="text-body2" anchor="bottom middle">
-                {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
-              </q-tooltip>
-            </q-btn>
-          </div>
-        </div>
-        <div class="col-xs-12 col-sm-7 col-md-7 col-lg-6 col-xl-6 q-col-gutter-sm">
+    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
+      <div class="billing-panel-container">
+        <div>
+          <!-- Panel de facturación -->
           <div class="row q-col-gutter-sm">
-            <div class="col-xl-3 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex justify-between">
+            <!-- Selectores principales -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;" class="col-12">
+              <!-- Select cliente -->
+              <div id="select-client">
+                <q-select
+                  filled
+                  dense
+                  v-model="client"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-value="id"
+                  :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                  :options="clients"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="filterClients"
+                  label="Cliente"
+                >
+                  <template v-slot:append>
+                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddClient = true)" size="sm"/>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Select tipo de factura -->
+              <div>
+                <q-select
+                  filled
+                  dense
+                  v-model="invoiceType"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-label="name"
+                  option-value="id"
+                  :options="invoiceTypes"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="filterInvoiceTypes"
+                  label="Tipo de factura"
+                />
+              </div>
+
+              <!-- Select tipo de factura (Arca) -->
+              <div v-if="invoiceType.bill">
+                <q-select
+                  filled
+                  dense
+                  v-model="voucherType"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-value="id"
+                  option-label="Desc"
+                  :options="voucherTypes"
+                  :rules="[(val) => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="getVoucherTypes"
+                  label="Tipo de factura (Arca)"
+                />
+              </div>
+
+              <!-- Select tipo de servicio -->
+              <div>
+                <q-select
+                  filled
+                  dense
+                  v-model="typeOfService"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-value="id"
+                  option-label="name"
+                  :options="typeOfServices"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  hide-bottom-space
+                  @filter="filterTypeOfServices"
+                  label="Tipo de servicio"
+                />
+              </div>
+
+              <!-- Espacio donde estaba el boton de caja - ahora vacío -->
+            </div>
+            <div class="col-12" style="width: 100% !important;">
               <q-input
                 filled
                 dense
@@ -100,13 +109,13 @@
                 autofocus
                 label="Código"
                 ref="barcode"
-                :style="$q.platform.is.nativeMobile ? 'width: 60%;' : 'width: 100%;'"
+                style="width: 100% !important; max-width: none !important;"
                 @keyup.enter="processBarcode(barcode)"
                 @focus="scanner = false"
                 @blur="scanner = true"
               />
               <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
+                style="border-radius: 10px; padding: 5px 15px; margin-top: 8px;"
                 color="primary"
                 icon="qr_code_scanner"
                 label="Escanear"
@@ -120,29 +129,8 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="justify-start col-xl-9 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                label="Cobrar"
-                icon="payments"
-                color="positive"
-                id="payments"
-                dense
-                :disable="products.length <= 0"
-                @click="dialogPayment = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F1
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobrar
-                </q-tooltip>
-              </q-btn>
+            <!-- Botón Mesas -->
+            <div class="col-12 q-mt-sm">
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
                 color="primary"
@@ -163,60 +151,6 @@
                 </q-badge>
                 <q-tooltip class="text-body2" anchor="bottom middle">
                   Seleccionar mesas
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                icon="payments"
-                color="info"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
-                style="border-radius: 10px; padding: 5px 15px"
-                @click="cashflow = true"
-              >
-                <q-badge
-                  color="swap_horiz"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F11
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Entrada y salida de dinero
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
-                icon="search"
-                color="teal"
-                dense
-                @click="searchInvoice = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F12
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Buscar factura
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                icon="delete"
-                color="negative"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Borrar factura
                 </q-tooltip>
               </q-btn>
             </div>
@@ -319,7 +253,7 @@
                           type="number"
                           @focus="e => e.target.select()"
                           v-model.number="scope.value"
-                          :model-value="Number(scope.value).toFixed(3)"
+                          :model-value="Number(scope.value).toFixed(2)"
                           autofocus
                           @keyup.enter="scope.set"
                         />
@@ -502,7 +436,7 @@
                 </div>
               </div>
             </div>
-           <div class="col-12 q-col-gutter-xs q-mt-md row">
+            <div class="col-12 q-col-gutter-xs q-mt-md row">
               <div class="col-6" v-if="typeOfService.code !== 4">
                 <q-select
                   filled
@@ -515,19 +449,97 @@
                   @filter="getCoins"
                 />
               </div>
-              <div class="col-6" v-if="typeOfService.code !== 4">
+              <div class="col-6" v-if="typeOfService.code !== '4'">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12">
+              <div class="col-12" v-if="typeOfService.code !== '4'">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
-
               </div>
-              <div class="col-12" v-if="typeOfService.code !== 4">
+              <div class="col-12">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+              </div>
+
+              <!-- Sección de archivos adjuntos - Solo para pedidos (code === 5) -->
+              <div class="col-12" v-if="typeOfService && typeOfService.code === 5">
+                <q-card flat bordered class="q-mt-md">
+                  <q-card-section class="q-pb-sm">
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center justify-between">
+                      <div class="flex items-center">
+                        <q-icon name="attachment" class="q-mr-sm" />
+                        Archivos Adjuntos
+                      </div>
+
+                      <!-- Botón para agregar archivos - visible cuando ya hay archivos -->
+                      <q-btn
+                        v-if="invoiceFiles.length > 0"
+                        round
+                        color="primary"
+                        text-color="white"
+                        icon="add"
+                        size="sm"
+                        unelevated
+                        @click="openFileDialog"
+                      >
+                        <q-tooltip>Agregar más archivos</q-tooltip>
+                      </q-btn>
+                    </div>
+
+                    <!-- Dropzone simple - solo cuando no hay archivos -->
+                    <div
+                      v-if="invoiceFiles.length === 0"
+                      class="upload-zone"
+                      :class="{
+                        'upload-zone-active': isDragOverInvoice,
+                        'q-dark': $q.dark.isActive
+                      }"
+                      @dragenter.prevent="isDragOverInvoice = true"
+                      @dragover.prevent="isDragOverInvoice = true"
+                      @dragleave.prevent="isDragOverInvoice = false"
+                      @drop.prevent="handleInvoiceFileDrop"
+                      @click="openFileDialog"
+                    >
+                      <div class="upload-content">
+                        <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
+                        <div class="upload-text">
+                          Arrastra archivos aquí
+                        </div>
+                        <q-btn
+                          color="primary"
+                          label="SELECCIONAR"
+                          unelevated
+                          size="xs"
+                          class="q-mt-xs upload-btn"
+                          @click.stop="openFileDialog"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Input oculto para seleccionar archivos - SIEMPRE disponible -->
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,application/pdf"
+                      style="display: none"
+                      @change="handleFileSelect"
+                    />
+
+                    <!-- Vista de archivos adjuntos -->
+                    <div v-if="invoiceFiles.length > 0" class="q-mt-md">
+                      <div class="text-body2 text-primary q-mb-sm">
+                        Archivos adjuntos ({{ invoiceFiles.length }})
+                      </div>
+                      <file-component
+                        :files="invoiceFiles"
+                        @delete:files="handleDeleteInvoiceFiles"
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
               </div>
               <div class="col-12">
                 <div class="flex q-mt-sm" v-if="invoice" style="gap: 15px;">
@@ -569,107 +581,268 @@
                   </q-btn>
                 </div>
               </div>
-              <div class="col-12">
-                <q-list separator bordered style="border-radius: 10px;">
-                  <q-item v-if="tableSelected.length">
-                    <q-item-section>
-                      Mesas
-                    </q-item-section>
-                    <q-item-section side>
-                      {{ tableSelected.length }}
-                    </q-item-section>
-                  </q-item>
-                  <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
-                    <q-item-section>
-                      TOTAL
-                    </q-item-section>
-                    <q-item-section v-if="coin" side class="text-white">
-                      {{ coin.symbol }} {{ formatNumber(totalBill) }}
-                    </q-item-section>
-                  </q-item>
-                  <q-item>
-                    <q-item-section v-if="pendingPayment >= 0">
-                      TOTAL POR COBRAR
-                    </q-item-section>
-                    <q-item-section v-else>
-                      VUELTO
-                    </q-item-section>
-                    <q-item-section side v-if="coin">
-                      {{  coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </div>
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-5 col-md-5 col-lg-6 col-xl-6" ref="productsSection">
-          <q-table
-            v-model:pagination="pagination"
-            row-key="name"
-            id="pop-products"
-            dense
-            grid
-            style="max-height: calc(100vh - 190px); overflow: auto;"
-            binary-state-sort
-            :loading="loadingProducts"
-            :rows="allProducts"
-            :columns="productColumns"
-            :filter="filter"
-            no-data-label="Registro no encontrado"
-            @request="setPagination"
-          >
-            <template v-slot:top>
-              <div class="row full-width q-col-gutter-xs">
-                <div class="col-6">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    clearable
-                    label="Categorías"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="category"
-                    :options="categories"
-                    @filter="filterCategories"
-                  />
-                </div>
-                <div class="col-6">
-                  <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
-                    <template v-slot:append>
-                      <q-icon name="search" />
-                    </template>
-                  </q-input>
-                </div>
+        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
+
+          <!-- Botones de acción arriba de todo -->
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+            <div class="flex q-gutter-sm justify-start">
+              <!-- Abrir/Cerrar caja -->
+              <q-btn
+                v-if="openCashBox"
+                style="border-radius: 10px; padding: 5px 15px;"
+                dense
+                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                :color="isUserBoxOpen ? 'negative' : 'primary'"
+                :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+                @click="handleCashBoxButtonClick"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Cobrar -->
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                label="Cobrar"
+                icon="payments"
+                color="positive"
+                dense
+                :disable="products.length <= 0"
+                @click="dialogPayment = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F1
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Cobrar
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Entrada/Salida -->
+              <q-btn
+                icon="payments"
+                color="info"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
+                style="border-radius: 10px; padding: 5px 15px"
+                @click="cashflow = true"
+              >
+                <q-badge
+                  color="swap_horiz"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F11
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Entrada y salida de dinero
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Buscar -->
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
+                icon="search"
+                color="teal"
+                dense
+                @click="searchInvoice = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F12
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Buscar factura
+                </q-tooltip>
+              </q-btn>
+
+              <!-- Borrar -->
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                icon="delete"
+                color="negative"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
+                @click="clear"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Borrar factura
+                </q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+
+          <!-- Filtros fijos arriba -->
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+            <div class="row q-col-gutter-xs">
+              <div class="col-6">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  clearable
+                  label="Categorías"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="category"
+                  :options="categories"
+                  @filter="filterCategories"
+                />
               </div>
-            </template>
-            <template v-slot:item="props">
-              <div class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
-                <q-card class="my-card" style="border-radius: 10px;">
+              <div class="col-6">
+                <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
+                  <template v-slot:append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </div>
+            </div>
+          </div>
+
+          <!-- Productos con scroll -->
+          <div
+            ref="productsScrollContainer"
+            class="product-container-scroll"
+            style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+            @scroll="handleProductsScroll"
+          >
+            <!-- Grid de productos y skeleton juntos -->
+            <div class="row q-col-gutter-xs">
+              <!-- Productos existentes -->
+              <div
+                v-for="product in allProducts"
+                :key="product.id"
+                class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                style="padding: 1px;"
+              >
+                <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
                   <q-img
                     style="height: 150px; width: 100%; border-radius: 10px;"
-                    :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                    @click="props.row.is_promotion ? openPromoDialog(props.row) : validateProduct(props.row, true)"
+                    :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                    @click="product.is_promotion ? openPromoDialog(product) : validateProduct(product, true)"
                   >
                     <div class="absolute-full text-body2 flex flex-center text-bold text-center">
-                      {{ props.row.name }}
-                      <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 3px; right: 3px;">
+                      {{ product.name }}
+                      <q-badge v-if="!validStockProduct(product, 1)" color="negative" floating style="top: 3px; right: 3px;">
                         Sin stock
                       </q-badge>
                     </div>
                     <q-tooltip class="text-body2">
-                      {{props.row.name}}
+                      {{ product.name }}
                     </q-tooltip>
                   </q-img>
                 </q-card>
               </div>
-            </template>
-            <template v-slot:loading>
-              <q-inner-loading showing color="primary" />
-            </template>
-          </q-table>
+
+              <!-- Skeleton loader en la misma fila -->
+              <template v-if="loadingProducts">
+                <div
+                  v-for="n in skeletonCount"
+                  :key="`skeleton-${n}`"
+                  class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                  style="padding: 1px;"
+                >
+                  <q-card class="my-card" style="border-radius: 10px;">
+                    <q-skeleton
+                      height="150px"
+                      width="100%"
+                      style="border-radius: 10px;"
+                    />
+                  </q-card>
+                </div>
+              </template>
+            </div>
+
+            <!-- Mensaje cuando no hay productos -->
+            <div v-if="!loadingProducts && allProducts.length === 0" class="text-center q-pa-lg text-grey">
+              <q-icon name="inventory_2" size="3rem" />
+              <div class="text-h6 q-mt-md">No se encontraron productos</div>
+            </div>
+          </div>
+
+          <!-- Total fijo abajo -->
+          <div style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
+            <q-list separator bordered style="border-radius: 10px;">
+              <q-item v-if="tableSelected.length">
+                <q-item-section>
+                  Mesas
+                </q-item-section>
+                <q-item-section side>
+                  {{ tableSelected.length }}
+                </q-item-section>
+              </q-item>
+              <!-- Tasa de cambio -->
+              <q-item v-if="exchangeRate" class="bg-blue-1">
+                <q-item-section>
+                  <div class="text-subtitle2 text-weight-medium">Tasa de cambio</div>
+                  <div class="text-caption text-grey-7">
+                    1 {{ coin?.symbol || '' }} = {{ exchangeRate.amount }} {{ exchangeRate.coin?.symbol || '' }}
+                  </div>
+                </q-item-section>
+              </q-item>
+              <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                <q-item-section>
+                  TOTAL
+                </q-item-section>
+                <q-item-section v-if="coin" side class="text-white">
+                  <div style="display: flex; align-items: center; gap: 7px">
+                    <span>
+                      {{ coin.symbol }}
+                    </span>
+                    <span>
+                      {{ formatNumber(totalBill) }}
+                    </span>
+                    <span v-if="exchangeRate">
+                      |
+                    </span>
+                    <span v-if="exchangeRate">
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
+                    </span>
+                  </div>
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section v-if="pendingPayment >= 0">
+                  TOTAL POR COBRAR
+                </q-item-section>
+                <q-item-section v-else>
+                  VUELTO
+                </q-item-section>
+                <q-item-section side v-if="coin">
+                  <div style="display: flex; align-items: center; gap: 7px">
+                    <span>
+                      {{ coin.symbol }}
+                    </span>
+                    <span>
+                      {{ formatNumber(Math.abs(pendingPayment)) }}
+                    </span>
+                    <span v-if="exchangeRate">
+                      |
+                    </span>
+                    <span v-if="exchangeRate">
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
+                    </span>
+                  </div>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
         </div>
       </div>
     </q-form>
@@ -831,6 +1004,7 @@
       :cash-box-state="cashBoxState"
       :type-of-service="typeOfService"
       :invoice-type="invoiceType"
+      :exchange-rate="exchangeRate"
       @update:show="dialogPayment = $event"
       @update:table-close="tableClose = $event"
       @payment-update="handlePaymentUpdate"
@@ -911,48 +1085,83 @@
     />
 
     <q-dialog v-model="openAddClient" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+      <q-card style="width: 900px; max-width: 95vw;" class="client-form-card">
         <q-form @submit="saveClient">
-          <q-card-section class="row items-center q-py-sm bg-primary text-white">
-            <div class="text-h6">Agregar cliente</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeAddClientModal" />
+          <!-- Header con estilo naranja -->
+          <q-card-section class="client-form-header">
+            <div class="text-h6 text-white">Agregar cliente</div>
+            <q-btn icon="close" flat round dense @click="closeAddClientModal" class="text-white" />
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-select
-                use-input
-                filled
-                autofocus
-                label="Tipo de documento"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="clientAdded.document_type"
-                :options="documentTypes"
-                @filter="getDocumentTypes"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+
+          <!-- Body con tema oscuro -->
+          <q-card-section class="client-form-body">
+            <!-- Nombre - Campo principal con asterisco rojo -->
+            <div class="form-field-wrapper">
               <q-input
-                filled
-                v-model="clientAdded.document_number"
-                label="Número de documento"
-              />
-                <!-- :rules="[val => !!val || 'El campo es requerido.']" -->
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
+                outlined
                 v-model="clientAdded.name"
-                label="Nombre"
+                label="Nombre *"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                class="client-form-input client-form-name-input"
+                autofocus
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+
+            <!-- Información adicional -->
+            <div class="text-grey-5 q-mb-md">Información adicional (opcional)</div>
+
+            <!-- Fila 1: Tipo de documento y Número -->
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-6">
+                <q-select
+                  outlined
+                  use-input
+                  label="Tipo de documento"
+                  input-debounce="0"
+                  option-label="Desc"
+                  option-value="id"
+                  v-model="clientAdded.document_type"
+                  :options="documentTypes"
+                  @filter="getDocumentTypes"
+                  class="client-form-input"
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  outlined
+                  v-model="clientAdded.document_number"
+                  label="Número de documento"
+                  class="client-form-input"
+                />
+              </div>
+            </div>
+
+            <!-- Fila 2: Correo y Teléfono -->
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-6">
+                <q-input
+                  outlined
+                  v-model="clientAdded.email"
+                  type="email"
+                  label="Correo"
+                  class="client-form-input"
+                />
+              </div>
+              <div class="col-6">
+                <q-input
+                  outlined
+                  v-model="clientAdded.phone_number"
+                  label="Teléfono"
+                  class="client-form-input"
+                />
+              </div>
+            </div>
+
+            <!-- Condición de IVA -->
+            <div class="form-field-wrapper">
               <q-select
+                outlined
                 use-input
-                filled
                 label="Condición de IVA"
                 input-debounce="0"
                 option-label="name"
@@ -960,24 +1169,20 @@
                 v-model="clientAdded.condition_iva_receptor"
                 :options="conditionIvaReceptors"
                 @filter="getConditionIvaReceptor"
+                class="client-form-input"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.email"
-                type="email"
-                label="Correo"
+
+            <!-- Checkbox cuenta corriente -->
+            <div class="form-field-wrapper">
+              <q-checkbox
+                v-model="clientAdded.is_credit"
+                label="¿Maneja cuenta corriente?"
+                class="client-form-checkbox"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="clientAdded.phone_number"
-                label="Número de teléfono"
-              />
-            </div>
-            <!-- Sección de Dirección -->
+
+            <!-- Sección de Dirección - MANTENER IGUAL -->
             <div class="col-12">
               <AddressComponent
                 :key="addressComponentKey"
@@ -985,10 +1190,26 @@
                 @address-selected="handleAddressSelectedForClient"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="clientAdded.is_credit"
+                label="¿Maneja cuenta corriente?"
+              />
+            </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
-          </q-card-actions>
+
+          <!-- Botón guardar mejorado -->
+          <div class="client-form-actions-improved">
+            <q-btn
+              icon="save"
+              color="primary"
+              label="GUARDAR"
+              type="submit"
+              :loading="loadingClient"
+              size="lg"
+              class="client-form-save-btn"
+            />
+          </div>
         </q-form>
       </q-card>
     </q-dialog>
@@ -1009,10 +1230,10 @@
               filled
               v-model.number="quantity"
               :model-value="Number(quantity).toFixed(3)"
-              autofocus
               label="Cantidad"
               type="number"
               style="width: 50%;"
+              @focus="e => e.target.select()"
               @update:model-value="updateValues('quantity')"
             />
             <q-input
@@ -1022,6 +1243,8 @@
               label="Importe"
               type="number"
               style="width: 50%;"
+              autofocus
+              @focus="e => e.target.select()"
               @update:model-value="updateValues('currentAmount')"
             />
           </q-card-section>
@@ -1072,6 +1295,7 @@ import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
 import PaymentModal from 'src/components/PaymentModal.vue'
 import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
+import FileComponent from 'src/components/FileComponent.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1090,7 +1314,8 @@ export default {
     BarcodeScanner,
     CashBoxDialog,
     TransferMpDialog,
-    CashflowModal
+    CashflowModal,
+    FileComponent
   },
   data () {
     return {
@@ -1211,6 +1436,11 @@ export default {
        */
       cashflow: false,
       /**
+       * Invoice created at (custom date)
+       * @type {String}
+       */
+      invoiceCreatedAt: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
+      /**
        * Delivery date
        * @type {String}
        */
@@ -1276,7 +1506,9 @@ export default {
        * Client added data form
        * @type {Object}
        */
-      clientAdded: {},
+      clientAdded: {
+        is_credit: false
+      },
       /**
        * Invoice data
        * @type {Object}
@@ -1391,11 +1623,6 @@ export default {
        */
       exchange: false,
       /**
-       * Exchange rate
-       * @type {Number}
-       */
-      exchangeRate: 0,
-      /**
        * Scan dialog
        * @type {Boolean}
        */
@@ -1454,6 +1681,21 @@ export default {
        */
       withoutPrint: false,
       /**
+       * Invoice files (attachments)
+       * @type {Array}
+       */
+      invoiceFiles: [],
+      /**
+       * Drag over state for invoice files
+       * @type {Boolean}
+       */
+      isDragOverInvoice: false,
+      /**
+       * Deleted invoice files
+       * @type {Array}
+       */
+      deletedInvoiceFiles: [],
+      /**
        * Loading living room
        * @type {Boolean}
        */
@@ -1479,6 +1721,11 @@ export default {
        */
       categories: [],
       /**
+       * Exchange rate
+       * @type {Object}
+       */
+      exchangeRate: null,
+      /**
        * Loading products
        * @type {Boolean}
        */
@@ -1491,7 +1738,9 @@ export default {
       /**
        * Products columns
        * @type {Array}
+       * @deprecated Ya no se usa - Removido q-table, ahora se usa grid directo con v-for
        */
+      /* COMENTADO - Ya no necesario después de implementar scroll infinito
       productColumns: [
         {
           name: 'barcode',
@@ -1523,6 +1772,7 @@ export default {
           sortable: true
         }
       ],
+      */ // FIN COMENTADO - productColumns obsoleto
       voucherTypes: [],
       /**
        * Voucher type
@@ -1563,6 +1813,30 @@ export default {
         return total + ((payment.amount - (payment.discount_amount || 0)) || 0)
       }, 0)
       return this.totalBill - totalPayments
+    },
+    /**
+     * Calcula cuántos skeletons mostrar para llenar espacios vacíos en el grid
+     */
+    skeletonCount () {
+      // Si no hay productos, mostrar 12 skeletons (carga inicial)
+      if (this.allProducts.length === 0) {
+        return 12
+      }
+
+      // Detectar productos por fila según breakpoint (basado en col-xs-4, col-md-3, col-lg-2)
+      let productsPerRow = 6 // Default: col-lg-2 y col-xl-2 = 12/2 = 6
+
+      if (this.$q.screen.xs || this.$q.screen.sm) {
+        productsPerRow = 3 // col-xs-4 y col-sm-4 = 12/4 = 3
+      } else if (this.$q.screen.md) {
+        productsPerRow = 4 // col-md-3 = 12/3 = 4
+      }
+
+      // Calcular cuántos espacios vacíos quedan en la última fila
+      const emptySpaces = productsPerRow - (this.allProducts.length % productsPerRow)
+
+      // Si emptySpaces es igual a productsPerRow, significa que la última fila está completa
+      return emptySpaces === productsPerRow ? productsPerRow : emptySpaces
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice'])
@@ -1625,23 +1899,14 @@ export default {
       }
     },
     category () {
-      this.setPagination({
-        pagination: this.pagination,
-        filter: undefined
-      })
+      this.reloadProducts()
     },
     filter () {
-      this.setPagination({
-        pagination: this.pagination,
-        filter: undefined
-      })
+      this.reloadProducts()
     },
     branchOffice (data) {
       if (data) {
-        this.setPagination({
-          pagination: this.pagination,
-          filter: undefined
-        })
+        this.reloadProducts()
       }
     }
   },
@@ -1649,10 +1914,7 @@ export default {
     /**
      * Get products with pagination
      */
-    this.setPagination({
-      pagination: this.pagination,
-      filter: undefined
-    })
+    this.reloadProducts()
     /**
      * Init keywords button
      */
@@ -1708,11 +1970,28 @@ export default {
     this.getLocalStorage()
     this.getPaymentMethods()
     this.listenPayments()
+    this.getExchangeRates()
     this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
     // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    async getExchangeRates () {
+      try {
+        const { data } = await this.$api.get('exchange-rates', {
+          params: {
+            sortOrder: 'desc',
+            sortBy: 'id',
+            paginate: true,
+            perPage: 1,
+            page: 1
+          }
+        })
+        this.exchangeRate = data?.data?.[0]
+      } catch (error) {
+        console.error('Error getting exchange rates:', error)
+      }
+    },
     /**
      * Send invoice update to details screen
      * @param {Object} data - Invoice data
@@ -2127,15 +2406,23 @@ export default {
       }
     },
     /**
-     * Set data pagination emit event
-     * @param  {Object} data value pagination
+     * Recarga productos desde página 1 (usado por watchers y cambios de filtros)
+     * Reemplaza el antiguo setPagination con una API más simple
      */
-    setPagination (data) {
+    reloadProducts () {
+      console.log('🔄 Recargando productos desde página 1')
+
+      // Actualizar objeto pagination para resetear a página 1
+      this.pagination = {
+        ...this.pagination,
+        page: 1
+      }
+
       const params = {
         sortOrder: 'desc',
         sortBy: 'sold',
-        page: data.pagination.page,
-        perPage: data.pagination.rowsPerPage,
+        page: 1, // Siempre página 1 para recargas
+        perPage: this.pagination.rowsPerPage,
         paginate: true,
         dataSearch: {
           name: this.filter,
@@ -2143,8 +2430,9 @@ export default {
           barcode: this.filter
         }
       }
-      this.pagination = data.pagination
-      this.getAllProducts(params)
+
+      // false = carga inicial (reemplaza productos, no append)
+      this.getAllProducts(params, false)
     },
     /**
      * Set table selected
@@ -2337,6 +2625,7 @@ export default {
     filterCategories (value, update) {
       this.$api.get('categories', {
         params: {
+          branch_office_id: this.branchOffice?.id,
           dataSearch: {
             name: value
           }
@@ -2475,8 +2764,15 @@ export default {
      * Get all products
      * @param {Object} params params to search
      */
-    getAllProducts (params) {
+    getAllProducts (params, append = false) {
       this.loadingProducts = true
+
+      console.log(`${append ? '➕' : '🔄'} ${append ? 'Agregando' : 'Cargando'} productos:`, {
+        pagina: params.page,
+        porPagina: params.perPage,
+        append
+      })
+
       this.$api.get('products', {
         params: {
           ...params,
@@ -2489,7 +2785,7 @@ export default {
         }
       })
         .then(({ data }) => {
-          this.allProducts = data.data.map(product => ({
+          const newProducts = data.data.map(product => ({
             ...product,
             product_price_lists: [
               ...(product.product_price_lists || []),
@@ -2499,17 +2795,103 @@ export default {
               }
             ]
           }))
+
+          const prevCount = this.allProducts.length
+
+          if (append) {
+            // Scroll infinito: agregar productos al final
+            this.allProducts = [...this.allProducts, ...newProducts]
+            console.log('✓ Productos agregados:', {
+              nuevos: newProducts.length,
+              anterior: prevCount,
+              actual: this.allProducts.length,
+              total: data.total
+            })
+          } else {
+            // Carga inicial: reemplazar productos
+            this.allProducts = newProducts
+            console.log('✓ Productos cargados:', {
+              cantidad: newProducts.length,
+              total: data.total
+            })
+          }
+
           this.pagination.rowsNumber = data.total
-          this.fetchPromotions()
+
+          if (!append) {
+            // Solo cargar promociones en la carga inicial
+            this.fetchPromotions()
+          } else {
+            this.loadingProducts = false
+          }
         })
         .catch(err => {
           this.loadingProducts = false
+          console.error('❌ Error cargando productos:', err.message)
           Notify.create({
             message: err.message,
             icon: 'warning',
             color: 'negative'
           })
         })
+    },
+    /**
+     * Maneja el scroll infinito de productos
+     */
+    handleProductsScroll (event) {
+      const container = event.target
+      const scrollTop = container.scrollTop
+      const scrollHeight = container.scrollHeight
+      const clientHeight = container.clientHeight
+
+      // Detectar si está cerca del fondo (100px antes del final)
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100
+
+      // Solo continuar si está cerca del fondo y no está cargando
+      if (!isNearBottom || this.loadingProducts) {
+        return
+      }
+
+      // Verificar si hay más productos por cargar
+      const currentProductsCount = this.allProducts.length
+      const totalProducts = this.pagination.rowsNumber
+
+      // Si ya se cargaron todos los productos, no hacer nada
+      if (currentProductsCount >= totalProducts) {
+        console.log('✓ Todos los productos ya están cargados:', {
+          cargados: currentProductsCount,
+          total: totalProducts
+        })
+        return
+      }
+
+      // Calcular la siguiente página
+      const currentPage = Math.floor(currentProductsCount / this.pagination.rowsPerPage)
+      const nextPage = currentPage + 1
+
+      console.log('📦 Cargando más productos:', {
+        paginaActual: currentPage,
+        proximaPagina: nextPage,
+        productosCargados: currentProductsCount,
+        totalProductos: totalProducts,
+        restantes: totalProducts - currentProductsCount
+      })
+
+      // Cargar más productos
+      const params = {
+        sortOrder: 'desc',
+        sortBy: 'sold',
+        page: nextPage,
+        perPage: this.pagination.rowsPerPage,
+        paginate: true,
+        dataSearch: {
+          name: this.filter,
+          code: this.filter,
+          barcode: this.filter
+        }
+      }
+
+      this.getAllProducts(params, true)
     },
     sumCostPromotion (data) {
       return (data ?? [])
@@ -2637,17 +3019,20 @@ export default {
       this.resetProductSelection()
       this.tableSelected = []
       this.invoiceDescription = ''
+      this.invoiceCreatedAt = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.deliveryDate = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
       this.dialogPayment = false
-      this.withoutPrint = false
-      this.invoicePrinter = false
       this.tableClose = false
+      // Note: withoutPrint and invoicePrinter are reset by printBill() function
 
       // Limpiar campos de dirección
       this.address = null
       this.formattedAddress = ''
       // Reiniciar el componente AddressComponent incrementando su key
       this.addressComponentKey += 1
+
+      // Limpiar archivos adjuntos
+      this.clearInvoiceFiles()
 
       this.calculateTotal()
 
@@ -2707,6 +3092,10 @@ export default {
      * @returns {Object}
      */
     setModelInvoice () {
+      // Determinar si es cuenta corriente (CC) o contado
+      const isCuentaCorriente = this.invoiceType?.acronym_serie === 'CC'
+      const paymentType = isCuentaCorriente ? 'credit' : 'cash'
+
       const invoiceModel = {
         ...this.invoice,
         tableClose: this.tableClose,
@@ -2719,13 +3108,17 @@ export default {
         invoice_type_id: this.invoiceType.id,
         user_created_id: this.userSession.id,
         cashbox_user_id: this.cashBoxState?.id,
-        exchange_rate: this.exchangeRate,
+        exchange_rate: this.exchangeRate?.amount || 0,
+        created_at: this.invoiceCreatedAt,
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,
         products: this.products,
         status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
-        payments: this.payments.filter(payment => payment.amount > 0),
+        payments: this.payments.filter(payment => payment.amount > 0).map(payment => ({
+          ...payment,
+          payment_type: paymentType
+        })),
         total_amount: this.totalBill,
         tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
@@ -2738,14 +3131,6 @@ export default {
      */
     setParamsBill () {
       if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
-
-      console.log('=== SET PARAMS BILL ===', {
-        invoiceType: this.invoiceType,
-        pendingPayment: this.pendingPayment,
-        withoutPayment: this.withoutPayment,
-        withServiceType: this.withServiceType,
-        products: this.products
-      })
 
       if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
@@ -2776,11 +3161,19 @@ export default {
         let res = null
         if (!params) return
 
+        // Paso 1: Guardar factura con datos JSON
         if (this.$route.query.id) {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
           res = await this.$api.post('invoices', params)
         }
+
+        // Paso 2: Si hay archivos adjuntos y es tipo pedido (code === 5), enviarlos
+        const invoiceId = res.data.data?.id
+        if (invoiceId && this.invoiceFiles.length > 0 && this.typeOfService?.code === 5) {
+          await this.uploadInvoiceFiles(invoiceId)
+        }
+
         await this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
 
@@ -2790,14 +3183,68 @@ export default {
           // Limpiar siempre después de facturar exitosamente, excepto si viene de mesa
           setTimeout(() => this.clear(), 500)
         }
-        this.setPagination({
-          pagination: this.pagination,
-          filter: undefined
-        })
+        // Recargar productos para actualizar stock después de la venta
+        this.reloadProducts()
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
         this.loadingBilling = false
+      }
+    },
+
+    /**
+     * Upload invoice files to server
+     * @param {Number} invoiceId - ID de la factura creada
+     */
+    async uploadInvoiceFiles (invoiceId) {
+      try {
+        // Subir cada archivo individualmente
+        const uploadPromises = []
+
+        this.invoiceFiles.forEach((fileObj) => {
+          if (fileObj.isNew && fileObj.file) {
+            const formData = new FormData()
+
+            // Estructura requerida por el backend
+            formData.append('file', fileObj.file)
+            formData.append('fileable_type', 'App\\Models\\Invoice')
+            formData.append('fileable_id', invoiceId)
+
+            // Configurar headers para FormData
+            const config = {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            }
+
+            // Agregar promesa de upload
+            uploadPromises.push(
+              this.$api.post('files', formData, config)
+            )
+          }
+        })
+
+        // Eliminar archivos existentes marcados para eliminación (solo en edición)
+        if (this.deletedInvoiceFiles.length > 0) {
+          this.deletedInvoiceFiles.forEach((fileId) => {
+            // Verificar que sea un ID real antes de intentar eliminar
+            if (Number.isInteger(fileId) && fileId > 0) {
+              uploadPromises.push(
+                this.$api.delete(`files/${fileId}`)
+              )
+            }
+          })
+        }
+
+        // Ejecutar todas las subidas en paralelo
+        await Promise.all(uploadPromises)
+      } catch (error) {
+        console.error('Error al subir archivos:', error)
+        this.$q.notify({
+          message: 'La factura se guardó pero hubo un error al subir los archivos adjuntos',
+          icon: 'warning',
+          color: 'warning'
+        })
       }
     },
     /**
@@ -3533,7 +3980,9 @@ export default {
      */
     closeAddClientModal () {
       this.openAddClient = false
-      this.clientAdded = {}
+      this.clientAdded = {
+        is_credit: false
+      }
       this.address = null
       // Resetear el componente AddressComponent incrementando su key
       this.addressComponentKey += 1
@@ -3544,8 +3993,6 @@ export default {
      * @param {Object|String} address - The selected address
      */
     handleAddressSelectedForClient (address) {
-      console.log('Dirección seleccionada para cliente:', address)
-
       // Si la dirección es nula, limpiar el campo
       if (!address) {
         this.clientAdded.address = ''
@@ -3627,6 +4074,157 @@ export default {
         color: 'positive',
         icon: 'check_circle'
       })
+    },
+
+    /**
+     * Open file dialog safely
+     */
+    openFileDialog () {
+      const input = this.$refs.fileInput
+      if (input) {
+        input.click()
+      }
+    },
+
+    /**
+     * Handle file select
+     * @param {Event} event
+     */
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files)
+      this.processInvoiceFiles(files)
+      event.target.value = '' // Reset input
+    },
+
+    /**
+     * Handle invoice file drop
+     * @param {Event} event
+     */
+    handleInvoiceFileDrop (event) {
+      this.isDragOverInvoice = false
+      const files = Array.from(event.dataTransfer.files)
+      this.processInvoiceFiles(files)
+    },
+
+    /**
+     * Process invoice files (images and PDFs)
+     * @param {Array} files
+     */
+    processInvoiceFiles (files) {
+      let acceptedCount = 0
+      let rejectedCount = 0
+
+      files.forEach(file => {
+        // Validate file type
+        const isValidImage = file.type.startsWith('image/')
+        const isValidPDF = file.type === 'application/pdf'
+
+        if (!isValidImage && !isValidPDF) {
+          this.$q.notify({
+            message: `"${file.name}" no es un formato válido. Solo se permiten imágenes y archivos PDF`,
+            icon: 'warning',
+            color: 'negative',
+            position: 'top'
+          })
+          rejectedCount++
+          return
+        }
+
+        // Validate file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024 // 10MB
+
+        // Si el tamaño es 0, aceptar el archivo sin validación
+        // (Algunos navegadores como Brave reportan size=0 en drag & drop)
+        if (file.size === 0) {
+          this.addValidatedFile(file)
+          acceptedCount++
+          return
+        }
+
+        // Validar tamaño para archivos con size conocido
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2)
+
+        if (file.size > maxSize) {
+          this.$q.notify({
+            message: `"${file.name}" es muy grande (${fileSizeMB}MB). Máximo permitido: 10MB`,
+            icon: 'warning',
+            color: 'negative',
+            position: 'top',
+            timeout: 3000
+          })
+          rejectedCount++
+          return
+        }
+
+        // Archivo con tamaño válido, agregarlo directamente
+        this.addValidatedFile(file)
+        acceptedCount++
+      })
+
+      // Notificación de éxito si se agregaron archivos
+      if (acceptedCount > 0) {
+        const message = rejectedCount > 0
+          ? `${acceptedCount} archivo(s) agregado(s), ${rejectedCount} rechazado(s)`
+          : `${acceptedCount} archivo(s) agregado(s) exitosamente`
+
+        this.$q.notify({
+          message,
+          icon: 'check_circle',
+          color: 'positive',
+          position: 'top',
+          timeout: 2000
+        })
+      }
+    },
+
+    /**
+     * Add validated file to the list
+     * @param {File} file
+     */
+    addValidatedFile (file) {
+      const fileObj = {
+        id: Date.now() + Math.random(), // Temporary ID
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: URL.createObjectURL(file),
+        file, // Store original file for upload
+        isNew: true
+      }
+
+      this.invoiceFiles.push(fileObj)
+    },
+
+    /**
+     * Handle delete invoice files
+     * @param {Array} deletedIds
+     */
+    handleDeleteInvoiceFiles (deletedIds) {
+      if (deletedIds.length > 0) {
+        // Solo agregar IDs reales (enteros) de archivos existentes en el servidor
+        // Los IDs temporales (con decimales) no deben enviarse al backend
+        const realIds = deletedIds.filter(id => {
+          return Number.isInteger(id) && id > 0
+        })
+
+        if (realIds.length > 0) {
+          this.deletedInvoiceFiles.push(...realIds)
+        }
+      }
+    },
+
+    /**
+     * Clear invoice files
+     */
+    clearInvoiceFiles () {
+      // Revoke URLs to prevent memory leaks
+      this.invoiceFiles.forEach(file => {
+        if (file.url && file.isNew) {
+          URL.revokeObjectURL(file.url)
+        }
+      })
+      this.invoiceFiles = []
+      this.deletedInvoiceFiles = []
     }
   }
 }
@@ -3911,6 +4509,435 @@ export default {
 .modern-nav-btn--success:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Upload Zone Styles */
+.upload-zone {
+  background: rgba(25, 118, 210, 0.08);
+  border: 2px dashed var(--q-primary);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+}
+
+.upload-zone:hover {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.12);
+  border-color: var(--q-primary);
+}
+
+.upload-zone-active {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.15);
+  border-color: var(--q-primary);
+  transform: scale(1.02);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: var(--q-primary);
+  font-weight: 500;
+}
+
+.upload-btn {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* Dark mode support */
+.body--dark .upload-zone {
+  background: rgba(144, 202, 249, 0.1);
+  border-color: #90caf9;
+}
+
+.body--dark .upload-zone:hover {
+  background: rgba(144, 202, 249, 0.15);
+}
+
+.body--dark .upload-text {
+  color: #90caf9;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .upload-zone {
+    min-height: 80px;
+    padding: 12px;
+  }
+
+  .upload-text {
+    font-size: 12px;
+  }
+}
+
+.billing-panel-container {
+  display: grid;
+  grid-template-columns: calc(58.333% - 0.5rem) calc(41.666% - 0.5rem);
+  gap: 1rem;
+}
+
+/* Responsive: Móvil no aplica altura fija */
+@media (max-width: 599px) {
+  .billing-panel-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1440px) {
+  .billing-panel-container {
+    grid-template-columns: calc(50% - 0.5rem) calc(50% - 0.5rem);
+  }
+}
+
+.product-container-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Thumb translúcido */
+.product-container-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+}
+
+/* Estilos para el formulario moderno de cliente */
+.client-form-card {
+  background: white !important;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--q-separator-color);
+}
+
+.body--dark .client-form-card {
+  background: #1e1e1e !important;
+}
+
+.client-form-header {
+  background: var(--q-primary) !important;
+  padding: 20px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.client-form-header .text-h6 {
+  font-weight: 700;
+  font-size: 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.client-form-body {
+  background: white;
+  padding: 32px;
+  padding-bottom: 24px;
+  position: relative;
+  color: #333;
+}
+
+.body--dark .client-form-body {
+  background: #1e1e1e;
+  color: white;
+}
+
+.client-form-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--q-primary), #00bcd4, var(--q-primary));
+}
+
+.form-field-wrapper {
+  margin-bottom: 12px;
+}
+
+.client-form-input {
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.client-form-input :deep(.q-field__control) {
+  border-radius: 12px !important;
+  min-height: 60px;
+  border: none !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #f8f9fa;
+  position: relative;
+  color: #333;
+}
+
+.client-form-input :deep(.q-field__control):before {
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+.client-form-input :deep(.q-field__control):after {
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+/* Estilos globales para TODOS los inputs - incluyendo AddressComponent */
+:deep(.q-field__control) {
+  border-radius: 12px !important;
+}
+
+:deep(.q-input .q-field__control) {
+  border-radius: 12px !important;
+}
+
+:deep(.q-select .q-field__control) {
+  border-radius: 12px !important;
+}
+
+.body--dark .client-form-input :deep(.q-field__control) {
+  background: #2a2a2a;
+  color: white;
+}
+
+.client-form-input :deep(.q-field__control):hover {
+  border-color: var(--q-primary);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.client-form-input :deep(.q-field__native) {
+  color: inherit !important;
+  font-weight: 500;
+  padding: 12px 20px 8px 20px; /* Más padding arriba para dar espacio al label */
+}
+
+/* Labels mejorados con más espacio */
+.client-form-input :deep(.q-field__label) {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  left: 20px;
+  top: 8px !important; /* Más espacio arriba para separar del texto */
+  transition: all 0.3s ease;
+  color: #6b7280 !important;
+}
+
+.body--dark .client-form-input :deep(.q-field__label) {
+  color: #9ca3af !important;
+}
+
+/* Focus effects mejorados */
+.client-form-input :deep(.q-field--focused .q-field__control) {
+  border-color: var(--q-primary) !important;
+  box-shadow: 0 0 0 4px var(--q-primary-alpha, rgba(25, 118, 210, 0.15));
+  transform: scale(1.02);
+}
+
+.client-form-input :deep(.q-field--focused .q-field__label) {
+  color: var(--q-primary) !important;
+  transform: translateY(-32px) scale(0.85); /* Ajustado para el nuevo espaciado */
+  font-weight: 700;
+}
+
+/* Estilos adicionales para mejor presentación */
+.form-field-wrapper {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.text-grey-5 {
+  color: #6b7280 !important;
+  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.body--dark .text-grey-5 {
+  color: #9ca3af !important;
+}
+
+.client-form-input :deep(.q-field__control):before {
+  border-color: var(--q-separator-color) !important;
+}
+
+/* Bordes en tema claro */
+.body--light .client-form-input :deep(.q-field__control):before {
+  border-color: #e0e0e0 !important;
+}
+
+/* Bordes en tema oscuro */
+.body--dark .client-form-input :deep(.q-field__control):before {
+  border-color: #616161 !important;
+}
+
+.client-form-input :deep(.q-field__control):hover:before {
+  border-color: var(--q-primary) !important;
+}
+
+.client-form-input :deep(.q-field--focused .q-field__control):before,
+.client-form-input :deep(.q-field--focused .q-field__control):after {
+  border-color: var(--q-primary) !important;
+}
+
+/* Campo nombre con asterisco rojo */
+.client-form-input :deep(.q-field--error .q-field__label) {
+  color: #f44336 !important;
+}
+
+.client-form-input :deep(.q-field--error .q-field__control):before {
+  border-color: #f44336 !important;
+}
+
+/* Select dropdown */
+.client-form-input :deep(.q-field__append) {
+  color: #b0b0b0;
+}
+
+.client-form-actions-improved {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 32px;
+  background: white;
+  margin-top: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .client-form-actions-improved {
+  background: #1e1e1e;
+}
+
+/* Campo nombre más elegante y destacado */
+.client-form-name-input {
+  margin-bottom: 24px;
+}
+
+.client-form-name-input :deep(.q-field__control) {
+  min-height: 64px !important;
+  font-size: 18px;
+  border: 3px solid var(--q-primary);
+  border-radius: 16px;
+  background: #f0f8ff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.body--dark .client-form-name-input :deep(.q-field__control) {
+  background: #2a2a2a;
+}
+
+.client-form-name-input :deep(.q-field__native) {
+  font-size: 18px !important;
+  font-weight: 600;
+  padding: 0 24px;
+}
+
+.client-form-name-input :deep(.q-field__label) {
+  font-size: 16px !important;
+  font-weight: 700;
+  left: 24px;
+  color: var(--q-primary) !important;
+}
+
+.client-form-name-input :deep(.q-field--focused .q-field__control) {
+  border-color: var(--q-primary) !important;
+  box-shadow: 0 0 0 6px var(--q-primary-alpha, rgba(25, 118, 210, 0.15));
+  transform: scale(1.03);
+}
+
+.client-form-save-btn {
+  background: var(--q-primary) !important;
+  color: white !important;
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 120px;
+  height: 40px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form-save-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.client-form-save-btn:hover::before {
+  left: 100%;
+}
+
+.client-form-save-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Checkbox styling */
+.client-form-checkbox {
+  color: #b0b0b0;
+}
+
+.client-form-checkbox :deep(.q-checkbox__inner) {
+  color: var(--q-primary);
+}
+
+.client-form-checkbox :deep(.q-checkbox__label) {
+  color: #b0b0b0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .client-form-actions-improved {
+    position: static;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 0 20px 20px;
+  }
+  .client-form-body {
+    padding: 16px;
+    padding-bottom: 16px;
+  }
 }
 
 </style>

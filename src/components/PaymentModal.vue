@@ -45,15 +45,20 @@
           <q-markup-table class="q-mb-md">
             <thead>
               <tr>
+                <th class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">✅</th>
                 <th class="text-left">Método de pago</th>
                 <th class="text-left">Referencia</th>
                 <th class="text-right">Monto</th>
+                <th class="text-right" v-if="exchangeRate">Cambio</th>
                 <th class="text-right">% Descuento</th>
                 <th class="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(payment, index) in localPayments" :key="payment.id || index">
+                <td class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">
+                  <q-checkbox v-model="payment.checked" />
+                </td>
                 <td class="text-left">{{ payment.name }}</td>
                 <td class="text-left">
                   <span v-if="payment.reference">{{ payment.reference }}</span>
@@ -86,6 +91,9 @@
                     />
                   </q-popup-edit>
                 </td>
+                <td class="text-right" v-if="exchangeRate">
+                  {{ exchangeRate.coin?.symbol }} {{ formatNumber(payment.amount * exchangeRate.amount) }}
+                </td>
                 <td class="text-right">{{ payment.discount_percentage || 0 }}%</td>
                 <td class="text-center q-gutter-x-xs">
                   <q-btn
@@ -116,19 +124,45 @@
             <q-item-section v-else>
               VUELTO
             </q-item-section>
-            <q-item-section side v-if="coin" class="text-bold text-black">
-              {{ coin.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
+            <q-item-section side v-if="coin" class="text-bold">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span>
+                  {{ coin.symbol }}
+                </span>
+                <span>
+                  {{ formatNumber(Math.abs(pendingPayment)) }}
+                </span>
+                <span v-if="exchangeRate">
+                  |
+                </span>
+                <span v-if="exchangeRate">
+                  {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
+                </span>
+              </div>
             </q-item-section>
           </q-item>
 
           <q-list separator bordered style="border-radius: 10px;" dense>
             <!-- Subtotal -->
-            <q-item class="bg-positive text-white text-subtitle1" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
+            <q-item class="bg-positive text-white text-h6" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
               <q-item-section>
-                SUBTOTAL
+                TOTAL
               </q-item-section>
-              <q-item-section side v-if="coin" class="text-white">
-                {{ coin.symbol }} {{ formatNumber(totalAmount) }}
+              <q-item-section side v-if="coin" class="text-white text-bold">
+                <div style="display: flex; align-items: center; gap: 7px">
+                  <span>
+                    {{ coin.symbol }}
+                  </span>
+                  <span>
+                    {{ formatNumber(totalAmount) }}
+                  </span>
+                  <span v-if="exchangeRate">
+                    |
+                  </span>
+                  <span v-if="exchangeRate">
+                    {{ exchangeRate?.coin?.symbol }} {{ formatNumber(totalAmount * exchangeRate.amount) }}
+                  </span>
+                </div>
               </q-item-section>
             </q-item>
 
@@ -145,7 +179,20 @@
                 </span>
               </q-item-section>
               <q-item-section side v-if="coin">
-                {{ coin.symbol }} {{ formatNumber(paymentMethod.amount) }}
+                <div style="display: flex; align-items: center; gap: 7px" class="text-bold">
+                  <span>
+                    {{ coin.symbol }}
+                  </span>
+                  <span>
+                    {{ formatNumber(paymentMethod.amount) }}
+                  </span>
+                  <span v-if="exchangeRate">
+                    |
+                  </span>
+                  <span v-if="exchangeRate">
+                    {{ exchangeRate?.coin?.symbol }} {{ formatNumber(paymentMethod.amount * exchangeRate.amount) }}
+                  </span>
+                </div>
                 <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
                   (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
                 </span>
@@ -158,7 +205,14 @@
                 DESCUENTO TOTAL
               </q-item-section>
               <q-item-section side v-if="coin">
-                {{ coin.symbol }} {{ formatNumber(discountAmount) }}
+                <div style="display: flex; align-items: center; gap: 7px" class="text-bold">
+                  <span>
+                    {{ coin.symbol }}
+                  </span>
+                  <span>
+                    {{ formatNumber(discountAmount) }}
+                  </span>
+                </div>
               </q-item-section>
             </q-item>
 
@@ -221,6 +275,10 @@ export default {
     show: {
       type: Boolean,
       default: false
+    },
+    exchangeRate: {
+      type: Object,
+      default: null
     },
     paymentMethods: {
       type: Array,
@@ -330,6 +388,7 @@ export default {
       return localPayments.value.map(payment => ({
         name: payment.name,
         amount: payment.amount,
+        exchange: payment.exchange,
         discount_percentage: payment.discount_percentage || 0,
         discountAmount: payment.discount_percentage ? (payment.amount * payment.discount_percentage) / 100 : 0
       }))
@@ -353,6 +412,7 @@ export default {
         reference: null,
         coin_id: props.coin?.id ?? null,
         payment_method_id: data.id,
+        exchange: props.exchangeRate?.amount,
         user_created_id: props.userSession?.id ?? null,
         discount_percentage: data.percentage || 0,
         discount_amount: data.percentage
@@ -515,13 +575,9 @@ export default {
         // Close the modal
         emit('update:show', false)
 
-        // Navigate to main billing page if we have router access
-        if (window.location.pathname.includes('table-control')) {
-          // For TableControlPage, we need to refresh the tables view
-          setTimeout(() => {
-            window.location.reload()
-          }, 500)
-        }
+        // NOTE: Removed window.location.reload() because TableControlPage
+        // handles the table update internally via refreshTables() method.
+        // The reload was causing the page to refresh before print operations completed.
       } catch (error) {
         console.error('Error handling table close:', error)
       }

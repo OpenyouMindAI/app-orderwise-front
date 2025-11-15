@@ -388,6 +388,16 @@
                   <p class="checkbox-description">Permitir arqueo de caja</p>
                 </div>
               </div>
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <q-checkbox
+                    v-model="companyConfig.other.categories_by_branch"
+                    label="Categorías por sucursal"
+                    color="primary"
+                  />
+                  <p class="checkbox-description">Filtrar categorías diferentes por sucursal</p>
+                </div>
+              </div>
             </div>
 
             <div class="step-actions">
@@ -640,7 +650,7 @@ const loading = ref(false)
 const store = authentication()
 const { branchOffice } = storeToRefs(store)
 const userSession = store.userSession
-const company = ref(userSession.company_session)
+const company = ref(userSession.company_session || {})
 
 // Company config
 const companyConfig = ref({
@@ -652,7 +662,10 @@ const companyConfig = ref({
   coin: company.value?.company_config?.coin,
   priceList: company.value?.company_config?.price_list,
   printer: company.value?.company_config?.printer,
-  other: company.value?.company_config?.other || {},
+  other: {
+    ...(company.value?.company_config?.other || {}),
+    categories_by_branch: company.value?.company_config?.other?.categories_by_branch ?? false
+  },
   point_of_sale: company.value?.company_config?.point_of_sale,
   files: company.value?.company_config?.files || [],
   partial_billing: company.value?.company_config?.partial_billing || false,
@@ -670,7 +683,7 @@ const fileBanner = ref({
 const configFiles = ref([...companyConfig?.value?.files])
 
 const file = ref({
-  url: userSession.company_session.url
+  url: userSession?.company_session?.url
 })
 
 // Address component variables

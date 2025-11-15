@@ -77,6 +77,18 @@
 
           <!-- Position (only for editing) -->
           <q-input v-if="isEditing" v-model.number="form.position" label="Position" type="number" outlined min="1" />
+
+          <!-- Visible Toggle -->
+          <q-toggle
+            v-model="form.visible"
+            label="Visible en el menú"
+            color="primary"
+            left-label
+          >
+            <q-tooltip>
+              Si está desactivado, el módulo no se mostrará en el menú lateral aunque el usuario tenga permisos
+            </q-tooltip>
+          </q-toggle>
         </div>
       </q-card-section>
 
@@ -100,16 +112,16 @@ import IconPicker from './IconPicker.vue'
 const props = defineProps({
   module: {
     type: Object,
-    default: () => ({}),
+    default: () => ({})
   },
   sections: {
     type: Array,
-    default: () => [],
+    default: () => []
   },
   isEditing: {
     type: Boolean,
-    default: false,
-  },
+    default: false
+  }
 })
 
 const emit = defineEmits(['save', 'cancel'])
@@ -126,6 +138,7 @@ const form = reactive({
   section_id: null,
   icon: 'note',
   position: 1,
+  visible: true
 })
 
 // Computed properties
@@ -133,7 +146,7 @@ const sectionOptions = computed(() => {
   return props.sections.map((section) => ({
     label: section.name,
     value: section.id,
-    icon: section.icon,
+    icon: section.icon
   }))
 })
 
@@ -153,6 +166,7 @@ watch(
         section_id: newModule.section_id,
         icon: newModule.icon || 'note',
         position: newModule.position || 1,
+        visible: newModule.visible !== undefined ? newModule.visible : true
       })
     }
   },

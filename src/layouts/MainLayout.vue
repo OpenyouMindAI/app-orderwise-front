@@ -319,7 +319,8 @@
           <q-item
             v-if="
               validateRole(list.roles) &&
-              list.name != 'home'
+              list.name != 'home' &&
+              list.visible !== false
             "
             v-ripple
             clickable
@@ -395,12 +396,13 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-page-container class="main-content">
+    <q-page-container>
       <router-view />
     </q-page-container>
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
+
   </q-layout>
 </template>
 

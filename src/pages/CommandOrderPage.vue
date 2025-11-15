@@ -1,189 +1,275 @@
 <template>
-  <q-page padding>
-    <div class="flex flex-wrap justify-between">
-      <div class="flex q-gutter-sm">
-        <q-badge v-for="branchOffice in branchOfficeSelect" :key="branchOffice?.id">
+  <q-page class="trello-board">
+    <!-- Header Compacto -->
+    <div class="board-header">
+      <div class="flex items-center q-gutter-sm">
+        <q-icon name="dashboard" size="24px" color="primary" />
+        <span class="text-h6 text-weight-medium">Tablero de Órdenes</span>
+        <q-badge v-for="branchOffice in branchOfficeSelect" :key="branchOffice?.id" color="primary" class="q-ml-xs">
           {{ branchOffice.name }}
         </q-badge>
       </div>
-      <q-btn icon="filter_alt" color="primary" @click="dialogFilter = true" round size="sm"/>
+      <q-btn icon="tune" label="Filtros" color="primary" flat @click="dialogFilter = true" />
     </div>
-    <div class="board-command q-gutter-x-md q-py-sm justify-start">
-      <div v-for="(status, index) in statuses" :key="index">
-        <q-card class="column-command" v-if="!setPermissionsByUser(status.permissions)">
-          <q-card-section class="text-subtitle2">
-            {{ status.label }}
-            <q-badge rounded color="secondary" class="q-ml-xs">
-              {{ status.total }}
-            </q-badge>
-          </q-card-section>
-          <q-card-section class="scroll q-pt-sm q-gutter-sm" style="height: calc(100vh - 235px); overflow: auto;">
+
+    <!-- Bulk Actions Toolbar -->
+    <transition name="slide-down">
+      <div v-if="selectedInvoices.length > 0" class="bulk-actions-toolbar">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center q-gutter-sm">
+            <q-icon name="check_circle" size="24px" color="white" />
+            <span class="text-subtitle1 text-weight-medium text-white">
+              {{ selectedInvoices.length }} orden(es) seleccionada(s)
+            </span>
+            <q-btn
+              label="Deseleccionar todo"
+              flat
+              dense
+              color="white"
+              size="sm"
+              @click="clearSelection"
+            />
+          </div>
+          <div class="flex items-center q-gutter-sm">
+            <!-- Assign Delivery Person -->
+            <q-select
+              v-model="bulkDeliveryPerson"
+              :options="deliveryPersons"
+              option-label="name"
+              option-value="id"
+              dense
+              filled
+              dark
+              label="Asignar repartidor"
+              style="min-width: 200px"
+              @update:model-value="applyBulkDeliveryPerson"
+            >
+              <template v-slot:prepend>
+                <q-icon name="delivery_dining" />
+              </template>
+            </q-select>
+            <!-- Change Status -->
+            <q-select
+              v-model="bulkStatus"
+              :options="statuses"
+              option-label="label"
+              option-value="value"
+              dense
+              filled
+              dark
+              label="Cambiar estado"
+              style="min-width: 180px"
+              @update:model-value="applyBulkStatus"
+            >
+              <template v-slot:prepend>
+                <q-icon name="swap_horiz" />
+              </template>
+            </q-select>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Tablero Trello -->
+    <div class="trello-columns">
+      <div v-for="(status, index) in filteredStatuses" :key="index" class="trello-column">
+        <!-- Column Header -->
+        <div class="column-header">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center q-gutter-xs">
+              <!-- Select All Checkbox -->
+              <q-checkbox
+                :model-value="isColumnSelected(status)"
+                @update:model-value="toggleColumnSelection(status)"
+                dense
+                size="xs"
+                color="primary"
+              >
+                <q-tooltip>Seleccionar toda la columna</q-tooltip>
+              </q-checkbox>
+              <q-icon :name="status.icon" size="18px" :color="status.color" />
+              <span class="text-subtitle2 text-weight-bold">{{ status.label }}</span>
+            </div>
+            <div class="flex items-center q-gutter-xs">
+              <!-- View All Drivers Button (only for in_delivery) -->
+              <q-btn
+                v-if="status.value === 'in_delivery'"
+                icon="map"
+                size="sm"
+                flat
+                dense
+                round
+                color="teal"
+                @click="openAllDriversMap"
+              >
+                <q-tooltip>Ver todos los conductores</q-tooltip>
+              </q-btn>
+              <q-badge :color="status.color" rounded>{{ status.total }}</q-badge>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cards Container with Drag & Drop -->
+        <draggable
+          v-model="status.data"
+          :group="{ name: 'orders', pull: status.value !== 'in_delivery' && status.value !== 'delivered', put: status.value !== 'in_delivery' && status.value !== 'delivered' }"
+          item-key="id"
+          class="cards-container"
+          @change="onDragChange($event, status, index)"
+          :animation="200"
+          ghost-class="ghost-card"
+          :disabled="status.value === 'in_delivery' || status.value === 'delivered'"
+        >
+          <template #item="{ element: invoice }">
             <q-card
-              v-for="invoice in status.data"
-              :key="invoice.id"
-              class="cursor-pointer"
+              class="order-card"
+              :class="{ 'selected-card': isInvoiceSelected(invoice.id) }"
               @click="showInvoices(invoice)"
             >
 
-              <q-card-section class="flex justify-between items-center q-py-sm">
-                <div class="grid items-center full-width">
-                  <div class="flex justify-between full-width">
-                    <q-badge color="primary" class="text-bold">
-                      {{ invoice.branch_office?.name }}
-                      <q-tooltip class="text-subtitle1">
-                        {{ invoice.branch_office?.name }}
-                      </q-tooltip>
-                    </q-badge>
-                    <q-badge color="secondary" class="text-bold" v-if="invoice?.delivery_person">
-                      {{ invoice.delivery_person?.name }}
-                      <q-tooltip class="text-subtitle1">
-                        {{ invoice.delivery_person?.name }}
-                      </q-tooltip>
-                    </q-badge>
-                  </div>
-                  <div class="flex items-center full-width" style="margin-top: 10px; gap: 10px;">
-                    <q-btn
-                      icon="arrow_back"
-                      color="primary"
+              <!-- Card Header -->
+              <div class="card-header">
+                <div class="flex items-center justify-between q-mb-xs">
+                  <div class="flex items-center q-gutter-xs">
+                    <!-- Selection Checkbox -->
+                    <q-checkbox
+                      :model-value="isInvoiceSelected(invoice.id)"
+                      @update:model-value="toggleInvoiceSelection(invoice)"
+                      @click.stop
+                      dense
                       size="xs"
-                      round
-                      outline
-                      v-if="index"
-                      @click.stop="nextStatus(invoice, index - 1)"
-                    />
-                    <div class="text-bold">
-                      {{  invoice?.invoice_type?.name }}
-                      {{ invoice.code }}
-                    </div>
-                    <q-btn
-                      v-if="index !== (statuses.length - 1)"
-                      icon="arrow_forward"
                       color="primary"
-                      size="xs"
-                      round
-                      outline
-                      @click.stop="nextStatus(invoice, index + 1)"
                     />
+                    <span class="text-weight-bold text-body2">{{ invoice.code }}</span>
                   </div>
+                  <q-badge :color="getInvoiceTypeColor(invoice.invoice_type?.name)" text-color="white" class="text-caption">
+                    {{ invoice.invoice_type?.name }}
+                  </q-badge>
                 </div>
-              </q-card-section>
-              <q-separator/>
-              <q-card-section class="column q-py-xs">
-                <span class="text-bold">Artículos:</span>
+                <div class="text-caption text-grey-7">{{ invoice.branch_office?.name }}</div>
+              </div>
+              <!-- Products List with Checkboxes -->
+              <div class="card-products">
                 <div
-                  v-for="product in invoice.products" :key="product.id"
-                  class="full-width"
+                  v-for="product in invoice.products.slice(0, 3)"
+                  :key="product.id"
+                  class="product-item"
+                  @click.stop
                 >
-                  <div>
-                    <span>
-                      {{ product.name }}
-                      x
-                      {{ Number(product?.pivot?.amount).toFixed(2) }}
-                    </span>
-                  </div>
-                  <div style="word-wrap: break-word; overflow-wrap: break-word">
-                    <p class="text-body2 text-grey-7" v-if="product?.pivot?.observation">
-                      Observación: {{ product?.pivot?.observation }}
-                    </p>
+                  <q-checkbox
+                    v-model="product.pivot.is_ready"
+                    dense
+                    size="xs"
+                    color="green"
+                    :disable="status.value === 'in_delivery' || status.value === 'delivered'"
+                    @update:model-value="toggleProductReady(invoice, product)"
+                  />
+                  <div class="product-info">
+                    <span class="text-body2">{{ product.name }}</span>
+                    <span class="text-caption text-grey-6">x{{ Number(product?.pivot?.amount).toFixed(0) }}</span>
                   </div>
                 </div>
+                <div v-if="invoice.products.length > 3" class="text-caption text-grey-6 q-mt-xs q-ml-md">
+                  +{{ invoice.products.length - 3 }} más...
+                </div>
 
-                <!-- Promociones -->
-                <template v-if="invoice.promotions && invoice.promotions.length > 0">
-                  <span class="text-bold q-mt-sm">Promociones:</span>
-                  <div
-                    v-for="promotion in invoice.promotions" :key="promotion.id"
-                    class="full-width"
-                  >
-                    <div class="row items-center">
-                      <span>
-                        {{ promotion.name }}
-                        x
-                        {{ Number(promotion.pivot.quantity).toFixed(2) }}
-                      </span>
-                      <q-btn
-                        v-if="promotion.pivot && promotion.pivot.promotion_details && promotion.pivot.promotion_details.length > 0"
-                        :icon="promotionExpanded[promotion.id] ? 'expand_less' : 'expand_more'"
-                        size="xs"
-                        color="orange"
-                        @click.stop="togglePromotionDetails(promotion.id)"
-                        round
-                        dense
-                        class="q-ml-xs"
-                      />
-                    </div>
-
-                    <!-- Detalles de la promoción -->
-                    <div v-if="promotionExpanded[promotion.id] && promotion.pivot && promotion.pivot.promotion_details" class="q-ml-md q-mt-xs">
-                      <div v-for="group in promotion.pivot.promotion_details" :key="group.id" class="q-mb-xs">
-                        <div class="text-body2 text-weight-medium">
-                          {{ group.name }} ({{ group.quantity }} requeridos)
-                        </div>
-                        <div class="q-ml-sm">
-                          <div v-if="group.products && group.products.length > 0">
-                            <div
-                              v-for="product in group.products.filter(p => p.pivot && p.pivot.quantity > 0)"
-                              :key="product.id"
-                              class="text-body2 text-grey-7"
-                            >
-                              • {{ product.name }} ({{ product.pivot.quantity }} {{ product.pivot.quantity === 1 ? 'unidad' : 'unidades' }})
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                <!-- Progress Bar -->
+                <div class="q-mt-xs">
+                  <q-linear-progress
+                    :value="getProductsProgress(invoice)"
+                    color="green"
+                    size="4px"
+                    class="rounded-borders"
+                  />
+                  <div class="text-caption text-grey-6 q-mt-xs">
+                    {{ getReadyProductsCount(invoice) }}/{{ invoice.products.length }} listos
                   </div>
-                </template>
-              </q-card-section>
-              <q-separator/>
-              <q-card-section  class="q-py-sm" v-if="invoice.client">
-                Cliente: <span class="text-bold">{{ invoice.client?.name }}</span>
-              </q-card-section>
-              <q-separator/>
-              <q-card-section class="q-py-sm flex justify-between items-center">
-                <span v-if="visibleBranchOffice || role.deliveryPerson">
-                  Por pagar: {{  formatNumber(invoice.total - invoice.total_payments) }}
-                </span>
-                <q-btn
-                  color="secondary"
-                  icon="print"
-                  size="sm"
-                  round
-                  outline
-                  @click.stop="print(invoice)"
-                />
-              </q-card-section>
-              <q-separator v-if="invoice.description"/>
-              <q-card-section  class="q-py-sm" v-if="invoice.description">
-                <q-input
-                  type="textarea"
-                  readonly
-                  label="Descripción"
-                  autogrow
-                  borderless
-                  :model-value="invoice.description"
-                />
-              </q-card-section>
-              <q-separator/>
-              <q-card-section  class="text-bold q-py-sm">
-                Fecha: {{ formatDate(invoice.created_at, 'DD/MM/YYYY HH:mm:ss') }}
-              </q-card-section>
-              <q-separator v-if="invoice.delivery_date"/>
-              <q-card-section  class="text-bold q-py-sm" v-if="invoice.delivery_date">
-                Fecha de entrega: {{ formatDate(invoice.delivery_date, 'DD/MM/YYYY HH:mm:ss') }}
-              </q-card-section>
+                </div>
+              </div>
+              <!-- Card Footer -->
+              <div class="card-footer">
+                <!-- Cliente -->
+                <div v-if="invoice.client" class="flex items-center q-gutter-xs q-mb-xs">
+                  <q-icon name="person" size="14px" color="grey-6" />
+                  <span class="text-caption text-grey-7">{{ invoice.client?.name }}</span>
+                </div>
+
+                <!-- Delivery Person Assignment -->
+                <div class="delivery-assignment" @click.stop>
+                  <q-select
+                    v-model="invoice.delivery_person"
+                    :options="deliveryPersons"
+                    option-label="name"
+                    option-value="id"
+                    dense
+                    borderless
+                    placeholder="Asignar repartidor"
+                    class="delivery-select"
+                    :disable="status.value === 'in_delivery' || status.value === 'delivered'"
+                    @update:model-value="assignDeliveryPerson(invoice, $event)"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="delivery_dining" size="16px" color="primary" />
+                    </template>
+                    <template v-slot:selected>
+                      <span class="text-caption" v-if="invoice.delivery_person">
+                        {{ invoice.delivery_person.name }}
+                      </span>
+                      <span class="text-caption text-grey-6" v-else>
+                        Sin asignar
+                      </span>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-between q-mt-xs">
+                  <div class="flex items-center q-gutter-xs">
+                    <q-icon name="schedule" size="14px" color="grey-6" />
+                    <span class="text-caption text-grey-6">{{ formatDate(invoice.created_at, 'HH:mm') }}</span>
+                  </div>
+                  <div class="flex items-center q-gutter-xs">
+                    <!-- Track Delivery Button (only for in_delivery status) -->
+                    <q-btn
+                      v-if="status.value === 'in_delivery' && invoice.delivery_run_id"
+                      icon="map"
+                      size="xs"
+                      flat
+                      dense
+                      color="teal"
+                      @click.stop="openTrackingMap(invoice)"
+                    >
+                      <q-tooltip>Ver ubicación en tiempo real</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      icon="print"
+                      size="xs"
+                      flat
+                      dense
+                      color="grey-7"
+                      @click.stop="print(invoice)"
+                    />
+                  </div>
+                </div>
+              </div>
             </q-card>
-          </q-card-section>
-          <q-card-actions align="center" class="q-pa-sm">
-            <q-pagination
-              v-model="status.page"
-              :max="Math.ceil(status.total / 10)"
-              input
-              @update:model-value="loadInvoices(status)"
-            />
-          </q-card-actions>
-          <q-inner-loading :showing="status.loading" color="primary" />
-        </q-card>
+          </template>
+        </draggable>
+
+        <!-- Column Footer -->
+        <div class="column-footer" v-if="status.total > status.data.length">
+          <q-btn
+            flat
+            dense
+            color="primary"
+            label="Cargar más"
+            size="sm"
+            @click="loadMore(status)"
+            :loading="status.loading"
+          />
+        </div>
+
+        <q-inner-loading :showing="status.loading" color="primary" />
       </div>
     </div>
     <q-dialog v-model="openEditInvoice" persistent :maximized="$q.screen.lt.sm">
@@ -238,7 +324,7 @@
               </div>
               <div class="col-12">
                 <q-input
-                  :model-value="invoice?.address || invoice.client?.address"
+                  :model-value="invoice?.address?.formattedAddress || invoice.client?.address?.formattedAddress"
                   type="textarea"
                   autogrow
                   label="Dirección"
@@ -308,6 +394,74 @@
             <div
               :class="`col-sm-12 col-md-5 col-lg-5 q-gutter-y-sm ${$q.screen.lt.sm ? 'full-width' : ''}`"
             >
+              <!-- Sección de Archivos Adjuntos (Solo visualización) -->
+              <div v-if="invoice && invoice.invoice_files && invoice.invoice_files.length > 0">
+                <q-card flat bordered>
+                  <q-card-section class="q-pb-none">
+                    <div class="row items-center q-mb-sm">
+                      <div class="col">
+                        <div class="text-subtitle2 text-weight-medium">
+                          <q-icon name="attach_file" size="20px" class="q-mr-xs" />
+                          Archivos Adjuntos
+                        </div>
+                      </div>
+                      <div class="col-auto">
+                        <q-chip dense color="primary" text-color="white" size="sm">
+                          {{ invoice.invoice_files.length }}
+                        </q-chip>
+                      </div>
+                    </div>
+                  </q-card-section>
+
+                  <q-card-section class="q-pt-sm">
+                    <div class="invoice-files-grid">
+                      <div
+                        v-for="(file, index) in invoice.invoice_files"
+                        :key="index"
+                        class="invoice-file-item"
+                        @click="openGallery(index)"
+                      >
+                        <div class="invoice-file-wrapper">
+                          <!-- Imagen -->
+                          <q-img
+                            v-if="!file.name || !file.name.toLowerCase().endsWith('.pdf')"
+                            :src="file.url"
+                            :ratio="1"
+                            fit="cover"
+                            class="invoice-file-image"
+                            loading="lazy"
+                          >
+                            <template v-slot:error>
+                              <div class="absolute-full flex flex-center bg-grey-3">
+                                <q-icon name="broken_image" size="32px" color="grey-5" />
+                              </div>
+                            </template>
+                          </q-img>
+
+                          <!-- PDF -->
+                          <div v-else class="invoice-pdf-preview">
+                            <q-icon name="picture_as_pdf" size="40px" color="red-6" />
+                            <div class="invoice-pdf-name">
+                              {{ file.name }}
+                            </div>
+                          </div>
+
+                          <!-- Overlay hover -->
+                          <div class="invoice-file-overlay">
+                            <q-icon name="visibility" size="24px" color="white" />
+                          </div>
+
+                          <!-- Badge de número -->
+                          <div class="invoice-file-badge">
+                            {{ index + 1 }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+
               <q-expansion-item
                 v-if="role.deliveryPerson || visibleBranchOffice"
                 icon="payments"
@@ -466,6 +620,59 @@
                   </q-card-section>
                 </q-card>
               </q-expansion-item>
+
+              <!-- Timeline de Estados -->
+              <q-expansion-item
+                icon="trending_up"
+                label="Historial de Estados"
+                style="border-radius: 10px"
+                class="shadow-1 overflow-hidden"
+                default-opened
+              >
+                <q-card>
+                  <q-card-section class="q-py-sm q-pt-none">
+                    <!-- Tiempo Total -->
+                    <div class="q-mb-md q-pa-md bg-grey-2 rounded-borders text-center">
+                      <div class="text-overline text-grey-7">Tiempo Total</div>
+                      <div class="text-h5 text-weight-bold text-primary q-mt-xs">
+                        {{ getTotalTime(invoice) }}
+                      </div>
+                    </div>
+
+                    <!-- Timeline Minimalista -->
+                    <div class="status-timeline">
+                      <div
+                        v-for="(event, index) in getStatusTimeline(invoice)"
+                        :key="index"
+                        class="status-step"
+                        :class="{ 'is-last': index === getStatusTimeline(invoice).length - 1 }"
+                      >
+                        <!-- Línea conectora -->
+                        <div class="status-line" v-if="index < getStatusTimeline(invoice).length - 1"></div>
+
+                        <!-- Icono del estado -->
+                        <div class="status-icon" :style="`background-color: ${getStatusColor(event.color)}`">
+                          <q-icon :name="event.icon" size="20px" color="white" />
+                        </div>
+
+                        <!-- Contenido del estado -->
+                        <div class="status-content">
+                          <div class="row items-center justify-between q-mb-xs">
+                            <div class="text-subtitle2 text-weight-bold">{{ event.label }}</div>
+                            <div v-if="event.duration" class="status-duration">
+                              {{ event.duration }}
+                            </div>
+                          </div>
+                          <div class="text-caption text-grey-7">{{ event.date }}</div>
+                          <div v-if="event.user" class="text-caption text-grey-6 q-mt-xs">
+                            👤 {{ event.user }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
             </div>
           </div>
         </q-card-section>
@@ -494,110 +701,342 @@
       seamless
       full-height
     >
-      <q-card class="column full-height" style="width: 500px; max-width: 80vw;">
-        <q-card-section class="bg-primary text-white flex justify-between items-center">
-          <div class="text-h6">Filtros</div>
-          <q-btn icon="close" flat round dense @click="dialogFilter = false" />
+      <q-card class="column full-height filters-card">
+        <!-- Header Minimalista -->
+        <q-card-section class="filters-header">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center q-gutter-sm">
+              <q-icon name="filter_list" size="28px" color="primary" />
+              <span class="text-h5 text-weight-medium">Filtros</span>
+            </div>
+            <q-btn icon="close" flat round dense color="grey-7" @click="dialogFilter = false" />
+          </div>
         </q-card-section>
 
-        <q-card-section class="col q-pt-sm q-gutter-md">
-          <q-input
-            v-model="code"
-            label="Código de la comanda"
-            filled
-            dense
-            debounce="500"
-            clearable
+        <q-separator />
+
+        <!-- Filters Content -->
+        <q-card-section class="col q-pt-md filters-content">
+          <q-scroll-area class="full-height">
+            <div class="q-gutter-md q-pr-md">
+              <!-- Código -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="tag" size="18px" color="grey-7" />
+                  <span>Código de Orden</span>
+                </div>
+                <q-input
+                  v-model="code"
+                  placeholder="Buscar por código..."
+                  outlined
+                  dense
+                  debounce="500"
+                  clearable
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="search" size="18px" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Cliente -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="person" size="18px" color="grey-7" />
+                  <span>Cliente</span>
+                </div>
+                <q-select
+                  v-model="client"
+                  :options="clients"
+                  use-input
+                  outlined
+                  dense
+                  clearable
+                  input-debounce="300"
+                  placeholder="Seleccionar cliente..."
+                  option-value="id"
+                  :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                  @filter="filterClients"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="person_search" size="18px" />
+                  </template>
+                  <template v-slot:no-option>
+                    <q-item>
+                      <q-item-section class="text-grey">
+                        No se encontraron clientes
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Vendedor -->
+              <div class="filter-group" v-if="!role.deliveryPerson">
+                <div class="filter-label">
+                  <q-icon name="badge" size="18px" color="grey-7" />
+                  <span>Vendedor</span>
+                </div>
+                <q-select
+                  v-model="seller"
+                  :options="sellers"
+                  use-input
+                  outlined
+                  dense
+                  clearable
+                  input-debounce="0"
+                  placeholder="Seleccionar vendedor..."
+                  option-value="id"
+                  :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                  @filter="filterSellers"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="person_pin" size="18px" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Repartidor -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="delivery_dining" size="18px" color="grey-7" />
+                  <span>Repartidor</span>
+                </div>
+                <q-select
+                  v-model="deliveryPerson"
+                  :options="deliveryPersons"
+                  use-input
+                  outlined
+                  dense
+                  clearable
+                  input-debounce="0"
+                  placeholder="Seleccionar repartidor..."
+                  option-value="id"
+                  :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                  :readonly="!validate"
+                  @filter="filterDeliveryPersons"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="two_wheeler" size="18px" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Categoría -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="category" size="18px" color="grey-7" />
+                  <span>Categoría</span>
+                  <q-badge v-if="category.length" color="primary" rounded>{{ category.length }}</q-badge>
+                </div>
+                <q-select
+                  v-model="category"
+                  :options="categories"
+                  outlined
+                  dense
+                  multiple
+                  placeholder="Seleccionar categorías..."
+                  option-value="id"
+                  option-label="name"
+                  use-chips
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="label" size="18px" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Tipo de Servicio -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="room_service" size="18px" color="grey-7" />
+                  <span>Tipo de Servicio</span>
+                  <q-badge v-if="typeOfService.length" color="primary" rounded>{{ typeOfService.length }}</q-badge>
+                </div>
+                <q-select
+                  v-model="typeOfService"
+                  :options="typeOfServices"
+                  outlined
+                  dense
+                  multiple
+                  placeholder="Seleccionar servicios..."
+                  option-value="id"
+                  option-label="name"
+                  use-chips
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="restaurant_menu" size="18px" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Tipo de Factura -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="receipt" size="18px" color="grey-7" />
+                  <span>Tipo de Factura</span>
+                  <q-badge v-if="invoiceType.length" color="primary" rounded>{{ invoiceType.length }}</q-badge>
+                </div>
+                <q-select
+                  v-model="invoiceType"
+                  :options="invoiceTypes"
+                  outlined
+                  dense
+                  multiple
+                  placeholder="Seleccionar tipos..."
+                  option-value="id"
+                  option-label="name"
+                  use-chips
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="description" size="18px" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Sucursales -->
+              <div class="filter-group" v-if="userSession.is_root">
+                <div class="filter-label">
+                  <q-icon name="store" size="18px" color="grey-7" />
+                  <span>Sucursales</span>
+                  <q-badge v-if="branchOfficeSelect.length" color="primary" rounded>{{ branchOfficeSelect.length }}</q-badge>
+                </div>
+                <q-select
+                  v-model="branchOfficeSelect"
+                  :options="branchOffices"
+                  outlined
+                  dense
+                  multiple
+                  placeholder="Seleccionar sucursales..."
+                  option-value="id"
+                  option-label="name"
+                  use-chips
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="business" size="18px" />
+                  </template>
+                </q-select>
+              </div>
+            </div>
+          </q-scroll-area>
+        </q-card-section>
+
+        <!-- Footer Actions -->
+        <q-separator />
+        <q-card-actions class="filters-footer">
+          <q-btn
+            label="Limpiar Filtros"
+            icon="clear_all"
+            flat
+            color="grey-7"
+            @click="clearFilters"
           />
-          <q-select
-            dense
-            use-input
-            filled
-            label="Vendedor"
-            input-debounce="0"
-            option-value="id"
-            clearable
-            v-model="seller"
-            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-            :options="sellers"
-            v-if="!role.deliveryPerson"
-            @filter="filterSellers"
+          <q-space />
+          <q-btn
+            label="Aplicar"
+            icon="check"
+            color="primary"
+            unelevated
+            @click="dialogFilter = false"
           />
-          <q-select
-            dense
-            use-input
-            filled
-            label="Repartidor"
-            input-debounce="0"
-            option-value="id"
-            clearable
-            v-model="deliveryPerson"
-            :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-            :options="deliveryPersons"
-            :readonly="!validate"
-            @filter="filterDeliveryPersons"
-          />
-          <q-select
-            v-model="category"
-            :options="categories"
-            label="Categoría"
-            option-value="id"
-            option-label="name"
-            style="min-width: 300px;"
-            dense
-            filled
-            multiple
-          >
-            <template v-if="category.length" v-slot:append>
-              <q-icon name="cancel" @click.stop.prevent="category = []" class="cursor-pointer" />
-            </template>
-          </q-select>
-          <q-select
-            v-model="typeOfService"
-            :options="typeOfServices"
-            style="min-width: 300px;"
-            label="Tipo de servicio"
-            option-value="id"
-            option-label="name"
-            dense
-            filled
-            multiple
-          >
-            <template v-if="typeOfService.length" v-slot:append>
-              <q-icon name="cancel" @click.stop.prevent="typeOfService = []" class="cursor-pointer" />
-            </template>
-          </q-select>
-          <q-select
-            v-model="invoiceType"
-            :options="invoiceTypes"
-            style="min-width: 300px;"
-            label="Tipo de factura"
-            option-value="id"
-            option-label="name"
-            dense
-            filled
-            multiple
-          >
-            <template v-if="invoiceType.length" v-slot:append>
-              <q-icon name="cancel" @click.stop.prevent="invoiceType = []" class="cursor-pointer" />
-            </template>
-          </q-select>
-          <q-select
-            v-if="userSession.is_root"
-            v-model="branchOfficeSelect"
-            :options="branchOffices"
-            style="min-width: 300px;"
-            label="Sucursales"
-            option-value="id"
-            option-label="name"
-            dense
-            filled
-            multiple
-          >
-            <template v-if="branchOfficeSelect.length" v-slot:append>
-              <q-icon name="cancel" @click.stop.prevent="branchOfficeSelect = []" class="cursor-pointer" />
-            </template>
-          </q-select>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Image Gallery Preview -->
+    <ImageGalleryPreview
+      v-if="invoice && invoice.invoice_files && invoice.invoice_files.length > 0"
+      v-model="showGallery"
+      :images="invoice.invoice_files"
+      :initial-index="selectedFileIndex"
+      :loop="true"
+      :show-thumbnails="true"
+    />
+
+    <!-- Tracking Map Dialog -->
+    <q-dialog v-model="showTrackingMap" :maximized="$q.screen.lt.md">
+      <q-card :style="$q.screen.lt.md ? '' : 'width: 900px; max-width: 90vw; height: 700px;'">
+        <q-card-section class="row items-center q-pb-none bg-teal text-white">
+          <div class="text-h6">Tracking en Tiempo Real</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="q-pa-none" style="height: calc(100% - 60px);">
+          <div ref="trackingMapContainer" style="width: 100%; height: 100%;"></div>
+        </q-card-section>
+
+        <q-card-section v-if="trackingData" class="q-pt-sm">
+          <div class="row q-gutter-md">
+            <div class="col">
+              <div class="text-caption text-grey-7">Repartidor</div>
+              <div class="text-body2 text-weight-medium">{{ trackingData.delivery_person?.name || 'N/A' }}</div>
+            </div>
+            <div class="col">
+              <div class="text-caption text-grey-7">Estado</div>
+              <div class="text-body2 text-weight-medium">{{ getDeliveryStatusLabel(trackingData.current_status) }}</div>
+            </div>
+            <div class="col">
+              <div class="text-caption text-grey-7">Última actualización</div>
+              <div class="text-body2 text-weight-medium">{{ trackingData.last_update ? formatDate(trackingData.last_update, 'HH:mm:ss') : 'N/A' }}</div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- All Drivers Map Dialog -->
+    <q-dialog v-model="showAllDriversMap" maximized>
+      <q-card>
+        <!-- Header -->
+        <q-card-section class="row items-center q-pb-none bg-teal text-white">
+          <div class="text-subtitle1 text-sm-h5">Conductores en Tiempo Real</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <!-- Map Container -->
+        <q-card-section class="q-pa-none map-container">
+          <div ref="allDriversMapContainer" style="width: 100%; height: 100%;"></div>
+        </q-card-section>
+
+        <!-- Footer Info - Responsive -->
+        <q-card-section class="q-pa-sm q-pa-md-md bg-grey-1">
+          <div class="row q-col-gutter-sm q-col-gutter-md-md items-center">
+            <!-- Conductores Activos -->
+            <div class="col-12 col-sm-auto">
+              <div class="text-center text-sm-left">
+                <div class="text-caption text-grey-7">Conductores activos</div>
+                <div class="text-h6 text-weight-bold text-teal">{{ allDriversData.length }}</div>
+              </div>
+            </div>
+
+            <!-- Leyenda de Colores -->
+            <div class="col-12 col-sm">
+              <div class="row q-gutter-xs q-gutter-sm-md justify-center justify-sm-start flex-wrap">
+                <div class="flex items-center q-gutter-xs">
+                  <div style="width: 12px; height: 12px; border-radius: 50%; background: #00BCD4;"></div>
+                  <span class="text-caption">Conductor</span>
+                </div>
+                <div class="flex items-center q-gutter-xs">
+                  <div style="width: 12px; height: 12px; border-radius: 50%; background: #4CAF50;"></div>
+                  <span class="text-caption">Entregado</span>
+                </div>
+                <div class="flex items-center q-gutter-xs">
+                  <div style="width: 12px; height: 12px; border-radius: 50%; background: #FF9800;"></div>
+                  <span class="text-caption">Pendiente</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Última Actualización -->
+            <div class="col-12 col-sm-auto">
+              <div class="text-center text-sm-right">
+                <div class="text-caption text-grey-7">Última actualización</div>
+                <div class="text-body2">{{ formatDate(new Date(), 'HH:mm:ss') }}</div>
+              </div>
+            </div>
+          </div>
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -605,15 +1044,18 @@
 </template>
 
 <script setup>
+/* global google */
 import { api } from 'src/boot/axios'
 import { formatDate, notify, formatNumber, loading } from 'src/const/mixins'
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue'
 import { authentication } from 'src/stores/module-authentication'
 import { useRoute, useRouter } from 'vue-router'
-// import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import { commandPrint } from 'src/const/printers'
 import { useQuasar } from 'quasar'
+import ImageGalleryPreview from 'src/components/ImageGalleryComponent.vue'
+import draggable from 'vuedraggable'
+import { loadGoogleMaps } from 'src/config/maps'
 
 const store = authentication()
 
@@ -683,6 +1125,26 @@ const branchOfficeSelect = ref([])
  */
 const invoice = ref(null)
 /**
+ * Selected invoices for bulk actions
+ * @type {Array}
+ */
+const selectedInvoices = ref([])
+/**
+ * Show bulk actions toolbar
+ * @type {Boolean}
+ */
+const showBulkActions = ref(false)
+/**
+ * Bulk action delivery person
+ * @type {Object}
+ */
+const bulkDeliveryPerson = ref(null)
+/**
+ * Bulk action status
+ * @type {String}
+ */
+const bulkStatus = ref(null)
+/**
  * Loading edit
  * @type {Boolean}
  */
@@ -702,6 +1164,16 @@ const typeOfServices = ref([])
  * @type {Boolean}
  */
 const openEditInvoice = ref(false)
+/**
+ * Show gallery dialog
+ * @type {Boolean}
+ */
+const showGallery = ref(false)
+/**
+ * Selected file index for gallery
+ * @type {Number}
+ */
+const selectedFileIndex = ref(0)
 /**
  * Select category
  * @type {Object}
@@ -735,6 +1207,16 @@ const invoiceTypes = ref([])
 const branchOffices = ref([])
 
 /**
+ * Clients
+ * @type {Array}
+ */
+const clients = ref([])
+/**
+ * Selected client
+ * @type {Object}
+ */
+const client = ref(null)
+/**
  * Sellers
  * @type {Array}
  */
@@ -745,12 +1227,12 @@ const sellers = ref([])
  */
 const seller = ref(null)
 /**
- * Sellers
+ * Delivery Persons
  * @type {Array}
  */
 const deliveryPersons = ref([])
 /**
- * Selected seller
+ * Selected delivery person
  * @type {Object}
  */
 const deliveryPerson = ref(null)
@@ -765,6 +1247,7 @@ const visibleBranchOffice = userSession.is_root || userSession.is_super_admin
  */
 const interval = ref(null)
 const role = ref({})
+const isRefreshing = ref(false) // Flag para evitar peticiones simultáneas
 
 const validate = ref(true)
 
@@ -777,15 +1260,45 @@ const promotionExpanded = ref({})
 const permissions = ['SAM']
 
 /**
+ * Tracking map variables
+ */
+const showTrackingMap = ref(false)
+const trackingMapContainer = ref(null)
+const trackingMap = ref(null)
+const trackingData = ref(null)
+const courierMarker = ref(null)
+const trackingPolyline = ref(null)
+const trackingInterval = ref(null)
+
+/**
+ * All drivers map variables
+ */
+const showAllDriversMap = ref(false)
+const allDriversMapContainer = ref(null)
+const allDriversMap = ref(null)
+const allDriversData = ref([])
+const driverMarkers = ref({})
+const driverPolylines = ref({})
+const allDriversInterval = ref(null)
+
+/**
  * List status
  * @type {Array}
  */
 const statuses = ref([
-  { label: 'Pendiente', value: 'pending', data: [], page: 1, loading: false, permissions: ['DP'] },
-  { label: 'En proceso', value: 'on_process', data: [], page: 1, loading: false, permissions: ['DP'] },
-  { label: 'Terminado', value: 'finished', data: [], page: 1, loading: false, permissions: [] },
-  { label: 'Entregado', value: 'delivered', data: [], page: 1, loading: false, permissions: [] }
+  { label: 'Pendiente', value: 'pending', data: [], page: 1, loading: false, permissions: ['DP'], icon: 'schedule', color: 'orange', total: 0 },
+  { label: 'En proceso', value: 'on_process', data: [], page: 1, loading: false, permissions: ['DP'], icon: 'restaurant', color: 'blue', total: 0 },
+  { label: 'Terminado', value: 'finished', data: [], page: 1, loading: false, permissions: [], icon: 'check_circle', color: 'green', total: 0 },
+  { label: 'En Delivery', value: 'in_delivery', data: [], page: 1, loading: false, permissions: [], icon: 'local_shipping', color: 'teal', total: 0 },
+  { label: 'Entregado', value: 'delivered', data: [], page: 1, loading: false, permissions: [], icon: 'done_all', color: 'purple', total: 0 }
 ])
+
+/**
+ * Filtered statuses (computed to avoid v-if with v-for)
+ */
+const filteredStatuses = computed(() => {
+  return statuses.value.filter(status => !setPermissionsByUser(status.permissions))
+})
 
 /**
  * Params search
@@ -807,6 +1320,7 @@ onMounted(async () => {
   getInvoiceTypes()
   getTypeOfServices()
   getBranchOffices()
+  getDeliveryPersons()
   if (route.query.id) getInvoiceOne(route.query.id)
 })
 
@@ -822,10 +1336,13 @@ const setStatusValue = (sts, field) => {
 /**
  * Load invoices
  * @param {Object} status status
+ * @param {Boolean} silent if true, don't show loading indicator
  */
-const loadInvoices = async (status) => {
+const loadInvoices = async (status, silent = false) => {
   try {
-    status.loading = true
+    if (!silent) {
+      status.loading = true
+    }
     const { data } = await api.get('command-orders', {
       params: {
         ...params.value,
@@ -842,12 +1359,26 @@ const loadInvoices = async (status) => {
   } catch (error) {
     console.error(`Error al cargar datos para ${status.label}:`, error)
   } finally {
-    status.loading = false
+    if (!silent) {
+      status.loading = false
+    }
   }
 }
 
 onUnmounted(() => {
-  clearInterval(interval.value)
+  // Limpiar todos los intervalos para evitar "Too Many Attempts"
+  if (interval.value) {
+    clearInterval(interval.value)
+    interval.value = null
+  }
+  if (trackingInterval.value) {
+    clearInterval(trackingInterval.value)
+    trackingInterval.value = null
+  }
+  if (allDriversInterval.value) {
+    clearInterval(allDriversInterval.value)
+    allDriversInterval.value = null
+  }
 })
 
 watch(code, async (cat) => {
@@ -876,6 +1407,11 @@ watch(branchOfficeSelect, async (bo) => {
   localStorage.setItem('branchOffice-command', JSON.stringify(bo))
   const ids = bo.map((item) => item.id)
   filters('branch_office_id', ids, 'whereIn')
+})
+
+watch(client, async (client) => {
+  const ids = client?.id ? [client?.id] : []
+  filters('client_id', ids, 'whereIn')
 })
 
 watch(seller, async (seller) => {
@@ -923,9 +1459,10 @@ const setPermissions = () => {
     deliveryPerson: setPermissionsByUser(['DP'])
   }
 
+  // Auto-refresh every 30 seconds without loading indicator (aumentado para evitar Too Many Attempts)
   interval.value = setInterval(() => {
-    getInvoices(params.value)
-  }, 20000)
+    refreshInvoicesSilently()
+  }, 30000)
 }
 
 const setPermissionsByUser = (data) => {
@@ -949,6 +1486,15 @@ const showInvoices = (data) => {
   }, 100)
 }
 
+/**
+ * Opens the gallery at a specific file index
+ * @param {Number} index - Index of the file to display
+ */
+const openGallery = (index = 0) => {
+  selectedFileIndex.value = index
+  showGallery.value = true
+}
+
 const getInvoiceOne = async (id) => {
   try {
     loading(true)
@@ -968,6 +1514,49 @@ const getInvoices = async (dataFilter = {}) => {
   params.value = dataFilter
   statuses.value.forEach((column) => loadInvoices(column))
 }
+
+/**
+ * Refresh invoices silently (without loading indicator)
+ */
+const refreshInvoicesSilently = async () => {
+  // Evitar múltiples peticiones simultáneas
+  if (isRefreshing.value) {
+    return
+  }
+
+  try {
+    isRefreshing.value = true
+    // Cargar todas las columnas en paralelo
+    await Promise.all(
+      statuses.value.map((column) => loadInvoices(column, true))
+    )
+  } catch (error) {
+    console.error('Error en refresh silencioso:', error)
+  } finally {
+    isRefreshing.value = false
+  }
+}
+/**
+ * Filter clients
+ */
+const filterClients = async (value, update) => {
+  try {
+    const { data } = await api.get('clients', {
+      params: {
+        dataSearch: {
+          name: value,
+          document_number: value
+        }
+      }
+    })
+    update(() => {
+      clients.value = data
+    })
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
 /**
  * Get all sellers
  */
@@ -989,7 +1578,19 @@ const filterSellers = async (value, update) => {
   }
 }
 /**
- * Get all sellers
+ * Get all delivery persons
+ */
+const getDeliveryPersons = async () => {
+  try {
+    const { data } = await api.get('delivery-persons')
+    deliveryPersons.value = data
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
+/**
+ * Filter delivery persons
  */
 const filterDeliveryPersons = async (value, update) => {
   try {
@@ -1007,6 +1608,21 @@ const filterDeliveryPersons = async (value, update) => {
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   }
+}
+
+/**
+ * Clear all filters
+ */
+const clearFilters = () => {
+  code.value = null
+  client.value = null
+  seller.value = null
+  deliveryPerson.value = null
+  category.value = []
+  typeOfService.value = []
+  invoiceType.value = []
+  branchOfficeSelect.value = []
+  notify('Filtros limpiados', 'info', 'info')
 }
 /**
  * Get all invoices
@@ -1030,72 +1646,262 @@ const getBranchOffices = async () => {
  */
 const getCategories = async () => {
   try {
-    const { data } = await api.get('categories')
+    const { data } = await api.get('categories', {
+      params: {
+        branch_office_id: branchOffice.value?.id
+      }
+    })
     categories.value = data
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
 
-/**
- * Get all invoices
- */
 const getTypeOfServices = async () => {
   try {
     const { data } = await api.get('type-of-services')
     typeOfServices.value = data
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
 /**
- * Get all invoices
+ * Get invoice types
  */
 const getInvoiceTypes = async () => {
   try {
     const { data } = await api.get('invoice-types')
     invoiceTypes.value = data
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
 
-/**
- * Save edit
- */
-const saveEdit = async () => {
-  try {
-    loadingEdit.value = true
-    delete invoice.value.products
-    await api.put(`invoices/${invoice.value.id}`, {
-      ...invoice.value,
-      invoice_type_id: invoice.value?.invoice_type?.id,
-      delivery_person_id: invoice.value?.delivery_person?.id
-    })
-    notify('Factura editada exitosamente', 'positive', 'check_circle')
-    getInvoices(params.value)
-    openEditInvoice.value = false
-  } catch (error) {
-    notify(error.message, 'negative', 'warning')
-  } finally {
-    loadingEdit.value = false
-  }
-}
-/**
- * Change status
- * @param {Object} data invoice
- * @param {Number} index index status
- */
 const nextStatus = async (data, index) => {
   try {
     await api.put(`invoice-status-command/${data.id}`, { status: statuses.value[index].value })
     getInvoices(params.value)
   } catch (error) {
-    console.log(error)
+    notify(error.message, 'negative', 'warning')
   }
 }
+
 /**
- * Change status
+ * Drag & Drop handler
+ */
+const onDragChange = async (evt, status, statusIndex) => {
+  if (evt.added) {
+    const invoice = evt.added.element
+    const oldStatus = invoice.status
+
+    try {
+      const response = await api.put(`invoice-status-command/${invoice.id}`, {
+        status: status.value
+      })
+
+      // Update invoice with response data
+      if (response.data.invoice) {
+        Object.assign(invoice, response.data.invoice)
+      }
+
+      // Update totals
+      const oldStatusObj = statuses.value.find(s => s.value === oldStatus)
+      if (oldStatusObj && oldStatusObj.total > 0) {
+        oldStatusObj.total--
+      }
+      status.total++
+
+      notify('Orden movida exitosamente', 'positive', 'check_circle')
+    } catch (error) {
+      notify(error.message, 'negative', 'warning')
+      // Revert the change by reloading
+      getInvoices(params.value)
+    }
+  }
+}
+
+/**
+ * Toggle product ready status
+ */
+const toggleProductReady = async (invoice, product) => {
+  try {
+    await api.put(`invoice-product/${product.pivot.id}/toggle-ready`, {
+      is_ready: product.pivot.is_ready
+    })
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+    product.pivot.is_ready = !product.pivot.is_ready
+  }
+}
+
+/**
+ * Get products progress
+ */
+const getProductsProgress = (invoice) => {
+  if (!invoice.products || invoice.products.length === 0) return 0
+  const readyCount = invoice.products.filter(p => p.pivot?.is_ready).length
+  return readyCount / invoice.products.length
+}
+
+/**
+ * Get ready products count
+ */
+const getReadyProductsCount = (invoice) => {
+  if (!invoice.products) return 0
+  return invoice.products.filter(p => p.pivot?.is_ready).length
+}
+
+/**
+ * Assign delivery person to invoice
+ */
+const assignDeliveryPerson = async (invoice, deliveryPerson) => {
+  try {
+    await api.put(`invoices/${invoice.id}/assign-delivery-person`, {
+      delivery_person_id: deliveryPerson?.id || null
+    })
+    notify('Repartidor asignado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
+/**
+ * Check if invoice is selected
+ */
+const isInvoiceSelected = (invoiceId) => {
+  return selectedInvoices.value.some(inv => inv.id === invoiceId)
+}
+
+/**
+ * Toggle invoice selection
+ */
+const toggleInvoiceSelection = (invoice) => {
+  const index = selectedInvoices.value.findIndex(inv => inv.id === invoice.id)
+  if (index > -1) {
+    selectedInvoices.value.splice(index, 1)
+  } else {
+    selectedInvoices.value.push(invoice)
+  }
+}
+
+/**
+ * Check if all invoices in column are selected
+ */
+const isColumnSelected = (status) => {
+  if (status.data.length === 0) return false
+  return status.data.every(invoice => isInvoiceSelected(invoice.id))
+}
+
+/**
+ * Toggle column selection
+ */
+const toggleColumnSelection = (status) => {
+  const allSelected = isColumnSelected(status)
+  if (allSelected) {
+    // Deselect all from this column
+    status.data.forEach(invoice => {
+      const index = selectedInvoices.value.findIndex(inv => inv.id === invoice.id)
+      if (index > -1) {
+        selectedInvoices.value.splice(index, 1)
+      }
+    })
+  } else {
+    // Select all from this column
+    status.data.forEach(invoice => {
+      if (!isInvoiceSelected(invoice.id)) {
+        selectedInvoices.value.push(invoice)
+      }
+    })
+  }
+}
+
+/**
+ * Clear all selections
+ */
+const clearSelection = () => {
+  selectedInvoices.value = []
+  bulkDeliveryPerson.value = null
+  bulkStatus.value = null
+}
+
+/**
+ * Apply delivery person to all selected invoices
+ */
+const applyBulkDeliveryPerson = async (deliveryPerson) => {
+  if (!deliveryPerson || selectedInvoices.value.length === 0) return
+
+  try {
+    const promises = selectedInvoices.value.map(invoice =>
+      api.put(`invoices/${invoice.id}/assign-delivery-person`, {
+        delivery_person_id: deliveryPerson.id
+      })
+    )
+
+    await Promise.all(promises)
+
+    // Update local data
+    selectedInvoices.value.forEach(selectedInvoice => {
+      statuses.value.forEach(status => {
+        const invoice = status.data.find(inv => inv.id === selectedInvoice.id)
+        if (invoice) {
+          invoice.delivery_person = deliveryPerson
+        }
+      })
+    })
+
+    notify(`Repartidor asignado a ${selectedInvoices.value.length} orden(es)`, 'positive', 'check_circle')
+    clearSelection()
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
+/**
+ * Apply status change to all selected invoices
+ */
+const applyBulkStatus = async (newStatus) => {
+  if (!newStatus || selectedInvoices.value.length === 0) return
+
+  try {
+    const promises = selectedInvoices.value.map(invoice =>
+      api.put(`invoice-status-command/${invoice.id}`, {
+        status: newStatus.value
+      })
+    )
+
+    await Promise.all(promises)
+
+    notify(`Estado cambiado a ${newStatus.label} para ${selectedInvoices.value.length} orden(es)`, 'positive', 'check_circle')
+    clearSelection()
+    getInvoices(params.value)
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
+/**
+ * Get invoice type color
+ */
+const getInvoiceTypeColor = (typeName) => {
+  const colors = {
+    Factura: 'primary',
+    Boleta: 'secondary',
+    Ticket: 'accent',
+    Pedido: 'info',
+    Comanda: 'warning'
+  }
+  return colors[typeName] || 'grey'
+}
+
+/**
+ * Load more items
+ */
+const loadMore = async (status) => {
+  status.page++
+  await loadInvoices(status)
+}
+/**
+ * Change status invoice
  * @param {Object} data invoice
  * @param {Number} index index status
  */
@@ -1121,6 +1927,647 @@ const togglePromotionDetails = (promotionId) => {
   promotionExpanded.value[promotionId] = !promotionExpanded.value[promotionId]
 }
 
+/**
+ * Get status timeline with durations
+ * @param {Object} invoice invoice object
+ */
+const getStatusTimeline = (invoice) => {
+  if (!invoice || !invoice.status_history || invoice.status_history.length === 0) {
+    return []
+  }
+
+  const statusConfig = {
+    pending: { label: 'Pendiente', icon: 'schedule', color: 'orange' },
+    on_process: { label: 'En Proceso', icon: 'restaurant', color: 'blue' },
+    finished: { label: 'Terminado', icon: 'check_circle', color: 'green' },
+    in_delivery: { label: 'En Delivery', icon: 'local_shipping', color: 'teal' },
+    delivered: { label: 'Entregado', icon: 'done_all', color: 'purple' },
+    cancelled: { label: 'Anulado', icon: 'cancel', color: 'red' }
+  }
+
+  const timeline = []
+  const history = [...invoice.status_history].sort((a, b) => 
+    new Date(a.created_at) - new Date(b.created_at)
+  )
+
+  history.forEach((event, index) => {
+    const config = statusConfig[event.status] || { label: event.status, icon: 'circle', color: 'grey' }
+    const eventDate = new Date(event.created_at)
+    
+    let duration = null
+    if (index < history.length - 1) {
+      const nextEvent = history[index + 1]
+      const nextDate = new Date(nextEvent.created_at)
+      duration = formatDuration(nextDate - eventDate)
+    } else if (invoice.status === event.status) {
+      // Estado actual - calcular desde este evento hasta ahora
+      const now = new Date()
+      duration = formatDuration(now - eventDate)
+    }
+
+    timeline.push({
+      label: config.label,
+      date: formatDate(event.created_at, 'DD/MM/YYYY HH:mm:ss'),
+      icon: config.icon,
+      color: config.color,
+      duration: duration,
+      user: event.user?.name || event.actor?.name || null
+    })
+  })
+
+  return timeline
+}
+
+/**
+ * Get total time from first to last status
+ * @param {Object} invoice invoice object
+ */
+const getTotalTime = (invoice) => {
+  if (!invoice || !invoice.status_history || invoice.status_history.length === 0) {
+    return 'N/A'
+  }
+
+  const history = [...invoice.status_history].sort((a, b) => 
+    new Date(a.created_at) - new Date(b.created_at)
+  )
+
+  const firstEvent = new Date(history[0].created_at)
+  const lastEvent = invoice.status === 'delivered' || invoice.status === 'cancelled'
+    ? new Date(history[history.length - 1].created_at)
+    : new Date()
+
+  return formatDuration(lastEvent - firstEvent)
+}
+
+/**
+ * Format duration in milliseconds to human readable format
+ * @param {Number} ms milliseconds
+ */
+const formatDuration = (ms) => {
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) {
+    const remainingHours = hours % 24
+    return `${days}d ${remainingHours}h`
+  } else if (hours > 0) {
+    const remainingMinutes = minutes % 60
+    return `${hours}h ${remainingMinutes}m`
+  } else if (minutes > 0) {
+    const remainingSeconds = seconds % 60
+    return `${minutes}m ${remainingSeconds}s`
+  } else {
+    return `${seconds}s`
+  }
+}
+
+/**
+ * Get status color hex value
+ * @param {String} colorName Quasar color name
+ */
+const getStatusColor = (colorName) => {
+  const colors = {
+    grey: '#9E9E9E',
+    blue: '#2196F3',
+    green: '#4CAF50',
+    orange: '#FF9800',
+    teal: '#009688',
+    purple: '#9C27B0',
+    red: '#F44336'
+  }
+  return colors[colorName] || '#9E9E9E'
+}
+
+/**
+ * Open tracking map for delivery
+ * @param {Object} invoice invoice object
+ */
+async function openTrackingMap (invoice) {
+  showTrackingMap.value = true
+
+  // Wait for DOM to render
+  await new Promise(resolve => setTimeout(resolve, 100))
+
+  try {
+    // Load Google Maps first
+    await loadGoogleMaps()
+
+    // Load delivery run data
+    const response = await api.get(`/invoice-delivery-runs/${invoice.delivery_run_id}`)
+    trackingData.value = response.data.delivery_run
+
+    // Initialize map
+    initializeTrackingMap()
+
+    // Start real-time updates
+    startTrackingUpdates(invoice.delivery_run_id)
+  } catch (error) {
+    console.error('Error loading tracking data:', error)
+    notify('Error al cargar datos de tracking', 'negative')
+  }
+}
+
+/**
+ * Initialize Google Maps for tracking
+ */
+function initializeTrackingMap () {
+  if (!trackingMapContainer.value || !trackingData.value) return
+
+  // Get current location or use first delivery location
+  const currentLocation = trackingData.value.locations?.[0]
+  const firstDelivery = trackingData.value.items?.[0]
+
+  let centerLat = -12.0464 // Lima default
+  let centerLng = -77.0428
+
+  if (currentLocation) {
+    centerLat = currentLocation.latitude
+    centerLng = currentLocation.longitude
+  } else if (firstDelivery?.invoice?.client?.address) {
+    const addr = firstDelivery.invoice.client.address
+    centerLat = addr.lat || addr.latitude || centerLat
+    centerLng = addr.lng || addr.longitude || centerLng
+  }
+
+  // Create map
+  trackingMap.value = new google.maps.Map(trackingMapContainer.value, {
+    center: { lat: centerLat, lng: centerLng },
+    zoom: 14,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: true
+  })
+
+  // Add courier marker if location exists
+  if (currentLocation) {
+    courierMarker.value = new google.maps.Marker({
+      position: { lat: currentLocation.latitude, lng: currentLocation.longitude },
+      map: trackingMap.value,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#00BCD4',
+        fillOpacity: 1,
+        strokeColor: '#FFFFFF',
+        strokeWeight: 3
+      },
+      title: 'Repartidor'
+    })
+  }
+
+  // Add delivery markers
+  if (trackingData.value.items) {
+    trackingData.value.items.forEach((item, index) => {
+      const addr = item.invoice?.client?.address
+      if (addr && (addr.lat || addr.latitude)) {
+        const lat = addr.lat || addr.latitude
+        const lng = addr.lng || addr.longitude
+
+        const marker = new google.maps.Marker({
+          position: { lat, lng },
+          map: trackingMap.value,
+          label: {
+            text: String(index + 1),
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          },
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 15,
+            fillColor: item.delivery_status === 'delivered' ? '#4CAF50' : '#FF9800',
+            fillOpacity: 1,
+            strokeColor: '#FFFFFF',
+            strokeWeight: 2
+          },
+          title: item.invoice?.client?.name || 'Cliente'
+        })
+
+        // Info window
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px;">
+              <strong>${item.invoice?.code}</strong><br>
+              ${item.invoice?.client?.name}<br>
+              <span style="color: ${item.delivery_status === 'delivered' ? '#4CAF50' : '#FF9800'}">
+                ${getDeliveryStatusLabel(item.delivery_status)}
+              </span>
+            </div>
+          `
+        })
+
+        marker.addListener('click', () => {
+          infoWindow.open(trackingMap.value, marker)
+        })
+      }
+    })
+  }
+
+  // Draw path if locations exist
+  if (trackingData.value.locations && trackingData.value.locations.length > 1) {
+    const path = trackingData.value.locations.map(loc => ({
+      lat: loc.latitude,
+      lng: loc.longitude
+    }))
+
+    trackingPolyline.value = new google.maps.Polyline({
+      path,
+      geodesic: true,
+      strokeColor: '#00BCD4',
+      strokeOpacity: 0.8,
+      strokeWeight: 4,
+      map: trackingMap.value
+    })
+  }
+}
+
+/**
+ * Start real-time tracking updates
+ * @param {Number} deliveryRunId delivery run id
+ */
+function startTrackingUpdates (deliveryRunId) {
+  // Clear existing interval
+  if (trackingInterval.value) {
+    clearInterval(trackingInterval.value)
+  }
+
+  // Update every 10 seconds (aumentado de 5 a 10 para reducir carga)
+  trackingInterval.value = setInterval(async () => {
+    try {
+      // Solo actualizar si el mapa está visible
+      if (!showTrackingMap.value) {
+        stopTrackingUpdates()
+        return
+      }
+
+      const response = await api.get(`/invoice-delivery-runs/${deliveryRunId}`)
+      const newData = response.data.delivery_run
+
+      // Update tracking data
+      trackingData.value = newData
+
+      // Update courier marker position
+      if (newData.locations && newData.locations.length > 0 && courierMarker.value) {
+        const latestLocation = newData.locations[0]
+        const newPosition = {
+          lat: latestLocation.latitude,
+          lng: latestLocation.longitude
+        }
+
+        courierMarker.value.setPosition(newPosition)
+
+        // Update polyline path
+        if (trackingPolyline.value) {
+          const path = newData.locations.map(loc => ({
+            lat: loc.latitude,
+            lng: loc.longitude
+          }))
+          trackingPolyline.value.setPath(path)
+        }
+      }
+    } catch (error) {
+      console.error('Error updating tracking:', error)
+      // Si hay error, detener actualizaciones para evitar acumulación
+      if (error.response && error.response.status === 429) {
+        console.warn('Too many requests, stopping tracking updates')
+        stopTrackingUpdates()
+      }
+    }
+  }, 10000)
+}
+
+/**
+ * Stop tracking updates
+ */
+function stopTrackingUpdates () {
+  if (trackingInterval.value) {
+    clearInterval(trackingInterval.value)
+    trackingInterval.value = null
+  }
+}
+
+/**
+ * Get delivery status label
+ * @param {String} status delivery status
+ */
+function getDeliveryStatusLabel (status) {
+  const labels = {
+    pending: 'Pendiente',
+    arrived: 'En ubicación',
+    delivered: 'Entregado',
+    failed: 'Fallido'
+  }
+  return labels[status] || status
+}
+
+// Watch for dialog close to stop updates
+watch(showTrackingMap, (newVal) => {
+  if (!newVal) {
+    stopTrackingUpdates()
+  }
+})
+
+/**
+ * Open all drivers map
+ */
+async function openAllDriversMap () {
+  showAllDriversMap.value = true
+
+  // Wait for DOM to render
+  await new Promise(resolve => setTimeout(resolve, 100))
+
+  try {
+    // Load Google Maps first
+    await loadGoogleMaps()
+
+    // Load all active delivery runs
+    const response = await api.get('/invoice-delivery-runs/all-active')
+    allDriversData.value = response.data.delivery_runs || []
+
+    // Initialize map
+    initializeAllDriversMap()
+
+    // Start real-time updates
+    startAllDriversUpdates()
+  } catch (error) {
+    console.error('Error loading all drivers data:', error)
+    notify('Error al cargar datos de conductores', 'negative')
+  }
+}
+
+/**
+ * Initialize Google Maps for all drivers
+ */
+function initializeAllDriversMap () {
+  if (!allDriversMapContainer.value) return
+
+  // Center on Lima by default
+  let centerLat = -12.0464
+  let centerLng = -77.0428
+
+  // If there are drivers, center on first one
+  if (allDriversData.value.length > 0 && allDriversData.value[0].locations?.length > 0) {
+    const firstLocation = allDriversData.value[0].locations[0]
+    centerLat = parseFloat(firstLocation.latitude) || centerLat
+    centerLng = parseFloat(firstLocation.longitude) || centerLng
+  }
+
+  // Create map
+  allDriversMap.value = new google.maps.Map(allDriversMapContainer.value, {
+    center: { lat: centerLat, lng: centerLng },
+    zoom: 12,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: true
+  })
+
+  // Add markers for each driver
+  allDriversData.value.forEach((deliveryRun) => {
+    addDriverToMap(deliveryRun)
+  })
+
+  // Fit bounds to show all drivers
+  if (allDriversData.value.length > 0) {
+    const bounds = new google.maps.LatLngBounds()
+    allDriversData.value.forEach((deliveryRun) => {
+      if (deliveryRun.locations && deliveryRun.locations.length > 0) {
+        const loc = deliveryRun.locations[0]
+        const lat = parseFloat(loc.latitude)
+        const lng = parseFloat(loc.longitude)
+        if (!isNaN(lat) && !isNaN(lng)) {
+          bounds.extend({ lat, lng })
+        }
+      }
+    })
+    allDriversMap.value.fitBounds(bounds)
+  }
+}
+
+/**
+ * Add driver to map
+ * @param {Object} deliveryRun delivery run object
+ */
+function addDriverToMap (deliveryRun) {
+  if (!deliveryRun.locations || deliveryRun.locations.length === 0) return
+
+  const currentLocation = deliveryRun.locations[0]
+  const driverId = deliveryRun.id
+
+  // Parse coordinates to numbers
+  const lat = parseFloat(currentLocation.latitude)
+  const lng = parseFloat(currentLocation.longitude)
+
+  // Validate coordinates
+  if (isNaN(lat) || isNaN(lng)) {
+    console.warn('Invalid coordinates for driver:', deliveryRun.delivery_person?.name)
+    return
+  }
+
+  // Create driver marker
+  const marker = new google.maps.Marker({
+    position: { lat, lng },
+    map: allDriversMap.value,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 12,
+      fillColor: '#00BCD4',
+      fillOpacity: 1,
+      strokeColor: '#FFFFFF',
+      strokeWeight: 3
+    },
+    title: deliveryRun.delivery_person?.name || 'Conductor'
+  })
+
+  // Info window
+  const infoWindow = new google.maps.InfoWindow({
+    content: `
+      <div style="padding: 8px; min-width: 200px;">
+        <strong>${deliveryRun.delivery_person?.name || 'Conductor'}</strong><br>
+        <span style="color: #666;">Entregas: ${deliveryRun.items?.length || 0}</span><br>
+        <span style="color: #4CAF50;">Completadas: ${deliveryRun.items?.filter(i => i.delivery_status === 'delivered').length || 0}</span><br>
+        <span style="color: #FF9800;">Pendientes: ${deliveryRun.items?.filter(i => i.delivery_status !== 'delivered').length || 0}</span>
+      </div>
+    `
+  })
+
+  marker.addListener('click', () => {
+    // Close all other info windows
+    Object.values(driverMarkers.value).forEach(m => {
+      if (m.infoWindow) m.infoWindow.close()
+    })
+    infoWindow.open(allDriversMap.value, marker)
+  })
+
+  // Store marker
+  driverMarkers.value[driverId] = { marker, infoWindow }
+
+  // Draw path if locations exist
+  if (deliveryRun.locations.length > 1) {
+    const path = deliveryRun.locations
+      .map(loc => ({
+        lat: parseFloat(loc.latitude),
+        lng: parseFloat(loc.longitude)
+      }))
+      .filter(coord => !isNaN(coord.lat) && !isNaN(coord.lng))
+
+    const polyline = new google.maps.Polyline({
+      path,
+      geodesic: true,
+      strokeColor: '#00BCD4',
+      strokeOpacity: 0.6,
+      strokeWeight: 3,
+      map: allDriversMap.value
+    })
+
+    driverPolylines.value[driverId] = polyline
+  }
+
+  // Add delivery markers
+  if (deliveryRun.items) {
+    deliveryRun.items.forEach((item, index) => {
+      const addr = item.invoice?.client?.address
+      if (addr && (addr.lat || addr.latitude)) {
+        const lat = parseFloat(addr.lat || addr.latitude)
+        const lng = parseFloat(addr.lng || addr.longitude)
+
+        // Skip if invalid coordinates
+        if (isNaN(lat) || isNaN(lng)) return
+
+        new google.maps.Marker({
+          position: { lat, lng },
+          map: allDriversMap.value,
+          label: {
+            text: String(index + 1),
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold'
+          },
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: item.delivery_status === 'delivered' ? '#4CAF50' : '#FF9800',
+            fillOpacity: 1,
+            strokeColor: '#FFFFFF',
+            strokeWeight: 2
+          },
+          title: item.invoice?.code || 'Entrega'
+        })
+      }
+    })
+  }
+}
+
+/**
+ * Start real-time updates for all drivers
+ */
+function startAllDriversUpdates () {
+  // Clear existing interval
+  if (allDriversInterval.value) {
+    clearInterval(allDriversInterval.value)
+  }
+
+  // Update every 15 seconds (aumentado de 10 a 15 para reducir carga)
+  allDriversInterval.value = setInterval(async () => {
+    try {
+      // Solo actualizar si el mapa está visible
+      if (!showAllDriversMap.value) {
+        stopAllDriversUpdates()
+        return
+      }
+
+      const response = await api.get('/invoice-delivery-runs/all-active')
+      const newData = response.data.delivery_runs || []
+
+      // Update data
+      allDriversData.value = newData
+
+      // Update markers
+      newData.forEach((deliveryRun) => {
+        const driverId = deliveryRun.id
+        const driverMarker = driverMarkers.value[driverId]
+
+        if (driverMarker && deliveryRun.locations && deliveryRun.locations.length > 0) {
+          const latestLocation = deliveryRun.locations[0]
+          const lat = parseFloat(latestLocation.latitude)
+          const lng = parseFloat(latestLocation.longitude)
+
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const newPosition = { lat, lng }
+
+            // Update marker position
+            driverMarker.marker.setPosition(newPosition)
+
+            // Update polyline
+            if (driverPolylines.value[driverId]) {
+              const path = deliveryRun.locations
+                .map(loc => ({
+                  lat: parseFloat(loc.latitude),
+                  lng: parseFloat(loc.longitude)
+                }))
+                .filter(coord => !isNaN(coord.lat) && !isNaN(coord.lng))
+              driverPolylines.value[driverId].setPath(path)
+            }
+          }
+        } else if (!driverMarker && deliveryRun.locations && deliveryRun.locations.length > 0) {
+          // New driver appeared, add to map
+          addDriverToMap(deliveryRun)
+        }
+      })
+
+      // Remove markers for drivers that are no longer active
+      Object.keys(driverMarkers.value).forEach((driverId) => {
+        const stillActive = newData.find(d => d.id === parseInt(driverId))
+        if (!stillActive) {
+          driverMarkers.value[driverId].marker.setMap(null)
+          if (driverPolylines.value[driverId]) {
+            driverPolylines.value[driverId].setMap(null)
+          }
+          delete driverMarkers.value[driverId]
+          delete driverPolylines.value[driverId]
+        }
+      })
+    } catch (error) {
+      console.error('Error updating all drivers:', error)
+      // Si hay error 429, detener actualizaciones
+      if (error.response && error.response.status === 429) {
+        console.warn('Too many requests, stopping all drivers updates')
+        stopAllDriversUpdates()
+      }
+    }
+  }, 15000)
+}
+
+/**
+ * Stop all drivers updates
+ */
+function stopAllDriversUpdates () {
+  if (allDriversInterval.value) {
+    clearInterval(allDriversInterval.value)
+    allDriversInterval.value = null
+  }
+
+  // Clear markers
+  Object.values(driverMarkers.value).forEach(({ marker }) => {
+    marker.setMap(null)
+  })
+  driverMarkers.value = {}
+
+  // Clear polylines
+  Object.values(driverPolylines.value).forEach((polyline) => {
+    polyline.setMap(null)
+  })
+  driverPolylines.value = {}
+}
+
+// Watch for all drivers dialog close to stop updates
+watch(showAllDriversMap, (newVal) => {
+  if (!newVal) {
+    stopAllDriversUpdates()
+  }
+})
+
 </script>
 
 <style>
@@ -1133,6 +2580,451 @@ const togglePromotionDetails = (promotionId) => {
 .column-command {
   width: 350px;
   overflow-y: auto;
+}
+
+/* Estilos para grid de archivos adjuntos */
+.invoice-files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 12px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.invoice-file-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.invoice-file-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.invoice-file-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.invoice-file-image {
+  width: 100%;
+  height: 100%;
+}
+
+.invoice-file-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.invoice-file-item:hover .invoice-file-overlay {
+  opacity: 1;
+}
+
+.invoice-file-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.invoice-pdf-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  border-radius: 8px;
+  padding: 12px;
+  gap: 8px;
+}
+
+.invoice-pdf-name {
+  font-size: 9px;
+  font-weight: 500;
+  color: #616161;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Scrollbar para el grid */
+.invoice-files-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 3px;
+}
+
+.invoice-files-grid::-webkit-scrollbar-thumb:hover {
+  background: #9e9e9e;
+}
+
+/* ===== TRELLO BOARD STYLES ===== */
+.trello-board {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  min-height: 100vh;
+  padding: 0;
+}
+
+.board-header {
+  background: white;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Bulk Actions Toolbar */
+.bulk-actions-toolbar {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  padding: 16px 20px;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+  position: sticky;
+  top: 64px;
+  z-index: 99;
+}
+
+/* Slide down animation */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.slide-down-leave-to {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+/* Selected card highlight */
+.selected-card {
+  border: 2px solid #1976d2 !important;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
+  background: #e3f2fd !important;
+}
+
+/* Filters Card Styles */
+.filters-card {
+  width: 500px;
+  max-width: 80vw;
+  background: #fafafa;
+}
+
+.filters-header {
+  background: white;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.filters-content {
+  background: #fafafa;
+  padding: 24px;
+}
+
+.filters-footer {
+  background: white;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.filter-group {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.filter-group:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #424242;
+}
+
+.trello-columns {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  overflow-x: auto;
+  height: calc(100vh - 80px);
+  align-items: flex-start;
+}
+
+.trello-column {
+  min-width: 320px;
+  max-width: 320px;
+  background: #f1f3f5;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  max-height: calc(100vh - 120px);
+}
+
+.column-header {
+  padding: 16px;
+  background: white;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.cards-container {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 100px;
+  max-height: calc(100vh - 240px);
+}
+
+.cards-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cards-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cards-container::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.order-card {
+  margin-bottom: 12px;
+  border-radius: 10px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+}
+
+.order-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.order-card:active {
+  cursor: grabbing;
+}
+
+.ghost-card {
+  opacity: 0.5;
+  background: #e3f2fd;
+  border: 2px dashed #1976d2;
+}
+
+.card-header {
+  padding: 12px;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.card-products {
+  padding: 12px;
+  background: #fafbfc;
+}
+
+.product-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.product-item:last-child {
+  border-bottom: none;
+}
+
+.product-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-width: 0;
+}
+
+.product-info span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.card-footer {
+  padding: 12px;
+  background: white;
+  border-top: 1px solid #f1f3f5;
+}
+
+.delivery-assignment {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+}
+
+.delivery-select {
+  font-size: 12px;
+}
+
+.column-footer {
+  padding: 12px;
+  text-align: center;
+  background: white;
+  border-radius: 0 0 12px 12px;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Status Timeline Styles */
+.status-timeline {
+  position: relative;
+  padding-left: 0;
+}
+
+.status-step {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.status-step.is-last {
+  padding-bottom: 0;
+}
+
+.status-line {
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  bottom: -24px;
+  width: 2px;
+  background: #e0e0e0;
+}
+
+.status-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1;
+}
+
+.status-content {
+  flex: 1;
+  padding-top: 4px;
+}
+
+.status-duration {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.status-duration::before {
+  content: '⏱️';
+  margin-right: 4px;
+}
+
+/* Map Container - Responsive Heights */
+.map-container {
+  height: calc(100vh - 200px);
+}
+
+@media (max-width: 599px) {
+  /* Mobile - More space for footer */
+  .map-container {
+    height: calc(100vh - 280px);
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1023px) {
+  /* Tablet */
+  .map-container {
+    height: calc(100vh - 220px);
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Desktop */
+  .map-container {
+    height: calc(100vh - 180px);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .trello-column {
+    min-width: 280px;
+    max-width: 280px;
+  }
+
+  .board-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
 }
 
 </style>

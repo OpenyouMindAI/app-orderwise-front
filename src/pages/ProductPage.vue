@@ -1,6 +1,6 @@
 <template>
   <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
+    <div class="row q-col-gutter-md">
       <div class="col-12 text-right q-gutter-sm">
         <q-btn
           color="blue"
@@ -1545,6 +1545,7 @@ export default {
       this.$api.get('categories', {
         params: {
           paginate: false,
+          branch_office_id: this.branchOffice?.id,
           dataSearch: { name: value }
         }
       }).then(({ data }) => {
@@ -1558,6 +1559,7 @@ export default {
       this.$api.get('categories', {
         params: {
           paginate: false,
+          branch_office_id: this.branchOffice?.id,
           dataSearch: { name: value }
         }
       }).then(({ data }) => {

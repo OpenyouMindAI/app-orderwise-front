@@ -213,6 +213,32 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/TransferProductPage.vue')
       },
+      // Logistics Routes - Uber Style (Transfer Stocks)
+      {
+        path: 'courier/tray',
+        name: 'CourierTray',
+        meta: { requiresAuth: true },
+        component: () => import('pages/CourierTrayPage.vue')
+      },
+      {
+        path: 'courier/transport/:id',
+        name: 'ActiveTransport',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ActiveTransportPage.vue')
+      },
+      // Invoice Delivery Routes - Own Delivery System
+      {
+        path: 'delivery/tray',
+        name: 'InvoiceDeliveryTray',
+        meta: { requiresAuth: true },
+        component: () => import('pages/InvoiceDeliveryTrayPage.vue')
+      },
+      {
+        path: 'delivery/active/:id',
+        name: 'ActiveInvoiceDelivery',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ActiveInvoiceDeliveryPage.vue')
+      },
       {
         path: 'inventory-count',
         name: 'InventoryCount',
@@ -284,6 +310,12 @@ const routes = [
         name: 'Notification',
         meta: { requiresAuth: true },
         component: () => import('src/pages/NotificationPage.vue')
+      },
+      {
+        path: 'exchange-rates',
+        name: 'ExchangeRate',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/ExchangeRatePage.vue')
       }
     ]
   },
@@ -319,6 +351,11 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('pages/LoginPage.vue')
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('pages/RegisterPage.vue')
   },
   {
     path: '/verifying/:access_token/:expires_in/:token_type/:redirect',
