@@ -194,6 +194,12 @@
                   <span class="text-caption text-grey-7">{{ invoice.client?.name }}</span>
                 </div>
 
+                <!-- Descripción -->
+                <div v-if="invoice.description" class="flex items-start q-gutter-xs q-mb-xs">
+                  <q-icon name="description" size="14px" color="grey-6" class="q-mt-xs" />
+                  <span class="text-caption text-grey-7">{{ invoice.description }}</span>
+                </div>
+
                 <!-- Delivery Person Assignment -->
                 <div class="delivery-assignment" @click.stop>
                   <q-select
