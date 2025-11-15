@@ -196,6 +196,41 @@
             </q-card-section>
           </q-card>
 
+          <!-- Usuario Afectado (nuevo) -->
+          <q-card v-if="selected?.data?.api_activity_log?.response_body" flat class="detail-card">
+            <q-card-section>
+              <div class="detail-header">
+                <q-icon name="person" color="primary" size="20px" />
+                <span class="detail-title">Usuario Afectado</span>
+              </div>
+              <div class="detail-content">
+                <template v-if="parseResponseBody(selected?.data?.api_activity_log?.response_body)?.user_data">
+                  <div class="detail-item">
+                    <span class="detail-label">Nombre:</span>
+                    <span class="detail-value">{{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.name }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">{{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.email }}</span>
+                  </div>
+                  <div class="detail-item" v-if="parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.role">
+                    <span class="detail-label">Rol:</span>
+                    <q-chip dense color="primary" text-color="white">
+                      {{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.role }}
+                    </q-chip>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">ID:</span>
+                    <span class="detail-value">#{{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.id }}</span>
+                  </div>
+                </template>
+                <div v-else class="text-grey-6 text-caption">
+                  No hay información del usuario disponible
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+
           <!-- Request data mejorado -->
           <q-card flat class="detail-card">
             <q-card-section>
@@ -215,7 +250,55 @@
             </q-card-section>
             <q-separator />
             <q-card-section class="code-section">
-              <pre class="code-block">{{ formatJson(selected?.data?.request_data) }}</pre>
+              <div class="detail-content">
+                <div class="detail-item">
+                  <span class="detail-label">Método:</span>
+                  <q-chip dense :color="getMethodColor(selected?.data?.request_data?.method)" text-color="white">
+                    {{ selected?.data?.request_data?.method }}
+                  </q-chip>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">URL:</span>
+                  <a :href="selected?.data?.request_data?.url" target="_blank" class="text-primary detail-value">
+                    {{ selected?.data?.request_data?.url }}
+                  </a>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">IP:</span>
+                  <span class="detail-value">{{ selected?.data?.request_data?.ip }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">User Agent:</span>
+                  <span class="detail-value text-caption">{{ selected?.data?.request_data?.user_agent }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Origen:</span>
+                  <span class="detail-value">{{ selected?.data?.request_data?.origin }}</span>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+
+          <!-- Payload (nuevo) -->
+          <q-card v-if="selected?.data?.api_activity_log?.payload" flat class="detail-card">
+            <q-card-section>
+              <div class="detail-header">
+                <q-icon name="data_object" color="primary" size="20px" />
+                <span class="detail-title">Payload</span>
+                <q-space />
+                <q-btn
+                  dense
+                  flat
+                  icon="content_copy"
+                  @click="handleCopyJson(selected?.data?.api_activity_log?.payload)"
+                  color="primary"
+                  size="sm"
+                />
+              </div>
+            </q-card-section>
+            <q-separator />
+            <q-card-section class="code-section">
+              <pre class="code-block">{{ formatJson(selected?.data?.api_activity_log?.payload) }}</pre>
             </q-card-section>
           </q-card>
 
@@ -230,7 +313,7 @@
                   dense
                   flat
                   icon="content_copy"
-                  @click="handleCopyText(selected?.data?.trace)"
+                  @click="handleCopyText(getFormattedTrace())"
                   color="primary"
                   size="sm"
                 />
@@ -238,8 +321,48 @@
             </q-card-section>
             <q-separator />
             <q-card-section class="code-section">
-              <pre class="code-block trace-block">{{ selected?.data?.trace }}</pre>
+              <pre class="code-block trace-block">{{ getFormattedTrace() }}</pre>
             </q-card-section>
+          </q-card>
+
+          <!-- Activity Log Link (nuevo) -->
+          <q-card v-if="selected?.data?.api_activity_log?.id" flat class="detail-card">
+            <q-card-section>
+              <div class="detail-header">
+                <q-icon name="history" color="primary" size="20px" />
+                <span class="detail-title">Activity Log</span>
+              </div>
+              <div class="detail-content">
+                <div class="detail-item">
+                  <span class="detail-label">Log ID:</span>
+                  <span class="detail-value">#{{ selected?.data?.api_activity_log?.id }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Status Code:</span>
+                  <q-badge :color="getStatusColor(selected?.data?.api_activity_log?.status_code)">
+                    {{ selected?.data?.api_activity_log?.status_code }}
+                  </q-badge>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Response Time:</span>
+                  <q-badge color="info">{{ selected?.data?.api_activity_log?.response_time }}s</q-badge>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Endpoint:</span>
+                  <code>{{ selected?.data?.api_activity_log?.endpoint }}</code>
+                </div>
+              </div>
+            </q-card-section>
+            <q-card-actions align="right">
+              <q-btn
+                dense
+                flat
+                icon="open_in_new"
+                label="Ver en Logs"
+                color="primary"
+                @click="goToLog(selected?.data?.api_activity_log?.id)"
+              />
+            </q-card-actions>
           </q-card>
 
           <!-- Snapshot mejorado -->
@@ -484,6 +607,40 @@ export default defineComponent({
       })
     }
 
+    const parseResponseBody = (responseBody) => {
+      if (!responseBody) return null
+      try {
+        return typeof responseBody === 'string' ? JSON.parse(responseBody) : responseBody
+      } catch {
+        return null
+      }
+    }
+
+    const getFormattedTrace = () => {
+      // Intentar obtener el trace del response_body primero (nuevo formato)
+      const responseBody = parseResponseBody(selected.value?.data?.api_activity_log?.response_body)
+      if (responseBody?.trace && Array.isArray(responseBody.trace)) {
+        return responseBody.trace.map((t, i) => 
+          `#${i} ${t.file}:${t.line}\n    ${t.class ? t.class + '::' : ''}${t.function}`
+        ).join('\n\n')
+      }
+      // Fallback al formato antiguo
+      return selected.value?.data?.trace || 'No hay stack trace disponible'
+    }
+
+    const getStatusColor = (code) => {
+      const c = Number(code || 0)
+      if (c >= 500) return 'negative'
+      if (c >= 400) return 'warning'
+      if (c >= 300) return 'info'
+      if (c >= 200) return 'positive'
+      return 'grey'
+    }
+
+    const goToLog = (logId) => {
+      router.push({ name: 'log', query: { id: logId } })
+    }
+
     // Cargar datos iniciales
     fetchItems()
 
@@ -507,7 +664,11 @@ export default defineComponent({
       handleNotificationClick,
       handleCloseDrawer,
       handleCopyJson,
-      handleCopyText
+      handleCopyText,
+      parseResponseBody,
+      getFormattedTrace,
+      getStatusColor,
+      goToLog
     }
   }
 })
