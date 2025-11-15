@@ -398,6 +398,16 @@
                   <p class="checkbox-description">Filtrar categorías diferentes por sucursal</p>
                 </div>
               </div>
+              <div class="form-group">
+                <div class="checkbox-group">
+                  <q-checkbox
+                    v-model="companyConfig.is_table"
+                    label="Sistema de mesas"
+                    color="primary"
+                  />
+                  <p class="checkbox-description">Activar gestión de mesas y salones</p>
+                </div>
+              </div>
             </div>
 
             <div class="step-actions">
@@ -662,6 +672,7 @@ const companyConfig = ref({
   coin: company.value?.company_config?.coin,
   priceList: company.value?.company_config?.price_list,
   printer: company.value?.company_config?.printer,
+  is_table: company.value?.company_config?.is_table ?? false,
   other: {
     ...(company.value?.company_config?.other || {}),
     categories_by_branch: company.value?.company_config?.other?.categories_by_branch ?? false
@@ -1079,6 +1090,7 @@ const onSubmitConfig = async () => {
         payment_method_id: companyConfig.value?.paymentMethod?.id,
         client_id: companyConfig.value?.client?.id,
         printer_id: companyConfig.value?.printer?.id,
+        is_table: companyConfig.value?.is_table,
         other: {
           ...companyConfig.value?.other
         },

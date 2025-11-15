@@ -43,13 +43,18 @@
       </div>
 
       <div class="notifications-list">
-        <div v-if="filteredItems.length === 0" class="empty-state">
+        <div v-if="loading && items.length === 0" class="loading-state">
+          <q-spinner-dots color="primary" size="50px" />
+          <div class="text-body1 text-grey-6 q-mt-md">Cargando notificaciones...</div>
+        </div>
+
+        <div v-else-if="items.length === 0" class="empty-state">
           <q-icon name="notifications_none" size="4rem" color="grey-5" />
           <div class="text-h6 text-grey-6 q-mt-md">No hay notificaciones</div>
           <div class="text-body2 text-grey-5">No se encontraron notificaciones con los filtros aplicados</div>
         </div>
 
-        <div v-for="notification in filteredItems" :key="notification.id" class="notification-card">
+        <div v-for="notification in items" :key="notification.id" class="notification-card">
           <q-card flat class="modern-card" @click="handleNotificationClick(notification)">
             <q-card-section class="notification-header">
               <div class="notification-icon">
@@ -134,6 +139,26 @@
         </div>
       </div>
 
+      <!-- Paginación -->
+      <div v-if="pagination.total > 0" class="pagination-section">
+        <div class="pagination-info">
+          <span class="text-body2 text-grey-7">
+            Mostrando {{ items.length }} de {{ pagination.total }} notificaciones
+          </span>
+        </div>
+        <div class="pagination-actions">
+          <q-btn
+            v-if="pagination.current_page < pagination.last_page"
+            color="primary"
+            label="Cargar más"
+            icon-right="expand_more"
+            :loading="loading"
+            @click="loadMore"
+            class="load-more-btn"
+          />
+        </div>
+      </div>
+
       <q-drawer
         v-model="drawer"
         side="right"
@@ -196,6 +221,41 @@
             </q-card-section>
           </q-card>
 
+          <!-- Usuario Afectado (nuevo) -->
+          <q-card v-if="selected?.data?.api_activity_log?.response_body" flat class="detail-card">
+            <q-card-section>
+              <div class="detail-header">
+                <q-icon name="person" color="primary" size="20px" />
+                <span class="detail-title">Usuario Afectado</span>
+              </div>
+              <div class="detail-content">
+                <template v-if="parseResponseBody(selected?.data?.api_activity_log?.response_body)?.user_data">
+                  <div class="detail-item">
+                    <span class="detail-label">Nombre:</span>
+                    <span class="detail-value">{{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.name }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">{{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.email }}</span>
+                  </div>
+                  <div class="detail-item" v-if="parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.role">
+                    <span class="detail-label">Rol:</span>
+                    <q-chip dense color="primary" text-color="white">
+                      {{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.role }}
+                    </q-chip>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">ID:</span>
+                    <span class="detail-value">#{{ parseResponseBody(selected?.data?.api_activity_log?.response_body).user_data.id }}</span>
+                  </div>
+                </template>
+                <div v-else class="text-grey-6 text-caption">
+                  No hay información del usuario disponible
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+
           <!-- Request data mejorado -->
           <q-card flat class="detail-card">
             <q-card-section>
@@ -215,7 +275,55 @@
             </q-card-section>
             <q-separator />
             <q-card-section class="code-section">
-              <pre class="code-block">{{ formatJson(selected?.data?.request_data) }}</pre>
+              <div class="detail-content">
+                <div class="detail-item">
+                  <span class="detail-label">Método:</span>
+                  <q-chip dense :color="getMethodColor(selected?.data?.request_data?.method)" text-color="white">
+                    {{ selected?.data?.request_data?.method }}
+                  </q-chip>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">URL:</span>
+                  <a :href="selected?.data?.request_data?.url" target="_blank" class="text-primary detail-value">
+                    {{ selected?.data?.request_data?.url }}
+                  </a>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">IP:</span>
+                  <span class="detail-value">{{ selected?.data?.request_data?.ip }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">User Agent:</span>
+                  <span class="detail-value text-caption">{{ selected?.data?.request_data?.user_agent }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Origen:</span>
+                  <span class="detail-value">{{ selected?.data?.request_data?.origin }}</span>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+
+          <!-- Payload (nuevo) -->
+          <q-card v-if="selected?.data?.api_activity_log?.payload" flat class="detail-card">
+            <q-card-section>
+              <div class="detail-header">
+                <q-icon name="data_object" color="primary" size="20px" />
+                <span class="detail-title">Payload</span>
+                <q-space />
+                <q-btn
+                  dense
+                  flat
+                  icon="content_copy"
+                  @click="handleCopyJson(selected?.data?.api_activity_log?.payload)"
+                  color="primary"
+                  size="sm"
+                />
+              </div>
+            </q-card-section>
+            <q-separator />
+            <q-card-section class="code-section">
+              <pre class="code-block">{{ formatJson(selected?.data?.api_activity_log?.payload) }}</pre>
             </q-card-section>
           </q-card>
 
@@ -230,7 +338,7 @@
                   dense
                   flat
                   icon="content_copy"
-                  @click="handleCopyText(selected?.data?.trace)"
+                  @click="handleCopyText(getFormattedTrace())"
                   color="primary"
                   size="sm"
                 />
@@ -238,8 +346,48 @@
             </q-card-section>
             <q-separator />
             <q-card-section class="code-section">
-              <pre class="code-block trace-block">{{ selected?.data?.trace }}</pre>
+              <pre class="code-block trace-block">{{ getFormattedTrace() }}</pre>
             </q-card-section>
+          </q-card>
+
+          <!-- Activity Log Link (nuevo) -->
+          <q-card v-if="selected?.data?.api_activity_log?.id" flat class="detail-card">
+            <q-card-section>
+              <div class="detail-header">
+                <q-icon name="history" color="primary" size="20px" />
+                <span class="detail-title">Activity Log</span>
+              </div>
+              <div class="detail-content">
+                <div class="detail-item">
+                  <span class="detail-label">Log ID:</span>
+                  <span class="detail-value">#{{ selected?.data?.api_activity_log?.id }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Status Code:</span>
+                  <q-badge :color="getStatusColor(selected?.data?.api_activity_log?.status_code)">
+                    {{ selected?.data?.api_activity_log?.status_code }}
+                  </q-badge>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Response Time:</span>
+                  <q-badge color="info">{{ selected?.data?.api_activity_log?.response_time }}s</q-badge>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Endpoint:</span>
+                  <code>{{ selected?.data?.api_activity_log?.endpoint }}</code>
+                </div>
+              </div>
+            </q-card-section>
+            <q-card-actions align="right">
+              <q-btn
+                dense
+                flat
+                icon="open_in_new"
+                label="Ver en Logs"
+                color="primary"
+                @click="goToLog(selected?.data?.api_activity_log?.id)"
+              />
+            </q-card-actions>
           </q-card>
 
           <!-- Snapshot mejorado -->
@@ -289,8 +437,16 @@ export default defineComponent({
     const search = ref('')
     const typeFilter = ref(null)
     const severityFilter = ref(null)
+    const loading = ref(false)
     const route = useRoute()
     const router = useRouter()
+    
+    const pagination = ref({
+      current_page: 1,
+      last_page: 1,
+      per_page: 15,
+      total: 0
+    })
 
     watch(route, () => {
       if (route.query.id) {
@@ -373,12 +529,14 @@ export default defineComponent({
       })
     }
 
-    const fetchItems = async () => {
+    const fetchItems = async (page = 1, append = false) => {
+      loading.value = true
       try {
         const params = {
+          page: page,
+          per_page: pagination.value.per_page,
           search: search.value || null,
-          type: typeFilter.value || null,
-          severity: severityFilter.value?.value || null
+          type: typeFilter.value || null
         }
 
         Object.keys(params).forEach(key => {
@@ -389,12 +547,20 @@ export default defineComponent({
 
         const { data } = await api.get('notifications', { params })
 
-        let notifications = data
-        if (!Array.isArray(notifications)) {
-          notifications = [notifications].filter(Boolean)
+        // Actualizar paginación
+        pagination.value = {
+          current_page: data.current_page,
+          last_page: data.last_page,
+          per_page: data.per_page,
+          total: data.total
         }
 
-        items.value = notifications
+        // Actualizar items
+        if (append) {
+          items.value = [...items.value, ...data.data]
+        } else {
+          items.value = data.data
+        }
 
         if (route.query.id) {
           if (items.value.length > 0) {
@@ -409,50 +575,35 @@ export default defineComponent({
           message: 'Error cargando notificaciones',
           position: 'top'
         })
-        items.value = []
+        if (!append) {
+          items.value = []
+        }
+      } finally {
+        loading.value = false
       }
     }
 
-    const filteredItems = computed(() => {
-      let filtered = items.value
-
-      if (search.value) {
-        const searchTerm = search.value.toLowerCase()
-        filtered = filtered.filter(item => {
-          const message = item.data?.message?.toLowerCase() || ''
-          const errorType = item.data?.error_type?.toLowerCase() || ''
-          const exception = item.data?.exception?.toLowerCase() || ''
-          return message.includes(searchTerm) ||
-             errorType.includes(searchTerm) ||
-             exception.includes(searchTerm)
-        })
+    const loadMore = async () => {
+      if (pagination.value.current_page < pagination.value.last_page) {
+        await fetchItems(pagination.value.current_page + 1, true)
       }
+    }
 
-      if (typeFilter.value) {
-        filtered = filtered.filter(item =>
-          item.data?.error_type === typeFilter.value
-        )
-      }
-
-      if (severityFilter.value?.value) {
-        filtered = filtered.filter(item =>
-          item.data?.error_type === severityFilter.value.value
-        )
-      }
-
-      return filtered
-    })
+    // Filtros ahora se aplican en el backend, no necesitamos computed
 
     const handleSearchChange = () => {
-      fetchItems()
+      pagination.value.current_page = 1
+      fetchItems(1, false)
     }
 
     const handleTypeFilterChange = () => {
-      fetchItems()
+      pagination.value.current_page = 1
+      fetchItems(1, false)
     }
 
     const handleRefresh = () => {
-      fetchItems()
+      pagination.value.current_page = 1
+      fetchItems(1, false)
     }
 
     const handleNotificationClick = (notification) => {
@@ -484,16 +635,51 @@ export default defineComponent({
       })
     }
 
+    const parseResponseBody = (responseBody) => {
+      if (!responseBody) return null
+      try {
+        return typeof responseBody === 'string' ? JSON.parse(responseBody) : responseBody
+      } catch {
+        return null
+      }
+    }
+
+    const getFormattedTrace = () => {
+      // Intentar obtener el trace del response_body primero (nuevo formato)
+      const responseBody = parseResponseBody(selected.value?.data?.api_activity_log?.response_body)
+      if (responseBody?.trace && Array.isArray(responseBody.trace)) {
+        return responseBody.trace.map((t, i) => 
+          `#${i} ${t.file}:${t.line}\n    ${t.class ? t.class + '::' : ''}${t.function}`
+        ).join('\n\n')
+      }
+      // Fallback al formato antiguo
+      return selected.value?.data?.trace || 'No hay stack trace disponible'
+    }
+
+    const getStatusColor = (code) => {
+      const c = Number(code || 0)
+      if (c >= 500) return 'negative'
+      if (c >= 400) return 'warning'
+      if (c >= 300) return 'info'
+      if (c >= 200) return 'positive'
+      return 'grey'
+    }
+
+    const goToLog = (logId) => {
+      router.push({ name: 'log', query: { id: logId } })
+    }
+
     // Cargar datos iniciales
     fetchItems()
 
     return {
-      filteredItems,
       items,
       selected,
       drawer,
       search,
       typeFilter,
+      loading,
+      pagination,
       typeToggleOptions,
       getErrorColor,
       getErrorIcon,
@@ -507,7 +693,12 @@ export default defineComponent({
       handleNotificationClick,
       handleCloseDrawer,
       handleCopyJson,
-      handleCopyText
+      handleCopyText,
+      parseResponseBody,
+      getFormattedTrace,
+      getStatusColor,
+      goToLog,
+      loadMore
     }
   }
 })
@@ -653,6 +844,42 @@ export default defineComponent({
     justify-content: center;
     padding: 60px 20px;
     text-align: center;
+  }
+
+  /* Estado de carga */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  /* Sección de paginación */
+  .pagination-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 20px;
+    margin-top: 24px;
+    border-top: 1px solid rgba(229, 231, 235, 0.5);
+  }
+
+  .pagination-info {
+    text-align: center;
+  }
+
+  .pagination-actions {
+    display: flex;
+    justify-content: center;
+  }
+
+  .load-more-btn {
+    border-radius: 12px;
+    padding: 8px 24px;
+    min-width: 150px;
   }
 
   /* Estilos del drawer mejorados */

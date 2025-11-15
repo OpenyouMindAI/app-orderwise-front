@@ -129,31 +129,6 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <!-- Botón Mesas -->
-            <div class="col-12 q-mt-sm">
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px"
-                color="primary"
-                icon="table_restaurant"
-                dense
-                label="Mesas"
-                :loading="loadingLivingRoom"
-                @click="dialogTable = true"
-                v-if="companyConfig.is_table"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F10
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Seleccionar mesas
-                </q-tooltip>
-              </q-btn>
-            </div>
             <div class="col-12">
               <!-- Desktop view -->
               <q-table
@@ -590,20 +565,6 @@
           <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
             <div class="flex q-gutter-sm justify-start">
               <!-- Abrir/Cerrar caja -->
-              <q-btn
-                v-if="openCashBox"
-                style="border-radius: 10px; padding: 5px 15px;"
-                dense
-                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
-                :color="isUserBoxOpen ? 'negative' : 'primary'"
-                :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
-                @click="handleCashBoxButtonClick"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
-                </q-tooltip>
-              </q-btn>
-
               <!-- Cobrar -->
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
@@ -626,7 +587,28 @@
                   Cobrar
                 </q-tooltip>
               </q-btn>
-
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
+                color="orange"
+                icon="table_restaurant"
+                dense
+                label="Mesas"
+                :loading="loadingLivingRoom"
+                @click="dialogTable = true"
+                v-if="companyConfig.is_table"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F10
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Seleccionar mesas
+                </q-tooltip>
+              </q-btn>
               <!-- Entrada/Salida -->
               <q-btn
                 icon="payments"
@@ -670,7 +652,19 @@
                   Buscar factura
                 </q-tooltip>
               </q-btn>
-
+              <q-btn
+                v-if="openCashBox"
+                style="border-radius: 10px; padding: 5px 15px;"
+                dense
+                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                :color="isUserBoxOpen ? 'yellow' : 'primary'"
+                :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+                @click="handleCashBoxButtonClick"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+                </q-tooltip>
+              </q-btn>
               <!-- Borrar -->
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
