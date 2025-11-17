@@ -367,11 +367,7 @@ export default {
     })
 
     const pendingPayment = computed(() => {
-      const totalWithDisc = totalWithDiscount.value - totalPaymentWithDiscount.value
-
-      if (totalWithDisc > 0) return totalWithDiscount.value - totalPayment.value
-
-      return totalWithDisc
+      return props.totalAmount - totalPayment.value
     })
 
     const selectedPaymentMethods = computed(() => {
