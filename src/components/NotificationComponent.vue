@@ -102,6 +102,25 @@
               </q-item-section>
             </q-item>
           </q-list>
+
+          <!-- Botón cargar más -->
+          <div v-if="pagination.current_page < pagination.last_page" class="q-pa-md text-center">
+            <q-btn
+              color="primary"
+              label="Cargar más"
+              icon-right="expand_more"
+              :loading="loadingMore"
+              @click="loadMore"
+              dense
+              rounded
+              no-caps
+            />
+          </div>
+
+          <!-- Info de paginación -->
+          <div v-if="pagination.total > 0" class="q-pa-sm text-center text-caption text-grey-6">
+            {{ notifications.length }} de {{ pagination.total }} notificaciones
+          </div>
         </div>
       </q-card-section>
       <q-card-section v-else class="q-px-xs q-py-xs q-pb-md text-center">
@@ -159,6 +178,23 @@ export default {
     const notifications = ref([])
 
     /**
+     * Loading more notifications
+     * @type {Boolean}
+     */
+    const loadingMore = ref(false)
+
+    /**
+     * Pagination data
+     * @type {Object}
+     */
+    const pagination = ref({
+      current_page: 1,
+      last_page: 1,
+      per_page: 15,
+      total: 0
+    })
+
+    /**
      * Router
      * @type {Object}
      */
@@ -173,18 +209,60 @@ export default {
     /**
      * Get notifications
      * @param {Boolean} unread status guide
+     * @param {Number} page page number
+     * @param {Boolean} append append to existing notifications
      */
-    const getAllNotifications = async (unread) => {
+    const getAllNotifications = async (unread, page = 1, append = false) => {
       try {
         active.value = unread
-        loadingNotification.value = true
-        const { data } = await api.get('notifications', { params: { unread } })
-        notifications.value = data
+        if (!append) {
+          loadingNotification.value = true
+        } else {
+          loadingMore.value = true
+        }
+
+        const params = {
+          unread: unread ? 'true' : undefined,
+          page,
+          per_page: pagination.value.per_page
+        }
+
+        const { data } = await api.get('notifications', { params })
+
+        // Actualizar paginación
+        pagination.value = {
+          current_page: data.current_page,
+          last_page: data.last_page,
+          per_page: data.per_page,
+          total: data.total
+        }
+
+        // Actualizar notificaciones
+        if (append) {
+          notifications.value = [...notifications.value, ...data.data]
+        } else {
+          notifications.value = data.data
+        }
+
         loadingNotification.value = false
+        loadingMore.value = false
         emit('onLoad')
       } catch (error) {
-        notifications.value = []
+        if (!append) {
+          notifications.value = []
+        }
+        loadingNotification.value = false
+        loadingMore.value = false
         console.error('Error adding document: ', error)
+      }
+    }
+
+    /**
+     * Load more notifications
+     */
+    const loadMore = async () => {
+      if (pagination.value.current_page < pagination.value.last_page) {
+        await getAllNotifications(active.value, pagination.value.current_page + 1, true)
       }
     }
 
@@ -253,14 +331,17 @@ export default {
       active,
       getErrorIcon,
       loadingNotification,
+      loadingMore,
       notifications,
       numberOfNotifications,
+      pagination,
       unReadOneNotifications,
       gotToNotification,
       timeAgo,
       goToAboutPage,
       getAllNotifications,
-      unReadNotifications
+      unReadNotifications,
+      loadMore
     }
   },
   created () {

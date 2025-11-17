@@ -22,6 +22,11 @@
                       label="Estado" @update:model-value="fetchLogs" />
           </div>
 
+          <div class="col-6 col-md-2">
+            <q-toggle v-model="filters.errorsOnly" label="Solo errores" dense
+                      @update:model-value="fetchLogs" color="negative" />
+          </div>
+
           <!-- <CHANGE> Filtro de fecha mejorado sin restricciones y con opción de limpiar -->
           <div class="col-12 col-md-3">
             <q-input dense outlined v-model="filters.dateRangeLabel" readonly label="Rango de fecha"
@@ -108,6 +113,20 @@
             {{ props.row.user.name }}
           </q-chip>
           <span v-else class="text-grey-6">guest</span>
+        </q-td>
+      </template>
+
+      <!-- Columna de mensaje de error -->
+      <template #body-cell-error_message="props">
+        <q-td :props="props">
+          <div v-if="props.row.error_message" class="error-message-cell">
+            <q-icon name="error" size="xs" color="negative" class="q-mr-xs" />
+            <span class="text-negative text-caption">{{ props.row.error_message.substring(0, 50) }}{{ props.row.error_message.length > 50 ? '...' : '' }}</span>
+            <q-tooltip class="bg-negative text-white" max-width="400px">
+              {{ props.row.error_message }}
+            </q-tooltip>
+          </div>
+          <span v-else class="text-grey-5">-</span>
         </q-td>
       </template>
 
@@ -214,6 +233,48 @@
               <pre class="code-block">{{ pretty(selected?.headers) }}</pre>
             </q-card-section>
           </q-card>
+
+          <!-- Error Details (nuevo) -->
+          <q-card v-if="selected?.error_message" flat bordered class="error-card">
+            <q-card-section class="row items-center justify-between bg-negative text-white">
+              <div class="text-subtitle2 flex items-center">
+                <q-icon name="error" class="q-mr-xs" />
+                Detalles del Error
+              </div>
+              <q-btn dense flat icon="content_copy" @click="copyJson(parseResponseBody(selected?.response_body))" color="white" />
+            </q-card-section>
+            <q-separator />
+            <q-card-section>
+              <div class="error-details">
+                <div class="error-row">
+                  <b>Mensaje:</b> 
+                  <span class="text-negative">{{ selected?.error_message }}</span>
+                </div>
+                <template v-if="parseResponseBody(selected?.response_body)">
+                  <div class="error-row" v-if="parseResponseBody(selected?.response_body).error">
+                    <b>Tipo:</b> 
+                    <code>{{ parseResponseBody(selected?.response_body).error }}</code>
+                  </div>
+                  <div class="error-row" v-if="parseResponseBody(selected?.response_body).file">
+                    <b>Archivo:</b> 
+                    <code>{{ parseResponseBody(selected?.response_body).file }}:{{ parseResponseBody(selected?.response_body).line }}</code>
+                  </div>
+                  <div class="error-row" v-if="parseResponseBody(selected?.response_body).user_data">
+                    <b>Usuario afectado:</b> 
+                    <span>{{ parseResponseBody(selected?.response_body).user_data.name }} ({{ parseResponseBody(selected?.response_body).user_data.email }})</span>
+                  </div>
+                </template>
+              </div>
+            </q-card-section>
+            <q-separator />
+            <q-card-section v-if="parseResponseBody(selected?.response_body)?.trace">
+              <div class="text-subtitle2 q-mb-sm flex items-center">
+                <q-icon name="bug_report" class="q-mr-xs" />
+                Stack Trace
+              </div>
+              <pre class="code-block trace-block">{{ formatTrace(parseResponseBody(selected?.response_body).trace) }}</pre>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
     </q-drawer>
@@ -236,14 +297,15 @@ const dateRangeDialog = ref(false)
 const dateRange = ref({ from: null, to: null })
 
 // <CHANGE> Agregado control de columnas visibles
-const visibleColumnNames = ref(['id', 'created_at', 'method', 'status_code', 'endpoint', 'user_id', 'ip_address', 'response_time', 'full_url'])
+const visibleColumnNames = ref(['id', 'created_at', 'method', 'status_code', 'endpoint', 'error_message', 'user_id', 'ip_address', 'response_time'])
 
 const filters = reactive({
   search: '',
   method: null,
   status: null,
   dateRange: null,
-  dateRangeLabel: ''
+  dateRangeLabel: '',
+  errorsOnly: false
 })
 
 const pagination = ref({ page: 1, rowsPerPage: 25, rowsNumber: 0, sortBy: 'created_at', descending: true })
@@ -261,7 +323,7 @@ const columns = [
   { name: 'method', label: 'Método', field: 'method', sortable: true, align: 'left' },
   { name: 'status_code', label: 'Estado', field: 'status_code', sortable: true, align: 'left' },
   { name: 'endpoint', label: 'Endpoint', field: 'endpoint', sortable: true, align: 'left' },
-  // <CHANGE> Agregada columna de usuario
+  { name: 'error_message', label: 'Error', field: 'error_message', sortable: true, align: 'left' },
   { name: 'user_id', label: 'Usuario', field: 'user_id', sortable: true, align: 'left' },
   { name: 'ip_address', label: 'IP', field: 'ip_address', sortable: true, align: 'left' },
   { name: 'response_time', label: 'Tiempo (s)', field: 'response_time', sortable: true, align: 'right' },
@@ -339,6 +401,23 @@ function copyJson (obj) {
   $q.notify({ message: 'Copiado al portapapeles', icon: 'check', color: 'positive', position: 'top' })
 }
 
+function parseResponseBody (responseBody) {
+  if (!responseBody) return null
+  try {
+    return typeof responseBody === 'string' ? JSON.parse(responseBody) : responseBody
+  } catch {
+    return null
+  }
+}
+
+function formatTrace (trace) {
+  if (!trace) return ''
+  if (Array.isArray(trace)) {
+    return trace.map((t, i) => `#${i} ${t.file}:${t.line}\n    ${t.class ? t.class + '::' : ''}${t.function}`).join('\n\n')
+  }
+  return String(trace)
+}
+
 function copyCurl (row) {
   const data = row?.payload ? ` --data '${JSON.stringify(row.payload)}'` : ''
   const cmd = `curl -X ${row.method} '${row.full_url}'${data}`
@@ -374,28 +453,36 @@ async function onRequest (ctx) {
 async function fetchLogs () {
   loading.value = true
   try {
-    const { data } = await api.get('user-activity', {
-      params: {
-        page: pagination.value.page,
-        paginate: true,
-        perPage: pagination.value.rowsPerPage,
-        sortBy: pagination.value.sortBy,
-        sortOrder: pagination.value.descending ? 'desc' : 'asc',
-        dataSearch: {
-          ip_address: filters.search,
-          endpoint: filters.search
-        },
-        dataEqualFilter: {
-          method: filters.method?.value || null,
-          status_code: filters.status?.value || null
-        },
-        dateFilter: {
-          field: 'created_at',
-          from: filters.dateRange?.from || null,
-          to: filters.dateRange?.to || null
-        }
+    const params = {
+      page: pagination.value.page,
+      paginate: true,
+      perPage: pagination.value.rowsPerPage,
+      sortBy: pagination.value.sortBy,
+      sortOrder: pagination.value.descending ? 'desc' : 'asc',
+      dataSearch: {
+        ip_address: filters.search,
+        endpoint: filters.search,
+        error_message: filters.search
+      },
+      dataEqualFilter: {
+        method: filters.method?.value || null,
+        status_code: filters.status?.value || null
+      },
+      dateFilter: {
+        field: 'created_at',
+        from: filters.dateRange?.from || null,
+        to: filters.dateRange?.to || null
       }
-    })
+    }
+
+    // Filtro de solo errores
+    if (filters.errorsOnly) {
+      params.dataRangeFilter = {
+        status_code: { from: 400, to: 599 }
+      }
+    }
+
+    const { data } = await api.get('user-activity', { params })
     rows.value = data.data
     pagination.value.rowsNumber = data.total
   } catch (e) {
@@ -457,5 +544,35 @@ background: rgba(148,163,184,0.1);
 padding: 2px 6px;
 border-radius: 4px;
 font-size: 12px;
+}
+
+.error-message-cell {
+display: flex;
+align-items: center;
+max-width: 300px;
+}
+
+.error-card {
+border: 2px solid rgba(244, 67, 54, 0.3);
+}
+
+.error-details {
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.error-row {
+display: flex;
+flex-direction: column;
+gap: 4px;
+word-break: break-word;
+}
+
+.trace-block {
+max-height: 400px;
+overflow: auto;
+background: rgba(244, 67, 54, 0.05);
+border: 1px solid rgba(244, 67, 54, 0.2);
 }
 </style>
