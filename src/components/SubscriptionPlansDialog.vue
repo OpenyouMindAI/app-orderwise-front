@@ -1,206 +1,148 @@
 <template>
-  <q-dialog v-model="showDialog" persistent>
-    <q-card style="min-width: 900px; max-width: 95vw;">
-      <!-- Header -->
-      <q-card-section class="row items-center q-pb-none">
-        <div class="text-h6">Planes de Suscripción</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
-      </q-card-section>
+  <div>
+    <q-dialog v-model="showDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card flat class="fullscreen-pricing">
+        <!-- Close Button -->
+        <q-btn
+          icon="close"
+          flat
+          round
+          dense
+          v-close-popup
+          class="close-btn-fixed"
+        />
 
-      <!-- Current Plan Info -->
-      <q-card-section v-if="currentSubscription" class="q-pt-sm">
-        <q-banner rounded class="bg-primary text-white">
-          <template v-slot:avatar>
-            <q-icon name="workspace_premium" size="md" />
-          </template>
-          <div class="text-subtitle1">Plan Actual: <strong>{{ currentSubscription.plan.name }}</strong></div>
-          <div class="text-caption">
-            <span v-if="currentSubscription.status === 'trial'">
-              Período de prueba - Vence: {{ formatDate(currentSubscription.trial_end_date) }}
-            </span>
-            <span v-else-if="currentSubscription.status === 'active'">
-              Activo hasta: {{ formatDate(currentSubscription.end_date) }}
-              <span v-if="daysLeft <= 7" class="text-warning">
-                ({{ daysLeft }} días restantes)
-              </span>
-            </span>
-            <span v-else-if="currentSubscription.status === 'expired'" class="text-negative">
-              Expirado el {{ formatDate(currentSubscription.end_date) }}
-            </span>
+        <!-- Content Container -->
+        <div class="pricing-content">
+          <!-- Header -->
+          <div class="pricing-header">
+            <div class="text-h4 text-weight-bold text-center q-mb-sm">
+              Elige tu plan
+            </div>
+            <div class="text-subtitle1 text-center text-grey-7 q-mb-lg">
+              Selecciona el plan que mejor se adapte a tus necesidades
+            </div>
           </div>
-        </q-banner>
-      </q-card-section>
 
-      <!-- Plans Grid -->
-      <q-card-section>
-        <div class="row q-col-gutter-md">
-          <div 
-            v-for="plan in plans" 
-            :key="plan.id"
-            class="col-12 col-md-4"
-          >
-            <q-card 
-              bordered 
-              :class="[
-                'plan-card',
-                { 
-                  'current-plan': isCurrentPlan(plan),
-                  'recommended': plan.slug === 'pro'
-                }
-              ]"
+          <!-- Plans Grid -->
+          <div class="pricing-grid">
+            <div
+              v-for="plan in plans"
+              :key="plan.id"
+              class="plan-wrapper"
             >
-              <!-- Recommended Badge -->
-              <q-badge 
-                v-if="plan.slug === 'pro'" 
-                color="orange" 
-                floating
-                class="text-weight-bold"
+              <div
+                :class="[
+                  'pricing-card',
+                  {
+                    'pricing-card-featured': plan.slug === 'pro',
+                    'pricing-card-current': isCurrentPlan(plan)
+                  }
+                ]"
               >
-                Recomendado
-              </q-badge>
+                <!-- Plan Name -->
+                <div class="card-plan-name">{{ plan.name }}</div>
 
-              <q-card-section class="text-center">
-                <div class="text-h5 text-weight-bold">{{ plan.name }}</div>
-                <div class="text-h3 text-primary q-my-md">
-                  <span v-if="plan.price === 0">Gratis</span>
-                  <span v-else>
-                    ${{ plan.price }}
-                    <span class="text-caption">/mes</span>
-                  </span>
+                <!-- Price -->
+                <div class="card-price">
+                  <span v-if="plan.price === 0" class="price-value">$0</span>
+                  <template v-else>
+                    <span class="price-value">${{ plan.price }}</span>
+                  </template>
+                  <span class="price-period">/ Month</span>
                 </div>
-                <div class="text-caption text-grey-7">{{ plan.description }}</div>
-              </q-card-section>
 
-              <q-separator />
+                <div class="card-subtitle">{{ plan.description }}</div>
 
-              <q-card-section>
-                <q-list dense>
-                  <q-item v-for="(feature, index) in plan.features" :key="index">
-                    <q-item-section avatar>
-                      <q-icon name="check_circle" color="positive" size="sm" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-caption">{{ feature }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
+                <!-- CTA Button -->
+                <q-btn
+                  unelevated
+                  :color="plan.slug === 'pro' ? 'white' : 'primary'"
+                  :text-color="plan.slug === 'pro' ? 'primary' : 'white'"
+                  :label="getActionLabel(plan)"
+                  :class="['full-width', 'card-cta-btn', plan.slug === 'pro' ? 'btn-featured' : '']"
+                  @click="selectPlan(plan)"
+                  :loading="loading"
+                  :disable="isCurrentPlan(plan) || plan.slug === 'free'"
+                />
+
+                <!-- Features List -->
+                <div class="card-features">
+                  <div
+                    v-for="(feature, index) in plan.features"
+                    :key="index"
+                    class="card-feature-item"
+                  >
+                    <q-icon name="check_circle" size="18px" :color="plan.slug === 'pro' ? 'white' : 'positive'" />
+                    <span>{{ feature }}</span>
+                  </div>
+                </div>
 
                 <!-- Pro Team Branch Pricing -->
-                <div v-if="plan.slug === 'pro_team'" class="q-mt-md">
-                  <q-separator class="q-mb-sm" />
-                  <div class="text-caption text-grey-7 q-mb-xs">
-                    Sucursales adicionales: ${{ plan.price_per_branch }}/mes cada una
+                <div v-if="plan.slug === 'pro_team'" class="branch-pricing">
+                  <div class="branch-pricing-label">
+                    Sucursales adicionales: ${{ plan.price_per_branch }}/mes c/u
                   </div>
                   <q-input
                     v-model.number="branchCount"
                     type="number"
                     min="1"
                     dense
-                    outlined
+                    filled
                     label="Número de sucursales"
                     @update:model-value="calculateProTeamPrice(plan)"
                   >
                     <template v-slot:prepend>
-                      <q-icon name="store" />
+                      <q-icon name="store" size="18px" />
                     </template>
                   </q-input>
-                  <div class="text-subtitle2 text-primary q-mt-xs">
+                  <div class="branch-pricing-total">
                     Total: ${{ proTeamTotalPrice }}/mes
                   </div>
                 </div>
-              </q-card-section>
 
-              <q-card-actions class="q-pa-md">
-                <q-btn
-                  v-if="isCurrentPlan(plan)"
-                  unelevated
-                  color="grey"
-                  label="Plan Actual"
-                  class="full-width"
-                  disable
-                />
-                <q-btn
-                  v-else-if="plan.slug === 'free'"
-                  unelevated
-                  color="grey"
-                  label="Plan Básico"
-                  class="full-width"
-                  disable
-                />
-                <q-btn
-                  v-else-if="canUpgrade(plan)"
-                  unelevated
-                  color="primary"
-                  :label="getActionLabel(plan)"
-                  class="full-width"
-                  @click="selectPlan(plan)"
-                  :loading="loading"
-                />
-                <q-btn
-                  v-else
-                  unelevated
-                  color="grey"
-                  label="No disponible"
-                  class="full-width"
-                  disable
-                />
-              </q-card-actions>
-            </q-card>
+              </div>
+            </div>
           </div>
         </div>
-      </q-card-section>
+      </q-card>
+    </q-dialog>
 
-      <!-- Cancel Subscription -->
-      <q-card-section v-if="currentSubscription && !currentSubscription.plan.is_free">
-        <q-separator class="q-mb-md" />
-        <div class="text-center">
-          <q-btn
-            flat
-            color="negative"
-            label="Cancelar Suscripción"
-            icon="cancel"
-            @click="showCancelDialog = true"
+    <!-- Cancel Confirmation Dialog -->
+    <q-dialog v-model="showCancelDialog">
+      <q-card style="min-width: 400px;">
+        <q-card-section>
+          <div class="text-h6">¿Cancelar Suscripción?</div>
+        </q-card-section>
+
+        <q-card-section>
+          <p>¿Está seguro que desea cancelar su suscripción?</p>
+          <p class="text-caption text-grey-7">
+            Su plan actual permanecerá activo hasta la fecha de vencimiento.
+            Después de eso, su cuenta será cambiada al plan Free.
+          </p>
+          <q-input
+            v-model="cancellationReason"
+            type="textarea"
+            label="Motivo de cancelación (opcional)"
+            outlined
+            rows="3"
           />
-        </div>
-      </q-card-section>
-    </q-card>
-  </q-dialog>
+        </q-card-section>
 
-  <!-- Cancel Confirmation Dialog -->
-  <q-dialog v-model="showCancelDialog">
-    <q-card style="min-width: 400px;">
-      <q-card-section>
-        <div class="text-h6">¿Cancelar Suscripción?</div>
-      </q-card-section>
-
-      <q-card-section>
-        <p>¿Está seguro que desea cancelar su suscripción?</p>
-        <p class="text-caption text-grey-7">
-          Su plan actual permanecerá activo hasta la fecha de vencimiento.
-          Después de eso, su cuenta será cambiada al plan Free.
-        </p>
-        <q-input
-          v-model="cancellationReason"
-          type="textarea"
-          label="Motivo de cancelación (opcional)"
-          outlined
-          rows="3"
-        />
-      </q-card-section>
-
-      <q-card-actions align="right">
-        <q-btn flat label="No, mantener" color="primary" v-close-popup />
-        <q-btn 
-          unelevated 
-          label="Sí, cancelar" 
-          color="negative" 
-          @click="cancelSubscription"
-          :loading="loading"
-        />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
+        <q-card-actions align="right">
+          <q-btn flat label="No, mantener" color="primary" v-close-popup />
+          <q-btn
+            unelevated
+            label="Sí, cancelar"
+            color="negative"
+            @click="cancelSubscription"
+            :loading="loading"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+  </div>
 </template>
 
 <script>
@@ -218,7 +160,7 @@ export default {
     }
   },
   emits: ['update:modelValue', 'subscription-updated'],
-  setup(props, { emit }) {
+  setup (props, { emit }) {
     const plans = ref([])
     const currentSubscription = ref(null)
     const loading = ref(false)
@@ -248,11 +190,11 @@ export default {
     const canUpgrade = (plan) => {
       if (plan.slug === 'free') return false
       if (!currentSubscription.value) return true
-      
+
       const currentPlanOrder = { free: 0, pro: 1, pro_team: 2 }
       const currentOrder = currentPlanOrder[currentSubscription.value.plan.slug] || 0
       const targetOrder = currentPlanOrder[plan.slug] || 0
-      
+
       return targetOrder > currentOrder
     }
 
@@ -276,7 +218,7 @@ export default {
       try {
         const { data } = await api.get('subscription-plans')
         plans.value = data
-        
+
         // Calcular precio inicial de Pro Team
         const proTeamPlan = plans.value.find(p => p.slug === 'pro_team')
         if (proTeamPlan) {
@@ -291,7 +233,7 @@ export default {
       try {
         const { data } = await api.get('subscriptions/current')
         currentSubscription.value = data.subscription
-        
+
         if (data.subscription && data.subscription.branch_offices_count) {
           branchCount.value = data.subscription.branch_offices_count
         }
@@ -301,37 +243,49 @@ export default {
     }
 
     const selectPlan = async (plan) => {
+      // Si el plan es Free, no requiere pago
+      if (plan.slug === 'free') {
+        notify('El plan Free no requiere pago', 'info', 'info')
+        return
+      }
+
       loading.value = true
       try {
-        let response
-        
-        if (!currentSubscription.value) {
-          // Crear nueva suscripción
-          response = await api.post('subscriptions', {
-            subscription_plan_id: plan.id,
-            branch_offices_count: plan.slug === 'pro_team' ? branchCount.value : 1,
-            months: 1
-          })
-          notify('Suscripción creada exitosamente', 'positive', 'check_circle')
+        console.log('Creating payment link for plan:', plan.name)
+
+        // Crear link de pago con Mercado Pago
+        const response = await api.post('mercadopago/create-payment', {
+          subscription_plan_id: plan.id,
+          branch_offices_count: plan.slug === 'pro_team' ? branchCount.value : 1,
+          months: 1
+        })
+
+        console.log('Payment link response:', response.data)
+
+        // Redirigir a Mercado Pago
+        if (response.data.init_point) {
+          notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
+
+          // Usar sandbox en desarrollo, producción en producción
+          const paymentUrl = process.env.NODE_ENV === 'production'
+            ? response.data.init_point
+            : response.data.sandbox_init_point
+
+          console.log('Opening payment URL:', paymentUrl)
+
+          // Abrir en nueva ventana
+          window.open(paymentUrl, '_blank')
+
+          // Cerrar el diálogo
+          showDialog.value = false
         } else {
-          // Actualizar suscripción existente
-          response = await api.post('subscriptions/upgrade', {
-            subscription_plan_id: plan.id
-          })
-          notify('Plan actualizado exitosamente', 'positive', 'check_circle')
-          
-          // Si es Pro Team, actualizar el número de sucursales
-          if (plan.slug === 'pro_team' && branchCount.value > 1) {
-            await api.post('subscriptions/update-branch-count', {
-              branch_offices_count: branchCount.value
-            })
-          }
+          console.error('No init_point in response:', response.data)
+          notify('Error: No se recibió el link de pago', 'negative', 'warning')
         }
-        
-        await loadCurrentSubscription()
-        emit('subscription-updated', response.data.subscription)
       } catch (error) {
-        notify(error.response?.data?.message || 'Error al procesar la suscripción', 'negative', 'warning')
+        console.error('Error creating payment link:', error)
+        console.error('Error response:', error.response?.data)
+        notify(error.response?.data?.message || 'Error al crear el link de pago', 'negative', 'warning')
       } finally {
         loading.value = false
       }
@@ -343,11 +297,11 @@ export default {
         await api.post('subscriptions/cancel', {
           reason: cancellationReason.value
         })
-        
+
         notify('Suscripción cancelada exitosamente', 'positive', 'check_circle')
         showCancelDialog.value = false
         cancellationReason.value = ''
-        
+
         await loadCurrentSubscription()
         emit('subscription-updated', null)
       } catch (error) {
@@ -385,28 +339,321 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.plan-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.fullscreen-pricing {
+  background: #fafafa;
+  height: 100vh;
+  overflow-y: auto;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.close-btn-fixed {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+}
+
+.pricing-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 40px;
+}
+
+.pricing-header {
+  margin-bottom: 40px;
+
+  .text-h4 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .text-subtitle1 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.pricing-card {
+  background: white;
+  border-radius: 12px;
+  padding: 32px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
+  font-family: 'Inter', sans-serif;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   }
 
-  &.current-plan {
+  &.pricing-card-featured {
+    background: var(--q-primary);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 8px 32px rgba(var(--q-primary-rgb), 0.3);
+
+    .card-plan-name,
+    .price-value,
+    .card-subtitle,
+    .card-feature-item {
+      color: white;
+    }
+
+    .price-period {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    &:hover {
+      transform: scale(1.05) translateY(-4px);
+    }
+  }
+
+  &.pricing-card-current {
     border: 2px solid var(--q-primary);
-    background: rgba(var(--q-primary-rgb), 0.05);
+  }
+}
+
+.card-plan-name {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.3px;
+}
+
+.card-price {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.price-value {
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -1.5px;
+}
+
+.price-period {
+  font-size: 15px;
+  color: #666;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.card-subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+  min-height: 40px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.card-cta-btn {
+  height: 44px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: none;
+  margin-bottom: 24px;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    transform: translateY(-1px);
   }
 
-  &.recommended {
-    border: 2px solid var(--q-orange);
+  &.btn-featured {
+    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3) !important;
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.4) !important;
+    }
+  }
+}
+
+.card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.plan-card-modern {
+  position: relative;
+  height: 100%;
+  padding: 20px 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: white;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    border-color: #999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
 
-  .q-card__section:last-child {
-    margin-top: auto;
+  &.plan-card-current {
+    border: 1.5px solid var(--q-primary);
+    background: rgba(var(--q-primary-rgb), 0.02);
+  }
+
+  &.plan-card-popular {
+    border: 1.5px solid #000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.popular-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  background: #000;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+
+.plan-header {
+  margin-bottom: 16px;
+}
+
+.plan-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 4px;
+}
+
+.plan-description {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.plan-price {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.price-currency {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+}
+
+.price-amount {
+  font-size: 32px;
+  font-weight: 700;
+  color: #000;
+  line-height: 1;
+}
+
+.price-period {
+  font-size: 13px;
+  color: #666;
+  margin-left: 2px;
+}
+
+.plan-features {
+  flex: 1;
+  margin-bottom: 16px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.4;
+}
+
+.feature-icon {
+  color: #000;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.branch-pricing {
+  margin-bottom: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.branch-pricing-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.branch-pricing-total {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--q-primary);
+  margin-top: 6px;
+}
+
+.plan-action {
+  margin-top: auto;
+}
+
+.action-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+
+.cancel-section {
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.cancel-btn {
+  text-transform: none;
+  font-size: 12px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
   }
 }
 </style>
