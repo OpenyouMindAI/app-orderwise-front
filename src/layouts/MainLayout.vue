@@ -231,6 +231,24 @@
                 </div>
               </q-card-section>
 
+              <!-- Subscription Info (Solo para super_admin) -->
+              <q-card-section v-if="userSession.is_super_admin" class="q-pt-none">
+                <q-banner rounded dense class="bg-grey-2">
+                  <template v-slot:avatar>
+                    <q-icon name="workspace_premium" color="primary" />
+                  </template>
+                  <div class="text-caption">
+                    <strong>Plan:</strong> {{ subscriptionPlan }}
+                    <span v-if="subscriptionDaysLeft > 0 && subscriptionDaysLeft <= 7" class="text-warning">
+                      <br>({{ subscriptionDaysLeft }} días restantes)
+                    </span>
+                    <span v-else-if="subscriptionDaysLeft === 0" class="text-negative">
+                      <br>(Expirado)
+                    </span>
+                  </div>
+                </q-banner>
+              </q-card-section>
+
               <!-- Profile Actions -->
               <q-card-section class="profile-actions">
                 <q-list>
@@ -262,6 +280,28 @@
                     <q-item-section>
                       <q-item-label>{{ $q.dark.isActive ? 'Modo Claro' : 'Modo Oscuro' }}</q-item-label>
                       <q-item-label caption>Cambiar tema de la aplicación</q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <!-- Subscription Plans (Solo para super_admin) -->
+                  <q-separator v-if="userSession.is_super_admin" class="q-my-sm" />
+                  <q-item
+                    v-if="userSession.is_super_admin"
+                    v-ripple
+                    clickable
+                    class="profile-action-item"
+                    @click="openSubscriptionDialog"
+                    v-close-popup
+                  >
+                    <q-item-section avatar>
+                      <q-icon name="workspace_premium" color="primary" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>Planes de Suscripción</q-item-label>
+                      <q-item-label caption>Ver y gestionar tu plan</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-icon name="chevron_right" size="xs" />
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -403,6 +443,12 @@
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
 
+    <!-- Subscription Plans Dialog -->
+    <subscription-plans-dialog
+      v-model="showSubscriptionDialog"
+      @subscription-updated="onSubscriptionUpdated"
+    />
+
   </q-layout>
 </template>
 
@@ -410,6 +456,7 @@
 import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
+import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -426,7 +473,7 @@ import {
 } from '@capacitor/barcode-scanner'
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent, FloatingThemeSelector },
+  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog },
   data () {
     return {
       logo,
@@ -463,7 +510,22 @@ export default {
        * Scanned QR code
        * @type {String}
        */
-      scannedCode: ''
+      scannedCode: '',
+      /**
+       * Subscription dialog
+       * @type {Boolean}
+       */
+      showSubscriptionDialog: false,
+      /**
+       * Subscription plan name
+       * @type {String}
+       */
+      subscriptionPlan: 'Free',
+      /**
+       * Subscription days left
+       * @type {Number}
+       */
+      subscriptionDaysLeft: null
     }
   },
   computed: {
@@ -494,8 +556,43 @@ export default {
     this.loadingPage()
     this.getDataNotification()
     this.checkMultipleScreens()
+    this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Load subscription information
+     */
+    async loadSubscriptionInfo () {
+      try {
+        const { data } = await api.get('subscriptions/current')
+        if (data.subscription) {
+          this.subscriptionPlan = data.plan.name
+          this.subscriptionDaysLeft = data.days_until_expiration
+        } else {
+          this.subscriptionPlan = 'Free'
+          this.subscriptionDaysLeft = null
+        }
+      } catch (error) {
+        console.error('Error loading subscription:', error)
+        this.subscriptionPlan = 'Free'
+        this.subscriptionDaysLeft = null
+      }
+    },
+    /**
+     * Open subscription dialog
+     */
+    openSubscriptionDialog () {
+      this.showSubscriptionDialog = true
+    },
+    /**
+     * Handle subscription updated event
+     */
+    onSubscriptionUpdated (subscription) {
+      this.loadSubscriptionInfo()
+      if (subscription) {
+        notify('Suscripción actualizada exitosamente', 'positive', 'check_circle')
+      }
+    },
     /**
      * Check if device has multiple screens
      */
