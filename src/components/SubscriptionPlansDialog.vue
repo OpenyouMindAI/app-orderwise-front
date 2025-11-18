@@ -242,6 +242,10 @@ export default {
       }
     }
 
+    /**
+     * Iniciar proceso de pago con Mercado Pago Checkout Pro
+     * @param {Object} plan - Plan de suscripción seleccionado
+     */
     const selectPlan = async (plan) => {
       // Si el plan es Free, no requiere pago
       if (plan.slug === 'free') {
@@ -250,42 +254,59 @@ export default {
       }
 
       loading.value = true
-      try {
-        console.log('Creating payment link for plan:', plan.name)
 
-        // Crear link de pago con Mercado Pago
+      try {
+        // Crear link de pago con Checkout Pro
         const response = await api.post('mercadopago/create-payment', {
           subscription_plan_id: plan.id,
           branch_offices_count: plan.slug === 'pro_team' ? branchCount.value : 1,
           months: 1
         })
 
-        console.log('Payment link response:', response.data)
+        // Validar respuesta
+        if (!response.data.init_point) {
+          throw new Error('No se recibió URL de pago de Mercado Pago')
+        }
+
+        // Usar init_point directamente
+        const paymentUrl = response.data.init_point
+
+        // Guardar preference_id en localStorage para tracking
+        localStorage.setItem('mp_preference_id', response.data.preference_id)
+        localStorage.setItem('mp_plan_id', plan.id)
+        localStorage.setItem('mp_plan_name', plan.name)
+
+        // Notificar al usuario
+        notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
+
+        // Esperar un momento para que el usuario vea la notificación
+        await new Promise(resolve => setTimeout(resolve, 500))
 
         // Redirigir a Mercado Pago
-        if (response.data.init_point) {
-          notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
-
-          // Usar sandbox en desarrollo, producción en producción
-          const paymentUrl = process.env.NODE_ENV === 'production'
-            ? response.data.init_point
-            : response.data.sandbox_init_point
-
-          console.log('Opening payment URL:', paymentUrl)
-
-          // Abrir en nueva ventana
-          window.open(paymentUrl, '_blank')
-
-          // Cerrar el diálogo
-          showDialog.value = false
-        } else {
-          console.error('No init_point in response:', response.data)
-          notify('Error: No se recibió el link de pago', 'negative', 'warning')
-        }
+        window.location.href = paymentUrl
       } catch (error) {
-        console.error('Error creating payment link:', error)
-        console.error('Error response:', error.response?.data)
-        notify(error.response?.data?.message || 'Error al crear el link de pago', 'negative', 'warning')
+        // Manejo específico de errores
+        let errorMessage = 'Error al crear el link de pago'
+
+        if (error.response) {
+          // Error de respuesta del servidor
+          const { status, data } = error.response
+
+          if (status === 400) {
+            errorMessage = data.message || 'Datos de pago inválidos'
+          } else if (status === 401) {
+            errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente'
+          } else if (status === 500) {
+            errorMessage = 'Error del servidor. Por favor, intenta nuevamente'
+          } else if (data.details) {
+            errorMessage = `Error de Mercado Pago: ${JSON.stringify(data.details)}`
+          }
+        } else if (error.request) {
+          // Error de red
+          errorMessage = 'Error de conexión. Verifica tu internet'
+        }
+
+        notify(errorMessage, 'negative', 'warning')
       } finally {
         loading.value = false
       }
