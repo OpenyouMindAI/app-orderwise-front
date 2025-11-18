@@ -148,6 +148,28 @@
                 />
               </div>
 
+              <div class="form-group">
+                <label class="field-label">
+                  Rubro
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Tipo de negocio o actividad comercial (Restaurante, Farmacia, Supermercado, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
+                <q-select
+                  v-model="company.business_type"
+                  :options="businessTypes"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="filterBusinessTypes"
+                />
+              </div>
+
               <div class="form-group full-width">
                 <label class="field-label">
                   Dirección
@@ -242,7 +264,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 1"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -540,7 +562,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 2"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -613,7 +635,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 3"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -658,7 +680,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 4"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -722,7 +744,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 5"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -753,7 +775,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 6"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -794,6 +816,7 @@ const aliquotTypes = ref([])
 const clients = ref([])
 const paymentMethods = ref([])
 const printers = ref([])
+const businessTypes = ref([])
 const loading = ref(false)
 
 // Store and session
@@ -857,7 +880,7 @@ const address = ref(null)
 const formattedAddress = ref('')
 
 // Load branch office config into the form on component mount
-onMounted(() => {
+onMounted(async () => {
   if (branchOffice.value) {
     companyConfig.value.point_of_sale = branchOffice.value.point_of_sale
     companyConfig.value.other.default_price_list = branchOffice.value.default_price_list
@@ -865,6 +888,14 @@ onMounted(() => {
 
   // Inicializar dirección si existe
   initializeAddress()
+
+  // Cargar business types
+  try {
+    const { data } = await api.get('business-types')
+    businessTypes.value = data.data || data
+  } catch (error) {
+    console.error('Error loading business types:', error)
+  }
 })
 
 /**
@@ -935,6 +966,18 @@ const getNextStep = (currentStep) => {
   }
 
   return validSteps[currentIndex + 1]
+}
+
+// Función para obtener el step anterior válido
+const getPreviousStep = (currentStep) => {
+  const validSteps = steps.value.map(s => s.number).sort((a, b) => a - b)
+  const currentIndex = validSteps.indexOf(currentStep)
+
+  if (currentIndex === -1 || currentIndex === 0) {
+    return currentStep
+  }
+
+  return validSteps[currentIndex - 1]
 }
 
 // Refs for file uploaders
@@ -1015,6 +1058,11 @@ const formDate = (data) => {
   formData.append('document_number', data.document_number)
   formData.append('email', data.email)
   formData.append('phone_number', data.phone_number)
+
+  // Agregar business_type_id si está disponible
+  if (data.business_type && data.business_type.id) {
+    formData.append('business_type_id', data.business_type.id)
+  }
 
   // Agregar coordenadas GPS si están disponibles
   if (address.value && typeof address.value === 'object') {
@@ -1208,6 +1256,14 @@ const filterTypeOfServices = async (value, update) => {
   filterOptions(value, 'type-of-services', (data) => {
     update(() => {
       typeOfServices.value = data
+    })
+  })
+}
+
+const filterBusinessTypes = async (value, update) => {
+  filterOptions(value, 'business-types', (data) => {
+    update(() => {
+      businessTypes.value = data
     })
   })
 }
