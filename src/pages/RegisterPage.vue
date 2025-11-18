@@ -171,10 +171,100 @@
     </div>
 
     <!-- Modal de Setup de Empresa -->
-    <company-setup-modal
-      v-model="showCompanySetup"
-      @company-created="handleCompanyCreated"
-    />
+    <q-dialog v-model="showCompanySetup" persistent>
+      <q-card style="min-width: 500px; max-width: 600px;">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">Configura tu empresa</div>
+          <div class="text-subtitle2">Ingresa los datos de tu empresa para continuar</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit="setupCompany">
+            <div class="q-gutter-md">
+              <!-- Nombre de la empresa -->
+              <q-input
+                v-model="companyForm.company_name"
+                label="Nombre de la empresa *"
+                outlined
+                :rules="[val => !!val || 'El nombre es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="business" />
+                </template>
+              </q-input>
+
+              <!-- Documento -->
+              <q-input
+                v-model="companyForm.company_document"
+                label="CUIT / RUT / Documento *"
+                outlined
+                :rules="[val => !!val || 'El documento es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="badge" />
+                </template>
+              </q-input>
+
+              <!-- Email -->
+              <q-input
+                v-model="companyForm.company_email"
+                label="Email de la empresa *"
+                type="email"
+                outlined
+                :rules="[
+                  val => !!val || 'El email es requerido',
+                  val => /.+@.+\..+/.test(val) || 'Email inválido'
+                ]"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="email" />
+                </template>
+              </q-input>
+
+              <!-- Teléfono -->
+              <q-input
+                v-model="companyForm.company_phone"
+                label="Teléfono *"
+                outlined
+                :rules="[val => !!val || 'El teléfono es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="phone" />
+                </template>
+              </q-input>
+
+              <!-- Dirección -->
+              <q-input
+                v-model="companyForm.company_address"
+                label="Dirección"
+                outlined
+              >
+                <template v-slot:prepend>
+                  <q-icon name="location_on" />
+                </template>
+              </q-input>
+            </div>
+
+            <q-card-actions align="right" class="q-mt-md">
+              <q-btn
+                flat
+                label="Cancelar"
+                color="grey"
+                @click="showCompanySetup = false"
+                :disable="loadingCompanySetup"
+              />
+              <q-btn
+                type="submit"
+                label="Continuar"
+                color="primary"
+                unelevated
+                :loading="loadingCompanySetup"
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -184,7 +274,6 @@ import { useRouter } from 'vue-router'
 import { api } from 'src/boot/axios'
 import { logo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 
 const router = useRouter()
 const store = authentication()
@@ -205,6 +294,79 @@ const loading = ref(false)
 const loadingGoogle = ref(false)
 const showCompanySetup = ref(false)
 
+// Company setup form
+const companyForm = ref({
+  company_name: '',
+  company_document: '',
+  company_email: '',
+  company_phone: '',
+  company_address: ''
+})
+
+const loadingCompanySetup = ref(false)
+const registeredCredentials = ref({
+  email: '',
+  password: ''
+})
+
+/**
+ * Setup company with form data
+ */
+const setupCompany = async () => {
+  try {
+    loadingCompanySetup.value = true
+
+    await api.post('authentication/setup-company', companyForm.value)
+
+    notify('Empresa configurada exitosamente', 'positive', 'check_circle')
+
+    // Cerrar modal
+    showCompanySetup.value = false
+
+    // Hacer login automático con las credenciales guardadas
+    await loginAfterCompanySetup()
+  } catch (error) {
+    const message = error.response?.data?.message || 'Error al configurar empresa'
+    notify(message, 'negative', 'warning')
+  } finally {
+    loadingCompanySetup.value = false
+  }
+}
+
+/**
+ * Login after company setup
+ */
+const loginAfterCompanySetup = async () => {
+  try {
+    const { data } = await api.post('authentication/login', {
+      username: registeredCredentials.value.email,
+      password: registeredCredentials.value.password
+    })
+
+    // Guardar token en localStorage
+    localStorage.setItem('access_token', data.access_token)
+    api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
+
+    // Guardar sesión completa en el store
+    store.setSessionData({
+      user: data.user,
+      access_token: data.access_token,
+      token_type: data.token_type,
+      expires_in: data.expires_in
+    })
+
+    notify('¡Bienvenido! Configura tu empresa', 'positive', 'check_circle')
+
+    // Redirigir a configuración de empresa
+    router.push({
+      name: 'CompanyConfig'
+    })
+  } catch (error) {
+    const message = error.response?.data?.message || 'Error al iniciar sesión'
+    notify(message, 'negative', 'warning')
+  }
+}
+
 /**
  * Register with email and password
  */
@@ -214,27 +376,24 @@ const register = async () => {
 
     const { data } = await api.post('authentication/register', form.value)
 
-    // Guardar sesión completa en el store
-    store.setSessionData({
-      user: data.user,
-      access_token: data.access_token,
-      token_type: data.token_type,
-      expires_in: data.expires_in,
-      refresh_token: data.refresh_token
-    })
-
-    // Guardar token en localStorage
+    // Guardar token en localStorage INMEDIATAMENTE
     localStorage.setItem('access_token', data.access_token)
     api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
 
     notify('Registro exitoso', 'positive', 'check_circle')
 
-    // Mostrar modal de setup de empresa
-    if (data.needs_company_setup) {
-      showCompanySetup.value = true
-    } else {
-      router.push('/')
+    // Guardar credenciales para login posterior
+    registeredCredentials.value = {
+      email: form.value.email,
+      password: form.value.password
     }
+
+    // Pre-llenar formulario de empresa
+    companyForm.value.company_email = form.value.email
+    companyForm.value.company_phone = form.value.phone_number || ''
+
+    // Mostrar modal de configuración de empresa
+    showCompanySetup.value = true
   } catch (error) {
     const message = error.response?.data?.message || 'Error al registrar usuario'
     notify(message, 'negative', 'warning')
@@ -321,19 +480,6 @@ const registerWithGoogle = async () => {
   }
 }
 
-/**
- * Handle company created
- */
-const handleCompanyCreated = (data) => {
-  // Actualizar store con datos del usuario
-  store.userSession = data.user
-
-  // Marcar que necesita tutorial
-  localStorage.setItem('needs_tutorial', 'true')
-
-  // Redirigir directamente a productos para iniciar el tour
-  router.push('/products')
-}
 </script>
 
 <style scoped>

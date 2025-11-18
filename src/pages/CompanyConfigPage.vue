@@ -76,7 +76,14 @@
             <!-- Form Fields -->
             <div class="form-grid">
               <div class="form-group">
-                <label class="field-label">Nombre de la empresa</label>
+                <label class="field-label">
+                  Nombre de la empresa
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Nombre legal o comercial de tu empresa que aparecerá en facturas y documentos
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.name"
                   outlined
@@ -87,7 +94,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Documento</label>
+                <label class="field-label">
+                  Documento
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      CUIT, RUT o número de identificación fiscal de tu empresa
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.document_number"
                   outlined
@@ -98,7 +112,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Email</label>
+                <label class="field-label">
+                  Email
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Correo electrónico principal de contacto de la empresa
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.email"
                   outlined
@@ -110,7 +131,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Teléfono</label>
+                <label class="field-label">
+                  Teléfono
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de teléfono principal de la empresa para contacto con clientes
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.phone_number"
                   outlined
@@ -121,7 +149,14 @@
               </div>
 
               <div class="form-group full-width">
-                <label class="field-label">Dirección</label>
+                <label class="field-label">
+                  Dirección
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Dirección física de tu empresa. Usa el buscador para mayor precisión
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
@@ -144,8 +179,8 @@
           </q-form>
         </div>
 
-        <!-- Step 2: Printer Configuration -->
-        <div v-if="step === 2" class="step-card">
+        <!-- Step 6: Printer Configuration -->
+        <div v-if="step === 6" class="step-card">
           <div class="step-header">
             <h2>Dispositivos</h2>
             <p>Configura tu impresora y balanza</p>
@@ -154,7 +189,14 @@
           <q-form @submit="onSubmitConfig" class="step-form">
             <div class="form-grid">
               <div class="form-group full-width">
-                <label class="field-label">Código de balanza</label>
+                <label class="field-label">
+                  Código de balanza
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Código identificador de tu balanza electrónica para integración con el sistema
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.other.balance_code"
                   outlined
@@ -175,7 +217,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Impresora</label>
+                <label class="field-label">
+                  Impresora
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Selecciona la impresora predeterminada para tickets y facturas
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.printer"
                   :options="printers"
@@ -218,7 +267,14 @@
           <q-form @submit="onSubmitConfig" class="step-form">
             <div class="form-grid">
               <div class="form-group">
-                <label class="field-label">Cliente</label>
+                <label class="field-label">
+                  Cliente
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Cliente predeterminado para facturas (ej: Consumidor Final)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.client"
                   :options="clients"
@@ -233,7 +289,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Tipo de factura</label>
+                <label class="field-label">
+                  Tipo de factura
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Tipo de comprobante predeterminado (Factura, Ticket, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.invoiceType"
                   :options="invoiceTypes"
@@ -248,7 +311,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Tipo de servicio</label>
+                <label class="field-label">
+                  Tipo de servicio
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Categoría de servicio que ofrece tu empresa (Gastronomía, Retail, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.typeOfService"
                   :options="typeOfServices"
@@ -263,7 +333,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Método de pago</label>
+                <label class="field-label">
+                  Método de pago
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Método de pago predeterminado (Efectivo, Tarjeta, Transferencia, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.paymentMethod"
                   :options="paymentMethods"
@@ -277,7 +354,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Moneda</label>
+                <label class="field-label">
+                  Moneda
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Moneda predeterminada para tus transacciones (ARS, USD, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.coin"
                   :options="coins"
@@ -290,8 +374,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Tipo de concepto</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Tipo de concepto
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Concepto fiscal para AFIP/ARCA (Productos, Servicios, Productos y Servicios)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.concept_type"
                   :options="conceptTypes"
@@ -305,8 +396,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Tipo de factura (Arca)</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Tipo de factura (Arca)
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Tipo de comprobante para facturación electrónica AFIP (A, B, C, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.voucher_type"
                   :options="voucherTypes"
@@ -320,8 +418,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">IVA (%)</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  IVA (%)
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Alícuota de IVA predeterminada (21%, 10.5%, Exento, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.aliquot_type"
                   :options="aliquotTypes"
@@ -335,8 +440,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Inicio de actividades</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Inicio de actividades
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Fecha de inicio de actividades de tu empresa ante AFIP
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.other.activity_start_date"
                   outlined
@@ -346,8 +458,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Ingresos brutos</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Ingresos brutos
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de inscripción en Ingresos Brutos (IIBB)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.other.income_brut"
                   outlined
@@ -356,8 +475,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Punto de venta</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Punto de venta
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de punto de venta asignado por AFIP para facturación electrónica
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.point_of_sale"
                   outlined
@@ -432,8 +558,8 @@
         <!-- Step 4: Menu Configuration -->
         <div v-if="step === 4" class="step-card">
           <div class="step-header">
-            <h2>Menú</h2>
-            <p>Personaliza tu menú digital</p>
+            <h2>Tienda</h2>
+            <p>Personaliza tu tienda digital</p>
           </div>
 
           <div class="step-form">
@@ -547,8 +673,8 @@
           </q-form>
         </div>
 
-        <!-- Step 6: Branch Configuration -->
-        <div v-if="step === 6" class="step-card">
+        <!-- Step 2: Branch Configuration -->
+        <div v-if="step === 2" class="step-card">
           <div class="step-header">
             <h2>Configuración de Sucursal</h2>
             <p>Define los valores por defecto para esta sucursal</p>
@@ -557,7 +683,14 @@
           <q-form @submit="onSubmitConfig" class="step-form">
             <div class="form-grid">
               <div class="form-group">
-                <label class="field-label">Punto de venta</label>
+                <label class="field-label">
+                  Punto de venta
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de punto de venta específico para esta sucursal
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.point_of_sale"
                   outlined
@@ -567,7 +700,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Lista de precios por defecto</label>
+                <label class="field-label">
+                  Lista de precios por defecto
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Lista de precios que se aplicará por defecto en esta sucursal (1-5)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.default_price_list"
                   :options="['1', '2', '3', '4', '5']"
@@ -680,7 +820,7 @@ const companyConfig = ref({
   point_of_sale: company.value?.company_config?.point_of_sale,
   files: company.value?.company_config?.files || [],
   partial_billing: company.value?.company_config?.partial_billing || false,
-  open_cashbox: company.value?.company_config?.open_cashbox || false
+  open_cashbox: company.value?.company_config?.open_cashbox || true
 })
 
 const menuConfig = ref({
@@ -759,17 +899,43 @@ const initializeAddress = () => {
 }
 
 // Computed
-const totalSteps = computed(() => 7)
+const isFreePlan = computed(() => {
+  const subscription = userSession?.subscription
+  return !subscription || subscription?.subscription_plan?.slug === 'free'
+})
 
-const steps = computed(() => [
-  { number: 1, title: 'Empresa', icon: 'business' },
-  { number: 2, title: 'Dispositivos', icon: 'print' },
-  { number: 3, title: 'Facturación', icon: 'receipt' },
-  { number: 4, title: 'Menú', icon: 'restaurant_menu' },
-  { number: 5, title: 'Pantalla', icon: 'tv' },
-  { number: 6, title: 'Sucursal', icon: 'store' },
-  { number: 7, title: 'Integraciones', icon: 'hub' }
-])
+const totalSteps = computed(() => isFreePlan.value ? 5 : 7)
+
+const steps = computed(() => {
+  const allSteps = [
+    { number: 1, title: 'Empresa', icon: 'business' },
+    { number: 2, title: 'Sucursal', icon: 'store' },
+    { number: 3, title: 'Facturación', icon: 'receipt' },
+    { number: 4, title: 'Tienda', icon: 'restaurant_menu' },
+    { number: 5, title: 'Pantalla', icon: 'tv' },
+    { number: 6, title: 'Dispositivos', icon: 'print' },
+    { number: 7, title: 'Integraciones', icon: 'hub' }
+  ]
+
+  // Si es plan Free, excluir Sucursal (2) e Integraciones (7)
+  if (isFreePlan.value) {
+    return allSteps.filter(s => s.number !== 2 && s.number !== 7)
+  }
+
+  return allSteps
+})
+
+// Función para obtener el siguiente step válido
+const getNextStep = (currentStep) => {
+  const validSteps = steps.value.map(s => s.number).sort((a, b) => a - b)
+  const currentIndex = validSteps.indexOf(currentStep)
+
+  if (currentIndex === -1 || currentIndex === validSteps.length - 1) {
+    return currentStep
+  }
+
+  return validSteps[currentIndex + 1]
+}
 
 // Refs for file uploaders
 const logoUploader = ref(null)
@@ -894,7 +1060,7 @@ const onSubmit = async () => {
     notify('Guardado exitosamente', 'positive', 'check_circle')
 
     // Avanzar al siguiente paso
-    step.value = 2
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -934,6 +1100,9 @@ const onSubmitImages = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Avanzar al siguiente paso
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -1058,6 +1227,9 @@ const saveMenuConfig = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Avanzar al siguiente paso
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -1069,8 +1241,8 @@ const onSubmitConfig = async () => {
   try {
     loading.value = true
 
-    // Si estamos en el paso 6, guardamos la configuración de la sucursal
-    if (step.value === 6) {
+    // Si estamos en el paso 2 (Sucursal), guardamos la configuración de la sucursal
+    if (step.value === 2) {
       const payload = {
         branch_office_id: branchOffice.value.id,
         point_of_sale: companyConfig.value.point_of_sale,
@@ -1103,6 +1275,9 @@ const onSubmitConfig = async () => {
     }
 
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Avanzar al siguiente paso
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
