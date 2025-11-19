@@ -105,6 +105,27 @@
                   :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
                 />
               </div>
+              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
+                <q-select
+                  v-model="company.business_type"
+                  :options="businessTypes"
+                  option-label="name"
+                  option-value="id"
+                  filled
+                  label="Rubro"
+                  use-input
+                  @filter="filterBusinessTypes"
+                  lazy-rules
+                  :rules="[ val => val || 'Este campo es requerido']"
+                />
+              </div>
+              <div class="col-12">
+                <q-checkbox
+                  v-model="company.is_test"
+                  label="Empresa de prueba (sus productos serán copiados a nuevas empresas del mismo rubro)"
+                  color="primary"
+                />
+              </div>
               <!-- Sección de Dirección para Editar -->
               <div class="col-12">
                 <AddressComponent
@@ -184,6 +205,27 @@
                   label="Número de teléfono"
                   lazy-rules
                   :rules="[ val => val && val.length > 0 || 'Este campo es requerido']"
+                />
+              </div>
+              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
+                <q-select
+                  v-model="company.business_type"
+                  :options="businessTypes"
+                  option-label="name"
+                  option-value="id"
+                  filled
+                  label="Rubro"
+                  use-input
+                  @filter="filterBusinessTypes"
+                  lazy-rules
+                  :rules="[ val => val || 'Este campo es requerido']"
+                />
+              </div>
+              <div class="col-12">
+                <q-checkbox
+                  v-model="company.is_test"
+                  label="Empresa de prueba (sus productos serán copiados a nuevas empresas del mismo rubro)"
+                  color="primary"
                 />
               </div>
               <!-- Sección de Dirección para Agregar -->
@@ -400,7 +442,17 @@ const formDate = (data, put = false) => {
   formData.append('document_number', data.document_number)
   formData.append('email', data.email)
   formData.append('phone_number', data.phone_number)
-  formData.append('business_type_id', data.business_type_id)
+
+  // Agregar business_type_id si está disponible
+  if (data.business_type && data.business_type.id) {
+    formData.append('business_type_id', data.business_type.id)
+  } else if (data.business_type_id) {
+    formData.append('business_type_id', data.business_type_id)
+  }
+
+  // Agregar is_test (convertir a 1 o 0 para el backend)
+  formData.append('is_test', data.is_test ? 1 : 0)
+
   if (put) formData.append('_method', 'put')
   return formData
 }
@@ -461,6 +513,29 @@ async function getBusinessTypes () {
     console.error('Error fetching business types:', err)
   }
 }
+
+/**
+ * Filter business types with search
+ * @param {String} value - Search value
+ * @param {Function} update - Update callback
+ * @returns {void}
+ */
+async function filterBusinessTypes (value, update) {
+  try {
+    const { data } = await api.get('business-types', {
+      params: { search: value }
+    })
+    update(() => {
+      businessTypes.value = data.data || data
+    })
+  } catch (err) {
+    console.error('Error filtering business types:', err)
+    update(() => {
+      businessTypes.value = []
+    })
+  }
+}
+
 /**
  * Sets the pagination configuration and fetches companies
  * @param {Object} data - Pagination data

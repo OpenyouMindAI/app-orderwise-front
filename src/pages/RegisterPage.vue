@@ -171,6 +171,82 @@
     </div>
 
     <!-- Modal de Setup de Empresa -->
+    <!-- Modal de selección: Demo o Registrar Empresa -->
+    <q-dialog v-model="showCompanyOptions" persistent>
+      <q-card style="min-width: 600px; max-width: 700px;">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">¡Bienvenido! 🎉</div>
+          <div class="text-subtitle2">Elige cómo quieres comenzar</div>
+        </q-card-section>
+
+        <q-card-section class="q-pa-lg">
+          <div class="row q-col-gutter-md">
+            <!-- Opción: Ver Demo -->
+            <div class="col-12 col-md-6">
+              <q-card flat bordered class="demo-option-card cursor-pointer" @click="selectDemoOption">
+                <q-card-section class="text-center q-pa-lg">
+                  <q-icon name="visibility" size="64px" color="primary" />
+                  <div class="text-h6 q-mt-md">Ver Demo</div>
+                  <div class="text-caption text-grey-7 q-mt-sm">
+                    Explora el sistema con una empresa de ejemplo. Podrás crear tu empresa después.
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
+
+            <!-- Opción: Registrar Mi Empresa -->
+            <div class="col-12 col-md-6">
+              <q-card flat bordered class="demo-option-card cursor-pointer" @click="selectRegisterOption">
+                <q-card-section class="text-center q-pa-lg">
+                  <q-icon name="business" size="64px" color="positive" />
+                  <div class="text-h6 q-mt-md">Registrar Mi Empresa</div>
+                  <div class="text-caption text-grey-7 q-mt-sm">
+                    Configura tu empresa ahora y comienza a trabajar inmediatamente.
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Modal de selección de rubro para demo -->
+    <q-dialog v-model="showDemoBusinessTypeSelection" persistent>
+      <q-card style="min-width: 500px; max-width: 600px;">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">Selecciona un rubro</div>
+          <div class="text-subtitle2">Elige el tipo de negocio para ver la demo</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-form @submit="assignDemo">
+            <q-select
+              v-model="demoBusinessType"
+              :options="businessTypes"
+              option-label="name"
+              option-value="id"
+              label="Rubro *"
+              outlined
+              use-input
+              @filter="filterBusinessTypes"
+              :rules="[val => !!val || 'Selecciona un rubro']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="category" />
+              </template>
+            </q-select>
+
+            <div class="row q-mt-md q-gutter-sm justify-end">
+              <q-btn label="Volver" flat color="grey-7" @click="backToOptions" />
+              <q-btn label="Continuar" type="submit" color="primary" :loading="loadingDemo" />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Modal de configuración de empresa -->
     <q-dialog v-model="showCompanySetup" persistent>
       <q-card style="min-width: 500px; max-width: 600px;">
         <q-card-section class="bg-primary text-white">
@@ -243,6 +319,34 @@
                   <q-icon name="location_on" />
                 </template>
               </q-input>
+
+              <!-- Rubro -->
+              <q-select
+                v-model="companyForm.business_type"
+                :options="businessTypes"
+                option-label="name"
+                option-value="id"
+                label="Rubro *"
+                outlined
+                use-input
+                @filter="filterBusinessTypes"
+                :rules="[val => !!val || 'El rubro es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="category" />
+                </template>
+              </q-select>
+
+              <!-- Copiar productos de empresa de prueba -->
+              <q-checkbox
+                v-model="companyForm.copy_test_products"
+                label="Copiar productos y categorías de ejemplo"
+                color="primary"
+              >
+                <q-tooltip class="bg-grey-8">
+                  Copia productos y categorías de una empresa de prueba del mismo rubro para empezar rápidamente
+                </q-tooltip>
+              </q-checkbox>
             </div>
 
             <q-card-actions align="right" class="q-mt-md">
@@ -300,14 +404,53 @@ const companyForm = ref({
   company_document: '',
   company_email: '',
   company_phone: '',
-  company_address: ''
+  company_address: '',
+  business_type: null,
+  copy_test_products: false
 })
 
+const businessTypes = ref([])
 const loadingCompanySetup = ref(false)
+const isGoogleRegister = ref(false)
+const showCompanyOptions = ref(false)
+const showDemoBusinessTypeSelection = ref(false)
+const demoBusinessType = ref(null)
+const loadingDemo = ref(false)
 const registeredCredentials = ref({
   email: '',
   password: ''
 })
+
+/**
+ * Filter business types
+ */
+const filterBusinessTypes = async (value, update) => {
+  try {
+    const { data } = await api.get('business-types', {
+      params: { search: value }
+    })
+    update(() => {
+      businessTypes.value = data.data || data
+    })
+  } catch (error) {
+    console.error('Error loading business types:', error)
+    update(() => {
+      businessTypes.value = []
+    })
+  }
+}
+
+/**
+ * Load business types when opening modal
+ */
+const loadBusinessTypes = async () => {
+  try {
+    const { data } = await api.get('business-types')
+    businessTypes.value = data.data || data
+  } catch (error) {
+    console.error('Error loading business types:', error)
+  }
+}
 
 /**
  * Setup company with form data
@@ -316,15 +459,26 @@ const setupCompany = async () => {
   try {
     loadingCompanySetup.value = true
 
-    await api.post('authentication/setup-company', companyForm.value)
+    // Preparar payload con business_type_id
+    const payload = {
+      ...companyForm.value,
+      business_type_id: companyForm.value.business_type?.id
+    }
+
+    await api.post('authentication/setup-company', payload)
 
     notify('Empresa configurada exitosamente', 'positive', 'check_circle')
 
     // Cerrar modal
     showCompanySetup.value = false
 
-    // Hacer login automático con las credenciales guardadas
-    await loginAfterCompanySetup()
+    // Si fue registro con Google, ya tiene sesión activa, solo redirigir
+    if (isGoogleRegister.value) {
+      router.push({ name: 'CompanyConfig' })
+    } else {
+      // Hacer login automático con las credenciales guardadas
+      await loginAfterCompanySetup()
+    }
   } catch (error) {
     const message = error.response?.data?.message || 'Error al configurar empresa'
     notify(message, 'negative', 'warning')
@@ -382,6 +536,9 @@ const register = async () => {
 
     notify('Registro exitoso', 'positive', 'check_circle')
 
+    // Marcar que NO fue registro con Google
+    isGoogleRegister.value = false
+
     // Guardar credenciales para login posterior
     registeredCredentials.value = {
       email: form.value.email,
@@ -392,13 +549,75 @@ const register = async () => {
     companyForm.value.company_email = form.value.email
     companyForm.value.company_phone = form.value.phone_number || ''
 
-    // Mostrar modal de configuración de empresa
-    showCompanySetup.value = true
+    // Cargar business types
+    await loadBusinessTypes()
+
+    // Mostrar modal de opciones (Demo o Registrar)
+    showCompanyOptions.value = true
   } catch (error) {
     const message = error.response?.data?.message || 'Error al registrar usuario'
     notify(message, 'negative', 'warning')
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * Select demo option
+ */
+const selectDemoOption = () => {
+  showCompanyOptions.value = false
+  showDemoBusinessTypeSelection.value = true
+}
+
+/**
+ * Select register option
+ */
+const selectRegisterOption = () => {
+  showCompanyOptions.value = false
+  showCompanySetup.value = true
+}
+
+/**
+ * Back to options
+ */
+const backToOptions = () => {
+  showDemoBusinessTypeSelection.value = false
+  showCompanyOptions.value = true
+}
+
+/**
+ * Assign demo company
+ */
+const assignDemo = async () => {
+  try {
+    loadingDemo.value = true
+
+    const { data } = await api.post('authentication/assign-demo', {
+      business_type_id: demoBusinessType.value.id
+    })
+
+    // Actualizar sesión completa en el store (igual que LoginPage)
+    store.setSessionData(data)
+
+    notify('¡Bienvenido a la demo!', 'positive', 'check_circle')
+
+    // Cerrar modal
+    showDemoBusinessTypeSelection.value = false
+
+    // Redirigir según roles (igual que LoginPage)
+    if (data.user?.is_root) {
+      router.push({ name: 'Billing' })
+    } else if (data.user?.roles?.length === 0) {
+      notify('Usuario no tiene permisos', 'negative', 'warning')
+    } else {
+      router.push({ name: 'Tutorial' })
+    }
+  } catch (error) {
+    const message = error.response?.data?.message || 'Error al asignar empresa demo'
+    notify(message, 'negative', 'warning')
+  } finally {
+    loadingDemo.value = false
   }
 }
 
@@ -442,24 +661,24 @@ const registerWithGoogle = async () => {
               email: userInfo.email
             })
 
-            // Guardar sesión completa en el store
-            store.setSessionData({
-              user: data.user,
-              access_token: data.access_token,
-              token_type: data.token_type,
-              expires_in: data.expires_in,
-              refresh_token: data.refresh_token
-            })
-
-            // Guardar token en localStorage
-            localStorage.setItem('access_token', data.access_token)
-            api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
+            // Guardar sesión completa en el store (igual que LoginPage)
+            store.setSessionData(data)
 
             notify('Registro exitoso con Google', 'positive', 'check_circle')
 
             // Mostrar modal de setup de empresa
             if (data.needs_company_setup) {
-              showCompanySetup.value = true
+              // Marcar que fue registro con Google
+              isGoogleRegister.value = true
+
+              // Pre-llenar email de empresa con el email de Google
+              companyForm.value.company_email = userInfo.email
+
+              // Cargar business types
+              await loadBusinessTypes()
+
+              // Mostrar modal de opciones (Demo o Registrar)
+              showCompanyOptions.value = true
             } else {
               router.push('/')
             }
@@ -823,6 +1042,18 @@ const registerWithGoogle = async () => {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+/* Demo option cards */
+.demo-option-card {
+  transition: all 0.3s ease;
+  border: 2px solid #e5e7eb;
+}
+
+.demo-option-card:hover {
+  border-color: #667eea;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
 }
 
 /* Link a Login */

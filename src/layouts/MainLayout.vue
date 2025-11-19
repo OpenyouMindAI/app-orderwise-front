@@ -12,56 +12,100 @@
 
     <q-header elevated class="modern-header">
       <q-toolbar class="modern-toolbar">
-        <q-btn
-          flat
-          dense
-          round
-          class="q-mr-sm menu-btn"
-          icon="menu"
-          aria-label="Menu"
-          @click="leftDrawerOpen = !leftDrawerOpen"
-        />
-        <q-separator dark vertical inset />
+        <!-- Left: Menu + Logo -->
+        <div class="navbar-left">
+          <q-btn
+            flat
+            dense
+            round
+            class="menu-btn"
+            icon="menu"
+            aria-label="Menu"
+            @click="leftDrawerOpen = !leftDrawerOpen"
+          />
 
-        <div v-if="!$q.screen.lt.sm" class="flex q-ml-md full-width">
-          <q-img
-            :src="userSession?.company_session?.url || logo.white"
-            width="155px"
-            style="max-height: 40px"
-            alt="logo"
-            fit="contain"
+          <q-separator dark vertical inset class="q-mx-sm" />
+
+          <div v-if="!$q.screen.lt.sm" class="logo-container">
+            <q-img
+              :src="userSession?.company_session?.url || logo.white"
+              width="120px"
+              style="max-height: 32px"
+              alt="logo"
+              fit="contain"
+            >
+              <q-tooltip :offset="[10, 10]" class="text-body2">
+                {{ userSession?.company_session?.name }}
+              </q-tooltip>
+            </q-img>
+          </div>
+
+          <!-- Demo Badge (solo en modo demo) -->
+          <transition
+            appear
+            enter-active-class="animated fadeIn"
+            leave-active-class="animated fadeOut"
           >
-            <q-tooltip :offset="[10, 10]" class="text-body2">
-              {{ userSession?.company_session?.name }}
-            </q-tooltip>
-          </q-img>
+            <div v-if="store.isDemo" class="demo-badge-v0 q-ml-md">
+              <span>Demo</span>
+              <div class="demo-badge-dot"></div>
+            </div>
+          </transition>
         </div>
+
         <q-space />
-        <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
-        <q-btn
-          flat
-          dense
-          icon="cast_connected"
-          round
-          class="q-mr-sm"
-          @click="screen"
-          v-if="hasMultipleScreens && $q.platform.is.nativeMobile"
-        >
-          <q-tooltip>Segunda pantalla</q-tooltip>
-        </q-btn>
-        <!-- Botón de escaneo QR -->
-        <q-btn
-          flat
-          dense
-          icon="qr_code_scanner"
-          round
-          class="q-mr-sm"
-          v-if="$q.platform.is.nativeMobile"
-          @click="openQrScanner"
-        >
-          <q-tooltip>Escanear QR</q-tooltip>
-        </q-btn>
-        <q-btn flat dense icon="apps" round class="q-mr-sm">
+
+        <!-- Right: Actions -->
+        <div class="navbar-right">
+          <!-- Botón Crear Mi Empresa (solo en modo demo) -->
+          <transition
+            appear
+            enter-active-class="animated fadeIn"
+            leave-active-class="animated fadeOut"
+          >
+            <q-btn
+              v-if="store.isDemo"
+              flat
+              no-caps
+              dense
+              class="create-btn-v0"
+              @click="showCreateCompanyDialog = true"
+            >
+              <q-icon name="rocket_launch" size="16px" class="q-mr-xs" />
+              <span>Mi Empresa</span>
+
+              <q-tooltip class="bg-grey-9">
+                Crea tu empresa y comienza gratis
+              </q-tooltip>
+            </q-btn>
+          </transition>
+
+          <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
+          <q-btn
+            flat
+            dense
+            icon="cast_connected"
+            round
+            @click="screen"
+            v-if="hasMultipleScreens && $q.platform.is.nativeMobile"
+          >
+            <q-tooltip>Segunda pantalla</q-tooltip>
+          </q-btn>
+
+          <!-- Botón de escaneo QR -->
+          <q-btn
+            flat
+            dense
+            icon="qr_code_scanner"
+            round
+            v-if="$q.platform.is.nativeMobile"
+            @click="openQrScanner"
+          >
+            <q-tooltip>Escanear QR</q-tooltip>
+          </q-btn>
+
+          <!-- Herramientas -->
+          <q-btn flat dense icon="apps" round>
           <q-tooltip class="text-body2">
             Herramientas
           </q-tooltip>
@@ -184,29 +228,34 @@
               </div>
             </q-banner>
           </q-popup-proxy>
-        </q-btn>
-        <q-btn dense flat round icon="notifications" color="white" class="q-mr-sm">
-          <q-tooltip>
-            Notificaciones {{ numberOfNotifications.length }}
-          </q-tooltip>
-          <q-badge v-if="numberOfNotifications.length" color="teal" floating>
-            {{ numberOfNotifications.length }}
-          </q-badge>
-          <q-popup-proxy>
-            <notification-component
-              style-css="min-width: 25vw;"
-              @on-load="getDataNotification"
-            />
-          </q-popup-proxy>
-        </q-btn>
-        <q-separator dark vertical inset />
-        <q-btn
-          v-if="userSession"
-          flat
-          dense
-          round
-          class="q-ml-sm profile-btn"
-        >
+          </q-btn>
+
+          <!-- Notificaciones -->
+          <q-btn dense flat round icon="notifications" color="white">
+            <q-tooltip>
+              Notificaciones {{ numberOfNotifications.length }}
+            </q-tooltip>
+            <q-badge v-if="numberOfNotifications.length" color="teal" floating>
+              {{ numberOfNotifications.length }}
+            </q-badge>
+            <q-popup-proxy>
+              <notification-component
+                style-css="min-width: 25vw;"
+                @on-load="getDataNotification"
+              />
+            </q-popup-proxy>
+          </q-btn>
+
+          <q-separator dark vertical inset class="q-mx-sm" />
+
+          <!-- Profile -->
+          <q-btn
+            v-if="userSession"
+            flat
+            dense
+            round
+            class="profile-btn"
+          >
           <q-avatar size="36px" class="profile-avatar">
             <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
             <q-icon v-else name="person" size="24px" />
@@ -322,7 +371,8 @@
               </q-card-section>
             </q-card>
           </q-menu>
-        </q-btn>
+          </q-btn>
+        </div>
       </q-toolbar>
     </q-header>
     <q-drawer
@@ -449,6 +499,191 @@
       @subscription-updated="onSubscriptionUpdated"
     />
 
+    <!-- Create Company Dialog -->
+    <q-dialog
+      v-model="showCreateCompanyDialog"
+      persistent
+      transition-show="scale"
+      transition-hide="scale"
+    >
+      <q-card class="create-company-card" style="min-width: 500px; max-width: 600px;">
+        <!-- Header con gradiente -->
+        <q-card-section class="create-company-header">
+          <div class="row items-center">
+            <q-icon name="add_business" size="32px" class="q-mr-md" />
+            <div>
+              <div class="text-h6 text-weight-bold">Crear Mi Empresa</div>
+              <div class="text-caption">Deja la demo y crea tu cuenta empresarial</div>
+            </div>
+            <q-space />
+            <q-btn
+              flat
+              round
+              dense
+              icon="close"
+              @click="closeCreateCompanyDialog"
+            />
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="q-pt-md" style="max-height: 60vh; overflow-y: auto;">
+          <!-- Información de Demo -->
+          <q-banner rounded class="bg-orange-1 q-mb-md">
+            <template v-slot:avatar>
+              <q-icon name="info" color="orange" />
+            </template>
+            <div class="text-body2">
+              Actualmente estás usando una <strong>cuenta demo</strong>. 
+              Al crear tu empresa, todos tus datos se guardarán en tu propia cuenta.
+            </div>
+          </q-banner>
+
+          <!-- Formulario -->
+          <q-form ref="companyForm" @submit="createCompany">
+            <div class="row q-col-gutter-md">
+              <!-- Nombre de la empresa -->
+              <div class="col-12">
+                <q-input
+                  v-model="companyData.company_name"
+                  label="Nombre de la Empresa *"
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="business" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- RUT/Documento -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="companyData.company_document"
+                  label="RUT/Documento *"
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="badge" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Teléfono -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="companyData.company_phone"
+                  label="Teléfono *"
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="phone" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Email -->
+              <div class="col-12">
+                <q-input
+                  v-model="companyData.company_email"
+                  label="Email *"
+                  type="email"
+                  outlined
+                  dense
+                  :rules="[
+                    val => !!val || 'Campo requerido',
+                    val => /.+@.+\..+/.test(val) || 'Email inválido'
+                  ]"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="email" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Dirección -->
+              <div class="col-12">
+                <q-input
+                  v-model="companyData.company_address"
+                  label="Dirección"
+                  outlined
+                  dense
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="location_on" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Tipo de Negocio -->
+              <div class="col-12">
+                <q-select
+                  v-model="companyData.business_type"
+                  :options="businessTypes"
+                  option-label="name"
+                  option-value="id"
+                  label="Tipo de Negocio *"
+                  outlined
+                  dense
+                  use-input
+                  input-debounce="300"
+                  @filter="filterBusinessTypes"
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="category" />
+                  </template>
+                  <template v-slot:no-option>
+                    <q-item>
+                      <q-item-section class="text-grey">
+                        No hay resultados
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Copiar productos demo -->
+              <div class="col-12">
+                <q-checkbox
+                  v-model="companyData.copy_test_products"
+                  label="Copiar productos y categorías de la empresa demo"
+                  color="primary"
+                />
+              </div>
+            </div>
+          </q-form>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="grey-7"
+            @click="closeCreateCompanyDialog"
+            :disable="loadingCreateCompany"
+          />
+          <q-btn
+            unelevated
+            label="Crear Empresa"
+            color="primary"
+            icon-right="arrow_forward"
+            @click="createCompany"
+            :loading="loadingCreateCompany"
+            class="create-btn"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-layout>
 </template>
 
@@ -525,7 +760,39 @@ export default {
        * Subscription days left
        * @type {Number}
        */
-      subscriptionDaysLeft: null
+      subscriptionDaysLeft: null,
+      /**
+       * Show create company dialog
+       * @type {Boolean}
+       */
+      showCreateCompanyDialog: false,
+      /**
+       * Loading create company
+       * @type {Boolean}
+       */
+      loadingCreateCompany: false,
+      /**
+       * Company data form
+       * @type {Object}
+       */
+      companyData: {
+        company_name: '',
+        company_document: '',
+        company_email: '',
+        company_phone: '',
+        company_address: '',
+        business_type: null,
+        copy_test_products: true
+      },
+      /**
+       * Business types list
+       * @type {Array}
+       */
+      businessTypes: [],
+      /**
+       * Store instance
+       */
+      store: authentication()
     }
   },
   computed: {
@@ -533,6 +800,18 @@ export default {
     ...mapState(darkModeStore, ['darkMode'])
   },
   watch: {
+    showCreateCompanyDialog (val) {
+      if (val) {
+        this.loadBusinessTypes()
+        // Pre-llenar email con el del usuario
+        if (this.userSession?.email) {
+          this.companyData.company_email = this.userSession.email
+        }
+        if (this.userSession?.phone_number) {
+          this.companyData.company_phone = this.userSession.phone_number
+        }
+      }
+    },
     modules (value) {
       if (value.length > 0) {
         this.dataMenu = value.filter((element) => {
@@ -559,6 +838,108 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Load business types
+     */
+    async loadBusinessTypes () {
+      try {
+        const { data } = await api.get('business-types')
+        this.businessTypes = data.data || data
+      } catch (error) {
+        console.error('Error loading business types:', error)
+        notify('Error al cargar tipos de negocio', 'negative', 'warning')
+      }
+    },
+    /**
+     * Filter business types
+     */
+    async filterBusinessTypes (val, update) {
+      try {
+        const { data } = await api.get('business-types', {
+          params: { search: val }
+        })
+        update(() => {
+          this.businessTypes = data.data || data
+        })
+      } catch (error) {
+        console.error('Error filtering business types:', error)
+        update(() => {
+          this.businessTypes = []
+        })
+      }
+    },
+    /**
+     * Close create company dialog
+     */
+    closeCreateCompanyDialog () {
+      this.showCreateCompanyDialog = false
+      // Reset form
+      this.companyData = {
+        company_name: '',
+        company_document: '',
+        company_email: '',
+        company_phone: '',
+        company_address: '',
+        business_type: null,
+        copy_test_products: true
+      }
+    },
+    /**
+     * Create company
+     */
+    async createCompany () {
+      // Validar formulario
+      const valid = await this.$refs.companyForm.validate()
+      if (!valid) {
+        notify('Por favor completa todos los campos requeridos', 'warning', 'warning')
+        return
+      }
+
+      try {
+        this.loadingCreateCompany = true
+
+        // Preparar payload
+        const payload = {
+          company_name: this.companyData.company_name,
+          company_document: this.companyData.company_document,
+          company_email: this.companyData.company_email,
+          company_phone: this.companyData.company_phone,
+          company_address: this.companyData.company_address,
+          business_type_id: this.companyData.business_type?.id,
+          copy_test_products: this.companyData.copy_test_products
+        }
+
+        // Llamar al endpoint de setup-company
+        const { data } = await api.post('authentication/setup-company', payload)
+
+        // Actualizar store con nueva información
+        this.store.setSessionData({
+          user: data.user,
+          access_token: this.access_token,
+          token_type: this.token_type,
+          expires_in: this.expires_In,
+          refresh_token: this.refresh_token,
+          is_demo: false // Ya no es demo
+        })
+
+        // Cerrar diálogo
+        this.showCreateCompanyDialog = false
+
+        // Notificación de éxito con animación
+        notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
+
+        // Recargar página para actualizar todo
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      } catch (error) {
+        const message = error.response?.data?.message || 'Error al crear empresa'
+        notify(message, 'negative', 'warning')
+        console.error('Error creating company:', error)
+      } finally {
+        this.loadingCreateCompany = false
+      }
+    },
     /**
      * Load subscription information
      */
@@ -1415,5 +1796,195 @@ export default {
 
 .body--dark :deep(.q-expansion-item--active .q-expansion-item__label) {
   color: #a78bfa;
+}
+
+/* Navbar Structure v0 Style */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Demo Badge v0 Style */
+.demo-badge-v0 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.demo-badge-dot {
+  width: 6px;
+  height: 6px;
+  background: #fbbf24;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.body--dark .demo-badge-v0 {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Create Button v0 Style */
+.create-btn-v0 {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.create-btn-v0:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.body--dark .create-btn-v0:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.create-btn-v0 span {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .navbar-left {
+    gap: 4px;
+  }
+
+  .navbar-right {
+    gap: 2px;
+  }
+
+  .demo-badge-v0 {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .create-btn-v0 {
+    height: 28px;
+    padding: 0 10px;
+  }
+
+  .create-btn-v0 span {
+    font-size: 12px;
+  }
+}
+
+/* Create Company Dialog */
+.create-company-card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.create-company-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #667eea 100%);
+  color: white;
+  padding: 24px;
+}
+
+.body--dark .create-company-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #4c51bf 100%);
+}
+
+.create-company-card :deep(.q-field__control) {
+  border-radius: 8px;
+}
+
+.create-company-card :deep(.q-field--outlined .q-field__control:before) {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.body--dark .create-company-card :deep(.q-field--outlined .q-field__control:before) {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.create-company-card :deep(.q-field--outlined.q-field--focused .q-field__control:before) {
+  border-color: var(--q-primary);
+  border-width: 2px;
+}
+
+.create-btn {
+  font-weight: 600;
+  padding: 10px 24px;
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  transform: translateX(4px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .create-company-btn {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+  }
+
+  .create-company-btn :deep(.q-btn__content) {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .create-company-card {
+    min-width: 90vw !important;
+    max-width: 90vw !important;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 }
 </style>

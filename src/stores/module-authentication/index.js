@@ -37,7 +37,12 @@ export const authentication = defineStore('authentication', {
       /**
        * Branch office session
        */
-      branchOffice: null
+      branchOffice: null,
+      /**
+       * Is demo account
+       * @type {Boolean}
+       */
+      isDemo: false
     }
   },
   actions: {
@@ -116,6 +121,7 @@ export const authentication = defineStore('authentication', {
       this.token_type = data.token_type
       this.expires_In = data.expires_in
       this.refresh_token = data.refresh_token
+      this.isDemo = data.is_demo || false
 
       // Calculate token expiration time
       if (data.expires_in) {
@@ -173,6 +179,14 @@ export const authentication = defineStore('authentication', {
      */
     branchOfficeGetter (state) {
       return state.branchOffice
+    },
+    /**
+     * Is demo account getter
+     * @param {*} state
+     * @returns {Boolean} is demo
+     */
+    isDemoGetter (state) {
+      return state.isDemo
     }
   },
   persist: true
