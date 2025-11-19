@@ -15,6 +15,18 @@
           </div>
           <div class="header-actions">
             <q-btn
+              flat
+              dense
+              round
+              :icon="store.hideAmounts ? 'visibility' : 'visibility_off'"
+              @click="store.toggleHideAmounts()"
+              class="toggle-amounts-btn text-white"
+            >
+              <q-tooltip>
+                {{ store.hideAmounts ? 'Mostrar montos' : 'Ocultar montos' }}
+              </q-tooltip>
+            </q-btn>
+            <q-btn
               icon="filter_alt"
               label="Filtros"
               unelevated
@@ -30,8 +42,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Global KPIs - Modern Style -->
       <div class="kpi-grid">
         <div class="kpi-card kpi-danger hover-lift">
           <div class="kpi-icon-wrapper gradient-danger">
@@ -39,7 +49,7 @@
           </div>
           <div class="kpi-content">
             <div class="kpi-label">Total Adeudado</div>
-            <div class="kpi-value text-negative">{{ formatCurrency(globalKpis.total_owed) }}</div>
+            <div class="kpi-value text-negative">{{ store.hideAmounts ? '********' : formatCurrency(globalKpis.total_owed) }}</div>
             <div class="kpi-trend">
               <q-icon name="trending_up" size="16px" />
               <span>Facturas pendientes</span>
@@ -53,7 +63,7 @@
           </div>
           <div class="kpi-content">
             <div class="kpi-label">Total Cobrado</div>
-            <div class="kpi-value text-positive">{{ formatCurrency(globalKpis.total_paid) }}</div>
+            <div class="kpi-value text-positive">{{ store.hideAmounts ? '********' : formatCurrency(globalKpis.total_paid) }}</div>
             <div class="kpi-trend">
               <q-icon name="check_circle" size="16px" />
               <span>Pagos recibidos</span>
@@ -67,7 +77,7 @@
           </div>
           <div class="kpi-content">
             <div class="kpi-label">Saldo Pendiente</div>
-            <div class="kpi-value text-primary">{{ formatCurrency(globalKpis.balance) }}</div>
+            <div class="kpi-value text-primary">{{ store.hideAmounts ? '********' : formatCurrency(globalKpis.balance) }}</div>
             <div class="kpi-trend">
               <q-icon name="schedule" size="16px" />
               <span>Por cobrar</span>
@@ -223,8 +233,77 @@
             >
               <q-tooltip>Exportar PDF</q-tooltip>
             </q-btn>
+            <q-btn
+              flat
+              dense
+              round
+              :icon="store.hideAmounts ? 'visibility' : 'visibility_off'"
+              @click="store.toggleHideAmounts()"
+              class="toggle-amounts-btn text-white"
+            >
+              <q-tooltip>
+                {{ store.hideAmounts ? 'Mostrar montos' : 'Ocultar montos' }}
+              </q-tooltip>
+            </q-btn>
           </div>
         </div>
+      </div>
+
+      <!-- Date Filters -->
+      <div class="date-filters-section q-mb-md">
+        <q-card flat bordered>
+          <q-card-section class="q-pa-md">
+            <div class="row q-col-gutter-md items-center">
+              <div class="col-12 col-sm-auto">
+                <div class="text-subtitle2 text-weight-medium">
+                  <q-icon name="date_range" size="18px" class="q-mr-xs" />
+                  Filtrar por fecha
+                </div>
+              </div>
+              <div class="col-12 col-sm-3">
+                <q-input
+                  v-model="dateFilters.from"
+                  label="Desde"
+                  type="date"
+                  outlined
+                  dense
+                  clearable
+                  @update:model-value="applyDateFilters"
+                >
+                  <template #prepend>
+                    <q-icon name="event" />
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12 col-sm-3">
+                <q-input
+                  v-model="dateFilters.to"
+                  label="Hasta"
+                  type="date"
+                  outlined
+                  dense
+                  clearable
+                  @update:model-value="applyDateFilters"
+                >
+                  <template #prepend>
+                    <q-icon name="event" />
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12 col-sm-auto">
+                <q-btn
+                  label="Limpiar"
+                  icon="clear"
+                  outline
+                  color="grey-7"
+                  size="sm"
+                  @click="clearDateFilters"
+                  :disable="!dateFilters.from && !dateFilters.to"
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
       </div>
 
       <!-- Client Summary - Compact -->
@@ -235,7 +314,7 @@
           </div>
           <div class="summary-content">
             <div class="summary-label">Total Facturado</div>
-            <div class="summary-value text-negative">{{ formatCurrency(statement?.summary?.total_owed || 0) }}</div>
+            <div class="summary-value text-negative">{{ store.hideAmounts ? '********' : formatCurrency(statement?.summary?.total_owed || 0) }}</div>
           </div>
         </div>
 
@@ -245,7 +324,7 @@
           </div>
           <div class="summary-content">
             <div class="summary-label">Total Pagado</div>
-            <div class="summary-value text-positive">{{ formatCurrency(statement?.summary?.total_paid || 0) }}</div>
+            <div class="summary-value text-positive">{{ store.hideAmounts ? '********' : formatCurrency(statement?.summary?.total_paid || 0) }}</div>
           </div>
         </div>
 
@@ -255,7 +334,7 @@
           </div>
           <div class="summary-content">
             <div class="summary-label">Saldo Actual</div>
-            <div class="summary-value text-primary">{{ formatCurrency(statement?.summary?.current_balance || 0) }}</div>
+            <div class="summary-value text-primary">{{ store.hideAmounts ? '********' : formatCurrency(statement?.summary?.current_balance || 0) }}</div>
           </div>
         </div>
       </div>
@@ -1350,6 +1429,7 @@ export default {
   data () {
     return {
       formatNumber,
+      store: authentication(),
 
       /**
        * Selected client to view their account statement
@@ -1478,6 +1558,15 @@ export default {
         date_to: '',
         min_balance: null,
         balance_status: 'all' // all, with_debt, no_debt
+      },
+
+      /**
+       * Date filters for client statement detail
+       * @type {Object}
+       */
+      dateFilters: {
+        from: '',
+        to: ''
       },
 
       // ============================================
@@ -1837,7 +1926,9 @@ export default {
           sortBy: sortBy || 'date',
           sortOrder: descending ? 'desc' : 'asc',
           branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
-          transaction_type: this.transactionFilter !== 'all' ? this.transactionFilter : null
+          transaction_type: this.transactionFilter !== 'all' ? this.transactionFilter : null,
+          date_from: this.dateFilters.from || null,
+          date_to: this.dateFilters.to || null
         }
 
         const { data } = await this.$api.get(`client-statement/clients/${this.selectedClient.id}`, { params })
@@ -1879,6 +1970,12 @@ export default {
         this.selectedClient = client
         this.transactionFilter = 'all'
 
+        // Reset date filters
+        this.dateFilters = {
+          from: '',
+          to: ''
+        }
+
         // Reset pagination
         this.statementPagination = {
           sortBy: 'date',
@@ -1893,6 +1990,36 @@ export default {
       } catch (error) {
         notify(error.message || 'Error al cargar estado de cuenta', 'negative', 'warning')
       }
+    },
+
+    /**
+     * Applies date filters to the client statement
+     * Resets pagination and reloads data
+     */
+    async applyDateFilters () {
+      if (!this.selectedClient) return
+
+      // Reset to first page when applying filters
+      this.statementPagination.page = 1
+
+      // Reload data with new filters
+      await this.onStatementRequest({ pagination: this.statementPagination })
+    },
+
+    /**
+     * Clears date filters and reloads data
+     */
+    async clearDateFilters () {
+      this.dateFilters = {
+        from: '',
+        to: ''
+      }
+
+      // Reset to first page
+      this.statementPagination.page = 1
+
+      // Reload data without filters
+      await this.onStatementRequest({ pagination: this.statementPagination })
     },
 
     /**
@@ -2804,6 +2931,10 @@ body.body--dark .branch-badge {
   align-items: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  opacity: 1;
+  visibility: visible;
+  position: relative;
+  z-index: 1;
 }
 
 .summary-icon {
@@ -2819,6 +2950,8 @@ body.body--dark .branch-badge {
 
 .summary-content {
   flex: 1;
+  opacity: 1;
+  visibility: visible;
 }
 
 .summary-label {
@@ -2828,12 +2961,16 @@ body.body--dark .branch-badge {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
+  opacity: 1;
+  visibility: visible;
 }
 
 .summary-value {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.5px;
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Statement Container */
@@ -3454,6 +3591,70 @@ body.body--dark .receipt-actions {
   min-width: 140px;
   border-radius: 8px;
   font-weight: 600;
+}
+
+/* ============================================ */
+/* KPI HEADER SECTION */
+/* ============================================ */
+
+.kpi-header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+body.body--dark .kpi-header-section {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-color: #334155;
+}
+
+.kpi-header-title {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+body.body--dark .kpi-header-title {
+  color: #e2e8f0;
+}
+
+.toggle-amounts-btn {
+  transition: all 0.3s ease;
+}
+
+.toggle-amounts-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: scale(1.1);
+}
+
+body.body--dark .toggle-amounts-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================ */
+/* DATE FILTERS SECTION */
+/* ============================================ */
+
+.date-filters-section {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.date-filters-section .q-card {
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+body.body--dark .date-filters-section .q-card {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 /* ============================================ */
