@@ -26,7 +26,7 @@
 
           <q-separator dark vertical inset class="q-mx-sm" />
 
-          <div v-if="!$q.screen.lt.sm" class="logo-container">
+          <div v-if="!$q.screen.lt.sm" class="logo-container-with-badge">
             <q-img
               :src="userSession?.company_session?.url || logo.white"
               width="120px"
@@ -38,19 +38,19 @@
                 {{ userSession?.company_session?.name }}
               </q-tooltip>
             </q-img>
-          </div>
 
-          <!-- Demo Badge (solo en modo demo) -->
-          <transition
-            appear
-            enter-active-class="animated fadeIn"
-            leave-active-class="animated fadeOut"
-          >
-            <div v-if="store.isDemo" class="demo-badge-v0 q-ml-md">
-              <span>Demo</span>
-              <div class="demo-badge-dot"></div>
-            </div>
-          </transition>
+            <!-- Demo Badge flotante (solo en modo demo) -->
+            <transition
+              appear
+              enter-active-class="animated fadeIn"
+              leave-active-class="animated fadeOut"
+            >
+              <div v-if="store.isDemo" class="demo-badge-floating">
+                <span>Demo</span>
+                <div class="demo-badge-dot"></div>
+              </div>
+            </transition>
+          </div>
         </div>
 
         <q-space />
@@ -65,13 +65,13 @@
           >
             <q-btn
               v-if="store.isDemo"
-              flat
+              outline
               no-caps
               dense
               class="create-btn-v0"
               @click="showCreateCompanyDialog = true"
             >
-              <q-icon name="rocket_launch" size="16px" class="q-mr-xs" />
+              <q-icon name="rocket_launch" size="16px" class="q-mr-xs rocket-icon" />
               <span>Mi Empresa</span>
 
               <q-tooltip class="bg-grey-9">
@@ -781,7 +781,7 @@ export default {
         company_email: '',
         company_phone: '',
         company_address: '',
-        business_type: null,
+        business_type: this.userSession?.company_session?.business_type,
         copy_test_products: true
       },
       /**
@@ -928,10 +928,13 @@ export default {
         // Notificación de éxito con animación
         notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
 
-        // Recargar página para actualizar todo
+        // Marcar que necesita tour
+        localStorage.setItem('needs_company_config_tour', 'true')
+
+        // Redirigir a CompanyConfigPage para hacer el tour
         setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+          this.$router.push({ name: 'CompanyConfig' })
+        }, 1000)
       } catch (error) {
         const message = error.response?.data?.message || 'Error al crear empresa'
         notify(message, 'negative', 'warning')
@@ -1805,7 +1808,8 @@ export default {
   gap: 0;
 }
 
-.logo-container {
+.logo-container-with-badge {
+  position: relative;
   display: flex;
   align-items: center;
 }
@@ -1828,6 +1832,45 @@ export default {
   font-weight: 500;
   color: white;
   backdrop-filter: blur(10px);
+}
+
+/* Demo Badge Floating (flotando al lado del logo) */
+.demo-badge-floating {
+  position: absolute;
+  right: -32px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(251, 191, 36, 0.95);
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #1f2937;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+  z-index: 10;
+  animation: float-badge 3s ease-in-out infinite;
+}
+
+@keyframes float-badge {
+  0%, 100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    transform: translateY(-50%) translateX(2px);
+  }
+}
+
+.demo-badge-floating .demo-badge-dot {
+  width: 5px;
+  height: 5px;
+  background: #1f2937;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .demo-badge-dot {
@@ -1853,6 +1896,11 @@ export default {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.body--dark .demo-badge-floating {
+  background: rgba(251, 191, 36, 0.9);
+  box-shadow: 0 2px 12px rgba(251, 191, 36, 0.5);
+}
+
 /* Create Button v0 Style */
 .create-btn-v0 {
   height: 32px;
@@ -1876,6 +1924,52 @@ export default {
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
+}
+
+/* Rocket Icon Animation */
+.rocket-icon {
+  animation: rocket-launch 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes rocket-launch {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  10% {
+    transform: translateY(-2px) rotate(-3deg);
+  }
+  20% {
+    transform: translateY(-4px) rotate(3deg);
+  }
+  30% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+  40% {
+    transform: translateY(-4px) rotate(2deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+.create-btn-v0:hover .rocket-icon {
+  animation: rocket-boost 0.6s ease-in-out infinite;
+}
+
+@keyframes rocket-boost {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-3px) rotate(-5deg) scale(1.1);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0deg) scale(1.15);
+  }
+  75% {
+    transform: translateY(-3px) rotate(5deg) scale(1.1);
+  }
 }
 
 /* Responsive */

@@ -804,6 +804,8 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import { driver } from 'driver.js'
+import 'driver.js/dist/driver.css'
 
 // Reactive data
 const coins = ref([])
@@ -895,6 +897,17 @@ onMounted(async () => {
     businessTypes.value = data.data || data
   } catch (error) {
     console.error('Error loading business types:', error)
+  }
+
+  // Iniciar tour si viene de crear empresa
+  const needsTour = localStorage.getItem('needs_company_config_tour')
+  if (needsTour === 'true') {
+    localStorage.removeItem('needs_company_config_tour')
+    // Esperar a que el DOM esté listo
+    await nextTick()
+    setTimeout(() => {
+      startConfigTour()
+    }, 500)
   }
 })
 
@@ -1397,6 +1410,101 @@ const handleAddressSelected = (selectedAddress) => {
       lng: address.value?.longitude
     }
   })
+}
+
+/**
+ * Start configuration tour with Driver.js
+ */
+const startConfigTour = () => {
+  // Construir pasos dinámicamente según los steps disponibles
+  const tourSteps = [
+    {
+      element: '.steps-nav',
+      popover: {
+        title: '¡Bienvenido a la Configuración! 🎉',
+        description: 'Te guiaremos por las diferentes secciones para configurar tu empresa. Puedes navegar entre ellas haciendo clic en cada paso.',
+        side: 'bottom',
+        align: 'center'
+      }
+    }
+  ]
+
+  // Agregar pasos según los steps disponibles
+  const stepElements = document.querySelectorAll('.step-nav-item')
+  stepElements.forEach((element, index) => {
+    const stepTitle = element.querySelector('.step-nav-label')?.textContent || ''
+
+    let description = ''
+    let icon = ''
+
+    switch (stepTitle) {
+      case 'Empresa':
+        icon = '📋'
+        description = 'Aquí configuras la información básica de tu empresa: nombre, documento, logo, dirección y datos de contacto.'
+        break
+      case 'Sucursal':
+        icon = '🏪'
+        description = 'Configura los valores predeterminados para esta sucursal: punto de venta y lista de precios.'
+        break
+      case 'Facturación':
+        icon = '🧾'
+        description = 'Define la configuración de facturación: cliente por defecto, tipo de factura, método de pago, moneda y datos fiscales.'
+        break
+      case 'Tienda':
+        icon = '🛒'
+        description = 'Personaliza tu tienda digital: colores, banner y configuración visual para tus clientes.'
+        break
+      case 'Pantalla':
+        icon = '📺'
+        description = 'Configura la pantalla de visualización para tus clientes: tipo de servicio y opciones de display.'
+        break
+      case 'Dispositivos':
+        icon = '🖨️'
+        description = 'Configura tus dispositivos: impresora y balanza para el punto de venta.'
+        break
+      case 'Integraciones':
+        icon = '🔗'
+        description = 'Conecta tu sistema con servicios externos como ARCA para facturación electrónica.'
+        break
+    }
+
+    if (description) {
+      tourSteps.push({
+        element: `.step-nav-item:nth-child(${index + 1})`,
+        popover: {
+          title: `${icon} ${stepTitle}`,
+          description,
+          side: 'bottom',
+          align: 'start'
+        }
+      })
+    }
+  })
+
+  // Paso final
+  tourSteps.push({
+    popover: {
+      title: '✅ ¡Listo para Comenzar!',
+      description: 'Ahora puedes configurar cada sección a tu ritmo. Recuerda guardar los cambios en cada paso. ¡Éxito! 🚀',
+      side: 'center',
+      align: 'center'
+    }
+  })
+
+  const driverObj = driver({
+    showProgress: true,
+    showButtons: ['next', 'previous', 'close'],
+    steps: tourSteps,
+    nextBtnText: 'Siguiente →',
+    prevBtnText: '← Anterior',
+    doneBtnText: '¡Entendido!',
+    progressText: '{{current}} de {{total}}',
+    onDestroyStarted: () => {
+      driverObj.destroy()
+    }
+  })
+
+  driverObj.drive()
 }
 </script>
 
