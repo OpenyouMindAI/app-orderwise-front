@@ -148,24 +148,6 @@ const routes = [
         component: () => import('pages/CompanyConfigPage.vue')
       },
       {
-        path: 'subscription/success',
-        name: 'SubscriptionSuccess',
-        meta: { requiresAuth: true },
-        component: () => import('pages/SubscriptionSuccessPage.vue')
-      },
-      {
-        path: 'subscription/failure',
-        name: 'SubscriptionFailure',
-        meta: { requiresAuth: true },
-        component: () => import('pages/SubscriptionFailurePage.vue')
-      },
-      {
-        path: 'subscription/pending',
-        name: 'SubscriptionPending',
-        meta: { requiresAuth: true },
-        component: () => import('pages/SubscriptionPendingPage.vue')
-      },
-      {
         path: 'delivery-persons',
         name: 'DeliveryPerson',
         meta: { requiresAuth: true },
@@ -370,6 +352,24 @@ const routes = [
         component: () => import('pages/CommandPage.vue')
       }
     ]
+  },
+  {
+    path: '/subscription/success',
+    name: 'SubscriptionSuccess',
+    meta: { requiresAuth: true },
+    component: () => import('pages/SubscriptionSuccessPage.vue')
+  },
+  {
+    path: '/subscription/failure',
+    name: 'SubscriptionFailure',
+    meta: { requiresAuth: true },
+    component: () => import('pages/SubscriptionFailurePage.vue')
+  },
+  {
+    path: '/subscription/pending',
+    name: 'SubscriptionPending',
+    meta: { requiresAuth: true },
+    component: () => import('pages/SubscriptionPendingPage.vue')
   },
   {
     path: '/login',
