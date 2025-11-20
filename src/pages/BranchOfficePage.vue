@@ -1,8 +1,90 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddBranchOffice = true" icon="add_circle"/>
+      <div class="col-12">
+        <!-- Warning Banner when near limit -->
+        <q-banner
+          v-if="branchOffices.length >= maxBranches - 1 && branchOffices.length < maxBranches"
+          class="bg-warning text-white q-mb-md"
+          rounded
+        >
+          <template v-slot:avatar>
+            <q-icon name="warning" color="white" />
+          </template>
+          <div class="text-body2">
+            Estás cerca del límite de sucursales ({{ branchOffices.length }}/{{ maxBranches }}).
+            <a @click="$router.push('/subscription-plans')" class="text-white text-weight-bold cursor-pointer" style="text-decoration: underline;">
+              Actualiza tu plan
+            </a>
+            para agregar más sucursales.
+          </div>
+        </q-banner>
+
+        <!-- Limit Reached Banner -->
+        <q-banner
+          v-if="branchOffices.length >= maxBranches"
+          class="bg-negative text-white q-mb-md"
+          rounded
+        >
+          <template v-slot:avatar>
+            <q-icon name="block" color="white" />
+          </template>
+          <div class="text-body2">
+            Has alcanzado el límite de {{ maxBranches }} sucursal(es) de tu plan.
+            <a @click="$router.push('/subscription-plans')" class="text-white text-weight-bold cursor-pointer" style="text-decoration: underline;">
+              Actualiza tu plan
+            </a>
+            para agregar más sucursales.
+          </div>
+        </q-banner>
+
+        <div class="row items-center justify-between q-mb-md">
+          <!-- Subscription Info Card -->
+          <div class="col-auto">
+            <q-card
+              flat
+              bordered
+              class="subscription-info-card"
+              :class="{
+                'border-warning': branchOffices.length >= maxBranches - 1 && branchOffices.length < maxBranches,
+                'border-negative': branchOffices.length >= maxBranches
+              }"
+            >
+              <q-card-section horizontal class="items-center q-pa-sm">
+                <q-icon
+                  name="store"
+                  size="32px"
+                  :color="branchOffices.length >= maxBranches ? 'negative' : 'primary'"
+                  class="q-mr-sm"
+                />
+                <div>
+                  <div class="text-caption text-grey-7">Sucursales</div>
+                  <div class="text-h6 text-weight-bold">
+                    {{ branchOffices.length }} / {{ maxBranches }}
+                  </div>
+                  <div v-if="currentSubscription" class="text-caption text-grey-6">
+                    Plan: {{ currentSubscription.plan?.name || 'Free' }}
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- Add Button -->
+          <div class="col-auto">
+            <q-btn
+              color="primary"
+              icon="add_circle"
+              label="Agregar Sucursal"
+              @click="checkAndOpenAddDialog"
+              :disable="branchOffices.length >= maxBranches"
+            >
+              <q-tooltip v-if="branchOffices.length >= maxBranches">
+                Has alcanzado el límite de sucursales de tu plan ({{ maxBranches }}). Actualiza tu plan para agregar más.
+              </q-tooltip>
+            </q-btn>
+          </div>
+        </div>
       </div>
       <div class="col-12">
         <q-table
@@ -116,6 +198,8 @@ export default {
       branchOffices: [],
       branchOffice: {},
       filter: '',
+      currentSubscription: null,
+      maxBranches: 1,
       /**
        * Params search
        * @type {Object}
@@ -171,6 +255,7 @@ export default {
     }
   },
   mounted () {
+    this.loadSubscription()
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
@@ -182,6 +267,44 @@ export default {
     }
   },
   methods: {
+    /**
+     * Load current subscription to get branch limit
+     */
+    async loadSubscription () {
+      try {
+        const { data } = await this.$api.get('subscriptions/current')
+        this.currentSubscription = data.subscription
+        this.maxBranches = data.subscription?.branch_offices_count || 1
+      } catch (error) {
+        console.error('Error loading subscription:', error)
+        this.maxBranches = 1
+      }
+    },
+    /**
+     * Check if can add more branches before opening dialog
+     */
+    checkAndOpenAddDialog () {
+      if (this.branchOffices.length >= this.maxBranches) {
+        Notify.create({
+          message: `Has alcanzado el límite de ${this.maxBranches} sucursal(es) de tu plan. Actualiza tu plan para agregar más sucursales.`,
+          icon: 'warning',
+          color: 'warning',
+          position: 'top',
+          timeout: 4000,
+          actions: [
+            {
+              label: 'Ver Planes',
+              color: 'white',
+              handler: () => {
+                this.$router.push('/subscription-plans')
+              }
+            }
+          ]
+        })
+        return
+      }
+      this.openAddBranchOffice = true
+    },
     /**
      * Close all modals
      */
@@ -266,11 +389,53 @@ export default {
         })
         .catch(err => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+          
+          // Manejar errores de validación de Laravel
+          if (err.response?.status === 422) {
+            const errors = err.response?.data?.errors || {}
+            
+            // Si hay error de límite de sucursales
+            if (errors.branch_limit) {
+              Notify.create({
+                message: errors.branch_limit[0],
+                icon: 'warning',
+                color: 'warning',
+                position: 'top',
+                timeout: 5000,
+                actions: [
+                  {
+                    label: 'Ver Planes',
+                    color: 'white',
+                    handler: () => {
+                      this.$router.push('/subscription-plans')
+                    }
+                  },
+                  {
+                    label: 'Cerrar',
+                    color: 'white'
+                  }
+                ]
+              })
+              return
+            }
+            
+            // Otros errores de validación
+            const firstError = Object.values(errors)[0]
+            const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+            Notify.create({
+              message: errorMessage || 'Error de validación',
+              icon: 'warning',
+              color: 'negative'
+            })
+          } else {
+            // Otros errores
+            const errorMessage = err.response?.data?.message || err.message || 'Error al crear sucursal'
+            Notify.create({
+              message: errorMessage,
+              icon: 'warning',
+              color: 'negative'
+            })
+          }
         })
     },
     /**
@@ -404,3 +569,26 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.subscription-info-card {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.subscription-info-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.border-warning {
+  border: 2px solid #f2c037 !important;
+}
+
+.border-negative {
+  border: 2px solid #c10015 !important;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+</style>

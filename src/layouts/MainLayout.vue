@@ -67,6 +67,21 @@
           >
             {{ branchOffice.name }}
           </q-chip>
+
+          <!-- Add Branch Button -->
+          <q-btn
+            v-if="canAddMoreBranches"
+            flat
+            dense
+            round
+            size="sm"
+            icon="add"
+            color="primary"
+            class="q-ml-xs add-branch-btn"
+            @click="goToAddBranch"
+          >
+            <q-tooltip>Agregar sucursal ({{ currentBranchCount }}/{{ maxBranches }})</q-tooltip>
+          </q-btn>
         </div>
 
         <q-space />
@@ -804,6 +819,21 @@ export default {
        */
       subscriptionDaysLeft: null,
       /**
+       * Current subscription data
+       * @type {Object}
+       */
+      currentSubscription: null,
+      /**
+       * Max branches allowed
+       * @type {Number}
+       */
+      maxBranches: 1,
+      /**
+       * Current branch count
+       * @type {Number}
+       */
+      currentBranchCount: 0,
+      /**
        * Show create company dialog
        * @type {Boolean}
        */
@@ -860,6 +890,9 @@ export default {
     currentPageHasTour () {
       const pagesWithTour = ['Billing', 'CompanyConfig', 'Category', 'Product']
       return pagesWithTour.includes(this.$route.name)
+    },
+    canAddMoreBranches () {
+      return this.currentBranchCount < this.maxBranches
     }
   },
   watch: {
@@ -894,6 +927,11 @@ export default {
       .notification((notification) => {
         this.setNotification(notification)
       })
+    
+    // Listen for subscription updates
+    window.addEventListener('subscription-updated', () => {
+      this.loadSubscriptionInfo()
+    })
   },
   created () {
     this.loadingPage()
@@ -1087,15 +1125,43 @@ export default {
         if (data.subscription) {
           this.subscriptionPlan = data.plan.name
           this.subscriptionDaysLeft = data.days_until_expiration
+          this.currentSubscription = data.subscription
+          this.maxBranches = data.subscription.branch_offices_count || 1
         } else {
           this.subscriptionPlan = 'Free'
           this.subscriptionDaysLeft = null
+          this.currentSubscription = null
+          this.maxBranches = 1
         }
+        
+        // Load current branch count
+        await this.loadBranchCount()
       } catch (error) {
         console.error('Error loading subscription:', error)
         this.subscriptionPlan = 'Free'
         this.subscriptionDaysLeft = null
+        this.maxBranches = 1
       }
+    },
+    /**
+     * Load current branch count
+     */
+    async loadBranchCount () {
+      try {
+        const { data } = await api.get('branch-offices', {
+          params: { paginate: false }
+        })
+        this.currentBranchCount = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+      } catch (error) {
+        console.error('Error loading branch count:', error)
+        this.currentBranchCount = 0
+      }
+    },
+    /**
+     * Go to add branch page
+     */
+    goToAddBranch () {
+      this.$router.push('/branch-offices')
     },
     /**
      * Open subscription dialog
@@ -1677,10 +1743,31 @@ export default {
   max-width: 200px;
 }
 
+.add-branch-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.add-branch-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.add-branch-btn:active {
+  transform: scale(0.95);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .branch-chip :deep(.q-chip__content) {
     max-width: 120px;
+  }
+
+  .add-branch-btn {
+    display: none;
   }
 }
 
