@@ -263,112 +263,129 @@
           <q-menu class="profile-menu" transition-show="jump-down" transition-hide="jump-up">
             <q-card class="profile-card" flat bordered>
               <!-- Profile Header -->
-              <q-card-section class="profile-header">
+              <div class="profile-header-modern">
                 <div class="profile-header-content">
-                  <q-avatar size="64px" class="profile-avatar-large">
+                  <q-avatar size="48px" class="profile-avatar-modern">
                     <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
-                    <q-icon v-else name="person" size="36px" />
+                    <q-icon v-else name="person" size="28px" />
                   </q-avatar>
                   <div class="profile-info">
                     <div class="profile-name">{{ ucwords(`${userSession.name}`) }}</div>
                     <div class="profile-email">{{ userSession.email }}</div>
-                    <q-chip size="sm" class="profile-role" dense>
-                      <q-icon name="badge" size="14px" class="q-mr-xs" />
-                      {{ userSession.is_root ? 'Root' : userSession?.roles[0]?.name }}
-                    </q-chip>
                   </div>
                 </div>
-              </q-card-section>
+              </div>
 
-              <!-- Subscription Info (Solo para super_admin) -->
-              <q-card-section v-if="userSession.is_super_admin" class="q-pt-none">
-                <q-banner rounded dense class="bg-grey-2">
-                  <template v-slot:avatar>
-                    <q-icon name="workspace_premium" color="primary" />
-                  </template>
-                  <div class="text-caption">
-                    <strong>Plan:</strong> {{ subscriptionPlan }}
-                    <span v-if="subscriptionDaysLeft > 0 && subscriptionDaysLeft <= 7" class="text-warning">
-                      <br>({{ subscriptionDaysLeft }} días restantes)
-                    </span>
-                    <span v-else-if="subscriptionDaysLeft === 0" class="text-negative">
-                      <br>(Expirado)
-                    </span>
-                  </div>
-                </q-banner>
-              </q-card-section>
+              <!-- Plan Info / Demo Action -->
+              <div>
+                <q-item
+                  v-if="store.isDemo"
+                  clickable
+                  v-ripple
+                  class="demo-action-item"
+                  @click="showCreateCompanyDialog = true"
+                  v-close-popup
+                >
+                  <q-item-section avatar class="min-width-auto">
+                    <div class="demo-icon-wrapper">
+                      <q-icon name="workspace_premium" color="amber" size="22px" />
+                    </div>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-body2 text-weight-bold">Demo</q-item-label>
+                    <q-item-label caption class="text-caption demo-caption">Crea tu empresa</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <div class="rocket-wrapper">
+                      <q-icon name="rocket_launch" size="20px" class="rocket-icon" color="primary" />
+                    </div>
+                  </q-item-section>
+                </q-item>
+                <div v-else class="plan-compact">
+                  <q-icon name="workspace_premium" color="primary" size="16px" />
+                  <span class="text-caption q-ml-xs"><strong>Plan: {{ subscriptionPlan }}</strong></span>
+                </div>
+              </div>
 
               <!-- Profile Actions -->
-              <q-card-section class="profile-actions">
-                <q-list>
+              <div>
+                <q-list dense class="q-py-none q-my-none">
                   <q-item
                     v-ripple
                     clickable
-                    class="profile-action-item"
+                    dense
+                    class="profile-action-item-compact"
                     @click="changeRoute('Profile', 'Perfil')"
                     v-close-popup
                   >
-                    <q-item-section avatar>
-                      <q-icon name="account_circle" color="primary" />
+                    <q-item-section avatar class="min-width-auto">
+                      <div class="action-icon-wrapper">
+                        <q-icon name="account_circle" color="primary" size="20px" />
+                      </div>
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label>Mi Perfil</q-item-label>
-                      <q-item-label caption>Ver y editar información</q-item-label>
+                      <q-item-label class="text-body2 text-weight-medium">Mi Perfil</q-item-label>
+                      <q-item-label caption class="text-caption action-caption">Ver y editar información</q-item-label>
                     </q-item-section>
                   </q-item>
 
                   <q-item
                     v-ripple
                     clickable
-                    class="profile-action-item"
+                    dense
+                    class="profile-action-item-compact"
                     @click="setTheme"
                   >
-                    <q-item-section avatar>
-                      <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" color="primary" />
+                    <q-item-section avatar class="min-width-auto">
+                      <div class="action-icon-wrapper">
+                        <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" color="primary" size="20px" />
+                      </div>
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label>{{ $q.dark.isActive ? 'Modo Claro' : 'Modo Oscuro' }}</q-item-label>
-                      <q-item-label caption>Cambiar tema de la aplicación</q-item-label>
+                      <q-item-label class="text-body2 text-weight-medium">{{ $q.dark.isActive ? 'Modo Claro' : 'Modo Oscuro' }}</q-item-label>
+                      <q-item-label caption class="text-caption action-caption">Cambiar tema</q-item-label>
                     </q-item-section>
                   </q-item>
 
                   <!-- Subscription Plans (Solo para super_admin) -->
-                  <q-separator v-if="userSession.is_super_admin" class="q-my-sm" />
                   <q-item
                     v-if="userSession.is_super_admin"
                     v-ripple
                     clickable
-                    class="profile-action-item"
+                    dense
+                    class="profile-action-item-compact"
                     @click="openSubscriptionDialog"
                     v-close-popup
                   >
-                    <q-item-section avatar>
-                      <q-icon name="workspace_premium" color="primary" />
+                    <q-item-section avatar class="min-width-auto">
+                      <div class="action-icon-wrapper">
+                        <q-icon name="workspace_premium" color="primary" size="20px" />
+                      </div>
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label>Planes de Suscripción</q-item-label>
-                      <q-item-label caption>Ver y gestionar tu plan</q-item-label>
+                      <q-item-label class="text-body2 text-weight-medium">Suscripción</q-item-label>
+                      <q-item-label caption class="text-caption action-caption">Gestionar plan</q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                      <q-icon name="chevron_right" size="xs" />
+                      <q-icon name="chevron_right" size="16px" color="grey-6" />
                     </q-item-section>
                   </q-item>
                 </q-list>
-              </q-card-section>
+              </div>
 
               <!-- Logout Button -->
-              <q-card-section class="profile-logout">
+              <div class="logout-container-modern">
                 <q-btn
                   unelevated
                   color="negative"
-                  icon="logout"
+                  icon-right="logout"
                   label="Cerrar Sesión"
-                  class="full-width logout-btn"
+                  class="full-width logout-btn-modern"
                   @click="logoutAt"
                   v-close-popup
                   no-caps
                 />
-              </q-card-section>
+              </div>
             </q-card>
           </q-menu>
           </q-btn>
@@ -609,16 +626,10 @@
 
               <!-- Dirección -->
               <div class="col-12">
-                <q-input
-                  v-model="companyData.company_address"
-                  label="Dirección"
-                  outlined
-                  dense
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="location_on" />
-                  </template>
-                </q-input>
+                <AddressComponent
+                  :initial-address="companyAddressData"
+                  @address-selected="handleCompanyAddressSelected"
+                />
               </div>
 
               <!-- Tipo de Negocio -->
@@ -692,6 +703,7 @@ import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -708,7 +720,7 @@ import {
 } from '@capacitor/barcode-scanner'
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog },
+  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog, AddressComponent },
   data () {
     return {
       logo,
@@ -781,8 +793,21 @@ export default {
         company_email: '',
         company_phone: '',
         company_address: '',
-        business_type: this.userSession?.company_session?.business_type,
+        business_type: null,
         copy_test_products: true
+      },
+      companyAddressData: {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
       },
       /**
        * Business types list
@@ -804,6 +829,7 @@ export default {
       if (val) {
         this.loadBusinessTypes()
         // Pre-llenar email con el del usuario
+        this.companyData.business_type = this.userSession?.company_session?.business_type
         if (this.userSession?.email) {
           this.companyData.company_email = this.userSession.email
         }
@@ -883,6 +909,46 @@ export default {
         business_type: null,
         copy_test_products: true
       }
+      this.companyAddressData = {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      }
+    },
+    /**
+     * Handle company address selected
+     */
+    handleCompanyAddressSelected (addressDetails) {
+      if (addressDetails) {
+        // Guardar los detalles completos de la dirección
+        this.companyAddressData = { ...addressDetails }
+        // Actualizar el campo company_address con la dirección formateada
+        this.companyData.company_address = addressDetails.formattedAddress || addressDetails.street || ''
+      } else {
+        // Limpiar si se resetea la dirección
+        this.companyAddressData = {
+          name: '',
+          street: '',
+          city: '',
+          state: '',
+          country: '',
+          zipCode: '',
+          latitude: null,
+          longitude: null,
+          formattedAddress: '',
+          placeId: '',
+          types: []
+        }
+        this.companyData.company_address = ''
+      }
     },
     /**
      * Create company
@@ -928,12 +994,12 @@ export default {
         // Notificación de éxito con animación
         notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
 
-        // Marcar que necesita tour
-        localStorage.setItem('needs_company_config_tour', 'true')
+        // Marcar que necesita tour de facturación
+        localStorage.setItem('needs_billing_tour', 'true')
 
-        // Redirigir a CompanyConfigPage para hacer el tour
+        // Redirigir a BillingPage para hacer el tour
         setTimeout(() => {
-          this.$router.push({ name: 'CompanyConfig' })
+          this.$router.push({ name: 'Billing' })
         }, 1000)
       } catch (error) {
         const message = error.response?.data?.message || 'Error al crear empresa'
@@ -1636,123 +1702,246 @@ export default {
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
 }
 
-.profile-menu {
-  margin-top: 8px;
-}
-
 .profile-card {
-  min-width: 320px;
-  border-radius: 15px;
+  min-width: 300px;
+  max-width: 300px;
+  border-radius: 16px;
   overflow: hidden;
   border: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 .body--dark .profile-card {
-  background: #2d3748;
+  background: #1e293b;
   border: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-/* Profile Header */
-.profile-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  padding: 20px;
-  transition: background 0.3s ease;
+/* Profile Header Modern */
+.profile-header-modern {
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  padding: 20px 16px;
+  transition: all 0.3s ease;
 }
 
-.body--dark .profile-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  filter: brightness(0.85);
+.body--dark .profile-header-modern {
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  filter: brightness(1.1);
 }
 
 .profile-header-content {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-.profile-avatar-large {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.profile-avatar-modern {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.profile-avatar-modern:hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .profile-info {
   flex: 1;
   color: white;
+  min-width: 0;
 }
 
 .profile-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
-  margin-bottom: 4px;
-  line-height: 1.2;
+  margin-bottom: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .profile-email {
-  font-size: 13px;
-  opacity: 0.9;
-  margin-bottom: 8px;
+  font-size: 12px;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
 }
 
-.profile-role {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-/* Profile Actions */
-.profile-actions {
-  padding: 8px 0;
-  background: white;
-}
-
-.body--dark .profile-actions {
-  background: #2d3748;
-}
-
-.profile-action-item {
-  border-radius: 8px;
-  margin: 4px 8px;
-  transition: all 0.3s ease;
-}
-
-.profile-action-item:hover {
+/* Plan Compact */
+.plan-compact {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
   background: rgba(124, 58, 237, 0.08);
-  transform: translateX(4px);
+  border-radius: 6px;
 }
 
-.body--dark .profile-action-item:hover {
+.body--dark .plan-compact {
   background: rgba(139, 92, 246, 0.15);
 }
 
-:deep(.profile-action-item .q-item__label) {
-  font-weight: 500;
-  font-size: 14px;
+/* Demo Action Item - Modern */
+.demo-action-item {
+  border-radius: 0;
+  margin: 0;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 64px;
 }
 
-:deep(.profile-action-item .q-item__label--caption) {
-  font-size: 12px;
-  opacity: 0.7;
+.demo-action-item:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+  transform: translateX(4px);
+  box-shadow: inset 4px 0 0 0 rgba(251, 191, 36, 0.6);
 }
 
-/* Logout Section */
-.profile-logout {
-  padding: 12px 16px;
-  background: #f9fafb;
+.body--dark .demo-action-item {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.18) 0%, rgba(245, 158, 11, 0.12) 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
-.body--dark .profile-logout {
-  background: #1a202c;
+.body--dark .demo-action-item:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.28) 0%, rgba(245, 158, 11, 0.2) 100%);
+  box-shadow: inset 4px 0 0 0 rgba(251, 191, 36, 0.8);
 }
 
-.logout-btn {
-  border-radius: 8px;
-  font-weight: 600;
+.demo-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(251, 191, 36, 0.15);
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 
-.logout-btn:hover {
+.demo-action-item:hover .demo-icon-wrapper {
+  background: rgba(251, 191, 36, 0.25);
+  transform: scale(1.1);
+}
+
+.rocket-wrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.demo-action-item:hover .rocket-wrapper {
+  background: rgba(124, 58, 237, 0.2);
+  transform: rotate(10deg) scale(1.1);
+}
+
+.demo-caption {
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+/* Profile Actions Modern */
+.profile-action-item-compact {
+  border-radius: 0;
+  margin: 0;
+  min-height: 52px;
+  padding: 10px 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.profile-action-item-compact:last-child {
+  border-bottom: none;
+}
+
+.profile-action-item-compact:hover {
+  background: rgba(124, 58, 237, 0.06);
+  transform: translateX(4px);
+  box-shadow: inset 3px 0 0 0 rgba(124, 58, 237, 0.5);
+}
+
+.body--dark .profile-action-item-compact {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.body--dark .profile-action-item-compact:hover {
+  background: rgba(139, 92, 246, 0.12);
+  box-shadow: inset 3px 0 0 0 rgba(139, 92, 246, 0.6);
+}
+
+.action-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 58, 237, 0.08);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.profile-action-item-compact:hover .action-icon-wrapper {
+  background: rgba(124, 58, 237, 0.15);
+  transform: scale(1.1);
+}
+
+.body--dark .action-icon-wrapper {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.body--dark .profile-action-item-compact:hover .action-icon-wrapper {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.action-caption {
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+:deep(.profile-action-item-compact .q-item__label) {
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+:deep(.profile-action-item-compact .q-item__label--caption) {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Logout Container Modern */
+.logout-container-modern {
+  padding: 12px 16px 16px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.body--dark .logout-container-modern {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.logout-btn-modern {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 10px 16px;
+  letter-spacing: 0.01em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.logout-btn-modern:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
 }
 
 /* Drawer Styles */

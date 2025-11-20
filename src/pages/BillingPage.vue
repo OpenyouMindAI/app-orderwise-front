@@ -1,5 +1,41 @@
 <template>
   <q-page padding>
+    <!-- Tour Overlay -->
+    <div v-if="showTour" class="tour-overlay" @click.self="skipTour">
+      <div class="tour-spotlight" :style="spotlightStyle"></div>
+      <q-card class="tour-card" :style="tourCardStyle">
+        <q-card-section class="tour-header">
+          <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ tourSteps.length }}</div>
+          <q-btn flat round dense icon="close" @click="skipTour" color="grey-7" size="sm" />
+        </q-card-section>
+        <q-card-section>
+          <div class="tour-title">{{ tourSteps[currentTourStep].title }}</div>
+          <div class="tour-description">{{ tourSteps[currentTourStep].description }}</div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            v-if="currentTourStep > 0"
+            flat
+            label="Anterior"
+            @click="previousTourStep"
+            color="grey-7"
+          />
+          <q-btn
+            flat
+            label="Saltar tour"
+            @click="skipTour"
+            color="grey-7"
+          />
+          <q-btn
+            unelevated
+            :label="currentTourStep === tourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
+            @click="nextTourStep"
+            color="primary"
+          />
+        </q-card-actions>
+      </q-card>
+    </div>
+
     <div v-if="$route.query.id">
       <span class="text-subtitle1">Factura número: </span>
       <span class="text-subtitle2">{{ invoice?.code }}</span>
@@ -79,7 +115,7 @@
               </div>
 
               <!-- Select tipo de servicio -->
-              <div>
+              <div id="tour-type-service">
                 <q-select
                   filled
                   dense
@@ -101,7 +137,7 @@
 
               <!-- Espacio donde estaba el boton de caja - ahora vacío -->
             </div>
-            <div class="col-12" style="width: 100% !important;">
+            <div class="col-12" style="width: 100% !important;" id="tour-barcode">
               <q-input
                 filled
                 dense
@@ -129,7 +165,7 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="col-12">
+            <div class="col-12" id="tour-products-table">
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
@@ -1313,6 +1349,34 @@ export default {
   },
   data () {
     return {
+      // Tour System
+      showTour: false,
+      currentTourStep: 0,
+      tourSteps: [
+        {
+          target: '#select-client',
+          title: '👤 Seleccionar Cliente',
+          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
+        },
+        {
+          target: '#tour-type-service',
+          title: '🍽️ Tipo de Servicio',
+          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
+        },
+        {
+          target: '#tour-barcode',
+          title: '🔍 Código de Barras',
+          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
+        },
+        {
+          target: '#tour-products-table',
+          title: '📦 Lista de Artículos',
+          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
+        }
+      ],
+      spotlightStyle: {},
+      tourCardStyle: {},
+
       currentCashierSession: null,
 
       scanner: false,
@@ -1909,6 +1973,12 @@ export default {
      * Get products with pagination
      */
     this.reloadProducts()
+
+    /**
+     * Check if should show tour (only once after company creation)
+     */
+    this.checkAndStartTour()
+
     /**
      * Init keywords button
      */
@@ -1967,9 +2037,123 @@ export default {
     this.getExchangeRates()
     this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
-    // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    /**
+     * Check and start tour if needed
+     */
+    checkAndStartTour () {
+      const hasSeenBillingTour = localStorage.getItem('has_seen_billing_tour')
+      const needsTour = localStorage.getItem('needs_billing_tour')
+
+      if (needsTour === 'true' && !hasSeenBillingTour) {
+        // Esperar a que el DOM esté completamente renderizado
+        this.$nextTick(() => {
+          setTimeout(() => {
+            this.startTour()
+          }, 500)
+        })
+      }
+    },
+
+    /**
+     * Start tour
+     */
+    startTour () {
+      this.showTour = true
+      this.currentTourStep = 0
+      this.updateTourPosition()
+    },
+
+    /**
+     * Next tour step
+     */
+    nextTourStep () {
+      if (this.currentTourStep < this.tourSteps.length - 1) {
+        this.currentTourStep++
+        this.updateTourPosition()
+      } else {
+        this.finishTour()
+      }
+    },
+
+    /**
+     * Previous tour step
+     */
+    previousTourStep () {
+      if (this.currentTourStep > 0) {
+        this.currentTourStep--
+        this.updateTourPosition()
+      }
+    },
+
+    /**
+     * Skip tour
+     */
+    skipTour () {
+      this.finishTour()
+    },
+
+    /**
+     * Finish tour
+     */
+    finishTour () {
+      this.showTour = false
+      localStorage.setItem('has_seen_billing_tour', 'true')
+      localStorage.removeItem('needs_billing_tour')
+      this.$q.notify({
+        message: '¡Tour completado! Ya puedes comenzar a facturar',
+        color: 'positive',
+        icon: 'check_circle'
+      })
+    },
+
+    /**
+     * Update tour position
+     */
+    updateTourPosition () {
+      this.$nextTick(() => {
+        const step = this.tourSteps[this.currentTourStep]
+        const element = document.querySelector(step.target)
+
+        if (element) {
+          const rect = element.getBoundingClientRect()
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+          // Scroll to element
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+          // Update spotlight position
+          this.spotlightStyle = {
+            top: `${rect.top + scrollTop - 10}px`,
+            left: `${rect.left + scrollLeft - 10}px`,
+            width: `${rect.width + 20}px`,
+            height: `${rect.height + 20}px`
+          }
+
+          // Position tour card
+          const cardWidth = 400
+          const cardHeight = 250
+          let cardTop = rect.top + scrollTop + rect.height + 20
+          let cardLeft = rect.left + scrollLeft
+
+          // Adjust if card goes off screen
+          if (cardLeft + cardWidth > window.innerWidth) {
+            cardLeft = window.innerWidth - cardWidth - 20
+          }
+          if (cardTop + cardHeight > window.innerHeight + scrollTop) {
+            cardTop = rect.top + scrollTop - cardHeight - 20
+          }
+
+          this.tourCardStyle = {
+            top: `${cardTop}px`,
+            left: `${cardLeft}px`
+          }
+        }
+      })
+    },
+
     async getExchangeRates () {
       try {
         const { data } = await this.$api.get('exchange-rates', {
@@ -4931,6 +5115,118 @@ export default {
   .client-form-body {
     padding: 16px;
     padding-bottom: 16px;
+  }
+}
+
+/* Tour Styles */
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9998;
+  backdrop-filter: blur(2px);
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 3px solid var(--q-primary);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px rgba(var(--q-primary-rgb, 25, 118, 210), 0.5);
+  transition: all 0.3s ease;
+  z-index: 9999;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px rgba(var(--q-primary-rgb, 25, 118, 210), 0.5);
+  }
+  50% {
+    border-color: rgba(var(--q-primary-rgb, 25, 118, 210), 0.7);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 30px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 10000;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    min-width: 300px;
+    max-width: 90vw;
+    left: 5vw !important;
+  }
+
+  .tour-title {
+    font-size: 18px;
+  }
+
+  .tour-description {
+    font-size: 13px;
   }
 }
 
