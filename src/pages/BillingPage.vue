@@ -1,7 +1,7 @@
 <template>
   <q-page padding>
     <!-- Tour Overlay -->
-    <div v-if="showTour" class="tour-overlay" @click.self="skipTour">
+    <div v-if="showTour" class="tour-overlay">
       <div class="tour-spotlight" :style="spotlightStyle"></div>
       <q-card class="tour-card" :style="tourCardStyle">
         <q-card-section class="tour-header">
@@ -35,6 +35,20 @@
         </q-card-actions>
       </q-card>
     </div>
+
+    <!-- Botón flotante para activar tour -->
+    <q-btn
+      v-if="!showTour"
+      fab
+      icon="help_outline"
+      color="primary"
+      class="tour-fab-btn"
+      @click="startTour"
+    >
+      <q-tooltip anchor="center left" self="center right" :offset="[10, 10]">
+        Ver tutorial de facturación
+      </q-tooltip>
+    </q-btn>
 
     <div v-if="$route.query.id">
       <span class="text-subtitle1">Factura número: </span>
@@ -73,7 +87,7 @@
               </div>
 
               <!-- Select tipo de factura -->
-              <div>
+              <div id="tour-tipo-factura">
                 <q-select
                   filled
                   dense
@@ -393,7 +407,7 @@
                               class="q-ml-xs cursor-pointer"
                             />
                             <q-popup-edit
-                              v-if="userSession.is_root || !setPermissionsByUser(['CJ'])"
+                              v-if="userSession?.is_root || !setPermissionsByUser(['CJ'])"
                               v-model.number="product.price"
                               auto-save
                               v-slot="scope"
@@ -448,7 +462,7 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <div class="col-6" v-if="typeOfService.code !== 4">
+              <!-- <div class="col-6" v-if="typeOfService.code !== '4'">
                 <q-select
                   filled
                   dense
@@ -459,7 +473,7 @@
                   :options="coins"
                   @filter="getCoins"
                 />
-              </div>
+              </div> -->
               <div class="col-6" v-if="typeOfService.code !== '4'">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
@@ -470,7 +484,7 @@
                   @address-selected="handleAddressSelected"
                 />
               </div>
-              <div class="col-12">
+              <div class="col-12" id="tour-descripcion">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
@@ -603,6 +617,7 @@
               <!-- Abrir/Cerrar caja -->
               <!-- Cobrar -->
               <q-btn
+                id="tour-btn-cobrar"
                 style="border-radius: 10px; padding: 5px 15px"
                 label="Cobrar"
                 icon="payments"
@@ -624,6 +639,7 @@
                 </q-tooltip>
               </q-btn>
               <q-btn
+                id="tour-btn-mesas"
                 style="border-radius: 10px; padding: 5px 15px"
                 color="orange"
                 icon="table_restaurant"
@@ -647,6 +663,7 @@
               </q-btn>
               <!-- Entrada/Salida -->
               <q-btn
+                id="tour-btn-cashflow"
                 icon="payments"
                 color="info"
                 dense
@@ -669,6 +686,7 @@
 
               <!-- Buscar -->
               <q-btn
+                id="tour-btn-buscar"
                 style="border-radius: 10px; padding: 5px 15px"
                 :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
                 icon="search"
@@ -703,6 +721,7 @@
               </q-btn>
               <!-- Borrar -->
               <q-btn
+                id="tour-btn-borrar"
                 style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
                 color="negative"
@@ -720,7 +739,7 @@
           <!-- Filtros fijos arriba -->
           <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
             <div class="row q-col-gutter-xs">
-              <div class="col-6">
+              <div class="col-6" id="tour-select-categoria">
                 <q-select
                   use-input
                   filled
@@ -735,7 +754,7 @@
                   @filter="filterCategories"
                 />
               </div>
-              <div class="col-6">
+              <div class="col-6" id="tour-input-buscar-producto">
                 <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
                   <template v-slot:append>
                     <q-icon name="search" />
@@ -747,6 +766,7 @@
 
           <!-- Productos con scroll -->
           <div
+            id="tour-seccion-productos"
             ref="productsScrollContainer"
             class="product-container-scroll"
             style="flex: 1; overflow-y: auto; padding: 0.5rem;"
@@ -1092,7 +1112,7 @@
     <!-- Cash Box Dialog -->
     <CashBoxDialog
       v-model="showCashBoxDialog"
-      :cashier-id="userSession.id"
+      :cashier-id="userSession?.id"
       :is-box-already-open="isUserBoxOpen"
       :available-cash-boxes="availableCashBoxes"
       :branch-office="branchOffice"
@@ -1359,6 +1379,11 @@ export default {
           description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
         },
         {
+          target: '#tour-tipo-factura',
+          title: '🧾 Tipo de Factura',
+          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
+        },
+        {
           target: '#tour-type-service',
           title: '🍽️ Tipo de Servicio',
           description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
@@ -1372,6 +1397,51 @@ export default {
           target: '#tour-products-table',
           title: '📦 Lista de Artículos',
           description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
+        },
+        {
+          target: '#tour-descripcion',
+          title: '📝 Descripción',
+          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.'
+        },
+        {
+          target: '#tour-btn-cobrar',
+          title: '💰 Botón Cobrar (F1)',
+          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
+        },
+        {
+          target: '#tour-btn-mesas',
+          title: '🪑 Botón Mesas (F10)',
+          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
+        },
+        {
+          target: '#tour-btn-cashflow',
+          title: '💵 Entrada/Salida de Dinero (F11)',
+          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
+        },
+        {
+          target: '#tour-btn-buscar',
+          title: '🔎 Buscar Factura (F12)',
+          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
+        },
+        {
+          target: '#tour-btn-borrar',
+          title: '🗑️ Borrar Factura',
+          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
+        },
+        {
+          target: '#tour-select-categoria',
+          title: '🏷️ Filtro de Categorías',
+          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
+        },
+        {
+          target: '#tour-input-buscar-producto',
+          title: '🔍 Buscar Producto',
+          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
+        },
+        {
+          target: '#tour-seccion-productos',
+          title: '🛍️ Sección de Productos',
+          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
         }
       ],
       spotlightStyle: {},
@@ -2045,14 +2115,24 @@ export default {
     checkAndStartTour () {
       const hasSeenBillingTour = localStorage.getItem('has_seen_billing_tour')
       const needsTour = localStorage.getItem('needs_billing_tour')
+      const hasVisitedBilling = sessionStorage.getItem('has_visited_billing')
 
-      if (needsTour === 'true' && !hasSeenBillingTour) {
+      // Mostrar tour si:
+      // 1. Se marcó que necesita tour (después de crear empresa)
+      // 2. O es la primera vez que visita la página en esta sesión y nunca ha visto el tour
+      if ((needsTour === 'true' && !hasSeenBillingTour) || (!hasVisitedBilling && !hasSeenBillingTour)) {
+        // Marcar que ya visitó la página en esta sesión
+        sessionStorage.setItem('has_visited_billing', 'true')
+        
         // Esperar a que el DOM esté completamente renderizado
         this.$nextTick(() => {
           setTimeout(() => {
             this.startTour()
           }, 500)
         })
+      } else {
+        // Marcar que ya visitó la página en esta sesión
+        sessionStorage.setItem('has_visited_billing', 'true')
       }
     },
 
@@ -2117,39 +2197,87 @@ export default {
         const element = document.querySelector(step.target)
 
         if (element) {
-          const rect = element.getBoundingClientRect()
-          const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+          // Scroll to element first
+          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
 
-          // Scroll to element
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Wait for scroll to finish before calculating positions
+          setTimeout(() => {
+            const rect = element.getBoundingClientRect()
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
 
-          // Update spotlight position
-          this.spotlightStyle = {
-            top: `${rect.top + scrollTop - 10}px`,
-            left: `${rect.left + scrollLeft - 10}px`,
-            width: `${rect.width + 20}px`,
-            height: `${rect.height + 20}px`
-          }
+            // Update spotlight position
+            this.spotlightStyle = {
+              top: `${rect.top + scrollTop - 10}px`,
+              left: `${rect.left + scrollLeft - 10}px`,
+              width: `${rect.width + 20}px`,
+              height: `${rect.height + 20}px`
+            }
 
-          // Position tour card
-          const cardWidth = 400
-          const cardHeight = 250
-          let cardTop = rect.top + scrollTop + rect.height + 20
-          let cardLeft = rect.left + scrollLeft
+            // Position tour card with better logic
+            const cardWidth = 400
+            const cardHeight = 280
+            const padding = 20
+            const viewportHeight = window.innerHeight
+            const viewportWidth = window.innerWidth
 
-          // Adjust if card goes off screen
-          if (cardLeft + cardWidth > window.innerWidth) {
-            cardLeft = window.innerWidth - cardWidth - 20
-          }
-          if (cardTop + cardHeight > window.innerHeight + scrollTop) {
-            cardTop = rect.top + scrollTop - cardHeight - 20
-          }
+            let cardTop = rect.top + scrollTop
+            let cardLeft = rect.left + scrollLeft
 
-          this.tourCardStyle = {
-            top: `${cardTop}px`,
-            left: `${cardLeft}px`
-          }
+            // Detectar si es la sección de productos o categorías/búsqueda
+            const isProductSection = step.target === '#tour-seccion-productos' || 
+                                    step.target === '#tour-select-categoria' || 
+                                    step.target === '#tour-input-buscar-producto'
+
+            if (isProductSection) {
+              // Para sección de productos, posicionar a la IZQUIERDA del elemento
+              // Calcular posición: elemento.left - ancho del card - espacio
+              const spaceFromElement = 30 // Espacio entre el card y el elemento
+              cardLeft = rect.left + scrollLeft - cardWidth - spaceFromElement
+              
+              // Si no cabe a la izquierda, posicionar en el borde izquierdo con margen
+              if (cardLeft < padding) {
+                cardLeft = padding
+              }
+              
+              // Centrar verticalmente con el elemento
+              cardTop = rect.top + scrollTop + (rect.height / 2) - (cardHeight / 2)
+            } else {
+              // Para otros elementos, posicionar DEBAJO
+              cardTop = rect.bottom + scrollTop + padding
+              
+              // If card goes below viewport, position it above the element
+              if (rect.bottom + cardHeight + padding > viewportHeight) {
+                cardTop = rect.top + scrollTop - cardHeight - padding
+              }
+
+              // If still goes above viewport, position it in the middle
+              if (cardTop < scrollTop) {
+                cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+              }
+            }
+
+            // Adjust horizontal position
+            if (cardLeft + cardWidth > viewportWidth) {
+              cardLeft = viewportWidth - cardWidth - padding
+            }
+            if (cardLeft < 0) {
+              cardLeft = padding
+            }
+
+            // Adjust vertical position to keep in viewport
+            if (cardTop + cardHeight > scrollTop + viewportHeight) {
+              cardTop = scrollTop + viewportHeight - cardHeight - padding
+            }
+            if (cardTop < scrollTop) {
+              cardTop = scrollTop + padding
+            }
+
+            this.tourCardStyle = {
+              top: `${cardTop}px`,
+              left: `${cardLeft}px`
+            }
+          }, 300)
         }
       })
     },
@@ -5125,17 +5253,20 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: transparent;
   z-index: 9998;
-  backdrop-filter: blur(2px);
+  pointer-events: auto;
 }
 
 .tour-spotlight {
   position: absolute;
   background: transparent;
-  border: 3px solid var(--q-primary);
-  border-radius: 8px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px rgba(var(--q-primary-rgb, 25, 118, 210), 0.5);
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow: 
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
   transition: all 0.3s ease;
   z-index: 9999;
   pointer-events: none;
@@ -5145,11 +5276,17 @@ export default {
 @keyframes pulse-border {
   0%, 100% {
     border-color: var(--q-primary);
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px rgba(var(--q-primary-rgb, 25, 118, 210), 0.5);
+    box-shadow: 
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
   }
   50% {
-    border-color: rgba(var(--q-primary-rgb, 25, 118, 210), 0.7);
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 30px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+    border-color: var(--q-primary);
+    box-shadow: 
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
   }
 }
 
@@ -5227,6 +5364,32 @@ export default {
 
   .tour-description {
     font-size: 13px;
+  }
+}
+
+/* Tour FAB Button */
+.tour-fab-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tour-fab-btn:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 12px 32px rgba(var(--q-primary-rgb, 25, 118, 210), 0.3);
+}
+
+.tour-fab-btn:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .tour-fab-btn {
+    bottom: 16px;
+    right: 16px;
   }
 }
 

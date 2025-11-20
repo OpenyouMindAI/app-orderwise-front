@@ -55,6 +55,22 @@
 
         <q-space />
 
+        <!-- Branch Office Indicator -->
+        <div v-if="branchOffice" class="branch-indicator">
+          <q-chip
+            dense
+            square
+            class="branch-chip"
+            icon="store"
+            color="primary"
+            text-color="white"
+          >
+            {{ branchOffice.name }}
+          </q-chip>
+        </div>
+
+        <q-space />
+
         <!-- Right: Actions -->
         <div class="navbar-right">
           <!-- Botón Crear Mi Empresa (solo en modo demo) -->
@@ -997,10 +1013,34 @@ export default {
         // Marcar que necesita tour de facturación
         localStorage.setItem('needs_billing_tour', 'true')
 
-        // Redirigir a BillingPage para hacer el tour
-        setTimeout(() => {
-          this.$router.push({ name: 'Billing' })
-        }, 1000)
+        // Mostrar diálogo de opciones
+        this.$q.dialog({
+          title: '¡Empresa creada exitosamente! 🎉',
+          message: '¿Qué te gustaría hacer ahora?',
+          options: {
+            type: 'radio',
+            model: 'billing',
+            items: [
+              { label: 'Ver tutorial de facturación (Recomendado)', value: 'billing', color: 'primary' },
+              { label: 'Configurar mi empresa', value: 'config', color: 'secondary' }
+            ]
+          },
+          cancel: false,
+          persistent: true,
+          ok: {
+            label: 'Continuar',
+            color: 'primary'
+          }
+        }).onOk(data => {
+          if (data === 'billing') {
+            // Ir a facturación con tour
+            this.$router.push({ name: 'Billing' })
+          } else {
+            // Ir a configuración de empresa con tour
+            localStorage.setItem('needs_company_config_tour', 'true')
+            this.$router.push({ name: 'CompanyConfig' })
+          }
+        })
       } catch (error) {
         const message = error.response?.data?.message || 'Error al crear empresa'
         notify(message, 'negative', 'warning')
@@ -1568,6 +1608,51 @@ export default {
 .menu-btn:hover {
   transform: scale(1.1);
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* Branch Office Indicator */
+.branch-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.branch-chip {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  height: 28px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.branch-chip:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.branch-chip :deep(.q-chip__icon) {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+.branch-chip :deep(.q-chip__content) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .branch-chip :deep(.q-chip__content) {
+    max-width: 120px;
+  }
 }
 
 /* Drawer Styles */

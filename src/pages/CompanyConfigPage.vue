@@ -1,5 +1,41 @@
 <template>
   <q-page class="minimalist-config">
+    <!-- Tour Overlay -->
+    <div v-if="showTour" class="tour-overlay">
+      <div class="tour-spotlight" :style="spotlightStyle"></div>
+      <q-card class="tour-card" :style="tourCardStyle">
+        <q-card-section class="tour-header">
+          <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ tourSteps.length }}</div>
+          <q-btn flat round dense icon="close" @click="skipTour" color="grey-7" size="sm" />
+        </q-card-section>
+        <q-card-section>
+          <div class="tour-title">{{ tourSteps[currentTourStep].title }}</div>
+          <div class="tour-description">{{ tourSteps[currentTourStep].description }}</div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            flat
+            label="Anterior"
+            @click="previousTourStep"
+            :disable="currentTourStep === 0"
+            color="grey-7"
+          />
+          <q-btn
+            flat
+            label="Saltar tour"
+            @click="skipTour"
+            color="grey-7"
+          />
+          <q-btn
+            unelevated
+            :label="currentTourStep === tourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
+            @click="nextTourStep"
+            color="primary"
+          />
+        </q-card-actions>
+      </q-card>
+    </div>
+
     <div class="config-container">
       <!-- Progress Header -->
       <div class="progress-header">
@@ -24,6 +60,7 @@
         <div
           v-for="stepItem in steps"
           :key="stepItem.number"
+          :id="`tour-step-${stepItem.number}`"
           class="step-nav-item"
           :class="{
             'active': step === stepItem.number,
@@ -790,6 +827,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Botón flotante para activar tour -->
+    <q-btn
+      v-if="!showTour"
+      fab
+      icon="help_outline"
+      color="primary"
+      class="tour-fab-btn"
+      @click="startTour"
+    >
+      <q-tooltip anchor="center left" self="center right" :offset="[10, 10]">
+        Ver tutorial de configuración
+      </q-tooltip>
+    </q-btn>
   </q-page>
 </template>
 
@@ -820,6 +871,12 @@ const paymentMethods = ref([])
 const printers = ref([])
 const businessTypes = ref([])
 const loading = ref(false)
+
+// Tour System
+const showTour = ref(false)
+const currentTourStep = ref(0)
+const spotlightStyle = ref({})
+const tourCardStyle = ref({})
 
 // Store and session
 const store = authentication()
@@ -899,14 +956,19 @@ onMounted(async () => {
     console.error('Error loading business types:', error)
   }
 
-  // Iniciar tour si viene de crear empresa
+  // Verificar si debe mostrar el tour
+  const hasSeenTour = localStorage.getItem('has_seen_company_config_tour')
   const needsTour = localStorage.getItem('needs_company_config_tour')
-  if (needsTour === 'true') {
+  
+  // Mostrar tour si:
+  // 1. Nunca lo ha visto (primera visita)
+  // 2. O viene marcado como que necesita el tour
+  if (hasSeenTour !== 'true' || needsTour === 'true') {
     localStorage.removeItem('needs_company_config_tour')
     // Esperar a que el DOM esté listo
     await nextTick()
     setTimeout(() => {
-      startConfigTour()
+      startTour()
     }, 500)
   }
 })
@@ -967,6 +1029,66 @@ const steps = computed(() => {
   }
 
   return allSteps
+})
+
+const tourSteps = computed(() => {
+  const allTourSteps = [
+    {
+      target: '.steps-nav',
+      title: '🔢 Navegación de Configuración',
+      description: 'Estos botones te permiten navegar entre las diferentes secciones de configuración de tu empresa. Haz clic en cualquiera para ir directamente a esa sección.'
+    },
+    {
+      stepNumber: 1,
+      target: '#tour-step-1',
+      title: '🏢 Empresa',
+      description: 'Configura la información básica de tu empresa: nombre, documento, email, teléfono, dirección y logo.'
+    },
+    {
+      stepNumber: 2,
+      target: '#tour-step-2',
+      title: '🏪 Sucursal',
+      description: 'Configura las sucursales de tu empresa. Define puntos de venta y listas de precios para cada sucursal.'
+    },
+    {
+      stepNumber: 3,
+      target: '#tour-step-3',
+      title: '🧾 Facturación',
+      description: 'Configura los parámetros de facturación: tipo de factura, moneda, tipo de servicio, método de pago y cliente por defecto.'
+    },
+    {
+      stepNumber: 4,
+      target: '#tour-step-4',
+      title: '🍽️ Tienda',
+      description: 'Configura las opciones de tu tienda: habilita mesas, define horarios de atención y personaliza la experiencia del cliente.'
+    },
+    {
+      stepNumber: 5,
+      target: '#tour-step-5',
+      title: '📺 Pantalla',
+      description: 'Configura la pantalla de visualización para tus clientes. Personaliza cómo se muestran los pedidos y productos.'
+    },
+    {
+      stepNumber: 6,
+      target: '#tour-step-6',
+      title: '🖨️ Dispositivos',
+      description: 'Configura las impresoras y otros dispositivos conectados a tu sistema para imprimir facturas y tickets.'
+    },
+    {
+      stepNumber: 7,
+      target: '#tour-step-7',
+      title: '🔗 Integraciones',
+      description: 'Conecta tu sistema con servicios externos como ARCA para facturación electrónica y otras integraciones.'
+    }
+  ]
+
+  // Filtrar pasos del tour según el plan
+  // Si es plan Free, excluir Sucursal (stepNumber 2) e Integraciones (stepNumber 7)
+  if (isFreePlan.value) {
+    return allTourSteps.filter(s => !s.stepNumber || (s.stepNumber !== 2 && s.stepNumber !== 7))
+  }
+
+  return allTourSteps
 })
 
 // Función para obtener el siguiente step válido
@@ -1352,6 +1474,124 @@ const onSubmitConfig = async () => {
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * Start tour
+ */
+const startTour = () => {
+  showTour.value = true
+  currentTourStep.value = 0
+  updateTourPosition()
+}
+
+/**
+ * Next tour step
+ */
+const nextTourStep = () => {
+  if (currentTourStep.value < tourSteps.value.length - 1) {
+    currentTourStep.value++
+    updateTourPosition()
+  } else {
+    finishTour()
+  }
+}
+
+/**
+ * Previous tour step
+ */
+const previousTourStep = () => {
+  if (currentTourStep.value > 0) {
+    currentTourStep.value--
+    updateTourPosition()
+  }
+}
+
+/**
+ * Skip tour
+ */
+const skipTour = () => {
+  finishTour()
+}
+
+/**
+ * Finish tour
+ */
+const finishTour = () => {
+  showTour.value = false
+  localStorage.setItem('has_seen_company_config_tour', 'true')
+  notify('¡Tour completado!', 'positive', 'check_circle')
+}
+
+/**
+ * Update tour position
+ */
+const updateTourPosition = () => {
+  nextTick(() => {
+    const step = tourSteps.value[currentTourStep.value]
+    const element = document.querySelector(step.target)
+
+    if (element) {
+      // Scroll to element first
+      element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+      // Wait for scroll to finish before calculating positions
+      setTimeout(() => {
+        const rect = element.getBoundingClientRect()
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+        // Update spotlight position
+        spotlightStyle.value = {
+          top: `${rect.top + scrollTop - 10}px`,
+          left: `${rect.left + scrollLeft - 10}px`,
+          width: `${rect.width + 20}px`,
+          height: `${rect.height + 20}px`
+        }
+
+        // Position tour card with better logic
+        const cardWidth = 400
+        const cardHeight = 280
+        const padding = 20
+        const viewportHeight = window.innerHeight
+        const viewportWidth = window.innerWidth
+
+        let cardTop = rect.bottom + scrollTop + padding
+        let cardLeft = rect.left + scrollLeft
+
+        // If card goes below viewport, position it above the element
+        if (rect.bottom + cardHeight + padding > viewportHeight) {
+          cardTop = rect.top + scrollTop - cardHeight - padding
+        }
+
+        // If still goes above viewport, position it in the middle
+        if (cardTop < scrollTop) {
+          cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+        }
+
+        // Adjust horizontal position
+        if (cardLeft + cardWidth > viewportWidth) {
+          cardLeft = viewportWidth - cardWidth - padding
+        }
+        if (cardLeft < 0) {
+          cardLeft = padding
+        }
+
+        // Adjust vertical position to keep in viewport
+        if (cardTop + cardHeight > scrollTop + viewportHeight) {
+          cardTop = scrollTop + viewportHeight - cardHeight - padding
+        }
+        if (cardTop < scrollTop) {
+          cardTop = scrollTop + padding
+        }
+
+        tourCardStyle.value = {
+          top: `${cardTop}px`,
+          left: `${cardLeft}px`
+        }
+      }, 300)
+    }
+  })
 }
 
 /**
@@ -1935,6 +2175,151 @@ const startConfigTour = () => {
 
   .progress-bar {
     width: 180px;
+  }
+}
+
+/* Tour Styles */
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 9998;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  transition: all 0.3s ease;
+  z-index: 9999;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  }
+  50% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 10000;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Tour FAB Button */
+.tour-fab-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tour-fab-btn:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 12px 32px rgba(var(--q-primary-rgb, 25, 118, 210), 0.3);
+}
+
+.tour-fab-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    min-width: 300px;
+    max-width: 90vw;
+    left: 5vw !important;
+  }
+
+  .tour-title {
+    font-size: 18px;
+  }
+
+  .tour-description {
+    font-size: 13px;
+  }
+
+  .tour-fab-btn {
+    bottom: 16px;
+    right: 16px;
   }
 }
 </style>
