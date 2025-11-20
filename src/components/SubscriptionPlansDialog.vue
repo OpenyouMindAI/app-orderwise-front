@@ -148,7 +148,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
-import { notify } from 'src/const/mixins'
+import { formatNumber, notify } from 'src/const/mixins'
 import { date } from 'quasar'
 
 export default {
@@ -210,7 +210,7 @@ export default {
     const calculateProTeamPrice = (plan) => {
       if (plan.slug === 'pro_team') {
         const additionalBranches = Math.max(0, branchCount.value - 1)
-        proTeamTotalPrice.value = parseFloat(plan.price) + (additionalBranches * parseFloat(plan.price_per_branch))
+        proTeamTotalPrice.value = formatNumber(parseFloat(plan.price) + (additionalBranches * parseFloat(plan.price_per_branch)))
       }
     }
 
