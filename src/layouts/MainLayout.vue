@@ -96,6 +96,19 @@
             </q-btn>
           </transition>
 
+          <!-- Botón de Tour -->
+          <q-btn
+            v-if="currentPageHasTour"
+            flat
+            dense
+            icon="help_outline"
+            round
+            @click="activateCurrentPageTour"
+            class="tour-btn-navbar"
+          >
+            <q-tooltip>Ver tutorial de esta página</q-tooltip>
+          </q-btn>
+
           <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
           <q-btn
             flat
@@ -723,6 +736,7 @@ import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
+import eventBus from 'src/utils/eventBus'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
@@ -838,7 +852,15 @@ export default {
   },
   computed: {
     ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice', 'access_token', 'refresh_token', 'expires_In', 'token_type']),
-    ...mapState(darkModeStore, ['darkMode'])
+    ...mapState(darkModeStore, ['darkMode']),
+    /**
+     * Check if current page has tour available
+     * @returns {Boolean}
+     */
+    currentPageHasTour () {
+      const pagesWithTour = ['Billing', 'CompanyConfig', 'Category', 'Product']
+      return pagesWithTour.includes(this.$route.name)
+    }
   },
   watch: {
     showCreateCompanyDialog (val) {
@@ -880,6 +902,13 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Activate tour for current page
+     */
+    activateCurrentPageTour () {
+      // Emitir evento global para que la página actual active su tour
+      eventBus.emit('activate-page-tour', this.$route.name)
+    },
     /**
      * Load business types
      */
@@ -1653,6 +1682,20 @@ export default {
   .branch-chip :deep(.q-chip__content) {
     max-width: 120px;
   }
+}
+
+/* Tour Button in Navbar */
+.tour-btn-navbar {
+  transition: all 0.3s ease;
+}
+
+.tour-btn-navbar:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tour-btn-navbar:active {
+  transform: scale(0.95);
 }
 
 /* Drawer Styles */

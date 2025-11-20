@@ -23,6 +23,7 @@
         <!-- Botón modo normal -->
         <template v-else>
           <q-btn
+            id="tour-btn-editar-secuencia"
             color="primary"
             icon="sort"
             label="Editar Secuencia"
@@ -30,14 +31,16 @@
           />
         </template>
         <q-btn
+          id="tour-btn-agregar"
           color="primary"
-          @click="openAddCategory = true"
+          @click="openAddCategoryDialog"
           icon="add_circle"
           label="Agregar"
         />
       </div>
       <div class="col-12">
         <q-table
+          id="tour-tabla-categorias"
           title="Categorías"
           row-key="name"
           :columns="columns"
@@ -88,8 +91,45 @@
         </q-table>
       </div>
     </div>
+
+    <!-- Tour Overlay -->
+    <div v-if="showTour" class="tour-overlay">
+      <div class="tour-spotlight" :style="spotlightStyle"></div>
+      <q-card class="tour-card" :style="tourCardStyle">
+        <q-card-section class="tour-header">
+          <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ currentTourSteps.length }}</div>
+          <q-btn flat round dense icon="close" @click="skipTour" color="white" size="sm" />
+        </q-card-section>
+        <q-card-section>
+          <div class="tour-title">{{ currentTourSteps[currentTourStep]?.title }}</div>
+          <div class="tour-description">{{ currentTourSteps[currentTourStep]?.description }}</div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            flat
+            label="Anterior"
+            @click="previousTourStep"
+            :disable="currentTourStep === 0"
+            color="grey-7"
+          />
+          <q-btn
+            flat
+            label="Saltar tour"
+            @click="skipTour"
+            color="grey-7"
+          />
+          <q-btn
+            unelevated
+            :label="currentTourStep === currentTourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
+            @click="nextTourStep"
+            color="primary"
+          />
+        </q-card-actions>
+      </q-card>
+    </div>
+
     <q-dialog v-model="openEditCategory" persistent :maximized="$q.screen.lt.sm">
-      <q-card style="width: 900px; max-width: 95vw;">
+      <q-card style="width: 600px; max-width: 95vw;">
         <q-form @submit="saveEdit">
           <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Modificar categoría</div>
@@ -99,6 +139,7 @@
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
+                id="tour-edit-nombre"
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="category.name"
@@ -108,6 +149,7 @@
             </div>
             <div class="col-12">
               <q-select
+                id="tour-edit-iva"
                 use-input
                 filled
                 label="Iva (%)"
@@ -121,6 +163,7 @@
             </div>
             <div class="col-12">
               <q-select
+                id="tour-edit-impresora"
                 use-input
                 filled
                 clearable
@@ -150,6 +193,7 @@
                 </div>
               </div>
               <q-select
+                id="tour-edit-sucursales"
                 filled
                 multiple
                 use-chips
@@ -175,6 +219,7 @@
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
+                id="tour-edit-catalogo"
                 v-model="category.show_catalog"
                 label="Mostrar en catálogo"
                 :true-value="1"
@@ -183,14 +228,14 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="negative" label="Eliminar" @click="deleteCategory" :loading="visible" />
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
+            <q-btn id="tour-edit-btn-eliminar" color="negative" label="Eliminar" @click="deleteCategory" :loading="visible" />
+            <q-btn id="tour-edit-btn-guardar" color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
     <q-dialog v-model="openAddCategory" persistent :maximized="$q.screen.lt.sm">
-      <q-card style="width: 900px; max-width: 95vw;">
+      <q-card style="width: 600px; max-width: 95vw;">
         <q-form @submit="saveCategory">
           <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Agregar categoría</div>
@@ -200,6 +245,7 @@
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
+                id="tour-add-nombre"
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="category.name"
@@ -209,6 +255,7 @@
             </div>
             <div class="col-12">
               <q-select
+                id="tour-add-iva"
                 use-input
                 filled
                 label="Iva (%)"
@@ -222,6 +269,7 @@
             </div>
             <div class="col-12">
               <q-select
+                id="tour-add-impresora"
                 use-input
                 filled
                 clearable
@@ -251,6 +299,7 @@
                 </div>
               </div>
               <q-select
+                id="tour-add-sucursales"
                 filled
                 multiple
                 use-chips
@@ -276,6 +325,7 @@
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-toggle
+                id="tour-add-catalogo"
                 v-model="category.show_catalog"
                 label="Mostrar en catálogo"
                 :true-value="1"
@@ -284,8 +334,8 @@
             </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
+            <q-btn id="tour-add-btn-cancelar" color="secondary" label="Cancelar" @click="closeModal" />
+            <q-btn id="tour-add-btn-agregar" color="primary" label="Agregar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -298,6 +348,7 @@ import { Notify } from 'quasar'
 import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
+import eventBus from 'src/utils/eventBus'
 export default {
   data () {
     return {
@@ -380,7 +431,35 @@ export default {
         paginate: true,
         sortBy: 'sort_order',
         sortOrder: 'asc'
-      }
+      },
+      // Tour System
+      showTour: false,
+      currentTourStep: 0,
+      currentTourType: 'main',
+      mainTourSteps: [
+        {
+          target: '#tour-btn-editar-secuencia',
+          title: '🔢 Editar Secuencia',
+          description: 'Usa este botón para cambiar el orden de las categorías. Podrás mover las categorías hacia arriba o abajo para organizarlas como prefieras.'
+        },
+        {
+          target: '#tour-btn-agregar',
+          title: '➕ Botón Agregar',
+          description: 'Haz clic aquí para agregar una nueva categoría. Al hacer clic, se abrirá un formulario donde podrás ingresar todos los datos de la categoría.'
+        },
+        {
+          target: '#tour-tabla-categorias',
+          title: '📋 Tabla de Categorías',
+          description: 'Aquí se muestran todas las categorías creadas. Puedes ver el nombre, impuesto, impresora asignada y más información de cada categoría.'
+        },
+        {
+          target: '#tour-tabla-categorias tbody tr:first-child',
+          title: '✏️ Editar Categoría',
+          description: 'Para editar una categoría, simplemente haz clic en cualquier fila de la tabla. Se abrirá un formulario con todos los datos que podrás modificar.'
+        }
+      ],
+      spotlightStyle: {},
+      tourCardStyle: {}
     }
   },
   mounted () {
@@ -389,6 +468,16 @@ export default {
       filter: undefined
     })
     this.getBranchOffices()
+
+    // Check and start tour on first visit
+    this.checkAndStartTour()
+
+    // Listen for tour activation from navbar
+    eventBus.on('activate-page-tour', (pageName) => {
+      if (pageName === 'Category') {
+        this.startMainTour()
+      }
+    })
   },
   watch: {
     filter (data) {
@@ -408,9 +497,18 @@ export default {
         })
       }
       return cols
+    },
+    currentTourSteps () {
+      return this.mainTourSteps
     }
   },
   methods: {
+    /**
+     * Open add category dialog
+     */
+    openAddCategoryDialog () {
+      this.openAddCategory = true
+    },
     /**
      * Close all modals
      */
@@ -872,6 +970,148 @@ export default {
       })
       // Asegurar que estén ordenadas
       this.categories.sort((a, b) => a.sort_order - b.sort_order)
+    },
+    /**
+     * Check and start tour on first visit
+     */
+    checkAndStartTour () {
+      const hasSeenMainTour = localStorage.getItem('has_seen_category_main_tour')
+      if (hasSeenMainTour !== 'true') {
+        setTimeout(() => {
+          this.startMainTour()
+        }, 500)
+      }
+    },
+    /**
+     * Start main tour
+     */
+    startMainTour () {
+      this.currentTourType = 'main'
+      this.currentTourStep = 0
+      this.showTour = true
+      this.$nextTick(() => {
+        this.updateTourPosition()
+      })
+    },
+    /**
+     * Next tour step
+     */
+    nextTourStep () {
+      if (this.currentTourStep < this.currentTourSteps.length - 1) {
+        this.currentTourStep++
+        this.$nextTick(() => {
+          this.updateTourPosition()
+        })
+      } else {
+        this.finishTour()
+      }
+    },
+    /**
+     * Previous tour step
+     */
+    previousTourStep () {
+      if (this.currentTourStep > 0) {
+        this.currentTourStep--
+        this.$nextTick(() => {
+          this.updateTourPosition()
+        })
+      }
+    },
+    /**
+     * Skip tour
+     */
+    skipTour () {
+      this.finishTour()
+    },
+    /**
+     * Finish tour
+     */
+    finishTour () {
+      this.showTour = false
+      this.currentTourStep = 0
+      localStorage.setItem('has_seen_category_main_tour', 'true')
+      notify('¡Tour completado! Ya conoces cómo gestionar categorías.', 'positive', 'check_circle')
+    },
+    /**
+     * Update tour position
+     */
+    updateTourPosition (retryCount = 0) {
+      this.$nextTick(() => {
+        const step = this.currentTourSteps[this.currentTourStep]
+        if (!step) return
+
+        const element = document.querySelector(step.target)
+        if (!element) {
+          // Retry up to 5 times with increasing delay
+          if (retryCount < 5) {
+            console.warn(`Tour element not found: ${step.target}, retrying... (${retryCount + 1}/5)`)
+            setTimeout(() => {
+              this.updateTourPosition(retryCount + 1)
+            }, 200 * (retryCount + 1))
+            return
+          } else {
+            console.error('Tour element not found after retries:', step.target)
+            return
+          }
+        }
+
+        // Scroll to element first
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+        // Wait for scroll to finish before calculating positions
+        setTimeout(() => {
+          const rect = element.getBoundingClientRect()
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+          // Update spotlight position
+          this.spotlightStyle = {
+            top: `${rect.top + scrollTop - 10}px`,
+            left: `${rect.left + scrollLeft - 10}px`,
+            width: `${rect.width + 20}px`,
+            height: `${rect.height + 20}px`
+          }
+
+          // Position tour card with better logic
+          const cardWidth = 400
+          const cardHeight = 280
+          const padding = 20
+          const viewportHeight = window.innerHeight
+          const viewportWidth = window.innerWidth
+
+          let cardTop = rect.bottom + scrollTop + padding
+          let cardLeft = rect.left + scrollLeft
+
+          // Special positioning for table - place card at bottom of viewport
+          if (step.target === '#tour-tabla-categorias' || step.target === '#tour-tabla-categorias tbody tr:first-child') {
+            cardTop = scrollTop + viewportHeight - cardHeight - padding
+            cardLeft = scrollLeft + (viewportWidth - cardWidth) / 2
+          } else {
+            // If card goes below viewport, position it above the element
+            if (rect.bottom + cardHeight + padding > viewportHeight) {
+              cardTop = rect.top + scrollTop - cardHeight - padding
+            }
+
+            // If still goes above viewport, position it in the middle
+            if (cardTop < scrollTop) {
+              cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+            }
+
+            // Adjust horizontal position
+            if (cardLeft + cardWidth > viewportWidth) {
+              cardLeft = viewportWidth - cardWidth - padding
+            }
+            if (cardLeft < 0) {
+              cardLeft = padding
+            }
+          }
+
+          this.tourCardStyle = {
+            top: `${cardTop}px`,
+            left: `${cardLeft}px`
+          }
+        }, 300)
+      })
     }
   }
 }
@@ -929,5 +1169,126 @@ export default {
   font-size: 18px;
   color: #1976d2;
   text-align: center;
+}
+
+/* Tour Styles */
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  transition: all 0.3s ease;
+  z-index: 10001;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  }
+  50% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 10002;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    min-width: 300px;
+    max-width: 90vw;
+    left: 5vw !important;
+  }
+
+  .tour-title {
+    font-size: 18px;
+  }
+
+  .tour-description {
+    font-size: 13px;
+  }
 }
 </style>

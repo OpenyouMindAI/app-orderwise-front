@@ -36,20 +36,6 @@
       </q-card>
     </div>
 
-    <!-- Botón flotante para activar tour -->
-    <q-btn
-      v-if="!showTour"
-      fab
-      icon="help_outline"
-      color="primary"
-      class="tour-fab-btn"
-      @click="startTour"
-    >
-      <q-tooltip anchor="center left" self="center right" :offset="[10, 10]">
-        Ver tutorial de facturación
-      </q-tooltip>
-    </q-btn>
-
     <div v-if="$route.query.id">
       <span class="text-subtitle1">Factura número: </span>
       <span class="text-subtitle2">{{ invoice?.code }}</span>
@@ -1334,6 +1320,7 @@ import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, loading, notify, BALANZA_PREFIXES } from 'src/const/mixins'
+import eventBus from 'src/utils/eventBus'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
@@ -2048,6 +2035,15 @@ export default {
      * Check if should show tour (only once after company creation)
      */
     this.checkAndStartTour()
+
+    /**
+     * Listen for tour activation from navbar
+     */
+    eventBus.on('activate-page-tour', (pageName) => {
+      if (pageName === 'Billing') {
+        this.startTour()
+      }
+    })
 
     /**
      * Init keywords button
@@ -5364,32 +5360,6 @@ export default {
 
   .tour-description {
     font-size: 13px;
-  }
-}
-
-/* Tour FAB Button */
-.tour-fab-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.tour-fab-btn:hover {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 12px 32px rgba(var(--q-primary-rgb, 25, 118, 210), 0.3);
-}
-
-.tour-fab-btn:active {
-  transform: scale(0.95);
-}
-
-@media (max-width: 768px) {
-  .tour-fab-btn {
-    bottom: 16px;
-    right: 16px;
   }
 }
 

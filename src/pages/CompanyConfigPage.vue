@@ -827,20 +827,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Botón flotante para activar tour -->
-    <q-btn
-      v-if="!showTour"
-      fab
-      icon="help_outline"
-      color="primary"
-      class="tour-fab-btn"
-      @click="startTour"
-    >
-      <q-tooltip anchor="center left" self="center right" :offset="[10, 10]">
-        Ver tutorial de configuración
-      </q-tooltip>
-    </q-btn>
   </q-page>
 </template>
 
@@ -852,6 +838,7 @@ import ScheduleCompany from 'src/components/Company/ScheduleCompany.vue'
 import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
 import { ref, computed, nextTick, onMounted } from 'vue'
+import eventBus from 'src/utils/eventBus'
 import FileComponent from 'src/components/FileComponent.vue'
 import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
@@ -971,6 +958,13 @@ onMounted(async () => {
       startTour()
     }, 500)
   }
+
+  // Listen for tour activation from navbar
+  eventBus.on('activate-page-tour', (pageName) => {
+    if (pageName === 'CompanyConfig') {
+      startTour()
+    }
+  })
 })
 
 /**
@@ -2282,25 +2276,6 @@ const startConfigTour = () => {
   color: #b0b0b0;
 }
 
-/* Tour FAB Button */
-.tour-fab-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.tour-fab-btn:hover {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 12px 32px rgba(var(--q-primary-rgb, 25, 118, 210), 0.3);
-}
-
-.tour-fab-btn:active {
-  transform: scale(0.95);
-}
-
 /* Responsive tour */
 @media (max-width: 768px) {
   .tour-card {
@@ -2315,11 +2290,6 @@ const startConfigTour = () => {
 
   .tour-description {
     font-size: 13px;
-  }
-
-  .tour-fab-btn {
-    bottom: 16px;
-    right: 16px;
   }
 }
 </style>

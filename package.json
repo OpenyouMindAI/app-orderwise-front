@@ -46,6 +46,7 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "laravel-echo": "^1.17.1",
+    "mitt": "^3.0.1",
     "multi-display-manager": "file:plugin/multi-display-manager",
     "pinia": "^2.0.11",
     "pinia-plugin-persistedstate": "^3.2.1",
