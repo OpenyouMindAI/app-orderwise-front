@@ -43,26 +43,27 @@
           <div class="col-auto">
             <q-card
               flat
-              bordered
-              class="subscription-info-card"
+              class="subscription-info-card-modern"
               :class="{
-                'border-warning': branchOffices.length >= maxBranches - 1 && branchOffices.length < maxBranches,
-                'border-negative': branchOffices.length >= maxBranches
+                'card-warning': branchOffices.length >= maxBranches - 1 && branchOffices.length < maxBranches,
+                'card-danger': branchOffices.length >= maxBranches,
+                'card-success': branchOffices.length < maxBranches - 1
               }"
             >
-              <q-card-section horizontal class="items-center q-pa-sm">
-                <q-icon
-                  name="store"
-                  size="32px"
-                  :color="branchOffices.length >= maxBranches ? 'negative' : 'primary'"
-                  class="q-mr-sm"
-                />
-                <div>
-                  <div class="text-caption text-grey-7">Sucursales</div>
-                  <div class="text-h6 text-weight-bold">
-                    {{ branchOffices.length }} / {{ maxBranches }}
+              <q-card-section class="row items-center q-pa-md no-wrap">
+                <div class="icon-container q-mr-md">
+                  <q-icon
+                    name="store"
+                    size="28px"
+                    color="white"
+                  />
+                </div>
+                <div class="info-content">
+                  <div class="text-overline text-weight-medium opacity-80">Sucursales</div>
+                  <div class="text-h5 text-weight-bold q-mb-xs">
+                    {{ branchOffices.length }} <span class="text-body1 opacity-60">/ {{ maxBranches }}</span>
                   </div>
-                  <div v-if="currentSubscription" class="text-caption text-grey-6">
+                  <div v-if="currentSubscription" class="text-caption text-weight-medium opacity-80">
                     Plan: {{ currentSubscription.plan?.name || 'Free' }}
                   </div>
                 </div>
@@ -73,9 +74,13 @@
           <!-- Add Button -->
           <div class="col-auto">
             <q-btn
+              unelevated
+              rounded
               color="primary"
               icon="add_circle"
               label="Agregar Sucursal"
+              size="md"
+              class="add-branch-btn-modern"
               @click="checkAndOpenAddDialog"
               :disable="branchOffices.length >= maxBranches"
             >
@@ -571,24 +576,122 @@ export default {
 </script>
 
 <style scoped>
-.subscription-info-card {
+/* Modern Subscription Info Card */
+.subscription-info-card-modern {
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+  min-width: 240px;
+}
+
+.subscription-info-card-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+.subscription-info-card-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Card States */
+.subscription-info-card-modern.card-success {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.subscription-info-card-modern.card-warning {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.subscription-info-card-modern.card-danger {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* Icon Container */
+.icon-container {
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   transition: all 0.3s ease;
 }
 
-.subscription-info-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.subscription-info-card-modern:hover .icon-container {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
-.border-warning {
-  border: 2px solid #f2c037 !important;
+/* Info Content */
+.info-content {
+  position: relative;
+  z-index: 1;
 }
 
-.border-negative {
-  border: 2px solid #c10015 !important;
+.opacity-80 {
+  opacity: 0.9;
 }
 
+.opacity-60 {
+  opacity: 0.7;
+}
+
+/* Add Button Modern */
+.add-branch-btn-modern {
+  padding: 12px 28px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-branch-btn-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.add-branch-btn-modern:active {
+  transform: translateY(0);
+}
+
+.add-branch-btn-modern:disabled {
+  opacity: 0.5;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Old styles for compatibility */
 .cursor-pointer {
   cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .subscription-info-card-modern {
+    min-width: 200px;
+  }
+
+  .icon-container {
+    width: 48px;
+    height: 48px;
+  }
+
+  .icon-container .q-icon {
+    font-size: 24px !important;
+  }
 }
 </style>
