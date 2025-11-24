@@ -10,6 +10,13 @@
           label="Seleccionar múltiples"
         />
         <q-btn
+          color="positive"
+          @click="openMassiveStockDialog"
+          icon="add"
+          v-if="selection.length"
+          label="Agregar stock"
+        />
+        <q-btn
           color="negative"
           @click="deleteMassive"
           icon="delete"
@@ -898,6 +905,32 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="massiveStockDialog" persistent>
+      <q-card style="width: 400px; max-width: 90vw;">
+        <q-card-section class="row items-center bg-primary text-white q-py-sm">
+          <div class="text-h6">Agregar stock masivo</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="massiveStockDialog = false" />
+        </q-card-section>
+        <q-card-section>
+          <div class="q-mb-md">
+            Seleccionados: {{ selection.length }} productos
+          </div>
+          <q-input
+            v-model.number="massiveStockQuantity"
+            type="number"
+            min="1"
+            label="Cantidad de stock a sumar"
+            filled
+            dense
+          />
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn color="secondary" label="Cancelar" flat @click="massiveStockDialog = false" />
+          <q-btn color="primary" label="Confirmar" @click="confirmMassiveStock" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-dialog
       v-model="dialogFilter"
       position="right"
@@ -1222,6 +1255,8 @@ export default {
       multipleSelected: false,
       products: [],
       selection: [],
+      massiveStockDialog: false,
+      massiveStockQuantity: null,
       isDragOver: false,
       company: null,
       addonsProducts: [],
@@ -1381,10 +1416,10 @@ export default {
       filter: undefined
     })
     this.getUnitOfMeasures()
-    
+
     // Check and start tour on first visit
     this.checkAndStartTour()
-    
+
     // Listen for tour activation from navbar
     eventBus.on('activate-page-tour', (pageName) => {
       if (pageName === 'Product') {
@@ -1748,6 +1783,37 @@ export default {
           notify(error.message, 'negative', 'warning')
         }
       })
+    },
+    openMassiveStockDialog () {
+      if (!this.selection.length) {
+        notify('Selecciona al menos un producto', 'warning', 'warning')
+        return
+      }
+      this.massiveStockQuantity = null
+      this.massiveStockDialog = true
+    },
+    async confirmMassiveStock () {
+      if (!this.massiveStockQuantity || this.massiveStockQuantity <= 0) {
+        notify('La cantidad debe ser mayor a 0', 'warning', 'warning')
+        return
+      }
+      try {
+        loading(true)
+        const productIds = this.selection.map(item => item.id)
+        await this.$api.post('massive-stock', {
+          product_ids: productIds,
+          quantity: this.massiveStockQuantity,
+          branch_office_id: this.branchOffice?.id
+        })
+        notify('Stock actualizado exitosamente', 'positive', 'info')
+        this.massiveStockDialog = false
+        this.selection = []
+        this.getProducts(this.params)
+      } catch (error) {
+        notify(error.message || 'Error al actualizar el stock', 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
     },
     /**
      * Open companies dialog
@@ -2376,7 +2442,7 @@ export default {
         })
 
         const blob = new Blob([response.data], { type: 'application/pdf' })
-        const file = new File([blob], `codigos-qr-productos.pdf`, { type: 'application/pdf' })
+        const file = new File([blob], 'codigos-qr-productos.pdf', { type: 'application/pdf' })
 
         // Try to share using Web Share API
         if (navigator.share) {
