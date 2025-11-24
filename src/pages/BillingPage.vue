@@ -1121,82 +1121,76 @@
     />
 
     <q-dialog v-model="openAddClient" persistent>
-      <q-card style="width: 900px; max-width: 95vw;" class="client-form-card">
+      <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
           <!-- Header con estilo naranja -->
-          <q-card-section class="client-form-header">
-            <div class="text-h6 text-white">Agregar cliente</div>
-            <q-btn icon="close" flat round dense @click="closeAddClientModal" class="text-white" />
+          <q-card-section class="row items-center text-white bg-primary">
+            <div class="text-h6">Agregar cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="closeAddClientModal" />
           </q-card-section>
 
           <!-- Body con tema oscuro -->
-          <q-card-section class="client-form-body">
+          <q-card-section class="row q-col-gutter-sm">
             <!-- Nombre - Campo principal con asterisco rojo -->
-            <div class="form-field-wrapper">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                outlined
+                filled
                 v-model="clientAdded.name"
                 label="Nombre *"
                 :rules="[val => !!val || 'El campo es requerido.']"
-                class="client-form-input client-form-name-input"
                 autofocus
               />
             </div>
 
             <!-- Información adicional -->
-            <div class="text-grey-5 q-mb-md">Información adicional (opcional)</div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-grey-7 q-mt-sm">
+              Información adicional (opcional)
+            </div>
 
             <!-- Fila 1: Tipo de documento y Número -->
-            <div class="row q-col-gutter-md q-mb-md">
-              <div class="col-6">
-                <q-select
-                  outlined
-                  use-input
-                  label="Tipo de documento"
-                  input-debounce="0"
-                  option-label="Desc"
-                  option-value="id"
-                  v-model="clientAdded.document_type"
-                  :options="documentTypes"
-                  @filter="getDocumentTypes"
-                  class="client-form-input"
-                />
-              </div>
-              <div class="col-6">
-                <q-input
-                  outlined
-                  v-model="clientAdded.document_number"
-                  label="Número de documento"
-                  class="client-form-input"
-                />
-              </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-select
+                filled
+                use-input
+                label="Tipo de documento"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="clientAdded.document_type"
+                :options="documentTypes"
+                @filter="getDocumentTypes"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.document_number"
+                label="Número de documento"
+              />
             </div>
 
             <!-- Fila 2: Correo y Teléfono -->
-            <div class="row q-col-gutter-md q-mb-md">
-              <div class="col-6">
-                <q-input
-                  outlined
-                  v-model="clientAdded.email"
-                  type="email"
-                  label="Correo"
-                  class="client-form-input"
-                />
-              </div>
-              <div class="col-6">
-                <q-input
-                  outlined
-                  v-model="clientAdded.phone_number"
-                  label="Teléfono"
-                  class="client-form-input"
-                />
-              </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.email"
+                type="email"
+                label="Correo"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.phone_number"
+                label="Teléfono"
+              />
             </div>
 
             <!-- Condición de IVA -->
-            <div class="form-field-wrapper">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-select
-                outlined
+                filled
                 use-input
                 label="Condición de IVA"
                 input-debounce="0"
@@ -1205,16 +1199,14 @@
                 v-model="clientAdded.condition_iva_receptor"
                 :options="conditionIvaReceptors"
                 @filter="getConditionIvaReceptor"
-                class="client-form-input"
               />
             </div>
 
             <!-- Checkbox cuenta corriente -->
-            <div class="form-field-wrapper">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-checkbox
                 v-model="clientAdded.is_credit"
                 label="¿Maneja cuenta corriente?"
-                class="client-form-checkbox"
               />
             </div>
 
@@ -1226,26 +1218,18 @@
                 @address-selected="handleAddressSelectedForClient"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-checkbox
-                v-model="clientAdded.is_credit"
-                label="¿Maneja cuenta corriente?"
-              />
-            </div>
           </q-card-section>
 
-          <!-- Botón guardar mejorado -->
-          <div class="client-form-actions-improved">
+          <!-- Botón guardar -->
+          <q-card-actions align="right" class="text-primary">
             <q-btn
               icon="save"
               color="primary"
               label="GUARDAR"
               type="submit"
               :loading="loadingClient"
-              size="lg"
-              class="client-form-save-btn"
             />
-          </div>
+          </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
@@ -2119,7 +2103,7 @@ export default {
       if ((needsTour === 'true' && !hasSeenBillingTour) || (!hasVisitedBilling && !hasSeenBillingTour)) {
         // Marcar que ya visitó la página en esta sesión
         sessionStorage.setItem('has_visited_billing', 'true')
-        
+
         // Esperar a que el DOM esté completamente renderizado
         this.$nextTick(() => {
           setTimeout(() => {
@@ -2221,8 +2205,8 @@ export default {
             let cardLeft = rect.left + scrollLeft
 
             // Detectar si es la sección de productos o categorías/búsqueda
-            const isProductSection = step.target === '#tour-seccion-productos' || 
-                                    step.target === '#tour-select-categoria' || 
+            const isProductSection = step.target === '#tour-seccion-productos' ||
+                                    step.target === '#tour-select-categoria' ||
                                     step.target === '#tour-input-buscar-producto'
 
             if (isProductSection) {
@@ -2230,18 +2214,18 @@ export default {
               // Calcular posición: elemento.left - ancho del card - espacio
               const spaceFromElement = 30 // Espacio entre el card y el elemento
               cardLeft = rect.left + scrollLeft - cardWidth - spaceFromElement
-              
+
               // Si no cabe a la izquierda, posicionar en el borde izquierdo con margen
               if (cardLeft < padding) {
                 cardLeft = padding
               }
-              
+
               // Centrar verticalmente con el elemento
               cardTop = rect.top + scrollTop + (rect.height / 2) - (cardHeight / 2)
             } else {
               // Para otros elementos, posicionar DEBAJO
               cardTop = rect.bottom + scrollTop + padding
-              
+
               // If card goes below viewport, position it above the element
               if (rect.bottom + cardHeight + padding > viewportHeight) {
                 cardTop = rect.top + scrollTop - cardHeight - padding
@@ -5259,7 +5243,7 @@ export default {
   background: transparent;
   border: 4px solid var(--q-primary);
   border-radius: 12px;
-  box-shadow: 
+  box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.75),
     0 0 0 8px rgba(255, 255, 255, 0.1),
     0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
@@ -5272,14 +5256,14 @@ export default {
 @keyframes pulse-border {
   0%, 100% {
     border-color: var(--q-primary);
-    box-shadow: 
+    box-shadow:
       0 0 0 9999px rgba(0, 0, 0, 0.75),
       0 0 0 8px rgba(255, 255, 255, 0.1),
       0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
   }
   50% {
     border-color: var(--q-primary);
-    box-shadow: 
+    box-shadow:
       0 0 0 9999px rgba(0, 0, 0, 0.75),
       0 0 0 8px rgba(255, 255, 255, 0.15),
       0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);

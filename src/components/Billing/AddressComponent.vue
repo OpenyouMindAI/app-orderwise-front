@@ -599,64 +599,6 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Contenedor principal */
-.address-component {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Sección del input principal */
-.address-input-section {
-  position: relative;
-}
-
-/* Input con altura consistente con formularios de cliente */
-.places-input :deep(.q-field__control) {
-  min-height: 60px; /* Misma altura que los inputs del formulario de cliente */
-  border-radius: 12px !important;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  background: #f8f9fa;
-}
-
-.body--dark .places-input :deep(.q-field__control) {
-  background: #2a2a2a;
-}
-
-/* Label con espaciado mejorado igual al formulario de cliente */
-.places-input :deep(.q-field__label) {
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  left: 20px;
-  top: 8px !important; /* Más espacio arriba para separar del texto */
-  transition: all 0.3s ease;
-  color: #6b7280 !important;
-}
-
-.body--dark .places-input :deep(.q-field__label) {
-  color: #9ca3af !important;
-}
-
-/* Padding del texto igual al formulario de cliente */
-.places-input :deep(.q-field__native) {
-  padding: 12px 20px 8px 20px; /* Más padding arriba para dar espacio al label */
-  font-weight: 500;
-}
-
-/* Focus effects */
-.places-input :deep(.q-field--focused .q-field__label) {
-  color: var(--q-primary) !important;
-  transform: translateY(-32px) scale(0.85); /* Ajustado para el nuevo espaciado */
-  font-weight: 700;
-}
-
-.places-input :deep(.q-field--focused .q-field__control) {
-  border-color: var(--q-primary) !important;
-  box-shadow: 0 0 0 4px var(--q-primary-alpha, rgba(25, 118, 210, 0.15));
-  transform: scale(1.02);
-}
-
 /* Sección de acciones */
 .address-actions-section {
   margin-top: 4px;
