@@ -61,6 +61,63 @@
                 rows="3"
               />
             </div>
+            <div class="col-12">
+              <q-file
+                filled
+                v-model="imageFile"
+                label="Imagen del Rubro"
+                hint="Selecciona una imagen para el rubro"
+                accept="image/*"
+                @update:model-value="onImageSelected"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="image" />
+                </template>
+                <template v-slot:append v-if="imageFile || businessType.image">
+                  <q-btn
+                    round
+                    dense
+                    flat
+                    icon="close"
+                    @click.stop="clearImage"
+                  />
+                </template>
+              </q-file>
+              <div v-if="imagePreview || businessType.image" class="q-mt-sm">
+                <q-img
+                  :src="imagePreview || getImageUrl(businessType.image)"
+                  style="max-width: 200px; max-height: 200px; border-radius: 8px;"
+                  fit="contain"
+                />
+              </div>
+            </div>
+            <div class="col-12">
+              <q-file
+                filled
+                v-model="videoFile"
+                label="Video del Rubro"
+                hint="Selecciona un video para el rubro"
+                accept="video/*"
+                @update:model-value="onVideoSelected"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="videocam" />
+                </template>
+                <template v-slot:append v-if="videoFile || businessType.video">
+                  <q-btn
+                    round
+                    dense
+                    flat
+                    icon="close"
+                    @click.stop="clearVideo"
+                  />
+                </template>
+              </q-file>
+              <div v-if="businessType.video" class="q-mt-sm text-caption text-grey-7">
+                <q-icon name="check_circle" color="positive" size="sm" />
+                Video actual cargado
+              </div>
+            </div>
           </q-card-section>
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
@@ -111,6 +168,63 @@
                 rows="3"
               />
             </div>
+            <div class="col-12">
+              <q-file
+                filled
+                v-model="imageFile"
+                label="Imagen del Rubro"
+                hint="Selecciona una imagen para el rubro"
+                accept="image/*"
+                @update:model-value="onImageSelected"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="image" />
+                </template>
+                <template v-slot:append v-if="imageFile || businessType.image">
+                  <q-btn
+                    round
+                    dense
+                    flat
+                    icon="close"
+                    @click.stop="clearImage"
+                  />
+                </template>
+              </q-file>
+              <div v-if="imagePreview || businessType.image" class="q-mt-sm">
+                <q-img
+                  :src="imagePreview || getImageUrl(businessType.image)"
+                  style="max-width: 200px; max-height: 200px; border-radius: 8px;"
+                  fit="contain"
+                />
+              </div>
+            </div>
+            <div class="col-12">
+              <q-file
+                filled
+                v-model="videoFile"
+                label="Video del Rubro"
+                hint="Selecciona un video para el rubro"
+                accept="video/*"
+                @update:model-value="onVideoSelected"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="videocam" />
+                </template>
+                <template v-slot:append v-if="videoFile || businessType.video">
+                  <q-btn
+                    round
+                    dense
+                    flat
+                    icon="close"
+                    @click.stop="clearVideo"
+                  />
+                </template>
+              </q-file>
+              <div v-if="businessType.video" class="q-mt-sm text-caption text-grey-7">
+                <q-icon name="check_circle" color="positive" size="sm" />
+                Video actual cargado
+              </div>
+            </div>
           </q-card-section>
           <q-card-section class="row q-col-gutter-sm">
             <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
@@ -144,6 +258,9 @@ export default {
       businessType: {},
       filter: '',
       moduleSelected: [],
+      imageFile: null,
+      imagePreview: null,
+      videoFile: null,
       /**
        * Params search
        * @type {Object}
@@ -219,6 +336,9 @@ export default {
       this.openEditBusinessType = false
       this.businessType = {}
       this.moduleSelected = []
+      this.imageFile = null
+      this.imagePreview = null
+      this.videoFile = null
     },
     /**
      * Search business types
@@ -268,13 +388,24 @@ export default {
      */
     saveBusinessType () {
       this.visible = true
-      const payload = {
-        name: this.businessType.name,
-        description: this.businessType.description,
-        modules: this.moduleSelected
+      const formData = new FormData()
+      formData.append('name', this.businessType.name)
+      formData.append('description', this.businessType.description)
+      if (this.imageFile) {
+        formData.append('image', this.imageFile)
+      }
+      if (this.videoFile) {
+        formData.append('video', this.videoFile)
+      }
+      if (this.moduleSelected && this.moduleSelected.length > 0) {
+        this.moduleSelected.forEach((moduleId, index) => {
+          formData.append(`modules[${index}]`, moduleId)
+        })
       }
 
-      this.$api.post('business-types', payload)
+      this.$api.post('business-types', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
         .then(({ data }) => {
           this.getBusinessTypes()
           this.openAddBusinessType = false
@@ -303,19 +434,34 @@ export default {
       this.openEditBusinessType = true
       this.businessType = { ...row }
       this.moduleSelected = row.modules ? row.modules.map(element => element.id) : []
+      this.imageFile = null
+      this.imagePreview = null
+      this.videoFile = null
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      const payload = {
-        name: this.businessType.name,
-        description: this.businessType.description,
-        modules: this.moduleSelected
+      const formData = new FormData()
+      formData.append('name', this.businessType.name)
+      formData.append('description', this.businessType.description)
+      if (this.imageFile) {
+        formData.append('image', this.imageFile)
       }
+      if (this.videoFile) {
+        formData.append('video', this.videoFile)
+      }
+      if (this.moduleSelected && this.moduleSelected.length > 0) {
+        this.moduleSelected.forEach((moduleId, index) => {
+          formData.append(`modules[${index}]`, moduleId)
+        })
+      }
+      formData.append('_method', 'PUT')
 
-      this.$api.put(`business-types/${this.businessType.id}`, payload)
+      this.$api.post(`business-types/${this.businessType.id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
         .then(({ data }) => {
           this.getBusinessTypes()
           this.openEditBusinessType = false
@@ -380,6 +526,55 @@ export default {
         this.modules = data
       } catch (err) {
         console.error('Error loading modules:', err)
+      }
+    },
+    /**
+     * Handle image selection
+     */
+    onImageSelected (file) {
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          this.imagePreview = e.target.result
+        }
+        reader.readAsDataURL(file)
+      } else {
+        this.imagePreview = null
+      }
+    },
+    /**
+     * Clear selected image
+     */
+    clearImage () {
+      this.imageFile = null
+      this.imagePreview = null
+      if (this.businessType.image) {
+        this.businessType.image = null
+      }
+    },
+    /**
+     * Get image URL from image object
+     */
+    getImageUrl (image) {
+      if (!image) return ''
+      return image.url || ''
+    },
+    /**
+     * Handle video selection
+     */
+    onVideoSelected (file) {
+      // Solo necesitamos el archivo, no preview para video
+      if (!file) {
+        this.videoFile = null
+      }
+    },
+    /**
+     * Clear selected video
+     */
+    clearVideo () {
+      this.videoFile = null
+      if (this.businessType.video) {
+        this.businessType.video = null
       }
     }
   }
