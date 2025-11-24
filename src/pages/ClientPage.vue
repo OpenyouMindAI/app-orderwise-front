@@ -172,7 +172,7 @@
           </q-card-section>
 
           <!-- Body con tema oscuro -->
-          <q-card-section class="row">
+          <q-card-section class="row q-col-gutter-sm">
             <!-- Nombre - Campo principal con asterisco rojo -->
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
@@ -257,12 +257,6 @@
                 :key="addressComponentKey"
                 :initial-address="address"
                 @address-selected="handleAddressSelected"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-checkbox
-                v-model="client.is_credit"
-                label="¿Maneja cuenta corriente?"
               />
             </div>
           </q-card-section>
