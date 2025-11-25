@@ -119,6 +119,19 @@
                   :rules="[ val => val || 'Este campo es requerido']"
                 />
               </div>
+              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-6">
+                <q-select
+                  v-model="company.country"
+                  :options="countries"
+                  option-label="name"
+                  option-value="id"
+                  filled
+                  label="País"
+                  use-input
+                  emit-value="false"
+                  map-options
+                />
+              </div>
               <div class="col-12">
                 <q-checkbox
                   v-model="company.is_test"
@@ -264,6 +277,7 @@ const companies = ref([])
  * @type {Array}
  */
 const businessTypes = ref([])
+const countries = ref([])
 /**
  * File selected
  * @type {Object}
@@ -400,6 +414,7 @@ onMounted(() => {
     pagination: paginationConfig.value
   })
   getBusinessTypes()
+  getCountries()
 })
 
 /**
@@ -448,6 +463,13 @@ const formDate = (data, put = false) => {
     formData.append('business_type_id', data.business_type.id)
   } else if (data.business_type_id) {
     formData.append('business_type_id', data.business_type_id)
+  }
+
+  // Agregar country_id si está disponible
+  if (data.country && data.country.id) {
+    formData.append('country_id', data.country.id)
+  } else if (data.country_id) {
+    formData.append('country_id', data.country_id)
   }
 
   // Agregar is_test (convertir a 1 o 0 para el backend)
@@ -511,6 +533,20 @@ async function getBusinessTypes () {
   } catch (err) {
     notify('Error al cargar los tipos de empresa', 'negative', 'warning')
     console.error('Error fetching business types:', err)
+  }
+}
+
+/**
+ * Fetches the list of countries from the API
+ * @returns {void}
+ */
+async function getCountries () {
+  try {
+    const { data } = await api.get('countries')
+    countries.value = data.data || data
+  } catch (err) {
+    notify('Error al cargar los países', 'negative', 'warning')
+    console.error('Error fetching countries:', err)
   }
 }
 

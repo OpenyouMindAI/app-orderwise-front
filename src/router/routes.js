@@ -94,6 +94,12 @@ const routes = [
         component: () => import('pages/CoinPage.vue')
       },
       {
+        path: 'countries',
+        meta: { requiresAuth: true },
+        name: 'Country',
+        component: () => import('pages/CountryPage.vue')
+      },
+      {
         path: 'box-reports',
         meta: { requiresAuth: true },
         name: 'BoxReport',

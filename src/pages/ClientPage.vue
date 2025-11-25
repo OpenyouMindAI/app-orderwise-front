@@ -357,15 +357,6 @@ export default {
           label: 'Correo',
           field: 'email',
           sortable: true
-        },
-        {
-          name: 'address',
-          align: 'left',
-          label: 'Dirección',
-          field: row => row.address?.formattedAddress || row.address?.name || (typeof row.address === 'string' ? row.address : 'Sin dirección'),
-          sortable: true,
-          style: 'width: 250px; max-width: 250px;',
-          headerStyle: 'width: 250px; max-width: 250px;'
         }
       ],
       paginationConfig: {
