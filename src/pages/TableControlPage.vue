@@ -473,7 +473,7 @@
             </div>
           </div>
           <q-btn
-            v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0 && !hasEditPermission"
+            v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0"
             label="Cobrar"
             color="positive"
             @click="openPaymentDialog"
@@ -754,6 +754,7 @@
 
     <!-- Payment Modal -->
     <PaymentModal
+      :visible-close-table="hasEditPermission"
       :show="showPaymentDialog"
       :payment-methods="paymentMethods"
       :payments="invoicePayments"
@@ -1812,7 +1813,7 @@ export default {
         } else {
           // Create new invoice
           const invoiceType = this.invoiceTypes.find(it => it.acronym_serie === 'T')
-          const typeOfService = this.typeOfServices.find(ts => ts.code === 2)
+          const typeOfService = this.typeOfServices.find(ts => ts.code === '2')
 
           if (!invoiceType || !typeOfService) {
             Notify.create({ message: 'No se pudieron encontrar los tipos de factura o servicio necesarios.', color: 'negative' })
