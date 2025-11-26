@@ -241,6 +241,7 @@
               color="primary"
               size="md"
               @click.stop.prevent="toggleClientField"
+              :disable="hasEditPermission"
             >
               <q-tooltip>
                 {{ clientFieldEnabled ? 'Agregar nuevo cliente' : 'Editar cliente' }}
@@ -308,6 +309,7 @@
                         color="primary"
                         @click="editProductNote(index)"
                         class="edit-note-btn"
+                        :disable="hasEditPermission"
                       >
                         <q-tooltip>Agregar nota</q-tooltip>
                       </q-btn>
@@ -331,7 +333,7 @@
                         round
                         flat
                         @click="decreaseQuantity(index)"
-                        :disable="product.pivot.amount <= 1"
+                        :disable="product.pivot.amount <= 1 || hasEditPermission"
                         class="quantity-btn"
                       />
                       <q-input
@@ -344,6 +346,7 @@
                         class="quantity-input"
                         style="min-width: 100px;"
                         @update:model-value="updateQuantity(index, $event)"
+                        :readonly="hasEditPermission"
                       />
                       <q-btn
                         icon="add"
@@ -352,6 +355,7 @@
                         flat
                         @click="increaseQuantity(index)"
                         class="quantity-btn"
+                        :disable="hasEditPermission"
                       />
                     </div>
                   </div>
@@ -420,6 +424,7 @@
                     size="sm"
                     @click="quickAddProduct(product)"
                     class="quick-add-btn"
+                    :disable="hasEditPermission"
                   >
                     <q-tooltip>Agregar rápido</q-tooltip>
                   </q-btn>
@@ -430,6 +435,7 @@
                     size="sm"
                     @click="addProductWithNote(product)"
                     class="add-with-note-btn"
+                    :disable="hasEditPermission"
                   >
                     <q-tooltip>Agregar con nota</q-tooltip>
                   </q-btn>
@@ -471,7 +477,7 @@
             </div>
           </div>
           <q-btn
-            v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0"
+            v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0 && !hasEditPermission"
             label="Cobrar"
             color="positive"
             @click="openPaymentDialog"
@@ -885,6 +891,10 @@ export default {
       return this.userSession?.is_root ||
       this.userSession?.is_super_admin ||
       false
+    },
+
+    hasEditPermission () {
+      return this.userSession.roles.some(role => role.acronym === 'SEL')
     },
 
     roomOptions () {
