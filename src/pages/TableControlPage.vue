@@ -1660,12 +1660,14 @@ export default {
 
     handleClientFocus () {
       // Clear field and open dropdown automatically
-      this.tempClient = null
-      this.$nextTick(() => {
-        if (this.$refs.clientSelect) {
-          this.$refs.clientSelect.showPopup()
-        }
-      })
+      if (!this.$q.platform.is.mobile) {
+        this.tempClient = null
+        this.$nextTick(() => {
+          if (this.$refs.clientSelect) {
+            this.$refs.clientSelect.showPopup()
+          }
+        })
+      }
     },
 
     toggleClientField () {
