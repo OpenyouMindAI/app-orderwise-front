@@ -43,13 +43,15 @@
                 <!-- Plan Name -->
                 <div class="card-plan-name">{{ plan.name }}</div>
 
-                <!-- Price -->
+                <!-- Price (local currency if available) -->
                 <div class="card-price">
                   <span v-if="plan.price === 0" class="price-value">$0</span>
                   <template v-else>
-                    <span class="price-value">${{ plan.price }}</span>
+                    <span class="price-value">
+                      {{ getPlanCurrencySymbol(plan) }}{{ getPlanLocalPrice(plan) }}
+                    </span>
                   </template>
-                  <span class="price-period">/ Month</span>
+                  <span class="price-period">/ mes</span>
                 </div>
 
                 <div class="card-subtitle">{{ plan.description }}</div>
@@ -78,7 +80,7 @@
                   </div>
                 </div>
 
-                <!-- Pro Team Branch Pricing -->
+                <!-- Pro Team Branch Pricing (usa cálculo del backend con conversión) -->
                 <div v-if="plan.slug === 'pro_team'" class="branch-pricing">
                   <div class="branch-pricing-label">
                     Sucursales adicionales: ${{ plan.price_per_branch }}/mes c/u
@@ -90,14 +92,14 @@
                     dense
                     filled
                     label="Número de sucursales"
-                    @update:model-value="calculateProTeamPrice(plan)"
+                    @update:model-value="() => calculateProTeamPrice(plan)"
                   >
                     <template v-slot:prepend>
                       <q-icon name="store" size="18px" />
                     </template>
                   </q-input>
                   <div class="branch-pricing-total">
-                    Total: ${{ proTeamTotalPrice }}/mes
+                    Total: {{ getPlanCurrencySymbol(plan) }}{{ proTeamTotalPrice }}/mes
                   </div>
                 </div>
 
@@ -166,6 +168,7 @@ export default {
     const loading = ref(false)
     const branchCount = ref(1)
     const proTeamTotalPrice = ref(0)
+    const pricingByPlan = ref({})
     const showCancelDialog = ref(false)
     const cancellationReason = ref('')
 
@@ -207,11 +210,66 @@ export default {
       return date.formatDate(dateStr, 'DD/MM/YYYY')
     }
 
-    const calculateProTeamPrice = (plan) => {
-      if (plan.slug === 'pro_team') {
-        const additionalBranches = Math.max(0, branchCount.value - 1)
-        proTeamTotalPrice.value = formatNumber(parseFloat(plan.price) + (additionalBranches * parseFloat(plan.price_per_branch)))
+    const getPlanPricing = (plan) => pricingByPlan.value[plan.id] || null
+
+    const getPlanLocalPrice = (plan) => {
+      const pricing = getPlanPricing(plan)
+      if (pricing && pricing.total_price_local) {
+        return formatNumber(pricing.total_price_local)
       }
+      return formatNumber(plan.price)
+    }
+
+    const getPlanUsdPrice = (plan) => {
+      const pricing = getPlanPricing(plan)
+      const value = pricing && pricing.total_price_usd ? pricing.total_price_usd : plan.price
+      return formatNumber(value)
+    }
+
+    const getPlanCurrencySymbol = (plan) => {
+      const pricing = getPlanPricing(plan)
+      return pricing && pricing.local_currency_symbol ? pricing.local_currency_symbol : '$'
+    }
+
+    const hasExchangeInfo = (plan) => {
+      const pricing = getPlanPricing(plan)
+      return !!(pricing && pricing.exchange_rate && pricing.local_currency_code)
+    }
+
+    const getExchangeRate = (plan) => {
+      const pricing = getPlanPricing(plan)
+      return pricing ? formatNumber(pricing.exchange_rate) : null
+    }
+
+    const getLocalCurrencyCode = (plan) => {
+      const pricing = getPlanPricing(plan)
+      return pricing ? pricing.local_currency_code : null
+    }
+
+    const fetchPlanPricing = async (plan, branches) => {
+      if (plan.price === 0) return
+      try {
+        const { data } = await api.post(`subscription-plans/${plan.id}/calculate-price`, {
+          branch_count: branches
+        })
+        pricingByPlan.value = {
+          ...pricingByPlan.value,
+          [plan.id]: data
+        }
+
+        if (plan.slug === 'pro_team') {
+          proTeamTotalPrice.value = data.total_price_local
+            ? formatNumber(data.total_price_local)
+            : formatNumber(data.total_price_usd)
+        }
+      } catch (error) {
+        console.error('Error fetching plan pricing', error)
+      }
+    }
+
+    const calculateProTeamPrice = async (plan) => {
+      if (plan.slug !== 'pro_team') return
+      await fetchPlanPricing(plan, branchCount.value)
     }
 
     const loadPlans = async () => {
@@ -219,10 +277,10 @@ export default {
         const { data } = await api.get('subscription-plans')
         plans.value = data
 
-        // Calcular precio inicial de Pro Team
-        const proTeamPlan = plans.value.find(p => p.slug === 'pro_team')
-        if (proTeamPlan) {
-          calculateProTeamPrice(proTeamPlan)
+        // Cargar precios (y conversión) para todos los planes
+        for (const plan of plans.value) {
+          const branches = plan.slug === 'pro_team' ? branchCount.value : 1
+          await fetchPlanPricing(plan, branches)
         }
       } catch (error) {
         notify(error.message || 'Error al cargar planes', 'negative', 'warning')
@@ -236,6 +294,10 @@ export default {
 
         if (data.subscription && data.subscription.branch_offices_count) {
           branchCount.value = data.subscription.branch_offices_count
+          const proTeamPlan = plans.value.find(p => p.slug === 'pro_team')
+          if (proTeamPlan) {
+            await fetchPlanPricing(proTeamPlan, branchCount.value)
+          }
         }
       } catch (error) {
         console.error('Error loading subscription:', error)
@@ -352,6 +414,12 @@ export default {
       getActionLabel,
       formatDate,
       calculateProTeamPrice,
+      getPlanLocalPrice,
+      getPlanCurrencySymbol,
+      getPlanUsdPrice,
+      hasExchangeInfo,
+      getExchangeRate,
+      getLocalCurrencyCode,
       selectPlan,
       cancelSubscription
     }
@@ -460,7 +528,7 @@ export default {
 }
 
 .price-value {
-  font-size: 52px;
+  font-size: 30px;
   font-weight: 800;
   line-height: 1;
   font-family: 'Inter', sans-serif;
