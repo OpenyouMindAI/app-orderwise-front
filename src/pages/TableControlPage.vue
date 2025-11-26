@@ -241,7 +241,6 @@
               color="primary"
               size="md"
               @click.stop.prevent="toggleClientField"
-              :disable="hasEditPermission"
             >
               <q-tooltip>
                 {{ clientFieldEnabled ? 'Agregar nuevo cliente' : 'Editar cliente' }}
