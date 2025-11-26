@@ -328,6 +328,12 @@ const routes = [
         name: 'ExchangeRate',
         meta: { requiresAuth: true },
         component: () => import('src/pages/ExchangeRatePage.vue')
+      },
+      {
+        path: 'ai-chat',
+        name: 'AiChat',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/AiChatPage.vue')
       }
     ]
   },

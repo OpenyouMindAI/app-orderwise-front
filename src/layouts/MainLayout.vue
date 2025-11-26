@@ -148,6 +148,19 @@
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
 
+          <!-- Botón Chat con IA -->
+          <q-btn
+            flat
+            dense
+            icon="smart_toy"
+            round
+            color="primary"
+            @click="changeRoute('AiChat', 'Chat con IA')"
+            class="ai-chat-btn"
+          >
+            <q-tooltip>Chat con IA - Asistente Virtual</q-tooltip>
+          </q-btn>
+
           <!-- Herramientas -->
           <q-btn flat dense icon="apps" round>
           <q-tooltip class="text-body2">
@@ -918,6 +931,39 @@ export default {
             }).length > 0
           )
         })
+
+        // Agregar entrada de Chat con IA si no existe
+        const hasAiChat = this.dataMenu.some(section =>
+          section.modules.some(module => module.link === 'AiChat')
+        )
+
+        if (!hasAiChat) {
+          // Buscar sección de Herramientas o crear una nueva
+          let toolsSection = this.dataMenu.find(section =>
+            section.name === 'Herramientas' || section.name === 'Tools'
+          )
+
+          if (!toolsSection) {
+            toolsSection = {
+              id: 'tools-section',
+              name: 'Herramientas',
+              icon: 'build',
+              modules: []
+            }
+            this.dataMenu.push(toolsSection)
+          }
+
+          // Agregar módulo de Chat con IA
+          toolsSection.modules.push({
+            id: 'ai-chat-module',
+            name: 'ai-chat',
+            title: 'Chat con IA',
+            link: 'AiChat',
+            icon: 'smart_toy',
+            roles: ['super_admin', 'admin', 'user'],
+            visible: true
+          })
+        }
       }
     }
   },
@@ -2443,6 +2489,40 @@ export default {
 
 .create-btn:hover {
   transform: translateX(4px);
+}
+
+/* AI Chat Button */
+.ai-chat-btn {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.ai-chat-btn:hover {
+  transform: scale(1.1);
+}
+
+.ai-chat-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
 }
 
 /* Responsive adjustments */
