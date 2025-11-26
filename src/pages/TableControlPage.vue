@@ -355,7 +355,6 @@
                         flat
                         @click="increaseQuantity(index)"
                         class="quantity-btn"
-                        :disable="hasEditPermission"
                       />
                     </div>
                   </div>
@@ -424,7 +423,6 @@
                     size="sm"
                     @click="quickAddProduct(product)"
                     class="quick-add-btn"
-                    :disable="hasEditPermission"
                   >
                     <q-tooltip>Agregar rápido</q-tooltip>
                   </q-btn>
@@ -435,7 +433,6 @@
                     size="sm"
                     @click="addProductWithNote(product)"
                     class="add-with-note-btn"
-                    :disable="hasEditPermission"
                   >
                     <q-tooltip>Agregar con nota</q-tooltip>
                   </q-btn>
