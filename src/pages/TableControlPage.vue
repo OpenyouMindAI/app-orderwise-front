@@ -1813,7 +1813,7 @@ export default {
         } else {
           // Create new invoice
           const invoiceType = this.invoiceTypes.find(it => it.acronym_serie === 'T')
-          const typeOfService = this.typeOfServices.find(ts => ts.code === '2')
+          const typeOfService = this.typeOfServices.find(ts => Number(ts.code) === 2)
 
           if (!invoiceType || !typeOfService) {
             Notify.create({ message: 'No se pudieron encontrar los tipos de factura o servicio necesarios.', color: 'negative' })
