@@ -24,7 +24,7 @@
         <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9">
           <!-- Table Close Toggle -->
           <q-toggle
-            v-if="showTableClose"
+            v-if="showTableClose && !visibleCloseTable"
             :model-value="tableClose"
             @update:model-value="$emit('update:table-close', $event)"
             label="Cerrar mesa"
@@ -263,6 +263,10 @@ export default {
   ],
   props: {
     show: {
+      type: Boolean,
+      default: false
+    },
+    visibleCloseTable: {
       type: Boolean,
       default: false
     },
