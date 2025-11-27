@@ -156,6 +156,7 @@
             round
             color="primary"
             @click="changeRoute('AiChat', 'Chat con IA')"
+            v-if="userSession?.is_root"
             class="ai-chat-btn"
           >
             <q-tooltip>Chat con IA - Asistente Virtual</q-tooltip>
