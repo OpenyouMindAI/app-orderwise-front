@@ -2423,17 +2423,35 @@ export default {
     async exportClientStatement () {
       try {
         loading(true)
+        const params = {
+          branch_office_id: this.selectedBranchOffice || this.branchOffice?.id
+        }
+
+        // Add date filters if they exist
+        if (this.dateFilters.from) {
+          params.date_from = this.dateFilters.from
+        }
+        if (this.dateFilters.to) {
+          params.date_to = this.dateFilters.to
+        }
+
         const { data } = await this.$api.get(`client-statement/clients/${this.selectedClient.id}/export-pdf`, {
-          params: {
-            branch_office_id: this.selectedBranchOffice || this.branchOffice?.id
-          },
+          params,
           responseType: 'blob'
         })
 
         const url = window.URL.createObjectURL(new Blob([data]))
         const link = document.createElement('a')
         link.href = url
-        link.setAttribute('download', `estado-cuenta-${this.selectedClient.name}.pdf`)
+
+        // Add date range to filename if filters are applied
+        let filename = `estado-cuenta-${this.selectedClient.name}`
+        if (this.dateFilters.from || this.dateFilters.to) {
+          filename += '-filtrado'
+        }
+        filename += '.pdf'
+
+        link.setAttribute('download', filename)
         document.body.appendChild(link)
         link.click()
         link.remove()
