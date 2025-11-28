@@ -7,6 +7,85 @@
 
     <!-- Content -->
     <div v-else class="q-pa-md">
+      <!-- Rutas Predefinidas con Invoices -->
+      <div v-if="predefinedRoutes.length > 0" class="q-mb-xl">
+        <div class="text-h6 q-mb-md">
+          <q-icon name="event_repeat" color="purple" size="24px" class="q-mr-sm" />
+          Rutas Predefinidas
+        </div>
+        <q-card
+          v-for="route in predefinedRoutes"
+          :key="route.id"
+          dark
+          class="bg-grey-9 q-mb-md"
+          style="border-radius: 16px;"
+        >
+          <q-card-section>
+            <div class="text-h6 q-mb-sm">{{ route.name }}</div>
+            <div class="text-caption text-grey-5 q-mb-md">
+              {{ route.routeClients.length }} clientes con pedidos hoy
+            </div>
+
+            <!-- Clients with Invoices -->
+            <q-list dark>
+              <q-expansion-item
+                v-for="routeClient in route.routeClients"
+                :key="routeClient.id"
+                :label="routeClient.client.name"
+                :caption="`${routeClient.client.invoices.length} pedido(s)`"
+                expand-separator
+                header-class="bg-grey-8"
+              >
+                <q-card dark class="bg-grey-8">
+                  <q-card-section>
+                    <!-- Invoices -->
+                    <div v-for="invoice in routeClient.client.invoices" :key="invoice.id" class="q-mb-md">
+                      <div class="text-subtitle2 q-mb-xs">
+                        Factura {{ invoice.code }} - ${{ invoice.total?.toFixed(2) }}
+                      </div>
+                      <!-- Products -->
+                      <q-list dense dark class="bg-grey-7" style="border-radius: 8px;">
+                        <q-item v-for="product in invoice.products" :key="product.id" dense>
+                          <q-item-section>
+                            <q-item-label>{{ product.name }}</q-item-label>
+                            <q-item-label caption>
+                              Pedido: {{ product.pivot?.amount || 0 }} unidades
+                            </q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-input
+                              v-model.number="product.quantity_to_load"
+                              type="number"
+                              dense
+                              outlined
+                              dark
+                              label="Cargar"
+                              :max="product.pivot?.amount"
+                              style="width: 100px;"
+                            />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
+            </q-list>
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn
+              unelevated
+              color="positive"
+              label="Generar Ruta del Día"
+              icon="route"
+              @click="generateDailyRoute(route)"
+              :loading="generatingRoute"
+            />
+          </q-card-actions>
+        </q-card>
+      </div>
+
       <!-- Entregas Disponibles (con selección múltiple) -->
       <div v-if="invoices.length > 0">
         <div class="row items-center justify-between q-mb-md">
@@ -134,15 +213,20 @@ const $q = useQuasar()
 const invoices = ref([])
 const acceptedInvoices = ref([])
 const selectedInvoices = ref([])
+const predefinedRoutes = ref([])
 const loading = ref(false)
 const startingDelivery = ref(false)
 const optimizingRoute = ref(false)
+const generatingRoute = ref(false)
 const hasActiveRun = ref(false)
 
 onMounted(async () => {
   await checkActiveRun()
   if (!hasActiveRun.value) {
-    await fetchInvoices()
+    await Promise.all([
+      fetchPredefinedRoutes(),
+      fetchInvoices()
+    ])
   }
 })
 
@@ -299,6 +383,91 @@ async function optimizeRoute (invoices) {
   } catch (error) {
     console.error('Error optimizing route:', error)
     return invoices
+  }
+}
+
+async function fetchPredefinedRoutes () {
+  try {
+    const response = await api.get('/delivery-routes/predefined-with-invoices')
+    predefinedRoutes.value = response.data.routes || []
+    
+    // Initialize quantity_to_load for all products
+    predefinedRoutes.value.forEach(route => {
+      route.routeClients.forEach(routeClient => {
+        routeClient.client.invoices.forEach(invoice => {
+          invoice.products.forEach(product => {
+            product.quantity_to_load = product.pivot?.amount || 0
+          })
+        })
+      })
+    })
+  } catch (error) {
+    console.error('Error fetching predefined routes:', error)
+  }
+}
+
+async function generateDailyRoute (route) {
+  generatingRoute.value = true
+  
+  try {
+    // Collect all invoices with selected products
+    const invoices = []
+    
+    route.routeClients.forEach(routeClient => {
+      routeClient.client.invoices.forEach(invoice => {
+        const products = invoice.products
+          .filter(p => p.quantity_to_load > 0)
+          .map(p => ({
+            product_id: p.id,
+            quantity_loaded: p.quantity_to_load
+          }))
+        
+        if (products.length > 0) {
+          invoices.push({
+            invoice_id: invoice.id,
+            products
+          })
+        }
+      })
+    })
+    
+    if (invoices.length === 0) {
+      $q.notify({
+        type: 'warning',
+        message: 'Debes seleccionar al menos un producto para cargar',
+        position: 'top'
+      })
+      return
+    }
+    
+    // Generate route from invoices
+    const response = await api.post('/delivery-routes/generate-from-invoices', {
+      predefined_route_id: route.id,
+      invoices
+    })
+    
+    const generatedRoute = response.data.route
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Ruta del día generada exitosamente',
+      position: 'top'
+    })
+    
+    // Navigate to active delivery route
+    router.push({
+      name: 'ActiveDeliveryRoute',
+      params: { id: generatedRoute.id }
+    })
+  } catch (error) {
+    console.error('Error generating daily route:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Error al generar ruta',
+      position: 'top'
+    })
+  } finally {
+    generatingRoute.value = false
   }
 }
 

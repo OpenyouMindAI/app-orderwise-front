@@ -251,6 +251,25 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/ActiveInvoiceDeliveryPage.vue')
       },
+      // Delivery Route Management System
+      {
+        path: 'delivery-routes',
+        name: 'DeliveryRoute',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DeliveryRoutesPage.vue')
+      },
+      {
+        path: 'delivery-routes/builder/:id?',
+        name: 'DeliveryRouteBuilder',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DeliveryRouteBuilderPage.vue')
+      },
+      {
+        path: 'delivery-routes/active/:id',
+        name: 'ActiveDeliveryRoute',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ActiveDeliveryRoutePage.vue')
+      },
       {
         path: 'inventory-count',
         name: 'InventoryCount',
