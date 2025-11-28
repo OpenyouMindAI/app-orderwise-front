@@ -39,6 +39,11 @@ export const authentication = defineStore('authentication', {
        */
       branchOffice: null,
       /**
+       * Hide amounts in accounts receivable
+       * @type {Boolean}
+       */
+      hideAmounts: localStorage.getItem('hideAmounts') === 'true' || false
+      /**
        * Is demo account
        * @type {Boolean}
        */
@@ -103,6 +108,13 @@ export const authentication = defineStore('authentication', {
       } catch (error) {
         throw error.response.data
       }
+    },
+    /**
+     * Toggle hide amounts
+     */
+    toggleHideAmounts () {
+      this.hideAmounts = !this.hideAmounts
+      localStorage.setItem('hideAmounts', this.hideAmounts)
     },
     /**
      * Set company session
