@@ -11,35 +11,14 @@
           Gestiona y monitorea las rutas de entrega
         </div>
       </div>
-      <q-btn-dropdown
+      <q-btn
         unelevated
         color="positive"
         label="Nueva Ruta"
         icon="add"
-      >
-        <q-list>
-          <q-item clickable v-close-popup @click="createRoute('dynamic')">
-            <q-item-section avatar>
-              <q-icon name="edit_road" color="blue" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>Ruta Dinámica</q-item-label>
-              <q-item-label caption>Crear ruta manual con clientes y productos</q-item-label>
-            </q-item-section>
-          </q-item>
-          <q-item clickable v-close-popup @click="createRoute('predefined')">
-            <q-item-section avatar>
-              <q-icon name="event_repeat" color="purple" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>Ruta Predefinida</q-item-label>
-              <q-item-label caption>Crear ruta fija con clientes recurrentes</q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-btn-dropdown>
+        @click="createRoute()"
+      />
     </div>
-
 
     <!-- Routes List -->
     <q-card flat bordered>
@@ -51,7 +30,7 @@
           :loading="loading"
           :filter="filter"
           flat
-          :pagination.sync="paginationConfig"
+          v-model:pagination="paginationConfig"
           @request="setPagination"
         >
           <template v-slot:top-right>
@@ -68,20 +47,6 @@
             <q-td :props="props">
               <div class="text-weight-medium">{{ props.row.route_number }}</div>
               <div class="text-caption text-grey-7">{{ props.row.name }}</div>
-            </q-td>
-          </template>
-
-          <template v-slot:body-cell-route_type="props">
-            <q-td :props="props">
-              <q-chip
-                :color="props.row.route_type === 'predefined' ? 'purple' : 'blue'"
-                text-color="white"
-                dense
-                size="sm"
-                :icon="props.row.route_type === 'predefined' ? 'event_repeat' : 'edit_road'"
-              >
-                {{ props.row.route_type === 'predefined' ? 'Predefinida' : 'Dinámica' }}
-              </q-chip>
             </q-td>
           </template>
 
@@ -105,23 +70,6 @@
                 {{ props.row.courier.name }}
               </div>
               <div v-else class="text-grey-6">Sin asignar</div>
-            </q-td>
-          </template>
-
-          <template v-slot:body-cell-progress="props">
-            <q-td :props="props">
-              <div class="row items-center">
-                <div class="col">
-                  <q-linear-progress
-                    :value="props.row.completed_stops / props.row.total_stops"
-                    color="positive"
-                    style="height: 8px; border-radius: 4px;"
-                  />
-                </div>
-                <div class="q-ml-sm text-caption">
-                  {{ props.row.completed_stops }}/{{ props.row.total_stops }}
-                </div>
-              </div>
             </q-td>
           </template>
 
@@ -162,30 +110,6 @@
                 @click="editRoute(props.row)"
               >
                 <q-tooltip>Editar</q-tooltip>
-              </q-btn>
-              <q-btn
-                v-if="props.row.status === 'assigned'"
-                flat
-                dense
-                round
-                icon="play_arrow"
-                color="positive"
-                size="sm"
-                @click="startRoute(props.row)"
-              >
-                <q-tooltip>Iniciar ruta</q-tooltip>
-              </q-btn>
-              <q-btn
-                v-if="props.row.status === 'in_progress'"
-                flat
-                dense
-                round
-                icon="map"
-                color="orange"
-                size="sm"
-                @click="viewActiveRoute(props.row)"
-              >
-                <q-tooltip>Ver ruta activa</q-tooltip>
               </q-btn>
               <q-btn
                 v-if="props.row.status === 'draft'"
@@ -253,20 +177,23 @@
                 </q-avatar>
               </q-item-section>
               <q-item-section>
-                <q-item-label>{{ stop.client?.name }}</q-item-label>
-                <q-item-label caption>
-                  {{ stop.products?.length || 0 }} productos
+                <q-item-label>{{ stop.client?.name || 'Cliente' }}</q-item-label>
+                <q-item-label caption v-if="stop.client?.address">
+                  <q-icon name="place" size="12px" />
+                  {{ getClientAddress(stop.client) }}
                 </q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-chip
-                  :color="getStopColor(stop.delivery_status)"
-                  text-color="white"
-                  dense
-                  size="sm"
-                >
-                  {{ getStopLabel(stop.delivery_status) }}
-                </q-chip>
+                <div class="text-caption text-grey-7">
+                  <div v-if="stop.distance_text">
+                    <q-icon name="route" size="14px" />
+                    {{ stop.distance_text }}
+                  </div>
+                  <div v-if="stop.duration_text">
+                    <q-icon name="schedule" size="14px" />
+                    {{ stop.duration_text }}
+                  </div>
+                </div>
               </q-item-section>
             </q-item>
           </q-list>
@@ -327,13 +254,6 @@ const columns = [
     sortable: true
   },
   {
-    name: 'route_type',
-    label: 'Tipo',
-    field: 'route_type',
-    align: 'center',
-    sortable: true
-  },
-  {
     name: 'status',
     label: 'Estado',
     field: 'status',
@@ -348,12 +268,6 @@ const columns = [
     sortable: true
   },
   {
-    name: 'progress',
-    label: 'Progreso',
-    field: 'progress',
-    align: 'left'
-  },
-  {
     name: 'distance',
     label: 'Distancia/Tiempo',
     field: 'total_distance_km',
@@ -365,15 +279,6 @@ const columns = [
     field: 'actions',
     align: 'center'
   }
-]
-
-// Status options
-const statusOptions = [
-  { label: 'Borrador', value: 'draft' },
-  { label: 'Asignada', value: 'assigned' },
-  { label: 'En Progreso', value: 'in_progress' },
-  { label: 'Completada', value: 'completed' },
-  { label: 'Cancelada', value: 'cancelled' }
 ]
 
 onMounted(() => {
@@ -432,17 +337,8 @@ function applyFilters (dataEqualFilter) {
   getRoutes(params.value)
 }
 
-function clearFilters () {
-  params.value.dataEqualFilter = {}
-  params.value.page = 1
-  getRoutes(params.value)
-}
-
-function createRoute (routeType = 'dynamic') {
-  router.push({ 
-    name: 'DeliveryRouteBuilder',
-    query: { type: routeType }
-  })
+function createRoute () {
+  router.push({ name: 'DeliveryRouteBuilder' })
 }
 
 function editRoute (route) {
@@ -452,36 +348,6 @@ function editRoute (route) {
 function viewRoute (route) {
   selectedRoute.value = route
   showDetailsDialog.value = true
-}
-
-function viewActiveRoute (route) {
-  router.push({ name: 'ActiveDeliveryRoute', params: { id: route.id } })
-}
-
-async function startRoute (route) {
-  $q.dialog({
-    title: 'Confirmar',
-    message: `¿Iniciar la ruta ${route.route_number}?`,
-    cancel: true,
-    persistent: true
-  }).onOk(async () => {
-    try {
-      await api.post(`delivery-routes/${route.id}/start`)
-
-      $q.notify({
-        type: 'positive',
-        message: 'Ruta iniciada exitosamente'
-      })
-
-      getRoutes(params.value)
-    } catch (error) {
-      console.error('Error starting route:', error)
-      $q.notify({
-        type: 'negative',
-        message: error.response?.data?.message || 'Error al iniciar la ruta'
-      })
-    }
-  })
 }
 
 async function deleteRoute (route) {
@@ -543,14 +409,17 @@ function getStopColor (status) {
   return colors[status] || 'grey'
 }
 
-function getStopLabel (status) {
-  const labels = {
-    pending: 'Pendiente',
-    arrived: 'Llegó',
-    delivered: 'Entregado',
-    failed: 'Fallido',
-    skipped: 'Omitido'
+function getClientAddress (client) {
+  if (!client?.address) return ''
+
+  if (typeof client.address === 'string') {
+    return client.address
   }
-  return labels[status] || status
+
+  if (typeof client.address === 'object') {
+    return client.address.formattedAddress || client.address.street || ''
+  }
+
+  return ''
 }
 </script>

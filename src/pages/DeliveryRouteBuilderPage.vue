@@ -8,27 +8,18 @@
           {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
         </div>
         <div class="text-caption text-grey-7">
-          {{ deliveryRoute?.name || 'Construye tu ruta de entrega dinámicamente' }}
+          {{ deliveryRoute?.name || routeForm.name || 'Construye tu ruta de entrega' }}
         </div>
       </div>
       <div class="row q-gutter-sm">
         <q-btn
-          v-if="deliveryRoute && deliveryRoute.status === 'draft'"
-          outline
-          color="primary"
-          label="Optimizar Ruta"
-          icon="auto_fix_high"
-          @click="optimizeRoute"
-          :loading="optimizing"
-        />
-        <q-btn
-          v-if="deliveryRoute && (deliveryRoute.status === 'draft' || deliveryRoute.status === 'assigned')"
           unelevated
           color="positive"
           label="Guardar Ruta"
           icon="save"
           @click="saveRoute"
           :loading="saving"
+          :disable="stops.length === 0"
         />
         <q-btn
           flat
@@ -50,38 +41,6 @@
               Configuración de Ruta
             </div>
 
-            <!-- Route Type -->
-            <q-select
-              v-model="routeForm.route_type"
-              :options="routeTypeOptions"
-              label="Tipo de Ruta"
-              outlined
-              dense
-              class="q-mb-md"
-              :disable="!!deliveryRoute"
-            >
-              <template v-slot:prepend>
-                <q-icon :name="routeForm.route_type === 'predefined' ? 'event_repeat' : 'edit_road'" />
-              </template>
-            </q-select>
-
-            <!-- Operating Days (only for predefined) -->
-            <q-select
-              v-if="routeForm.route_type === 'predefined'"
-              v-model="routeForm.operating_days"
-              :options="daysOfWeek"
-              label="Días de Operación"
-              outlined
-              dense
-              multiple
-              use-chips
-              class="q-mb-md"
-            >
-              <template v-slot:prepend>
-                <q-icon name="calendar_today" />
-              </template>
-            </q-select>
-
             <!-- Route Name -->
             <q-input
               v-model="routeForm.name"
@@ -101,9 +60,13 @@
               outlined
               dense
               clearable
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
               class="q-mb-md"
               @update:model-value="onCourierChange"
-              @popup-show="loadCouriers"
+              @filter="filterCouriers"
             >
               <template v-slot:prepend>
                 <q-icon name="person" />
@@ -119,8 +82,12 @@
               label="Sucursal de Origen"
               outlined
               dense
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
               class="q-mb-md"
-              @popup-show="loadBranches"
+              @filter="filterBranches"
             >
               <template v-slot:prepend>
                 <q-icon name="store" />
@@ -174,16 +141,17 @@
             <!-- Client Search -->
             <q-select
               v-model="selectedClient"
-              :options="filteredClients"
+              :options="clients"
               option-label="name"
               option-value="id"
               label="Buscar Cliente"
               outlined
               dense
               use-input
-              input-debounce="300"
+              hide-selected
+              fill-input
+              input-debounce="0"
               @filter="filterClients"
-              @popup-show="() => loadClients()"
               class="q-mb-md"
             >
               <template v-slot:prepend>
@@ -211,11 +179,11 @@
             <q-btn
               unelevated
               color="positive"
-              :label="routeForm.route_type === 'predefined' ? 'Agregar Cliente' : 'Agregar a Ruta'"
+              label="Agregar Cliente"
               icon="add"
               class="full-width"
               :disable="!selectedClient"
-              @click="routeForm.route_type === 'predefined' ? addClientToPredefinedRoute() : showProductDialog = true"
+              @click="addClientToPredefinedRoute()"
             />
           </q-card-section>
         </q-card>
@@ -223,12 +191,35 @@
         <!-- Stops List with Drag & Drop -->
         <q-card class="q-mt-md">
           <q-card-section>
-            <div class="text-h6 q-mb-md">
-              <q-icon name="list" color="primary" />
-              Orden de Paradas ({{ stops.length }})
-              <q-chip v-if="stops.length > 0" dense color="grey-3" class="q-ml-sm">
-                Arrastra para reordenar
-              </q-chip>
+            <div class="row items-center q-mb-md">
+              <div class="col">
+                <div class="text-h6">
+                  <q-icon name="list" color="primary" />
+                  Orden de Paradas ({{ stops.length }})
+                </div>
+                <div v-if="totalDistance || totalDuration" class="text-caption text-grey-7 q-mt-xs">
+                  <q-icon name="route" size="14px" />
+                  {{ totalDistance }}
+                  <span v-if="totalDuration">
+                    • <q-icon name="schedule" size="14px" />
+                    {{ totalDuration }}
+                  </span>
+                </div>
+              </div>
+              <div class="col-auto">
+                <q-btn
+                  v-if="stops.length > 1"
+                  unelevated
+                  color="primary"
+                  icon="route"
+                  label="Optimizar Ruta"
+                  size="sm"
+                  @click="optimizeRoute"
+                  :loading="optimizing"
+                >
+                  <q-tooltip>Reordenar paradas para minimizar distancia y tiempo</q-tooltip>
+                </q-btn>
+              </div>
             </div>
 
             <div v-if="stops.length === 0" class="text-center text-grey-6 q-py-lg">
@@ -271,12 +262,22 @@
                           {{ element.client?.name }}
                         </div>
                         <div class="text-caption text-grey-7">
-                          {{ element.products?.length || 0 }} productos
-                          <span v-if="element.distance_from_previous_km">
-                            • {{ element.distance_from_previous_km }} km
+                          <span v-if="element.distance_text">
+                            <q-icon name="route" size="14px" />
+                            {{ element.distance_text }}
                           </span>
-                          <span v-if="element.estimated_time_from_previous_minutes">
-                            • {{ element.estimated_time_from_previous_minutes }} min
+                          <span v-if="element.duration_text">
+                            <span v-if="element.distance_text"> • </span>
+                            <q-icon name="schedule" size="14px" />
+                            {{ element.duration_text }}
+                          </span>
+                          <span v-if="!element.distance_text && !element.duration_text && index === 0">
+                            <q-icon name="flag" size="14px" />
+                            Punto de inicio
+                          </span>
+                          <span v-if="!element.distance_text && !element.duration_text && index > 0" class="text-orange">
+                            <q-icon name="pending" size="14px" />
+                            Calculando ruta...
                           </span>
                         </div>
                         <div v-if="element.client?.opening_hours" class="text-caption text-primary">
@@ -311,108 +312,6 @@
         </q-card>
       </div>
     </div>
-
-    <!-- Product Selection Dialog (only for dynamic routes) -->
-    <q-dialog v-if="routeForm.route_type === 'dynamic'" v-model="showProductDialog" persistent>
-      <q-card style="min-width: 600px;">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Productos para {{ selectedClient?.name }}</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
-        </q-card-section>
-
-        <q-card-section>
-          <!-- Product Search -->
-          <q-input
-            v-model="productSearch"
-            label="Buscar producto"
-            outlined
-            dense
-            class="q-mb-md"
-            @update:model-value="(val) => loadProducts(val)"
-            debounce="300"
-          >
-            <template v-slot:prepend>
-              <q-icon name="search" />
-            </template>
-          </q-input>
-
-          <!-- Selected Products -->
-          <div class="text-subtitle2 q-mb-sm">Productos Seleccionados ({{ selectedProducts.length }})</div>
-          <q-list bordered separator class="rounded-borders q-mb-md" style="max-height: 300px; overflow-y: auto;">
-            <q-item v-for="(item, index) in selectedProducts" :key="index">
-              <q-item-section avatar>
-                <q-avatar color="primary" text-color="white">
-                  {{ index + 1 }}
-                </q-avatar>
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>{{ item.product.name }}</q-item-label>
-                <q-item-label caption>
-                  Precio: ${{ item.unit_price }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <div class="row items-center q-gutter-sm">
-                  <q-input
-                    v-model.number="item.quantity_ordered"
-                    type="number"
-                    dense
-                    outlined
-                    style="width: 80px;"
-                    label="Cant."
-                    min="0"
-                    step="0.01"
-                  />
-                  <q-btn
-                    flat
-                    dense
-                    round
-                    icon="delete"
-                    color="negative"
-                    size="sm"
-                    @click="removeProduct(index)"
-                  />
-                </div>
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <!-- Available Products -->
-          <div class="text-subtitle2 q-mb-sm">Productos Disponibles</div>
-          <q-list bordered separator class="rounded-borders" style="max-height: 200px; overflow-y: auto;">
-            <q-item
-              v-for="product in filteredProducts"
-              :key="product.id"
-              clickable
-              @click="addProduct(product)"
-            >
-              <q-item-section>
-                <q-item-label>{{ product.name }}</q-item-label>
-                <q-item-label caption>
-                  Stock: {{ product.stock }} • Precio: ${{ product.price }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-icon name="add_circle" color="positive" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Cancelar" color="grey-7" v-close-popup />
-          <q-btn
-            unelevated
-            label="Agregar a Ruta"
-            color="positive"
-            :disable="selectedProducts.length === 0"
-            @click="addStopToRoute"
-            :loading="addingStop"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
@@ -439,67 +338,60 @@ const selectedStop = ref(null)
 const couriers = ref([])
 const branches = ref([])
 const clients = ref([])
-const filteredClients = ref([])
-const products = ref([])
 const selectedClient = ref(null)
-const selectedProducts = ref([])
-const productSearch = ref('')
-const showProductDialog = ref(false)
 const saving = ref(false)
 const optimizing = ref(false)
-const addingStop = ref(false)
 
 // Form
 const routeForm = ref({
   name: '',
-  route_type: 'dynamic',
-  operating_days: [],
   courier: null,
   origin_branch: null,
   notes: ''
 })
-
-// Route type options
-const routeTypeOptions = [
-  { label: 'Dinámica', value: 'dynamic' },
-  { label: 'Predefinida', value: 'predefined' }
-]
-
-// Days of week
-const daysOfWeek = [
-  { label: 'Lunes', value: 'monday' },
-  { label: 'Martes', value: 'tuesday' },
-  { label: 'Miércoles', value: 'wednesday' },
-  { label: 'Jueves', value: 'thursday' },
-  { label: 'Viernes', value: 'friday' },
-  { label: 'Sábado', value: 'saturday' },
-  { label: 'Domingo', value: 'sunday' }
-]
 
 // Map markers and paths
 const originMarker = ref(null)
 const stopMarkers = ref([])
 const routePaths = ref([])
 
-// Computed
-const filteredProducts = computed(() => {
-  if (!productSearch.value) return products.value
+// Computed properties
+const totalDistance = computed(() => {
+  if (stops.value.length === 0) return ''
 
-  const search = productSearch.value.toLowerCase()
-  return products.value.filter(p =>
-    p.name.toLowerCase().includes(search) ||
-    p.barcode?.toLowerCase().includes(search)
-  )
+  const totalMeters = stops.value.reduce((sum, stop) => {
+    return sum + (stop.distance_value || 0)
+  }, 0)
+
+  if (totalMeters === 0) return ''
+
+  if (totalMeters >= 1000) {
+    return `${(totalMeters / 1000).toFixed(1)} km`
+  }
+  return `${totalMeters} m`
+})
+
+const totalDuration = computed(() => {
+  if (stops.value.length === 0) return ''
+
+  const totalSeconds = stops.value.reduce((sum, stop) => {
+    return sum + (stop.duration_value || 0)
+  }, 0)
+
+  if (totalSeconds === 0) return ''
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours} h ${minutes} min`
+  }
+  return `${minutes} min`
 })
 
 onMounted(async () => {
   await loadInitialData()
   await initializeMap()
-
-  // Set route type from query parameter
-  if (routeParams.query.type) {
-    routeForm.value.route_type = routeParams.query.type
-  }
 
   if (routeParams.params.id) {
     await loadRoute()
@@ -525,58 +417,79 @@ async function loadInitialData () {
   // No cargar nada al inicio - se cargará bajo demanda
 }
 
-async function loadCouriers () {
-  if (couriers.value.length > 0) return
-  try {
-    const { data } = await api.get('delivery-persons')
-    couriers.value = data || []
-  } catch (error) {
-    console.error('Error loading couriers:', error)
-  }
+function filterCouriers (value, update) {
+  api.get('delivery-persons', {
+    params: {
+      sortBy: 'id',
+      sortOrder: 'desc',
+      dataSearch: {
+        name: value
+      }
+    }
+  })
+    .then(({ data }) => {
+      update(() => {
+        couriers.value = data || []
+      })
+    })
+    .catch(err => {
+      console.error('Error loading couriers:', err)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al buscar repartidores',
+        icon: 'warning'
+      })
+    })
 }
 
-async function loadBranches () {
-  if (branches.value.length > 0) return
-  try {
-    const branchesRes = await api.get('/branch-offices')
-    branches.value = branchesRes.data || []
-  } catch (error) {
-    console.error('Error loading branches:', error)
-  }
-}
-
-async function loadClients (searchTerm = '') {
-  try {
-    const params = searchTerm ? { search: searchTerm } : {}
-    const clientsRes = await api.get('clients', { params })
-    clients.value = clientsRes.data || []
-    filteredClients.value = clients.value
-  } catch (error) {
-    console.error('Error loading clients:', error)
-  }
-}
-
-async function loadProducts (searchTerm = '') {
-  try {
-    const params = searchTerm ? { search: searchTerm } : {}
-    const productsRes = await api.get('products', { params })
-    products.value = productsRes.data || []
-  } catch (error) {
-    console.error('Error loading products:', error)
-  }
+function filterBranches (value, update) {
+  api.get('/branch-offices', {
+    params: {
+      sortBy: 'id',
+      sortOrder: 'desc',
+      dataSearch: {
+        name: value
+      }
+    }
+  })
+    .then(({ data }) => {
+      update(() => {
+        branches.value = data || []
+      })
+    })
+    .catch(err => {
+      console.error('Error loading branches:', err)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al buscar sucursales',
+        icon: 'warning'
+      })
+    })
 }
 
 async function loadRoute () {
   try {
     const response = await api.get(`/delivery-routes/${routeParams.params.id}`)
     deliveryRoute.value = response.data.route
-    stops.value = deliveryRoute.value.stops || []
+
+    // Process stops to ensure they have all client data
+    stops.value = (deliveryRoute.value.stops || []).map(stop => ({
+      ...stop,
+      client_id: stop.client_id || stop.client?.id,
+      latitude: stop.latitude || stop.client?.latitude,
+      longitude: stop.longitude || stop.client?.longitude,
+      // Preserve distance and duration if they exist
+      distance_text: stop.distance_text,
+      duration_text: stop.duration_text,
+      distance_value: stop.distance_value,
+      duration_value: stop.duration_value
+    }))
 
     // Populate form
     routeForm.value = {
       name: deliveryRoute.value.name || '',
       courier: deliveryRoute.value.courier || null,
-      origin_branch: deliveryRoute.value.originBranch || null,
+      origin_branch: deliveryRoute.value.originBranch || deliveryRoute.value.origin_branch || null,
       notes: deliveryRoute.value.notes || ''
     }
 
@@ -693,8 +606,77 @@ async function updateMapRoute () {
     map.value.fitBounds(bounds)
   }
 
-  // Draw route
+  // Draw route and calculate distances
   await drawRoute()
+  await calculateDistancesAndTimes()
+}
+
+async function calculateDistancesAndTimes () {
+  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+    return
+  }
+
+  const distanceMatrixService = new google.maps.DistanceMatrixService()
+
+  // Get origin coordinates
+  const origin = routeForm.value.origin_branch
+  const originAddress = origin.address || {}
+  const originLat = originAddress.latitude || origin.latitude
+  const originLng = originAddress.longitude || origin.longitude
+
+  if (!originLat || !originLng) return
+
+  // Calculate distance and time for each stop
+  for (let i = 0; i < stops.value.length; i++) {
+    const stop = stops.value[i]
+    const stopLat = stop.latitude
+    const stopLng = stop.longitude
+
+    if (!stopLat || !stopLng) continue
+
+    // Determine origin for this stop (previous stop or branch)
+    let fromLat, fromLng
+    if (i === 0) {
+      fromLat = originLat
+      fromLng = originLng
+    } else {
+      const prevStop = stops.value[i - 1]
+      fromLat = prevStop.latitude
+      fromLng = prevStop.longitude
+    }
+
+    if (!fromLat || !fromLng) continue
+
+    try {
+      const result = await new Promise((resolve, reject) => {
+        distanceMatrixService.getDistanceMatrix(
+          {
+            origins: [{ lat: parseFloat(fromLat), lng: parseFloat(fromLng) }],
+            destinations: [{ lat: parseFloat(stopLat), lng: parseFloat(stopLng) }],
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.METRIC
+          },
+          (response, status) => {
+            if (status === 'OK') {
+              resolve(response)
+            } else {
+              reject(status)
+            }
+          }
+        )
+      })
+
+      if (result.rows[0]?.elements[0]?.status === 'OK') {
+        const element = result.rows[0].elements[0]
+        stop.distance_text = element.distance.text
+        stop.duration_text = element.duration.text
+        stop.distance_value = element.distance.value // meters
+        stop.duration_value = element.duration.value // seconds
+      }
+    } catch (error) {
+      console.error('Error calculating distance:', error)
+    }
+  }
 }
 
 async function drawRoute () {
@@ -752,16 +734,30 @@ async function drawRoute () {
   }
 }
 
-async function filterClients (val, update) {
-  if (val === '') {
-    update(async () => {
-      await loadClients()
+function filterClients (value, update) {
+  api.get('clients', {
+    params: {
+      sortBy: 'id',
+      sortOrder: 'desc',
+      dataSearch: {
+        name: value,
+        document_number: value
+      }
+    }
+  })
+    .then(({ data }) => {
+      update(() => {
+        clients.value = data
+      })
     })
-  } else {
-    update(async () => {
-      await loadClients(val)
+    .catch(err => {
+      console.error('Error loading clients:', err)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al buscar clientes',
+        icon: 'warning'
+      })
     })
-  }
 }
 
 function getClientAddress (client) {
@@ -783,29 +779,6 @@ function getOpeningHoursText (openingHours) {
   if (!todayHours) return 'Cerrado hoy'
 
   return `${todayHours.open} - ${todayHours.close}`
-}
-
-function addProduct (product) {
-  const existing = selectedProducts.value.find(p => p.product.id === product.id)
-  if (existing) {
-    $q.notify({
-      type: 'warning',
-      message: 'Producto ya agregado'
-    })
-    return
-  }
-
-  selectedProducts.value.push({
-    product,
-    product_id: product.id,
-    quantity_ordered: 1,
-    quantity_loaded: 1,
-    unit_price: product.price
-  })
-}
-
-function removeProduct (index) {
-  selectedProducts.value.splice(index, 1)
 }
 
 async function addClientToPredefinedRoute () {
@@ -838,77 +811,33 @@ async function addClientToPredefinedRoute () {
   updateMapRoute()
 }
 
-async function addStopToRoute () {
-  if (!selectedClient.value || selectedProducts.value.length === 0) {
-    return
-  }
-
-  if (!deliveryRoute.value) {
-    // Create route first
-    await createRoute()
-  }
-
-  addingStop.value = true
-
-  try {
-    const response = await api.post(`/delivery-routes/${deliveryRoute.value.id}/stops`, {
-      client_id: selectedClient.value.id,
-      products: selectedProducts.value.map(p => ({
-        product_id: p.product_id,
-        quantity_ordered: p.quantity_ordered,
-        quantity_loaded: p.quantity_loaded || p.quantity_ordered,
-        unit_price: p.unit_price
-      }))
-    })
-
-    stops.value.push(response.data.stop)
-
-    $q.notify({
-      type: 'positive',
-      message: 'Parada agregada exitosamente'
-    })
-
-    // Reset
-    selectedClient.value = null
-    selectedProducts.value = []
-    showProductDialog.value = false
-
-    // Update map
-    await nextTick()
-    updateMapRoute()
-  } catch (error) {
-    console.error('Error adding stop:', error)
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Error al agregar parada'
-    })
-  } finally {
-    addingStop.value = false
-  }
-}
-
 async function createRoute () {
   try {
     const payload = {
       name: routeForm.value.name || 'Nueva Ruta',
-      route_type: routeForm.value.route_type,
+      route_type: 'predefined',
       courier_id: routeForm.value.courier?.id,
       origin_branch_id: routeForm.value.origin_branch?.id,
       notes: routeForm.value.notes
     }
 
-    // Add operating days for predefined routes
-    if (routeForm.value.route_type === 'predefined') {
-      payload.operating_days = routeForm.value.operating_days.map(d => d.value || d)
-      
-      // Add clients from stops for predefined routes
-      if (stops.value.length > 0) {
-        payload.clients = stops.value.map((stop, index) => ({
-          client_id: stop.client_id,
-          stop_order: index + 1,
-          estimated_time_minutes: 15
-        }))
-      }
+    // Add clients from stops for predefined routes
+    if (stops.value.length > 0) {
+      payload.clients = stops.value.map((stop, index) => ({
+        client_id: stop.client_id,
+        stop_order: index + 1,
+        estimated_time_minutes: stop.estimated_time_minutes || 15,
+        // Include distance and time data if available
+        distance_from_previous_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
+        estimated_time_from_previous_minutes: stop.duration_value ? Math.round(stop.duration_value / 60) : null
+      }))
+
+      // Calculate totals
+      const totalDistance = stops.value.reduce((sum, stop) => sum + (stop.distance_value || 0), 0)
+      const totalDuration = stops.value.reduce((sum, stop) => sum + (stop.duration_value || 0), 0)
+
+      payload.total_distance_km = totalDistance > 0 ? (totalDistance / 1000).toFixed(2) : null
+      payload.estimated_duration_minutes = totalDuration > 0 ? Math.round(totalDuration / 60) : null
     }
 
     const response = await api.post('/delivery-routes', payload)
@@ -940,17 +869,41 @@ async function saveRoute () {
   saving.value = true
 
   try {
-    await api.patch(`/delivery-routes/${deliveryRoute.value.id}`, {
+    const payload = {
       name: routeForm.value.name,
       courier_id: routeForm.value.courier?.id,
       origin_branch_id: routeForm.value.origin_branch?.id,
       notes: routeForm.value.notes
-    })
+    }
+
+    // Include clients/stops for predefined routes
+    if (stops.value.length > 0) {
+      payload.clients = stops.value.map((stop, index) => ({
+        client_id: stop.client_id,
+        stop_order: index + 1,
+        estimated_time_minutes: stop.estimated_time_minutes || 15,
+        // Include distance and time data if available
+        distance_from_previous_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
+        estimated_time_from_previous_minutes: stop.duration_value ? Math.round(stop.duration_value / 60) : null
+      }))
+
+      // Calculate totals
+      const totalDistance = stops.value.reduce((sum, stop) => sum + (stop.distance_value || 0), 0)
+      const totalDuration = stops.value.reduce((sum, stop) => sum + (stop.duration_value || 0), 0)
+
+      payload.total_distance_km = totalDistance > 0 ? (totalDistance / 1000).toFixed(2) : null
+      payload.estimated_duration_minutes = totalDuration > 0 ? Math.round(totalDuration / 60) : null
+    }
+
+    await api.patch(`/delivery-routes/${deliveryRoute.value.id}`, payload)
 
     $q.notify({
       type: 'positive',
       message: 'Ruta guardada exitosamente'
     })
+
+    // Reload route to get updated data
+    await loadRoute()
   } catch (error) {
     console.error('Error saving route:', error)
     $q.notify({
@@ -959,6 +912,81 @@ async function saveRoute () {
     })
   } finally {
     saving.value = false
+  }
+}
+
+async function optimizeRoute () {
+  if (stops.value.length < 2 || !routeForm.value.origin_branch) {
+    return
+  }
+
+  optimizing.value = true
+
+  try {
+    // Get origin coordinates
+    const origin = routeForm.value.origin_branch
+    const originAddress = origin.address || {}
+    const originLat = originAddress.latitude || origin.latitude
+    const originLng = originAddress.longitude || origin.longitude
+
+    if (!originLat || !originLng) {
+      throw new Error('No se pudo obtener la ubicación de la sucursal')
+    }
+
+    // Prepare waypoints for optimization
+    const waypoints = stops.value.map(stop => ({
+      location: {
+        lat: parseFloat(stop.latitude),
+        lng: parseFloat(stop.longitude)
+      },
+      stopover: true
+    }))
+
+    // Use Google Directions Service with waypoint optimization
+    const directionsService = new google.maps.DirectionsService()
+
+    const result = await new Promise((resolve, reject) => {
+      directionsService.route(
+        {
+          origin: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+          destination: { lat: parseFloat(originLat), lng: parseFloat(originLng) }, // Return to origin
+          waypoints,
+          optimizeWaypoints: true,
+          travelMode: google.maps.TravelMode.DRIVING
+        },
+        (response, status) => {
+          if (status === 'OK') {
+            resolve(response)
+          } else {
+            reject(status)
+          }
+        }
+      )
+    })
+
+    // Get optimized order
+    const optimizedOrder = result.routes[0].waypoint_order
+
+    // Reorder stops based on optimization
+    const optimizedStops = optimizedOrder.map(index => stops.value[index])
+    stops.value = optimizedStops
+
+    $q.notify({
+      type: 'positive',
+      message: 'Ruta optimizada exitosamente',
+      caption: 'Las paradas se reordenaron para minimizar distancia y tiempo'
+    })
+
+    // Map will update automatically via watch
+  } catch (error) {
+    console.error('Error optimizing route:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al optimizar la ruta',
+      caption: error.message || 'Intenta nuevamente'
+    })
+  } finally {
+    optimizing.value = false
   }
 }
 
@@ -1013,40 +1041,6 @@ async function removeStop (stop) {
       })
     }
   })
-}
-
-async function optimizeRoute () {
-  if (!deliveryRoute.value || stops.value.length < 2) {
-    $q.notify({
-      type: 'warning',
-      message: 'Se necesitan al menos 2 paradas para optimizar'
-    })
-    return
-  }
-
-  optimizing.value = true
-
-  try {
-    const response = await api.post(`/delivery-routes/${deliveryRoute.value.id}/optimize`)
-
-    deliveryRoute.value = response.data.route
-    stops.value = deliveryRoute.value.stops || []
-
-    $q.notify({
-      type: 'positive',
-      message: 'Ruta optimizada exitosamente'
-    })
-
-    // Map will update automatically via watch
-  } catch (error) {
-    console.error('Error optimizing route:', error)
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Error al optimizar ruta'
-    })
-  } finally {
-    optimizing.value = false
-  }
 }
 
 function selectStop (stop) {
