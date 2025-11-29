@@ -33,7 +33,7 @@
 
     <div class="row q-col-gutter-md">
       <!-- Left Panel - Route Configuration -->
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-sm-4 col-md-4">
         <q-card>
           <q-card-section>
             <div class="text-h6 q-mb-md">
@@ -103,30 +103,6 @@
               dense
               rows="3"
             />
-          </q-card-section>
-
-          <q-separator />
-
-          <!-- Route Stats -->
-          <q-card-section v-if="deliveryRoute">
-            <div class="text-subtitle2 q-mb-sm">Estadísticas de Ruta</div>
-            <div class="row q-col-gutter-sm">
-              <div class="col-6">
-                <q-chip color="primary" text-color="white" icon="place" dense>
-                  {{ deliveryRoute.total_stops || 0 }} paradas
-                </q-chip>
-              </div>
-              <div class="col-6">
-                <q-chip color="orange" text-color="white" icon="straighten" dense>
-                  {{ deliveryRoute.total_distance_km || 0 }} km
-                </q-chip>
-              </div>
-              <div class="col-12">
-                <q-chip color="green" text-color="white" icon="schedule" dense>
-                  {{ deliveryRoute.estimated_duration_minutes || 0 }} min estimados
-                </q-chip>
-              </div>
-            </div>
           </q-card-section>
         </q-card>
 
@@ -306,7 +282,7 @@
       </div>
 
       <!-- Right Panel - Map -->
-      <div class="col-12 col-md-8">
+      <div class="col-12 col-sm-8 col-md-8">
         <q-card style="height: calc(100vh - 120px);">
           <div id="route-map" ref="mapContainer" style="width: 100%; height: 100%;"></div>
         </q-card>
@@ -390,11 +366,18 @@ const totalDuration = computed(() => {
 })
 
 onMounted(async () => {
+  console.log('=== Component Mounted ===')
+  console.log('Route params:', routeParams.params)
+  console.log('Route ID:', routeParams.params.id)
+
   await loadInitialData()
   await initializeMap()
 
   if (routeParams.params.id) {
+    console.log('Loading route with ID:', routeParams.params.id)
     await loadRoute()
+  } else {
+    console.log('No route ID found, skipping loadRoute()')
   }
 
   // Listen for real-time updates
@@ -469,21 +452,81 @@ function filterBranches (value, update) {
 
 async function loadRoute () {
   try {
+    console.log('Loading route ID:', routeParams.params.id)
     const response = await api.get(`/delivery-routes/${routeParams.params.id}`)
+    console.log('API Response:', response.data)
     deliveryRoute.value = response.data.route
+    console.log('deliveryRoute.value:', deliveryRoute.value)
+    console.log('deliveryRoute.value.route_clients:', deliveryRoute.value.route_clients)
+    console.log('deliveryRoute.value.routeClients:', deliveryRoute.value.routeClients)
+    console.log('deliveryRoute.value.stops:', deliveryRoute.value.stops)
 
-    // Process stops to ensure they have all client data
-    stops.value = (deliveryRoute.value.stops || []).map(stop => ({
-      ...stop,
-      client_id: stop.client_id || stop.client?.id,
-      latitude: stop.latitude || stop.client?.latitude,
-      longitude: stop.longitude || stop.client?.longitude,
-      // Preserve distance and duration if they exist
-      distance_text: stop.distance_text,
-      duration_text: stop.duration_text,
-      distance_value: stop.distance_value,
-      duration_value: stop.duration_value
-    }))
+    // Process routeClients (static routes) - API returns snake_case
+    const routeClients = deliveryRoute.value.route_clients || deliveryRoute.value.routeClients || deliveryRoute.value.stops || []
+    console.log('routeClients to process:', routeClients)
+
+    stops.value = routeClients.map((stop, index) => {
+      console.log(`Processing stop ${index + 1}:`, {
+        stop_id: stop.id,
+        client_name: stop.client?.name,
+        stop_latitude: stop.latitude,
+        stop_longitude: stop.longitude,
+        stop_latitude_type: typeof stop.latitude,
+        stop_longitude_type: typeof stop.longitude
+      })
+
+      // Extract latitude and longitude from client address
+      let lat = stop.latitude
+      let lng = stop.longitude
+
+      // If stop doesn't have coordinates, try to get from client
+      if ((!lat || !lng) && stop.client) {
+        const clientAddress = stop.client.address
+
+        if (clientAddress) {
+          // If address is a JSON string, parse it
+          if (typeof clientAddress === 'string') {
+            try {
+              const parsed = JSON.parse(clientAddress)
+              lat = lat || parsed.latitude
+              lng = lng || parsed.longitude
+            } catch (e) {
+              // If parsing fails, address might be a plain string
+              console.warn('Could not parse client address:', clientAddress)
+            }
+          } else if (typeof clientAddress === 'object') {
+            // If address is already an object
+            lat = lat || clientAddress.latitude
+            lng = lng || clientAddress.longitude
+          }
+        }
+
+        // Fallback to direct client properties
+        lat = lat || stop.client.latitude
+        lng = lng || stop.client.longitude
+      }
+
+      const mappedStop = {
+        ...stop,
+        client_id: stop.client_id || stop.client?.id,
+        latitude: lat,
+        longitude: lng,
+        // Preserve distance and duration if they exist
+        distance_text: stop.distance_text,
+        duration_text: stop.duration_text,
+        distance_value: stop.distance_value,
+        duration_value: stop.duration_value
+      }
+
+      console.log(`Mapped stop ${index + 1}:`, {
+        client_name: stop.client?.name,
+        final_latitude: mappedStop.latitude,
+        final_longitude: mappedStop.longitude,
+        has_coordinates: !!(mappedStop.latitude && mappedStop.longitude)
+      })
+
+      return mappedStop
+    })
 
     // Populate form
     routeForm.value = {
@@ -492,6 +535,9 @@ async function loadRoute () {
       origin_branch: deliveryRoute.value.originBranch || deliveryRoute.value.origin_branch || null,
       notes: deliveryRoute.value.notes || ''
     }
+
+    console.log('Loaded stops:', stops.value)
+    console.log('Stops with coordinates:', stops.value.filter(s => s.latitude && s.longitude).length)
 
     // Update map
     await nextTick()
@@ -506,19 +552,42 @@ async function loadRoute () {
 }
 
 async function initializeMap () {
-  await loadGoogleMaps()
+  try {
+    console.log('Initializing map...')
+    await loadGoogleMaps()
+    console.log('Google Maps loaded, mapContainer:', mapContainer.value)
 
-  map.value = new google.maps.Map(mapContainer.value, {
-    center: { lat: -34.603722, lng: -58.381592 },
-    zoom: 12,
-    mapTypeControl: false,
-    fullscreenControl: true,
-    streetViewControl: false,
-    styles: darkMapStyles
-  })
+    if (!mapContainer.value) {
+      console.error('Map container not found!')
+      return
+    }
+
+    map.value = new google.maps.Map(mapContainer.value, {
+      center: { lat: -34.603722, lng: -58.381592 },
+      zoom: 12,
+      mapTypeControl: false,
+      fullscreenControl: true,
+      streetViewControl: false,
+      styles: darkMapStyles
+    })
+
+    console.log('Map initialized successfully:', !!map.value)
+  } catch (error) {
+    console.error('Error initializing map:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al inicializar el mapa'
+    })
+  }
 }
 
 async function updateMapRoute () {
+  console.log('=== updateMapRoute called ===')
+  console.log('Map initialized:', !!map.value)
+  console.log('Origin branch:', routeForm.value.origin_branch)
+  console.log('Stops count:', stops.value.length)
+  console.log('Stops data:', JSON.stringify(stops.value, null, 2))
+
   // Clear existing markers and paths
   if (originMarker.value) {
     originMarker.value.setMap(null)
@@ -528,7 +597,15 @@ async function updateMapRoute () {
   routePaths.value.forEach(path => path.setMap(null))
   routePaths.value = []
 
+  if (!map.value) {
+    console.error('Map not initialized!')
+    return
+  }
+
   if (!routeForm.value.origin_branch || stops.value.length === 0) {
+    console.warn('Missing origin_branch or stops, skipping map update')
+    console.warn('origin_branch:', routeForm.value.origin_branch)
+    console.warn('stops.length:', stops.value.length)
     return
   }
 
@@ -566,11 +643,22 @@ async function updateMapRoute () {
     bounds.extend(new google.maps.LatLng(originLat, originLng))
   }
 
+  console.log('Processing stops for markers...')
   stops.value.forEach((stop, index) => {
     const lat = stop.latitude
     const lng = stop.longitude
 
-    if (!lat || !lng) return
+    console.log(`Stop ${index + 1}:`, {
+      client: stop.client?.name,
+      lat,
+      lng,
+      hasCoordinates: !!(lat && lng)
+    })
+
+    if (!lat || !lng) {
+      console.warn(`Stop ${index + 1} missing coordinates, skipping`)
+      return
+    }
 
     const marker = new google.maps.Marker({
       position: { lat: parseFloat(lat), lng: parseFloat(lng) },
@@ -592,6 +680,7 @@ async function updateMapRoute () {
       title: stop.client?.name
     })
 
+    console.log(`Marker ${index + 1} created successfully`)
     stopMarkers.value.push(marker)
     bounds.extend(new google.maps.LatLng(lat, lng))
 
@@ -784,6 +873,42 @@ function getOpeningHoursText (openingHours) {
 async function addClientToPredefinedRoute () {
   if (!selectedClient.value) return
 
+  // Extract coordinates from client address
+  let lat = null
+  let lng = null
+
+  const clientAddress = selectedClient.value.address
+
+  if (clientAddress) {
+    // If address is a JSON string, parse it
+    if (typeof clientAddress === 'string') {
+      try {
+        const parsed = JSON.parse(clientAddress)
+        lat = parsed.latitude
+        lng = parsed.longitude
+      } catch (e) {
+        console.warn('Could not parse client address:', clientAddress)
+      }
+    } else if (typeof clientAddress === 'object') {
+      // If address is already an object
+      lat = clientAddress.latitude
+      lng = clientAddress.longitude
+    }
+  }
+
+  // Fallback to direct client properties
+  lat = lat || selectedClient.value.latitude
+  lng = lng || selectedClient.value.longitude
+
+  if (!lat || !lng) {
+    $q.notify({
+      type: 'warning',
+      message: 'El cliente no tiene coordenadas de ubicación',
+      caption: 'Asegúrate de que el cliente tenga una dirección válida'
+    })
+    return
+  }
+
   // For predefined routes, just add client to stops list (no products yet)
   const newStop = {
     id: Date.now(), // Temporary ID
@@ -791,12 +916,14 @@ async function addClientToPredefinedRoute () {
     client: selectedClient.value,
     stop_order: stops.value.length + 1,
     delivery_status: 'pending',
-    latitude: selectedClient.value.address?.latitude,
-    longitude: selectedClient.value.address?.longitude,
+    latitude: lat,
+    longitude: lng,
     products: [] // No products for predefined routes
   }
 
   stops.value.push(newStop)
+
+  console.log('Added stop:', newStop)
 
   $q.notify({
     type: 'positive',
@@ -812,10 +939,15 @@ async function addClientToPredefinedRoute () {
 }
 
 async function createRoute () {
+  // Si ya existe una ruta, actualizar en lugar de crear
+  if (deliveryRoute.value) {
+    await saveRoute()
+    return
+  }
+
   try {
     const payload = {
       name: routeForm.value.name || 'Nueva Ruta',
-      route_type: 'predefined',
       courier_id: routeForm.value.courier?.id,
       origin_branch_id: routeForm.value.origin_branch?.id,
       notes: routeForm.value.notes
@@ -826,9 +958,11 @@ async function createRoute () {
       payload.clients = stops.value.map((stop, index) => ({
         client_id: stop.client_id,
         stop_order: index + 1,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
         estimated_time_minutes: stop.estimated_time_minutes || 15,
         // Include distance and time data if available
-        distance_from_previous_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
+        distance_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
         estimated_time_from_previous_minutes: stop.duration_value ? Math.round(stop.duration_value / 60) : null
       }))
 
@@ -881,9 +1015,11 @@ async function saveRoute () {
       payload.clients = stops.value.map((stop, index) => ({
         client_id: stop.client_id,
         stop_order: index + 1,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
         estimated_time_minutes: stop.estimated_time_minutes || 15,
         // Include distance and time data if available
-        distance_from_previous_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
+        distance_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
         estimated_time_from_previous_minutes: stop.duration_value ? Math.round(stop.duration_value / 60) : null
       }))
 

@@ -42,7 +42,7 @@ export const authentication = defineStore('authentication', {
        * Hide amounts in accounts receivable
        * @type {Boolean}
        */
-      hideAmounts: localStorage.getItem('hideAmounts') === 'true' || false
+      hideAmounts: localStorage.getItem('hideAmounts') === 'true' || false,
       /**
        * Is demo account
        * @type {Boolean}
