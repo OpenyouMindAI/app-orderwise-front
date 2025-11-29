@@ -2,7 +2,8 @@
   <div class="places-input-container">
     <q-input
       ref="inputRef"
-      v-model="address"
+      :model-value="displayAddress"
+      @update:model-value="handleAddressInput"
       label="Buscar dirección de entrega"
       filled
       clearable
@@ -12,57 +13,38 @@
       label-color="grey-6"
       color="primary"
       @clear="resetAddress"
-      @keyup.enter="handleManualAddressInput"
-      @blur="handleManualAddressInput"
     >
       <template #prepend>
         <q-icon name="place" color="grey-6" size="20px" />
       </template>
-    </q-input>
-
-    <!-- Acciones disponibles -->
-    <div
-      v-if="(address && address.length > 2) || addressDetails.latitude"
-      class="address-actions-section"
-    >
-      <div class="actions-container">
-        <!-- Botón para guardar manualmente -->
+      
+      <template #append>
+        <!-- Botón de mapa dentro del input -->
         <q-btn
-          v-if="address && address.length > 2 && !addressDetails.formattedAddress"
+          v-if="addressDetails.latitude && addressDetails.formattedAddress"
           flat
-          dense
-          icon="save"
-          label="Guardar dirección"
-          color="positive"
-          size="sm"
-          class="action-btn"
-          @click="handleManualAddressInput"
-        />
-
-        <!-- Información guardada -->
-        <div
-          v-if="addressDetails.formattedAddress"
-          class="saved-address-info"
-        >
-          <q-icon name="check_circle" color="positive" size="16px" />
-          <span class="saved-text">{{ addressDetails.formattedAddress }}</span>
-        </div>
-
-        <!-- Botón para ver mapa -->
-        <q-btn
-          v-if="addressDetails.latitude || addressDetails.formattedAddress"
-          flat
+          round
           dense
           icon="map"
-          label="Ver mapa"
           color="primary"
           size="sm"
-          class="action-btn"
           :loading="geocodingAddress"
-          @click="showMapModal"
-        />
-      </div>
-    </div>
+          @click.stop="showMapModal"
+        >
+          <q-tooltip>Ver en mapa</q-tooltip>
+        </q-btn>
+        
+        <!-- Indicador de dirección guardada -->
+        <q-icon
+          v-else-if="addressDetails.formattedAddress"
+          name="check_circle"
+          color="positive"
+          size="20px"
+        >
+          <q-tooltip>Dirección guardada</q-tooltip>
+        </q-icon>
+      </template>
+    </q-input>
     <!-- Modal del mapa optimizado -->
     <q-dialog
       v-model="mapModal"
@@ -131,13 +113,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { loadGoogleMaps } from 'src/boot/google-maps'
 
 const emit = defineEmits(['address-selected'])
 
 const inputRef = ref(null)
 const address = ref('')
+const displayAddress = ref('')
 const autocomplete = ref(null)
 const loading = ref(false)
 const mapModal = ref(false)
@@ -147,7 +130,7 @@ const geocodingAddress = ref(false)
 
 const props = defineProps({
   initialAddress: {
-    type: Object,
+    type: [Object, String],
     default: () => ({
       name: '',
       street: '',
@@ -191,36 +174,102 @@ onMounted(async () => {
 // Función para cargar dirección inicial de forma segura
 const loadInitialAddress = () => {
   try {
-    if (props.initialAddress && typeof props.initialAddress === 'object') {
-      const initial = props.initialAddress
+    if (!props.initialAddress) {
+      address.value = ''
+      return
+    }
 
-      // Cargar dirección en el input
-      if (initial.formattedAddress) {
-        address.value = initial.formattedAddress
-      } else if (initial.name) {
-        address.value = initial.name
+    let initial = props.initialAddress
+
+    console.log('🔍 loadInitialAddress - Tipo:', typeof initial)
+    console.log('🔍 loadInitialAddress - Valor:', initial)
+
+    // Si viene como string JSON, parsearlo
+    if (typeof initial === 'string') {
+      try {
+        initial = JSON.parse(initial)
+        console.log('✅ Parseado como JSON:', initial)
+      } catch (e) {
+        // Si no es JSON válido, usar como dirección simple
+        console.log('📝 Usando string directo:', initial)
+        address.value = String(initial)
+        return
       }
+    }
 
-      // Cargar detalles completos si existen
-      if (initial.formattedAddress || initial.latitude) {
-        addressDetails.value = {
-          name: initial.name || '',
-          street: initial.street || '',
-          city: initial.city || '',
-          state: initial.state || '',
-          country: initial.country || '',
-          zipCode: initial.zipCode || '',
-          latitude: initial.latitude || null,
-          longitude: initial.longitude || null,
-          formattedAddress: initial.formattedAddress || '',
-          placeId: initial.placeId || '',
-          types: initial.types || []
-        }
+    // Verificar que sea un objeto válido
+    if (typeof initial !== 'object' || initial === null) {
+      console.log('⚠️ No es un objeto válido')
+      address.value = ''
+      return
+    }
+
+    // Cargar dirección en el input (priorizar formattedAddress)
+    let displayAddress = ''
+    
+    if (initial.formattedAddress) {
+      displayAddress = String(initial.formattedAddress)
+    } else if (initial.name) {
+      displayAddress = String(initial.name)
+    } else if (initial.street) {
+      displayAddress = String(initial.street)
+    }
+
+    console.log('📍 Dirección a mostrar:', displayAddress)
+    address.value = displayAddress
+    displayAddress.value = displayAddress
+
+    // Cargar detalles completos si existen
+    if (initial.formattedAddress || initial.latitude || initial.name) {
+      addressDetails.value = {
+        name: initial.name || '',
+        street: initial.street || '',
+        city: initial.city || '',
+        state: initial.state || '',
+        country: initial.country || '',
+        zipCode: initial.zipCode || '',
+        latitude: initial.latitude || null,
+        longitude: initial.longitude || null,
+        formattedAddress: initial.formattedAddress || '',
+        placeId: initial.placeId || '',
+        types: initial.types || []
       }
     }
   } catch (error) {
-    // Silencioso: no mostrar error si no hay dirección inicial
+    console.error('❌ Error loading initial address:', error)
+    address.value = ''
   }
+}
+
+// Watch para cambios en initialAddress
+watch(() => props.initialAddress, (newAddress) => {
+  if (newAddress) {
+    loadInitialAddress()
+  }
+}, { deep: true, immediate: true })
+
+// Watch para asegurar que address siempre sea string
+watch(address, (newVal) => {
+  if (typeof newVal === 'string') {
+    displayAddress.value = newVal
+  } else if (typeof newVal === 'object' && newVal !== null) {
+    // Si es un objeto, extraer el string
+    if (newVal.formattedAddress) {
+      displayAddress.value = String(newVal.formattedAddress)
+    } else if (newVal.name) {
+      displayAddress.value = String(newVal.name)
+    } else {
+      displayAddress.value = ''
+    }
+  } else {
+    displayAddress.value = ''
+  }
+})
+
+// Manejar cambios en el input
+const handleAddressInput = (value) => {
+  address.value = value
+  displayAddress.value = value
 }
 
 // Limpieza al desmontar
@@ -339,7 +388,7 @@ const handlePlaceSelection = async (place) => {
       return
     }
 
-    address.value = place.formatted_address || place.name || ''
+    address.value = place.formattedAddress || place.name || ''
     addressDetails.value = {
       name: place.name || '',
       street: '',
@@ -576,6 +625,7 @@ const editAddress = () => {
 
 const resetAddress = () => {
   address.value = ''
+  displayAddress.value = ''
   addressDetails.value = {
     name: '',
     street: '',
@@ -599,51 +649,13 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Sección de acciones */
-.address-actions-section {
-  margin-top: 4px;
+/* Input container */
+.places-input-container {
+  width: 100%;
 }
 
-.actions-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 0;
-}
-
-.action-btn {
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  min-width: auto;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Información de dirección guardada */
-.saved-address-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: rgba(76, 175, 80, 0.1);
-  border-radius: 4px;
-  border-left: 3px solid #4caf50;
-  flex: 1;
-  min-width: 200px;
-}
-
-.saved-text {
-  font-size: 12px;
-  color: #2e7d32;
-  font-weight: 500;
-  line-height: 1.2;
-  word-break: break-word;
+.places-input {
+  width: 100%;
 }
 
 /* Modal del mapa optimizado */
@@ -791,17 +803,23 @@ defineExpose({
   .actions-container {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 12px;
   }
 
   .action-btn {
     justify-content: center;
     width: 100%;
+    padding: 14px 24px;
+    font-size: 15px;
   }
 
-  .saved-address-info {
+  .saved-address-card {
     min-width: unset;
     width: 100%;
+  }
+
+  .saved-address-text {
+    font-size: 13px;
   }
 
   .map-card {

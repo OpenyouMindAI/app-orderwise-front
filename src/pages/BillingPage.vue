@@ -1218,6 +1218,13 @@
                 @address-selected="handleAddressSelectedForClient"
               />
             </div>
+            <div class="col-12">
+              <q-input
+                filled
+                v-model="clientAdded.reference"
+                label="Referencia"
+              />
+            </div>
           </q-card-section>
 
           <!-- Botón guardar -->

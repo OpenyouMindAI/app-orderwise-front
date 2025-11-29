@@ -139,6 +139,13 @@
                 @address-selected="handleAddressSelected"
               />
             </div>
+            <div class="col-12">
+              <q-input
+                filled
+                v-model="client.reference"
+                label="Referencia"
+              />
+            </div>
           </q-card-section>
 
           <!-- Botones de acción -->
@@ -257,6 +264,13 @@
                 :key="addressComponentKey"
                 :initial-address="address"
                 @address-selected="handleAddressSelected"
+              />
+            </div>
+            <div class="col-12">
+              <q-input
+                filled
+                v-model="client.reference"
+                label="Referencia"
               />
             </div>
           </q-card-section>
