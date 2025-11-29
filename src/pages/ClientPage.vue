@@ -619,31 +619,7 @@ export default {
       this.role = row.role
       this.client.condition_iva_receptor = JSON.parse(row.condition_iva_receptor)
       this.client.document_type = JSON.parse(row.document_type)
-
-      // Actualizar la dirección cuando se selecciona un cliente
-      if (row.address) {
-        this.formattedAddress = row.address
-        // Crear objeto de dirección para AddressComponent
-        this.address = {
-          name: '',
-          street: '',
-          city: '',
-          state: '',
-          country: '',
-          zipCode: '',
-          latitude: row.latitude || null,
-          longitude: row.longitude || null,
-          formattedAddress: row.address,
-          placeId: row.place_id || '',
-          types: []
-        }
-        this.client.address = row.address
-      } else {
-        this.formattedAddress = ''
-        this.address = null
-        this.client.address = ''
-      }
-
+      this.address = row.address
       // Incrementar la clave para forzar re-renderización del AddressComponent
       this.addressComponentKey += 1
     },
@@ -725,38 +701,6 @@ export default {
 
       // Actualizar los campos de dirección para el formulario
       this.address = address
-
-      // Formatear la dirección para enviarla en el cliente
-      // El componente AddressComponent devuelve un objeto con la estructura específica
-      if (typeof address === 'object' && address !== null) {
-        // Priorizar formattedAddress si existe
-        if (address.formattedAddress) {
-          this.formattedAddress = address.formattedAddress
-        } else if (address.name) {
-          // Si no hay formattedAddress, usar el name del lugar
-          this.formattedAddress = address.name
-        } else {
-          // Construir dirección desde componentes disponibles
-          const addressParts = []
-          if (address.street) addressParts.push(address.street)
-          if (address.city) addressParts.push(address.city)
-          if (address.state) addressParts.push(address.state)
-          if (address.country) addressParts.push(address.country)
-          if (address.zipCode) addressParts.push(address.zipCode)
-
-          this.formattedAddress = addressParts.length > 0
-            ? addressParts.join(', ')
-            : JSON.stringify(address)
-        }
-      } else if (typeof address === 'string') {
-        // Si por alguna razón viene como string
-        this.formattedAddress = address
-      } else {
-        // Fallback: convertir a string
-        this.formattedAddress = String(address)
-      }
-
-      // Dirección procesada correctamente - no necesita reinicialización del componente
     }
   }
 }

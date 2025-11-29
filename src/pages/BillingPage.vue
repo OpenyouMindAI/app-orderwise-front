@@ -448,7 +448,7 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <!-- <div class="col-6" v-if="typeOfService.code !== '4'">
+              <!-- <div class="col-6" v-if="Number(typeOfService.code) !== '4'">
                 <q-select
                   filled
                   dense
@@ -460,10 +460,10 @@
                   @filter="getCoins"
                 />
               </div> -->
-              <div class="col-6" v-if="typeOfService.code !== '4'">
+              <div class="col-6" v-if="Number(typeOfService.code) !== 4">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12" v-if="typeOfService.code !== '4'">
+              <div class="col-12" v-if="Number(typeOfService.code) !== 4">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
@@ -475,7 +475,7 @@
               </div>
 
               <!-- Sección de archivos adjuntos - Solo para pedidos (code === 5) -->
-              <div class="col-12" v-if="typeOfService && typeOfService.code === 5">
+              <div class="col-12" v-if="typeOfService && Number(typeOfService.code) === 5">
                 <q-card flat bordered class="q-mt-md">
                   <q-card-section class="q-pb-sm">
                     <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center justify-between">
@@ -3407,7 +3407,7 @@ export default {
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,
         products: this.products,
-        status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        status: this.invoice?.status || Number(this.typeOfService.code) === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0).map(payment => ({
           ...payment,
           payment_type: paymentType
@@ -3431,7 +3431,7 @@ export default {
         return false
       }
 
-      if (this.withServiceType.includes(this.typeOfService.code) && this.pendingPayment > 0) {
+      if (this.withServiceType.includes(Number(this.typeOfService.code)) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
         return false

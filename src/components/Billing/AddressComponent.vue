@@ -17,7 +17,7 @@
       <template #prepend>
         <q-icon name="place" color="grey-6" size="20px" />
       </template>
-      
+
       <template #append>
         <!-- Botón de mapa dentro del input -->
         <q-btn
@@ -33,7 +33,7 @@
         >
           <q-tooltip>Ver en mapa</q-tooltip>
         </q-btn>
-        
+
         <!-- Indicador de dirección guardada -->
         <q-icon
           v-else-if="addressDetails.formattedAddress"
@@ -183,6 +183,9 @@ const loadInitialAddress = () => {
 
     console.log('🔍 loadInitialAddress - Tipo:', typeof initial)
     console.log('🔍 loadInitialAddress - Valor:', initial)
+    console.log('🔍 formattedAddress:', initial.formattedAddress)
+    console.log('🔍 name:', initial.name)
+    console.log('🔍 street:', initial.street)
 
     // Si viene como string JSON, parsearlo
     if (typeof initial === 'string') {
@@ -205,19 +208,28 @@ const loadInitialAddress = () => {
     }
 
     // Cargar dirección en el input (priorizar formattedAddress)
-    let displayAddress = ''
-    
-    if (initial.formattedAddress) {
-      displayAddress = String(initial.formattedAddress)
-    } else if (initial.name) {
-      displayAddress = String(initial.name)
-    } else if (initial.street) {
-      displayAddress = String(initial.street)
+    let addressText = ''
+
+    if (initial.formattedAddress && initial.formattedAddress !== '') {
+      addressText = String(initial.formattedAddress)
+    } else if (initial.name && initial.name !== '') {
+      addressText = String(initial.name)
+    } else if (initial.street && initial.street !== '') {
+      addressText = String(initial.street)
     }
 
-    console.log('📍 Dirección a mostrar:', displayAddress)
-    address.value = displayAddress
-    displayAddress.value = displayAddress
+    console.log('📍 Dirección a mostrar:', addressText)
+    console.log('📍 Tipo de addressText:', typeof addressText)
+
+    // Solo actualizar si hay un texto válido
+    if (addressText && addressText !== '') {
+      address.value = addressText
+      displayAddress.value = addressText
+    } else {
+      console.log('⚠️ No hay dirección válida para mostrar')
+      address.value = ''
+      displayAddress.value = ''
+    }
 
     // Cargar detalles completos si existen
     if (initial.formattedAddress || initial.latitude || initial.name) {
