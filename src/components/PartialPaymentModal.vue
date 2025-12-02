@@ -230,6 +230,23 @@
 <script>
 import { ref, computed, watch } from 'vue'
 
+// Constantes para estados de tabs
+const TAB_STATES = {
+  AMOUNT: 'amount',
+  ITEM: 'item',
+  PERSON: 'person',
+  CONFIRM: 'confirm',
+  PROCESS: 'process',
+  FINISH: 'finish'
+}
+
+// Constantes para etiquetas de tipo de pago
+const PAYMENT_TYPE_LABELS = {
+  [TAB_STATES.AMOUNT]: 'Por Monto Fijo',
+  [TAB_STATES.ITEM]: 'Por Items',
+  [TAB_STATES.PERSON]: 'Por Persona'
+}
+
 export default {
   name: 'PartialPaymentModal',
   emits: ['update:show', 'confirm', 'cancel'],
@@ -252,68 +269,103 @@ export default {
     }
   },
   setup (props, { emit }) {
-    // Local state
-    const activeTab = ref('amount')
+    // ==================== Estado Local ====================
+    const activeTab = ref(TAB_STATES.AMOUNT)
     const splitAmount = ref(0)
     const numberOfPeople = ref(1)
     const selectedProducts = ref([])
     const selectedSplitType = ref(null)
     const remainingDebt = ref(props.totalAmount)
     const paidProductIds = ref(new Set())
+    const previousTab = ref(null)
 
-    // Reset state when modal is shown
+    // Variables para pago por persona
+    const amountPerPerson = ref(0)
+    const peoplePaymentCount = ref(0)
+
+    // ==================== Funciones Puras ====================
+    const formatNumber = (value) => {
+      if (!value && value !== 0) return '0'
+      return new Intl.NumberFormat('es-CO').format(value)
+    }
+
+    const calculateProductTotal = (product) => {
+      const price = parseFloat(product.pivot?.price || product.price || 0)
+      const amount = parseFloat(product.pivot?.amount || 1)
+      return price * amount
+    }
+
+    const calculateItemsTotal = (products, selectedIds) => {
+      return products
+        .filter(p => selectedIds.includes(p.id))
+        .reduce((sum, p) => sum + calculateProductTotal(p), 0)
+    }
+
+    const calculatePersonAmount = (debt, people, savedAmount) => {
+      return savedAmount > 0 ? savedAmount : debt / (people || 1)
+    }
+
+    const resetState = () => {
+      activeTab.value = TAB_STATES.AMOUNT
+      splitAmount.value = 0
+      numberOfPeople.value = 1
+      selectedProducts.value = []
+      selectedSplitType.value = null
+      remainingDebt.value = props.totalAmount
+      paidProductIds.value.clear()
+      amountPerPerson.value = 0
+      peoplePaymentCount.value = 0
+      previousTab.value = null
+    }
+
+    // ==================== Watchers ====================
     watch(() => props.show, (newVal) => {
-      if (newVal) {
-        activeTab.value = 'amount'
-        splitAmount.value = 0
-        numberOfPeople.value = 1
-        selectedProducts.value = []
-        selectedSplitType.value = null
-        remainingDebt.value = props.totalAmount
-        paidProductIds.value.clear()
-      }
+      if (newVal) resetState()
     })
 
     watch(() => props.totalAmount, (newVal) => {
       remainingDebt.value = newVal
     })
 
-    // Computed
+    // ==================== Computed Properties ====================
+    const currentPaymentType = computed(() => selectedSplitType.value || activeTab.value)
+
     const isStepValid = computed(() => {
-      if (activeTab.value === 'amount') {
-        return splitAmount.value > 0 && splitAmount.value <= remainingDebt.value
-      } else if (activeTab.value === 'item') {
-        return selectedProducts.value.length > 0
-      } else if (activeTab.value === 'person') {
-        return numberOfPeople.value > 0
-      } else if (['confirm', 'process', 'finish'].includes(activeTab.value)) {
-        return true
+      const validations = {
+        [TAB_STATES.AMOUNT]: () => splitAmount.value > 0 && splitAmount.value <= remainingDebt.value,
+        [TAB_STATES.ITEM]: () => selectedProducts.value.length > 0,
+        [TAB_STATES.PERSON]: () => numberOfPeople.value > 0,
+        [TAB_STATES.CONFIRM]: () => true,
+        [TAB_STATES.PROCESS]: () => true,
+        [TAB_STATES.FINISH]: () => true
       }
-      return false
+      return validations[activeTab.value]?.() || false
     })
 
     const paymentSummary = computed(() => {
+      const type = currentPaymentType.value
       let amountToPay = 0
       let typeLabel = ''
 
-      // Usar el tipo seleccionado si existe, o la tab actual
-      const type = selectedSplitType.value || activeTab.value
+      switch (type) {
+        case TAB_STATES.AMOUNT: {
+          amountToPay = splitAmount.value
+          typeLabel = PAYMENT_TYPE_LABELS[TAB_STATES.AMOUNT]
+          break
+        }
 
-      if (type === 'amount') {
-        amountToPay = splitAmount.value
-        typeLabel = 'Por Monto Fijo'
-      } else if (type === 'item') {
-        amountToPay = props.products
-          .filter(p => selectedProducts.value.includes(p.id))
-          .reduce((sum, p) => {
-            const price = parseFloat(p.pivot?.price || p.price || 0)
-            const amount = parseFloat(p.pivot?.amount || 1)
-            return sum + (price * amount)
-          }, 0)
-        typeLabel = `Por Items (${selectedProducts.value.length} seleccionados)`
-      } else if (type === 'person') {
-        amountToPay = remainingDebt.value / (numberOfPeople.value || 1)
-        typeLabel = `Por Persona (1 de ${numberOfPeople.value})`
+        case TAB_STATES.ITEM: {
+          amountToPay = calculateItemsTotal(props.products, selectedProducts.value)
+          typeLabel = `${PAYMENT_TYPE_LABELS[TAB_STATES.ITEM]} (${selectedProducts.value.length} seleccionados)`
+          break
+        }
+
+        case TAB_STATES.PERSON: {
+          amountToPay = calculatePersonAmount(remainingDebt.value, numberOfPeople.value, amountPerPerson.value)
+          const currentPayment = peoplePaymentCount.value + 1
+          typeLabel = `${PAYMENT_TYPE_LABELS[TAB_STATES.PERSON]} (${currentPayment} de ${numberOfPeople.value})`
+          break
+        }
       }
 
       return {
@@ -329,37 +381,89 @@ export default {
       return [...props.products].sort((a, b) => {
         const aPaid = isProductPaid(a.id)
         const bPaid = isProductPaid(b.id)
-        if (aPaid === bPaid) return 0
-        return aPaid ? 1 : -1
+        return aPaid === bPaid ? 0 : (aPaid ? 1 : -1)
       })
     })
 
     const buttonLabel = computed(() => {
-      switch (activeTab.value) {
-        case 'amount':
-        case 'item':
-        case 'person':
-          return 'Continuar'
-        case 'confirm':
-          return 'Confirmar Pago'
-        case 'process':
-          return 'Finalizar'
-        case 'finish':
-          return remainingDebt.value > 0 ? 'Continuar Cobrando' : 'Cerrar'
-        default:
-          return 'Siguiente'
+      const labels = {
+        [TAB_STATES.AMOUNT]: 'Continuar',
+        [TAB_STATES.ITEM]: 'Continuar',
+        [TAB_STATES.PERSON]: 'Continuar',
+        [TAB_STATES.CONFIRM]: 'Confirmar Pago',
+        [TAB_STATES.PROCESS]: 'Finalizar',
+        [TAB_STATES.FINISH]: remainingDebt.value > 0 ? 'Continuar Cobrando' : 'Cerrar'
       }
+      return labels[activeTab.value] || 'Siguiente'
     })
 
-    // Methods
-    const formatNumber = (value) => {
-      if (!value && value !== 0) return '0'
-      return new Intl.NumberFormat('es-CO').format(value)
+    // ==================== Métodos de Navegación ====================
+    const confirmSelection = () => {
+      previousTab.value = activeTab.value
+      selectedSplitType.value = activeTab.value
+
+      if (activeTab.value === TAB_STATES.PERSON && amountPerPerson.value === 0) {
+        amountPerPerson.value = remainingDebt.value / (numberOfPeople.value || 1)
+      }
+
+      activeTab.value = TAB_STATES.CONFIRM
     }
 
+    const processPayment = () => {
+      activeTab.value = TAB_STATES.PROCESS
+    }
+
+    const finishPayment = () => {
+      remainingDebt.value -= paymentSummary.value.amountToPay
+
+      if (selectedSplitType.value === TAB_STATES.ITEM) {
+        selectedProducts.value.forEach(id => paidProductIds.value.add(id))
+      }
+
+      if (selectedSplitType.value === TAB_STATES.PERSON) {
+        peoplePaymentCount.value++
+      }
+
+      activeTab.value = TAB_STATES.FINISH
+    }
+
+    const resetForNextPayment = () => {
+      if (selectedSplitType.value === TAB_STATES.PERSON) {
+        activeTab.value = TAB_STATES.CONFIRM
+      } else {
+        activeTab.value = previousTab.value || TAB_STATES.AMOUNT
+        splitAmount.value = 0
+        numberOfPeople.value = 1
+        selectedProducts.value = []
+        selectedSplitType.value = null
+        amountPerPerson.value = 0
+        peoplePaymentCount.value = 0
+      }
+    }
+
+    const handleConfirm = () => {
+      emit('confirm', {
+        type: selectedSplitType.value || activeTab.value,
+        splitAmount: splitAmount.value,
+        numberOfPeople: numberOfPeople.value,
+        selectedProducts: selectedProducts.value
+      })
+    }
+
+    const handleFinish = () => {
+      if (remainingDebt.value > 0) {
+        resetForNextPayment()
+      } else {
+        emit('update:show', false)
+        previousTab.value = null
+        handleConfirm()
+      }
+    }
+
+    // ==================== Handlers de Eventos ====================
     const handleCancel = () => {
-      if (['confirm', 'process'].includes(activeTab.value)) {
-        activeTab.value = selectedSplitType.value || 'amount'
+      if ([TAB_STATES.CONFIRM, TAB_STATES.PROCESS].includes(activeTab.value)) {
+        activeTab.value = selectedSplitType.value || TAB_STATES.AMOUNT
         selectedSplitType.value = null
         return
       }
@@ -368,45 +472,19 @@ export default {
     }
 
     const handleNextAction = () => {
-      // Navegación basada en la tab actual
-      if (['amount', 'item', 'person'].includes(activeTab.value)) {
-        selectedSplitType.value = activeTab.value
-        activeTab.value = 'confirm'
-      } else if (activeTab.value === 'confirm') {
-        // Emitir evento con los datos para procesar
-        handleConfirm()
-        activeTab.value = 'process'
-      } else if (activeTab.value === 'process') {
-        remainingDebt.value -= paymentSummary.value.amountToPay
-
-        if (selectedSplitType.value === 'item') {
-          selectedProducts.value.forEach(id => paidProductIds.value.add(id))
-        }
-
-        activeTab.value = 'finish'
-      } else if (activeTab.value === 'finish') {
-        if (remainingDebt.value > 0) {
-          activeTab.value = 'amount'
-          splitAmount.value = 0
-          numberOfPeople.value = 1
-          selectedProducts.value = []
-          selectedSplitType.value = null
-        } else {
-          emit('update:show', false)
-        }
+      const transitions = {
+        [TAB_STATES.AMOUNT]: confirmSelection,
+        [TAB_STATES.ITEM]: confirmSelection,
+        [TAB_STATES.PERSON]: confirmSelection,
+        [TAB_STATES.CONFIRM]: processPayment,
+        [TAB_STATES.PROCESS]: finishPayment,
+        [TAB_STATES.FINISH]: handleFinish
       }
+
+      transitions[activeTab.value]?.()
     }
 
-    const handleConfirm = () => {
-      const data = {
-        type: selectedSplitType.value || activeTab.value,
-        splitAmount: splitAmount.value,
-        numberOfPeople: numberOfPeople.value,
-        selectedProducts: selectedProducts.value
-      }
-      emit('confirm', data)
-    }
-
+    // ==================== Return ====================
     return {
       activeTab,
       splitAmount,

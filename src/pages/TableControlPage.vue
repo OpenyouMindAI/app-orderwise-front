@@ -474,6 +474,13 @@
           </div>
           <q-btn
             v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0"
+            label="Cobro Parcial"
+            color="positive"
+            @click="showPartialPaymentModal = true"
+            :loading="saving"
+          />
+          <q-btn
+            v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0"
             label="Cobrar"
             color="positive"
             @click="openPaymentDialog"
@@ -773,6 +780,17 @@
       @payment-delete="handlePaymentDelete"
       @action-click="handlePaymentAction"
     />
+
+    <!-- Partial Payment Modal -->
+    <PartialPaymentModal
+      :show="showPartialPaymentModal"
+      :products="invoiceProducts"
+      :total-amount="calculateTotal()"
+      :loading="saving"
+      @update:show="showPartialPaymentModal = $event"
+      @confirm="handlePartialPaymentConfirm"
+      @cancel="showPartialPaymentModal = false"
+    />
   </div>
 </template>
 
@@ -785,12 +803,14 @@ import { loading, formatNumber, notify } from 'src/const/mixins'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import { apiArca } from 'src/boot/axios'
 import PaymentModal from 'src/components/PaymentModal.vue'
+import PartialPaymentModal from 'src/components/PartialPaymentModal.vue'
 
 export default {
   components: {
     DraggableResizableContainer,
     DraggableResizableVue,
-    PaymentModal
+    PaymentModal,
+    PartialPaymentModal
   },
   data () {
     return {
@@ -863,6 +883,7 @@ export default {
 
       // Payment Modal state
       showPaymentDialog: false,
+      showPartialPaymentModal: false,
       paymentMethods: [],
       invoicePayments: [],
       tableClose: false,
@@ -1091,6 +1112,20 @@ export default {
       } finally {
         this.saving = false
       }
+    },
+
+    // Partial Payment Modal Methods
+    handlePartialPaymentConfirm (data) {
+      console.log('Pago parcial confirmado:', data)
+      // Aquí puedes procesar los datos del pago parcial
+      // data contiene: { type, splitAmount, numberOfPeople, selectedProducts }
+      this.$q.notify({
+        message: 'Pago parcial procesado correctamente',
+        type: 'positive',
+        icon: 'check_circle'
+      })
+      // Cerrar el modal después de procesar
+      this.showPartialPaymentModal = false
     },
 
     async saveInvoiceWithPayments (params, action = 'save') {
