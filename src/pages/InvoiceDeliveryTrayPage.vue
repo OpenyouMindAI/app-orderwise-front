@@ -433,7 +433,6 @@ function getFormattedAddress (address) {
 
 <style scoped>
 .page-container {
-  background: #fafafa;
   min-height: 100vh;
 }
 
