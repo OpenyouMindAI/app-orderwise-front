@@ -141,7 +141,8 @@ export default {
     modelValue: Boolean,
     cashierId: {
       type: Number,
-      required: true
+      required: false,
+      default: null
     },
     isBoxAlreadyOpen: {
       type: Boolean,
@@ -153,7 +154,8 @@ export default {
     },
     branchOffice: {
       type: Object,
-      required: true
+      required: false,
+      default: null
     }
   },
 

@@ -400,7 +400,7 @@
                                 dense
                                 round
                                 color="negative"
-                                @click="removePayment(payment)"
+                                @click="confirmDeletePayment(payment)"
                               />
                             </td>
                           </tr>
@@ -666,12 +666,40 @@ export default {
         await this.$api.delete(`purchase-payments/${payment.id}`)
         await this.getPurchase(payment.purchase_id)
         this.filterDate()
-        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+        notify('Pago eliminado exitosamente', 'positive', 'check_circle')
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
         loading(false)
       }
+    },
+    /**
+     * Shows a confirmation dialog before deleting a payment
+     * @param {Object} payment payment
+     */
+    confirmDeletePayment (payment) {
+      if (!payment) {
+        notify('No se pudo identificar el pago', 'negative', 'warning')
+        return
+      }
+
+      this.$q.dialog({
+        title: 'Confirmar eliminación',
+        message: `¿Está seguro que desea eliminar este pago de ${this.formatNumber(payment.amount || 0)}?`,
+        cancel: {
+          label: 'CANCELAR',
+          color: 'grey-7',
+          flat: true
+        },
+        ok: {
+          label: 'ELIMINAR',
+          color: 'negative',
+          unelevated: true
+        },
+        persistent: true
+      }).onOk(() => {
+        this.removePayment(payment)
+      })
     },
     /**
      * Clear filter

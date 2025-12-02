@@ -3,10 +3,18 @@
     <div class="row q-col-gutter-md">
       <div class="col-12 text-right q-gutter-sm">
         <q-btn
+          id="tour-btn-seleccionar-multiples"
           color="blue"
           @click="multipleSelected = !multipleSelected"
           :icon="multipleSelected ? 'check_box' : 'check_box_outline_blank'"
           label="Seleccionar múltiples"
+        />
+        <q-btn
+          color="positive"
+          @click="openMassiveStockDialog"
+          icon="add"
+          v-if="selection.length"
+          label="Agregar stock"
         />
         <q-btn
           color="negative"
@@ -16,18 +24,21 @@
           label="Eliminar masivo"
         />
         <q-btn
+          id="tour-btn-codigos-qr"
           color="teal"
           @click="openQrDialog"
           icon="qr_code"
           label="Códigos QR"
         />
         <q-btn
+          id="tour-btn-lista-precios"
           color="purple"
           @click="listPriceDialog = true"
           icon="list"
           label="Modificar lista de precios"
         />
         <q-btn
+          id="tour-btn-exportar"
           color="secondary"
           @click="download"
           icon="download"
@@ -40,12 +51,14 @@
           v-if="userSession.is_root"
         />
         <q-btn
+          id="tour-btn-agregar"
           color="primary"
-          @click="openAddProduct = true"
+          @click="openAddProductDialog"
           icon="add_circle"
           label="Agregar Producto"
         />
         <q-btn
+          id="tour-btn-filtrar"
           color="primary"
           @click="dialogFilter = true"
           icon="filter_alt"
@@ -54,6 +67,7 @@
       </div>
       <div class="col-12">
         <q-table
+          id="tour-tabla-productos"
           title="Productos"
           row-key="id"
           :columns="columns"
@@ -117,6 +131,7 @@
                       <div class="row q-col-gutter-sm">
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-input
+                            id="tour-edit-barcode"
                             filled
                             v-model="product.barcode"
                             autofocus
@@ -131,6 +146,7 @@
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-input
+                            id="tour-edit-nombre"
                             :rules="[val => !!val || 'El campo es requerido.']"
                             filled
                             v-model="product.name"
@@ -140,6 +156,7 @@
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-select
+                            id="tour-edit-categoria"
                             use-input
                             filled
                             label="Categoría"
@@ -500,6 +517,7 @@
                     <div class="row q-col-gutter-sm">
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                         <q-input
+                          id="tour-add-barcode"
                           filled
                           v-model="product.barcode"
                           autofocus
@@ -514,6 +532,7 @@
                       </div>
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                         <q-input
+                          id="tour-add-nombre"
                           :rules="[val => !!val || 'El campo es requerido.']"
                           filled
                           v-model="product.name"
@@ -523,6 +542,7 @@
                       </div>
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                         <q-select
+                          id="tour-add-categoria"
                           use-input
                           filled
                           label="Categoría"
@@ -885,6 +905,32 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="massiveStockDialog" persistent>
+      <q-card style="width: 400px; max-width: 90vw;">
+        <q-card-section class="row items-center bg-primary text-white q-py-sm">
+          <div class="text-h6">Agregar stock masivo</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="massiveStockDialog = false" />
+        </q-card-section>
+        <q-card-section>
+          <div class="q-mb-md">
+            Seleccionados: {{ selection.length }} productos
+          </div>
+          <q-input
+            v-model.number="massiveStockQuantity"
+            type="number"
+            min="1"
+            label="Cantidad de stock a sumar"
+            filled
+            dense
+          />
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn color="secondary" label="Cancelar" flat @click="massiveStockDialog = false" />
+          <q-btn color="primary" label="Confirmar" @click="confirmMassiveStock" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-dialog
       v-model="dialogFilter"
       position="right"
@@ -1125,6 +1171,42 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Tour Overlay -->
+    <div v-if="showTour" class="tour-overlay">
+      <div class="tour-spotlight" :style="spotlightStyle"></div>
+      <q-card class="tour-card" :style="tourCardStyle">
+        <q-card-section class="tour-header">
+          <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ currentTourSteps.length }}</div>
+          <q-btn flat round dense icon="close" @click="skipTour" color="white" size="sm" />
+        </q-card-section>
+        <q-card-section>
+          <div class="tour-title">{{ currentTourSteps[currentTourStep]?.title }}</div>
+          <div class="tour-description">{{ currentTourSteps[currentTourStep]?.description }}</div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            flat
+            label="Anterior"
+            @click="previousTourStep"
+            :disable="currentTourStep === 0"
+            color="grey-7"
+          />
+          <q-btn
+            flat
+            label="Saltar tour"
+            @click="skipTour"
+            color="grey-7"
+          />
+          <q-btn
+            unelevated
+            :label="currentTourStep === currentTourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
+            @click="nextTourStep"
+            color="primary"
+          />
+        </q-card-actions>
+      </q-card>
+    </div>
   </div>
 </template>
 
@@ -1137,6 +1219,7 @@ import PackProduct from 'src/components/Product/PackProduct.vue'
 import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
+import eventBus from 'src/utils/eventBus'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1172,6 +1255,8 @@ export default {
       multipleSelected: false,
       products: [],
       selection: [],
+      massiveStockDialog: false,
+      massiveStockQuantity: null,
       isDragOver: false,
       company: null,
       addonsProducts: [],
@@ -1274,7 +1359,55 @@ export default {
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc'
-      }
+      },
+      // Tour System
+      showTour: false,
+      currentTourStep: 0,
+      currentTourType: 'main',
+      mainTourSteps: [
+        {
+          target: '#tour-btn-seleccionar-multiples',
+          title: '☑️ Seleccionar Múltiples',
+          description: 'Activa este modo para seleccionar varios productos a la vez y realizar acciones masivas como eliminar.'
+        },
+        {
+          target: '#tour-btn-codigos-qr',
+          title: '📱 Códigos QR',
+          description: 'Genera códigos QR para tus productos. Útil para impresión de etiquetas y gestión de inventario.'
+        },
+        {
+          target: '#tour-btn-lista-precios',
+          title: '💰 Modificar Lista de Precios',
+          description: 'Actualiza los precios de múltiples productos de forma masiva usando listas de precios.'
+        },
+        {
+          target: '#tour-btn-exportar',
+          title: '📥 Exportar Excel',
+          description: 'Descarga todos tus productos en un archivo Excel para análisis o respaldo.'
+        },
+        {
+          target: '#tour-btn-agregar',
+          title: '➕ Agregar Producto',
+          description: 'Haz clic aquí para agregar un nuevo producto. Se abrirá un formulario completo con todos los campos necesarios.'
+        },
+        {
+          target: '#tour-btn-filtrar',
+          title: '🔍 Filtrar Productos',
+          description: 'Filtra productos por categoría, precio, stock y más criterios para encontrar lo que necesitas.'
+        },
+        {
+          target: '#tour-tabla-productos',
+          title: '📋 Tabla de Productos',
+          description: 'Aquí se muestran todos tus productos con información clave: nombre, categoría, precio, stock y más.'
+        },
+        {
+          target: '#tour-tabla-productos tbody tr:first-child',
+          title: '✏️ Editar Producto',
+          description: 'Para editar un producto, simplemente haz clic en cualquier fila de la tabla. Se abrirá el formulario de edición.'
+        }
+      ],
+      spotlightStyle: {},
+      tourCardStyle: {}
     }
   },
   mounted () {
@@ -1283,9 +1416,25 @@ export default {
       filter: undefined
     })
     this.getUnitOfMeasures()
+
+    // Check and start tour on first visit
+    this.checkAndStartTour()
+
+    // Listen for tour activation from navbar
+    eventBus.on('activate-page-tour', (pageName) => {
+      if (pageName === 'Product') {
+        this.startMainTour()
+      }
+    })
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice'])
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    /**
+     * Get current tour steps
+     */
+    currentTourSteps () {
+      return this.mainTourSteps
+    }
   },
   watch: {
     /**
@@ -1634,6 +1783,37 @@ export default {
           notify(error.message, 'negative', 'warning')
         }
       })
+    },
+    openMassiveStockDialog () {
+      if (!this.selection.length) {
+        notify('Selecciona al menos un producto', 'warning', 'warning')
+        return
+      }
+      this.massiveStockQuantity = null
+      this.massiveStockDialog = true
+    },
+    async confirmMassiveStock () {
+      if (!this.massiveStockQuantity || this.massiveStockQuantity <= 0) {
+        notify('La cantidad debe ser mayor a 0', 'warning', 'warning')
+        return
+      }
+      try {
+        loading(true)
+        const productIds = this.selection.map(item => item.id)
+        await this.$api.post('massive-stock', {
+          product_ids: productIds,
+          quantity: this.massiveStockQuantity,
+          branch_office_id: this.branchOffice?.id
+        })
+        notify('Stock actualizado exitosamente', 'positive', 'info')
+        this.massiveStockDialog = false
+        this.selection = []
+        this.getProducts(this.params)
+      } catch (error) {
+        notify(error.message || 'Error al actualizar el stock', 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
     },
     /**
      * Open companies dialog
@@ -2262,7 +2442,7 @@ export default {
         })
 
         const blob = new Blob([response.data], { type: 'application/pdf' })
-        const file = new File([blob], `codigos-qr-productos.pdf`, { type: 'application/pdf' })
+        const file = new File([blob], 'codigos-qr-productos.pdf', { type: 'application/pdf' })
 
         // Try to share using Web Share API
         if (navigator.share) {
@@ -2302,6 +2482,156 @@ export default {
       } finally {
         this.loadingPdf = false
       }
+    },
+    /**
+     * Open add product dialog
+     */
+    openAddProductDialog () {
+      this.openAddProduct = true
+    },
+    /**
+     * Check and start tour on first visit
+     */
+    checkAndStartTour () {
+      const hasSeenTour = localStorage.getItem('has_seen_product_main_tour')
+      if (hasSeenTour !== 'true') {
+        this.$nextTick(() => {
+          setTimeout(() => {
+            this.startMainTour()
+          }, 500)
+        })
+      }
+    },
+    /**
+     * Start main page tour
+     */
+    startMainTour () {
+      this.currentTourType = 'main'
+      this.currentTourStep = 0
+      this.showTour = true
+      this.$nextTick(() => {
+        this.updateTourPosition()
+      })
+    },
+    /**
+     * Next tour step
+     */
+    nextTourStep () {
+      if (this.currentTourStep < this.currentTourSteps.length - 1) {
+        this.currentTourStep++
+        this.$nextTick(() => {
+          this.updateTourPosition()
+        })
+      } else {
+        this.finishTour()
+      }
+    },
+    /**
+     * Previous tour step
+     */
+    previousTourStep () {
+      if (this.currentTourStep > 0) {
+        this.currentTourStep--
+        this.$nextTick(() => {
+          this.updateTourPosition()
+        })
+      }
+    },
+    /**
+     * Skip tour
+     */
+    skipTour () {
+      this.finishTour()
+    },
+    /**
+     * Finish tour
+     */
+    finishTour () {
+      this.showTour = false
+      this.currentTourStep = 0
+      localStorage.setItem('has_seen_product_main_tour', 'true')
+      notify('¡Tour completado! Ya conoces cómo gestionar productos.', 'positive', 'check_circle')
+    },
+    /**
+     * Update tour position
+     */
+    updateTourPosition (retryCount = 0) {
+      this.$nextTick(() => {
+        const step = this.currentTourSteps[this.currentTourStep]
+        if (!step) return
+
+        const element = document.querySelector(step.target)
+        if (!element) {
+          // Retry up to 5 times with increasing delay
+          if (retryCount < 5) {
+            console.warn(`Tour element not found: ${step.target}, retrying... (${retryCount + 1}/5)`)
+            setTimeout(() => {
+              this.updateTourPosition(retryCount + 1)
+            }, 200 * (retryCount + 1))
+            return
+          } else {
+            console.error('Tour element not found after retries:', step.target)
+            return
+          }
+        }
+
+        // Scroll to element first
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+        // Wait for scroll to finish before calculating positions
+        setTimeout(() => {
+          const rect = element.getBoundingClientRect()
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+          // Update spotlight position
+          this.spotlightStyle = {
+            top: `${rect.top + scrollTop - 10}px`,
+            left: `${rect.left + scrollLeft - 10}px`,
+            width: `${rect.width + 20}px`,
+            height: `${rect.height + 20}px`
+          }
+
+          // Position tour card with better logic
+          const cardWidth = 400
+          const cardHeight = 280
+          const padding = 20
+          const viewportHeight = window.innerHeight
+          const viewportWidth = window.innerWidth
+
+          let cardTop = rect.bottom + scrollTop + padding
+          let cardLeft = rect.left + scrollLeft
+
+          // Special positioning for table - place card at bottom of viewport
+          if (step.target === '#tour-tabla-productos' || step.target === '#tour-tabla-productos tbody tr:first-child') {
+            cardTop = scrollTop + viewportHeight - cardHeight - padding
+            cardLeft = scrollLeft + (viewportWidth - cardWidth) / 2
+          } else {
+            // If card goes below viewport, position it above the element
+            if (rect.bottom + cardHeight + padding > viewportHeight) {
+              cardTop = rect.top + scrollTop - cardHeight - padding
+            }
+
+            // If still goes above viewport, position it in the middle
+            if (cardTop < scrollTop) {
+              cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+            }
+
+            // Adjust horizontal position
+            if (cardLeft + cardWidth > viewportWidth) {
+              cardLeft = viewportWidth - cardWidth - padding
+            }
+            if (cardLeft < 0) {
+              cardLeft = padding
+            }
+          }
+
+          this.tourCardStyle = {
+            top: `${cardTop}px`,
+            left: `${cardLeft}px`
+          }
+        }, 300)
+      })
     }
   }
 }
@@ -2331,4 +2661,124 @@ export default {
   transform: scale(1.02);
 }
 
+/* Tour Styles */
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  transition: all 0.3s ease;
+  z-index: 10001;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  }
+  50% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 10002;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    min-width: 300px;
+    max-width: 90vw;
+    left: 5vw !important;
+  }
+
+  .tour-title {
+    font-size: 18px;
+  }
+
+  .tour-description {
+    font-size: 13px;
+  }
+}
 </style>

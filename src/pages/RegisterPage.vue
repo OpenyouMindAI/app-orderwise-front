@@ -171,20 +171,335 @@
     </div>
 
     <!-- Modal de Setup de Empresa -->
-    <company-setup-modal
-      v-model="showCompanySetup"
-      @company-created="handleCompanyCreated"
-    />
+    <!-- Modal de selección: Demo o Registrar Empresa -->
+    <q-dialog v-model="showCompanyOptions" persistent transition-show="scale" transition-hide="scale">
+      <q-card class="modern-options-dialog">
+        <!-- Header minimalista -->
+        <q-card-section class="options-header">
+          <div class="header-content">
+            <div class="welcome-icon-wrapper">
+              <q-icon name="celebration" size="32px" class="welcome-icon" />
+            </div>
+            <div class="text-h5 text-weight-bold q-mt-sm">¡Bienvenido!</div>
+            <div class="text-subtitle1 text-grey-7 q-mt-xs">Elige cómo quieres comenzar</div>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pa-xl">
+          <div class="row q-col-gutter-lg">
+            <!-- Opción: Ver Demo -->
+            <div class="col-12 col-md-6">
+              <div class="modern-option-card demo-card" @click="selectDemoOption">
+                <div class="option-icon-wrapper demo-icon">
+                  <q-icon name="visibility" size="40px" />
+                </div>
+                <div class="option-content">
+                  <div class="option-title">Ver Demo</div>
+                  <div class="option-description">
+                    Explora el sistema con datos de ejemplo
+                  </div>
+                </div>
+                <div class="option-badge demo-badge">
+                  <q-icon name="rocket_launch" size="16px" />
+                  <span>Rápido</span>
+                </div>
+                <div class="option-arrow">
+                  <q-icon name="arrow_forward" size="24px" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Opción: Registrar Mi Empresa -->
+            <div class="col-12 col-md-6">
+              <div class="modern-option-card business-card" @click="selectRegisterOption">
+                <div class="option-icon-wrapper business-icon">
+                  <q-icon name="business" size="40px" />
+                </div>
+                <div class="option-content">
+                  <div class="option-title">Mi Empresa</div>
+                  <div class="option-description">
+                    Configura tu empresa y comienza ahora
+                  </div>
+                </div>
+                <div class="option-badge business-badge">
+                  <q-icon name="verified" size="16px" />
+                  <span>Recomendado</span>
+                </div>
+                <div class="option-arrow">
+                  <q-icon name="arrow_forward" size="24px" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Modal de selección de rubro para demo -->
+    <q-dialog v-model="showDemoBusinessTypeSelection" persistent transition-show="scale" transition-hide="scale">
+      <q-card class="business-type-dialog">
+        <!-- Header -->
+        <q-card-section class="business-type-header">
+          <div class="header-content">
+            <div class="business-icon-wrapper">
+              <q-icon name="store" size="28px" class="business-icon" />
+            </div>
+            <div class="text-h6 text-weight-bold q-mt-xs">Selecciona tu Rubro</div>
+            <div class="text-caption text-grey-7">Elige el tipo de negocio para la demo</div>
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <!-- Buscador -->
+        <q-card-section class="q-pa-md">
+          <q-input
+            v-model="businessTypeSearch"
+            placeholder="Buscar rubro..."
+            filled
+            dense
+            clearable
+            @update:model-value="searchBusinessTypes"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </q-card-section>
+
+        <!-- Grid de Cards -->
+        <q-card-section class="q-pa-md" style="max-height: 50vh; overflow-y: auto;">
+          <div class="row q-col-gutter-sm">
+            <div
+              v-for="(type, index) in filteredBusinessTypes"
+              :key="type.id"
+              class="col-12 col-sm-6"
+            >
+              <div
+                class="business-type-card"
+                :class="{ 'selected': demoBusinessType?.id === type.id }"
+                @click="selectBusinessType(type)"
+                :style="{ animationDelay: `${index * 0.05}s` }"
+              >
+                <div class="business-type-icon">
+                  <q-icon :name="getBusinessIcon(type.name)" size="32px" />
+                </div>
+                <div class="business-type-name">{{ type.name }}</div>
+                <div class="business-type-check" v-if="demoBusinessType?.id === type.id">
+                  <q-icon name="check_circle" size="24px" color="positive" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- No results -->
+          <div v-if="filteredBusinessTypes.length === 0" class="text-center q-pa-lg">
+            <q-icon name="search_off" size="64px" color="grey-5" />
+            <div class="text-h6 text-grey-6 q-mt-md">No se encontraron rubros</div>
+            <div class="text-caption text-grey-5">Intenta con otra búsqueda</div>
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <!-- Footer -->
+        <q-card-actions class="q-pa-md">
+          <q-btn
+            flat
+            label="Volver"
+            color="grey-7"
+            icon="arrow_back"
+            @click="backToOptions"
+            no-caps
+          />
+          <q-space />
+          <q-btn
+            label="Continuar"
+            color="primary"
+            icon-right="arrow_forward"
+            @click="assignDemo"
+            :loading="loadingDemo"
+            :disable="!demoBusinessType"
+            unelevated
+            no-caps
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Modal de configuración de empresa -->
+    <q-dialog v-model="showCompanySetup" persistent transition-show="scale" transition-hide="scale">
+      <q-card class="modern-company-setup-dialog">
+        <!-- Header moderno -->
+        <q-card-section class="company-setup-header">
+          <div class="header-content">
+            <div class="setup-icon-wrapper">
+              <q-icon name="business_center" size="28px" class="setup-icon" />
+            </div>
+            <div class="text-h6 text-weight-bold q-mt-xs">Configura tu Empresa</div>
+            <div class="text-caption text-grey-7">Completa la información para comenzar</div>
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="q-pa-md" style="max-height: 60vh; overflow-y: auto;">
+          <q-form @submit="setupCompany">
+            <!-- Grid de inputs -->
+            <div class="row q-col-gutter-sm">
+              <!-- Nombre de la empresa -->
+              <div class="col-12">
+                <q-input
+                  v-model="companyForm.company_name"
+                  label="Nombre de la Empresa *"
+                  filled
+                  dense
+                  :rules="[val => !!val || 'El nombre es requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="business" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Documento y Teléfono en la misma fila -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="companyForm.company_document"
+                  label="CUIT / RUT / Documento *"
+                  filled
+                  dense
+                  :rules="[val => !!val || 'El documento es requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="badge" />
+                  </template>
+                </q-input>
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="companyForm.company_phone"
+                  label="Teléfono *"
+                  filled
+                  dense
+                  :rules="[val => !!val || 'El teléfono es requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="phone" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Email -->
+              <div class="col-12">
+                <q-input
+                  v-model="companyForm.company_email"
+                  label="Email de la Empresa *"
+                  type="email"
+                  filled
+                  dense
+                  :rules="[
+                    val => !!val || 'El email es requerido',
+                    val => /.+@.+\..+/.test(val) || 'Email inválido'
+                  ]"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="email" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Rubro -->
+              <div class="col-12">
+                <q-select
+                  v-model="companyForm.business_type"
+                  :options="businessTypes"
+                  option-label="name"
+                  option-value="id"
+                  label="Rubro / Tipo de Negocio *"
+                  filled
+                  dense
+                  use-input
+                  input-debounce="300"
+                  @filter="filterBusinessTypes"
+                  :rules="[val => !!val || 'El rubro es requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="category" />
+                  </template>
+                  <template v-slot:no-option>
+                    <q-item>
+                      <q-item-section class="text-grey">
+                        No hay resultados
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Checkbox de copiar productos -->
+              <div class="col-12">
+                <q-checkbox
+                  v-model="companyForm.copy_test_products"
+                  label="Copiar productos y categorías de ejemplo"
+                  color="primary"
+                  dense
+                  class="q-mt-xs"
+                >
+                  <q-tooltip class="bg-grey-8">
+                    Te ayudará a empezar más rápido con datos de prueba del mismo rubro
+                  </q-tooltip>
+                </q-checkbox>
+              </div>
+              <!-- Dirección con AddressComponent -->
+              <div class="col-12 q-mt-sm">
+                <AddressComponent
+                  :initial-address="companyAddressData"
+                  @address-selected="handleCompanyAddressSelected"
+                />
+              </div>
+            </div>
+          </q-form>
+        </q-card-section>
+
+        <q-separator />
+
+        <!-- Footer con botones -->
+        <q-card-actions class="q-pa-md">
+          <q-btn
+            flat
+            label="Volver"
+            color="grey-7"
+            icon="arrow_back"
+            @click="backToOptions"
+            :disable="loadingCompanySetup"
+            no-caps
+          />
+          <q-space />
+          <q-btn
+            label="Crear Empresa"
+            color="primary"
+            icon-right="rocket_launch"
+            @click="setupCompany"
+            :loading="loadingCompanySetup"
+            unelevated
+            no-caps
+            class="setup-submit-btn"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from 'src/boot/axios'
 import { logo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 
 const router = useRouter()
 const store = authentication()
@@ -205,6 +520,246 @@ const loading = ref(false)
 const loadingGoogle = ref(false)
 const showCompanySetup = ref(false)
 
+// Company setup form
+const companyForm = ref({
+  company_name: '',
+  company_document: '',
+  company_email: '',
+  company_phone: '',
+  company_address: '',
+  business_type: null,
+  copy_test_products: false
+})
+
+const businessTypes = ref([])
+const loadingCompanySetup = ref(false)
+const isGoogleRegister = ref(false)
+const showCompanyOptions = ref(false)
+const showDemoBusinessTypeSelection = ref(false)
+const demoBusinessType = ref(null)
+const loadingDemo = ref(false)
+const registeredCredentials = ref({
+  email: '',
+  password: ''
+})
+
+// Company address data
+const companyAddressData = ref({
+  name: '',
+  street: '',
+  city: '',
+  state: '',
+  country: '',
+  zipCode: '',
+  latitude: null,
+  longitude: null,
+  formattedAddress: '',
+  placeId: '',
+  types: []
+})
+
+// Business type search
+const businessTypeSearch = ref('')
+const filteredBusinessTypes = computed(() => {
+  if (!businessTypeSearch.value) {
+    return businessTypes.value
+  }
+  const search = businessTypeSearch.value.toLowerCase()
+  return businessTypes.value.filter(type =>
+    type.name.toLowerCase().includes(search)
+  )
+})
+
+/**
+ * Filter business types
+ */
+const filterBusinessTypes = async (value, update) => {
+  try {
+    const { data } = await api.get('business-types', {
+      params: { search: value }
+    })
+    update(() => {
+      businessTypes.value = data.data || data
+    })
+  } catch (error) {
+    console.error('Error loading business types:', error)
+    update(() => {
+      businessTypes.value = []
+    })
+  }
+}
+
+/**
+ * Load business types when opening modal
+ */
+const loadBusinessTypes = async () => {
+  try {
+    const { data } = await api.get('business-types')
+    businessTypes.value = data.data || data
+  } catch (error) {
+    console.error('Error loading business types:', error)
+  }
+}
+
+/**
+ * Search business types
+ */
+const searchBusinessTypes = (value) => {
+  // El filtrado se hace automáticamente con el computed
+}
+
+/**
+ * Select business type
+ */
+const selectBusinessType = (type) => {
+  demoBusinessType.value = type
+}
+
+/**
+ * Get icon for business type
+ */
+const getBusinessIcon = (name) => {
+  const iconMap = {
+    'Restaurante': 'restaurant',
+    'Cafetería': 'local_cafe',
+    'Panadería': 'bakery_dining',
+    'Bar': 'local_bar',
+    'Supermercado': 'shopping_cart',
+    'Tienda de Ropa': 'checkroom',
+    'Farmacia': 'local_pharmacy',
+    'Ferretería': 'hardware',
+    'Librería': 'menu_book',
+    'Tecnología': 'devices',
+    'Electrónica': 'electrical_services',
+    'Mueblería': 'chair',
+    'Joyería': 'diamond',
+    'Peluquería': 'content_cut',
+    'Gimnasio': 'fitness_center',
+    'Spa': 'spa',
+    'Hotel': 'hotel',
+    'Automotriz': 'directions_car',
+    'Construcción': 'construction',
+    'Educación': 'school',
+    'Salud': 'local_hospital',
+    'Belleza': 'face',
+    'Mascotas': 'pets',
+    'Deportes': 'sports_soccer',
+    'Juguetería': 'toys',
+    'Floristería': 'local_florist',
+    'Óptica': 'visibility',
+    'Fotografía': 'photo_camera',
+    'Imprenta': 'print',
+    'Lavandería': 'local_laundry_service'
+  }
+
+  // Buscar coincidencia parcial
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (name.toLowerCase().includes(key.toLowerCase())) {
+      return icon
+    }
+  }
+
+  // Icono por defecto
+  return 'store'
+}
+
+/**
+ * Handle company address selected
+ */
+const handleCompanyAddressSelected = (addressDetails) => {
+  if (addressDetails) {
+    // Guardar los detalles completos de la dirección
+    companyAddressData.value = { ...addressDetails }
+    // Actualizar el campo company_address con la dirección formateada
+    companyForm.value.company_address = addressDetails.formattedAddress || addressDetails.street || ''
+  } else {
+    // Limpiar si se resetea la dirección
+    companyAddressData.value = {
+      name: '',
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+      latitude: null,
+      longitude: null,
+      formattedAddress: '',
+      placeId: '',
+      types: []
+    }
+    companyForm.value.company_address = ''
+  }
+}
+
+/**
+ * Setup company with form data
+ */
+const setupCompany = async () => {
+  try {
+    loadingCompanySetup.value = true
+
+    // Preparar payload con business_type_id
+    const payload = {
+      ...companyForm.value,
+      business_type_id: companyForm.value.business_type?.id
+    }
+
+    await api.post('authentication/setup-company', payload)
+
+    notify('Empresa configurada exitosamente', 'positive', 'check_circle')
+
+    // Cerrar modal
+    showCompanySetup.value = false
+
+    // Si fue registro con Google, ya tiene sesión activa, solo redirigir
+    if (isGoogleRegister.value) {
+      router.push({ name: 'CompanyConfig' })
+    } else {
+      // Hacer login automático con las credenciales guardadas
+      await loginAfterCompanySetup()
+    }
+  } catch (error) {
+    const message = error.response?.data?.message || 'Error al configurar empresa'
+    notify(message, 'negative', 'warning')
+  } finally {
+    loadingCompanySetup.value = false
+  }
+}
+
+/**
+ * Login after company setup
+ */
+const loginAfterCompanySetup = async () => {
+  try {
+    const { data } = await api.post('authentication/login', {
+      username: registeredCredentials.value.email,
+      password: registeredCredentials.value.password
+    })
+
+    // Guardar token en localStorage
+    localStorage.setItem('access_token', data.access_token)
+    api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
+
+    // Guardar sesión completa en el store
+    store.setSessionData({
+      user: data.user,
+      access_token: data.access_token,
+      token_type: data.token_type,
+      expires_in: data.expires_in
+    })
+
+    notify('¡Bienvenido! Configura tu empresa', 'positive', 'check_circle')
+
+    // Redirigir a configuración de empresa
+    router.push({
+      name: 'CompanyConfig'
+    })
+  } catch (error) {
+    const message = error.response?.data?.message || 'Error al iniciar sesión'
+    notify(message, 'negative', 'warning')
+  }
+}
+
 /**
  * Register with email and password
  */
@@ -214,32 +769,110 @@ const register = async () => {
 
     const { data } = await api.post('authentication/register', form.value)
 
-    // Guardar sesión completa en el store
-    store.setSessionData({
-      user: data.user,
-      access_token: data.access_token,
-      token_type: data.token_type,
-      expires_in: data.expires_in,
-      refresh_token: data.refresh_token
-    })
-
-    // Guardar token en localStorage
+    // Guardar token en localStorage INMEDIATAMENTE
     localStorage.setItem('access_token', data.access_token)
     api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
 
     notify('Registro exitoso', 'positive', 'check_circle')
 
-    // Mostrar modal de setup de empresa
-    if (data.needs_company_setup) {
-      showCompanySetup.value = true
-    } else {
-      router.push('/')
+    // Marcar que NO fue registro con Google
+    isGoogleRegister.value = false
+
+    // Guardar credenciales para login posterior
+    registeredCredentials.value = {
+      email: form.value.email,
+      password: form.value.password
     }
+
+    // Pre-llenar formulario de empresa
+    companyForm.value.company_email = form.value.email
+    companyForm.value.company_phone = form.value.phone_number || ''
+
+    // Cargar business types
+    await loadBusinessTypes()
+
+    // Mostrar modal de opciones (Demo o Registrar)
+    showCompanyOptions.value = true
   } catch (error) {
     const message = error.response?.data?.message || 'Error al registrar usuario'
     notify(message, 'negative', 'warning')
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * Select demo option
+ */
+const selectDemoOption = () => {
+  showCompanyOptions.value = false
+  showDemoBusinessTypeSelection.value = true
+}
+
+/**
+ * Select register option
+ */
+const selectRegisterOption = () => {
+  showCompanyOptions.value = false
+  showCompanySetup.value = true
+}
+
+/**
+ * Back to options
+ */
+const backToOptions = () => {
+  // Cerrar todos los diálogos
+  showDemoBusinessTypeSelection.value = false
+  showCompanySetup.value = false
+
+  // Mostrar opciones nuevamente
+  showCompanyOptions.value = true
+
+  // Limpiar formularios
+  demoBusinessType.value = null
+  companyForm.value = {
+    company_name: '',
+    company_document: '',
+    company_email: '',
+    company_phone: '',
+    company_address: '',
+    business_type: null,
+    copy_test_products: true
+  }
+}
+
+/**
+ * Assign demo company
+ */
+const assignDemo = async () => {
+  try {
+    loadingDemo.value = true
+
+    const { data } = await api.post('authentication/assign-demo', {
+      business_type_id: demoBusinessType.value.id
+    })
+
+    // Actualizar sesión completa en el store (igual que LoginPage)
+    store.setSessionData(data)
+
+    notify('¡Bienvenido a la demo!', 'positive', 'check_circle')
+
+    // Cerrar modal
+    showDemoBusinessTypeSelection.value = false
+
+    // Redirigir según roles (igual que LoginPage)
+    if (data.user?.is_root) {
+      router.push({ name: 'Billing' })
+    } else if (data.user?.roles?.length === 0) {
+      notify('Usuario no tiene permisos', 'negative', 'warning')
+    } else {
+      router.push({ name: 'Tutorial' })
+    }
+  } catch (error) {
+    const message = error.response?.data?.message || 'Error al asignar empresa demo'
+    notify(message, 'negative', 'warning')
+  } finally {
+    loadingDemo.value = false
   }
 }
 
@@ -283,24 +916,24 @@ const registerWithGoogle = async () => {
               email: userInfo.email
             })
 
-            // Guardar sesión completa en el store
-            store.setSessionData({
-              user: data.user,
-              access_token: data.access_token,
-              token_type: data.token_type,
-              expires_in: data.expires_in,
-              refresh_token: data.refresh_token
-            })
-
-            // Guardar token en localStorage
-            localStorage.setItem('access_token', data.access_token)
-            api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
+            // Guardar sesión completa en el store (igual que LoginPage)
+            store.setSessionData(data)
 
             notify('Registro exitoso con Google', 'positive', 'check_circle')
 
             // Mostrar modal de setup de empresa
             if (data.needs_company_setup) {
-              showCompanySetup.value = true
+              // Marcar que fue registro con Google
+              isGoogleRegister.value = true
+
+              // Pre-llenar email de empresa con el email de Google
+              companyForm.value.company_email = userInfo.email
+
+              // Cargar business types
+              await loadBusinessTypes()
+
+              // Mostrar modal de opciones (Demo o Registrar)
+              showCompanyOptions.value = true
             } else {
               router.push('/')
             }
@@ -321,19 +954,6 @@ const registerWithGoogle = async () => {
   }
 }
 
-/**
- * Handle company created
- */
-const handleCompanyCreated = (data) => {
-  // Actualizar store con datos del usuario
-  store.userSession = data.user
-
-  // Marcar que necesita tutorial
-  localStorage.setItem('needs_tutorial', 'true')
-
-  // Redirigir directamente a productos para iniciar el tour
-  router.push('/products')
-}
 </script>
 
 <style scoped>
@@ -348,7 +968,6 @@ const handleCompanyCreated = (data) => {
   overflow-y: auto;
   overflow-x: hidden;
   background: transparent;
-  padding: 20px 0;
 }
 
 /* Fondo animado - Igual al LoginPage */
@@ -677,6 +1296,483 @@ const handleCompanyCreated = (data) => {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+/* Modern Options Dialog */
+.modern-options-dialog {
+  min-width: 700px;
+  max-width: 800px;
+  border-radius: 24px;
+  overflow: hidden;
+  animation: dialogEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dialogEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.options-header {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 40px 32px 32px;
+  text-align: center;
+}
+
+.body--dark .options-header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%);
+}
+
+.header-content {
+  animation: fadeInDown 0.6s ease-out 0.2s backwards;
+}
+
+.welcome-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+  }
+}
+
+.welcome-icon {
+  color: white;
+}
+
+/* Modern Option Cards */
+.modern-option-card {
+  position: relative;
+  padding: 32px 24px;
+  border-radius: 20px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+  animation: cardSlideIn 0.6s ease-out backwards;
+}
+
+.modern-option-card:nth-child(1) {
+  animation-delay: 0.3s;
+}
+
+.modern-option-card:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+@keyframes cardSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.body--dark .modern-option-card {
+  background: #1e1e1e;
+  border-color: #374151;
+}
+
+.modern-option-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(102, 126, 234, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.modern-option-card:hover::before {
+  opacity: 1;
+}
+
+.modern-option-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: var(--q-primary);
+  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
+}
+
+.modern-option-card:active {
+  transform: translateY(-4px) scale(1.01);
+}
+
+/* Option Icon Wrapper */
+.option-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.demo-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.business-icon {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.modern-option-card:hover .option-icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Option Content */
+.option-content {
+  margin-bottom: 16px;
+}
+
+.option-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.body--dark .option-title {
+  color: #f3f4f6;
+}
+
+.option-description {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.body--dark .option-description {
+  color: #9ca3af;
+}
+
+/* Option Badge */
+.option-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+}
+
+.demo-badge {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.business-badge {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.modern-option-card:hover .option-badge {
+  transform: translateX(4px);
+}
+
+/* Option Arrow */
+.option-arrow {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--q-primary);
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.modern-option-card:hover .option-arrow {
+  opacity: 1;
+  transform: translateX(4px);
+  background: var(--q-primary);
+  color: white;
+}
+
+/* Business Type Selection Dialog */
+.business-type-dialog {
+  min-width: 650px;
+  max-width: 700px;
+  border-radius: 20px;
+  overflow: hidden;
+  animation: dialogEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.business-type-header {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+
+.body--dark .business-type-header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%);
+}
+
+.business-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+.business-icon {
+  color: white;
+}
+
+/* Business Type Cards */
+.business-type-card {
+  position: relative;
+  padding: 20px;
+  border-radius: 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: cardFadeIn 0.5s ease-out backwards;
+}
+
+@keyframes cardFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.body--dark .business-type-card {
+  background: #1e1e1e;
+  border-color: #374151;
+}
+
+.business-type-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--q-primary);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.2);
+}
+
+.business-type-card.selected {
+  border-color: var(--q-primary);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+
+.business-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  color: var(--q-primary);
+  transition: all 0.3s ease;
+}
+
+.body--dark .business-type-icon {
+  background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+}
+
+.business-type-card:hover .business-type-icon {
+  transform: scale(1.1) rotate(5deg);
+  background: linear-gradient(135deg, var(--q-primary) 0%, #764ba2 100%);
+  color: white;
+}
+
+.business-type-card.selected .business-type-icon {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #764ba2 100%);
+  color: white;
+}
+
+.business-type-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.body--dark .business-type-name {
+  color: #f3f4f6;
+}
+
+.business-type-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  animation: checkAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes checkAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive Business Type Dialog */
+@media (max-width: 768px) {
+  .business-type-dialog {
+    min-width: 95vw;
+    max-width: 95vw;
+  }
+
+  .business-type-card {
+    padding: 16px;
+  }
+
+  .business-type-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .business-type-name {
+    font-size: 14px;
+  }
+}
+
+/* Modern Company Setup Dialog */
+.modern-company-setup-dialog {
+  min-width: 600px;
+  max-width: 650px;
+  border-radius: 20px;
+  overflow: hidden;
+  animation: dialogEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.company-setup-header {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+
+.body--dark .company-setup-header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%);
+}
+
+.setup-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+.setup-icon {
+  color: white;
+}
+
+/* Setup Submit Button */
+.setup-submit-btn {
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.setup-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(var(--q-primary-rgb, 16, 185, 129), 0.3);
+}
+
+/* Responsive Company Setup */
+@media (max-width: 768px) {
+  .modern-company-setup-dialog {
+    min-width: 95vw;
+    max-width: 95vw;
+  }
+
+  .company-setup-header {
+    padding: 20px 16px 16px;
+  }
+
+  .setup-icon-wrapper {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* Responsive Options Dialog */
+@media (max-width: 768px) {
+  .modern-options-dialog {
+    min-width: 95vw;
+    max-width: 95vw;
+  }
+
+  .options-header {
+    padding: 32px 24px 24px;
+  }
+
+  .modern-option-card {
+    padding: 24px 20px;
+  }
+
+  .option-icon-wrapper {
+    width: 60px;
+    height: 60px;
+  }
+
+  .option-title {
+    font-size: 20px;
+  }
 }
 
 /* Link a Login */

@@ -433,16 +433,22 @@
 
           <q-separator />
 
-          <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-card-actions align="right" class="text-primary">
             <q-btn
-              color="grey-7"
+              v-if="isEditMode"
+              color="negative"
+              label="Eliminar"
+              @click="confirmDeletePromotion"
+              :loading="saving"
+            />
+            <q-btn
+              color="secondary"
               label="Cancelar"
-              flat
               @click="closeModal"
             />
             <q-btn
               color="primary"
-              :label="isEditMode ? 'Actualizar Promoción' : 'Guardar Promoción'"
+              :label="isEditMode ? 'Actualizar Promoción' : 'Guardar'"
               type="submit"
               :loading="saving"
             />
@@ -564,7 +570,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['update:modelValue', 'promotion-saved', 'promotion-updated'])
+const emit = defineEmits(['update:modelValue', 'promotion-saved', 'promotion-updated', 'promotion-deleted'])
 
 // Quasar instance
 const $q = useQuasar()
@@ -708,6 +714,34 @@ const loadPromotionForEdit = (promotionData) => {
 const closeModal = () => {
   internalShowModal.value = false
   resetForm()
+}
+
+const confirmDeletePromotion = () => {
+  if (!isEditMode.value || !promotion.value || !promotion.value.id) {
+    $q.notify({
+      type: 'negative',
+      message: 'No se pudo identificar la promoción a eliminar.',
+      position: 'top'
+    })
+    return
+  }
+
+  $q.dialog({
+    title: 'Eliminar promoción',
+    message: '¿Está seguro de que desea eliminar esta promoción? Esta acción no se puede deshacer.',
+    cancel: {
+      flat: true,
+      color: 'grey-7',
+      label: 'Cancelar'
+    },
+    ok: {
+      color: 'negative',
+      label: 'Eliminar'
+    },
+    persistent: true
+  }).onOk(() => {
+    emit('promotion-deleted', { ...promotion.value })
+  })
 }
 
 // Multiple image handling functions

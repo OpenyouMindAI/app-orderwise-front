@@ -440,7 +440,8 @@ export default {
     },
     branchOffice: {
       type: Object,
-      required: true
+      required: false,
+      default: null
     },
     flowType: {
       type: String,

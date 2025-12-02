@@ -12,56 +12,158 @@
 
     <q-header elevated class="modern-header">
       <q-toolbar class="modern-toolbar">
-        <q-btn
-          flat
-          dense
-          round
-          class="q-mr-sm menu-btn"
-          icon="menu"
-          aria-label="Menu"
-          @click="leftDrawerOpen = !leftDrawerOpen"
-        />
-        <q-separator dark vertical inset />
+        <!-- Left: Menu + Logo -->
+        <div class="navbar-left">
+          <q-btn
+            flat
+            dense
+            round
+            class="menu-btn"
+            icon="menu"
+            aria-label="Menu"
+            @click="leftDrawerOpen = !leftDrawerOpen"
+          />
 
-        <div v-if="!$q.screen.lt.sm" class="flex q-ml-md full-width">
-          <q-img
-            :src="userSession?.company_session?.url || logo.white"
-            width="155px"
-            style="max-height: 40px"
-            alt="logo"
-            fit="contain"
-          >
-            <q-tooltip :offset="[10, 10]" class="text-body2">
-              {{ userSession?.company_session?.name }}
-            </q-tooltip>
-          </q-img>
+          <q-separator dark vertical inset class="q-mx-sm" />
+
+          <div v-if="!$q.screen.lt.sm" class="logo-container-with-badge">
+            <q-img
+              :src="userSession?.company_session?.url || logo.white"
+              width="120px"
+              style="max-height: 32px"
+              alt="logo"
+              fit="contain"
+            >
+              <q-tooltip :offset="[10, 10]" class="text-body2">
+                {{ userSession?.company_session?.name }}
+              </q-tooltip>
+            </q-img>
+
+            <!-- Demo Badge flotante (solo en modo demo) -->
+            <transition
+              appear
+              enter-active-class="animated fadeIn"
+              leave-active-class="animated fadeOut"
+            >
+              <div v-if="store.isDemo" class="demo-badge-floating">
+                <span>Demo</span>
+                <div class="demo-badge-dot"></div>
+              </div>
+            </transition>
+          </div>
         </div>
+
         <q-space />
-        <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
-        <q-btn
-          flat
-          dense
-          icon="cast_connected"
-          round
-          class="q-mr-sm"
-          @click="screen"
-          v-if="hasMultipleScreens && $q.platform.is.nativeMobile"
-        >
-          <q-tooltip>Segunda pantalla</q-tooltip>
-        </q-btn>
-        <!-- Botón de escaneo QR -->
-        <q-btn
-          flat
-          dense
-          icon="qr_code_scanner"
-          round
-          class="q-mr-sm"
-          v-if="$q.platform.is.nativeMobile"
-          @click="openQrScanner"
-        >
-          <q-tooltip>Escanear QR</q-tooltip>
-        </q-btn>
-        <q-btn flat dense icon="apps" round class="q-mr-sm">
+
+        <!-- Branch Office Indicator -->
+        <div v-if="branchOffice" class="branch-indicator">
+          <q-chip
+            dense
+            square
+            class="branch-chip"
+            icon="store"
+            color="primary"
+            text-color="white"
+          >
+            {{ branchOffice.name }}
+          </q-chip>
+
+          <!-- Add Branch Button -->
+          <q-btn
+            v-if="canAddMoreBranches"
+            flat
+            dense
+            round
+            size="sm"
+            icon="add"
+            color="primary"
+            class="q-ml-xs add-branch-btn"
+            @click="goToAddBranch"
+          >
+            <q-tooltip>Agregar sucursal ({{ currentBranchCount }}/{{ maxBranches }})</q-tooltip>
+          </q-btn>
+        </div>
+
+        <q-space />
+
+        <!-- Right: Actions -->
+        <div class="navbar-right">
+          <!-- Botón Crear Mi Empresa (solo en modo demo) -->
+          <transition
+            appear
+            enter-active-class="animated fadeIn"
+            leave-active-class="animated fadeOut"
+          >
+            <q-btn
+              v-if="store.isDemo"
+              outline
+              no-caps
+              dense
+              class="create-btn-v0"
+              @click="showCreateCompanyDialog = true"
+            >
+              <q-icon name="rocket_launch" size="16px" class="q-mr-xs rocket-icon" />
+              <span>Mi Empresa</span>
+
+              <q-tooltip class="bg-grey-9">
+                Crea tu empresa y comienza gratis
+              </q-tooltip>
+            </q-btn>
+          </transition>
+
+          <!-- Botón de Tour -->
+          <q-btn
+            v-if="currentPageHasTour"
+            flat
+            dense
+            icon="help_outline"
+            round
+            @click="activateCurrentPageTour"
+            class="tour-btn-navbar"
+          >
+            <q-tooltip>Ver tutorial de esta página</q-tooltip>
+          </q-btn>
+
+          <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
+          <q-btn
+            flat
+            dense
+            icon="cast_connected"
+            round
+            @click="screen"
+            v-if="hasMultipleScreens && $q.platform.is.nativeMobile"
+          >
+            <q-tooltip>Segunda pantalla</q-tooltip>
+          </q-btn>
+
+          <!-- Botón de escaneo QR -->
+          <q-btn
+            flat
+            dense
+            icon="qr_code_scanner"
+            round
+            v-if="$q.platform.is.nativeMobile"
+            @click="openQrScanner"
+          >
+            <q-tooltip>Escanear QR</q-tooltip>
+          </q-btn>
+
+          <!-- Botón Chat con IA -->
+          <q-btn
+            flat
+            dense
+            icon="smart_toy"
+            round
+            color="primary"
+            @click="changeRoute('AiChat', 'Chat con IA')"
+            v-if="userSession?.is_root"
+            class="ai-chat-btn"
+          >
+            <q-tooltip>Chat con IA - Asistente Virtual</q-tooltip>
+          </q-btn>
+
+          <!-- Herramientas -->
+          <q-btn flat dense icon="apps" round>
           <q-tooltip class="text-body2">
             Herramientas
           </q-tooltip>
@@ -184,29 +286,34 @@
               </div>
             </q-banner>
           </q-popup-proxy>
-        </q-btn>
-        <q-btn dense flat round icon="notifications" color="white" class="q-mr-sm">
-          <q-tooltip>
-            Notificaciones {{ numberOfNotifications.length }}
-          </q-tooltip>
-          <q-badge v-if="numberOfNotifications.length" color="teal" floating>
-            {{ numberOfNotifications.length }}
-          </q-badge>
-          <q-popup-proxy>
-            <notification-component
-              style-css="min-width: 25vw;"
-              @on-load="getDataNotification"
-            />
-          </q-popup-proxy>
-        </q-btn>
-        <q-separator dark vertical inset />
-        <q-btn
-          v-if="userSession"
-          flat
-          dense
-          round
-          class="q-ml-sm profile-btn"
-        >
+          </q-btn>
+
+          <!-- Notificaciones -->
+          <q-btn dense flat round icon="notifications" color="white">
+            <q-tooltip>
+              Notificaciones {{ numberOfNotifications.length }}
+            </q-tooltip>
+            <q-badge v-if="numberOfNotifications.length" color="teal" floating>
+              {{ numberOfNotifications.length }}
+            </q-badge>
+            <q-popup-proxy>
+              <notification-component
+                style-css="min-width: 25vw;"
+                @on-load="getDataNotification"
+              />
+            </q-popup-proxy>
+          </q-btn>
+
+          <q-separator dark vertical inset class="q-mx-sm" />
+
+          <!-- Profile -->
+          <q-btn
+            v-if="userSession"
+            flat
+            dense
+            round
+            class="profile-btn"
+          >
           <q-avatar size="36px" class="profile-avatar">
             <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
             <q-icon v-else name="person" size="24px" />
@@ -214,75 +321,133 @@
           <q-menu class="profile-menu" transition-show="jump-down" transition-hide="jump-up">
             <q-card class="profile-card" flat bordered>
               <!-- Profile Header -->
-              <q-card-section class="profile-header">
+              <div class="profile-header-modern">
                 <div class="profile-header-content">
-                  <q-avatar size="64px" class="profile-avatar-large">
+                  <q-avatar size="48px" class="profile-avatar-modern">
                     <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
-                    <q-icon v-else name="person" size="36px" />
+                    <q-icon v-else name="person" size="28px" />
                   </q-avatar>
                   <div class="profile-info">
                     <div class="profile-name">{{ ucwords(`${userSession.name}`) }}</div>
                     <div class="profile-email">{{ userSession.email }}</div>
-                    <q-chip size="sm" class="profile-role" dense>
-                      <q-icon name="badge" size="14px" class="q-mr-xs" />
-                      {{ userSession.is_root ? 'Root' : userSession?.roles[0]?.name }}
-                    </q-chip>
                   </div>
                 </div>
-              </q-card-section>
+              </div>
+
+              <!-- Plan Info / Demo Action -->
+              <div>
+                <q-item
+                  v-if="store.isDemo"
+                  clickable
+                  v-ripple
+                  class="demo-action-item"
+                  @click="showCreateCompanyDialog = true"
+                  v-close-popup
+                >
+                  <q-item-section avatar class="min-width-auto">
+                    <div class="demo-icon-wrapper">
+                      <q-icon name="workspace_premium" color="amber" size="22px" />
+                    </div>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-body2 text-weight-bold">Demo</q-item-label>
+                    <q-item-label caption class="text-caption demo-caption">Crea tu empresa</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <div class="rocket-wrapper">
+                      <q-icon name="rocket_launch" size="20px" class="rocket-icon" color="primary" />
+                    </div>
+                  </q-item-section>
+                </q-item>
+                <div v-else class="plan-compact">
+                  <q-icon name="workspace_premium" color="primary" size="16px" />
+                  <span class="text-caption q-ml-xs"><strong>Plan: {{ subscriptionPlan }}</strong></span>
+                </div>
+              </div>
 
               <!-- Profile Actions -->
-              <q-card-section class="profile-actions">
-                <q-list>
+              <div>
+                <q-list dense class="q-py-none q-my-none">
                   <q-item
                     v-ripple
                     clickable
-                    class="profile-action-item"
+                    dense
+                    class="profile-action-item-compact"
                     @click="changeRoute('Profile', 'Perfil')"
                     v-close-popup
                   >
-                    <q-item-section avatar>
-                      <q-icon name="account_circle" color="primary" />
+                    <q-item-section avatar class="min-width-auto">
+                      <div class="action-icon-wrapper">
+                        <q-icon name="account_circle" color="primary" size="20px" />
+                      </div>
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label>Mi Perfil</q-item-label>
-                      <q-item-label caption>Ver y editar información</q-item-label>
+                      <q-item-label class="text-body2 text-weight-medium">Mi Perfil</q-item-label>
+                      <q-item-label caption class="text-caption action-caption">Ver y editar información</q-item-label>
                     </q-item-section>
                   </q-item>
 
                   <q-item
                     v-ripple
                     clickable
-                    class="profile-action-item"
+                    dense
+                    class="profile-action-item-compact"
                     @click="setTheme"
                   >
-                    <q-item-section avatar>
-                      <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" color="primary" />
+                    <q-item-section avatar class="min-width-auto">
+                      <div class="action-icon-wrapper">
+                        <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" color="primary" size="20px" />
+                      </div>
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label>{{ $q.dark.isActive ? 'Modo Claro' : 'Modo Oscuro' }}</q-item-label>
-                      <q-item-label caption>Cambiar tema de la aplicación</q-item-label>
+                      <q-item-label class="text-body2 text-weight-medium">{{ $q.dark.isActive ? 'Modo Claro' : 'Modo Oscuro' }}</q-item-label>
+                      <q-item-label caption class="text-caption action-caption">Cambiar tema</q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <!-- Subscription Plans (Solo para super_admin) -->
+                  <q-item
+                    v-if="userSession.is_super_admin"
+                    v-ripple
+                    clickable
+                    dense
+                    class="profile-action-item-compact"
+                    @click="openSubscriptionDialog"
+                    v-close-popup
+                  >
+                    <q-item-section avatar class="min-width-auto">
+                      <div class="action-icon-wrapper">
+                        <q-icon name="workspace_premium" color="primary" size="20px" />
+                      </div>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-body2 text-weight-medium">Suscripción</q-item-label>
+                      <q-item-label caption class="text-caption action-caption">Gestionar plan</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-icon name="chevron_right" size="16px" color="grey-6" />
                     </q-item-section>
                   </q-item>
                 </q-list>
-              </q-card-section>
+              </div>
 
               <!-- Logout Button -->
-              <q-card-section class="profile-logout">
+              <div class="logout-container-modern">
                 <q-btn
                   unelevated
                   color="negative"
-                  icon="logout"
+                  icon-right="logout"
                   label="Cerrar Sesión"
-                  class="full-width logout-btn"
+                  class="full-width logout-btn-modern"
                   @click="logoutAt"
                   v-close-popup
                   no-caps
                 />
-              </q-card-section>
+              </div>
             </q-card>
           </q-menu>
-        </q-btn>
+          </q-btn>
+        </div>
       </q-toolbar>
     </q-header>
     <q-drawer
@@ -403,6 +568,191 @@
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
 
+    <!-- Subscription Plans Dialog -->
+    <subscription-plans-dialog
+      v-model="showSubscriptionDialog"
+      @subscription-updated="onSubscriptionUpdated"
+    />
+
+    <!-- Create Company Dialog -->
+    <q-dialog
+      v-model="showCreateCompanyDialog"
+      persistent
+      transition-show="scale"
+      transition-hide="scale"
+    >
+      <q-card class="create-company-card" style="min-width: 500px; max-width: 600px;">
+        <!-- Header con gradiente -->
+        <q-card-section class="create-company-header">
+          <div class="row items-center">
+            <q-icon name="add_business" size="32px" class="q-mr-md" />
+            <div>
+              <div class="text-h6 text-weight-bold">Crear Mi Empresa</div>
+              <div class="text-caption">Deja la demo y crea tu cuenta empresarial</div>
+            </div>
+            <q-space />
+            <q-btn
+              flat
+              round
+              dense
+              icon="close"
+              @click="closeCreateCompanyDialog"
+            />
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="q-pt-md" style="max-height: 60vh; overflow-y: auto;">
+          <!-- Información de Demo -->
+          <q-banner rounded class="bg-orange-1 q-mb-md">
+            <template v-slot:avatar>
+              <q-icon name="info" color="orange" />
+            </template>
+            <div class="text-body2">
+              Actualmente estás usando una <strong>cuenta demo</strong>. 
+              Al crear tu empresa, todos tus datos se guardarán en tu propia cuenta.
+            </div>
+          </q-banner>
+
+          <!-- Formulario -->
+          <q-form ref="companyForm" @submit="createCompany">
+            <div class="row q-col-gutter-md">
+              <!-- Nombre de la empresa -->
+              <div class="col-12">
+                <q-input
+                  v-model="companyData.company_name"
+                  label="Nombre de la Empresa *"
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="business" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- RUT/Documento -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="companyData.company_document"
+                  label="RUT/Documento *"
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="badge" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Teléfono -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="companyData.company_phone"
+                  label="Teléfono *"
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="phone" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Email -->
+              <div class="col-12">
+                <q-input
+                  v-model="companyData.company_email"
+                  label="Email *"
+                  type="email"
+                  outlined
+                  dense
+                  :rules="[
+                    val => !!val || 'Campo requerido',
+                    val => /.+@.+\..+/.test(val) || 'Email inválido'
+                  ]"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="email" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Dirección -->
+              <div class="col-12">
+                <AddressComponent
+                  :initial-address="companyAddressData"
+                  @address-selected="handleCompanyAddressSelected"
+                />
+              </div>
+
+              <!-- Tipo de Negocio -->
+              <div class="col-12">
+                <q-select
+                  v-model="companyData.business_type"
+                  :options="businessTypes"
+                  option-label="name"
+                  option-value="id"
+                  label="Tipo de Negocio *"
+                  outlined
+                  dense
+                  use-input
+                  input-debounce="300"
+                  @filter="filterBusinessTypes"
+                  :rules="[val => !!val || 'Campo requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="category" />
+                  </template>
+                  <template v-slot:no-option>
+                    <q-item>
+                      <q-item-section class="text-grey">
+                        No hay resultados
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Copiar productos demo -->
+              <div class="col-12">
+                <q-checkbox
+                  v-model="companyData.copy_test_products"
+                  label="Copiar productos y categorías de la empresa demo"
+                  color="primary"
+                />
+              </div>
+            </div>
+          </q-form>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="grey-7"
+            @click="closeCreateCompanyDialog"
+            :disable="loadingCreateCompany"
+          />
+          <q-btn
+            unelevated
+            label="Crear Empresa"
+            color="primary"
+            icon-right="arrow_forward"
+            @click="createCompany"
+            :loading="loadingCreateCompany"
+            class="create-btn"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-layout>
 </template>
 
@@ -410,9 +760,12 @@
 import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
+import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
+import eventBus from 'src/utils/eventBus'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
@@ -426,7 +779,7 @@ import {
 } from '@capacitor/barcode-scanner'
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent, FloatingThemeSelector },
+  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog, AddressComponent },
   data () {
     return {
       logo,
@@ -463,14 +816,113 @@ export default {
        * Scanned QR code
        * @type {String}
        */
-      scannedCode: ''
+      scannedCode: '',
+      /**
+       * Subscription dialog
+       * @type {Boolean}
+       */
+      showSubscriptionDialog: false,
+      /**
+       * Subscription plan name
+       * @type {String}
+       */
+      subscriptionPlan: 'Free',
+      /**
+       * Subscription days left
+       * @type {Number}
+       */
+      subscriptionDaysLeft: null,
+      /**
+       * Current subscription data
+       * @type {Object}
+       */
+      currentSubscription: null,
+      /**
+       * Max branches allowed
+       * @type {Number}
+       */
+      maxBranches: 1,
+      /**
+       * Current branch count
+       * @type {Number}
+       */
+      currentBranchCount: 0,
+      /**
+       * Show create company dialog
+       * @type {Boolean}
+       */
+      showCreateCompanyDialog: false,
+      /**
+       * Loading create company
+       * @type {Boolean}
+       */
+      loadingCreateCompany: false,
+      /**
+       * Company data form
+       * @type {Object}
+       */
+      companyData: {
+        company_name: '',
+        company_document: '',
+        company_email: '',
+        company_phone: '',
+        company_address: '',
+        business_type: null,
+        copy_test_products: true
+      },
+      companyAddressData: {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      },
+      /**
+       * Business types list
+       * @type {Array}
+       */
+      businessTypes: [],
+      /**
+       * Store instance
+       */
+      store: authentication()
     }
   },
   computed: {
     ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice', 'access_token', 'refresh_token', 'expires_In', 'token_type']),
-    ...mapState(darkModeStore, ['darkMode'])
+    ...mapState(darkModeStore, ['darkMode']),
+    /**
+     * Check if current page has tour available
+     * @returns {Boolean}
+     */
+    currentPageHasTour () {
+      const pagesWithTour = ['Billing', 'CompanyConfig', 'Category', 'Product']
+      return pagesWithTour.includes(this.$route.name)
+    },
+    canAddMoreBranches () {
+      return this.currentBranchCount < this.maxBranches
+    }
   },
   watch: {
+    showCreateCompanyDialog (val) {
+      if (val) {
+        this.loadBusinessTypes()
+        // Pre-llenar email con el del usuario
+        this.companyData.business_type = this.userSession?.company_session?.business_type
+        if (this.userSession?.email) {
+          this.companyData.company_email = this.userSession.email
+        }
+        if (this.userSession?.phone_number) {
+          this.companyData.company_phone = this.userSession.phone_number
+        }
+      }
+    },
     modules (value) {
       if (value.length > 0) {
         this.dataMenu = value.filter((element) => {
@@ -480,6 +932,39 @@ export default {
             }).length > 0
           )
         })
+
+        // Agregar entrada de Chat con IA si no existe
+        const hasAiChat = this.dataMenu.some(section =>
+          section.modules.some(module => module.link === 'AiChat')
+        )
+
+        if (!hasAiChat) {
+          // Buscar sección de Herramientas o crear una nueva
+          let toolsSection = this.dataMenu.find(section =>
+            section.name === 'Herramientas' || section.name === 'Tools'
+          )
+
+          if (!toolsSection) {
+            toolsSection = {
+              id: 'tools-section',
+              name: 'Herramientas',
+              icon: 'build',
+              modules: []
+            }
+            this.dataMenu.push(toolsSection)
+          }
+
+          // Agregar módulo de Chat con IA
+          toolsSection.modules.push({
+            id: 'ai-chat-module',
+            name: 'ai-chat',
+            title: 'Chat con IA',
+            link: 'AiChat',
+            icon: 'smart_toy',
+            roles: ['super_admin', 'admin', 'user'],
+            visible: true
+          })
+        }
       }
     }
   },
@@ -489,13 +974,257 @@ export default {
       .notification((notification) => {
         this.setNotification(notification)
       })
+    
+    // Listen for subscription updates
+    window.addEventListener('subscription-updated', () => {
+      this.loadSubscriptionInfo()
+    })
   },
   created () {
     this.loadingPage()
     this.getDataNotification()
     this.checkMultipleScreens()
+    this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Activate tour for current page
+     */
+    activateCurrentPageTour () {
+      // Emitir evento global para que la página actual active su tour
+      eventBus.emit('activate-page-tour', this.$route.name)
+    },
+    /**
+     * Load business types
+     */
+    async loadBusinessTypes () {
+      try {
+        const { data } = await api.get('business-types')
+        this.businessTypes = data.data || data
+      } catch (error) {
+        console.error('Error loading business types:', error)
+        notify('Error al cargar tipos de negocio', 'negative', 'warning')
+      }
+    },
+    /**
+     * Filter business types
+     */
+    async filterBusinessTypes (val, update) {
+      try {
+        const { data } = await api.get('business-types', {
+          params: { search: val }
+        })
+        update(() => {
+          this.businessTypes = data.data || data
+        })
+      } catch (error) {
+        console.error('Error filtering business types:', error)
+        update(() => {
+          this.businessTypes = []
+        })
+      }
+    },
+    /**
+     * Close create company dialog
+     */
+    closeCreateCompanyDialog () {
+      this.showCreateCompanyDialog = false
+      // Reset form
+      this.companyData = {
+        company_name: '',
+        company_document: '',
+        company_email: '',
+        company_phone: '',
+        company_address: '',
+        business_type: null,
+        copy_test_products: true
+      }
+      this.companyAddressData = {
+        name: '',
+        street: '',
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null,
+        formattedAddress: '',
+        placeId: '',
+        types: []
+      }
+    },
+    /**
+     * Handle company address selected
+     */
+    handleCompanyAddressSelected (addressDetails) {
+      if (addressDetails) {
+        // Guardar los detalles completos de la dirección
+        this.companyAddressData = { ...addressDetails }
+        // Actualizar el campo company_address con la dirección formateada
+        this.companyData.company_address = addressDetails.formattedAddress || addressDetails.street || ''
+      } else {
+        // Limpiar si se resetea la dirección
+        this.companyAddressData = {
+          name: '',
+          street: '',
+          city: '',
+          state: '',
+          country: '',
+          zipCode: '',
+          latitude: null,
+          longitude: null,
+          formattedAddress: '',
+          placeId: '',
+          types: []
+        }
+        this.companyData.company_address = ''
+      }
+    },
+    /**
+     * Create company
+     */
+    async createCompany () {
+      // Validar formulario
+      const valid = await this.$refs.companyForm.validate()
+      if (!valid) {
+        notify('Por favor completa todos los campos requeridos', 'warning', 'warning')
+        return
+      }
+
+      try {
+        this.loadingCreateCompany = true
+
+        // Preparar payload
+        const payload = {
+          company_name: this.companyData.company_name,
+          company_document: this.companyData.company_document,
+          company_email: this.companyData.company_email,
+          company_phone: this.companyData.company_phone,
+          company_address: this.companyData.company_address,
+          business_type_id: this.companyData.business_type?.id,
+          copy_test_products: this.companyData.copy_test_products
+        }
+
+        // Llamar al endpoint de setup-company
+        const { data } = await api.post('authentication/setup-company', payload)
+
+        // Actualizar store con nueva información
+        this.store.setSessionData({
+          user: data.user,
+          access_token: this.access_token,
+          token_type: this.token_type,
+          expires_in: this.expires_In,
+          refresh_token: this.refresh_token,
+          is_demo: false // Ya no es demo
+        })
+
+        // Cerrar diálogo
+        this.showCreateCompanyDialog = false
+
+        // Notificación de éxito con animación
+        notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
+
+        // Marcar que necesita tour de facturación
+        localStorage.setItem('needs_billing_tour', 'true')
+
+        // Mostrar diálogo de opciones
+        this.$q.dialog({
+          title: '¡Empresa creada exitosamente! 🎉',
+          message: '¿Qué te gustaría hacer ahora?',
+          options: {
+            type: 'radio',
+            model: 'billing',
+            items: [
+              { label: 'Ver tutorial de facturación (Recomendado)', value: 'billing', color: 'primary' },
+              { label: 'Configurar mi empresa', value: 'config', color: 'secondary' }
+            ]
+          },
+          cancel: false,
+          persistent: true,
+          ok: {
+            label: 'Continuar',
+            color: 'primary'
+          }
+        }).onOk(data => {
+          if (data === 'billing') {
+            // Ir a facturación con tour
+            this.$router.push({ name: 'Billing' })
+          } else {
+            // Ir a configuración de empresa con tour
+            localStorage.setItem('needs_company_config_tour', 'true')
+            this.$router.push({ name: 'CompanyConfig' })
+          }
+        })
+      } catch (error) {
+        const message = error.response?.data?.message || 'Error al crear empresa'
+        notify(message, 'negative', 'warning')
+        console.error('Error creating company:', error)
+      } finally {
+        this.loadingCreateCompany = false
+      }
+    },
+    /**
+     * Load subscription information
+     */
+    async loadSubscriptionInfo () {
+      try {
+        const { data } = await api.get('subscriptions/current')
+        if (data.subscription) {
+          this.subscriptionPlan = data.plan.name
+          this.subscriptionDaysLeft = data.days_until_expiration
+          this.currentSubscription = data.subscription
+          this.maxBranches = data.subscription.branch_offices_count || 1
+        } else {
+          this.subscriptionPlan = 'Free'
+          this.subscriptionDaysLeft = null
+          this.currentSubscription = null
+          this.maxBranches = 1
+        }
+        
+        // Load current branch count
+        await this.loadBranchCount()
+      } catch (error) {
+        console.error('Error loading subscription:', error)
+        this.subscriptionPlan = 'Free'
+        this.subscriptionDaysLeft = null
+        this.maxBranches = 1
+      }
+    },
+    /**
+     * Load current branch count
+     */
+    async loadBranchCount () {
+      try {
+        const { data } = await api.get('branch-offices', {
+          params: { paginate: false }
+        })
+        this.currentBranchCount = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+      } catch (error) {
+        console.error('Error loading branch count:', error)
+        this.currentBranchCount = 0
+      }
+    },
+    /**
+     * Go to add branch page
+     */
+    goToAddBranch () {
+      this.$router.push('/branch-offices')
+    },
+    /**
+     * Open subscription dialog
+     */
+    openSubscriptionDialog () {
+      this.showSubscriptionDialog = true
+    },
+    /**
+     * Handle subscription updated event
+     */
+    onSubscriptionUpdated (subscription) {
+      this.loadSubscriptionInfo()
+      if (subscription) {
+        notify('Suscripción actualizada exitosamente', 'positive', 'check_circle')
+      }
+    },
     /**
      * Check if device has multiple screens
      */
@@ -1023,6 +1752,86 @@ export default {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Branch Office Indicator */
+.branch-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.branch-chip {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  height: 28px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.branch-chip:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.branch-chip :deep(.q-chip__icon) {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+.branch-chip :deep(.q-chip__content) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.add-branch-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.add-branch-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.add-branch-btn:active {
+  transform: scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .branch-chip :deep(.q-chip__content) {
+    max-width: 120px;
+  }
+
+  .add-branch-btn {
+    display: none;
+  }
+}
+
+/* Tour Button in Navbar */
+.tour-btn-navbar {
+  transition: all 0.3s ease;
+}
+
+.tour-btn-navbar:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tour-btn-navbar:active {
+  transform: scale(0.95);
+}
+
 /* Drawer Styles */
 .modern-drawer-header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
@@ -1155,123 +1964,246 @@ export default {
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
 }
 
-.profile-menu {
-  margin-top: 8px;
-}
-
 .profile-card {
-  min-width: 320px;
-  border-radius: 15px;
+  min-width: 300px;
+  max-width: 300px;
+  border-radius: 16px;
   overflow: hidden;
   border: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 .body--dark .profile-card {
-  background: #2d3748;
+  background: #1e293b;
   border: none !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-/* Profile Header */
-.profile-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  padding: 20px;
-  transition: background 0.3s ease;
+/* Profile Header Modern */
+.profile-header-modern {
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  padding: 20px 16px;
+  transition: all 0.3s ease;
 }
 
-.body--dark .profile-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  filter: brightness(0.85);
+.body--dark .profile-header-modern {
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  filter: brightness(1.1);
 }
 
 .profile-header-content {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
-.profile-avatar-large {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.profile-avatar-modern {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.profile-avatar-modern:hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .profile-info {
   flex: 1;
   color: white;
+  min-width: 0;
 }
 
 .profile-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
-  margin-bottom: 4px;
-  line-height: 1.2;
+  margin-bottom: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .profile-email {
-  font-size: 13px;
-  opacity: 0.9;
-  margin-bottom: 8px;
+  font-size: 12px;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
 }
 
-.profile-role {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-/* Profile Actions */
-.profile-actions {
-  padding: 8px 0;
-  background: white;
-}
-
-.body--dark .profile-actions {
-  background: #2d3748;
-}
-
-.profile-action-item {
-  border-radius: 8px;
-  margin: 4px 8px;
-  transition: all 0.3s ease;
-}
-
-.profile-action-item:hover {
+/* Plan Compact */
+.plan-compact {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
   background: rgba(124, 58, 237, 0.08);
-  transform: translateX(4px);
+  border-radius: 6px;
 }
 
-.body--dark .profile-action-item:hover {
+.body--dark .plan-compact {
   background: rgba(139, 92, 246, 0.15);
 }
 
-:deep(.profile-action-item .q-item__label) {
-  font-weight: 500;
-  font-size: 14px;
+/* Demo Action Item - Modern */
+.demo-action-item {
+  border-radius: 0;
+  margin: 0;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 64px;
 }
 
-:deep(.profile-action-item .q-item__label--caption) {
-  font-size: 12px;
-  opacity: 0.7;
+.demo-action-item:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+  transform: translateX(4px);
+  box-shadow: inset 4px 0 0 0 rgba(251, 191, 36, 0.6);
 }
 
-/* Logout Section */
-.profile-logout {
-  padding: 12px 16px;
-  background: #f9fafb;
+.body--dark .demo-action-item {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.18) 0%, rgba(245, 158, 11, 0.12) 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
-.body--dark .profile-logout {
-  background: #1a202c;
+.body--dark .demo-action-item:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.28) 0%, rgba(245, 158, 11, 0.2) 100%);
+  box-shadow: inset 4px 0 0 0 rgba(251, 191, 36, 0.8);
 }
 
-.logout-btn {
-  border-radius: 8px;
-  font-weight: 600;
+.demo-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(251, 191, 36, 0.15);
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 
-.logout-btn:hover {
+.demo-action-item:hover .demo-icon-wrapper {
+  background: rgba(251, 191, 36, 0.25);
+  transform: scale(1.1);
+}
+
+.rocket-wrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.demo-action-item:hover .rocket-wrapper {
+  background: rgba(124, 58, 237, 0.2);
+  transform: rotate(10deg) scale(1.1);
+}
+
+.demo-caption {
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+/* Profile Actions Modern */
+.profile-action-item-compact {
+  border-radius: 0;
+  margin: 0;
+  min-height: 52px;
+  padding: 10px 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.profile-action-item-compact:last-child {
+  border-bottom: none;
+}
+
+.profile-action-item-compact:hover {
+  background: rgba(124, 58, 237, 0.06);
+  transform: translateX(4px);
+  box-shadow: inset 3px 0 0 0 rgba(124, 58, 237, 0.5);
+}
+
+.body--dark .profile-action-item-compact {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.body--dark .profile-action-item-compact:hover {
+  background: rgba(139, 92, 246, 0.12);
+  box-shadow: inset 3px 0 0 0 rgba(139, 92, 246, 0.6);
+}
+
+.action-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 58, 237, 0.08);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.profile-action-item-compact:hover .action-icon-wrapper {
+  background: rgba(124, 58, 237, 0.15);
+  transform: scale(1.1);
+}
+
+.body--dark .action-icon-wrapper {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.body--dark .profile-action-item-compact:hover .action-icon-wrapper {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.action-caption {
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+:deep(.profile-action-item-compact .q-item__label) {
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+:deep(.profile-action-item-compact .q-item__label--caption) {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Logout Container Modern */
+.logout-container-modern {
+  padding: 12px 16px 16px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.body--dark .logout-container-modern {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.logout-btn-modern {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 10px 16px;
+  letter-spacing: 0.01em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.logout-btn-modern:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
 }
 
 /* Drawer Styles */
@@ -1318,5 +2250,320 @@ export default {
 
 .body--dark :deep(.q-expansion-item--active .q-expansion-item__label) {
   color: #a78bfa;
+}
+
+/* Navbar Structure v0 Style */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.logo-container-with-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Demo Badge v0 Style */
+.demo-badge-v0 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+/* Demo Badge Floating (flotando al lado del logo) */
+.demo-badge-floating {
+  position: absolute;
+  right: -32px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(251, 191, 36, 0.95);
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #1f2937;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+  z-index: 10;
+  animation: float-badge 3s ease-in-out infinite;
+}
+
+@keyframes float-badge {
+  0%, 100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    transform: translateY(-50%) translateX(2px);
+  }
+}
+
+.demo-badge-floating .demo-badge-dot {
+  width: 5px;
+  height: 5px;
+  background: #1f2937;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.demo-badge-dot {
+  width: 6px;
+  height: 6px;
+  background: #fbbf24;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.body--dark .demo-badge-v0 {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.body--dark .demo-badge-floating {
+  background: rgba(251, 191, 36, 0.9);
+  box-shadow: 0 2px 12px rgba(251, 191, 36, 0.5);
+}
+
+/* Create Button v0 Style */
+.create-btn-v0 {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.create-btn-v0:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.body--dark .create-btn-v0:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.create-btn-v0 span {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Rocket Icon Animation */
+.rocket-icon {
+  animation: rocket-launch 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes rocket-launch {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  10% {
+    transform: translateY(-2px) rotate(-3deg);
+  }
+  20% {
+    transform: translateY(-4px) rotate(3deg);
+  }
+  30% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+  40% {
+    transform: translateY(-4px) rotate(2deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+.create-btn-v0:hover .rocket-icon {
+  animation: rocket-boost 0.6s ease-in-out infinite;
+}
+
+@keyframes rocket-boost {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-3px) rotate(-5deg) scale(1.1);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0deg) scale(1.15);
+  }
+  75% {
+    transform: translateY(-3px) rotate(5deg) scale(1.1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .navbar-left {
+    gap: 4px;
+  }
+
+  .navbar-right {
+    gap: 2px;
+  }
+
+  .demo-badge-v0 {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  .create-btn-v0 {
+    height: 28px;
+    padding: 0 10px;
+  }
+
+  .create-btn-v0 span {
+    font-size: 12px;
+  }
+}
+
+/* Create Company Dialog */
+.create-company-card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.create-company-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #667eea 100%);
+  color: white;
+  padding: 24px;
+}
+
+.body--dark .create-company-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #4c51bf 100%);
+}
+
+.create-company-card :deep(.q-field__control) {
+  border-radius: 8px;
+}
+
+.create-company-card :deep(.q-field--outlined .q-field__control:before) {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.body--dark .create-company-card :deep(.q-field--outlined .q-field__control:before) {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.create-company-card :deep(.q-field--outlined.q-field--focused .q-field__control:before) {
+  border-color: var(--q-primary);
+  border-width: 2px;
+}
+
+.create-btn {
+  font-weight: 600;
+  padding: 10px 24px;
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  transform: translateX(4px);
+}
+
+/* AI Chat Button */
+.ai-chat-btn {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.ai-chat-btn:hover {
+  transform: scale(1.1);
+}
+
+.ai-chat-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .create-company-btn {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+  }
+
+  .create-company-btn :deep(.q-btn__content) {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .create-company-card {
+    min-width: 90vw !important;
+    max-width: 90vw !important;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 }
 </style>

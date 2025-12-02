@@ -525,6 +525,17 @@
                     >
                       <q-tooltip>Ver detalle del pago</q-tooltip>
                     </q-btn>
+                    <q-btn
+                      v-if="props.row.type === 'payment' && isAdmin"
+                      icon="delete_forever"
+                      size="sm"
+                      round
+                      flat
+                      color="negative"
+                      @click="confirmDeletePayment(props.row.payment)"
+                    >
+                      <q-tooltip>Eliminar pago</q-tooltip>
+                    </q-btn>
                   </div>
                 </template>
                 <template v-else>
@@ -644,6 +655,17 @@
                         @click="downloadPaymentReceiptFromRow(props.row)"
                       >
                         <q-tooltip>Descargar comprobante</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        v-if="props.row.type === 'payment' && isAdmin"
+                        icon="delete_forever"
+                        size="xs"
+                        round
+                        flat
+                        color="negative"
+                        @click="confirmDeletePayment(props.row.payment)"
+                      >
+                        <q-tooltip>Eliminar pago</q-tooltip>
                       </q-btn>
                     </div>
                   </template>
@@ -1063,7 +1085,7 @@
                     <td class="text-right text-weight-bold text-positive">{{ formatCurrency(payment.amount) }}</td>
                     <td class="text-center">
                       <q-btn
-                        icon="delete"
+                        icon="delete_forever"
                         size="sm"
                         round
                         flat
@@ -1766,6 +1788,14 @@ export default {
              this.invoicePaymentForm.amount <= (this.invoicePaymentData?.balance || 0) &&
              this.invoicePaymentForm.payment_method_id &&
              this.invoicePaymentForm.date
+    },
+
+    /**
+     * Checks if the current user is an administrator
+     * @returns {Boolean} True if user is root or super admin
+     */
+    isAdmin () {
+      return this.userSession?.is_root || this.userSession?.is_super_admin
     }
   },
 
@@ -2337,6 +2367,92 @@ export default {
       } catch (error) {
         notify('Error al cargar detalle del pago', 'negative', 'warning')
       } finally {
+        loading(false)
+      }
+    },
+
+    /**
+     * Shows a confirmation dialog before deleting a payment
+     * Displays payment details and affected invoices
+     * @param {Object} payment - Payment object to delete
+     */
+    confirmDeletePayment (payment) {
+      if (!payment) {
+        notify('No se pudo identificar el pago', 'negative', 'warning')
+        return
+      }
+
+      this.$q.dialog({
+        title: 'Confirmar eliminación',
+        message: `¿Está seguro que desea eliminar este pago de ${this.formatCurrency(payment.amount || 0)}?`,
+        cancel: {
+          label: 'CANCELAR',
+          color: 'grey-7',
+          flat: true
+        },
+        ok: {
+          label: 'ELIMINAR',
+          color: 'negative',
+          unelevated: true
+        },
+        persistent: true
+      }).onOk(() => {
+        this.deletePayment(payment.id)
+      })
+    },
+
+    /**
+     * Deletes a payment from the system
+     * Updates the account statement and KPIs after deletion
+     * @param {Number} paymentId - ID of the payment to delete
+     */
+    async deletePayment (paymentId) {
+      try {
+        loading(true)
+
+        // Delete payment via API
+        await this.$api.delete(`invoice-payments/${paymentId}`)
+
+        // Close any open dialogs immediately
+        this.invoiceDetailDialog = false
+        this.paymentDetailDialog = false
+
+        notify('Pago eliminado exitosamente', 'positive', 'check_circle')
+
+        // Reload data immediately for instant feedback
+        if (this.selectedClient) {
+          // Reload client statement
+          await this.onStatementRequest({ pagination: this.statementPagination })
+        } else {
+          // Reload clients list
+          this.loadClients()
+        }
+
+        // Stop loading immediately to give faster feedback
+        loading(false)
+      } catch (error) {
+        console.error('Error completo al eliminar pago:', error)
+        console.error('Respuesta del servidor:', error.response)
+
+        let errorMessage = 'Error al eliminar el pago'
+
+        if (error.response) {
+          // El servidor respondió con un código de error
+          if (error.response.status === 404) {
+            errorMessage = 'El pago no existe o ya fue eliminado'
+          } else if (error.response.status === 403) {
+            errorMessage = 'No tienes permisos para eliminar este pago'
+          } else if (error.response.data?.message) {
+            errorMessage = error.response.data.message
+          } else if (error.response.data?.error) {
+            errorMessage = error.response.data.error
+          }
+        } else if (error.request) {
+          // La petición se hizo pero no hubo respuesta
+          errorMessage = 'No se pudo conectar con el servidor'
+        }
+
+        notify(errorMessage, 'negative', 'warning')
         loading(false)
       }
     },

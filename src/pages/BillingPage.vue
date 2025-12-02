@@ -1,5 +1,41 @@
 <template>
   <q-page padding>
+    <!-- Tour Overlay -->
+    <div v-if="showTour" class="tour-overlay">
+      <div class="tour-spotlight" :style="spotlightStyle"></div>
+      <q-card class="tour-card" :style="tourCardStyle">
+        <q-card-section class="tour-header">
+          <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ tourSteps.length }}</div>
+          <q-btn flat round dense icon="close" @click="skipTour" color="grey-7" size="sm" />
+        </q-card-section>
+        <q-card-section>
+          <div class="tour-title">{{ tourSteps[currentTourStep].title }}</div>
+          <div class="tour-description">{{ tourSteps[currentTourStep].description }}</div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            v-if="currentTourStep > 0"
+            flat
+            label="Anterior"
+            @click="previousTourStep"
+            color="grey-7"
+          />
+          <q-btn
+            flat
+            label="Saltar tour"
+            @click="skipTour"
+            color="grey-7"
+          />
+          <q-btn
+            unelevated
+            :label="currentTourStep === tourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
+            @click="nextTourStep"
+            color="primary"
+          />
+        </q-card-actions>
+      </q-card>
+    </div>
+
     <div v-if="$route.query.id">
       <span class="text-subtitle1">Factura número: </span>
       <span class="text-subtitle2">{{ invoice?.code }}</span>
@@ -37,7 +73,7 @@
               </div>
 
               <!-- Select tipo de factura -->
-              <div>
+              <div id="tour-tipo-factura">
                 <q-select
                   filled
                   dense
@@ -79,7 +115,7 @@
               </div>
 
               <!-- Select tipo de servicio -->
-              <div>
+              <div id="tour-type-service">
                 <q-select
                   filled
                   dense
@@ -101,7 +137,7 @@
 
               <!-- Espacio donde estaba el boton de caja - ahora vacío -->
             </div>
-            <div class="col-12" style="width: 100% !important;">
+            <div class="col-12" style="width: 100% !important;" id="tour-barcode">
               <q-input
                 filled
                 dense
@@ -129,7 +165,7 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="col-12">
+            <div class="col-12" id="tour-products-table">
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
@@ -357,7 +393,7 @@
                               class="q-ml-xs cursor-pointer"
                             />
                             <q-popup-edit
-                              v-if="userSession.is_root || !setPermissionsByUser(['CJ'])"
+                              v-if="userSession?.is_root || !setPermissionsByUser(['CJ'])"
                               v-model.number="product.price"
                               auto-save
                               v-slot="scope"
@@ -412,7 +448,7 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <div class="col-6" v-if="typeOfService.code !== 4">
+              <!-- <div class="col-6" v-if="Number(typeOfService.code) !== '4'">
                 <q-select
                   filled
                   dense
@@ -423,23 +459,23 @@
                   :options="coins"
                   @filter="getCoins"
                 />
-              </div>
-              <div class="col-6" v-if="typeOfService.code !== '4'">
+              </div> -->
+              <div class="col-6" v-if="Number(typeOfService.code) !== 4">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12" v-if="typeOfService.code !== '4'">
+              <div class="col-12" v-if="Number(typeOfService.code) !== 4">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
               </div>
-              <div class="col-12">
+              <div class="col-12" id="tour-descripcion">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
               <!-- Sección de archivos adjuntos - Solo para pedidos (code === 5) -->
-              <div class="col-12" v-if="typeOfService && typeOfService.code === 5">
+              <div class="col-12" v-if="typeOfService && Number(typeOfService.code) === 5">
                 <q-card flat bordered class="q-mt-md">
                   <q-card-section class="q-pb-sm">
                     <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center justify-between">
@@ -567,6 +603,7 @@
               <!-- Abrir/Cerrar caja -->
               <!-- Cobrar -->
               <q-btn
+                id="tour-btn-cobrar"
                 style="border-radius: 10px; padding: 5px 15px"
                 label="Cobrar"
                 icon="payments"
@@ -588,6 +625,7 @@
                 </q-tooltip>
               </q-btn>
               <q-btn
+                id="tour-btn-mesas"
                 style="border-radius: 10px; padding: 5px 15px"
                 color="orange"
                 icon="table_restaurant"
@@ -611,6 +649,7 @@
               </q-btn>
               <!-- Entrada/Salida -->
               <q-btn
+                id="tour-btn-cashflow"
                 icon="payments"
                 color="info"
                 dense
@@ -633,6 +672,7 @@
 
               <!-- Buscar -->
               <q-btn
+                id="tour-btn-buscar"
                 style="border-radius: 10px; padding: 5px 15px"
                 :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
                 icon="search"
@@ -667,6 +707,7 @@
               </q-btn>
               <!-- Borrar -->
               <q-btn
+                id="tour-btn-borrar"
                 style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
                 color="negative"
@@ -684,7 +725,7 @@
           <!-- Filtros fijos arriba -->
           <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
             <div class="row q-col-gutter-xs">
-              <div class="col-6">
+              <div class="col-6" id="tour-select-categoria">
                 <q-select
                   use-input
                   filled
@@ -699,7 +740,7 @@
                   @filter="filterCategories"
                 />
               </div>
-              <div class="col-6">
+              <div class="col-6" id="tour-input-buscar-producto">
                 <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
                   <template v-slot:append>
                     <q-icon name="search" />
@@ -711,6 +752,7 @@
 
           <!-- Productos con scroll -->
           <div
+            id="tour-seccion-productos"
             ref="productsScrollContainer"
             class="product-container-scroll"
             style="flex: 1; overflow-y: auto; padding: 0.5rem;"
@@ -1056,7 +1098,7 @@
     <!-- Cash Box Dialog -->
     <CashBoxDialog
       v-model="showCashBoxDialog"
-      :cashier-id="userSession.id"
+      :cashier-id="userSession?.id"
       :is-box-already-open="isUserBoxOpen"
       :available-cash-boxes="availableCashBoxes"
       :branch-office="branchOffice"
@@ -1079,82 +1121,76 @@
     />
 
     <q-dialog v-model="openAddClient" persistent>
-      <q-card style="width: 900px; max-width: 95vw;" class="client-form-card">
+      <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveClient">
           <!-- Header con estilo naranja -->
-          <q-card-section class="client-form-header">
-            <div class="text-h6 text-white">Agregar cliente</div>
-            <q-btn icon="close" flat round dense @click="closeAddClientModal" class="text-white" />
+          <q-card-section class="row items-center text-white bg-primary">
+            <div class="text-h6">Agregar cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="closeAddClientModal" />
           </q-card-section>
 
           <!-- Body con tema oscuro -->
-          <q-card-section class="client-form-body">
+          <q-card-section class="row q-col-gutter-sm">
             <!-- Nombre - Campo principal con asterisco rojo -->
-            <div class="form-field-wrapper">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                outlined
+                filled
                 v-model="clientAdded.name"
                 label="Nombre *"
                 :rules="[val => !!val || 'El campo es requerido.']"
-                class="client-form-input client-form-name-input"
                 autofocus
               />
             </div>
 
             <!-- Información adicional -->
-            <div class="text-grey-5 q-mb-md">Información adicional (opcional)</div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-grey-7 q-mt-sm">
+              Información adicional (opcional)
+            </div>
 
             <!-- Fila 1: Tipo de documento y Número -->
-            <div class="row q-col-gutter-md q-mb-md">
-              <div class="col-6">
-                <q-select
-                  outlined
-                  use-input
-                  label="Tipo de documento"
-                  input-debounce="0"
-                  option-label="Desc"
-                  option-value="id"
-                  v-model="clientAdded.document_type"
-                  :options="documentTypes"
-                  @filter="getDocumentTypes"
-                  class="client-form-input"
-                />
-              </div>
-              <div class="col-6">
-                <q-input
-                  outlined
-                  v-model="clientAdded.document_number"
-                  label="Número de documento"
-                  class="client-form-input"
-                />
-              </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-select
+                filled
+                use-input
+                label="Tipo de documento"
+                input-debounce="0"
+                option-label="Desc"
+                option-value="id"
+                v-model="clientAdded.document_type"
+                :options="documentTypes"
+                @filter="getDocumentTypes"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.document_number"
+                label="Número de documento"
+              />
             </div>
 
             <!-- Fila 2: Correo y Teléfono -->
-            <div class="row q-col-gutter-md q-mb-md">
-              <div class="col-6">
-                <q-input
-                  outlined
-                  v-model="clientAdded.email"
-                  type="email"
-                  label="Correo"
-                  class="client-form-input"
-                />
-              </div>
-              <div class="col-6">
-                <q-input
-                  outlined
-                  v-model="clientAdded.phone_number"
-                  label="Teléfono"
-                  class="client-form-input"
-                />
-              </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.email"
+                type="email"
+                label="Correo"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="clientAdded.phone_number"
+                label="Teléfono"
+              />
             </div>
 
             <!-- Condición de IVA -->
-            <div class="form-field-wrapper">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-select
-                outlined
+                filled
                 use-input
                 label="Condición de IVA"
                 input-debounce="0"
@@ -1163,16 +1199,14 @@
                 v-model="clientAdded.condition_iva_receptor"
                 :options="conditionIvaReceptors"
                 @filter="getConditionIvaReceptor"
-                class="client-form-input"
               />
             </div>
 
             <!-- Checkbox cuenta corriente -->
-            <div class="form-field-wrapper">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-checkbox
                 v-model="clientAdded.is_credit"
                 label="¿Maneja cuenta corriente?"
-                class="client-form-checkbox"
               />
             </div>
 
@@ -1184,26 +1218,25 @@
                 @address-selected="handleAddressSelectedForClient"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-checkbox
-                v-model="clientAdded.is_credit"
-                label="¿Maneja cuenta corriente?"
+            <div class="col-12">
+              <q-input
+                filled
+                v-model="clientAdded.reference"
+                label="Referencia"
               />
             </div>
           </q-card-section>
 
-          <!-- Botón guardar mejorado -->
-          <div class="client-form-actions-improved">
+          <!-- Botón guardar -->
+          <q-card-actions align="right" class="text-primary">
             <q-btn
               icon="save"
               color="primary"
               label="GUARDAR"
               type="submit"
               :loading="loadingClient"
-              size="lg"
-              class="client-form-save-btn"
             />
-          </div>
+          </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
@@ -1278,6 +1311,7 @@ import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatDate, formatNumber, loading, notify, BALANZA_PREFIXES } from 'src/const/mixins'
+import eventBus from 'src/utils/eventBus'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
@@ -1313,6 +1347,84 @@ export default {
   },
   data () {
     return {
+      // Tour System
+      showTour: false,
+      currentTourStep: 0,
+      tourSteps: [
+        {
+          target: '#select-client',
+          title: '👤 Seleccionar Cliente',
+          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
+        },
+        {
+          target: '#tour-tipo-factura',
+          title: '🧾 Tipo de Factura',
+          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
+        },
+        {
+          target: '#tour-type-service',
+          title: '🍽️ Tipo de Servicio',
+          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
+        },
+        {
+          target: '#tour-barcode',
+          title: '🔍 Código de Barras',
+          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
+        },
+        {
+          target: '#tour-products-table',
+          title: '📦 Lista de Artículos',
+          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
+        },
+        {
+          target: '#tour-descripcion',
+          title: '📝 Descripción',
+          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.'
+        },
+        {
+          target: '#tour-btn-cobrar',
+          title: '💰 Botón Cobrar (F1)',
+          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
+        },
+        {
+          target: '#tour-btn-mesas',
+          title: '🪑 Botón Mesas (F10)',
+          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
+        },
+        {
+          target: '#tour-btn-cashflow',
+          title: '💵 Entrada/Salida de Dinero (F11)',
+          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
+        },
+        {
+          target: '#tour-btn-buscar',
+          title: '🔎 Buscar Factura (F12)',
+          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
+        },
+        {
+          target: '#tour-btn-borrar',
+          title: '🗑️ Borrar Factura',
+          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
+        },
+        {
+          target: '#tour-select-categoria',
+          title: '🏷️ Filtro de Categorías',
+          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
+        },
+        {
+          target: '#tour-input-buscar-producto',
+          title: '🔍 Buscar Producto',
+          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
+        },
+        {
+          target: '#tour-seccion-productos',
+          title: '🛍️ Sección de Productos',
+          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
+        }
+      ],
+      spotlightStyle: {},
+      tourCardStyle: {},
+
       currentCashierSession: null,
 
       scanner: false,
@@ -1909,6 +2021,21 @@ export default {
      * Get products with pagination
      */
     this.reloadProducts()
+
+    /**
+     * Check if should show tour (only once after company creation)
+     */
+    this.checkAndStartTour()
+
+    /**
+     * Listen for tour activation from navbar
+     */
+    eventBus.on('activate-page-tour', (pageName) => {
+      if (pageName === 'Billing') {
+        this.startTour()
+      }
+    })
+
     /**
      * Init keywords button
      */
@@ -1967,9 +2094,181 @@ export default {
     this.getExchangeRates()
     this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
-    // document.addEventListener('click', this.handleClick)
   },
   methods: {
+    /**
+     * Check and start tour if needed
+     */
+    checkAndStartTour () {
+      const hasSeenBillingTour = localStorage.getItem('has_seen_billing_tour')
+      const needsTour = localStorage.getItem('needs_billing_tour')
+      const hasVisitedBilling = sessionStorage.getItem('has_visited_billing')
+
+      // Mostrar tour si:
+      // 1. Se marcó que necesita tour (después de crear empresa)
+      // 2. O es la primera vez que visita la página en esta sesión y nunca ha visto el tour
+      if ((needsTour === 'true' && !hasSeenBillingTour) || (!hasVisitedBilling && !hasSeenBillingTour)) {
+        // Marcar que ya visitó la página en esta sesión
+        sessionStorage.setItem('has_visited_billing', 'true')
+
+        // Esperar a que el DOM esté completamente renderizado
+        this.$nextTick(() => {
+          setTimeout(() => {
+            this.startTour()
+          }, 500)
+        })
+      } else {
+        // Marcar que ya visitó la página en esta sesión
+        sessionStorage.setItem('has_visited_billing', 'true')
+      }
+    },
+
+    /**
+     * Start tour
+     */
+    startTour () {
+      this.showTour = true
+      this.currentTourStep = 0
+      this.updateTourPosition()
+    },
+
+    /**
+     * Next tour step
+     */
+    nextTourStep () {
+      if (this.currentTourStep < this.tourSteps.length - 1) {
+        this.currentTourStep++
+        this.updateTourPosition()
+      } else {
+        this.finishTour()
+      }
+    },
+
+    /**
+     * Previous tour step
+     */
+    previousTourStep () {
+      if (this.currentTourStep > 0) {
+        this.currentTourStep--
+        this.updateTourPosition()
+      }
+    },
+
+    /**
+     * Skip tour
+     */
+    skipTour () {
+      this.finishTour()
+    },
+
+    /**
+     * Finish tour
+     */
+    finishTour () {
+      this.showTour = false
+      localStorage.setItem('has_seen_billing_tour', 'true')
+      localStorage.removeItem('needs_billing_tour')
+      this.$q.notify({
+        message: '¡Tour completado! Ya puedes comenzar a facturar',
+        color: 'positive',
+        icon: 'check_circle'
+      })
+    },
+
+    /**
+     * Update tour position
+     */
+    updateTourPosition () {
+      this.$nextTick(() => {
+        const step = this.tourSteps[this.currentTourStep]
+        const element = document.querySelector(step.target)
+
+        if (element) {
+          // Scroll to element first
+          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+          // Wait for scroll to finish before calculating positions
+          setTimeout(() => {
+            const rect = element.getBoundingClientRect()
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+            // Update spotlight position
+            this.spotlightStyle = {
+              top: `${rect.top + scrollTop - 10}px`,
+              left: `${rect.left + scrollLeft - 10}px`,
+              width: `${rect.width + 20}px`,
+              height: `${rect.height + 20}px`
+            }
+
+            // Position tour card with better logic
+            const cardWidth = 400
+            const cardHeight = 280
+            const padding = 20
+            const viewportHeight = window.innerHeight
+            const viewportWidth = window.innerWidth
+
+            let cardTop = rect.top + scrollTop
+            let cardLeft = rect.left + scrollLeft
+
+            // Detectar si es la sección de productos o categorías/búsqueda
+            const isProductSection = step.target === '#tour-seccion-productos' ||
+                                    step.target === '#tour-select-categoria' ||
+                                    step.target === '#tour-input-buscar-producto'
+
+            if (isProductSection) {
+              // Para sección de productos, posicionar a la IZQUIERDA del elemento
+              // Calcular posición: elemento.left - ancho del card - espacio
+              const spaceFromElement = 30 // Espacio entre el card y el elemento
+              cardLeft = rect.left + scrollLeft - cardWidth - spaceFromElement
+
+              // Si no cabe a la izquierda, posicionar en el borde izquierdo con margen
+              if (cardLeft < padding) {
+                cardLeft = padding
+              }
+
+              // Centrar verticalmente con el elemento
+              cardTop = rect.top + scrollTop + (rect.height / 2) - (cardHeight / 2)
+            } else {
+              // Para otros elementos, posicionar DEBAJO
+              cardTop = rect.bottom + scrollTop + padding
+
+              // If card goes below viewport, position it above the element
+              if (rect.bottom + cardHeight + padding > viewportHeight) {
+                cardTop = rect.top + scrollTop - cardHeight - padding
+              }
+
+              // If still goes above viewport, position it in the middle
+              if (cardTop < scrollTop) {
+                cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+              }
+            }
+
+            // Adjust horizontal position
+            if (cardLeft + cardWidth > viewportWidth) {
+              cardLeft = viewportWidth - cardWidth - padding
+            }
+            if (cardLeft < 0) {
+              cardLeft = padding
+            }
+
+            // Adjust vertical position to keep in viewport
+            if (cardTop + cardHeight > scrollTop + viewportHeight) {
+              cardTop = scrollTop + viewportHeight - cardHeight - padding
+            }
+            if (cardTop < scrollTop) {
+              cardTop = scrollTop + padding
+            }
+
+            this.tourCardStyle = {
+              top: `${cardTop}px`,
+              left: `${cardLeft}px`
+            }
+          }, 300)
+        }
+      })
+    },
+
     async getExchangeRates () {
       try {
         const { data } = await this.$api.get('exchange-rates', {
@@ -3108,7 +3407,7 @@ export default {
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,
         products: this.products,
-        status: this.invoice?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        status: this.invoice?.status || Number(this.typeOfService.code) === 4 ? 'delivered' : 'pending',
         payments: this.payments.filter(payment => payment.amount > 0).map(payment => ({
           ...payment,
           payment_type: paymentType
@@ -3132,7 +3431,7 @@ export default {
         return false
       }
 
-      if (this.withServiceType.includes(this.typeOfService.code) && this.pendingPayment > 0) {
+      if (this.withServiceType.includes(Number(this.typeOfService.code)) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
         this.dialogPayment = true
         return false
@@ -4931,6 +5230,127 @@ export default {
   .client-form-body {
     padding: 16px;
     padding-bottom: 16px;
+  }
+}
+
+/* Tour Styles */
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 9998;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  transition: all 0.3s ease;
+  z-index: 9999;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  }
+  50% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 10000;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    min-width: 300px;
+    max-width: 90vw;
+    left: 5vw !important;
+  }
+
+  .tour-title {
+    font-size: 18px;
+  }
+
+  .tour-description {
+    font-size: 13px;
   }
 }
 

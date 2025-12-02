@@ -94,6 +94,12 @@ const routes = [
         component: () => import('pages/CoinPage.vue')
       },
       {
+        path: 'countries',
+        meta: { requiresAuth: true },
+        name: 'Country',
+        component: () => import('pages/CountryPage.vue')
+      },
+      {
         path: 'box-reports',
         meta: { requiresAuth: true },
         name: 'BoxReport',
@@ -116,6 +122,12 @@ const routes = [
         name: 'Profile',
         meta: { requiresAuth: true },
         component: () => import('pages/ProfilePage.vue')
+      },
+      {
+        path: 'subscription-plans',
+        name: 'SubscriptionPlan',
+        meta: { requiresAuth: true },
+        component: () => import('pages/SubscriptionPlansPage.vue')
       },
       {
         path: 'command-orders',
@@ -239,6 +251,25 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/ActiveInvoiceDeliveryPage.vue')
       },
+      // Delivery Route Management System
+      {
+        path: 'delivery-routes',
+        name: 'DeliveryRoute',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DeliveryRoutesPage.vue')
+      },
+      {
+        path: 'delivery-routes/builder/:id?',
+        name: 'DeliveryRouteBuilder',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DeliveryRouteBuilderPage.vue')
+      },
+      {
+        path: 'delivery-routes/active/:id',
+        name: 'ActiveDeliveryRoute',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ActiveDeliveryRoutePage.vue')
+      },
       {
         path: 'inventory-count',
         name: 'InventoryCount',
@@ -316,6 +347,12 @@ const routes = [
         name: 'ExchangeRate',
         meta: { requiresAuth: true },
         component: () => import('src/pages/ExchangeRatePage.vue')
+      },
+      {
+        path: 'ai-chat',
+        name: 'AiChat',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/AiChatPage.vue')
       }
     ]
   },
@@ -346,6 +383,24 @@ const routes = [
         component: () => import('pages/CommandPage.vue')
       }
     ]
+  },
+  {
+    path: '/subscription/success',
+    name: 'SubscriptionSuccess',
+    meta: { requiresAuth: true },
+    component: () => import('pages/SubscriptionSuccessPage.vue')
+  },
+  {
+    path: '/subscription/failure',
+    name: 'SubscriptionFailure',
+    meta: { requiresAuth: true },
+    component: () => import('pages/SubscriptionFailurePage.vue')
+  },
+  {
+    path: '/subscription/pending',
+    name: 'SubscriptionPending',
+    meta: { requiresAuth: true },
+    component: () => import('pages/SubscriptionPendingPage.vue')
   },
   {
     path: '/login',

@@ -1,0 +1,1257 @@
+<template>
+  <q-page class="q-pa-md">
+    <!-- Header -->
+    <div class="row items-center justify-between q-mb-md">
+      <div>
+        <div class="text-h5 text-weight-bold">
+          <q-icon name="route" color="primary" size="32px" class="q-mr-sm" />
+          {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
+        </div>
+        <div class="text-caption text-grey-7">
+          {{ deliveryRoute?.name || routeForm.name || 'Construye tu ruta de entrega' }}
+        </div>
+      </div>
+      <div class="row q-gutter-sm">
+        <q-btn
+          unelevated
+          color="positive"
+          label="Guardar Ruta"
+          icon="save"
+          @click="saveRoute"
+          :loading="saving"
+          :disable="stops.length === 0"
+        />
+        <q-btn
+          flat
+          color="grey-7"
+          label="Volver"
+          icon="arrow_back"
+          @click="$router.back()"
+        />
+      </div>
+    </div>
+
+    <div class="row q-col-gutter-md">
+      <!-- Left Panel - Route Configuration -->
+      <div class="col-12 col-sm-4 col-md-4">
+        <q-card>
+          <q-card-section>
+            <div class="text-h6 q-mb-md">
+              <q-icon name="settings" color="primary" />
+              Configuración de Ruta
+            </div>
+
+            <!-- Route Name -->
+            <q-input
+              v-model="routeForm.name"
+              label="Nombre de la Ruta"
+              outlined
+              dense
+              class="q-mb-md"
+            />
+
+            <!-- Courier Selection -->
+            <q-select
+              v-model="routeForm.courier"
+              :options="couriers"
+              option-label="name"
+              option-value="id"
+              label="Asignar Repartidor"
+              outlined
+              dense
+              clearable
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
+              class="q-mb-md"
+              @update:model-value="onCourierChange"
+              @filter="filterCouriers"
+            >
+              <template v-slot:prepend>
+                <q-icon name="person" />
+              </template>
+            </q-select>
+
+            <!-- Origin Branch -->
+            <q-select
+              v-model="routeForm.origin_branch"
+              :options="branches"
+              option-label="name"
+              option-value="id"
+              label="Sucursal de Origen"
+              outlined
+              dense
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
+              class="q-mb-md"
+              @filter="filterBranches"
+            >
+              <template v-slot:prepend>
+                <q-icon name="store" />
+              </template>
+            </q-select>
+
+            <!-- Notes -->
+            <q-input
+              v-model="routeForm.notes"
+              label="Notas"
+              type="textarea"
+              outlined
+              dense
+              rows="3"
+            />
+          </q-card-section>
+        </q-card>
+
+        <!-- Add Client Section -->
+        <q-card class="q-mt-md">
+          <q-card-section>
+            <div class="text-h6 q-mb-md">
+              <q-icon name="add_location" color="positive" />
+              Agregar Cliente
+            </div>
+
+            <!-- Client Search -->
+            <q-select
+              v-model="selectedClient"
+              :options="clients"
+              option-label="name"
+              option-value="id"
+              label="Buscar Cliente"
+              outlined
+              dense
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
+              @filter="filterClients"
+              class="q-mb-md"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" />
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon name="person" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ getClientAddress(scope.opt) }}
+                    </q-item-label>
+                    <q-item-label caption v-if="scope.opt.opening_hours">
+                      <q-icon name="schedule" size="12px" />
+                      {{ getOpeningHoursText(scope.opt.opening_hours) }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <q-btn
+              unelevated
+              color="positive"
+              label="Agregar Cliente"
+              icon="add"
+              class="full-width"
+              :disable="!selectedClient"
+              @click="addClientToPredefinedRoute()"
+            />
+          </q-card-section>
+        </q-card>
+
+        <!-- Stops List with Drag & Drop -->
+        <q-card class="q-mt-md">
+          <q-card-section>
+            <div class="row items-center q-mb-md">
+              <div class="col">
+                <div class="text-h6">
+                  <q-icon name="list" color="primary" />
+                  Orden de Paradas ({{ stops.length }})
+                </div>
+                <div v-if="totalDistance || totalDuration" class="text-caption text-grey-7 q-mt-xs">
+                  <q-icon name="route" size="14px" />
+                  {{ totalDistance }}
+                  <span v-if="totalDuration">
+                    • <q-icon name="schedule" size="14px" />
+                    {{ totalDuration }}
+                  </span>
+                </div>
+              </div>
+              <div class="col-auto">
+                <q-btn
+                  v-if="stops.length > 1"
+                  unelevated
+                  color="primary"
+                  icon="route"
+                  label="Optimizar Ruta"
+                  size="sm"
+                  @click="optimizeRoute"
+                  :loading="optimizing"
+                >
+                  <q-tooltip>Reordenar paradas para minimizar distancia y tiempo</q-tooltip>
+                </q-btn>
+              </div>
+            </div>
+
+            <div v-if="stops.length === 0" class="text-center text-grey-6 q-py-lg">
+              <q-icon name="location_off" size="48px" />
+              <div class="q-mt-sm">No hay paradas agregadas</div>
+            </div>
+
+            <draggable
+              v-model="stops"
+              item-key="id"
+              handle=".drag-handle"
+              @end="onStopReorder"
+              class="stops-list"
+            >
+              <template #item="{ element, index }">
+                <q-card
+                  flat
+                  bordered
+                  class="stop-card q-mb-sm"
+                  :class="{ 'stop-active': selectedStop?.id === element.id }"
+                  @click="selectStop(element)"
+                >
+                  <q-card-section class="q-pa-sm">
+                    <div class="row items-center no-wrap">
+                      <!-- Drag Handle -->
+                      <q-icon
+                        name="drag_indicator"
+                        class="drag-handle cursor-move q-mr-sm"
+                        color="grey-6"
+                      />
+
+                      <!-- Stop Number -->
+                      <div class="stop-number q-mr-sm">
+                        {{ index + 1 }}
+                      </div>
+
+                      <!-- Client Info -->
+                      <div class="col">
+                        <div class="text-body2 text-weight-medium">
+                          {{ element.client?.name }}
+                        </div>
+                        <div class="text-caption text-grey-7">
+                          <span v-if="element.distance_text">
+                            <q-icon name="route" size="14px" />
+                            {{ element.distance_text }}
+                          </span>
+                          <span v-if="element.duration_text">
+                            <span v-if="element.distance_text"> • </span>
+                            <q-icon name="schedule" size="14px" />
+                            {{ element.duration_text }}
+                          </span>
+                          <span v-if="!element.distance_text && !element.duration_text && index === 0">
+                            <q-icon name="flag" size="14px" />
+                            Punto de inicio
+                          </span>
+                          <span v-if="!element.distance_text && !element.duration_text && index > 0" class="text-orange">
+                            <q-icon name="pending" size="14px" />
+                            Calculando ruta...
+                          </span>
+                        </div>
+                        <div v-if="element.client?.opening_hours" class="text-caption text-primary">
+                          <q-icon name="schedule" size="12px" />
+                          {{ getOpeningHoursText(element.client.opening_hours) }}
+                        </div>
+                      </div>
+
+                      <!-- Actions -->
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        icon="delete"
+                        color="negative"
+                        size="sm"
+                        @click.stop="removeStop(element)"
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </template>
+            </draggable>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- Right Panel - Map -->
+      <div class="col-12 col-sm-8 col-md-8">
+        <q-card style="height: calc(100vh - 120px);">
+          <div id="route-map" ref="mapContainer" style="width: 100%; height: 100%;"></div>
+        </q-card>
+      </div>
+    </div>
+  </q-page>
+</template>
+
+<script setup>
+/* global google */
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { api } from 'src/boot/axios'
+import { echo } from 'src/boot/pusher'
+import { loadGoogleMaps, darkMapStyles } from 'src/config/maps'
+import draggable from 'vuedraggable'
+
+const router = useRouter()
+const routeParams = useRoute()
+const $q = useQuasar()
+
+// Refs
+const mapContainer = ref(null)
+const map = ref(null)
+const deliveryRoute = ref(null)
+const stops = ref([])
+const selectedStop = ref(null)
+const couriers = ref([])
+const branches = ref([])
+const clients = ref([])
+const selectedClient = ref(null)
+const saving = ref(false)
+const optimizing = ref(false)
+
+// Form
+const routeForm = ref({
+  name: '',
+  courier: null,
+  origin_branch: null,
+  notes: ''
+})
+
+// Map markers and paths
+const originMarker = ref(null)
+const stopMarkers = ref([])
+const routePaths = ref([])
+
+// Computed properties
+const totalDistance = computed(() => {
+  if (stops.value.length === 0) return ''
+
+  const totalMeters = stops.value.reduce((sum, stop) => {
+    return sum + (stop.distance_value || 0)
+  }, 0)
+
+  if (totalMeters === 0) return ''
+
+  if (totalMeters >= 1000) {
+    return `${(totalMeters / 1000).toFixed(1)} km`
+  }
+  return `${totalMeters} m`
+})
+
+const totalDuration = computed(() => {
+  if (stops.value.length === 0) return ''
+
+  const totalSeconds = stops.value.reduce((sum, stop) => {
+    return sum + (stop.duration_value || 0)
+  }, 0)
+
+  if (totalSeconds === 0) return ''
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours} h ${minutes} min`
+  }
+  return `${minutes} min`
+})
+
+onMounted(async () => {
+  console.log('=== Component Mounted ===')
+  console.log('Route params:', routeParams.params)
+  console.log('Route ID:', routeParams.params.id)
+
+  await loadInitialData()
+  await initializeMap()
+
+  if (routeParams.params.id) {
+    console.log('Loading route with ID:', routeParams.params.id)
+    await loadRoute()
+  } else {
+    console.log('No route ID found, skipping loadRoute()')
+  }
+
+  // Listen for real-time updates
+  if (deliveryRoute.value) {
+    listenForUpdates()
+  }
+})
+
+onUnmounted(() => {
+  stopListening()
+})
+
+// Watch stops for real-time map updates
+watch(stops, async () => {
+  await nextTick()
+  updateMapRoute()
+}, { deep: true })
+
+async function loadInitialData () {
+  // No cargar nada al inicio - se cargará bajo demanda
+}
+
+function filterCouriers (value, update) {
+  api.get('delivery-persons', {
+    params: {
+      sortBy: 'id',
+      sortOrder: 'desc',
+      dataSearch: {
+        name: value
+      }
+    }
+  })
+    .then(({ data }) => {
+      update(() => {
+        couriers.value = data || []
+      })
+    })
+    .catch(err => {
+      console.error('Error loading couriers:', err)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al buscar repartidores',
+        icon: 'warning'
+      })
+    })
+}
+
+function filterBranches (value, update) {
+  api.get('/branch-offices', {
+    params: {
+      sortBy: 'id',
+      sortOrder: 'desc',
+      dataSearch: {
+        name: value
+      }
+    }
+  })
+    .then(({ data }) => {
+      update(() => {
+        branches.value = data || []
+      })
+    })
+    .catch(err => {
+      console.error('Error loading branches:', err)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al buscar sucursales',
+        icon: 'warning'
+      })
+    })
+}
+
+async function loadRoute () {
+  try {
+    console.log('Loading route ID:', routeParams.params.id)
+    const response = await api.get(`/delivery-routes/${routeParams.params.id}`)
+    console.log('API Response:', response.data)
+    deliveryRoute.value = response.data.route
+    console.log('deliveryRoute.value:', deliveryRoute.value)
+    console.log('deliveryRoute.value.route_clients:', deliveryRoute.value.route_clients)
+    console.log('deliveryRoute.value.routeClients:', deliveryRoute.value.routeClients)
+    console.log('deliveryRoute.value.stops:', deliveryRoute.value.stops)
+
+    // Process routeClients (static routes) - API returns snake_case
+    const routeClients = deliveryRoute.value.route_clients || deliveryRoute.value.routeClients || deliveryRoute.value.stops || []
+    console.log('routeClients to process:', routeClients)
+
+    stops.value = routeClients.map((stop, index) => {
+      console.log(`Processing stop ${index + 1}:`, {
+        stop_id: stop.id,
+        client_name: stop.client?.name,
+        stop_latitude: stop.latitude,
+        stop_longitude: stop.longitude,
+        stop_latitude_type: typeof stop.latitude,
+        stop_longitude_type: typeof stop.longitude
+      })
+
+      // Extract latitude and longitude from client address
+      let lat = stop.latitude
+      let lng = stop.longitude
+
+      // If stop doesn't have coordinates, try to get from client
+      if ((!lat || !lng) && stop.client) {
+        const clientAddress = stop.client.address
+
+        if (clientAddress) {
+          // If address is a JSON string, parse it
+          if (typeof clientAddress === 'string') {
+            try {
+              const parsed = JSON.parse(clientAddress)
+              lat = lat || parsed.latitude
+              lng = lng || parsed.longitude
+            } catch (e) {
+              // If parsing fails, address might be a plain string
+              console.warn('Could not parse client address:', clientAddress)
+            }
+          } else if (typeof clientAddress === 'object') {
+            // If address is already an object
+            lat = lat || clientAddress.latitude
+            lng = lng || clientAddress.longitude
+          }
+        }
+
+        // Fallback to direct client properties
+        lat = lat || stop.client.latitude
+        lng = lng || stop.client.longitude
+      }
+
+      const mappedStop = {
+        ...stop,
+        client_id: stop.client_id || stop.client?.id,
+        latitude: lat,
+        longitude: lng,
+        // Preserve distance and duration if they exist
+        distance_text: stop.distance_text,
+        duration_text: stop.duration_text,
+        distance_value: stop.distance_value,
+        duration_value: stop.duration_value
+      }
+
+      console.log(`Mapped stop ${index + 1}:`, {
+        client_name: stop.client?.name,
+        final_latitude: mappedStop.latitude,
+        final_longitude: mappedStop.longitude,
+        has_coordinates: !!(mappedStop.latitude && mappedStop.longitude)
+      })
+
+      return mappedStop
+    })
+
+    // Populate form
+    routeForm.value = {
+      name: deliveryRoute.value.name || '',
+      courier: deliveryRoute.value.courier || null,
+      origin_branch: deliveryRoute.value.originBranch || deliveryRoute.value.origin_branch || null,
+      notes: deliveryRoute.value.notes || ''
+    }
+
+    console.log('Loaded stops:', stops.value)
+    console.log('Stops with coordinates:', stops.value.filter(s => s.latitude && s.longitude).length)
+
+    // Update map
+    await nextTick()
+    updateMapRoute()
+  } catch (error) {
+    console.error('Error loading route:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar la ruta'
+    })
+  }
+}
+
+async function initializeMap () {
+  try {
+    console.log('Initializing map...')
+    await loadGoogleMaps()
+    console.log('Google Maps loaded, mapContainer:', mapContainer.value)
+
+    if (!mapContainer.value) {
+      console.error('Map container not found!')
+      return
+    }
+
+    map.value = new google.maps.Map(mapContainer.value, {
+      center: { lat: -34.603722, lng: -58.381592 },
+      zoom: 12,
+      mapTypeControl: false,
+      fullscreenControl: true,
+      streetViewControl: false,
+      styles: darkMapStyles
+    })
+
+    console.log('Map initialized successfully:', !!map.value)
+  } catch (error) {
+    console.error('Error initializing map:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al inicializar el mapa'
+    })
+  }
+}
+
+async function updateMapRoute () {
+  console.log('=== updateMapRoute called ===')
+  console.log('Map initialized:', !!map.value)
+  console.log('Origin branch:', routeForm.value.origin_branch)
+  console.log('Stops count:', stops.value.length)
+  console.log('Stops data:', JSON.stringify(stops.value, null, 2))
+
+  // Clear existing markers and paths
+  if (originMarker.value) {
+    originMarker.value.setMap(null)
+  }
+  stopMarkers.value.forEach(marker => marker.setMap(null))
+  stopMarkers.value = []
+  routePaths.value.forEach(path => path.setMap(null))
+  routePaths.value = []
+
+  if (!map.value) {
+    console.error('Map not initialized!')
+    return
+  }
+
+  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+    console.warn('Missing origin_branch or stops, skipping map update')
+    console.warn('origin_branch:', routeForm.value.origin_branch)
+    console.warn('stops.length:', stops.value.length)
+    return
+  }
+
+  // Add origin marker
+  const origin = routeForm.value.origin_branch
+  const originAddress = origin.address || {}
+  const originLat = originAddress.latitude || origin.latitude
+  const originLng = originAddress.longitude || origin.longitude
+
+  if (originLat && originLng) {
+    originMarker.value = new google.maps.Marker({
+      position: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+      map: map.value,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: '#FF9800',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 3
+      },
+      label: {
+        text: 'O',
+        color: 'white',
+        fontSize: '14px',
+        fontWeight: 'bold'
+      },
+      title: origin.name
+    })
+  }
+
+  // Add stop markers
+  const bounds = new google.maps.LatLngBounds()
+  if (originLat && originLng) {
+    bounds.extend(new google.maps.LatLng(originLat, originLng))
+  }
+
+  console.log('Processing stops for markers...')
+  stops.value.forEach((stop, index) => {
+    const lat = stop.latitude
+    const lng = stop.longitude
+
+    console.log(`Stop ${index + 1}:`, {
+      client: stop.client?.name,
+      lat,
+      lng,
+      hasCoordinates: !!(lat && lng)
+    })
+
+    if (!lat || !lng) {
+      console.warn(`Stop ${index + 1} missing coordinates, skipping`)
+      return
+    }
+
+    const marker = new google.maps.Marker({
+      position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      map: map.value,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 11,
+        fillColor: '#2196F3',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2
+      },
+      label: {
+        text: (index + 1).toString(),
+        color: 'white',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      },
+      title: stop.client?.name
+    })
+
+    console.log(`Marker ${index + 1} created successfully`)
+    stopMarkers.value.push(marker)
+    bounds.extend(new google.maps.LatLng(lat, lng))
+
+    // Add click listener
+    marker.addListener('click', () => {
+      selectStop(stop)
+    })
+  })
+
+  // Fit bounds
+  if (stopMarkers.value.length > 0 || originMarker.value) {
+    map.value.fitBounds(bounds)
+  }
+
+  // Draw route and calculate distances
+  await drawRoute()
+  await calculateDistancesAndTimes()
+}
+
+async function calculateDistancesAndTimes () {
+  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+    return
+  }
+
+  const distanceMatrixService = new google.maps.DistanceMatrixService()
+
+  // Get origin coordinates
+  const origin = routeForm.value.origin_branch
+  const originAddress = origin.address || {}
+  const originLat = originAddress.latitude || origin.latitude
+  const originLng = originAddress.longitude || origin.longitude
+
+  if (!originLat || !originLng) return
+
+  // Calculate distance and time for each stop
+  for (let i = 0; i < stops.value.length; i++) {
+    const stop = stops.value[i]
+    const stopLat = stop.latitude
+    const stopLng = stop.longitude
+
+    if (!stopLat || !stopLng) continue
+
+    // Determine origin for this stop (previous stop or branch)
+    let fromLat, fromLng
+    if (i === 0) {
+      fromLat = originLat
+      fromLng = originLng
+    } else {
+      const prevStop = stops.value[i - 1]
+      fromLat = prevStop.latitude
+      fromLng = prevStop.longitude
+    }
+
+    if (!fromLat || !fromLng) continue
+
+    try {
+      const result = await new Promise((resolve, reject) => {
+        distanceMatrixService.getDistanceMatrix(
+          {
+            origins: [{ lat: parseFloat(fromLat), lng: parseFloat(fromLng) }],
+            destinations: [{ lat: parseFloat(stopLat), lng: parseFloat(stopLng) }],
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.METRIC
+          },
+          (response, status) => {
+            if (status === 'OK') {
+              resolve(response)
+            } else {
+              reject(status)
+            }
+          }
+        )
+      })
+
+      if (result.rows[0]?.elements[0]?.status === 'OK') {
+        const element = result.rows[0].elements[0]
+        stop.distance_text = element.distance.text
+        stop.duration_text = element.duration.text
+        stop.distance_value = element.distance.value // meters
+        stop.duration_value = element.duration.value // seconds
+      }
+    } catch (error) {
+      console.error('Error calculating distance:', error)
+    }
+  }
+}
+
+async function drawRoute () {
+  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+    return
+  }
+
+  const directionsService = new google.maps.DirectionsService()
+
+  // Build waypoints
+  const origin = routeForm.value.origin_branch
+  const originAddress = origin.address || {}
+  const originLat = originAddress.latitude || origin.latitude
+  const originLng = originAddress.longitude || origin.longitude
+
+  if (!originLat || !originLng) return
+
+  // Draw route segments
+  let prevLat = originLat
+  let prevLng = originLng
+
+  for (let i = 0; i < stops.value.length; i++) {
+    const stop = stops.value[i]
+    const stopLat = stop.latitude
+    const stopLng = stop.longitude
+
+    if (!stopLat || !stopLng) continue
+
+    try {
+      const result = await directionsService.route({
+        origin: { lat: parseFloat(prevLat), lng: parseFloat(prevLng) },
+        destination: { lat: parseFloat(stopLat), lng: parseFloat(stopLng) },
+        travelMode: google.maps.TravelMode.DRIVING
+      })
+
+      const renderer = new google.maps.DirectionsRenderer({
+        map: map.value,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: '#2196F3',
+          strokeWeight: 4,
+          strokeOpacity: 0.8
+        },
+        preserveViewport: true
+      })
+
+      renderer.setDirections(result)
+      routePaths.value.push(renderer)
+
+      prevLat = stopLat
+      prevLng = stopLng
+    } catch (error) {
+      console.error('Error drawing route segment:', error)
+    }
+  }
+}
+
+function filterClients (value, update) {
+  api.get('clients', {
+    params: {
+      sortBy: 'id',
+      sortOrder: 'desc',
+      dataSearch: {
+        name: value,
+        document_number: value
+      }
+    }
+  })
+    .then(({ data }) => {
+      update(() => {
+        clients.value = data
+      })
+    })
+    .catch(err => {
+      console.error('Error loading clients:', err)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al buscar clientes',
+        icon: 'warning'
+      })
+    })
+}
+
+function getClientAddress (client) {
+  if (!client.address) return 'Sin dirección'
+
+  const addr = typeof client.address === 'string'
+    ? JSON.parse(client.address)
+    : client.address
+
+  return addr.formattedAddress || addr.street || 'Sin dirección'
+}
+
+function getOpeningHoursText (openingHours) {
+  if (!openingHours) return ''
+
+  const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' }).toLowerCase()
+  const todayHours = openingHours[today]
+
+  if (!todayHours) return 'Cerrado hoy'
+
+  return `${todayHours.open} - ${todayHours.close}`
+}
+
+async function addClientToPredefinedRoute () {
+  if (!selectedClient.value) return
+
+  // Extract coordinates from client address
+  let lat = null
+  let lng = null
+
+  const clientAddress = selectedClient.value.address
+
+  if (clientAddress) {
+    // If address is a JSON string, parse it
+    if (typeof clientAddress === 'string') {
+      try {
+        const parsed = JSON.parse(clientAddress)
+        lat = parsed.latitude
+        lng = parsed.longitude
+      } catch (e) {
+        console.warn('Could not parse client address:', clientAddress)
+      }
+    } else if (typeof clientAddress === 'object') {
+      // If address is already an object
+      lat = clientAddress.latitude
+      lng = clientAddress.longitude
+    }
+  }
+
+  // Fallback to direct client properties
+  lat = lat || selectedClient.value.latitude
+  lng = lng || selectedClient.value.longitude
+
+  if (!lat || !lng) {
+    $q.notify({
+      type: 'warning',
+      message: 'El cliente no tiene coordenadas de ubicación',
+      caption: 'Asegúrate de que el cliente tenga una dirección válida'
+    })
+    return
+  }
+
+  // For predefined routes, just add client to stops list (no products yet)
+  const newStop = {
+    id: Date.now(), // Temporary ID
+    client_id: selectedClient.value.id,
+    client: selectedClient.value,
+    stop_order: stops.value.length + 1,
+    delivery_status: 'pending',
+    latitude: lat,
+    longitude: lng,
+    products: [] // No products for predefined routes
+  }
+
+  stops.value.push(newStop)
+
+  console.log('Added stop:', newStop)
+
+  $q.notify({
+    type: 'positive',
+    message: 'Cliente agregado a la ruta'
+  })
+
+  // Reset
+  selectedClient.value = null
+
+  // Update map
+  await nextTick()
+  updateMapRoute()
+}
+
+async function createRoute () {
+  // Si ya existe una ruta, actualizar en lugar de crear
+  if (deliveryRoute.value) {
+    await saveRoute()
+    return
+  }
+
+  try {
+    const payload = {
+      name: routeForm.value.name || 'Nueva Ruta',
+      courier_id: routeForm.value.courier?.id,
+      origin_branch_id: routeForm.value.origin_branch?.id,
+      notes: routeForm.value.notes
+    }
+
+    // Add clients from stops for predefined routes
+    if (stops.value.length > 0) {
+      payload.clients = stops.value.map((stop, index) => ({
+        client_id: stop.client_id,
+        stop_order: index + 1,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        estimated_time_minutes: stop.estimated_time_minutes || 15,
+        // Include distance and time data if available
+        distance_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
+        estimated_time_from_previous_minutes: stop.duration_value ? Math.round(stop.duration_value / 60) : null
+      }))
+
+      // Calculate totals
+      const totalDistance = stops.value.reduce((sum, stop) => sum + (stop.distance_value || 0), 0)
+      const totalDuration = stops.value.reduce((sum, stop) => sum + (stop.duration_value || 0), 0)
+
+      payload.total_distance_km = totalDistance > 0 ? (totalDistance / 1000).toFixed(2) : null
+      payload.estimated_duration_minutes = totalDuration > 0 ? Math.round(totalDuration / 60) : null
+    }
+
+    const response = await api.post('/delivery-routes', payload)
+
+    deliveryRoute.value = response.data.route
+
+    $q.notify({
+      type: 'positive',
+      message: 'Ruta creada exitosamente'
+    })
+
+    // Update URL
+    router.replace({ name: 'DeliveryRouteBuilder', params: { id: deliveryRoute.value.id } })
+
+    // Listen for updates
+    listenForUpdates()
+  } catch (error) {
+    console.error('Error creating route:', error)
+    throw error
+  }
+}
+
+async function saveRoute () {
+  if (!deliveryRoute.value) {
+    await createRoute()
+    return
+  }
+
+  saving.value = true
+
+  try {
+    const payload = {
+      name: routeForm.value.name,
+      courier_id: routeForm.value.courier?.id,
+      origin_branch_id: routeForm.value.origin_branch?.id,
+      notes: routeForm.value.notes
+    }
+
+    // Include clients/stops for predefined routes
+    if (stops.value.length > 0) {
+      payload.clients = stops.value.map((stop, index) => ({
+        client_id: stop.client_id,
+        stop_order: index + 1,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        estimated_time_minutes: stop.estimated_time_minutes || 15,
+        // Include distance and time data if available
+        distance_km: stop.distance_value ? (stop.distance_value / 1000).toFixed(2) : null,
+        estimated_time_from_previous_minutes: stop.duration_value ? Math.round(stop.duration_value / 60) : null
+      }))
+
+      // Calculate totals
+      const totalDistance = stops.value.reduce((sum, stop) => sum + (stop.distance_value || 0), 0)
+      const totalDuration = stops.value.reduce((sum, stop) => sum + (stop.duration_value || 0), 0)
+
+      payload.total_distance_km = totalDistance > 0 ? (totalDistance / 1000).toFixed(2) : null
+      payload.estimated_duration_minutes = totalDuration > 0 ? Math.round(totalDuration / 60) : null
+    }
+
+    await api.patch(`/delivery-routes/${deliveryRoute.value.id}`, payload)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Ruta guardada exitosamente'
+    })
+
+    // Reload route to get updated data
+    await loadRoute()
+  } catch (error) {
+    console.error('Error saving route:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Error al guardar la ruta'
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
+async function optimizeRoute () {
+  if (stops.value.length < 2 || !routeForm.value.origin_branch) {
+    return
+  }
+
+  optimizing.value = true
+
+  try {
+    // Get origin coordinates
+    const origin = routeForm.value.origin_branch
+    const originAddress = origin.address || {}
+    const originLat = originAddress.latitude || origin.latitude
+    const originLng = originAddress.longitude || origin.longitude
+
+    if (!originLat || !originLng) {
+      throw new Error('No se pudo obtener la ubicación de la sucursal')
+    }
+
+    // Prepare waypoints for optimization
+    const waypoints = stops.value.map(stop => ({
+      location: {
+        lat: parseFloat(stop.latitude),
+        lng: parseFloat(stop.longitude)
+      },
+      stopover: true
+    }))
+
+    // Use Google Directions Service with waypoint optimization
+    const directionsService = new google.maps.DirectionsService()
+
+    const result = await new Promise((resolve, reject) => {
+      directionsService.route(
+        {
+          origin: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+          destination: { lat: parseFloat(originLat), lng: parseFloat(originLng) }, // Return to origin
+          waypoints,
+          optimizeWaypoints: true,
+          travelMode: google.maps.TravelMode.DRIVING
+        },
+        (response, status) => {
+          if (status === 'OK') {
+            resolve(response)
+          } else {
+            reject(status)
+          }
+        }
+      )
+    })
+
+    // Get optimized order
+    const optimizedOrder = result.routes[0].waypoint_order
+
+    // Reorder stops based on optimization
+    const optimizedStops = optimizedOrder.map(index => stops.value[index])
+    stops.value = optimizedStops
+
+    $q.notify({
+      type: 'positive',
+      message: 'Ruta optimizada exitosamente',
+      caption: 'Las paradas se reordenaron para minimizar distancia y tiempo'
+    })
+
+    // Map will update automatically via watch
+  } catch (error) {
+    console.error('Error optimizing route:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al optimizar la ruta',
+      caption: error.message || 'Intenta nuevamente'
+    })
+  } finally {
+    optimizing.value = false
+  }
+}
+
+async function onStopReorder () {
+  if (!deliveryRoute.value) return
+
+  // Update stop orders
+  const reorderedStops = stops.value.map((stop, index) => ({
+    id: stop.id,
+    stop_order: index + 1
+  }))
+
+  try {
+    await api.post(`/delivery-routes/${deliveryRoute.value.id}/stops/reorder`, {
+      stops: reorderedStops
+    })
+
+    // Map will update automatically via watch
+  } catch (error) {
+    console.error('Error reordering stops:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al reordenar paradas'
+    })
+  }
+}
+
+async function removeStop (stop) {
+  $q.dialog({
+    title: 'Confirmar',
+    message: `¿Eliminar parada de ${stop.client?.name}?`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await api.delete(`/delivery-routes/${deliveryRoute.value.id}/stops/${stop.id}`)
+
+      const index = stops.value.findIndex(s => s.id === stop.id)
+      if (index > -1) {
+        stops.value.splice(index, 1)
+      }
+
+      $q.notify({
+        type: 'positive',
+        message: 'Parada eliminada'
+      })
+    } catch (error) {
+      console.error('Error removing stop:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Error al eliminar parada'
+      })
+    }
+  })
+}
+
+function selectStop (stop) {
+  selectedStop.value = stop
+
+  // Center map on stop
+  if (stop.latitude && stop.longitude) {
+    map.value.panTo({
+      lat: parseFloat(stop.latitude),
+      lng: parseFloat(stop.longitude)
+    })
+    map.value.setZoom(15)
+  }
+}
+
+function onCourierChange () {
+  if (deliveryRoute.value) {
+    saveRoute()
+  }
+}
+
+function listenForUpdates () {
+  if (!deliveryRoute.value) return
+
+  const channel = echo.channel(`delivery-route.${deliveryRoute.value.id}`)
+
+  channel.listen('.route.updated', async () => {
+    await loadRoute()
+  })
+}
+
+function stopListening () {
+  if (deliveryRoute.value) {
+    echo.leave(`delivery-route.${deliveryRoute.value.id}`)
+  }
+}
+</script>
+
+<style scoped>
+.stop-card {
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.stop-card:hover {
+  background-color: rgba(33, 150, 243, 0.05);
+}
+
+.stop-active {
+  border-color: #2196F3;
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.stop-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.drag-handle {
+  cursor: move;
+}
+
+.drag-handle:hover {
+  color: #2196F3;
+}
+
+.stops-list {
+  min-height: 100px;
+}
+</style>

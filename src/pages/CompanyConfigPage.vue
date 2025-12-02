@@ -1,5 +1,41 @@
 <template>
   <q-page class="minimalist-config">
+    <!-- Tour Overlay -->
+    <div v-if="showTour" class="tour-overlay">
+      <div class="tour-spotlight" :style="spotlightStyle"></div>
+      <q-card class="tour-card" :style="tourCardStyle">
+        <q-card-section class="tour-header">
+          <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ tourSteps.length }}</div>
+          <q-btn flat round dense icon="close" @click="skipTour" color="grey-7" size="sm" />
+        </q-card-section>
+        <q-card-section>
+          <div class="tour-title">{{ tourSteps[currentTourStep].title }}</div>
+          <div class="tour-description">{{ tourSteps[currentTourStep].description }}</div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            flat
+            label="Anterior"
+            @click="previousTourStep"
+            :disable="currentTourStep === 0"
+            color="grey-7"
+          />
+          <q-btn
+            flat
+            label="Saltar tour"
+            @click="skipTour"
+            color="grey-7"
+          />
+          <q-btn
+            unelevated
+            :label="currentTourStep === tourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
+            @click="nextTourStep"
+            color="primary"
+          />
+        </q-card-actions>
+      </q-card>
+    </div>
+
     <div class="config-container">
       <!-- Progress Header -->
       <div class="progress-header">
@@ -24,6 +60,7 @@
         <div
           v-for="stepItem in steps"
           :key="stepItem.number"
+          :id="`tour-step-${stepItem.number}`"
           class="step-nav-item"
           :class="{
             'active': step === stepItem.number,
@@ -76,7 +113,14 @@
             <!-- Form Fields -->
             <div class="form-grid">
               <div class="form-group">
-                <label class="field-label">Nombre de la empresa</label>
+                <label class="field-label">
+                  Nombre de la empresa
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Nombre legal o comercial de tu empresa que aparecerá en facturas y documentos
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.name"
                   outlined
@@ -87,7 +131,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Documento</label>
+                <label class="field-label">
+                  Documento
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      CUIT, RUT o número de identificación fiscal de tu empresa
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.document_number"
                   outlined
@@ -98,7 +149,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Email</label>
+                <label class="field-label">
+                  Email
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Correo electrónico principal de contacto de la empresa
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.email"
                   outlined
@@ -110,7 +168,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Teléfono</label>
+                <label class="field-label">
+                  Teléfono
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de teléfono principal de la empresa para contacto con clientes
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="company.phone_number"
                   outlined
@@ -120,8 +185,37 @@
                 />
               </div>
 
+              <div class="form-group">
+                <label class="field-label">
+                  Rubro
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Tipo de negocio o actividad comercial (Restaurante, Farmacia, Supermercado, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
+                <q-select
+                  v-model="company.business_type"
+                  :options="businessTypes"
+                  option-label="name"
+                  option-value="id"
+                  outlined
+                  dense
+                  use-input
+                  class="custom-input"
+                  @filter="filterBusinessTypes"
+                />
+              </div>
+
               <div class="form-group full-width">
-                <label class="field-label">Dirección</label>
+                <label class="field-label">
+                  Dirección
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Dirección física de tu empresa. Usa el buscador para mayor precisión
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
@@ -144,8 +238,8 @@
           </q-form>
         </div>
 
-        <!-- Step 2: Printer Configuration -->
-        <div v-if="step === 2" class="step-card">
+        <!-- Step 6: Printer Configuration -->
+        <div v-if="step === 6" class="step-card">
           <div class="step-header">
             <h2>Dispositivos</h2>
             <p>Configura tu impresora y balanza</p>
@@ -154,7 +248,14 @@
           <q-form @submit="onSubmitConfig" class="step-form">
             <div class="form-grid">
               <div class="form-group full-width">
-                <label class="field-label">Código de balanza</label>
+                <label class="field-label">
+                  Código de balanza
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Código identificador de tu balanza electrónica para integración con el sistema
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.other.balance_code"
                   outlined
@@ -175,7 +276,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Impresora</label>
+                <label class="field-label">
+                  Impresora
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Selecciona la impresora predeterminada para tickets y facturas
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.printer"
                   :options="printers"
@@ -193,7 +301,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 1"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -218,7 +326,14 @@
           <q-form @submit="onSubmitConfig" class="step-form">
             <div class="form-grid">
               <div class="form-group">
-                <label class="field-label">Cliente</label>
+                <label class="field-label">
+                  Cliente
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Cliente predeterminado para facturas (ej: Consumidor Final)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.client"
                   :options="clients"
@@ -233,7 +348,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Tipo de factura</label>
+                <label class="field-label">
+                  Tipo de factura
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Tipo de comprobante predeterminado (Factura, Ticket, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.invoiceType"
                   :options="invoiceTypes"
@@ -248,7 +370,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Tipo de servicio</label>
+                <label class="field-label">
+                  Tipo de servicio
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Categoría de servicio que ofrece tu empresa (Gastronomía, Retail, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.typeOfService"
                   :options="typeOfServices"
@@ -263,7 +392,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Método de pago</label>
+                <label class="field-label">
+                  Método de pago
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Método de pago predeterminado (Efectivo, Tarjeta, Transferencia, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.paymentMethod"
                   :options="paymentMethods"
@@ -277,7 +413,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Moneda</label>
+                <label class="field-label">
+                  Moneda
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Moneda predeterminada para tus transacciones (ARS, USD, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.coin"
                   :options="coins"
@@ -290,8 +433,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Tipo de concepto</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Tipo de concepto
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Concepto fiscal para AFIP/ARCA (Productos, Servicios, Productos y Servicios)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.concept_type"
                   :options="conceptTypes"
@@ -305,8 +455,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Tipo de factura (Arca)</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Tipo de factura (Arca)
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Tipo de comprobante para facturación electrónica AFIP (A, B, C, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.voucher_type"
                   :options="voucherTypes"
@@ -320,8 +477,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">IVA (%)</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  IVA (%)
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Alícuota de IVA predeterminada (21%, 10.5%, Exento, etc.)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.aliquot_type"
                   :options="aliquotTypes"
@@ -335,8 +499,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Inicio de actividades</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Inicio de actividades
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Fecha de inicio de actividades de tu empresa ante AFIP
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.other.activity_start_date"
                   outlined
@@ -346,8 +517,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Ingresos brutos</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Ingresos brutos
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de inscripción en Ingresos Brutos (IIBB)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.other.income_brut"
                   outlined
@@ -356,8 +534,15 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="field-label">Punto de venta</label>
+              <div v-if="!isFreePlan" class="form-group">
+                <label class="field-label">
+                  Punto de venta
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de punto de venta asignado por AFIP para facturación electrónica
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.point_of_sale"
                   outlined
@@ -414,7 +599,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 2"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -432,8 +617,8 @@
         <!-- Step 4: Menu Configuration -->
         <div v-if="step === 4" class="step-card">
           <div class="step-header">
-            <h2>Menú</h2>
-            <p>Personaliza tu menú digital</p>
+            <h2>Tienda</h2>
+            <p>Personaliza tu tienda digital</p>
           </div>
 
           <div class="step-form">
@@ -487,7 +672,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 3"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -532,7 +717,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 4"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -547,8 +732,8 @@
           </q-form>
         </div>
 
-        <!-- Step 6: Branch Configuration -->
-        <div v-if="step === 6" class="step-card">
+        <!-- Step 2: Branch Configuration -->
+        <div v-if="step === 2" class="step-card">
           <div class="step-header">
             <h2>Configuración de Sucursal</h2>
             <p>Define los valores por defecto para esta sucursal</p>
@@ -557,7 +742,14 @@
           <q-form @submit="onSubmitConfig" class="step-form">
             <div class="form-grid">
               <div class="form-group">
-                <label class="field-label">Punto de venta</label>
+                <label class="field-label">
+                  Punto de venta
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Número de punto de venta específico para esta sucursal
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-input
                   v-model="companyConfig.point_of_sale"
                   outlined
@@ -567,7 +759,14 @@
               </div>
 
               <div class="form-group">
-                <label class="field-label">Lista de precios por defecto</label>
+                <label class="field-label">
+                  Lista de precios por defecto
+                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                      Lista de precios que se aplicará por defecto en esta sucursal (1-5)
+                    </q-tooltip>
+                  </q-icon>
+                </label>
                 <q-select
                   v-model="companyConfig.other.default_price_list"
                   :options="['1', '2', '3', '4', '5']"
@@ -582,7 +781,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 5"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -613,7 +812,7 @@
               <q-btn
                 flat
                 label="Anterior"
-                @click="step = 6"
+                @click="step = getPreviousStep(step)"
                 class="action-btn-secondary"
               />
               <q-btn
@@ -639,9 +838,12 @@ import ScheduleCompany from 'src/components/Company/ScheduleCompany.vue'
 import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
 import { ref, computed, nextTick, onMounted } from 'vue'
+import eventBus from 'src/utils/eventBus'
 import FileComponent from 'src/components/FileComponent.vue'
 import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import { driver } from 'driver.js'
+import 'driver.js/dist/driver.css'
 
 // Reactive data
 const coins = ref([])
@@ -654,7 +856,14 @@ const aliquotTypes = ref([])
 const clients = ref([])
 const paymentMethods = ref([])
 const printers = ref([])
+const businessTypes = ref([])
 const loading = ref(false)
+
+// Tour System
+const showTour = ref(false)
+const currentTourStep = ref(0)
+const spotlightStyle = ref({})
+const tourCardStyle = ref({})
 
 // Store and session
 const store = authentication()
@@ -680,7 +889,7 @@ const companyConfig = ref({
   point_of_sale: company.value?.company_config?.point_of_sale,
   files: company.value?.company_config?.files || [],
   partial_billing: company.value?.company_config?.partial_billing || false,
-  open_cashbox: company.value?.company_config?.open_cashbox || false
+  open_cashbox: company.value?.company_config?.open_cashbox || true
 })
 
 const menuConfig = ref({
@@ -717,7 +926,7 @@ const address = ref(null)
 const formattedAddress = ref('')
 
 // Load branch office config into the form on component mount
-onMounted(() => {
+onMounted(async () => {
   if (branchOffice.value) {
     companyConfig.value.point_of_sale = branchOffice.value.point_of_sale
     companyConfig.value.other.default_price_list = branchOffice.value.default_price_list
@@ -725,6 +934,37 @@ onMounted(() => {
 
   // Inicializar dirección si existe
   initializeAddress()
+
+  // Cargar business types
+  try {
+    const { data } = await api.get('business-types')
+    businessTypes.value = data.data || data
+  } catch (error) {
+    console.error('Error loading business types:', error)
+  }
+
+  // Verificar si debe mostrar el tour
+  const hasSeenTour = localStorage.getItem('has_seen_company_config_tour')
+  const needsTour = localStorage.getItem('needs_company_config_tour')
+  
+  // Mostrar tour si:
+  // 1. Nunca lo ha visto (primera visita)
+  // 2. O viene marcado como que necesita el tour
+  if (hasSeenTour !== 'true' || needsTour === 'true') {
+    localStorage.removeItem('needs_company_config_tour')
+    // Esperar a que el DOM esté listo
+    await nextTick()
+    setTimeout(() => {
+      startTour()
+    }, 500)
+  }
+
+  // Listen for tour activation from navbar
+  eventBus.on('activate-page-tour', (pageName) => {
+    if (pageName === 'CompanyConfig') {
+      startTour()
+    }
+  })
 })
 
 /**
@@ -759,17 +999,115 @@ const initializeAddress = () => {
 }
 
 // Computed
-const totalSteps = computed(() => 7)
+const isFreePlan = computed(() => {
+  const subscription = userSession?.subscription
+  return !subscription || subscription?.subscription_plan?.slug === 'free'
+})
 
-const steps = computed(() => [
-  { number: 1, title: 'Empresa', icon: 'business' },
-  { number: 2, title: 'Dispositivos', icon: 'print' },
-  { number: 3, title: 'Facturación', icon: 'receipt' },
-  { number: 4, title: 'Menú', icon: 'restaurant_menu' },
-  { number: 5, title: 'Pantalla', icon: 'tv' },
-  { number: 6, title: 'Sucursal', icon: 'store' },
-  { number: 7, title: 'Integraciones', icon: 'hub' }
-])
+const totalSteps = computed(() => isFreePlan.value ? 5 : 7)
+
+const steps = computed(() => {
+  const allSteps = [
+    { number: 1, title: 'Empresa', icon: 'business' },
+    { number: 2, title: 'Sucursal', icon: 'store' },
+    { number: 3, title: 'Facturación', icon: 'receipt' },
+    { number: 4, title: 'Tienda', icon: 'restaurant_menu' },
+    { number: 5, title: 'Pantalla', icon: 'tv' },
+    { number: 6, title: 'Dispositivos', icon: 'print' },
+    { number: 7, title: 'Integraciones', icon: 'hub' }
+  ]
+
+  // Si es plan Free, excluir Sucursal (2) e Integraciones (7)
+  if (isFreePlan.value) {
+    return allSteps.filter(s => s.number !== 2 && s.number !== 7)
+  }
+
+  return allSteps
+})
+
+const tourSteps = computed(() => {
+  const allTourSteps = [
+    {
+      target: '.steps-nav',
+      title: '🔢 Navegación de Configuración',
+      description: 'Estos botones te permiten navegar entre las diferentes secciones de configuración de tu empresa. Haz clic en cualquiera para ir directamente a esa sección.'
+    },
+    {
+      stepNumber: 1,
+      target: '#tour-step-1',
+      title: '🏢 Empresa',
+      description: 'Configura la información básica de tu empresa: nombre, documento, email, teléfono, dirección y logo.'
+    },
+    {
+      stepNumber: 2,
+      target: '#tour-step-2',
+      title: '🏪 Sucursal',
+      description: 'Configura las sucursales de tu empresa. Define puntos de venta y listas de precios para cada sucursal.'
+    },
+    {
+      stepNumber: 3,
+      target: '#tour-step-3',
+      title: '🧾 Facturación',
+      description: 'Configura los parámetros de facturación: tipo de factura, moneda, tipo de servicio, método de pago y cliente por defecto.'
+    },
+    {
+      stepNumber: 4,
+      target: '#tour-step-4',
+      title: '🍽️ Tienda',
+      description: 'Configura las opciones de tu tienda: habilita mesas, define horarios de atención y personaliza la experiencia del cliente.'
+    },
+    {
+      stepNumber: 5,
+      target: '#tour-step-5',
+      title: '📺 Pantalla',
+      description: 'Configura la pantalla de visualización para tus clientes. Personaliza cómo se muestran los pedidos y productos.'
+    },
+    {
+      stepNumber: 6,
+      target: '#tour-step-6',
+      title: '🖨️ Dispositivos',
+      description: 'Configura las impresoras y otros dispositivos conectados a tu sistema para imprimir facturas y tickets.'
+    },
+    {
+      stepNumber: 7,
+      target: '#tour-step-7',
+      title: '🔗 Integraciones',
+      description: 'Conecta tu sistema con servicios externos como ARCA para facturación electrónica y otras integraciones.'
+    }
+  ]
+
+  // Filtrar pasos del tour según el plan
+  // Si es plan Free, excluir Sucursal (stepNumber 2) e Integraciones (stepNumber 7)
+  if (isFreePlan.value) {
+    return allTourSteps.filter(s => !s.stepNumber || (s.stepNumber !== 2 && s.stepNumber !== 7))
+  }
+
+  return allTourSteps
+})
+
+// Función para obtener el siguiente step válido
+const getNextStep = (currentStep) => {
+  const validSteps = steps.value.map(s => s.number).sort((a, b) => a - b)
+  const currentIndex = validSteps.indexOf(currentStep)
+
+  if (currentIndex === -1 || currentIndex === validSteps.length - 1) {
+    return currentStep
+  }
+
+  return validSteps[currentIndex + 1]
+}
+
+// Función para obtener el step anterior válido
+const getPreviousStep = (currentStep) => {
+  const validSteps = steps.value.map(s => s.number).sort((a, b) => a - b)
+  const currentIndex = validSteps.indexOf(currentStep)
+
+  if (currentIndex === -1 || currentIndex === 0) {
+    return currentStep
+  }
+
+  return validSteps[currentIndex - 1]
+}
 
 // Refs for file uploaders
 const logoUploader = ref(null)
@@ -850,6 +1188,11 @@ const formDate = (data) => {
   formData.append('email', data.email)
   formData.append('phone_number', data.phone_number)
 
+  // Agregar business_type_id si está disponible
+  if (data.business_type && data.business_type.id) {
+    formData.append('business_type_id', data.business_type.id)
+  }
+
   // Agregar coordenadas GPS si están disponibles
   if (address.value && typeof address.value === 'object') {
     if (address.value.latitude !== undefined && address.value.latitude !== null) {
@@ -894,7 +1237,7 @@ const onSubmit = async () => {
     notify('Guardado exitosamente', 'positive', 'check_circle')
 
     // Avanzar al siguiente paso
-    step.value = 2
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -934,6 +1277,9 @@ const onSubmitImages = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Avanzar al siguiente paso
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -1043,6 +1389,14 @@ const filterTypeOfServices = async (value, update) => {
   })
 }
 
+const filterBusinessTypes = async (value, update) => {
+  filterOptions(value, 'business-types', (data) => {
+    update(() => {
+      businessTypes.value = data
+    })
+  })
+}
+
 const saveMenuConfig = async () => {
   try {
     loading.value = true
@@ -1058,6 +1412,9 @@ const saveMenuConfig = async () => {
       company_config: data
     })
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Avanzar al siguiente paso
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
@@ -1069,8 +1426,8 @@ const onSubmitConfig = async () => {
   try {
     loading.value = true
 
-    // Si estamos en el paso 6, guardamos la configuración de la sucursal
-    if (step.value === 6) {
+    // Si estamos en el paso 2 (Sucursal), guardamos la configuración de la sucursal
+    if (step.value === 2) {
       const payload = {
         branch_office_id: branchOffice.value.id,
         point_of_sale: companyConfig.value.point_of_sale,
@@ -1103,11 +1460,132 @@ const onSubmitConfig = async () => {
     }
 
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Avanzar al siguiente paso
+    step.value = getNextStep(step.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * Start tour
+ */
+const startTour = () => {
+  showTour.value = true
+  currentTourStep.value = 0
+  updateTourPosition()
+}
+
+/**
+ * Next tour step
+ */
+const nextTourStep = () => {
+  if (currentTourStep.value < tourSteps.value.length - 1) {
+    currentTourStep.value++
+    updateTourPosition()
+  } else {
+    finishTour()
+  }
+}
+
+/**
+ * Previous tour step
+ */
+const previousTourStep = () => {
+  if (currentTourStep.value > 0) {
+    currentTourStep.value--
+    updateTourPosition()
+  }
+}
+
+/**
+ * Skip tour
+ */
+const skipTour = () => {
+  finishTour()
+}
+
+/**
+ * Finish tour
+ */
+const finishTour = () => {
+  showTour.value = false
+  localStorage.setItem('has_seen_company_config_tour', 'true')
+  notify('¡Tour completado!', 'positive', 'check_circle')
+}
+
+/**
+ * Update tour position
+ */
+const updateTourPosition = () => {
+  nextTick(() => {
+    const step = tourSteps.value[currentTourStep.value]
+    const element = document.querySelector(step.target)
+
+    if (element) {
+      // Scroll to element first
+      element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+      // Wait for scroll to finish before calculating positions
+      setTimeout(() => {
+        const rect = element.getBoundingClientRect()
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+        // Update spotlight position
+        spotlightStyle.value = {
+          top: `${rect.top + scrollTop - 10}px`,
+          left: `${rect.left + scrollLeft - 10}px`,
+          width: `${rect.width + 20}px`,
+          height: `${rect.height + 20}px`
+        }
+
+        // Position tour card with better logic
+        const cardWidth = 400
+        const cardHeight = 280
+        const padding = 20
+        const viewportHeight = window.innerHeight
+        const viewportWidth = window.innerWidth
+
+        let cardTop = rect.bottom + scrollTop + padding
+        let cardLeft = rect.left + scrollLeft
+
+        // If card goes below viewport, position it above the element
+        if (rect.bottom + cardHeight + padding > viewportHeight) {
+          cardTop = rect.top + scrollTop - cardHeight - padding
+        }
+
+        // If still goes above viewport, position it in the middle
+        if (cardTop < scrollTop) {
+          cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+        }
+
+        // Adjust horizontal position
+        if (cardLeft + cardWidth > viewportWidth) {
+          cardLeft = viewportWidth - cardWidth - padding
+        }
+        if (cardLeft < 0) {
+          cardLeft = padding
+        }
+
+        // Adjust vertical position to keep in viewport
+        if (cardTop + cardHeight > scrollTop + viewportHeight) {
+          cardTop = scrollTop + viewportHeight - cardHeight - padding
+        }
+        if (cardTop < scrollTop) {
+          cardTop = scrollTop + padding
+        }
+
+        tourCardStyle.value = {
+          top: `${cardTop}px`,
+          left: `${cardLeft}px`
+        }
+      }, 300)
+    }
+  })
 }
 
 /**
@@ -1166,6 +1644,101 @@ const handleAddressSelected = (selectedAddress) => {
       lng: address.value?.longitude
     }
   })
+}
+
+/**
+ * Start configuration tour with Driver.js
+ */
+const startConfigTour = () => {
+  // Construir pasos dinámicamente según los steps disponibles
+  const tourSteps = [
+    {
+      element: '.steps-nav',
+      popover: {
+        title: '¡Bienvenido a la Configuración! 🎉',
+        description: 'Te guiaremos por las diferentes secciones para configurar tu empresa. Puedes navegar entre ellas haciendo clic en cada paso.',
+        side: 'bottom',
+        align: 'center'
+      }
+    }
+  ]
+
+  // Agregar pasos según los steps disponibles
+  const stepElements = document.querySelectorAll('.step-nav-item')
+  stepElements.forEach((element, index) => {
+    const stepTitle = element.querySelector('.step-nav-label')?.textContent || ''
+
+    let description = ''
+    let icon = ''
+
+    switch (stepTitle) {
+      case 'Empresa':
+        icon = '📋'
+        description = 'Aquí configuras la información básica de tu empresa: nombre, documento, logo, dirección y datos de contacto.'
+        break
+      case 'Sucursal':
+        icon = '🏪'
+        description = 'Configura los valores predeterminados para esta sucursal: punto de venta y lista de precios.'
+        break
+      case 'Facturación':
+        icon = '🧾'
+        description = 'Define la configuración de facturación: cliente por defecto, tipo de factura, método de pago, moneda y datos fiscales.'
+        break
+      case 'Tienda':
+        icon = '🛒'
+        description = 'Personaliza tu tienda digital: colores, banner y configuración visual para tus clientes.'
+        break
+      case 'Pantalla':
+        icon = '📺'
+        description = 'Configura la pantalla de visualización para tus clientes: tipo de servicio y opciones de display.'
+        break
+      case 'Dispositivos':
+        icon = '🖨️'
+        description = 'Configura tus dispositivos: impresora y balanza para el punto de venta.'
+        break
+      case 'Integraciones':
+        icon = '🔗'
+        description = 'Conecta tu sistema con servicios externos como ARCA para facturación electrónica.'
+        break
+    }
+
+    if (description) {
+      tourSteps.push({
+        element: `.step-nav-item:nth-child(${index + 1})`,
+        popover: {
+          title: `${icon} ${stepTitle}`,
+          description,
+          side: 'bottom',
+          align: 'start'
+        }
+      })
+    }
+  })
+
+  // Paso final
+  tourSteps.push({
+    popover: {
+      title: '✅ ¡Listo para Comenzar!',
+      description: 'Ahora puedes configurar cada sección a tu ritmo. Recuerda guardar los cambios en cada paso. ¡Éxito! 🚀',
+      side: 'center',
+      align: 'center'
+    }
+  })
+
+  const driverObj = driver({
+    showProgress: true,
+    showButtons: ['next', 'previous', 'close'],
+    steps: tourSteps,
+    nextBtnText: 'Siguiente →',
+    prevBtnText: '← Anterior',
+    doneBtnText: '¡Entendido!',
+    progressText: '{{current}} de {{total}}',
+    onDestroyStarted: () => {
+      driverObj.destroy()
+    }
+  })
+
+  driverObj.drive()
 }
 </script>
 
@@ -1596,6 +2169,127 @@ const handleAddressSelected = (selectedAddress) => {
 
   .progress-bar {
     width: 180px;
+  }
+}
+
+/* Tour Styles */
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 9998;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  transition: all 0.3s ease;
+  z-index: 9999;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  }
+  50% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 10000;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    min-width: 300px;
+    max-width: 90vw;
+    left: 5vw !important;
+  }
+
+  .tour-title {
+    font-size: 18px;
+  }
+
+  .tour-description {
+    font-size: 13px;
   }
 }
 </style>

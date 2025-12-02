@@ -81,6 +81,7 @@
       :promotion-data="selectedPromotion"
       @promotion-saved="handlePromotionSaved"
       @promotion-updated="handlePromotionUpdated"
+      @promotion-deleted="handlePromotionDeleted"
     />
   </div>
 </template>
@@ -563,6 +564,30 @@ export default {
       console.log('Promoción actualizada:', updatedPromotion)
       this.getPromotions()
       notify('Promoción actualizada exitosamente', 'positive', 'info')
+    },
+
+    /**
+     * Handle promotion deleted event from modal
+     */
+    handlePromotionDeleted (promotion) {
+      if (!promotion || !promotion.id) {
+        notify('No se pudo identificar la promoción a eliminar', 'negative', 'warning')
+        return
+      }
+
+      this.visible = true
+      this.$api.delete(`promotions/${promotion.id}`)
+        .then(() => {
+          this.getPromotions()
+          this.visible = false
+          this.openPromotionModal = false
+          this.selectedPromotion = null
+          notify('Promoción eliminada exitosamente', 'positive', 'info')
+        })
+        .catch(err => {
+          this.visible = false
+          notify(err.message || 'Error al eliminar la promoción', 'negative', 'warning')
+        })
     },
 
     /**

@@ -1,8 +1,58 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddBranchOffice = true" icon="add_circle"/>
+      <div class="col-12">
+        <div class="row items-center justify-between q-mb-md">
+          <!-- Subscription Info Card -->
+          <div class="col-auto">
+            <q-card
+              flat
+              class="subscription-info-card-modern"
+              :class="{
+                'card-warning': branchOffices.length >= maxBranches - 1 && branchOffices.length < maxBranches,
+                'card-danger': branchOffices.length >= maxBranches,
+                'card-success': branchOffices.length < maxBranches - 1
+              }"
+            >
+              <q-card-section class="row items-center q-pa-md no-wrap">
+                <div class="icon-container q-mr-md">
+                  <q-icon
+                    name="store"
+                    size="28px"
+                    color="white"
+                  />
+                </div>
+                <div class="info-content">
+                  <div class="text-overline text-weight-medium opacity-80">Sucursales</div>
+                  <div class="text-h5 text-weight-bold q-mb-xs">
+                    {{ branchOffices.length }} <span class="text-body1 opacity-60">/ {{ maxBranches }}</span>
+                  </div>
+                  <div v-if="currentSubscription" class="text-caption text-weight-medium opacity-80">
+                    Plan: {{ currentSubscription.plan?.name || 'Free' }}
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- Add Button -->
+          <div class="col-auto">
+            <q-btn
+              unelevated
+              rounded
+              color="primary"
+              icon="add_circle"
+              label="Agregar Sucursal"
+              size="md"
+              class="add-branch-btn-modern"
+              @click="checkAndOpenAddDialog"
+            >
+              <q-tooltip v-if="branchOffices.length >= maxBranches">
+                Has alcanzado el límite de sucursales de tu plan ({{ maxBranches }}). Actualiza tu plan para agregar más.
+              </q-tooltip>
+            </q-btn>
+          </div>
+        </div>
       </div>
       <div class="col-12">
         <q-table
@@ -66,6 +116,77 @@
         </q-form>
       </q-card>
     </q-dialog>
+    <q-dialog v-model="openUpgradeBranchesDialog" persistent>
+      <q-card class="upgrade-dialog-card">
+        <q-card-section class="row items-center no-wrap upgrade-dialog-header">
+          <div class="upgrade-header-icon q-mr-md">
+            <q-icon name="store" size="24px" />
+          </div>
+          <div class="col">
+            <div class="text-subtitle1 text-weight-bold">Límite de sucursales alcanzado</div>
+            <div class="text-caption text-grey-2">
+              Aumenta tu límite para poder crear más sucursales.
+            </div>
+          </div>
+          <q-btn icon="close" flat round dense @click="openUpgradeBranchesDialog = false" />
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="upgrade-dialog-body">
+          <div class="text-body1 q-mb-sm">
+            Actualmente estás usando
+            <span class="text-weight-bold">{{ branchOffices.length }}</span>
+            de
+            <span class="text-weight-bold">{{ maxBranches }}</span>
+            sucursal(es) permitidas por tu plan.
+          </div>
+
+          <div v-if="currentSubscription" class="upgrade-plan-chip q-mb-md">
+            <q-icon name="workspace_premium" size="16px" class="q-mr-xs" />
+            <span class="text-caption">Plan actual:</span>
+            <span class="text-caption text-weight-bold q-ml-xs">{{ currentSubscription.plan?.name || 'Free' }}</span>
+          </div>
+
+          <div class="text-body2 text-grey-7 q-mb-md">
+            Elige el <span class="text-weight-bold">nuevo número total de sucursales</span> que deseas tener.
+            Te redirigiremos a Mercado Pago para completar el pago y actualizar tu límite.
+          </div>
+
+          <div class="q-mt-sm">
+            <q-input
+              v-model.number="upgradeBranchCount"
+              type="number"
+              filled
+              dense
+              :min="Math.max(maxBranches + 1, 1)"
+              :hint="`Mínimo: ${maxBranches + 1} sucursales`"
+              label="Nuevo total de sucursales"
+              class="upgrade-branches-input"
+            >
+              <template v-slot:prepend>
+                <q-icon name="store" />
+              </template>
+            </q-input>
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right" class="upgrade-dialog-actions">
+          <q-btn flat label="Cancelar" color="grey-7" @click="openUpgradeBranchesDialog = false" />
+          <q-btn
+            unelevated
+            color="primary"
+            icon="payment"
+            :label="upgradeLoading ? 'Redirigiendo...' : 'Continuar al pago'"
+            :loading="upgradeLoading"
+            :disable="!canStartBranchUpgrade"
+            @click="startBranchUpgradePayment"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-dialog v-model="openAddBranchOffice" persistent>
       <q-card style="width: 700px; max-width: 80vw;">
         <q-form @submit="saveBranchOffice">
@@ -116,6 +237,11 @@ export default {
       branchOffices: [],
       branchOffice: {},
       filter: '',
+      currentSubscription: null,
+      maxBranches: 1,
+      openUpgradeBranchesDialog: false,
+      upgradeBranchCount: 1,
+      upgradeLoading: false,
       /**
        * Params search
        * @type {Object}
@@ -170,7 +296,14 @@ export default {
       formattedAddress: ''
     }
   },
+  computed: {
+    canStartBranchUpgrade () {
+      const target = Number(this.upgradeBranchCount || 0)
+      return !this.upgradeLoading && target && target > this.maxBranches
+    }
+  },
   mounted () {
+    this.loadSubscription()
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
@@ -183,6 +316,34 @@ export default {
   },
   methods: {
     /**
+     * Load current subscription to get branch limit
+     */
+    async loadSubscription () {
+      try {
+        const { data } = await this.$api.get('subscriptions/current')
+        this.currentSubscription = data.subscription
+        this.maxBranches = data.subscription?.branch_offices_count || 1
+
+        // Inicializar el valor por defecto del upgrade con el límite actual + 1
+        if (this.maxBranches > 0) {
+          this.upgradeBranchCount = this.maxBranches + 1
+        }
+      } catch (error) {
+        console.error('Error loading subscription:', error)
+        this.maxBranches = 1
+      }
+    },
+    /**
+     * Check if can add more branches before opening dialog
+     */
+    checkAndOpenAddDialog () {
+      if (this.branchOffices.length >= this.maxBranches) {
+        this.openUpgradeBranchesDialog = true
+        return
+      }
+      this.openAddBranchOffice = true
+    },
+    /**
      * Close all modals
      */
     closeModal () {
@@ -193,6 +354,90 @@ export default {
       this.address = null
       this.formattedAddress = ''
       this.addressComponentKey += 1
+    },
+    async startBranchUpgradePayment () {
+      if (!this.currentSubscription || !this.currentSubscription.plan) {
+        Notify.create({
+          message: 'No se encontró información de tu plan actual',
+          icon: 'warning',
+          color: 'negative'
+        })
+        return
+      }
+
+      const targetBranches = Number(this.upgradeBranchCount || 0)
+      if (!targetBranches || targetBranches <= this.maxBranches) {
+        Notify.create({
+          message: `Debes elegir al menos ${this.maxBranches + 1} sucursales`,
+          icon: 'warning',
+          color: 'warning'
+        })
+        return
+      }
+
+      this.upgradeLoading = true
+
+      try {
+        const response = await this.$api.post('mercadopago/create-payment', {
+          subscription_plan_id: this.currentSubscription.plan.id,
+          branch_offices_count: targetBranches,
+          months: 1
+        })
+
+        if (!response.data?.init_point) {
+          throw new Error('No se recibió URL de pago de Mercado Pago')
+        }
+
+        const paymentUrl = response.data.init_point
+
+        // Guardar datos mínimos para referencia (opcional)
+        if (response.data.preference_id) {
+          localStorage.setItem('mp_preference_id', response.data.preference_id)
+        }
+        localStorage.setItem('mp_plan_id', this.currentSubscription.plan.id)
+        localStorage.setItem('mp_plan_name', this.currentSubscription.plan.name || 'Plan actual')
+
+        Notify.create({
+          message: 'Redirigiendo a Mercado Pago...',
+          icon: 'payment',
+          color: 'info'
+        })
+
+        this.openUpgradeBranchesDialog = false
+
+        // Pequeña pausa para que el usuario vea la notificación
+        setTimeout(() => {
+          window.location.href = paymentUrl
+        }, 500)
+      } catch (error) {
+        let errorMessage = 'Error al crear el link de pago'
+
+        if (error.response) {
+          const { status, data } = error.response
+
+          if (status === 400) {
+            errorMessage = data.message || 'Datos de pago inválidos'
+          } else if (status === 401) {
+            errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente'
+          } else if (status === 500) {
+            errorMessage = 'Error del servidor. Por favor, intenta nuevamente'
+          } else if (data?.details) {
+            errorMessage = `Error de Mercado Pago: ${JSON.stringify(data.details)}`
+          }
+        } else if (error.request) {
+          errorMessage = 'Error de conexión. Verifica tu internet'
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+
+        Notify.create({
+          message: errorMessage,
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        this.upgradeLoading = false
+      }
     },
     /**
      * Search beneficiary
@@ -266,11 +511,53 @@ export default {
         })
         .catch(err => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
+          
+          // Manejar errores de validación de Laravel
+          if (err.response?.status === 422) {
+            const errors = err.response?.data?.errors || {}
+            
+            // Si hay error de límite de sucursales
+            if (errors.branch_limit) {
+              Notify.create({
+                message: errors.branch_limit[0],
+                icon: 'warning',
+                color: 'warning',
+                position: 'top',
+                timeout: 5000,
+                actions: [
+                  {
+                    label: 'Ver Planes',
+                    color: 'white',
+                    handler: () => {
+                      this.$router.push('/subscription-plans')
+                    }
+                  },
+                  {
+                    label: 'Cerrar',
+                    color: 'white'
+                  }
+                ]
+              })
+              return
+            }
+            
+            // Otros errores de validación
+            const firstError = Object.values(errors)[0]
+            const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+            Notify.create({
+              message: errorMessage || 'Error de validación',
+              icon: 'warning',
+              color: 'negative'
+            })
+          } else {
+            // Otros errores
+            const errorMessage = err.response?.data?.message || err.message || 'Error al crear sucursal'
+            Notify.create({
+              message: errorMessage,
+              icon: 'warning',
+              color: 'negative'
+            })
+          }
         })
     },
     /**
@@ -404,3 +691,170 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Modern Subscription Info Card */
+.subscription-info-card-modern {
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+  min-width: 240px;
+}
+
+.subscription-info-card-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+.subscription-info-card-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Card States */
+.subscription-info-card-modern.card-success {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.subscription-info-card-modern.card-warning {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.subscription-info-card-modern.card-danger {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* Icon Container */
+.icon-container {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.subscription-info-card-modern:hover .icon-container {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+/* Info Content */
+.info-content {
+  position: relative;
+  z-index: 1;
+}
+
+.opacity-80 {
+  opacity: 0.9;
+}
+
+.opacity-60 {
+  opacity: 0.7;
+}
+
+/* Add Button Modern */
+.add-branch-btn-modern {
+  padding: 12px 28px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-branch-btn-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.add-branch-btn-modern:active {
+  transform: translateY(0);
+}
+
+.add-branch-btn-modern:disabled {
+  opacity: 0.5;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Upgrade branches dialog */
+.upgrade-dialog-card {
+  width: 520px;
+  max-width: 90vw;
+  border-radius: 14px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.upgrade-dialog-header {
+  padding: 14px 18px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: #ffffff;
+}
+
+.upgrade-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upgrade-dialog-body {
+  padding: 18px 20px 10px;
+}
+
+.upgrade-plan-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(76, 175, 80, 0.08);
+  color: #2e7d32;
+}
+
+.upgrade-branches-input :deep(.q-field__control) {
+  border-radius: 10px;
+}
+
+.upgrade-dialog-actions {
+  padding: 10px 16px 14px;
+}
+
+/* Old styles for compatibility */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .subscription-info-card-modern {
+    min-width: 200px;
+  }
+
+  .icon-container {
+    width: 48px;
+    height: 48px;
+  }
+
+  .icon-container .q-icon {
+    font-size: 24px !important;
+  }
+}
+</style>

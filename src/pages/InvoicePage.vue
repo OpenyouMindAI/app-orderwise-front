@@ -210,6 +210,17 @@
                   autogrow
                 />
               </div>
+              <div class="col-12" v-if="invoice?.address?.formattedAddress">
+                <q-input
+                  label="Dirección"
+                  filled
+                  :model-value="invoice?.address?.formattedAddress"
+                  readonly
+                  dense
+                  type="textarea"
+                  autogrow
+                />
+              </div>
               <div class="col-12">
                 <q-expansion-item
                   icon="list"
@@ -1453,6 +1464,8 @@ export default {
       this.invoice = {
         ...row
       }
+
+      console.log(row)
 
       this.openEditInvoice = true
     },
