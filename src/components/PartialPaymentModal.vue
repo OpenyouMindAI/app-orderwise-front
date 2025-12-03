@@ -289,31 +289,24 @@
           </div>
         </q-tab-panel>
 
-        <!-- Proceso de pago -->
-        <q-tab-panel name="process">
-          <div class="split-content q-pa-md">
-            <div class="text-h6 q-mb-md">
-              <q-icon name="payments" />
-              Proceso de Cobro Parcial
+        <!-- Mensaje de Finalización - Solo se muestra cuando remainingDebt === 0 -->
+        <q-tab-panel name="finish" v-if="remainingDebt === 0">
+          <div class="split-content q-pa-md text-center">
+            <q-icon name="check_circle" color="positive" size="4rem" class="q-mb-md" />
+            <div class="text-h5 q-mb-md text-positive">
+              ¡Pago Completado!
             </div>
-            <p class="text-body2 text-grey-7">
-              Proceso de cobro parcial.
+            <p class="text-body1 text-grey-7">
+              El monto total ha sido cancelado exitosamente.
             </p>
-            <!-- Aquí irá la lógica para el proceso de cobro parcial -->
-          </div>
-        </q-tab-panel>
-
-        <!-- Mensaje de Finalización -->
-        <q-tab-panel name="finish">
-          <div class="split-content q-pa-md">
-            <div class="text-h6 q-mb-md">
-              <q-icon name="payments" />
-              Finalización de Cobro Parcial
+            <div class="q-mt-lg">
+              <q-card flat bordered class="q-pa-md bg-grey-1">
+                <div class="text-subtitle2 text-grey-7">Total Pagado</div>
+                <div class="text-h4 text-positive text-weight-bold">
+                  ${{ formatNumber(totalAmount) }}
+                </div>
+              </q-card>
             </div>
-            <p class="text-body2 text-grey-7">
-              Finalización de cobro parcial.
-            </p>
-            <!-- Aquí irá la lógica para la finalización de cobro parcial -->
           </div>
         </q-tab-panel>
       </q-tab-panels>
@@ -352,7 +345,6 @@ const TAB_STATES = {
   ITEM: 'item',
   PERSON: 'person',
   CONFIRM: 'confirm',
-  PROCESS: 'process',
   FINISH: 'finish'
 }
 
@@ -463,7 +455,6 @@ export default {
         [TAB_STATES.ITEM]: () => selectedProducts.value.length > 0,
         [TAB_STATES.PERSON]: () => numberOfPeople.value > 0,
         [TAB_STATES.CONFIRM]: () => true,
-        [TAB_STATES.PROCESS]: () => true,
         [TAB_STATES.FINISH]: () => true
       }
       return validations[activeTab.value]?.() || false
@@ -518,7 +509,6 @@ export default {
         [TAB_STATES.ITEM]: 'Continuar',
         [TAB_STATES.PERSON]: 'Continuar',
         [TAB_STATES.CONFIRM]: 'Confirmar Pago',
-        [TAB_STATES.PROCESS]: 'Finalizar',
         [TAB_STATES.FINISH]: remainingDebt.value > 0 ? 'Continuar Cobrando' : 'Cerrar'
       }
       return labels[activeTab.value] || 'Siguiente'
@@ -536,10 +526,6 @@ export default {
       activeTab.value = TAB_STATES.CONFIRM
     }
 
-    const processPayment = () => {
-      activeTab.value = TAB_STATES.PROCESS
-    }
-
     const finishPayment = () => {
       remainingDebt.value -= paymentSummary.value.amountToPay
 
@@ -551,7 +537,14 @@ export default {
         peoplePaymentCount.value++
       }
 
-      activeTab.value = TAB_STATES.FINISH
+      // Manejar el flujo según la deuda restante
+      if (remainingDebt.value === 0) {
+        // Mostrar mensaje de finalización exitosa
+        activeTab.value = TAB_STATES.FINISH
+      } else {
+        // Aún hay deuda, resetear para el siguiente pago
+        resetForNextPayment()
+      }
     }
 
     const resetForNextPayment = () => {
@@ -639,22 +632,16 @@ export default {
       payment.amount = parseFloat(newAmount) || 0
     }
 
-    const handleConfirm = () => {
-      emit('confirm', {
-        type: selectedSplitType.value || activeTab.value,
-        splitAmount: splitAmount.value,
-        numberOfPeople: numberOfPeople.value,
-        selectedProducts: selectedProducts.value
-      })
-    }
-
     const handleFinish = () => {
       if (remainingDebt.value > 0) {
+        // Si aún hay deuda pendiente, continuar con el siguiente pago
         resetForNextPayment()
       } else {
+        // Solo cerrar el modal cuando la deuda esté completamente pagada
         emit('update:show', false)
         previousTab.value = null
-        handleConfirm()
+        // No emitimos confirmación al padre
+        // handleConfirm()
       }
     }
 
@@ -681,7 +668,7 @@ export default {
 
     // ==================== Handlers de Eventos ====================
     const handleCancel = () => {
-      if ([TAB_STATES.CONFIRM, TAB_STATES.PROCESS].includes(activeTab.value)) {
+      if (activeTab.value === TAB_STATES.CONFIRM) {
         activeTab.value = selectedSplitType.value || TAB_STATES.AMOUNT
         selectedSplitType.value = null
         return
@@ -695,8 +682,7 @@ export default {
         [TAB_STATES.AMOUNT]: confirmSelection,
         [TAB_STATES.ITEM]: confirmSelection,
         [TAB_STATES.PERSON]: confirmSelection,
-        [TAB_STATES.CONFIRM]: processPayment,
-        [TAB_STATES.PROCESS]: finishPayment,
+        [TAB_STATES.CONFIRM]: finishPayment,
         [TAB_STATES.FINISH]: handleFinish
       }
 
