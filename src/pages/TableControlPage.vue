@@ -786,6 +786,7 @@
       :show="showPartialPaymentModal"
       :products="invoiceProducts"
       :total-amount="calculateTotal()"
+      :payment-methods="paymentMethods"
       :loading="saving"
       @update:show="showPartialPaymentModal = $event"
       @confirm="handlePartialPaymentConfirm"

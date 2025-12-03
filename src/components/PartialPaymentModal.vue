@@ -123,12 +123,8 @@
         <!-- Confirmar procedimiento de pago -->
         <q-tab-panel name="confirm">
           <div class="split-content q-pa-md">
-            <div class="text-h6 q-mb-md text-primary">
-              <q-icon name="check_circle" />
-              Confirmar Cobro Parcial
-            </div>
 
-            <q-card flat bordered class="q-pa-md bg-grey-1">
+            <q-card flat bordered class="q-pa-md bg-grey-1 q-mb-md">
               <div class="row q-col-gutter-md">
                 <div class="col-12">
                   <div class="text-subtitle2 text-grey-7">Tipo de División</div>
@@ -138,7 +134,7 @@
                 </div>
 
                 <div class="col-12">
-                  <q-separator class="q-my-sm" />
+                  <q-separator />
                 </div>
 
                 <div class="col-6">
@@ -156,7 +152,7 @@
                 </div>
 
                 <div class="col-12">
-                  <q-separator class="q-my-sm" />
+                  <q-separator />
                 </div>
 
                 <div class="col-12 text-right">
@@ -168,9 +164,128 @@
               </div>
             </q-card>
 
-            <div class="q-mt-md text-center text-grey-8">
-              <p>¿Está seguro que desea procesar este pago parcial?</p>
+            <!-- Payment Methods Cards -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-weight-medium q-mb-sm">
+                <q-icon name="credit_card" class="q-mr-sm" />
+                Métodos de Pago
+              </div>
+              <div class="row q-col-gutter-sm">
+                <div
+                  v-for="method in paymentMethods"
+                  :key="method.id"
+                  class="col-6 col-sm-4 col-md-3"
+                >
+                  <q-card
+                    flat
+                    bordered
+                    class="payment-method-card q-pa-sm cursor-pointer"
+                    :class="{ 'disabled-card': pendingPayment <= 0 }"
+                    @click="pendingPayment > 0 ? addPayment(method) : null"
+                  >
+                    <div class="row items-center q-gutter-sm">
+                      <q-icon
+                        :name="getPaymentMethodIcon(method.name)"
+                        size="sm"
+                        color="primary"
+                      />
+                      <div class="text-body2">{{ method.name }}</div>
+                    </div>
+                  </q-card>
+                </div>
+              </div>
             </div>
+
+            <!-- Payment Summary -->
+            <q-card flat bordered class="q-pa-md bg-grey-1 q-mb-md">
+              <div class="row q-col-gutter-md">
+                <div class="col-6">
+                  <div class="text-subtitle2 text-grey-7">Monto a pagar</div>
+                  <div class="text-h6">
+                    ${{ formatNumber(paymentSummary.amountToPay) }}
+                  </div>
+                </div>
+
+                <div class="col-6 text-right">
+                  <div class="text-subtitle2 text-grey-7">Total pagado</div>
+                  <div class="text-h5 text-positive text-weight-bold">
+                    ${{ formatNumber(totalPaymentAmount) }}
+                  </div>
+                </div>
+
+                <div class="col-12" v-if="partialPayments.length > 0">
+                  <q-separator />
+                </div>
+
+                <!-- Lista de Métodos de Pago Agregados -->
+                <div class="col-12" v-if="partialPayments.length > 0">
+                  <div class="text-subtitle2 text-grey-7 q-mb-sm">Métodos de pago seleccionados</div>
+                  <q-list separator bordered dense style="border-radius: 8px;">
+                    <q-item
+                      v-for="(payment, index) in partialPayments"
+                      :key="index"
+                      class="q-py-sm"
+                    >
+                      <q-item-section>
+                        <div class="text-weight-medium">{{ payment.name }}</div>
+                      </q-item-section>
+                      <q-item-section side>
+                        <div class="row items-center q-gutter-xs">
+                          <div class="text-weight-medium">
+                            ${{ formatNumber(payment.amount) }}
+                          </div>
+                          <q-btn
+                            icon="edit"
+                            color="primary"
+                            flat
+                            round
+                            dense
+                            size="sm"
+                          >
+                            <q-popup-edit
+                              :model-value="payment.amount"
+                              @update:model-value="updatePaymentAmount(payment, index, $event)"
+                              auto-save
+                              v-slot="scope"
+                            >
+                              <q-input
+                                v-model.number="scope.value"
+                                autofocus
+                                type="number"
+                                @keyup.enter="scope.set"
+                              />
+                            </q-popup-edit>
+                            <q-tooltip>Editar monto</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            icon="delete"
+                            color="negative"
+                            flat
+                            round
+                            dense
+                            size="sm"
+                            @click="deletePayment(index)"
+                          >
+                            <q-tooltip>Eliminar</q-tooltip>
+                          </q-btn>
+                        </div>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </div>
+
+                <div class="col-12" v-if="partialPayments.length > 0">
+                  <q-separator />
+                </div>
+
+                <div class="col-12 text-right">
+                  <div class="text-subtitle2 text-grey-7">Pendiente</div>
+                  <div class="text-h6 text-warning">
+                    ${{ formatNumber(pendingPayment) }}
+                  </div>
+                </div>
+              </div>
+            </q-card>
           </div>
         </q-tab-panel>
 
@@ -229,6 +344,7 @@
 
 <script>
 import { ref, computed, watch } from 'vue'
+import { useQuasar } from 'quasar'
 
 // Constantes para estados de tabs
 const TAB_STATES = {
@@ -266,9 +382,15 @@ export default {
     loading: {
       type: Boolean,
       default: false
+    },
+    paymentMethods: {
+      type: Array,
+      default: () => []
     }
   },
   setup (props, { emit }) {
+    const $q = useQuasar()
+
     // ==================== Estado Local ====================
     const activeTab = ref(TAB_STATES.AMOUNT)
     const splitAmount = ref(0)
@@ -282,6 +404,9 @@ export default {
     // Variables para pago por persona
     const amountPerPerson = ref(0)
     const peoplePaymentCount = ref(0)
+
+    // Variables para gestión de pagos
+    const partialPayments = ref([])
 
     // ==================== Funciones Puras ====================
     const formatNumber = (value) => {
@@ -301,6 +426,7 @@ export default {
         .reduce((sum, p) => sum + calculateProductTotal(p), 0)
     }
 
+    // TODO:
     const calculatePersonAmount = (debt, people, savedAmount) => {
       return savedAmount > 0 ? savedAmount : debt / (people || 1)
     }
@@ -316,6 +442,7 @@ export default {
       amountPerPerson.value = 0
       peoplePaymentCount.value = 0
       previousTab.value = null
+      partialPayments.value = []
     }
 
     // ==================== Watchers ====================
@@ -441,6 +568,77 @@ export default {
       }
     }
 
+    // ==================== Gestión de Pagos ====================
+    const totalPaymentAmount = computed(() => {
+      return partialPayments.value.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+    })
+
+    const pendingPayment = computed(() => {
+      return paymentSummary.value.amountToPay - totalPaymentAmount.value
+    })
+
+    const promptPaymentAmount = (method) => {
+      return new Promise((resolve) => {
+        const discountText = method.discount_percentage > 0
+          ? ` (${method.discount_percentage}% de descuento)`
+          : ''
+
+        $q.dialog({
+          title: `Pago con ${method.name}${discountText}`,
+          message: `Ingrese el monto a pagar con ${method.name}.`,
+          persistent: true,
+          prompt: {
+            model: pendingPayment.value > 0 ? pendingPayment.value.toString() : '',
+            type: 'number',
+            min: 0,
+            filled: true,
+            'input-style': 'text-align: center'
+          },
+          cancel: true,
+          color: 'primary'
+        }).onOk(data => {
+          const amount = parseFloat(data)
+          if (!isNaN(amount) && amount > 0) {
+            resolve(amount)
+          } else {
+            resolve(null)
+          }
+        }).onCancel(() => resolve(null))
+          .onDismiss(() => resolve(null))
+      })
+    }
+
+    const addPayment = async (method) => {
+      if (pendingPayment.value <= 0) return
+
+      const amount = await promptPaymentAmount(method)
+      if (amount === null) return
+
+      const payment = {
+        name: method.name,
+        acronym: method.acronym,
+        amount: parseFloat(amount),
+        payment_method_id: method.id,
+        discount_percentage: method.percentage || 0
+      }
+
+      // Check if payment method already exists
+      const existingIndex = partialPayments.value.findIndex(p => p.payment_method_id === method.id)
+      if (existingIndex >= 0) {
+        partialPayments.value[existingIndex].amount = payment.amount
+      } else {
+        partialPayments.value.push(payment)
+      }
+    }
+
+    const deletePayment = (index) => {
+      partialPayments.value.splice(index, 1)
+    }
+
+    const updatePaymentAmount = (payment, index, newAmount) => {
+      payment.amount = parseFloat(newAmount) || 0
+    }
+
     const handleConfirm = () => {
       emit('confirm', {
         type: selectedSplitType.value || activeTab.value,
@@ -458,6 +656,27 @@ export default {
         previousTab.value = null
         handleConfirm()
       }
+    }
+
+    // ==================== Utilidades de UI ====================
+    const getPaymentMethodIcon = (methodName) => {
+      const iconMap = {
+        Efectivo: 'payments',
+        'Tarjeta de Crédito': 'credit_card',
+        'Tarjeta de Débito': 'payment',
+        Transferencia: 'account_balance',
+        Cheque: 'receipt',
+        Otros: 'more_horiz'
+      }
+
+      // Buscar coincidencia parcial en el nombre
+      for (const [key, icon] of Object.entries(iconMap)) {
+        if (methodName.toLowerCase().includes(key.toLowerCase())) {
+          return icon
+        }
+      }
+
+      return 'credit_card' // Icono por defecto
     }
 
     // ==================== Handlers de Eventos ====================
@@ -498,7 +717,15 @@ export default {
       handleNextAction,
       remainingDebt,
       sortedProducts,
-      isProductPaid
+      isProductPaid,
+      getPaymentMethodIcon,
+      // Payment management
+      partialPayments,
+      totalPaymentAmount,
+      pendingPayment,
+      addPayment,
+      deletePayment,
+      updatePaymentAmount
     }
   }
 }
