@@ -1782,7 +1782,6 @@ import PackProduct from 'src/components/Product/PackProduct.vue'
 import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
-import eventBus from 'src/utils/eventBus'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1976,13 +1975,6 @@ export default {
 
     // Check and start tour on first visit
     this.checkAndStartTour()
-
-    // Listen for tour activation from navbar
-    eventBus.on('activate-page-tour', (pageName) => {
-      if (pageName === 'Product') {
-        this.startMainTour()
-      }
-    })
   },
   computed: {
     ...mapState(authentication, ['userSession', 'branchOffice']),
