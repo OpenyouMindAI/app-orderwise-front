@@ -103,7 +103,7 @@
               @click="showCreateCompanyDialog = true"
             >
               <q-icon name="rocket_launch" size="16px" class="q-mr-xs rocket-icon" />
-              <span>Mi Empresa</span>
+              <span v-if="!$q.screen.lt.sm">Mi Empresa</span>
 
               <q-tooltip class="bg-grey-9">
                 Crea tu empresa y comienza gratis

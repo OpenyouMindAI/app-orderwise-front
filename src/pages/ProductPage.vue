@@ -1,76 +1,351 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-md">
-      <div class="col-12 text-right q-gutter-sm">
-        <q-btn
-          id="tour-btn-seleccionar-multiples"
-          color="blue"
-          @click="multipleSelected = !multipleSelected"
-          :icon="multipleSelected ? 'check_box' : 'check_box_outline_blank'"
-          label="Seleccionar múltiples"
-        />
-        <q-btn
-          color="positive"
-          @click="openMassiveStockDialog"
-          icon="add"
-          v-if="selection.length"
-          label="Agregar stock"
-        />
-        <q-btn
-          color="negative"
-          @click="deleteMassive"
-          icon="delete"
-          v-if="selection.length"
-          label="Eliminar masivo"
-        />
-        <q-btn
-          id="tour-btn-codigos-qr"
-          color="teal"
-          @click="openQrDialog"
-          icon="qr_code"
-          label="Códigos QR"
-        />
-        <q-btn
-          id="tour-btn-lista-precios"
-          color="purple"
-          @click="listPriceDialog = true"
-          icon="list"
-          label="Modificar lista de precios"
-        />
-        <q-btn
-          id="tour-btn-exportar"
-          color="secondary"
-          @click="download"
-          icon="download"
-          label="Exportar excel"
-        />
-        <q-btn
-          color="info"
-          @click="openCompaniesDialog"
-          icon="content_copy"
-          v-if="userSession.is_root"
-        />
-        <q-btn
-          id="tour-btn-agregar"
-          color="primary"
-          @click="openAddProductDialog"
-          icon="add_circle"
-          label="Agregar Producto"
-        />
-        <q-btn
-          id="tour-btn-filtrar"
-          color="primary"
-          @click="dialogFilter = true"
-          icon="filter_alt"
-          label="Filtrar Productos"
-        />
+      <!-- Barra de herramientas mejorada -->
+      <div class="col-12">
+        <!-- Diseño para móvil -->
+        <div class="row q-gutter-sm items-center lt-sm q-mb-sm">
+          <q-btn
+            id="tour-btn-agregar"
+            color="primary"
+            @click="openAddProductDialog"
+            icon="add_circle"
+            round
+            size="md"
+            class="shadow-2"
+          >
+            <q-tooltip>Agregar Producto</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            id="tour-btn-filtrar"
+            color="primary"
+            @click="dialogFilter = true"
+            icon="filter_alt"
+            round
+            outline
+            size="md"
+            class="shadow-1"
+          >
+            <q-tooltip>Filtrar</q-tooltip>
+          </q-btn>
+
+          <q-space />
+
+          <!-- Botones de acciones masivas (cuando hay selección) -->
+          <q-btn
+            v-if="selection.length"
+            color="positive"
+            @click="openMassiveStockDialog"
+            icon="add"
+            round
+            size="md"
+            class="shadow-2"
+          >
+            <q-tooltip>Agregar stock</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            v-if="selection.length"
+            color="negative"
+            @click="deleteMassive"
+            icon="delete"
+            round
+            size="md"
+            class="shadow-2"
+          >
+            <q-tooltip>Eliminar</q-tooltip>
+          </q-btn>
+
+          <!-- Menú de más opciones -->
+          <q-btn
+            id="tour-btn-mas-opciones"
+            ref="moreOptionsBtn"
+            color="primary"
+            icon="more_vert"
+            round
+            outline
+            size="md"
+            class="shadow-1"
+          >
+            <q-menu>
+              <q-list>
+                <q-item
+                  id="tour-btn-seleccionar-multiples"
+                  clickable
+                  v-close-popup
+                  @click="toggleMultipleSelection"
+                >
+                  <q-item-section avatar>
+                    <q-icon :name="multipleSelected ? 'check_box' : 'check_box_outline_blank'" color="blue" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Seleccionar múltiples</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  id="tour-btn-codigos-qr"
+                  clickable
+                  v-close-popup
+                  @click="openQrDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="qr_code" color="teal" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Códigos QR</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-lista-precios"
+                  clickable
+                  v-close-popup
+                  @click="listPriceDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="list" color="purple" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Modificar lista de precios</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-exportar"
+                  clickable
+                  v-close-popup
+                  @click="download"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="download" color="secondary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Exportar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="importDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="upload" color="positive" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Importar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="columnDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="view_column" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Mostrar/Ocultar columnas</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="userSession.is_root" />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openCompaniesDialog"
+                  v-if="userSession.is_root"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="content_copy" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Copiar a empresas</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
+
+        <!-- Diseño para desktop -->
+        <div class="row q-gutter-sm items-center gt-xs q-mb-sm">
+          <!-- Botones principales (siempre visibles) -->
+          <q-btn
+            id="tour-btn-agregar-desktop"
+            color="primary"
+            @click="openAddProductDialog"
+            icon="add_circle"
+            label="Agregar Producto"
+            unelevated
+            class="shadow-2"
+          />
+
+          <q-btn
+            id="tour-btn-filtrar-desktop"
+            color="primary"
+            @click="dialogFilter = true"
+            icon="filter_alt"
+            label="Filtrar"
+            outline
+            class="shadow-1"
+          />
+
+          <q-space />
+
+          <!-- Botones de acciones masivas (cuando hay selección) -->
+          <q-btn
+            v-if="selection.length"
+            color="positive"
+            @click="openMassiveStockDialog"
+            icon="add"
+            label="Agregar stock"
+            unelevated
+            class="shadow-2"
+          />
+
+          <q-btn
+            v-if="selection.length"
+            color="negative"
+            @click="deleteMassive"
+            icon="delete"
+            label="Eliminar"
+            unelevated
+            class="shadow-2"
+          />
+
+          <!-- Menú de más opciones -->
+          <q-btn
+            id="tour-btn-mas-opciones-desktop"
+            ref="moreOptionsBtnDesktop"
+            color="primary"
+            icon="more_vert"
+            label="Más opciones"
+            outline
+            class="shadow-1"
+          >
+            <q-menu>
+              <q-list>
+                <q-item
+                  id="tour-btn-seleccionar-multiples-desktop"
+                  clickable
+                  v-close-popup
+                  @click="toggleMultipleSelection"
+                >
+                  <q-item-section avatar>
+                    <q-icon :name="multipleSelected ? 'check_box' : 'check_box_outline_blank'" color="blue" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Seleccionar múltiples</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  id="tour-btn-codigos-qr-desktop"
+                  clickable
+                  v-close-popup
+                  @click="openQrDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="qr_code" color="teal" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Códigos QR</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-lista-precios-desktop"
+                  clickable
+                  v-close-popup
+                  @click="listPriceDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="list" color="purple" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Modificar lista de precios</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-exportar-desktop"
+                  clickable
+                  v-close-popup
+                  @click="download"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="download" color="secondary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Exportar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="importDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="upload" color="positive" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Importar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="columnDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="view_column" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Mostrar/Ocultar columnas</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="userSession.is_root" />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openCompaniesDialog"
+                  v-if="userSession.is_root"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="content_copy" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Copiar a empresas</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
       </div>
       <div class="col-12">
         <q-table
           id="tour-tabla-productos"
           title="Productos"
           row-key="id"
-          :columns="columns"
+          :columns="visibleColumns"
           :rows="products"
           :loading="visible"
           :filter="filter"
@@ -939,6 +1214,7 @@
       <q-card style="width: 500px; max-width: 80vw;">
         <q-card-section class="bg-primary text-white row items-center justify-between">
           <div class="text-h6">
+            <q-icon name="filter_alt" class="q-mr-sm" />
             Filtros
           </div>
           <q-btn
@@ -953,13 +1229,20 @@
         <q-card-section class="q-pt-sm scroll" style="max-height: calc(100vh - 200px);">
           <div class="column q-gutter-y-md">
 
-            <q-input
-              v-model="filters.name"
-              label="Nombre"
-              filled
-              dense
-              clearable
-            />
+            <!-- Filtros de texto -->
+            <div>
+              <div class="text-subtitle2 text-grey-7 q-mb-sm">
+                <q-icon name="search" size="xs" class="q-mr-xs" />
+                Búsqueda
+              </div>
+              <q-input
+                v-model="filters.name"
+                label="Nombre"
+                filled
+                dense
+                clearable
+              />
+            </div>
 
             <q-input
               v-model="filters.description"
@@ -977,19 +1260,28 @@
               clearable
             />
 
-            <q-select
-              dense
-              use-input
-              filled
-              label="Categoría"
-              input-debounce="0"
-              option-value="id"
-              option-label="name"
-              clearable
-              v-model="filters.category_id"
-              :options="categories"
-              @filter="filterCategories"
-            />
+            <q-separator />
+
+            <!-- Filtros de selección -->
+            <div>
+              <div class="text-subtitle2 text-grey-7 q-mb-sm">
+                <q-icon name="category" size="xs" class="q-mr-xs" />
+                Clasificación
+              </div>
+              <q-select
+                dense
+                use-input
+                filled
+                label="Categoría"
+                input-debounce="0"
+                option-value="id"
+                option-label="name"
+                clearable
+                v-model="filters.category_id"
+                :options="categories"
+                @filter="filterCategories"
+              />
+            </div>
 
             <q-select
               dense
@@ -1005,32 +1297,60 @@
               @filter="filterMeasurementUnits"
             />
 
-            <q-select
-              dense
-              filled
-              label="¿Es pack?"
-              clearable
-              v-model="filters.is_pack"
-              :options="[{label: 'Sí', value: 1}, {label: 'No', value: 0}]"
-            />
+            <q-separator />
 
-            <q-select
-              dense
-              filled
-              label="¿Es adicional?"
-              clearable
-              v-model="filters.is_addon"
-              :options="[{label: 'Sí', value: 1}, {label: 'No', value: 0}]"
-            />
+            <!-- Filtros de opciones (con radio) -->
+            <div>
+              <div class="text-subtitle2 text-grey-7 q-mb-sm">
+                <q-icon name="tune" size="xs" class="q-mr-xs" />
+                Opciones
+              </div>
 
-            <q-select
-              dense
-              filled
-              label="¿Se muestra en catálogo?"
-              clearable
-              v-model="filters.show_in_catalog"
-              :options="[{label: 'Sí', value: 1}, {label: 'No', value: 0}]"
-            />
+              <div class="q-mb-md">
+                <div class="text-body2 q-mb-xs">¿Es pack?</div>
+                <q-option-group
+                  v-model="filters.is_pack"
+                  :options="[
+                    { label: 'Todos', value: null },
+                    { label: 'Sí', value: 1 },
+                    { label: 'No', value: 0 }
+                  ]"
+                  color="primary"
+                  inline
+                  dense
+                />
+              </div>
+
+              <div class="q-mb-md">
+                <div class="text-body2 q-mb-xs">¿Es adicional?</div>
+                <q-option-group
+                  v-model="filters.is_addon"
+                  :options="[
+                    { label: 'Todos', value: null },
+                    { label: 'Sí', value: 1 },
+                    { label: 'No', value: 0 }
+                  ]"
+                  color="primary"
+                  inline
+                  dense
+                />
+              </div>
+
+              <div class="q-mb-md">
+                <div class="text-body2 q-mb-xs">¿Se muestra en catálogo?</div>
+                <q-option-group
+                  v-model="filters.show_in_catalog"
+                  :options="[
+                    { label: 'Todos', value: null },
+                    { label: 'Sí', value: 1 },
+                    { label: 'No', value: 0 }
+                  ]"
+                  color="primary"
+                  inline
+                  dense
+                />
+              </div>
+            </div>
 
           </div>
         </q-card-section>
@@ -1054,6 +1374,225 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Diálogo de columnas -->
+    <q-dialog v-model="columnDialog" position="right" seamless>
+      <q-card style="width: 400px; max-width: 80vw;">
+        <q-card-section class="bg-info text-white row items-center justify-between">
+          <div class="text-h6">
+            <q-icon name="view_column" class="q-mr-sm" />
+            Columnas visibles
+          </div>
+          <q-btn
+            icon="close"
+            flat
+            round
+            dense
+            @click="columnDialog = false"
+          />
+        </q-card-section>
+
+        <q-card-section class="q-pt-md">
+          <div class="text-body2 text-grey-7 q-mb-md">
+            Selecciona las columnas que deseas ver en la tabla
+          </div>
+
+          <q-list>
+            <q-item
+              v-for="col in columns"
+              :key="col.name"
+              tag="label"
+              dense
+            >
+              <q-item-section avatar>
+                <q-checkbox
+                  v-model="visibleColumnNames"
+                  :val="col.name"
+                  color="primary"
+                />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ col.label }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            color="secondary"
+            label="Todas"
+            @click="selectAllColumns"
+            flat
+          />
+          <q-btn
+            color="primary"
+            label="Cerrar"
+            @click="columnDialog = false"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Diálogo de importación -->
+    <q-dialog v-model="importDialog" persistent transition-show="scale" transition-hide="scale">
+      <q-card class="import-dialog-card" style="width: 550px; max-width: 90vw; border-radius: 16px; overflow: hidden;">
+        <!-- Header -->
+        <q-card-section class="import-dialog-header q-pa-lg">
+          <div class="row items-center justify-between">
+            <div>
+              <div class="text-h5 text-weight-medium q-mb-xs">
+                <q-icon name="upload_file" size="28px" class="q-mr-sm" style="vertical-align: middle;" />
+                Importar Productos
+              </div>
+              <div class="text-caption opacity-70">Carga masiva desde Excel</div>
+            </div>
+            <q-btn
+              flat
+              round
+              dense
+              icon="close"
+              @click="closeImportDialog"
+              class="import-close-btn"
+            />
+          </div>
+        </q-card-section>
+
+        <!-- Content -->
+        <q-card-section class="q-pa-lg">
+          <!-- Step 1: Download Template -->
+          <div class="import-step q-mb-lg">
+            <div class="row items-center q-mb-md">
+              <div class="import-step-number">1</div>
+              <div class="text-subtitle1 text-weight-medium">Descarga la plantilla</div>
+            </div>
+            <q-btn
+              unelevated
+              color="primary"
+              icon="download"
+              label="Descargar Plantilla Excel"
+              @click="downloadTemplate"
+              class="full-width"
+              style="border-radius: 8px;"
+              size="md"
+            />
+          </div>
+
+          <!-- Step 2: Upload File -->
+          <div class="import-step q-mb-lg">
+            <div class="row items-center q-mb-md">
+              <div class="import-step-number">2</div>
+              <div class="text-subtitle1 text-weight-medium">Sube tu archivo</div>
+            </div>
+
+            <!-- Dropzone -->
+            <div
+              class="import-dropzone"
+              :class="{ 'dropzone-active': isDragging, 'dropzone-has-file': importFile }"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleFileDrop"
+              @click="triggerFileInput"
+            >
+              <input
+                ref="fileInput"
+                type="file"
+                accept=".xlsx,.xls"
+                @change="handleImportFileSelect"
+                style="display: none;"
+              />
+
+              <div v-if="!importFile" class="dropzone-content">
+                <q-icon name="cloud_upload" size="48px" color="primary" class="q-mb-md" />
+                <div class="text-h6 text-weight-medium q-mb-xs">
+                  Arrastra tu archivo aquí
+                </div>
+                <div class="text-body2 text-grey-7 q-mb-md">
+                  o haz clic para seleccionar
+                </div>
+                <div class="text-caption text-grey-6">
+                  Formatos: .xlsx, .xls • Máx. 10MB
+                </div>
+              </div>
+
+              <div v-else class="dropzone-file-info">
+                <div class="row items-center">
+                  <q-icon name="description" size="40px" color="positive" class="q-mr-md" />
+                  <div class="col">
+                    <div class="text-subtitle1 text-weight-medium">
+                      {{ importFile.name }}
+                    </div>
+                    <div class="text-caption text-grey-7">
+                      {{ formatFileSize(importFile.size) }}
+                    </div>
+                  </div>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="close"
+                    color="grey-7"
+                    @click.stop="removeFile"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Success Message -->
+          <transition name="fade">
+            <div v-if="importSuccess" class="import-success-banner q-mb-md">
+              <q-icon name="check_circle" size="24px" class="q-mr-sm" />
+              <div>
+                <div class="text-weight-medium">{{ importSuccessMessage }}</div>
+              </div>
+            </div>
+          </transition>
+
+          <!-- Error Messages -->
+          <transition name="fade">
+            <div v-if="importErrors.length > 0" class="import-error-banner q-mb-md">
+              <div class="row items-start">
+                <q-icon name="error" size="24px" class="q-mr-sm" />
+                <div class="col">
+                  <div class="text-weight-medium q-mb-xs">Errores encontrados:</div>
+                  <div class="import-error-list">
+                    <div v-for="(error, index) in importErrors" :key="index" class="import-error-item">
+                      {{ error }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </q-card-section>
+
+        <!-- Actions -->
+        <q-card-actions class="q-pa-lg q-pt-none">
+          <q-btn
+            flat
+            label="Cancelar"
+            @click="closeImportDialog"
+            color="grey-8"
+            class="q-px-lg"
+            style="border-radius: 8px;"
+          />
+          <q-space />
+          <q-btn
+            unelevated
+            color="positive"
+            label="Importar"
+            @click="importProducts"
+            :disable="!importFile"
+            :loading="importLoading"
+            icon-right="upload"
+            class="q-px-xl"
+            style="border-radius: 8px;"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <bulk-price-dialog
       :modelValue="listPriceDialog"
       :products="selection.length > 0 ? selection : 'all'"
@@ -1207,6 +1746,30 @@
         </q-card-actions>
       </q-card>
     </div>
+
+    <!-- Notificación flotante de descarga -->
+    <transition name="slide-up">
+      <div v-if="loadingDownload > 0" class="download-notification">
+        <q-card flat class="download-card">
+          <q-card-section class="row items-center q-pa-sm">
+            <q-icon name="download" color="secondary" size="24px" class="q-mr-sm" />
+            <div class="col">
+              <div class="text-body2 text-weight-medium">Exportando productos...</div>
+              <q-linear-progress
+                :value="loadingDownload"
+                color="secondary"
+                class="q-mt-xs"
+                rounded
+                size="4px"
+              />
+            </div>
+            <div class="text-caption text-grey-7 q-ml-sm">
+              {{ Math.round(loadingDownload * 100) }}%
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -1238,6 +1801,15 @@ export default {
       originalProduct: null,
       listPriceDialog: false,
       dialogFilter: false,
+      columnDialog: false,
+      importDialog: false,
+      importFile: null,
+      importLoading: false,
+      importErrors: [],
+      importSuccess: false,
+      importSuccessMessage: '',
+      isDragging: false,
+      visibleColumnNames: ['barcode', 'name', 'category', 'show_catalog', 'cost', 'price', 'stock'],
       filters: {
         name: null,
         description: null,
@@ -1366,34 +1938,19 @@ export default {
       currentTourType: 'main',
       mainTourSteps: [
         {
-          target: '#tour-btn-seleccionar-multiples',
-          title: '☑️ Seleccionar Múltiples',
-          description: 'Activa este modo para seleccionar varios productos a la vez y realizar acciones masivas como eliminar.'
-        },
-        {
-          target: '#tour-btn-codigos-qr',
-          title: '📱 Códigos QR',
-          description: 'Genera códigos QR para tus productos. Útil para impresión de etiquetas y gestión de inventario.'
-        },
-        {
-          target: '#tour-btn-lista-precios',
-          title: '💰 Modificar Lista de Precios',
-          description: 'Actualiza los precios de múltiples productos de forma masiva usando listas de precios.'
-        },
-        {
-          target: '#tour-btn-exportar',
-          title: '📥 Exportar Excel',
-          description: 'Descarga todos tus productos en un archivo Excel para análisis o respaldo.'
-        },
-        {
-          target: '#tour-btn-agregar',
+          target: '#tour-btn-agregar-desktop',
           title: '➕ Agregar Producto',
           description: 'Haz clic aquí para agregar un nuevo producto. Se abrirá un formulario completo con todos los campos necesarios.'
         },
         {
-          target: '#tour-btn-filtrar',
+          target: '#tour-btn-filtrar-desktop',
           title: '🔍 Filtrar Productos',
           description: 'Filtra productos por categoría, precio, stock y más criterios para encontrar lo que necesitas.'
+        },
+        {
+          target: '#tour-btn-mas-opciones-desktop',
+          title: '⚙️ Más Opciones',
+          description: 'Este menú contiene opciones adicionales:\n\n• Seleccionar múltiples: Activa el modo de selección masiva\n• Códigos QR: Genera códigos QR para tus productos\n• Modificar lista de precios: Actualiza precios de forma masiva\n• Exportar Excel: Descarga todos tus productos\n• Mostrar/Ocultar columnas: Personaliza las columnas de la tabla\n• Copiar a empresas: Duplica productos entre empresas (solo administradores)'
         },
         {
           target: '#tour-tabla-productos',
@@ -1434,6 +1991,12 @@ export default {
      */
     currentTourSteps () {
       return this.mainTourSteps
+    },
+    /**
+     * Get visible columns based on user selection
+     */
+    visibleColumns () {
+      return this.columns.filter(col => this.visibleColumnNames.includes(col.name))
     }
   },
   watch: {
@@ -1474,6 +2037,170 @@ export default {
     this.getMeasurementUnits()
   },
   methods: {
+    /**
+     * Toggle multiple selection mode
+     */
+    toggleMultipleSelection () {
+      this.multipleSelected = !this.multipleSelected
+      // Clear selection when disabling multiple selection
+      if (!this.multipleSelected) {
+        this.selection = []
+      }
+    },
+    /**
+     * Select all columns
+     */
+    selectAllColumns () {
+      this.visibleColumnNames = this.columns.map(col => col.name)
+    },
+    /**
+     * Download import template
+     */
+    async downloadTemplate () {
+      try {
+        const response = await this.$api.get('/products/download-import-template', {
+          responseType: 'blob'
+        })
+
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', 'plantilla-importar-productos.xlsx')
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+
+        notify('Plantilla descargada exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify('Error al descargar la plantilla', 'negative', 'error')
+      }
+    },
+    /**
+     * Import products from Excel
+     */
+    async importProducts () {
+      if (!this.importFile) {
+        notify('Por favor selecciona un archivo', 'warning', 'warning')
+        return
+      }
+
+      this.importLoading = true
+      this.importErrors = []
+      this.importSuccess = false
+
+      try {
+        const formData = new FormData()
+        formData.append('file', this.importFile)
+        formData.append('branch_office_id', this.branchOffice.id)
+
+        const response = await this.$api.post('/products/import', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        this.importSuccess = true
+        this.importSuccessMessage = `${response.data.imported} productos importados exitosamente`
+
+        if (response.data.errors && response.data.errors.length > 0) {
+          this.importErrors = response.data.errors
+        }
+
+        notify(response.data.message, 'positive', 'check_circle')
+
+        // Reload products after 2 seconds
+        setTimeout(() => {
+          this.setPagination({
+            pagination: this.paginationConfig,
+            filter: undefined
+          })
+          if (this.importErrors.length === 0) {
+            this.closeImportDialog()
+          }
+        }, 2000)
+      } catch (error) {
+        notify(error.response?.data?.message || 'Error al importar productos', 'negative', 'error')
+        if (error.response?.data?.errors) {
+          this.importErrors = error.response.data.errors
+        }
+      } finally {
+        this.importLoading = false
+      }
+    },
+    /**
+     * Close import dialog
+     */
+    closeImportDialog () {
+      this.importDialog = false
+      this.importFile = null
+      this.importErrors = []
+      this.importSuccess = false
+      this.importSuccessMessage = ''
+      this.isDragging = false
+    },
+    /**
+     * Trigger file input click
+     */
+    triggerFileInput () {
+      this.$refs.fileInput.click()
+    },
+    /**
+     * Handle file selection from input for import
+     */
+    handleImportFileSelect (event) {
+      const file = event.target.files[0]
+      if (file) {
+        this.validateAndSetFile(file)
+      }
+    },
+    /**
+     * Handle file drop
+     */
+    handleFileDrop (event) {
+      this.isDragging = false
+      const file = event.dataTransfer.files[0]
+      if (file) {
+        this.validateAndSetFile(file)
+      }
+    },
+    /**
+     * Validate and set file
+     */
+    validateAndSetFile (file) {
+      const validTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']
+      const maxSize = 10 * 1024 * 1024 // 10MB
+
+      if (!validTypes.includes(file.type)) {
+        notify('Por favor selecciona un archivo Excel válido (.xlsx o .xls)', 'negative', 'error')
+        return
+      }
+
+      if (file.size > maxSize) {
+        notify('El archivo es demasiado grande. Máximo 10MB', 'negative', 'error')
+        return
+      }
+
+      this.importFile = file
+    },
+    /**
+     * Remove selected file
+     */
+    removeFile () {
+      this.importFile = null
+      if (this.$refs.fileInput) {
+        this.$refs.fileInput.value = ''
+      }
+    },
+    /**
+     * Format file size
+     */
+    formatFileSize (bytes) {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    },
     /**
      * Create deep clone of product
      * @param {Object} product - Product to clone
@@ -1879,7 +2606,18 @@ export default {
         (percentCompleted) => {
           this.loadingDownload = percentCompleted / 100
           if (percentCompleted === 100) {
-            this.loadingDownload = 0
+            // Mantener visible por un momento antes de ocultar
+            setTimeout(() => {
+              this.loadingDownload = 0
+              // Mostrar notificación de éxito
+              Notify.create({
+                message: 'Productos exportados exitosamente',
+                icon: 'check_circle',
+                color: 'positive',
+                position: 'top',
+                timeout: 2000
+              })
+            }, 500)
           }
         },
         (link) => {
@@ -2547,6 +3285,12 @@ export default {
      * Finish tour
      */
     finishTour () {
+      // Remove highlight class from any element
+      const highlightedElement = document.querySelector('.tour-element-highlighted')
+      if (highlightedElement) {
+        highlightedElement.classList.remove('tour-element-highlighted')
+      }
+
       this.showTour = false
       this.currentTourStep = 0
       localStorage.setItem('has_seen_product_main_tour', 'true')
@@ -2559,6 +3303,12 @@ export default {
       this.$nextTick(() => {
         const step = this.currentTourSteps[this.currentTourStep]
         if (!step) return
+
+        // Remove highlight class from previous element
+        const previousHighlighted = document.querySelector('.tour-element-highlighted')
+        if (previousHighlighted) {
+          previousHighlighted.classList.remove('tour-element-highlighted')
+        }
 
         const element = document.querySelector(step.target)
         if (!element) {
@@ -2574,6 +3324,9 @@ export default {
             return
           }
         }
+
+        // Add highlight class to current element
+        element.classList.add('tour-element-highlighted')
 
         // Scroll to element first
         element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
@@ -2607,22 +3360,37 @@ export default {
             cardTop = scrollTop + viewportHeight - cardHeight - padding
             cardLeft = scrollLeft + (viewportWidth - cardWidth) / 2
           } else {
-            // If card goes below viewport, position it above the element
-            if (rect.bottom + cardHeight + padding > viewportHeight) {
-              cardTop = rect.top + scrollTop - cardHeight - padding
-            }
+            // Calculate available space below and above
+            const spaceBelow = viewportHeight - rect.bottom
+            const spaceAbove = rect.top
 
-            // If still goes above viewport, position it in the middle
-            if (cardTop < scrollTop) {
+            // If not enough space below, try to position above
+            if (spaceBelow < cardHeight + padding && spaceAbove > cardHeight + padding) {
+              cardTop = rect.top + scrollTop - cardHeight - padding
+            } else if (spaceBelow < cardHeight + padding && spaceAbove < cardHeight + padding) {
+              // If not enough space in either direction, center in viewport
               cardTop = scrollTop + (viewportHeight - cardHeight) / 2
             }
 
-            // Adjust horizontal position
-            if (cardLeft + cardWidth > viewportWidth) {
-              cardLeft = viewportWidth - cardWidth - padding
+            // Ensure card doesn't go above viewport
+            if (cardTop < scrollTop + padding) {
+              cardTop = scrollTop + padding
             }
-            if (cardLeft < 0) {
-              cardLeft = padding
+
+            // Ensure card doesn't go below viewport
+            if (cardTop + cardHeight > scrollTop + viewportHeight - padding) {
+              cardTop = scrollTop + viewportHeight - cardHeight - padding
+            }
+
+            // Adjust horizontal position to center on element if possible
+            cardLeft = rect.left + scrollLeft + (rect.width / 2) - (cardWidth / 2)
+
+            // Ensure card stays within viewport horizontally
+            if (cardLeft + cardWidth > scrollLeft + viewportWidth - padding) {
+              cardLeft = scrollLeft + viewportWidth - cardWidth - padding
+            }
+            if (cardLeft < scrollLeft + padding) {
+              cardLeft = scrollLeft + padding
             }
           }
 
@@ -2637,6 +3405,70 @@ export default {
 }
 </script>
 <style>
+/* Mobile toolbar improvements */
+@media (max-width: 599px) {
+  .q-pa-md {
+    padding: 8px !important;
+  }
+
+  .q-table__title {
+    font-size: 1.1rem !important;
+  }
+
+  .q-table__top {
+    padding: 8px !important;
+  }
+
+  /* Toolbar móvil */
+  .mobile-toolbar {
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    gap: 4px;
+  }
+
+  .body--dark .mobile-toolbar {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  /* Mejoras estéticas de botones móviles */
+  .q-btn.q-btn--round {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .q-btn.q-btn--round:active {
+    transform: scale(0.95);
+  }
+
+  .q-btn.q-btn--round:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Mejoras estéticas generales de botones */
+.q-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+}
+
+.q-btn:active {
+  transform: scale(0.98);
+}
+
+.q-btn.q-btn--round {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.q-btn.q-btn--round:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.q-btn.q-btn--round:active {
+  transform: scale(0.95);
+}
 
 .dropzone-card {
   border: 2px dashed #e0e0e0;
@@ -2670,7 +3502,7 @@ export default {
   bottom: 0;
   background: transparent;
   z-index: 10000;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .tour-spotlight {
@@ -2686,6 +3518,19 @@ export default {
   z-index: 10001;
   pointer-events: none;
   animation: pulse-border 2s infinite;
+}
+
+/* Allow clicks on highlighted element when click is required */
+.tour-spotlight.clickable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Make highlighted element clickeable during tour */
+.tour-element-highlighted {
+  position: relative;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
 }
 
 @keyframes pulse-border {
@@ -2713,6 +3558,7 @@ export default {
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   animation: tour-card-appear 0.3s ease-out;
+  pointer-events: auto;
 }
 
 @keyframes tour-card-appear {
@@ -2759,10 +3605,192 @@ export default {
   font-size: 14px;
   line-height: 1.6;
   color: #666;
+  white-space: pre-line;
 }
 
 .body--dark .tour-description {
   color: #b0b0b0;
+}
+
+/* Import Dialog Styles */
+.import-dialog-card {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+.import-dialog-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #1565c0 100%);
+  color: white;
+}
+
+.body--dark .import-dialog-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #0d47a1 100%);
+}
+
+.import-close-btn {
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.import-close-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.import-step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--q-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-right: 12px;
+  font-size: 14px;
+}
+
+/* Dropzone Styles */
+.import-dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.02);
+}
+
+.body--dark .import-dropzone {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.05);
+}
+
+.import-dropzone:hover {
+  border-color: var(--q-primary);
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.body--dark .import-dropzone:hover {
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.1);
+}
+
+.dropzone-active {
+  border-color: var(--q-primary);
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.1);
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(var(--q-primary-rgb, 25, 118, 210), 0.2);
+}
+
+.dropzone-has-file {
+  border-style: solid;
+  border-color: var(--q-positive);
+  background: rgba(76, 175, 80, 0.05);
+  padding: 20px;
+}
+
+.body--dark .dropzone-has-file {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+.dropzone-file-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.import-success-banner {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left: 4px solid #4caf50;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  color: #2e7d32;
+  animation: slideInUp 0.3s ease;
+}
+
+.body--dark .import-success-banner {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.25) 100%);
+  color: #81c784;
+}
+
+.import-error-banner {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left: 4px solid #f44336;
+  padding: 16px;
+  border-radius: 8px;
+  color: #c62828;
+  animation: slideInUp 0.3s ease;
+}
+
+.body--dark .import-error-banner {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(244, 67, 54, 0.25) 100%);
+  color: #ef5350;
+}
+
+.import-error-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.import-error-item {
+  padding: 6px 0;
+  font-size: 13px;
+  opacity: 0.9;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .import-error-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.import-error-item:last-child {
+  border-bottom: none;
+}
+
+/* Fade transition */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Slide up animation */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive tour */
@@ -2779,6 +3807,62 @@ export default {
 
   .tour-description {
     font-size: 13px;
+  }
+}
+
+/* Download notification styles */
+.download-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9000;
+  max-width: 400px;
+  min-width: 320px;
+}
+
+.download-card {
+  background: var(--q-dark);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.body--dark .download-card {
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.body--light .download-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Slide up animation */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-up-enter-from {
+  transform: translateY(100px);
+  opacity: 0;
+}
+
+.slide-up-leave-to {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
+/* Responsive */
+@media (max-width: 599px) {
+  .download-notification {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+    min-width: auto;
   }
 }
 </style>
