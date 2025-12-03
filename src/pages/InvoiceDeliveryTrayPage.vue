@@ -224,11 +224,11 @@ async function startMultipleDeliveries () {
     // Preparar datos de facturas con cantidades de productos
     const invoicesData = optimizedOrder.map(invoice => ({
       invoice_id: invoice.id,
-      products: invoice.products.map(product => ({
+      products: (invoice.products || []).map(product => ({
         product_id: product.id,
         quantity_to_load: product.quantity_to_load || 0
       }))
-    }))
+    })).filter(invoice => invoice.products.length > 0)
 
     // Start delivery with optimized order
     const response = await api.post('/invoice-delivery-runs/start', {
@@ -277,7 +277,16 @@ async function optimizeRoute (invoices) {
       }))
     })
 
-    return response.data.optimized_invoices
+    // Merge optimized order with original invoice data (including products)
+    const optimizedInvoices = response.data.optimized_invoices || []
+    return optimizedInvoices.map(optimizedInvoice => {
+      const originalInvoice = invoices.find(inv => inv.id === optimizedInvoice.id)
+      return {
+        ...originalInvoice,
+        ...optimizedInvoice,
+        products: originalInvoice?.products || []
+      }
+    })
   } catch (error) {
     console.error('Error optimizing route:', error)
     return invoices
@@ -591,6 +600,7 @@ function getFormattedAddress (address) {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
