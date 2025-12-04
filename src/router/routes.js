@@ -327,7 +327,7 @@ const routes = [
     component: () => import('pages/LoginPage.vue')
   },
   {
-    path: '/verifying/:access_token/:expires_in/:token_type/:redirect',
+    path: '/verifying/:token_type/:access_token/:expires_in/:redirect',
     name: 'VerifySession',
     meta: { requiresAuth: false },
     component: () => import('pages/VerifySessionPage.vue')
