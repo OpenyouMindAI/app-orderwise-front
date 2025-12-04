@@ -1916,7 +1916,7 @@ export default {
     },
     pendingPayment () {
       const totalPayments = this.payments.reduce((total, payment) => {
-        return total + ((payment.amount - (payment.discount_amount || 0)) || 0)
+        return total + (payment.amount || 0)
       }, 0)
       return this.totalBill - totalPayments
     },

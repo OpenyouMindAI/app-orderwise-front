@@ -349,6 +349,12 @@ const routes = [
         component: () => import('src/pages/ExchangeRatePage.vue')
       },
       {
+        path: 'sales-inventory-report',
+        name: 'SalesInventoryReport',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/SalesInventoryReportPage.vue')
+      },
+      {
         path: 'ai-chat',
         name: 'AiChat',
         meta: { requiresAuth: true },

@@ -34,7 +34,7 @@
         <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9">
           <!-- Table Close Toggle -->
           <q-toggle
-            v-if="showTableClose"
+            v-if="showTableClose && !visibleCloseTable"
             :model-value="tableClose"
             @update:model-value="$emit('update:table-close', $event)"
             label="Cerrar mesa"
@@ -276,6 +276,10 @@ export default {
       type: Boolean,
       default: false
     },
+    visibleCloseTable: {
+      type: Boolean,
+      default: false
+    },
     exchangeRate: {
       type: Object,
       default: null
@@ -377,11 +381,7 @@ export default {
     })
 
     const pendingPayment = computed(() => {
-      const totalWithDisc = totalWithDiscount.value - totalPaymentWithDiscount.value
-
-      if (totalWithDisc > 0) return totalWithDiscount.value - totalPayment.value
-
-      return totalWithDisc
+      return props.totalAmount - totalPayment.value
     })
 
     const selectedPaymentMethods = computed(() => {

@@ -308,6 +308,7 @@
                         color="primary"
                         @click="editProductNote(index)"
                         class="edit-note-btn"
+                        :disable="hasEditPermission"
                       >
                         <q-tooltip>Agregar nota</q-tooltip>
                       </q-btn>
@@ -331,7 +332,7 @@
                         round
                         flat
                         @click="decreaseQuantity(index)"
-                        :disable="product.pivot.amount <= 1"
+                        :disable="product.pivot.amount <= 1 || hasEditPermission"
                         class="quantity-btn"
                       />
                       <q-input
@@ -344,6 +345,7 @@
                         class="quantity-input"
                         style="min-width: 100px;"
                         @update:model-value="updateQuantity(index, $event)"
+                        :readonly="hasEditPermission"
                       />
                       <q-btn
                         icon="add"
@@ -752,6 +754,7 @@
 
     <!-- Payment Modal -->
     <PaymentModal
+      :visible-close-table="hasEditPermission"
       :show="showPaymentDialog"
       :payment-methods="paymentMethods"
       :payments="invoicePayments"
@@ -885,6 +888,10 @@ export default {
       return this.userSession?.is_root ||
       this.userSession?.is_super_admin ||
       false
+    },
+
+    hasEditPermission () {
+      return this.userSession.roles.some(role => role.acronym === 'SEL')
     },
 
     roomOptions () {
@@ -1656,12 +1663,14 @@ export default {
 
     handleClientFocus () {
       // Clear field and open dropdown automatically
-      this.tempClient = null
-      this.$nextTick(() => {
-        if (this.$refs.clientSelect) {
-          this.$refs.clientSelect.showPopup()
-        }
-      })
+      if (!this.$q.platform.is.mobile) {
+        this.tempClient = null
+        this.$nextTick(() => {
+          if (this.$refs.clientSelect) {
+            this.$refs.clientSelect.showPopup()
+          }
+        })
+      }
     },
 
     toggleClientField () {
@@ -1806,7 +1815,7 @@ export default {
         } else {
           // Create new invoice
           const invoiceType = this.invoiceTypes.find(it => it.acronym_serie === 'T')
-          const typeOfService = this.typeOfServices.find(ts => ts.code === 2)
+          const typeOfService = this.typeOfServices.find(ts => Number(ts.code) === 2)
 
           if (!invoiceType || !typeOfService) {
             Notify.create({ message: 'No se pudieron encontrar los tipos de factura o servicio necesarios.', color: 'negative' })
