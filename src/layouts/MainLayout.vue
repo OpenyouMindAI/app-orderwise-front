@@ -427,7 +427,7 @@ export default {
     async screen () {
       try {
         loading(true)
-        const url = `${import.meta.env.VITE_APP_URL}/verifying/${this.access_token}/${this.expires_In}/${this.token_type}/InvoiceDetails`
+        const url = `${import.meta.env.VITE_APP_URL}/verifying/${encodeURIComponent(this.token_type)}/${encodeURIComponent(this.access_token)}/${this.expires_In}/InvoiceDetails`
         await MultiDisplayManager.showOnSecondScreen({
           url
         })
