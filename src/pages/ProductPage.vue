@@ -1,69 +1,344 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-md">
-      <div class="col-12 text-right q-gutter-sm">
-        <q-btn
-          id="tour-btn-seleccionar-multiples"
-          color="blue"
-          @click="multipleSelected = !multipleSelected"
-          :icon="multipleSelected ? 'check_box' : 'check_box_outline_blank'"
-          label="Seleccionar múltiples"
-        />
-        <q-btn
-          color="positive"
-          @click="openMassiveStockDialog"
-          icon="add"
-          v-if="selection.length"
-          label="Agregar stock"
-        />
-        <q-btn
-          color="negative"
-          @click="deleteMassive"
-          icon="delete"
-          v-if="selection.length"
-          label="Eliminar masivo"
-        />
-        <q-btn
-          id="tour-btn-codigos-qr"
-          color="teal"
-          @click="openQrDialog"
-          icon="qr_code"
-          label="Códigos QR"
-        />
-        <q-btn
-          id="tour-btn-lista-precios"
-          color="purple"
-          @click="listPriceDialog = true"
-          icon="list"
-          label="Modificar lista de precios"
-        />
-        <q-btn
-          id="tour-btn-exportar"
-          color="secondary"
-          @click="download"
-          icon="download"
-          label="Exportar excel"
-        />
-        <q-btn
-          color="info"
-          @click="openCompaniesDialog"
-          icon="content_copy"
-          v-if="userSession.is_root"
-        />
-        <q-btn
-          id="tour-btn-agregar"
-          color="primary"
-          @click="openAddProductDialog"
-          icon="add_circle"
-          label="Agregar Producto"
-        />
-        <q-btn
-          id="tour-btn-filtrar"
-          color="primary"
-          @click="dialogFilter = true"
-          icon="filter_alt"
-          label="Filtrar Productos"
-        />
+      <!-- Barra de herramientas mejorada -->
+      <div class="col-12">
+        <!-- Diseño para móvil -->
+        <div class="row q-gutter-sm items-center lt-sm q-mb-sm">
+          <q-btn
+            id="tour-btn-agregar"
+            color="primary"
+            @click="openAddProductDialog"
+            icon="add_circle"
+            round
+            size="md"
+            class="shadow-2"
+          >
+            <q-tooltip>Agregar Producto</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            id="tour-btn-filtrar"
+            color="primary"
+            @click="dialogFilter = true"
+            icon="filter_alt"
+            round
+            outline
+            size="md"
+            class="shadow-1"
+          >
+            <q-tooltip>Filtrar</q-tooltip>
+          </q-btn>
+
+          <q-space />
+
+          <!-- Botones de acciones masivas (cuando hay selección) -->
+          <q-btn
+            v-if="selection.length"
+            color="positive"
+            @click="openMassiveStockDialog"
+            icon="add"
+            round
+            size="md"
+            class="shadow-2"
+          >
+            <q-tooltip>Agregar stock</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            v-if="selection.length"
+            color="negative"
+            @click="deleteMassive"
+            icon="delete"
+            round
+            size="md"
+            class="shadow-2"
+          >
+            <q-tooltip>Eliminar</q-tooltip>
+          </q-btn>
+
+          <!-- Menú de más opciones -->
+          <q-btn
+            id="tour-btn-mas-opciones"
+            ref="moreOptionsBtn"
+            color="primary"
+            icon="more_vert"
+            round
+            outline
+            size="md"
+            class="shadow-1"
+          >
+            <q-menu>
+              <q-list>
+                <q-item
+                  id="tour-btn-seleccionar-multiples"
+                  clickable
+                  v-close-popup
+                  @click="toggleMultipleSelection"
+                >
+                  <q-item-section avatar>
+                    <q-icon :name="multipleSelected ? 'check_box' : 'check_box_outline_blank'" color="blue" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Seleccionar múltiples</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  id="tour-btn-codigos-qr"
+                  clickable
+                  v-close-popup
+                  @click="openQrDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="qr_code" color="teal" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Códigos QR</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-lista-precios"
+                  clickable
+                  v-close-popup
+                  @click="listPriceDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="list" color="purple" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Modificar lista de precios</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-exportar"
+                  clickable
+                  v-close-popup
+                  @click="download"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="download" color="secondary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Exportar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="importDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="upload" color="positive" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Importar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="columnDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="view_column" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Mostrar/Ocultar columnas</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="userSession.is_root" />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openCompaniesDialog"
+                  v-if="userSession.is_root"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="content_copy" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Copiar a empresas</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
+
+        <!-- Diseño para desktop -->
+        <div class="row q-gutter-sm items-center gt-xs q-mb-sm">
+          <!-- Botones principales (siempre visibles) -->
+          <q-btn
+            id="tour-btn-agregar-desktop"
+            color="primary"
+            @click="openAddProductDialog"
+            icon="add_circle"
+            label="Agregar Producto"
+            unelevated
+            class="shadow-2"
+          />
+
+          <q-btn
+            id="tour-btn-filtrar-desktop"
+            color="primary"
+            @click="dialogFilter = true"
+            icon="filter_alt"
+            label="Filtrar"
+            outline
+            class="shadow-1"
+          />
+
+          <q-space />
+
+          <!-- Botones de acciones masivas (cuando hay selección) -->
+          <q-btn
+            v-if="selection.length"
+            color="positive"
+            @click="openMassiveStockDialog"
+            icon="add"
+            label="Agregar stock"
+            unelevated
+            class="shadow-2"
+          />
+
+          <q-btn
+            v-if="selection.length"
+            color="negative"
+            @click="deleteMassive"
+            icon="delete"
+            label="Eliminar"
+            unelevated
+            class="shadow-2"
+          />
+
+          <!-- Menú de más opciones -->
+          <q-btn
+            id="tour-btn-mas-opciones-desktop"
+            ref="moreOptionsBtnDesktop"
+            color="primary"
+            icon="more_vert"
+            label="Más opciones"
+            outline
+            class="shadow-1"
+          >
+            <q-menu>
+              <q-list>
+                <q-item
+                  id="tour-btn-seleccionar-multiples-desktop"
+                  clickable
+                  v-close-popup
+                  @click="toggleMultipleSelection"
+                >
+                  <q-item-section avatar>
+                    <q-icon :name="multipleSelected ? 'check_box' : 'check_box_outline_blank'" color="blue" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Seleccionar múltiples</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  id="tour-btn-codigos-qr-desktop"
+                  clickable
+                  v-close-popup
+                  @click="openQrDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="qr_code" color="teal" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Códigos QR</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-lista-precios-desktop"
+                  clickable
+                  v-close-popup
+                  @click="listPriceDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="list" color="purple" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Modificar lista de precios</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  id="tour-btn-exportar-desktop"
+                  clickable
+                  v-close-popup
+                  @click="download"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="download" color="secondary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Exportar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="importDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="upload" color="positive" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Importar Excel</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="columnDialog = true"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="view_column" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Mostrar/Ocultar columnas</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="userSession.is_root" />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openCompaniesDialog"
+                  v-if="userSession.is_root"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="content_copy" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Copiar a empresas</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
       </div>
       <div class="col-12">
         <q-table
@@ -1663,27 +1938,7 @@ export default {
       currentTourType: 'main',
       mainTourSteps: [
         {
-          target: '#tour-btn-seleccionar-multiples',
-          title: '☑️ Seleccionar Múltiples',
-          description: 'Activa este modo para seleccionar varios productos a la vez y realizar acciones masivas como eliminar.'
-        },
-        {
-          target: '#tour-btn-codigos-qr',
-          title: '📱 Códigos QR',
-          description: 'Genera códigos QR para tus productos. Útil para impresión de etiquetas y gestión de inventario.'
-        },
-        {
-          target: '#tour-btn-lista-precios',
-          title: '💰 Modificar Lista de Precios',
-          description: 'Actualiza los precios de múltiples productos de forma masiva usando listas de precios.'
-        },
-        {
-          target: '#tour-btn-exportar',
-          title: '📥 Exportar Excel',
-          description: 'Descarga todos tus productos en un archivo Excel para análisis o respaldo.'
-        },
-        {
-          target: '#tour-btn-agregar',
+          target: '#tour-btn-agregar-desktop',
           title: '➕ Agregar Producto',
           description: 'Haz clic aquí para agregar un nuevo producto. Se abrirá un formulario completo con todos los campos necesarios.'
         },
@@ -3247,7 +3502,7 @@ export default {
   bottom: 0;
   background: transparent;
   z-index: 10000;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .tour-spotlight {
