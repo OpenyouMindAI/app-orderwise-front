@@ -66,19 +66,19 @@
             <div class="products-list q-mt-md">
               <div
                 v-for="product in sortedProducts"
-                :key="product.id"
+                :key="product.uniqueKey"
                 class="product-item-split q-pa-sm q-mb-sm"
-                :class="{ 'bg-grey-2': isProductPaid(product.id) }"
+                :class="{ 'bg-grey-2': isItemPaid(product.uniqueKey) }"
               >
                 <q-checkbox
                   v-model="selectedProducts"
-                  :val="product.id"
+                  :val="product.uniqueKey"
                   :label="product.name"
-                  :disable="isProductPaid(product.id)"
+                  :disable="isItemPaid(product.uniqueKey)"
                 />
                 <span class="text-caption text-grey-7">
-                  ${{ formatNumber(product.pivot?.price || product.price) }}
-                  <q-icon v-if="isProductPaid(product.id)" name="check_circle" color="positive" class="q-ml-sm" />
+                  ${{ formatNumber(product.displayPrice) }}
+                  <q-icon v-if="isItemPaid(product.uniqueKey)" name="check_circle" color="positive" class="q-ml-sm" />
                 </span>
               </div>
             </div>
@@ -390,7 +390,7 @@ export default {
     const selectedProducts = ref([])
     const selectedSplitType = ref(null)
     const remainingDebt = ref(props.totalAmount)
-    const paidProductIds = ref(new Set())
+    const paidItemKeys = ref(new Set())
     const previousTab = ref(null)
 
     // Variables para pago por persona
@@ -406,16 +406,10 @@ export default {
       return new Intl.NumberFormat('es-CO').format(value)
     }
 
-    const calculateProductTotal = (product) => {
-      const price = parseFloat(product.pivot?.price || product.price || 0)
-      const amount = parseFloat(product.pivot?.amount || 1)
-      return price * amount
-    }
-
-    const calculateItemsTotal = (products, selectedIds) => {
-      return products
-        .filter(p => selectedIds.includes(p.id))
-        .reduce((sum, p) => sum + calculateProductTotal(p), 0)
+    const calculateItemsTotal = (expandedList, selectedKeys) => {
+      return expandedList
+        .filter(p => selectedKeys.includes(p.uniqueKey))
+        .reduce((sum, p) => sum + p.displayPrice, 0)
     }
 
     // TODO:
@@ -430,7 +424,7 @@ export default {
       selectedProducts.value = []
       selectedSplitType.value = null
       remainingDebt.value = props.totalAmount
-      paidProductIds.value.clear()
+      paidItemKeys.value.clear()
       amountPerPerson.value = 0
       peoplePaymentCount.value = 0
       previousTab.value = null
@@ -473,7 +467,7 @@ export default {
         }
 
         case TAB_STATES.ITEM: {
-          amountToPay = calculateItemsTotal(props.products, selectedProducts.value)
+          amountToPay = calculateItemsTotal(expandedProducts.value, selectedProducts.value)
           typeLabel = `${PAYMENT_TYPE_LABELS[TAB_STATES.ITEM]} (${selectedProducts.value.length} seleccionados)`
           break
         }
@@ -493,12 +487,30 @@ export default {
       }
     })
 
-    const isProductPaid = (id) => paidProductIds.value.has(id)
+    const isItemPaid = (key) => paidItemKeys.value.has(key)
+
+    const expandedProducts = computed(() => {
+      const list = []
+      props.products.forEach(p => {
+        const qty = Math.floor(parseFloat(p.pivot?.amount || 1))
+        const unitPrice = parseFloat(p.pivot?.price || p.price || 0)
+
+        for (let i = 0; i < qty; i++) {
+          list.push({
+            ...p,
+            uniqueKey: `${p.id}_${i}`,
+            displayPrice: unitPrice,
+            originalId: p.id
+          })
+        }
+      })
+      return list
+    })
 
     const sortedProducts = computed(() => {
-      return [...props.products].sort((a, b) => {
-        const aPaid = isProductPaid(a.id)
-        const bPaid = isProductPaid(b.id)
+      return [...expandedProducts.value].sort((a, b) => {
+        const aPaid = isItemPaid(a.uniqueKey)
+        const bPaid = isItemPaid(b.uniqueKey)
         return aPaid === bPaid ? 0 : (aPaid ? 1 : -1)
       })
     })
@@ -530,12 +542,14 @@ export default {
       remainingDebt.value -= paymentSummary.value.amountToPay
 
       if (selectedSplitType.value === TAB_STATES.ITEM) {
-        selectedProducts.value.forEach(id => paidProductIds.value.add(id))
+        selectedProducts.value.forEach(key => paidItemKeys.value.add(key))
       }
 
       if (selectedSplitType.value === TAB_STATES.PERSON) {
         peoplePaymentCount.value++
       }
+
+      partialPayments.value = []
 
       // Manejar el flujo según la deuda restante
       if (remainingDebt.value === 0) {
@@ -703,7 +717,7 @@ export default {
       handleNextAction,
       remainingDebt,
       sortedProducts,
-      isProductPaid,
+      isItemPaid,
       getPaymentMethodIcon,
       // Payment management
       partialPayments,
