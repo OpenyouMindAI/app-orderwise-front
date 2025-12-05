@@ -787,6 +787,10 @@
       :products="invoiceProducts"
       :total-amount="calculateTotal()"
       :payment-methods="paymentMethods"
+      :coin="coin"
+      :exchange-rate="exchangeRate"
+      :user-session="userSession"
+      :cash-box-state="cashBoxState"
       :loading="saving"
       @update:show="showPartialPaymentModal = $event"
       @confirm="handlePartialPaymentConfirm"
@@ -1116,17 +1120,23 @@ export default {
     },
 
     // Partial Payment Modal Methods
-    handlePartialPaymentConfirm (data) {
-      console.log('Pago parcial confirmado:', data)
-      // Aquí puedes procesar los datos del pago parcial
-      // data contiene: { type, splitAmount, numberOfPeople, selectedProducts }
-      this.$q.notify({
-        message: 'Pago parcial procesado correctamente',
-        type: 'positive',
-        icon: 'check_circle'
-      })
-      // Cerrar el modal después de procesar
-      this.showPartialPaymentModal = false
+    async handlePartialPaymentConfirm (data) {
+      const { action, params, tableClose } = data
+      try {
+        this.saving = true
+        this.tableClose = tableClose || false
+        await this.saveInvoiceWithPayments(params, action)
+        this.showPartialPaymentModal = false
+      } catch (error) {
+        console.error('Error en pago parcial:', error)
+        this.$q.notify({
+          message: 'Error al procesar el pago parcial',
+          type: 'negative',
+          icon: 'error'
+        })
+      } finally {
+        this.saving = false
+      }
     },
 
     async saveInvoiceWithPayments (params, action = 'save') {

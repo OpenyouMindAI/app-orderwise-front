@@ -1,30 +1,32 @@
 <template>
   <q-dialog :model-value="show" @update:model-value="$emit('update:show', $event)">
-    <q-card style="width: 800px; max-width: 90vw;">
+    <q-card class="partial-payment-card" style="width: 800px; max-width: 90vw;">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">
           Cobro Parcial
-          <span class="text-subtitle1 text-weight-regular text-grey-8 q-ml-sm">
-            Total: ${{ formatNumber(remainingDebt) }}
+          <span class="text-h6 text-weight-bold text-primary q-ml-sm">
+            Total: {{ currencySymbol }}{{ formatNumber(remainingDebt) }}
           </span>
         </div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
 
-      <!-- Split Bill Tabs -->
-      <q-tabs
-        v-model="activeTab"
-        class="invoice-tabs"
-        indicator-color="primary"
-        active-color="primary"
-        align="justify"
-        narrow-indicator
-      >
-        <q-tab name="amount" label="Por Monto" icon="payments" />
-        <q-tab name="item" label="Por Item" icon="receipt" />
-        <q-tab name="person" label="Por Persona" icon="people" />
-      </q-tabs>
+      <!-- Split Bill Tabs (se oculta en finish) -->
+      <div class="tabs-container" :class="{ 'tabs-hidden': activeTab === 'finish' }">
+        <q-tabs
+          v-model="activeTab"
+          class="invoice-tabs"
+          indicator-color="primary"
+          active-color="primary"
+          align="justify"
+          narrow-indicator
+        >
+          <q-tab name="amount" label="Por Monto" icon="payments" :disable="isAmountTabDisabled" />
+          <q-tab name="item" label="Por Item" icon="receipt" :disable="isItemTabDisabled" />
+          <q-tab name="person" label="Por Persona" icon="people" :disable="isPersonTabDisabled" />
+        </q-tabs>
+      </div>
 
       <!-- Tab Panels -->
       <q-tab-panels v-model="activeTab" class="invoice-body" animated>
@@ -46,7 +48,7 @@
                 label="Monto a dividir"
                 outlined
                 dense
-                prefix="$"
+                :prefix="currencySymbol"
               />
             </div>
           </div>
@@ -77,7 +79,7 @@
                   :disable="isItemPaid(product.uniqueKey)"
                 />
                 <span class="text-caption text-grey-7">
-                  ${{ formatNumber(product.displayPrice) }}
+                  {{ currencySymbol }}{{ formatNumber(product.displayPrice) }}
                   <q-icon v-if="isItemPaid(product.uniqueKey)" name="check_circle" color="positive" class="q-ml-sm" />
                 </span>
               </div>
@@ -110,7 +112,7 @@
                   <q-card-section>
                     <div class="text-subtitle2">Monto por persona:</div>
                     <div class="text-h6 text-primary">
-                      ${{ formatNumber(remainingDebt / numberOfPeople) }}
+                      {{ currencySymbol }}{{ formatNumber(remainingDebt / numberOfPeople) }}
                     </div>
                   </q-card-section>
                 </q-card>
@@ -126,39 +128,17 @@
 
             <q-card flat bordered class="q-pa-md bg-grey-1 q-mb-md">
               <div class="row q-col-gutter-md">
-                <div class="col-12">
+                <div class="col-6">
                   <div class="text-subtitle2 text-grey-7">Tipo de División</div>
                   <div class="text-body1 text-weight-medium">
                     {{ paymentSummary.typeLabel }}
                   </div>
                 </div>
 
-                <div class="col-12">
-                  <q-separator />
-                </div>
-
-                <div class="col-6">
-                  <div class="text-subtitle2 text-grey-7">Total a cancelar</div>
-                  <div class="text-h6">
-                    ${{ formatNumber(remainingDebt) }}
-                  </div>
-                </div>
-
                 <div class="col-6 text-right">
                   <div class="text-subtitle2 text-grey-7">Lo que se está cancelando</div>
                   <div class="text-h5 text-positive text-weight-bold">
-                    ${{ formatNumber(paymentSummary.amountToPay) }}
-                  </div>
-                </div>
-
-                <div class="col-12">
-                  <q-separator />
-                </div>
-
-                <div class="col-12 text-right">
-                  <div class="text-subtitle2 text-grey-7">Lo que falta por cobrar</div>
-                  <div class="text-h6 text-warning">
-                    ${{ formatNumber(paymentSummary.remainingAmount) }}
+                    {{ currencySymbol }}{{ formatNumber(paymentSummary.amountToPay) }}
                   </div>
                 </div>
               </div>
@@ -202,14 +182,14 @@
                 <div class="col-6">
                   <div class="text-subtitle2 text-grey-7">Monto a pagar</div>
                   <div class="text-h6">
-                    ${{ formatNumber(paymentSummary.amountToPay) }}
+                    {{ currencySymbol }}{{ formatNumber(paymentSummary.amountToPay) }}
                   </div>
                 </div>
 
                 <div class="col-6 text-right">
                   <div class="text-subtitle2 text-grey-7">Total pagado</div>
                   <div class="text-h5 text-positive text-weight-bold">
-                    ${{ formatNumber(totalPaymentAmount) }}
+                    {{ currencySymbol }}{{ formatNumber(totalPaymentAmount) }}
                   </div>
                 </div>
 
@@ -232,7 +212,7 @@
                       <q-item-section side>
                         <div class="row items-center q-gutter-xs">
                           <div class="text-weight-medium">
-                            ${{ formatNumber(payment.amount) }}
+                            {{ currencySymbol }}{{ formatNumber(payment.amount) }}
                           </div>
                           <q-btn
                             icon="edit"
@@ -281,7 +261,7 @@
                 <div class="col-12 text-right">
                   <div class="text-subtitle2 text-grey-7">Pendiente</div>
                   <div class="text-h6 text-warning">
-                    ${{ formatNumber(pendingPayment) }}
+                    {{ currencySymbol }}{{ formatNumber(pendingPayment) }}
                   </div>
                 </div>
               </div>
@@ -291,22 +271,59 @@
 
         <!-- Mensaje de Finalización - Solo se muestra cuando remainingDebt === 0 -->
         <q-tab-panel name="finish" v-if="remainingDebt === 0">
-          <div class="split-content q-pa-md text-center">
-            <q-icon name="check_circle" color="positive" size="4rem" class="q-mb-md" />
-            <div class="text-h5 q-mb-md text-positive">
+          <div class="split-content q-pa-lg text-center">
+            <!-- Success Icon -->
+            <div class="q-mb-lg">
+              <q-icon name="check_circle" color="positive" size="5rem" />
+            </div>
+
+            <!-- Success Message -->
+            <div class="text-h5 text-weight-bold text-positive q-mb-sm">
               ¡Pago Completado!
             </div>
-            <p class="text-body1 text-grey-7">
+            <p class="text-body2 text-grey-6 q-mb-lg">
               El monto total ha sido cancelado exitosamente.
             </p>
-            <div class="q-mt-lg">
-              <q-card flat bordered class="q-pa-md bg-grey-1">
-                <div class="text-subtitle2 text-grey-7">Total Pagado</div>
-                <div class="text-h4 text-positive text-weight-bold">
-                  ${{ formatNumber(totalAmount) }}
+
+            <!-- Total Pagado Card -->
+            <q-card flat class="bg-positive text-white q-mb-md" style="border-radius: 12px;">
+              <q-card-section class="q-py-md">
+                <div class="text-caption text-white-7">TOTAL PAGADO</div>
+                <div class="text-h4 text-weight-bold">
+                  {{ currencySymbol }} {{ formatNumber(totalAmount) }}
                 </div>
+              </q-card-section>
+            </q-card>
+
+            <!-- Resumen de Pagos -->
+            <div v-if="consolidatedPayments.length > 0" class="q-mb-md">
+              <div class="text-subtitle2 text-grey-7 q-mb-sm text-left">Desglose de pagos</div>
+              <q-card flat bordered style="border-radius: 8px;">
+                <q-list dense>
+                  <q-item v-for="(payment, index) in consolidatedPayments" :key="index" class="q-ma-xs">
+                    <q-item-section avatar>
+                      <q-icon :name="getPaymentMethodIcon(payment.name)" color="grey-7" size="sm" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ payment.name }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label class="text-weight-medium text-dark">
+                        {{ currencySymbol }} {{ formatNumber(payment.amount) }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
               </q-card>
             </div>
+
+            <!-- Checkbox Cerrar Mesa -->
+            <q-checkbox
+              v-model="closeTableOnFinish"
+              label="Cerrar mesa al finalizar"
+              color="primary"
+              class="q-mt-sm"
+            />
           </div>
         </q-tab-panel>
       </q-tab-panels>
@@ -323,13 +340,35 @@
           v-if="activeTab !== 'finish'"
         />
         <q-space />
+
+        <!-- Botones normales (antes de finish) -->
         <q-btn
+          v-if="activeTab !== 'finish'"
           :label="buttonLabel"
           color="positive"
           @click="handleNextAction"
           :loading="loading"
           :disable="!isStepValid"
         />
+
+        <!-- Botones de finalización (solo en finish) -->
+        <template v-if="activeTab === 'finish'">
+          <q-btn
+            label="Imprimir Factura"
+            icon="print"
+            color="primary"
+            class="q-ml-sm"
+            @click="handlePrintInvoice"
+            :loading="loading"
+          />
+          <q-btn
+            label="Guardar sin imprimir"
+            icon="save"
+            color="secondary"
+            @click="handleSaveWithoutPrint"
+            :loading="loading"
+          />
+        </template>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -338,6 +377,8 @@
 <script>
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { storeToRefs } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
 
 // Constantes para estados de tabs
 const TAB_STATES = {
@@ -378,10 +419,28 @@ export default {
     paymentMethods: {
       type: Array,
       default: () => []
+    },
+    coin: {
+      type: Object,
+      default: null
+    },
+    exchangeRate: {
+      type: Object,
+      default: null
+    },
+    userSession: {
+      type: Object,
+      default: null
+    },
+    cashBoxState: {
+      type: Object,
+      default: null
     }
   },
   setup (props, { emit }) {
     const $q = useQuasar()
+    const authStore = authentication()
+    const { userSession } = storeToRefs(authStore)
 
     // ==================== Estado Local ====================
     const activeTab = ref(TAB_STATES.AMOUNT)
@@ -392,13 +451,16 @@ export default {
     const remainingDebt = ref(props.totalAmount)
     const paidItemKeys = ref(new Set())
     const previousTab = ref(null)
+    const firstSplitType = ref(null) // Trackea el primer tipo de división usado
+    const closeTableOnFinish = ref(false) // Toggle para cerrar mesa al finalizar
 
     // Variables para pago por persona
     const amountPerPerson = ref(0)
     const peoplePaymentCount = ref(0)
 
     // Variables para gestión de pagos
-    const partialPayments = ref([])
+    const partialPayments = ref([]) // Pagos de la transacción actual
+    const allPayments = ref([]) // Todos los pagos acumulados de todas las transacciones
 
     // ==================== Funciones Puras ====================
     const formatNumber = (value) => {
@@ -417,6 +479,26 @@ export default {
       return savedAmount > 0 ? savedAmount : debt / (people || 1)
     }
 
+    // Consolidar pagos por método de pago (sumar montos del mismo método)
+    const consolidatePayments = (payments) => {
+      const consolidated = {}
+
+      payments.forEach(payment => {
+        const key = payment.payment_method_id
+        if (consolidated[key]) {
+          // Si ya existe, sumar amount y discount_amount
+          consolidated[key].amount += payment.amount
+          consolidated[key].discount_amount = (consolidated[key].discount_amount || 0) + (payment.discount_amount || 0)
+        } else {
+          // Si no existe, crear nuevo
+          consolidated[key] = { ...payment }
+        }
+      })
+
+      // Convertir objeto a array
+      return Object.values(consolidated)
+    }
+
     const resetState = () => {
       activeTab.value = TAB_STATES.AMOUNT
       splitAmount.value = 0
@@ -428,7 +510,10 @@ export default {
       amountPerPerson.value = 0
       peoplePaymentCount.value = 0
       previousTab.value = null
+      firstSplitType.value = null
       partialPayments.value = []
+      allPayments.value = []
+      closeTableOnFinish.value = false
     }
 
     // ==================== Watchers ====================
@@ -443,12 +528,42 @@ export default {
     // ==================== Computed Properties ====================
     const currentPaymentType = computed(() => selectedSplitType.value || activeTab.value)
 
+    // Obtener el objeto coin completo desde userSession (similar a BillingPage.vue)
+    const coin = computed(() => {
+      return userSession.value?.company_session?.company_config?.coin || null
+    })
+
+    const currencySymbol = computed(() => {
+      return coin.value?.symbol || null
+    })
+
+    // Computed properties para deshabilitar tabs incompatibles
+    const isAmountTabDisabled = computed(() => {
+      // Nunca se deshabilita - siempre se puede usar "Por Monto"
+      return false
+    })
+
+    const isItemTabDisabled = computed(() => {
+      // Solo se deshabilita si se usó "Por Monto" o "Por Persona" primero
+      return firstSplitType.value === TAB_STATES.AMOUNT || firstSplitType.value === TAB_STATES.PERSON
+    })
+
+    const isPersonTabDisabled = computed(() => {
+      // Nunca se deshabilita - siempre se puede usar "Por Persona"
+      return false
+    })
+
+    // Pagos consolidados (sumados por método de pago)
+    const consolidatedPayments = computed(() => {
+      return consolidatePayments(allPayments.value)
+    })
+
     const isStepValid = computed(() => {
       const validations = {
         [TAB_STATES.AMOUNT]: () => splitAmount.value > 0 && splitAmount.value <= remainingDebt.value,
         [TAB_STATES.ITEM]: () => selectedProducts.value.length > 0,
         [TAB_STATES.PERSON]: () => numberOfPeople.value > 0,
-        [TAB_STATES.CONFIRM]: () => true,
+        [TAB_STATES.CONFIRM]: () => pendingPayment.value === 0,
         [TAB_STATES.FINISH]: () => true
       }
       return validations[activeTab.value]?.() || false
@@ -531,6 +646,11 @@ export default {
       previousTab.value = activeTab.value
       selectedSplitType.value = activeTab.value
 
+      // Establecer el primer tipo de división usado (solo la primera vez)
+      if (firstSplitType.value === null) {
+        firstSplitType.value = activeTab.value
+      }
+
       if (activeTab.value === TAB_STATES.PERSON && amountPerPerson.value === 0) {
         amountPerPerson.value = remainingDebt.value / (numberOfPeople.value || 1)
       }
@@ -549,6 +669,10 @@ export default {
         peoplePaymentCount.value++
       }
 
+      // Guardar los pagos de esta transacción en allPayments
+      allPayments.value.push(...partialPayments.value)
+
+      // Limpiar pagos de la transacción actual
       partialPayments.value = []
 
       // Manejar el flujo según la deuda restante
@@ -621,18 +745,27 @@ export default {
       const amount = await promptPaymentAmount(method)
       if (amount === null) return
 
+      const parsedAmount = parseFloat(amount)
       const payment = {
         name: method.name,
         acronym: method.acronym,
-        amount: parseFloat(amount),
+        amount: parsedAmount,
+        reference: null,
+        coin_id: props.coin?.id ?? null,
         payment_method_id: method.id,
-        discount_percentage: method.percentage || 0
+        exchange: props.exchangeRate?.amount,
+        user_created_id: props.userSession?.id ?? null,
+        discount_percentage: method.percentage || 0,
+        discount_amount: method.percentage
+          ? (parsedAmount * method.percentage) / 100
+          : 0
       }
 
       // Check if payment method already exists
       const existingIndex = partialPayments.value.findIndex(p => p.payment_method_id === method.id)
       if (existingIndex >= 0) {
-        partialPayments.value[existingIndex].amount = payment.amount
+        // Reemplazar el objeto completo para mantener todos los campos actualizados
+        partialPayments.value[existingIndex] = payment
       } else {
         partialPayments.value.push(payment)
       }
@@ -655,8 +788,46 @@ export default {
         emit('update:show', false)
         previousTab.value = null
         // No emitimos confirmación al padre
-        // handleConfirm()
       }
+    }
+
+    const handlePrintInvoice = () => {
+      console.log('=== PARTIAL PAYMENT DEBUG ===')
+      console.log('All Payments:', allPayments.value)
+      console.log('Consolidated Payments:', consolidatedPayments.value)
+      console.log('Params:', {
+        branch_office_id: props.userSession?.branch_office_id,
+        cashbox_user_id: props.cashBoxState?.id,
+        payments: consolidatedPayments.value,
+        total_amount: props.totalAmount
+      })
+
+      // Emitir evento con la estructura de action-click de PaymentModal
+      emit('confirm', {
+        action: 'invoice',
+        params: {
+          branch_office_id: props.userSession?.branch_office_id,
+          cashbox_user_id: props.cashBoxState?.id,
+          payments: consolidatedPayments.value,
+          total_amount: props.totalAmount
+        },
+        payments: consolidatedPayments.value,
+        tableClose: closeTableOnFinish.value
+      })
+    }
+
+    const handleSaveWithoutPrint = () => {
+      emit('confirm', {
+        action: 'save',
+        params: {
+          branch_office_id: props.userSession?.branch_office_id,
+          cashbox_user_id: props.cashBoxState?.id,
+          payments: consolidatedPayments.value,
+          total_amount: props.totalAmount
+        },
+        payments: consolidatedPayments.value,
+        tableClose: closeTableOnFinish.value
+      })
     }
 
     // ==================== Utilidades de UI ====================
@@ -719,19 +890,39 @@ export default {
       sortedProducts,
       isItemPaid,
       getPaymentMethodIcon,
+      currencySymbol,
+      isAmountTabDisabled,
+      isItemTabDisabled,
+      isPersonTabDisabled,
       // Payment management
       partialPayments,
       totalPaymentAmount,
       pendingPayment,
       addPayment,
       deletePayment,
-      updatePaymentAmount
+      updatePaymentAmount,
+      consolidatedPayments,
+      handlePrintInvoice,
+      handleSaveWithoutPrint,
+      closeTableOnFinish
     }
   }
 }
 </script>
 
 <style scoped>
+.partial-payment-card {
+  height: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.partial-payment-card .invoice-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
 .split-content {
   min-height: 300px;
 }
@@ -755,5 +946,16 @@ export default {
 
 .cancel-btn {
   color: #666;
+}
+
+/* Animación del contenedor de tabs */
+.tabs-container {
+  overflow: hidden;
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+.tabs-container.tabs-hidden {
+  opacity: 0;
 }
 </style>
