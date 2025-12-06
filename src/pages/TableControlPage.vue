@@ -798,6 +798,7 @@
       :coin="coin"
       :exchange-rate="exchangeRate"
       :user-session="userSession"
+      :show-table-close="!!(selectedInvoice && selectedInvoice.id) && !hasEditPermission"
       :cash-box-state="cashBoxState"
       :loading="saving"
       @update:show="showPartialPaymentModal = $event"

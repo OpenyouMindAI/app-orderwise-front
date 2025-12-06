@@ -319,6 +319,7 @@
 
             <!-- Checkbox Cerrar Mesa -->
             <q-checkbox
+              v-if="showTableClose"
               v-model="closeTableOnFinish"
               label="Cerrar mesa al finalizar"
               color="primary"
@@ -436,6 +437,10 @@ export default {
     cashBoxState: {
       type: Object,
       default: null
+    },
+    showTableClose: {
+      type: Boolean,
+      default: false
     }
   },
   setup (props, { emit }) {
