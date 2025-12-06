@@ -142,7 +142,14 @@
       </div>
     </div>
     <!-- Invoice Modal -->
-    <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal" @before-show="storeActiveElement" @hide="restoreFocus">
+    <q-dialog
+      v-model="showInvoiceModal"
+      :position="$q.screen.lt.sm ? 'standard' : 'right'"
+      :maximized="$q.screen.lt.sm"
+      class="invoice-modal"
+      @before-show="storeActiveElement"
+      @hide="restoreFocus"
+    >
       <q-card class="invoice-card">
         <q-card-section class="invoice-header bg-primary text-white">
           <div class="invoice-header-content">
@@ -458,7 +465,14 @@
 
         <q-separator />
 
-        <q-card-actions class="invoice-actions">
+        <div v-if="invoiceProducts.length > 0" class="q-pa-md">
+          <div class="flex justify-between items-center q-gutter-x-sm text-h6 text-bold">
+            <span>Total:</span>
+            <span>${{ formatNumber(calculateTotal()) }}</span>
+          </div>
+        </div>
+
+        <q-card-actions class="invoice-actions q-pa-md">
           <q-btn
             label="Cancelar"
             flat
@@ -466,12 +480,6 @@
             class="cancel-btn"
           />
           <q-space />
-          <div v-if="invoiceProducts.length > 0" class="q-mr-sm">
-            <div class="flex justify-between items-center q-gutter-x-sm text-h6 text-bold">
-              <span>Total:</span>
-              <span>${{ formatNumber(calculateTotal()) }}</span>
-            </div>
-          </div>
           <q-btn
             v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0"
             label="Cobro Parcial"
@@ -3053,7 +3061,6 @@ body.body--dark {
 
 /* --- Actions --- */
 .invoice-actions {
-  padding: 1rem 1.5rem;
   background-color: var(--color-card);
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
