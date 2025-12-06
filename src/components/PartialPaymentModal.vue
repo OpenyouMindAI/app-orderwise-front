@@ -541,16 +541,22 @@ export default {
 
     // Computed properties para deshabilitar tabs incompatibles
     const isAmountTabDisabled = computed(() => {
+      // Deshabilitar si está en confirm
+      if (activeTab.value === TAB_STATES.CONFIRM) return true
       // Nunca se deshabilita - siempre se puede usar "Por Monto"
       return false
     })
 
     const isItemTabDisabled = computed(() => {
+      // Deshabilitar si está en confirm
+      if (activeTab.value === TAB_STATES.CONFIRM) return true
       // Solo se deshabilita si se usó "Por Monto" o "Por Persona" primero
       return firstSplitType.value === TAB_STATES.AMOUNT || firstSplitType.value === TAB_STATES.PERSON
     })
 
     const isPersonTabDisabled = computed(() => {
+      // Deshabilitar si está en confirm
+      if (activeTab.value === TAB_STATES.CONFIRM) return true
       // Nunca se deshabilita - siempre se puede usar "Por Persona"
       return false
     })

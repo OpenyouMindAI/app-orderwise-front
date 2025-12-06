@@ -158,6 +158,19 @@
               </q-btn>
               <q-btn
                 style="border-radius: 10px; padding: 5px 15px"
+                label="Cobro Parcial"
+                icon="splitscreen"
+                color="primary"
+                dense
+                :disable="products.length <= 0"
+                @click="showPartialPaymentModal = true"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Cobro parcial / dividir cuenta
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                style="border-radius: 10px; padding: 5px 15px"
                 color="primary"
                 icon="table_restaurant"
                 dense
@@ -877,6 +890,21 @@
       @action-click="handlePaymentAction"
     />
 
+    <!-- Partial Payment Modal -->
+    <PartialPaymentModal
+      :show="showPartialPaymentModal"
+      :products="products"
+      :total-amount="totalBill"
+      :payment-methods="paymentMethods"
+      :coin="coin"
+      :exchange-rate="exchangeRate"
+      :user-session="userSession"
+      :cash-box-state="cashBoxState"
+      :loading="loadingBilling"
+      @update:show="showPartialPaymentModal = $event"
+      @confirm="handlePartialPaymentConfirm"
+    />
+
     <q-dialog v-model="dialogTable">
       <drawer-table
         ref="drawerTable"
@@ -1113,6 +1141,7 @@ import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
 import PaymentModal from 'src/components/PaymentModal.vue'
+import PartialPaymentModal from 'src/components/PartialPaymentModal.vue'
 import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
 import {
@@ -1129,6 +1158,7 @@ export default {
     AddressComponent,
     DrawerTable,
     PaymentModal,
+    PartialPaymentModal,
     WaitByPaymentMp,
     BarcodeScanner,
     CashBoxDialog,
@@ -1370,6 +1400,7 @@ export default {
        * @type {Boolean}
        */
       dialogPayment: false,
+      showPartialPaymentModal: false,
       /**
        * Promo selection dialog
        * @type {Boolean}
@@ -2247,6 +2278,27 @@ export default {
           this.saveWithoutPrint()
           break
       }
+    },
+    /**
+     * Handle partial payment confirmation
+     */
+    handlePartialPaymentConfirm ({ action, params, payments, tableClose }) {
+      this.payments = payments
+      this.tableClose = tableClose || false
+
+      switch (action) {
+        case 'invoice':
+          this.savePrintInvoice()
+          break
+        case 'command':
+          this.submitBill()
+          break
+        case 'save':
+          this.saveWithoutPrint()
+          break
+      }
+
+      this.showPartialPaymentModal = false
     },
     /**
      * Save without print
