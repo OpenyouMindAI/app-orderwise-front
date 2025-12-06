@@ -1,6 +1,6 @@
 <template>
-  <q-dialog :model-value="show" @update:model-value="$emit('update:show', $event)">
-    <q-card class="partial-payment-card" style="width: 800px; max-width: 90vw;">
+  <q-dialog :model-value="show" :maximized="$q.screen.lt.sm" @update:model-value="$emit('update:show', $event)">
+    <q-card class="partial-payment-card" :style="$q.screen.lt.sm ? '' : 'width: 800px; max-width: 90vw; height: 100%; max-height: 85vh;'">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">
           Cobro Parcial
@@ -270,7 +270,7 @@
         </q-tab-panel>
 
         <!-- Mensaje de Finalización - Solo se muestra cuando remainingDebt === 0 -->
-        <q-tab-panel name="finish" v-if="remainingDebt === 0">
+        <q-tab-panel name="finish">
           <div class="split-content q-pa-lg text-center">
             <!-- Success Icon -->
             <div class="q-mb-lg">
@@ -352,14 +352,14 @@
         />
 
         <!-- Botones de finalización (solo en finish) -->
-        <template v-if="activeTab === 'finish'">
+        <div v-if="activeTab === 'finish'" class="finish-buttons">
           <q-btn
             label="Imprimir Factura"
             icon="print"
             color="primary"
-            class="q-ml-sm"
             @click="handlePrintInvoice"
             :loading="loading"
+            class="q-ml-sm finish-btn"
           />
           <q-btn
             label="Guardar sin imprimir"
@@ -367,8 +367,9 @@
             color="secondary"
             @click="handleSaveWithoutPrint"
             :loading="loading"
+            class="finish-btn"
           />
-        </template>
+        </div>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -476,7 +477,8 @@ export default {
 
     // TODO:
     const calculatePersonAmount = (debt, people, savedAmount) => {
-      return savedAmount > 0 ? savedAmount : debt / (people || 1)
+      const amount = savedAmount > 0 ? savedAmount : debt / (people || 1)
+      return Math.round(amount * 100) / 100
     }
 
     // Consolidar pagos por método de pago (sumar montos del mismo método)
@@ -588,8 +590,16 @@ export default {
         }
 
         case TAB_STATES.PERSON: {
-          amountToPay = calculatePersonAmount(remainingDebt.value, numberOfPeople.value, amountPerPerson.value)
           const currentPayment = peoplePaymentCount.value + 1
+          const isLastPerson = currentPayment === numberOfPeople.value
+
+          // Si es la última persona, pagar exactamente lo que queda para evitar diferencias de redondeo
+          if (isLastPerson) {
+            amountToPay = remainingDebt.value
+          } else {
+            amountToPay = calculatePersonAmount(remainingDebt.value, numberOfPeople.value, amountPerPerson.value)
+          }
+
           typeLabel = `${PAYMENT_TYPE_LABELS[TAB_STATES.PERSON]} (${currentPayment} de ${numberOfPeople.value})`
           break
         }
@@ -652,7 +662,7 @@ export default {
       }
 
       if (activeTab.value === TAB_STATES.PERSON && amountPerPerson.value === 0) {
-        amountPerPerson.value = remainingDebt.value / (numberOfPeople.value || 1)
+        amountPerPerson.value = Math.round((remainingDebt.value / (numberOfPeople.value || 1)) * 100) / 100
       }
 
       activeTab.value = TAB_STATES.CONFIRM
@@ -912,8 +922,6 @@ export default {
 
 <style scoped>
 .partial-payment-card {
-  height: 100%;
-  max-height: 85vh;
   display: flex;
   flex-direction: column;
 }
@@ -946,6 +954,33 @@ export default {
 
 .cancel-btn {
   color: #666;
+}
+
+/* Botones de finalización */
+.finish-buttons {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+/* En móvil: botones apilados verticalmente */
+@media (max-width: 599px) {
+  .finish-buttons {
+    flex-direction: column;
+  }
+
+  .finish-btn {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
+/* En desktop: botones horizontales */
+@media (min-width: 600px) {
+  .finish-buttons {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
 }
 
 /* Animación del contenedor de tabs */
