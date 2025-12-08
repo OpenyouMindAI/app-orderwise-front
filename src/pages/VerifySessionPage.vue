@@ -60,11 +60,6 @@ const store = authentication()
  * Parameters passed via the route, such as query or path parameters
  * @type {Object}
  */
-const { params } = route
-/**
- * Controls the visibility state, possibly for a UI element
- * @type {Boolean}
- */
 const visible = ref(true)
 /**
  * Indicates whether the retry operation is currently loading
@@ -102,7 +97,7 @@ const getUser = async () => {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        authorization: `${params.token_type} ${params.access_token}`
+        authorization: `${route.params.token_type} ${route.params.access_token}`
       }
     })
 
@@ -111,10 +106,10 @@ const getUser = async () => {
     data.roles = data?.roles?.length > 0 ? data?.roles : [data.role]
 
     store.setSessionData({
-      ...params,
+      ...route.params,
       user: data
     })
-    router.push({ name: params.redirect })
+    router.push({ name: route.params.redirect })
   } catch (err) {
     console.log(err)
     error.value = true
