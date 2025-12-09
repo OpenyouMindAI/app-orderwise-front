@@ -142,7 +142,14 @@
       </div>
     </div>
     <!-- Invoice Modal -->
-    <q-dialog v-model="showInvoiceModal" position="right" class="invoice-modal" @before-show="storeActiveElement" @hide="restoreFocus">
+    <q-dialog
+      v-model="showInvoiceModal"
+      :position="$q.screen.lt.sm ? 'standard' : 'right'"
+      :maximized="$q.screen.lt.sm"
+      class="invoice-modal"
+      @before-show="storeActiveElement"
+      @hide="restoreFocus"
+    >
       <q-card class="invoice-card">
         <q-card-section class="invoice-header bg-primary text-white">
           <div class="invoice-header-content">
@@ -458,7 +465,14 @@
 
         <q-separator />
 
-        <q-card-actions class="invoice-actions">
+        <div v-if="invoiceProducts.length > 0" class="q-pa-md">
+          <div class="flex justify-between items-center q-gutter-x-sm text-h6 text-bold">
+            <span>Total:</span>
+            <span>${{ formatNumber(calculateTotal()) }}</span>
+          </div>
+        </div>
+
+        <q-card-actions class="invoice-actions q-pa-md">
           <q-btn
             label="Cancelar"
             flat
@@ -466,12 +480,13 @@
             class="cancel-btn"
           />
           <q-space />
-          <div v-if="invoiceProducts.length > 0" class="q-mr-sm">
-            <div class="flex justify-between items-center q-gutter-x-sm text-h6 text-bold">
-              <span>Total:</span>
-              <span>${{ formatNumber(calculateTotal()) }}</span>
-            </div>
-          </div>
+          <q-btn
+            v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0"
+            label="Cobro Parcial"
+            color="positive"
+            @click="showPartialPaymentModal = true"
+            :loading="saving"
+          />
           <q-btn
             v-if="selectedInvoice && selectedInvoice.id && invoiceProducts.length > 0"
             label="Cobrar"
@@ -773,6 +788,23 @@
       @payment-delete="handlePaymentDelete"
       @action-click="handlePaymentAction"
     />
+
+    <!-- Partial Payment Modal -->
+    <PartialPaymentModal
+      :show="showPartialPaymentModal"
+      :products="invoiceProducts"
+      :total-amount="calculateTotal()"
+      :payment-methods="paymentMethods"
+      :coin="coin"
+      :exchange-rate="exchangeRate"
+      :user-session="userSession"
+      :show-table-close="!!(selectedInvoice && selectedInvoice.id) && !hasEditPermission"
+      :cash-box-state="cashBoxState"
+      :loading="saving"
+      @update:show="showPartialPaymentModal = $event"
+      @confirm="handlePartialPaymentConfirm"
+      @cancel="showPartialPaymentModal = false"
+    />
   </div>
 </template>
 
@@ -785,12 +817,14 @@ import { loading, formatNumber, notify } from 'src/const/mixins'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import { apiArca } from 'src/boot/axios'
 import PaymentModal from 'src/components/PaymentModal.vue'
+import PartialPaymentModal from 'src/components/PartialPaymentModal.vue'
 
 export default {
   components: {
     DraggableResizableContainer,
     DraggableResizableVue,
-    PaymentModal
+    PaymentModal,
+    PartialPaymentModal
   },
   data () {
     return {
@@ -863,6 +897,7 @@ export default {
 
       // Payment Modal state
       showPaymentDialog: false,
+      showPartialPaymentModal: false,
       paymentMethods: [],
       invoicePayments: [],
       tableClose: false,
@@ -1088,6 +1123,26 @@ export default {
         await this.saveInvoiceWithPayments(params, action)
       } catch (error) {
         // Error handled by saveInvoiceWithPayments
+      } finally {
+        this.saving = false
+      }
+    },
+
+    // Partial Payment Modal Methods
+    async handlePartialPaymentConfirm (data) {
+      const { action, params, tableClose } = data
+      try {
+        this.saving = true
+        this.tableClose = tableClose || false
+        await this.saveInvoiceWithPayments(params, action)
+        this.showPartialPaymentModal = false
+      } catch (error) {
+        console.error('Error en pago parcial:', error)
+        this.$q.notify({
+          message: 'Error al procesar el pago parcial',
+          type: 'negative',
+          icon: 'error'
+        })
       } finally {
         this.saving = false
       }
@@ -3007,7 +3062,6 @@ body.body--dark {
 
 /* --- Actions --- */
 .invoice-actions {
-  padding: 1rem 1.5rem;
   background-color: var(--color-card);
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
