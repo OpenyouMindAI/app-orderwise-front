@@ -60,11 +60,6 @@ const store = authentication()
  * Parameters passed via the route, such as query or path parameters
  * @type {Object}
  */
-const { params } = route
-/**
- * Controls the visibility state, possibly for a UI element
- * @type {Boolean}
- */
 const visible = ref(true)
 /**
  * Indicates whether the retry operation is currently loading
@@ -102,24 +97,34 @@ const getUser = async () => {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        authorization: `${params.token_type} ${params.access_token}`
+        authorization: `${route.params.token_type} ${route.params.access_token}`
       }
     })
 
-    console.log(data?.roles, data?.roles?.length)
+    // Update the store with the new token BEFORE making the request
+    // This allows the axios interceptor to use the correct token
+    store.access_token = accessToken
+    store.token_type = tokenType
+    store.expires_In = route.params.expires_in
+
+    // Update axios headers manually
+    api.defaults.headers.common.authorization = `${tokenType} ${accessToken}`
+
+    // Make the request - it will now use the correct token
+    const { data } = await api.post('session/get-token', {})
 
     data.roles = data?.roles?.length > 0 ? data?.roles : [data.role]
 
+    // Update the complete store with user information
     store.setSessionData({
-      ...params,
+      ...route.params,
       user: data
     })
-    router.push({ name: params.redirect })
+    router.push({ name: route.params.redirect })
   } catch (err) {
     console.log(err)
     error.value = true
-    notify(err.message, 'negative', 'warning')
+    notify(err?.response?.data?.message || err.message, 'negative', 'warning')
   }
 }
-
 </script>

@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useTourStore } from './tourStore'
 
 export const useThemeStore = defineStore('theme', {
   state: () => ({
@@ -164,6 +165,10 @@ export const useThemeStore = defineStore('theme', {
       console.log('📦 Tema guardado:', savedTheme)
       console.log('👁️ Mostrar selector:', showSelector)
 
+      // Usar tourStore en lugar de localStorage
+      const tourStore = useTourStore()
+      tourStore.initFromLocalStorage()
+
       // Si hay un tema guardado, usarlo
       if (savedTheme && this.themes[savedTheme]) {
         this.currentTheme = savedTheme
@@ -173,10 +178,13 @@ export const useThemeStore = defineStore('theme', {
         // Primera vez: usar tema por defecto y mostrar selector
         console.log('⚠️ Primera vez - Usando tema por defecto: purple')
         this.currentTheme = 'purple'
-        // Solo mostrar si no se ha cerrado antes
-        if (showSelector === null || showSelector === 'true') {
+        // Solo mostrar si no se ha cerrado antes Y no hay tour activo/por iniciar
+        if ((showSelector === null || showSelector === 'true') && !tourStore.isTourActiveOrPending) {
           this.showThemeSelector = true
           console.log('👁️ Mostrando selector de temas (primera vez)')
+        } else if (tourStore.isTourActiveOrPending) {
+          console.log('🎓 Tour activo o por iniciar - Selector de temas pospuesto')
+          tourStore.setPendingModal('themeSelector', true)
         }
       }
 
