@@ -41,8 +41,8 @@
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
-      <div class="billing-panel-container">
-        <div>
+      <div class="row q-col-gutter-sm billing-panel-container">
+        <div class="col-6">
           <!-- Panel de facturación -->
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales -->
@@ -167,11 +167,11 @@
             </div>
             <div class="justify-start col-xl-9 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
               <q-btn
+                id="tour-btn-cobrar"
                 style="border-radius: 10px; padding: 5px 15px"
                 label="Cobrar"
                 icon="payments"
                 color="positive"
-                id="payments"
                 dense
                 :disable="products.length <= 0"
                 @click="dialogPayment = true"
@@ -189,6 +189,7 @@
                 </q-tooltip>
               </q-btn>
               <q-btn
+                id="tour-btn-cobro-parcial"
                 style="border-radius: 10px; padding: 5px 15px"
                 label="Cobro Parcial"
                 icon="splitscreen"
@@ -202,6 +203,7 @@
                 </q-tooltip>
               </q-btn>
               <q-btn
+                id="tour-btn-mesas"
                 style="border-radius: 10px; padding: 5px 15px"
                 color="primary"
                 icon="table_restaurant"
@@ -225,6 +227,7 @@
               </q-btn>
 
               <q-btn
+                id="tour-btn-cashflow"
                 icon="payments"
                 color="info"
                 dense
@@ -246,6 +249,7 @@
               </q-btn>
 
               <q-btn
+                id="tour-btn-buscar"
                 style="border-radius: 10px; padding: 5px 15px"
                 :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
                 icon="search"
@@ -266,6 +270,7 @@
                 </q-tooltip>
               </q-btn>
               <q-btn
+                id="tour-btn-borrar"
                 style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
                 color="negative"
@@ -278,7 +283,7 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="col-12">
+            <div class="col-12" id="tour-tabla-articulos">
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
@@ -708,289 +713,165 @@
             </div>
           </div>
         </div>
-        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
-
-          <!-- Botones de acción arriba de todo -->
-          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
-            <div class="flex q-gutter-sm justify-start">
-              <!-- Abrir/Cerrar caja -->
-              <!-- Cobrar -->
-              <q-btn
-                id="tour-btn-cobrar"
-                style="border-radius: 10px; padding: 5px 15px"
-                label="Cobrar"
-                icon="payments"
-                color="positive"
-                dense
-                :disable="products.length <= 0"
-                @click="dialogPayment = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F1
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobrar
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                id="tour-btn-mesas"
-                style="border-radius: 10px; padding: 5px 15px"
-                color="orange"
-                icon="table_restaurant"
-                dense
-                label="Mesas"
-                :loading="loadingLivingRoom"
-                @click="dialogTable = true"
-                v-if="companyConfig.is_table"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F10
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Seleccionar mesas
-                </q-tooltip>
-              </q-btn>
-              <!-- Entrada/Salida -->
-              <q-btn
-                id="tour-btn-cashflow"
-                icon="payments"
-                color="info"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
-                style="border-radius: 10px; padding: 5px 15px"
-                @click="cashflow = true"
-              >
-                <q-badge
-                  color="swap_horiz"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F11
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Entrada y salida de dinero
-                </q-tooltip>
-              </q-btn>
-
-              <!-- Buscar -->
-              <q-btn
-                id="tour-btn-buscar"
-                style="border-radius: 10px; padding: 5px 15px"
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
-                icon="search"
-                color="teal"
-                dense
-                @click="searchInvoice = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F12
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Buscar factura
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                v-if="openCashBox"
-                style="border-radius: 10px; padding: 5px 15px;"
-                dense
-                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
-                :color="isUserBoxOpen ? 'yellow' : 'primary'"
-                :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
-                @click="handleCashBoxButtonClick"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
-                </q-tooltip>
-              </q-btn>
-              <!-- Borrar -->
-              <q-btn
-                id="tour-btn-borrar"
-                style="border-radius: 10px; padding: 5px 15px"
-                icon="delete"
-                color="negative"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Borrar factura
-                </q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-
-          <!-- Filtros fijos arriba -->
-          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
-            <div class="row q-col-gutter-xs">
-              <div class="col-6" id="tour-select-categoria">
-                <q-select
-                  use-input
-                  filled
-                  dense
-                  clearable
-                  label="Categorías"
-                  input-debounce="0"
-                  option-label="name"
-                  option-value="id"
-                  v-model="category"
-                  :options="categories"
-                  @filter="filterCategories"
-                />
-              </div>
-              <div class="col-6" id="tour-input-buscar-producto">
-                <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
-                  <template v-slot:append>
-                    <q-icon name="search" />
-                  </template>
-                </q-input>
+        <div class="col-6" ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
+          <div>
+            <!-- Filtros fijos arriba -->
+            <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+              <div class="row q-col-gutter-xs">
+                <div class="col-6" id="tour-select-categoria">
+                  <q-select
+                    use-input
+                    filled
+                    dense
+                    clearable
+                    label="Categorías"
+                    input-debounce="0"
+                    option-label="name"
+                    option-value="id"
+                    v-model="category"
+                    :options="categories"
+                    @filter="filterCategories"
+                  />
+                </div>
+                <div class="col-6" id="tour-input-buscar-producto">
+                  <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
+                    <template v-slot:append>
+                      <q-icon name="search" />
+                    </template>
+                  </q-input>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Productos con scroll -->
-          <div
-            id="tour-seccion-productos"
-            ref="productsScrollContainer"
-            class="product-container-scroll"
-            style="flex: 1; overflow-y: auto; padding: 0.5rem;"
-            @scroll="handleProductsScroll"
-          >
-            <!-- Grid de productos y skeleton juntos -->
-            <div class="row q-col-gutter-xs">
-              <!-- Productos existentes -->
-              <div
-                v-for="product in allProducts"
-                :key="product.id"
-                class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
-                style="padding: 1px;"
-              >
-                <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
-                  <q-img
-                    style="height: 150px; width: 100%; border-radius: 10px;"
-                    :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
-                    @click="product.is_promotion ? openPromoDialog(product) : validateProduct(product, true)"
-                  >
-                    <div class="absolute-full text-body2 flex flex-center text-bold text-center">
-                      {{ product.name }}
-                      <q-badge v-if="!validStockProduct(product, 1)" color="negative" floating style="top: 3px; right: 3px;">
-                        Sin stock
-                      </q-badge>
-                    </div>
-                    <q-tooltip class="text-body2">
-                      {{ product.name }}
-                    </q-tooltip>
-                  </q-img>
-                </q-card>
-              </div>
-
-              <!-- Skeleton loader en la misma fila -->
-              <template v-if="loadingProducts">
+            <!-- Productos con scroll -->
+            <div
+              id="tour-seccion-productos"
+              ref="productsScrollContainer"
+              class="product-container-scroll"
+              style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+              @scroll="handleProductsScroll"
+            >
+              <!-- Grid de productos y skeleton juntos -->
+              <div class="row q-col-gutter-xs">
+                <!-- Productos existentes -->
                 <div
-                  v-for="n in skeletonCount"
-                  :key="`skeleton-${n}`"
+                  v-for="product in allProducts"
+                  :key="product.id"
                   class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
                   style="padding: 1px;"
                 >
-                  <q-card class="my-card" style="border-radius: 10px;">
-                    <q-skeleton
-                      height="150px"
-                      width="100%"
-                      style="border-radius: 10px;"
-                    />
+                  <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
+                    <q-img
+                      style="height: 150px; width: 100%; border-radius: 10px;"
+                      :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                      @click="product.is_promotion ? openPromoDialog(product) : validateProduct(product, true)"
+                    >
+                      <div class="absolute-full text-body2 flex flex-center text-bold text-center">
+                        {{ product.name }}
+                        <q-badge v-if="!validStockProduct(product, 1)" color="negative" floating style="top: 3px; right: 3px;">
+                          Sin stock
+                        </q-badge>
+                      </div>
+                      <q-tooltip class="text-body2">
+                        {{ product.name }}
+                      </q-tooltip>
+                    </q-img>
                   </q-card>
                 </div>
-              </template>
+
+                <!-- Skeleton loader en la misma fila -->
+                <template v-if="loadingProducts">
+                  <div
+                    v-for="n in skeletonCount"
+                    :key="`skeleton-${n}`"
+                    class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                    style="padding: 1px;"
+                  >
+                    <q-card class="my-card" style="border-radius: 10px;">
+                      <q-skeleton
+                        height="150px"
+                        width="100%"
+                        style="border-radius: 10px;"
+                      />
+                    </q-card>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Mensaje cuando no hay productos -->
+              <div v-if="!loadingProducts && allProducts.length === 0" class="text-center q-pa-lg text-grey">
+                <q-icon name="inventory_2" size="3rem" />
+                <div class="text-h6 q-mt-md">No se encontraron productos</div>
+              </div>
             </div>
 
-            <!-- Mensaje cuando no hay productos -->
-            <div v-if="!loadingProducts && allProducts.length === 0" class="text-center q-pa-lg text-grey">
-              <q-icon name="inventory_2" size="3rem" />
-              <div class="text-h6 q-mt-md">No se encontraron productos</div>
+            <!-- Total fijo abajo -->
+            <div style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
+              <q-list separator bordered style="border-radius: 10px;">
+                <q-item v-if="tableSelected.length">
+                  <q-item-section>
+                    Mesas
+                  </q-item-section>
+                  <q-item-section side>
+                    {{ tableSelected.length }}
+                  </q-item-section>
+                </q-item>
+                <!-- Tasa de cambio -->
+                <q-item v-if="exchangeRate" class="bg-blue-1">
+                  <q-item-section>
+                    <div class="text-subtitle2 text-weight-medium">Tasa de cambio</div>
+                    <div class="text-caption text-grey-7">
+                      1 {{ coin?.symbol || '' }} = {{ exchangeRate.amount }} {{ exchangeRate.coin?.symbol || '' }}
+                    </div>
+                  </q-item-section>
+                </q-item>
+                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                  <q-item-section>
+                    TOTAL
+                  </q-item-section>
+                  <q-item-section v-if="coin" side class="text-white">
+                    <div style="display: flex; align-items: center; gap: 7px">
+                      <span>
+                        {{ coin.symbol }}
+                      </span>
+                      <span>
+                        {{ formatNumber(totalBill) }}
+                      </span>
+                      <span v-if="exchangeRate">
+                        |
+                      </span>
+                      <span v-if="exchangeRate">
+                        {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
+                      </span>
+                    </div>
+                  </q-item-section>
+                </q-item>
+                <q-item>
+                  <q-item-section v-if="pendingPayment >= 0">
+                    TOTAL POR COBRAR
+                  </q-item-section>
+                  <q-item-section v-else>
+                    VUELTO
+                  </q-item-section>
+                  <q-item-section side v-if="coin">
+                    <div style="display: flex; align-items: center; gap: 7px">
+                      <span>
+                        {{ coin.symbol }}
+                      </span>
+                      <span>
+                        {{ formatNumber(Math.abs(pendingPayment)) }}
+                      </span>
+                      <span v-if="exchangeRate">
+                        |
+                      </span>
+                      <span v-if="exchangeRate">
+                        {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
+                      </span>
+                    </div>
+                  </q-item-section>
+                </q-item>
+              </q-list>
             </div>
-          </div>
-
-          <!-- Total fijo abajo -->
-          <div style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
-            <q-list separator bordered style="border-radius: 10px;">
-              <q-item v-if="tableSelected.length">
-                <q-item-section>
-                  Mesas
-                </q-item-section>
-                <q-item-section side>
-                  {{ tableSelected.length }}
-                </q-item-section>
-              </q-item>
-              <!-- Tasa de cambio -->
-              <q-item v-if="exchangeRate" class="bg-blue-1">
-                <q-item-section>
-                  <div class="text-subtitle2 text-weight-medium">Tasa de cambio</div>
-                  <div class="text-caption text-grey-7">
-                    1 {{ coin?.symbol || '' }} = {{ exchangeRate.amount }} {{ exchangeRate.coin?.symbol || '' }}
-                  </div>
-                </q-item-section>
-              </q-item>
-              <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
-                <q-item-section>
-                  TOTAL
-                </q-item-section>
-                <q-item-section v-if="coin" side class="text-white">
-                  <div style="display: flex; align-items: center; gap: 7px">
-                    <span>
-                      {{ coin.symbol }}
-                    </span>
-                    <span>
-                      {{ formatNumber(totalBill) }}
-                    </span>
-                    <span v-if="exchangeRate">
-                      |
-                    </span>
-                    <span v-if="exchangeRate">
-                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
-                    </span>
-                  </div>
-                </q-item-section>
-              </q-item>
-              <q-item>
-                <q-item-section v-if="pendingPayment >= 0">
-                  TOTAL POR COBRAR
-                </q-item-section>
-                <q-item-section v-else>
-                  VUELTO
-                </q-item-section>
-                <q-item-section side v-if="coin">
-                  <div style="display: flex; align-items: center; gap: 7px">
-                    <span>
-                      {{ coin.symbol }}
-                    </span>
-                    <span>
-                      {{ formatNumber(Math.abs(pendingPayment)) }}
-                    </span>
-                    <span v-if="exchangeRate">
-                      |
-                    </span>
-                    <span v-if="exchangeRate">
-                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
-                    </span>
-                  </div>
-                </q-item-section>
-              </q-item>
-            </q-list>
           </div>
         </div>
       </div>
@@ -1444,6 +1325,7 @@ import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import { apiArca } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
+import { useTourStore } from 'src/stores/tourStore'
 import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import { commandPrint, ticketPrint } from 'src/const/printers'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
@@ -1476,8 +1358,12 @@ export default {
     FileComponent
   },
   data () {
+    const tourStore = useTourStore()
+    tourStore.initFromLocalStorage()
+
     return {
       // Tour System
+      tourStore,
       showTour: false,
       currentTourStep: 0,
       tourSteps: [
@@ -1502,7 +1388,7 @@ export default {
           description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
         },
         {
-          target: '#tour-products-table',
+          target: '#tour-tabla-articulos',
           title: '📦 Lista de Artículos',
           description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
         },
@@ -1515,6 +1401,11 @@ export default {
           target: '#tour-btn-cobrar',
           title: '💰 Botón Cobrar (F1)',
           description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
+        },
+        {
+          target: '#tour-btn-cobro-parcial',
+          title: '💳 Cobro Parcial',
+          description: 'Permite dividir la cuenta entre varios clientes o realizar pagos parciales. Útil para grupos que desean pagar por separado.'
         },
         {
           target: '#tour-btn-mesas',
@@ -2145,6 +2036,24 @@ export default {
       if (data) {
         this.reloadProducts()
       }
+    },
+    showTour (isActive) {
+      if (isActive) {
+        // Cerrar modal de caja cuando el tour se active
+        if (this.showCashBoxDialog) {
+          console.log('🎓 Tour activado - Cerrando modal de caja temporalmente')
+          this.showCashBoxDialog = false
+          this.tourStore.setPendingModal('cashBox', true)
+        }
+      } else {
+        // Reabrir modales pendientes cuando el tour termine
+        if (this.tourStore.getPendingModal('cashBox')) {
+          console.log('✅ Tour terminado - Reabriendo modal de caja')
+          this.$nextTick(() => {
+            this.showCashBoxDialog = true
+          })
+        }
+      }
     }
   },
   mounted () {
@@ -2260,6 +2169,8 @@ export default {
     startTour () {
       this.showTour = true
       this.currentTourStep = 0
+      // Usar tourStore en lugar de localStorage
+      this.tourStore.startTour()
       this.updateTourPosition()
     },
 
@@ -2297,8 +2208,8 @@ export default {
      */
     finishTour () {
       this.showTour = false
-      localStorage.setItem('has_seen_billing_tour', 'true')
-      localStorage.removeItem('needs_billing_tour')
+      // Usar tourStore en lugar de localStorage
+      this.tourStore.finishTour()
       this.$q.notify({
         message: '¡Tour completado! Ya puedes comenzar a facturar',
         color: 'positive',
@@ -4014,6 +3925,13 @@ export default {
       this.cashBoxState = null
       await this.loadAvailableCashBoxes()
 
+      // No mostrar el modal si el tour está activo o va a comenzar
+      if (this.tourStore.isTourActiveOrPending) {
+        console.log('🎓 Tour activo o por iniciar - Modal de caja pospuesto')
+        this.tourStore.setPendingModal('cashBox', true)
+        return
+      }
+
       // Mostrar automáticamente el modal para abrir caja con delay para asegurar renderizado
       this.showCashBoxDialog = true
     },
@@ -4775,5 +4693,126 @@ export default {
 /* Estilos específicos de BillingPage (los estilos comunes ahora están en app.scss) */
 .product-container {
   position: relative;
+}
+
+/* Tour Styles */
+.tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 9998;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  transition: all 0.3s ease;
+  z-index: 9999;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  }
+  50% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 10000;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    min-width: 300px;
+    max-width: 90vw;
+    left: 5vw !important;
+  }
+
+  .tour-title {
+    font-size: 18px;
+  }
+
+  .tour-description {
+    font-size: 13px;
+  }
 }
 </style>

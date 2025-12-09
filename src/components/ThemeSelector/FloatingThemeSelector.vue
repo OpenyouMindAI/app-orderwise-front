@@ -74,12 +74,14 @@
 
 <script>
 import { useThemeStore } from 'src/stores/themeStore'
-import { computed, ref, watch } from 'vue'
+import { useTourStore } from 'src/stores/tourStore'
+import { computed, ref, watch, onUnmounted } from 'vue'
 
 export default {
   name: 'FloatingThemeSelector',
-  setup() {
+  setup () {
     const themeStore = useThemeStore()
+    const tourStore = useTourStore()
     const showDialog = ref(themeStore.showThemeSelector)
     const selectedTheme = ref(themeStore.currentTheme)
 
@@ -89,6 +91,41 @@ export default {
     // Sincronizar con el store
     watch(() => themeStore.showThemeSelector, (newVal) => {
       showDialog.value = newVal
+    })
+
+    // Variable para rastrear estado anterior del tour
+    let previousTourState = tourStore.isActive
+
+    // Cerrar automáticamente si se detecta un tour activo
+    const checkTourStatus = () => {
+      // Tour se activó
+      if (tourStore.isActive && !previousTourState && showDialog.value) {
+        console.log('🎓 Tour detectado - Cerrando selector de temas temporalmente')
+        tourStore.setPendingModal('themeSelector', true)
+        showDialog.value = false
+        themeStore.showThemeSelector = false
+      }
+
+      // Tour terminó
+      if (!tourStore.isActive && previousTourState) {
+        if (tourStore.getPendingModal('themeSelector')) {
+          console.log('✅ Tour terminado - Reabriendo selector de temas')
+          setTimeout(() => {
+            showDialog.value = true
+            themeStore.showThemeSelector = true
+          }, 500)
+        }
+      }
+
+      previousTourState = tourStore.isActive
+    }
+
+    // Verificar cada 500ms si hay un tour activo
+    const intervalId = setInterval(checkTourStatus, 500)
+
+    // Limpiar el intervalo cuando el componente se desmonte
+    onUnmounted(() => {
+      clearInterval(intervalId)
     })
 
     const selectTheme = (themeName) => {
