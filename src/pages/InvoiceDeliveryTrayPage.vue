@@ -14,20 +14,53 @@
             <span class="header-count">{{ sortedInvoices.length }}</span>
             <span class="header-label">órdenes</span>
           </div>
-          <q-btn
-            v-if="selectedInvoices.length > 0"
-            flat
-            dense
-            no-caps
-            color="primary"
-            class="action-btn"
-            @click="startMultipleDeliveries"
-            :loading="optimizingRoute"
-          >
-            <q-icon name="local_shipping" size="18px" class="q-mr-xs" />
-            {{ selectedInvoices.length }}
-          </q-btn>
+          <div class="header-actions">
+            <q-btn
+              flat
+              dense
+              round
+              color="primary"
+              icon="map"
+              @click="showMapDialog = true"
+            >
+              <q-tooltip>Ver mapa de rutas</q-tooltip>
+            </q-btn>
+            <q-btn
+              v-if="selectedInvoices.length > 0"
+              flat
+              dense
+              no-caps
+              color="primary"
+              class="action-btn"
+              @click="startMultipleDeliveries"
+              :loading="optimizingRoute"
+            >
+              <q-icon name="local_shipping" size="18px" class="q-mr-xs" />
+              {{ selectedInvoices.length }}
+            </q-btn>
+          </div>
         </div>
+      </div>
+
+      <!-- Filters Bar -->
+      <div class="filters-bar">
+        <q-select
+          v-model="statusFilter"
+          :options="statusOptions"
+          option-value="value"
+          option-label="label"
+          emit-value
+          map-options
+          dense
+          outlined
+          label="Filtrar por estatus"
+          class="status-filter"
+          @update:model-value="fetchPredefinedRoutes"
+        >
+          <template v-slot:prepend>
+            <q-icon name="filter_list" />
+          </template>
+        </q-select>
       </div>
 
       <!-- Compact List -->
@@ -61,6 +94,12 @@
 
           <!-- Meta Info -->
           <div class="order-meta">
+            <q-badge
+              :color="getStatusColor(invoice.status)"
+              :label="getStatusLabel(invoice.status)"
+              class="status-badge"
+            />
+            <span class="meta-divider">•</span>
             <span class="meta-item">
               <q-icon name="near_me" size="14px" />
               {{ invoice.distance_km }}km
@@ -144,26 +183,152 @@
         />
       </div>
     </div>
+
+    <!-- Map Dialog - Uber Style -->
+    <q-dialog
+      v-model="showMapDialog"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+      class="map-dialog-fullscreen"
+    >
+      <q-card class="map-dialog-card">
+        <q-card-section class="q-pa-none map-card-section">
+          <!-- Close Button - Floating -->
+          <q-btn
+            flat
+            dense
+            round
+            icon="chevron_left"
+            size="md"
+            class="close-btn-floating"
+            @click="showMapDialog = false"
+          />
+
+          <!-- Map Container -->
+          <div id="routeMap" class="route-map">
+            <div v-if="loadingMap" class="map-loading">
+              <q-spinner-dots color="primary" size="50px" />
+              <div class="map-loading-text">Cargando mapa...</div>
+            </div>
+          </div>
+
+          <!-- Bottom Tabs - Uber Style -->
+          <div class="map-bottom-container">
+            <!-- Floating Tabs -->
+            <div class="map-tabs-modern">
+              <div
+                class="map-tab-modern"
+                :class="{ active: mapViewMode === 'complete' }"
+                @click="mapViewMode = 'complete'"
+              >
+                <q-icon name="route" size="20px" />
+                <span>Ruta Asignada</span>
+              </div>
+              <div
+                class="map-tab-modern"
+                :class="{ active: mapViewMode === 'simulated' }"
+                @click="mapViewMode = 'simulated'"
+              >
+                <q-icon name="local_shipping" size="20px" />
+                <span>Órdenes</span>
+              </div>
+            </div>
+
+            <!-- Filter - Minimalist -->
+            <div v-if="mapViewMode === 'simulated'" class="map-filter-modern">
+              <q-select
+                v-model="mapStatusFilter"
+                :options="statusOptions"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                borderless
+                class="filter-select-modern"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="tune" size="20px" class="text-grey-7" />
+                </template>
+              </q-select>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import { loadGoogleMaps } from 'src/boot/google-maps'
+import { authentication } from 'src/stores/module-authentication'
 
+// Router and UI utilities
 const router = useRouter()
 const $q = useQuasar()
 
+/** @type {import('vue').Ref<Array>} Array of selected invoices for delivery */
 const selectedInvoices = ref([])
-const predefinedRoutes = ref([])
+
+/** @type {import('vue').Ref<Array>} Array of assigned delivery routes */
+const assignedRoutes = ref([])
+
+/** @type {import('vue').Ref<Array>} Sorted and filtered invoices list */
 const sortedInvoices = ref([])
+
+/** @type {import('vue').Ref<boolean>} Loading state for main content */
 const loading = ref(false)
+
+/** @type {import('vue').Ref<boolean>} Loading state for route optimization */
 const optimizingRoute = ref(false)
+
+/** @type {import('vue').Ref<boolean>} Whether courier has an active delivery run */
 const hasActiveRun = ref(false)
+
+/** @type {import('vue').Ref<Object|null>} Current GPS location of the courier */
 const currentLocation = ref(null)
 
+/** @type {import('vue').Ref<string>} Current status filter for orders list */
+const statusFilter = ref('finished')
+
+/** @type {import('vue').Ref<boolean>} Controls map dialog visibility */
+const showMapDialog = ref(false)
+
+/** @type {import('vue').Ref<string>} Current map view mode (complete or simulated) */
+const mapViewMode = ref('complete')
+
+/** @type {import('vue').Ref<string>} Status filter for orders map view */
+const mapStatusFilter = ref('finished')
+
+/** @type {import('vue').Ref<Object|null>} Google Maps instance */
+const map = ref(null)
+
+/** @type {import('vue').Ref<Array>} Array of Google Maps marker objects */
+const mapMarkers = ref([])
+
+/** @type {import('vue').Ref<Array>} Array of DirectionsRenderer objects for route segments */
+const routePaths = ref([])
+
+/** @type {import('vue').Ref<boolean>} Loading state for map initialization */
+const loadingMap = ref(false)
+
+// Authentication store and user session
+const store = authentication()
+const userSession = store.userSession
+
+/** @type {Array<Object>} Available status filter options */
+const statusOptions = [
+  { label: 'Solo Finalizadas', value: 'finished' },
+  { label: 'En Proceso', value: 'on_process' },
+  { label: 'Pendientes', value: 'pending' },
+  { label: 'Todas', value: 'all' }
+]
+
+// Lifecycle hook - check for active delivery run on mount
 onMounted(async () => {
   await checkActiveRun()
   if (!hasActiveRun.value) {
@@ -172,6 +337,12 @@ onMounted(async () => {
   }
 })
 
+/**
+ * Checks if the courier has an active delivery run
+ * Redirects to active delivery page if found
+ * @async
+ * @returns {Promise<void>}
+ */
 async function checkActiveRun () {
   try {
     const response = await api.get('/invoice-delivery-runs/active')
@@ -192,10 +363,20 @@ async function checkActiveRun () {
   }
 }
 
+/**
+ * Checks if an invoice is currently selected
+ * @param {number} invoiceId - The invoice ID to check
+ * @returns {boolean} True if invoice is selected
+ */
 function isSelected (invoiceId) {
   return selectedInvoices.value.some(i => i.id === invoiceId)
 }
 
+/**
+ * Toggles the selection state of an invoice
+ * @param {Object} invoice - The invoice object to toggle
+ * @returns {void}
+ */
 function toggleSelection (invoice) {
   const index = selectedInvoices.value.findIndex(i => i.id === invoice.id)
   if (index > -1) {
@@ -205,6 +386,12 @@ function toggleSelection (invoice) {
   }
 }
 
+/**
+ * Starts a delivery run with multiple selected invoices
+ * Validates that all invoices are finished before starting
+ * @async
+ * @returns {Promise<void>}
+ */
 async function startMultipleDeliveries () {
   if (selectedInvoices.value.length === 0) {
     $q.notify({
@@ -215,13 +402,25 @@ async function startMultipleDeliveries () {
     return
   }
 
+  // Validate that all orders are finished
+  const nonFinishedInvoices = selectedInvoices.value.filter(inv => inv.status !== 'finished')
+  if (nonFinishedInvoices.length > 0) {
+    $q.notify({
+      type: 'negative',
+      message: `Solo puedes iniciar viajes con órdenes finalizadas. ${nonFinishedInvoices.length} orden(es) no están finalizadas.`,
+      position: 'top',
+      timeout: 3000
+    })
+    return
+  }
+
   optimizingRoute.value = true
 
   try {
-    // Optimize route
+    // Optimize route order
     const optimizedOrder = await optimizeRoute(selectedInvoices.value)
 
-    // Preparar datos de facturas con cantidades de productos
+    // Prepare invoice data with product quantities
     const invoicesData = optimizedOrder.map(invoice => ({
       invoice_id: invoice.id,
       products: (invoice.products || []).map(product => ({
@@ -260,6 +459,12 @@ async function startMultipleDeliveries () {
   }
 }
 
+/**
+ * Optimizes the delivery route order using backend algorithm
+ * @async
+ * @param {Array<Object>} invoices - Array of invoice objects to optimize
+ * @returns {Promise<Array<Object>>} Optimized array of invoices
+ */
 async function optimizeRoute (invoices) {
   if (invoices.length <= 1) {
     return invoices
@@ -277,7 +482,7 @@ async function optimizeRoute (invoices) {
       }))
     })
 
-    // Merge optimized order with original invoice data (including products)
+    // Merge optimized order with original invoice data
     const optimizedInvoices = response.data.optimized_invoices || []
     return optimizedInvoices.map(optimizedInvoice => {
       const originalInvoice = invoices.find(inv => inv.id === optimizedInvoice.id)
@@ -293,6 +498,11 @@ async function optimizeRoute (invoices) {
   }
 }
 
+/**
+ * Gets the courier's current GPS location
+ * @async
+ * @returns {Promise<void>}
+ */
 async function getCurrentLocation () {
   if (navigator.geolocation) {
     try {
@@ -309,51 +519,85 @@ async function getCurrentLocation () {
   }
 }
 
+/**
+ * Fetches the assigned route data for the courier from the backend
+ * @async
+ * @returns {Promise<void>}
+ */
+async function fetchAssignedRoute () {
+  try {
+    const response = await api.get('/delivery-routes/route-map-data')
+    assignedRoutes.value = response.data.routes || []
+  } catch (error) {
+    console.error('Error fetching assigned route:', error)
+  }
+}
+
+/**
+ * Fetches predefined routes and their associated orders
+ * Processes orders with distance calculations and route order
+ * @async
+ * @returns {Promise<void>}
+ */
 async function fetchPredefinedRoutes () {
   loading.value = true
   try {
-    const response = await api.get('/delivery-routes/predefined-with-invoices')
-    predefinedRoutes.value = response.data.routes || []
-
-    // Extraer todas las órdenes de todas las rutas
-    const allInvoices = []
-    predefinedRoutes.value.forEach(route => {
-      route.routeClients?.forEach(routeClient => {
-        if (routeClient.client?.invoices) {
-          routeClient.client.invoices.forEach(invoice => {
-            // Inicializar quantity_to_load en productos (permitir entregas parciales)
-            if (invoice.products) {
-              invoice.products.forEach(product => {
-                const amount = parseFloat(product.pivot?.amount || 0)
-                product.quantity_to_load = parseFloat(amount.toFixed(2))
-              })
-            }
-
-            // Calcular distancia desde ubicación actual
-            const distance = calculateInvoiceDistance(invoice, currentLocation.value)
-            allInvoices.push({
-              ...invoice,
-              distance_km: distance.toFixed(1),
-              estimated_time_min: Math.round(distance / 40 * 60), // 40 km/h promedio
-              route_id: route.id,
-              route_name: route.name
-            })
-          })
-        }
-      })
+    // Get orders based on assigned routes
+    const response = await api.get('/delivery-routes/my-route-orders', {
+      params: {
+        status: statusFilter.value
+      }
     })
 
-    // Ordenar por distancia descendente (más lejanas primero)
-    sortedInvoices.value = allInvoices.sort((a, b) =>
-      parseFloat(b.distance_km) - parseFloat(a.distance_km)
-    )
+    const ordersData = response.data.orders || []
+    assignedRoutes.value = response.data.routes || []
 
-    console.log('Órdenes ordenadas por distancia:', sortedInvoices.value.length)
+    // Process orders
+    const processedInvoices = ordersData.map(orderItem => {
+      const invoice = orderItem.order
+
+      // Initialize quantity_to_load for products (allow partial deliveries)
+      if (invoice.products) {
+        invoice.products.forEach(product => {
+          const amount = parseFloat(product.pivot?.amount || 0)
+          product.quantity_to_load = parseFloat(amount.toFixed(2))
+        })
+      }
+
+      // Use route coordinates
+      const lat = orderItem.latitude
+      const lng = orderItem.longitude
+
+      // Calculate distance from current location
+      let distance = 0
+      if (currentLocation.value && lat && lng) {
+        const R = 6371 // Earth radius in km
+        const dLat = (lat - currentLocation.value.lat) * Math.PI / 180
+        const dLng = (lng - currentLocation.value.lng) * Math.PI / 180
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(currentLocation.value.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2)
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        distance = R * c
+      }
+
+      return {
+        ...invoice,
+        latitude: lat,
+        longitude: lng,
+        stop_order: orderItem.stop_order,
+        distance_km: distance.toFixed(1),
+        estimated_time_min: Math.round(distance / 40 * 60) // Average 40 km/h
+      }
+    })
+
+    // Maintain route order (already sorted by stop_order)
+    sortedInvoices.value = processedInvoices
   } catch (error) {
-    console.error('Error fetching predefined routes:', error)
+    console.error('Error fetching route orders:', error)
     $q.notify({
       type: 'negative',
-      message: 'Error al cargar órdenes',
+      message: 'Error al cargar órdenes de la ruta',
       position: 'top'
     })
   } finally {
@@ -361,34 +605,22 @@ async function fetchPredefinedRoutes () {
   }
 }
 
-function calculateInvoiceDistance (invoice, origin) {
-  if (!origin || !invoice.client?.address) return 0
-
-  const clientAddress = typeof invoice.client.address === 'string'
-    ? JSON.parse(invoice.client.address)
-    : invoice.client.address
-
-  const clientLat = clientAddress?.latitude
-  const clientLng = clientAddress?.longitude
-
-  if (!clientLat || !clientLng) return 0
-
-  // Fórmula de Haversine
-  const R = 6371 // Radio de la Tierra en km
-  const dLat = (clientLat - origin.lat) * Math.PI / 180
-  const dLng = (clientLng - origin.lng) * Math.PI / 180
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(origin.lat * Math.PI / 180) * Math.cos(clientLat * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
-}
-
+/**
+ * Formats a numeric value to 2 decimal places
+ * @param {number|string|null} value - The value to format
+ * @returns {string} Formatted value with 2 decimals
+ */
 function formatQuantity (value) {
   if (value === null || value === undefined || value === '') return '0.00'
   return parseFloat(value).toFixed(2)
 }
 
+/**
+ * Updates the quantity to load for a product with validation
+ * @param {Object} product - The product object to update
+ * @param {number|string} value - The new quantity value
+ * @returns {void}
+ */
 function updateQuantity (product, value) {
   if (value === null || value === undefined || value === '') {
     product.quantity_to_load = 0
@@ -398,7 +630,7 @@ function updateQuantity (product, value) {
   const numValue = parseFloat(value)
   const maxAmount = parseFloat(product.pivot?.amount || 0)
 
-  // Permitir entregas parciales (puede ser menor que el pedido)
+  // Allow partial deliveries (can be less than ordered)
   if (numValue < 0) {
     product.quantity_to_load = 0
     $q.notify({
@@ -420,6 +652,11 @@ function updateQuantity (product, value) {
   }
 }
 
+/**
+ * Formats an address object or string into a readable format
+ * @param {Object|string} address - The address to format
+ * @returns {string} Formatted address string
+ */
 function getFormattedAddress (address) {
   if (!address) return 'Dirección no disponible'
 
@@ -438,6 +675,456 @@ function getFormattedAddress (address) {
 
   return 'Dirección no disponible'
 }
+
+/**
+ * Initializes the Google Maps instance and renders the initial view
+ * @async
+ * @returns {Promise<void>}
+ */
+async function initMap () {
+  loadingMap.value = true
+
+  try {
+    // Cargar Google Maps primero
+    const loaded = await loadGoogleMaps()
+
+    if (!loaded || !window.google) {
+      $q.notify({
+        type: 'negative',
+        message: 'Error al cargar Google Maps. Verifica tu conexión a internet.',
+        position: 'top'
+      })
+      return
+    }
+
+    const mapElement = document.getElementById('routeMap')
+    if (!mapElement) return
+
+    map.value = new window.google.maps.Map(mapElement, {
+      zoom: 13,
+      center: currentLocation.value || { lat: 0, lng: 0 },
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+      mapTypeControlOptions: {
+        position: window.google.maps.ControlPosition.TOP_CENTER,
+        style: window.google.maps.MapTypeControlStyle.HORIZONTAL_BAR
+      },
+      fullscreenControlOptions: {
+        position: window.google.maps.ControlPosition.RIGHT_TOP
+      }
+    })
+
+    // Limpiar elementos previos del mapa
+    clearMapElements()
+
+    // Cargar ruta asignada si no está cargada
+    if (mapViewMode.value === 'complete' && assignedRoutes.value.length === 0) {
+      await fetchAssignedRoute()
+    }
+
+    if (mapViewMode.value === 'complete') {
+      renderCompleteRoute()
+    } else {
+      renderSimulatedRoute()
+    }
+  } catch (error) {
+    console.error('Error inicializando mapa:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al inicializar el mapa',
+      position: 'top'
+    })
+  } finally {
+    loadingMap.value = false
+  }
+}
+
+/**
+ * Clears all markers and route paths from the map
+ * Removes all visual elements and empties the tracking arrays
+ * @returns {void}
+ */
+function clearMapElements () {
+  // Remove markers one by one
+  while (mapMarkers.value.length > 0) {
+    const marker = mapMarkers.value.pop()
+    if (marker) {
+      try {
+        marker.setMap(null)
+        marker.setVisible(false)
+      } catch (e) {
+        console.warn('Error removing marker:', e)
+      }
+    }
+  }
+
+  // Remove route paths one by one
+  while (routePaths.value.length > 0) {
+    const renderer = routePaths.value.pop()
+    if (renderer) {
+      try {
+        renderer.setMap(null)
+      } catch (e) {
+        console.warn('Error removing route:', e)
+      }
+    }
+  }
+}
+
+/**
+ * Renders the complete assigned route on the map
+ * Shows all stops in the courier's assigned route with markers and connecting lines
+ * @async
+ * @returns {Promise<void>}
+ */
+async function renderCompleteRoute () {
+  if (!map.value) return
+
+  // Load route data if not already loaded
+  if (assignedRoutes.value.length === 0) {
+    await fetchAssignedRoute()
+  }
+
+  if (assignedRoutes.value.length === 0) {
+    $q.notify({
+      type: 'info',
+      message: 'No tienes rutas asignadas para hoy',
+      position: 'top'
+    })
+    return
+  }
+
+  const bounds = new window.google.maps.LatLngBounds()
+  const directionsService = new window.google.maps.DirectionsService()
+
+  // Process each assigned route
+  for (const route of assignedRoutes.value) {
+    const originBranch = route.origin_branch
+
+    if (!originBranch || !originBranch.address) {
+      continue
+    }
+
+    // Get coordinates from origin_branch.address
+    const originAddress = originBranch.address
+    const originLat = originAddress.latitude
+    const originLng = originAddress.longitude
+
+    if (!originLat || !originLng) {
+      continue
+    }
+
+    // Create origin marker
+    const originMarker = new window.google.maps.Marker({
+      position: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+      map: map.value,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 14,
+        fillColor: '#FF9800',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 3
+      },
+      label: {
+        text: 'O',
+        color: 'white',
+        fontSize: '14px',
+        fontWeight: 'bold'
+      },
+      title: originBranch.name
+    })
+    mapMarkers.value.push(originMarker)
+    bounds.extend(new window.google.maps.LatLng(originLat, originLng))
+
+    // Create stop markers
+    const stops = route.route_clients || []
+
+    stops.forEach((stop) => {
+      const clientAddress = stop?.client?.address
+      
+      if (clientAddress?.latitude && clientAddress?.longitude) {
+        const marker = new window.google.maps.Marker({
+          position: { lat: parseFloat(clientAddress.latitude), lng: parseFloat(clientAddress.longitude) },
+          map: map.value,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: '#2196F3',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          },
+          label: {
+            text: stop.stop_order.toString(),
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          },
+          title: stop.client?.name || 'Cliente'
+        })
+        mapMarkers.value.push(marker)
+        bounds.extend(new window.google.maps.LatLng(clientAddress.latitude, clientAddress.longitude))
+      }
+    })
+
+    // Draw route segment by segment
+    let prevLat = originLat
+    let prevLng = originLng
+
+    for (const stop of stops) {
+      const clientAddress = stop?.client?.address
+      if (!clientAddress?.latitude || !clientAddress?.longitude) continue
+
+      try {
+        const result = await directionsService.route({
+          origin: { lat: parseFloat(prevLat), lng: parseFloat(prevLng) },
+          destination: { lat: parseFloat(clientAddress.latitude), lng: parseFloat(clientAddress.longitude) },
+          travelMode: window.google.maps.TravelMode.DRIVING
+        })
+
+        const renderer = new window.google.maps.DirectionsRenderer({
+          map: map.value,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#2196F3',
+            strokeWeight: 4,
+            strokeOpacity: 0.8
+          },
+          preserveViewport: true
+        })
+
+        renderer.setDirections(result)
+        routePaths.value.push(renderer)
+
+        prevLat = clientAddress.latitude
+        prevLng = clientAddress.longitude
+      } catch (error) {
+        console.error('Error dibujando segmento:', error)
+      }
+    }
+  }
+
+  if (mapMarkers.value.length > 0) {
+    map.value.fitBounds(bounds)
+  }
+}
+
+/**
+ * Renders the simulated route on the map showing only orders
+ * Displays orders filtered by status with markers and connecting route lines
+ * @async
+ * @returns {Promise<void>}
+ */
+async function renderSimulatedRoute () {
+  if (!map.value) return
+
+  const bounds = new window.google.maps.LatLngBounds()
+  const directionsService = new window.google.maps.DirectionsService()
+
+  try {
+    // Get orders data from backend
+    const response = await api.get('/delivery-routes/orders-map-data', {
+      params: { status: mapStatusFilter.value }
+    })
+
+    const stops = response.data.stops || []
+    const routesData = response.data.routes_data || []
+
+    if (stops.length === 0) {
+      $q.notify({
+        type: 'info',
+        message: `No hay órdenes ${mapStatusFilter.value === 'all' ? '' : 'con estado ' + mapStatusFilter.value}`,
+        position: 'top'
+      })
+      return
+    }
+
+    // Get origin from first stop
+    const origin = stops[0]?.origin
+
+    if (origin && origin.latitude && origin.longitude) {
+      const originMarker = new window.google.maps.Marker({
+        position: { lat: parseFloat(origin.latitude), lng: parseFloat(origin.longitude) },
+        map: map.value,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 14,
+          fillColor: '#FF9800',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 3
+        },
+        label: {
+          text: 'O',
+          color: 'white',
+          fontSize: '14px',
+          fontWeight: 'bold'
+        },
+        title: origin.name
+      })
+      mapMarkers.value.push(originMarker)
+      bounds.extend(new window.google.maps.LatLng(origin.latitude, origin.longitude))
+    }
+
+    // Create order markers
+    stops.forEach((stop) => {
+      if (stop.latitude && stop.longitude) {
+        const marker = new window.google.maps.Marker({
+          position: { lat: parseFloat(stop.latitude), lng: parseFloat(stop.longitude) },
+          map: map.value,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: '#2196F3',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          },
+          label: {
+            text: stop.position.toString(),
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          },
+          title: `#${stop.order_code} - ${stop.client_name}`
+        })
+
+        // Create InfoWindow with order data
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="padding: 12px; min-width: 200px;">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #111;">#${stop.order_code}</h3>
+              <p style="margin: 0; font-size: 12px; color: #666; line-height: 1.6;">
+                <strong>Cliente:</strong> ${stop.client_name}<br>
+                <strong>Total:</strong> $${stop.order_total?.toFixed(2)}<br>
+                <strong>Estado:</strong> ${getStatusLabel(stop.order_status)}<br>
+                <strong>Parada:</strong> #${stop.position}
+              </p>
+            </div>
+          `
+        })
+
+        marker.addListener('click', () => {
+          infoWindow.open(map.value, marker)
+        })
+
+        mapMarkers.value.push(marker)
+        bounds.extend(new window.google.maps.LatLng(stop.latitude, stop.longitude))
+      }
+    })
+
+    // Draw route segment by segment
+    if (origin && origin.latitude && origin.longitude) {
+      let prevLat = origin.latitude
+      let prevLng = origin.longitude
+
+      for (const stop of stops) {
+        if (!stop.latitude || !stop.longitude) continue
+
+        try {
+          const result = await directionsService.route({
+            origin: { lat: parseFloat(prevLat), lng: parseFloat(prevLng) },
+            destination: { lat: parseFloat(stop.latitude), lng: parseFloat(stop.longitude) },
+            travelMode: window.google.maps.TravelMode.DRIVING
+          })
+
+          const renderer = new window.google.maps.DirectionsRenderer({
+            map: map.value,
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#2196F3',
+              strokeWeight: 4,
+              strokeOpacity: 0.8
+            },
+            preserveViewport: true
+          })
+
+          renderer.setDirections(result)
+          routePaths.value.push(renderer)
+
+          prevLat = stop.latitude
+          prevLng = stop.longitude
+        } catch (error) {
+          console.error('Error dibujando segmento:', error)
+        }
+      }
+    }
+
+    if (mapMarkers.value.length > 0) {
+      map.value.fitBounds(bounds)
+    }
+  } catch (error) {
+    console.error('Error loading orders map:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar el mapa de órdenes',
+      position: 'top'
+    })
+  }
+}
+
+/**
+ * Gets the color associated with an order status
+ * @param {string} status - The status code (finished, on_process, pending)
+ * @returns {string} Hex color code
+ */
+function getStatusColor (status) {
+  const colors = {
+    finished: '#10b981',
+    on_process: '#f59e0b',
+    pending: '#6b7280'
+  }
+  return colors[status] || '#6b7280'
+}
+
+/**
+ * Gets the localized label for an order status
+ * @param {string} status - The status code (finished, on_process, pending)
+ * @returns {string} The localized status label
+ */
+function getStatusLabel (status) {
+  const labels = {
+    finished: 'Finalizada',
+    on_process: 'En Proceso',
+    pending: 'Pendiente'
+  }
+  return labels[status] || status
+}
+
+// Watch for changes in map view mode (tab switching)
+watch(mapViewMode, async (newMode) => {
+  if (map.value) {
+    // Clear map before rendering new view
+    clearMapElements()
+
+    if (newMode === 'complete') {
+      if (assignedRoutes.value.length === 0) {
+        await fetchAssignedRoute()
+      }
+      renderCompleteRoute()
+    } else {
+      renderSimulatedRoute()
+    }
+  }
+})
+
+watch(showMapDialog, (newVal) => {
+  if (newVal) {
+    setTimeout(() => {
+      initMap()
+    }, 300)
+  }
+})
+
+// Watch for changes in status filter (Orders tab only)
+watch(mapStatusFilter, () => {
+  if (map.value && mapViewMode.value === 'simulated') {
+    clearMapElements()
+    renderSimulatedRoute()
+  }
+})
 </script>
 
 <style scoped>
@@ -468,6 +1155,12 @@ function getFormattedAddress (address) {
   gap: 6px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .header-count {
   font-size: 20px;
   font-weight: 700;
@@ -486,6 +1179,203 @@ function getFormattedAddress (address) {
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 6px;
+}
+
+/* Filters Bar */
+.filters-bar {
+  background: white;
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.status-filter {
+  max-width: 300px;
+}
+
+/* Map Dialog - Fullscreen without padding */
+.map-dialog-fullscreen :deep(.q-dialog__inner) {
+  padding: 0 !important;
+}
+
+.map-dialog-card {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.map-card-section {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  padding: 0 !important;
+}
+
+/* Close Button - Floating (Minimalist) */
+.close-btn-floating {
+  position: absolute;
+  top: 15px;
+  left: 12px;
+  z-index: 1001;
+  background: white;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.close-btn-floating:hover {
+  background: #f5f5f5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: scale(1.05);
+}
+
+/* Google Maps Controls - Fix z-index */
+.route-map :deep(.gm-style .gm-style-mtc),
+.route-map :deep(.gm-style button),
+.route-map :deep(.gm-bundled-control) {
+  z-index: 100 !important;
+}
+
+/* Map Bottom Container - Uber Style */
+.map-bottom-container {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Floating Tabs - Modern */
+.map-tabs-modern {
+  display: flex;
+  background: white;
+  border-radius: 100px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  gap: 4px;
+}
+
+.map-tab-modern {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.map-tab-modern:hover {
+  background: #f5f5f5;
+  color: #111;
+}
+
+.map-tab-modern.active {
+  background: #111;
+  color: white;
+}
+
+.map-tab-modern.active:hover {
+  background: #000;
+}
+
+.map-tab-modern span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Filter - Minimalist */
+.map-filter-modern {
+  background: white;
+  border-radius: 100px;
+  padding: 4px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+}
+
+.filter-select-modern {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.filter-select-modern :deep(.q-field__control) {
+  height: 40px;
+  padding: 0;
+}
+
+.filter-select-modern :deep(.q-field__native) {
+  color: #111;
+  font-weight: 500;
+}
+
+.filter-select-modern :deep(.q-field__append) {
+  color: #666;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .map-tabs-modern {
+    width: calc(100vw - 32px);
+    justify-content: center;
+  }
+
+  .map-tab-modern {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 16px;
+  }
+
+  .map-tab-modern span {
+    font-size: 12px;
+  }
+
+  .map-filter-modern {
+    width: calc(100vw - 32px);
+  }
+}
+
+.route-map {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Ensure Google Maps controls are visible */
+.route-map :deep(.gmnoprint),
+.route-map :deep(.gm-style-cc) {
+  z-index: 100 !important;
+}
+
+.map-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 2000;
+  gap: 16px;
+}
+
+.map-loading-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
 }
 
 /* Orders List */
@@ -574,6 +1464,13 @@ function getFormattedAddress (address) {
   font-size: 11px;
   color: #6b7280;
   padding-left: 32px;
+}
+
+.status-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
 }
 
 .meta-item {

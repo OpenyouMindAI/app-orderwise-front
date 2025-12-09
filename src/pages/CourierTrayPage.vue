@@ -1,331 +1,267 @@
 <template>
-  <q-page class="bg-dark text-white">
-    <!-- Header -->
-    <div class="q-pa-md">
-      <div class="text-h5 q-mb-sm">
-        <q-icon name="local_shipping" color="primary" size="32px" class="q-mr-sm" />
-        Órdenes para Entrega
+  <q-page class="courier-page">
+    <!-- Compact Header Estilo Uber -->
+    <div class="uber-header">
+      <div class="header-content">
+        <div class="header-left">
+          <q-icon name="local_shipping" size="28px" />
+          <div class="header-info">
+            <div class="header-title">Mis Entregas</div>
+            <div class="header-subtitle">{{ orders.length }} órdenes • {{ route?.name || 'Sin ruta' }}</div>
+          </div>
+        </div>
+        <q-btn
+          flat
+          dense
+          round
+          icon="filter_list"
+          @click="showFilterDialog = true"
+        >
+          <q-badge v-if="statusFilter !== 'finished'" color="primary" floating>1</q-badge>
+        </q-btn>
       </div>
-      <div class="text-caption text-grey-5">
-        Ordenadas por distancia (más lejanas primero)
-      </div>
+    </div>
+
+    <!-- Action Buttons Estilo Uber -->
+    <div class="action-buttons">
+      <q-btn
+        unelevated
+        no-caps
+        class="action-btn primary-btn"
+        icon="map"
+        label="Ver Ruta Asignada"
+        @click="showRouteMap"
+      />
+      <q-btn
+        unelevated
+        no-caps
+        class="action-btn secondary-btn"
+        icon="route"
+        label="Ver Ruta de Órdenes"
+        @click="showOrdersMap"
+        :disable="orders.length === 0"
+      />
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="q-pa-md">
-      <q-skeleton v-for="i in 3" :key="i" height="120px" class="q-mb-md" />
+    <div v-if="loading" class="loading-container">
+      <q-skeleton v-for="i in 4" :key="i" height="88px" class="order-skeleton" />
     </div>
 
-    <!-- Content -->
-    <div v-else class="q-pa-md">
-      <!-- Mis Órdenes Aceptadas -->
-      <div v-if="acceptedInvoices.length > 0" class="q-mb-lg">
-        <div class="text-h6 q-mb-md">
-          <q-icon name="check_circle" color="green" size="24px" class="q-mr-sm" />
-          Mis Órdenes Aceptadas ({{ acceptedInvoices.length }})
-        </div>
-        <q-card
-          v-for="invoice in acceptedInvoices"
-          :key="invoice.id"
-          dark
-          class="bg-blue-grey-9 q-mb-md"
-          style="border-radius: 16px; border: 2px solid #4CAF50;"
-        >
-          <!-- Header: Invoice Code & Distance -->
-          <q-card-section class="q-pb-sm">
-            <div class="row items-center justify-between">
-              <div class="text-h6">
-                <q-badge color="green" class="q-mr-sm">LISTA</q-badge>
-                Orden #{{ invoice.code }}
-              </div>
-              <div class="text-caption text-grey-5">
-                {{ invoice.distance_km }} km • {{ invoice.estimated_time_min }} min
-              </div>
-            </div>
+    <!-- Orders List Estilo Uber -->
+    <div v-else-if="orders.length > 0" class="orders-container">
+      <div
+        v-for="(item, index) in orders"
+        :key="item.order.id"
+        class="order-card-uber"
+        @click="selectOrder(item)"
+      >
+        <!-- Stop Number Badge -->
+        <div class="stop-badge">{{ index + 1 }}</div>
 
-            <!-- Client Info -->
-            <div class="q-mt-sm">
-              <div class="row items-center q-mb-xs">
-                <q-icon name="person" color="blue" size="20px" class="q-mr-sm" />
-                <div>
-                  <div class="text-body2 text-weight-medium">{{ invoice.client?.name || 'Cliente' }}</div>
-                  <div class="text-caption text-grey-5">{{ getFormattedAddress(invoice.client?.address) }}</div>
-                </div>
-              </div>
-
-              <div class="row items-center">
-                <q-icon name="store" color="green" size="20px" class="q-mr-sm" />
-                <div>
-                  <div class="text-body2 text-weight-medium">{{ invoice.branchOffice?.name || 'Sucursal' }}</div>
-                  <div class="text-caption text-grey-5">Origen</div>
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-
-          <!-- Products List -->
-          <q-card-section class="q-pt-none">
-            <div class="text-subtitle2 q-mb-xs">
-              <q-icon name="inventory_2" size="18px" />
-              Productos ({{ invoice.products?.length || 0 }})
-            </div>
-            <q-list dense dark class="bg-grey-8" style="border-radius: 8px;">
-              <q-item v-for="product in invoice.products?.slice(0, 3)" :key="product.id" dense>
-                <q-item-section>
-                  <q-item-label class="text-body2">{{ product.name }}</q-item-label>
-                  <q-item-label caption class="text-grey-5">
-                    Cantidad: {{ product.pivot?.quantity || 0 }}
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-              <q-item v-if="invoice.products?.length > 3" dense>
-                <q-item-section>
-                  <q-item-label caption class="text-grey-5">
-                    +{{ invoice.products.length - 3 }} productos más
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </q-card-section>
-
-          <!-- Total -->
-          <q-card-section class="q-pt-none">
-            <div class="text-h6 text-green">
-              Total: ${{ invoice.total?.toFixed(2) || '0.00' }}
-            </div>
-          </q-card-section>
-
-          <!-- Actions -->
-          <q-card-actions class="q-px-md q-pb-md">
-            <q-btn
-              unelevated
-              no-caps
-              label="Iniciar Entrega"
-              color="light-green-6"
-              text-color="dark"
-              icon="navigation"
-              class="col"
-              style="border-radius: 12px; font-weight: bold;"
-              @click="startDeliveryDirectly(invoice)"
-              :loading="startingDelivery"
-            />
-          </q-card-actions>
-        </q-card>
-      </div>
-
-      <!-- Órdenes Disponibles -->
-      <div v-if="availableInvoices.length > 0">
-        <div class="row items-center justify-between q-mb-md">
-          <div class="text-h6">
-            <q-icon name="receipt_long" color="orange" size="24px" class="q-mr-sm" />
-            Órdenes Disponibles ({{ availableInvoices.length }})
+        <!-- Order Content -->
+        <div class="order-content">
+          <div class="order-header">
+            <div class="order-code">#{{ item.order.code }}</div>
+            <div class="order-total">${{ item.order.total?.toFixed(0) }}</div>
           </div>
-          <q-btn
-            v-if="selectedInvoices.length > 0"
-            unelevated
-            no-caps
-            :label="`Iniciar con ${selectedInvoices.length} seleccionadas`"
-            color="light-green-6"
-            text-color="dark"
-            icon="route"
-            @click="startMultipleDeliveries"
-            :loading="optimizingRoute"
+
+          <div class="order-client">
+            <q-icon name="person" size="16px" />
+            <span>{{ item.client_name }}</span>
+          </div>
+
+          <div class="order-products">
+            <q-icon name="inventory_2" size="16px" />
+            <span>{{ item.order.products?.length || 0 }} productos</span>
+          </div>
+
+          <!-- Status Badge -->
+          <q-badge
+            :color="getStatusColor(item.order.status)"
+            :label="getStatusLabel(item.order.status)"
+            class="status-badge-uber"
           />
         </div>
-        <q-list>
-      <q-card
-        v-for="invoice in availableInvoices"
-        :key="invoice.id"
-        dark
-        class="bg-grey-9 q-mb-md"
-        :class="{ 'border-primary': isSelected(invoice.id) }"
-        style="border-radius: 16px;"
-        :style="isSelected(invoice.id) ? 'border: 2px solid #1976d2;' : ''"
-      >
-        <!-- Header: Invoice Code & Distance -->
-        <q-card-section class="q-pb-sm">
-          <div class="row items-center justify-between">
-            <div class="row items-center">
-              <q-checkbox
-                :model-value="isSelected(invoice.id)"
-                @update:model-value="toggleSelection(invoice)"
-                color="primary"
-                class="q-mr-sm"
-              />
-              <div class="text-h6">Orden #{{ invoice.code }}</div>
-            </div>
-            <div class="text-caption text-grey-5">
-              {{ invoice.distance_km }} km • {{ invoice.estimated_time_min }} min
-            </div>
-          </div>
 
-          <!-- Client & Branch Info -->
-          <div class="q-mt-sm">
-            <div class="row items-center q-mb-xs">
-              <q-icon name="person" color="blue" size="20px" class="q-mr-sm" />
-              <div>
-                <div class="text-body2 text-weight-medium">{{ invoice.client?.name || 'Cliente' }}</div>
-                <div class="text-caption text-grey-5">{{ getFormattedAddress(invoice.client?.address) }}</div>
-              </div>
-            </div>
+        <!-- Chevron -->
+        <q-icon name="chevron_right" size="20px" class="chevron-icon" />
+      </div>
+    </div>
 
-            <div class="row items-center">
-              <q-icon name="store" color="green" size="20px" class="q-mr-sm" />
-              <div>
-                <div class="text-body2 text-weight-medium">{{ invoice.branchOffice?.name || 'Sucursal' }}</div>
-                <div class="text-caption text-grey-5">Origen</div>
-              </div>
-            </div>
-          </div>
+    <!-- Empty State -->
+    <div v-else class="empty-state">
+      <q-icon name="inbox" size="64px" color="grey-5" />
+      <div class="empty-title">No hay órdenes</div>
+      <div class="empty-subtitle">
+        {{ statusFilter === 'finished' ? 'No tienes órdenes finalizadas en tu ruta' : 'No hay órdenes con este filtro' }}
+      </div>
+    </div>
+
+    <!-- Filter Dialog -->
+    <q-dialog v-model="showFilterDialog">
+      <q-card class="filter-card">
+        <q-card-section>
+          <div class="text-h6">Filtrar por estado</div>
         </q-card-section>
 
-        <!-- Products List -->
         <q-card-section class="q-pt-none">
-          <div class="text-subtitle2 q-mb-xs">
-            <q-icon name="inventory_2" size="18px" />
-            Productos ({{ invoice.products?.length || 0 }})
-          </div>
-          <q-list dense dark class="bg-grey-8" style="border-radius: 8px;">
-            <q-item v-for="product in invoice.products?.slice(0, 3)" :key="product.id" dense>
+          <q-list>
+            <q-item
+              v-for="option in statusOptions"
+              :key="option.value"
+              clickable
+              v-ripple
+              @click="selectStatus(option.value)"
+              :active="statusFilter === option.value"
+              active-class="bg-primary text-white"
+            >
               <q-item-section>
-                <q-item-label class="text-body2">{{ product.name }}</q-item-label>
-                <q-item-label caption class="text-grey-5">
-                  Cantidad: {{ product.pivot?.quantity || 0 }}
-                </q-item-label>
+                <q-item-label>{{ option.label }}</q-item-label>
               </q-item-section>
-            </q-item>
-            <q-item v-if="invoice.products?.length > 3" dense>
-              <q-item-section>
-                <q-item-label caption class="text-grey-5">
-                  +{{ invoice.products.length - 3 }} productos más
-                </q-item-label>
+              <q-item-section side>
+                <q-icon v-if="statusFilter === option.value" name="check" />
               </q-item-section>
             </q-item>
           </q-list>
         </q-card-section>
 
-        <!-- Total -->
-        <q-card-section class="q-pt-none">
-          <div class="text-h6 text-green">
-            Total: ${{ invoice.total?.toFixed(2) || '0.00' }}
-          </div>
-        </q-card-section>
-
-        <!-- Actions -->
-        <q-card-actions class="q-px-md q-pb-md">
-          <q-btn
-            unelevated
-            no-caps
-            label="Aceptar"
-            color="light-green-6"
-            text-color="dark"
-            class="col"
-            style="border-radius: 12px; font-weight: bold;"
-            @click="acceptInvoice(invoice)"
-            :loading="acceptingId === invoice.id"
-          />
+        <q-card-actions align="right">
+          <q-btn flat label="Cerrar" color="primary" v-close-popup />
         </q-card-actions>
       </q-card>
-        </q-list>
-      </div>
+    </q-dialog>
 
-      <!-- Empty State -->
-      <div v-if="availableInvoices.length === 0 && acceptedInvoices.length === 0" class="flex flex-center" style="height: 50vh;">
-        <div class="text-center">
-          <q-icon name="receipt_long" size="80px" color="grey-6" />
-          <div class="text-h6 q-mt-md text-grey-6">No hay órdenes disponibles</div>
-          <q-btn
-            flat
-            color="primary"
-            label="Actualizar"
-            icon="refresh"
-            @click="fetchInvoices"
-            class="q-mt-md"
-          />
-        </div>
-      </div>
-    </div>
+    <!-- Order Details Dialog -->
+    <q-dialog v-model="showOrderDialog" position="bottom">
+      <q-card class="order-details-card">
+        <q-card-section class="order-details-header">
+          <div class="text-h6">Orden #{{ selectedOrder?.order?.code }}</div>
+          <q-btn flat dense round icon="close" v-close-popup />
+        </q-card-section>
 
-    <!-- Accepted Dialog -->
-    <q-dialog v-model="showAcceptedDialog" @hide="onDialogHide">
-      <q-card dark class="bg-grey-9" style="min-width: 320px; border-radius: 16px;">
-        <q-card-section class="text-center">
-          <q-icon name="check_circle" color="green" size="60px" />
-          <div class="text-h6 q-mt-md">Orden Aceptada</div>
-          <div class="text-caption text-grey-5 q-mt-sm">
-            Orden #{{ acceptedInvoice?.code }}
+        <q-card-section>
+          <!-- Client Info -->
+          <div class="detail-section">
+            <div class="detail-label">Cliente</div>
+            <div class="detail-value">{{ selectedOrder?.client_name }}</div>
           </div>
-          <div class="text-caption text-grey-5 q-mt-xs">
-            ¿Deseas iniciar la entrega ahora?
+
+          <!-- Products -->
+          <div class="detail-section">
+            <div class="detail-label">Productos ({{ selectedOrder?.order?.products?.length || 0 }})</div>
+            <q-list dense class="products-list">
+              <q-item v-for="product in selectedOrder?.order?.products" :key="product.id">
+                <q-item-section>
+                  <q-item-label>{{ product.name }}</q-item-label>
+                  <q-item-label caption>Cantidad: {{ product.pivot?.quantity || 0 }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+
+          <!-- Total -->
+          <div class="detail-section">
+            <div class="detail-label">Total</div>
+            <div class="detail-value total-value">${{ selectedOrder?.order?.total?.toFixed(2) }}</div>
           </div>
         </q-card-section>
 
-        <q-card-actions class="q-px-md q-pb-md q-gutter-sm">
+        <q-card-actions class="q-pa-md">
           <q-btn
-            flat
+            v-if="selectedOrder?.order?.status === 'finished' && !selectedOrder?.order?.delivery_person_id"
+            unelevated
             no-caps
-            label="Más Tarde"
-            color="grey-5"
-            class="col"
-            style="border-radius: 12px;"
-            @click="closeAcceptedDialog"
+            label="Aceptar Orden"
+            color="primary"
+            class="full-width action-btn-large"
+            @click="acceptOrder"
+            :loading="accepting"
           />
           <q-btn
+            v-else-if="selectedOrder?.order?.delivery_person_id"
             unelevated
             no-caps
             label="Iniciar Entrega"
-            color="light-green-6"
-            text-color="dark"
-            icon="navigation"
-            class="col"
-            style="border-radius: 12px; font-weight: bold;"
+            color="positive"
+            class="full-width action-btn-large"
             @click="startDelivery"
-            :loading="startingDelivery"
+            :loading="starting"
+          />
+          <q-btn
+            v-else
+            flat
+            no-caps
+            label="No disponible para entrega"
+            color="grey"
+            class="full-width"
+            disable
           />
         </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Map Dialog -->
+    <q-dialog v-model="showMapDialog" maximized>
+      <q-card class="map-card">
+        <q-card-section class="map-header">
+          <div class="text-h6">{{ mapTitle }}</div>
+          <q-btn flat dense round icon="close" v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="map-container-section">
+          <div id="uber-map" class="uber-map"></div>
+        </q-card-section>
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import { loadGoogleMaps } from 'src/boot/google-maps'
 
 const router = useRouter()
 const $q = useQuasar()
 
-const availableInvoices = ref([])
-const acceptedInvoices = ref([])
-const selectedInvoices = ref([])
+// State
+const route = ref(null)
+const orders = ref([])
 const loading = ref(false)
-const acceptingId = ref(null)
-const showAcceptedDialog = ref(false)
-const acceptedInvoice = ref(null)
-const startingDelivery = ref(false)
-const optimizingRoute = ref(false)
-const hasActiveRun = ref(false)
-const currentLocation = ref(null)
+const statusFilter = ref('finished')
+const showFilterDialog = ref(false)
+const showOrderDialog = ref(false)
+const selectedOrder = ref(null)
+const accepting = ref(false)
+const starting = ref(false)
+const showMapDialog = ref(false)
+const mapTitle = ref('')
+const map = ref(null)
+const markers = ref([])
+const routePaths = ref([])
+
+const statusOptions = [
+  { label: 'Solo Finalizadas', value: 'finished' },
+  { label: 'En Proceso', value: 'on_process' },
+  { label: 'Pendientes', value: 'pending' },
+  { label: 'Todas', value: 'all' }
+]
 
 onMounted(async () => {
   await checkActiveRun()
-  if (!hasActiveRun.value) {
-    await getCurrentLocation()
-    await fetchInvoices()
-  }
+  await fetchMyRouteOrders()
 })
 
 async function checkActiveRun () {
   try {
     const response = await api.get('/invoice-delivery-runs/active')
     if (response.data.delivery_run) {
-      hasActiveRun.value = true
-      // Redirect to active transport
       $q.notify({
         type: 'info',
-        message: 'Tienes un viaje activo',
+        message: 'Tienes una entrega activa',
         position: 'top'
       })
       router.push({
@@ -334,70 +270,23 @@ async function checkActiveRun () {
       })
     }
   } catch (error) {
-    // No active run, continue
-    hasActiveRun.value = false
+    // No active run
   }
 }
 
-async function getCurrentLocation () {
-  if (navigator.geolocation) {
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject)
-      })
-      currentLocation.value = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      }
-    } catch (error) {
-      console.log('No se pudo obtener la ubicación:', error)
-    }
-  }
-}
-
-async function fetchInvoices () {
+async function fetchMyRouteOrders () {
   loading.value = true
   try {
-    // Obtener órdenes disponibles del repartidor a través de las rutas
-    const response = await api.get('/delivery-routes/predefined-with-invoices')
-    
-    // Extraer todas las órdenes de todas las rutas
-    let allInvoices = []
-    if (response.data.routes) {
-      response.data.routes.forEach(route => {
-        route.routeClients?.forEach(routeClient => {
-          if (routeClient.client?.invoices) {
-            routeClient.client.invoices.forEach(invoice => {
-              // Agregar información de distancia
-              const distance = calculateInvoiceDistance(invoice, currentLocation.value)
-              allInvoices.push({
-                ...invoice,
-                distance_km: distance.toFixed(1),
-                estimated_time_min: Math.round(distance / 40 * 60), // 40 km/h promedio
-                route_id: route.id,
-                route_name: route.name
-              })
-            })
-          }
-        })
-      })
-    }
+    const response = await api.get('/delivery-routes/my-route-orders', {
+      params: { status: statusFilter.value }
+    })
 
-    // Ordenar por distancia descendente (más lejanas primero)
-    allInvoices.sort((a, b) => parseFloat(b.distance_km) - parseFloat(a.distance_km))
+    route.value = response.data.route
+    orders.value = response.data.orders || []
 
-    // Separar entre disponibles y aceptadas
-    availableInvoices.value = allInvoices.filter(inv => 
-      inv.status === 'finished' && !inv.delivery_person_id
-    )
-    acceptedInvoices.value = allInvoices.filter(inv => 
-      inv.status === 'finished' && inv.delivery_person_id
-    )
-
-    console.log('Órdenes disponibles:', availableInvoices.value.length)
-    console.log('Órdenes aceptadas:', acceptedInvoices.value.length)
+    console.log('Órdenes cargadas:', orders.value.length)
   } catch (error) {
-    console.error('Error fetching invoices:', error)
+    console.error('Error fetching orders:', error)
     $q.notify({
       type: 'negative',
       message: 'Error al cargar órdenes',
@@ -408,88 +297,50 @@ async function fetchInvoices () {
   }
 }
 
-function calculateInvoiceDistance (invoice, origin) {
-  if (!origin || !invoice.client?.address) return 0
-
-  const clientAddress = typeof invoice.client.address === 'string' 
-    ? JSON.parse(invoice.client.address) 
-    : invoice.client.address
-
-  const clientLat = clientAddress?.latitude
-  const clientLng = clientAddress?.longitude
-
-  if (!clientLat || !clientLng) return 0
-
-  // Fórmula de Haversine
-  const R = 6371 // Radio de la Tierra en km
-  const dLat = (clientLat - origin.lat) * Math.PI / 180
-  const dLng = (clientLng - origin.lng) * Math.PI / 180
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(origin.lat * Math.PI / 180) * Math.cos(clientLat * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
+function selectStatus (value) {
+  statusFilter.value = value
+  showFilterDialog.value = false
+  fetchMyRouteOrders()
 }
 
-async function acceptInvoice (invoice) {
-  // Check if already has active run
-  await checkActiveRun()
-  if (hasActiveRun.value) {
-    $q.notify({
-      type: 'warning',
-      message: 'Ya tienes una entrega activa. Complétala antes de aceptar otra orden.',
-      position: 'top'
-    })
-    return
-  }
+function selectOrder (item) {
+  selectedOrder.value = item
+  showOrderDialog.value = true
+}
 
-  acceptingId.value = invoice.id
+async function acceptOrder () {
+  accepting.value = true
   try {
-    // Asignar el repartidor a la orden
     const user = JSON.parse(localStorage.getItem('user'))
-    await api.put(`/invoices/${invoice.id}`, {
+    await api.put(`/invoices/${selectedOrder.value.order.id}`, {
       delivery_person_id: user.id
     })
 
-    acceptedInvoice.value = invoice
-    showAcceptedDialog.value = true
+    $q.notify({
+      type: 'positive',
+      message: 'Orden aceptada',
+      position: 'top'
+    })
 
-    // Remove from available list
-    availableInvoices.value = availableInvoices.value.filter(inv => inv.id !== invoice.id)
+    showOrderDialog.value = false
+    await fetchMyRouteOrders()
   } catch (error) {
-    console.error('Error accepting invoice:', error)
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Error al aceptar orden',
+      message: 'Error al aceptar orden',
       position: 'top'
     })
   } finally {
-    acceptingId.value = null
+    accepting.value = false
   }
-}
-
-
-async function closeAcceptedDialog () {
-  showAcceptedDialog.value = false
-  // Recargar inmediatamente al cerrar
-  await fetchInvoices()
-}
-
-async function onDialogHide () {
-  console.log('Dialog hide event triggered')
-  // Recargar órdenes para mostrar la aceptada en la sección correcta
-  await fetchInvoices()
 }
 
 async function startDelivery () {
-  startingDelivery.value = true
+  starting.value = true
   try {
-    // Create delivery run with this invoice
     const response = await api.post('/invoice-delivery-runs/start', {
-      invoice_ids: [acceptedInvoice.value.id]
+      invoice_ids: [selectedOrder.value.order.id]
     })
-
-    const deliveryRun = response.data.delivery_run
 
     $q.notify({
       type: 'positive',
@@ -497,180 +348,591 @@ async function startDelivery () {
       position: 'top'
     })
 
-    // Close dialog
-    showAcceptedDialog.value = false
-
-    // Navigate to active delivery page
     router.push({
       name: 'ActiveTransport',
-      params: { id: deliveryRun.id }
+      params: { id: response.data.delivery_run.id }
     })
   } catch (error) {
-    console.error('Error starting delivery:', error)
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Error al iniciar entrega',
+      message: 'Error al iniciar entrega',
       position: 'top'
     })
   } finally {
-    startingDelivery.value = false
+    starting.value = false
   }
 }
 
-async function startDeliveryDirectly (invoice) {
-  startingDelivery.value = true
+async function showRouteMap () {
+  mapTitle.value = 'Ruta Asignada - Todos los Clientes'
+  showMapDialog.value = true
+  await initMap('route')
+}
+
+async function showOrdersMap () {
+  mapTitle.value = 'Ruta de Órdenes - Secuencia de Entregas'
+  showMapDialog.value = true
+  await initMap('orders')
+}
+
+async function initMap (type) {
   try {
-    // Create delivery run with this invoice
-    const response = await api.post('/invoice-delivery-runs/start', {
-      invoice_ids: [invoice.id]
+    await loadGoogleMaps()
+
+    // Wait for dialog to render
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    const mapElement = document.getElementById('uber-map')
+    if (!mapElement) return
+
+    map.value = new google.maps.Map(mapElement, {
+      zoom: 13,
+      center: { lat: 0, lng: 0 },
+      styles: getUberMapStyles(),
+      disableDefaultUI: true,
+      zoomControl: true,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true
     })
 
-    const deliveryRun = response.data.delivery_run
-
-    $q.notify({
-      type: 'positive',
-      message: 'Entrega iniciada',
-      position: 'top'
-    })
-
-    // Navigate to active delivery page
-    router.push({
-      name: 'ActiveTransport',
-      params: { id: deliveryRun.id }
-    })
+    if (type === 'route') {
+      await renderRouteMap()
+    } else {
+      await renderOrdersMap()
+    }
   } catch (error) {
-    console.error('Error starting delivery:', error)
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Error al iniciar entrega',
-      position: 'top'
-    })
-  } finally {
-    startingDelivery.value = false
+    console.error('Error initializing map:', error)
   }
 }
 
+async function renderRouteMap () {
+  if (!route.value || !route.value.routeClients) return
 
-function isSelected (invoiceId) {
-  return selectedInvoices.value.some(inv => inv.id === invoiceId)
-}
+  const bounds = new google.maps.LatLngBounds()
 
-function toggleSelection (invoice) {
-  const index = selectedInvoices.value.findIndex(inv => inv.id === invoice.id)
-  if (index > -1) {
-    selectedInvoices.value.splice(index, 1)
-  } else {
-    selectedInvoices.value.push(invoice)
-  }
-}
+  // Origin marker
+  if (route.value.originBranch) {
+    const origin = route.value.originBranch
+    const originLat = origin.address?.latitude || origin.latitude
+    const originLng = origin.address?.longitude || origin.longitude
 
-async function startMultipleDeliveries () {
-  if (selectedInvoices.value.length === 0) {
-    $q.notify({
-      type: 'warning',
-      message: 'Selecciona al menos una orden',
-      position: 'top'
-    })
-    return
-  }
-
-  optimizingRoute.value = true
-
-  try {
-    // Optimizar ruta usando Google Maps
-    const optimizedOrder = await optimizeRoute(selectedInvoices.value)
-
-    // Crear delivery run con las órdenes en orden óptimo
-    const response = await api.post('/invoice-delivery-runs/start', {
-      invoice_ids: optimizedOrder.map(inv => inv.id)
-    })
-
-    const deliveryRun = response.data.delivery_run
-
-    $q.notify({
-      type: 'positive',
-      message: `Ruta optimizada: ${optimizedOrder.length} entregas. Ahorro estimado: ${optimizedOrder.savings || 0} min`,
-      position: 'top',
-      timeout: 3000
-    })
-
-    // Navigate to active delivery page
-    router.push({
-      name: 'ActiveTransport',
-      params: { id: deliveryRun.id }
-    })
-  } catch (error) {
-    console.error('Error starting multiple deliveries:', error)
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Error al iniciar entregas',
-      position: 'top'
-    })
-  } finally {
-    optimizingRoute.value = false
-  }
-}
-
-async function optimizeRoute (invoices) {
-  // Implementar algoritmo de optimización de ruta
-  // Usaremos el problema del viajante (TSP) simplificado
-  
-  if (invoices.length <= 1) {
-    return invoices
-  }
-
-  try {
-    // Llamar al backend para optimizar con Google Maps Distance Matrix
-    const response = await api.post('/invoice-delivery-runs/optimize-route', {
-      invoices: invoices.map(inv => {
-        const clientAddress = typeof inv.client.address === 'string' 
-          ? JSON.parse(inv.client.address) 
-          : inv.client.address
-        
-        return {
-          id: inv.id,
-          client_location: {
-            lat: clientAddress?.latitude,
-            lng: clientAddress?.longitude
-          }
-        }
+    if (originLat && originLng) {
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+        map: map.value,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 14,
+          fillColor: '#000000',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 3
+        },
+        label: {
+          text: 'O',
+          color: 'white',
+          fontSize: '14px',
+          fontWeight: 'bold'
+        },
+        title: origin.name
       })
-    })
-
-    return response.data.optimized_invoices
-  } catch (error) {
-    console.error('Error optimizing route:', error)
-    // Si falla, retornar orden original
-    return invoices
-  }
-}
-
-function getFormattedAddress (address) {
-  if (!address) return 'Dirección no disponible'
-
-  // Si es un objeto JSON
-  if (typeof address === 'object') {
-    return address.formattedAddress || address.name || 'Dirección no disponible'
-  }
-
-  // Si es un string (datos antiguos)
-  if (typeof address === 'string') {
-    // Intentar parsear como JSON
-    try {
-      const parsed = JSON.parse(address)
-      return parsed.formattedAddress || parsed.name || address
-    } catch (e) {
-      // Si no es JSON válido, retornar el string directamente
-      return address
+      markers.value.push(marker)
+      bounds.extend(new google.maps.LatLng(originLat, originLng))
     }
   }
 
-  return 'Dirección no disponible'
+  // Client markers
+  route.value.routeClients.forEach((client, index) => {
+    const lat = client.latitude
+    const lng = client.longitude
+
+    if (lat && lng) {
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        map: map.value,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#000000',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2
+        },
+        label: {
+          text: (index + 1).toString(),
+          color: 'white',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        },
+        title: client.client?.name
+      })
+      markers.value.push(marker)
+      bounds.extend(new google.maps.LatLng(lat, lng))
+    }
+  })
+
+  if (markers.value.length > 0) {
+    map.value.fitBounds(bounds)
+  }
+
+  // Draw route
+  await drawRoute(route.value.routeClients)
+}
+
+async function renderOrdersMap () {
+  if (orders.value.length === 0) return
+
+  const bounds = new google.maps.LatLngBounds()
+
+  // Origin marker
+  if (route.value?.originBranch) {
+    const origin = route.value.originBranch
+    const originLat = origin.address?.latitude || origin.latitude
+    const originLng = origin.address?.longitude || origin.longitude
+
+    if (originLat && originLng) {
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+        map: map.value,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 14,
+          fillColor: '#000000',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 3
+        },
+        label: {
+          text: 'O',
+          color: 'white',
+          fontSize: '14px',
+          fontWeight: 'bold'
+        },
+        title: origin.name
+      })
+      markers.value.push(marker)
+      bounds.extend(new google.maps.LatLng(originLat, originLng))
+    }
+  }
+
+  // Order markers
+  orders.value.forEach((item, index) => {
+    const lat = item.latitude
+    const lng = item.longitude
+
+    if (lat && lng) {
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        map: map.value,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#000000',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2
+        },
+        label: {
+          text: (index + 1).toString(),
+          color: 'white',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        },
+        title: `#${item.order.code} - ${item.client_name}`
+      })
+      markers.value.push(marker)
+      bounds.extend(new google.maps.LatLng(lat, lng))
+    }
+  })
+
+  if (markers.value.length > 0) {
+    map.value.fitBounds(bounds)
+  }
+
+  // Draw route for orders
+  const ordersWithCoords = orders.value.filter(item => item.latitude && item.longitude)
+  await drawRoute(ordersWithCoords)
+}
+
+async function drawRoute (stops) {
+  if (!route.value?.originBranch || stops.length === 0) return
+
+  const directionsService = new google.maps.DirectionsService()
+  const origin = route.value.originBranch
+  let prevLat = origin.address?.latitude || origin.latitude
+  let prevLng = origin.address?.longitude || origin.longitude
+
+  for (let i = 0; i < stops.length; i++) {
+    const stop = stops[i]
+    const stopLat = stop.latitude
+    const stopLng = stop.longitude
+
+    if (!stopLat || !stopLng) continue
+
+    try {
+      const result = await directionsService.route({
+        origin: { lat: parseFloat(prevLat), lng: parseFloat(prevLng) },
+        destination: { lat: parseFloat(stopLat), lng: parseFloat(stopLng) },
+        travelMode: google.maps.TravelMode.DRIVING
+      })
+
+      const renderer = new google.maps.DirectionsRenderer({
+        map: map.value,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: '#000000',
+          strokeWeight: 4,
+          strokeOpacity: 0.8
+        },
+        preserveViewport: true
+      })
+
+      renderer.setDirections(result)
+      routePaths.value.push(renderer)
+
+      prevLat = stopLat
+      prevLng = stopLng
+    } catch (error) {
+      console.error('Error drawing route segment:', error)
+    }
+  }
+}
+
+function getUberMapStyles () {
+  return [
+    {
+      featureType: 'all',
+      elementType: 'geometry',
+      stylers: [{ color: '#f5f5f5' }]
+    },
+    {
+      featureType: 'water',
+      elementType: 'geometry',
+      stylers: [{ color: '#c9e9f6' }]
+    },
+    {
+      featureType: 'road',
+      elementType: 'geometry',
+      stylers: [{ color: '#ffffff' }]
+    },
+    {
+      featureType: 'poi',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }]
+    }
+  ]
+}
+
+function getStatusColor (status) {
+  const colors = {
+    finished: 'positive',
+    on_process: 'warning',
+    pending: 'info',
+    cancelled: 'negative'
+  }
+  return colors[status] || 'grey'
+}
+
+function getStatusLabel (status) {
+  const labels = {
+    finished: 'Finalizada',
+    on_process: 'En Proceso',
+    pending: 'Pendiente',
+    cancelled: 'Cancelada'
+  }
+  return labels[status] || status
 }
 </script>
 
 <style scoped>
-.bg-dark {
-  background-color: #1a1a1a;
+.courier-page {
+  background: #f7f7f7;
+  min-height: 100vh;
+}
+
+/* Header Estilo Uber */
+.uber-header {
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.action-btn {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.primary-btn {
+  background: #000 !important;
+  color: white !important;
+}
+
+.secondary-btn {
+  background: white !important;
+  color: #000 !important;
+  border: 1px solid #e0e0e0;
+}
+
+/* Loading */
+.loading-container {
+  padding: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.order-skeleton {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+/* Orders Container */
+.orders-container {
+  padding: 0 16px 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Order Card Estilo Uber */
+.order-card-uber {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #e0e0e0;
+}
+
+.order-card-uber:active {
+  transform: scale(0.98);
+  background: #f9f9f9;
+}
+
+.stop-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #000;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.order-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.order-code {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+}
+
+.order-total {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+}
+
+.order-client,
+.order-products {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.status-badge-uber {
+  margin-top: 8px;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.chevron-icon {
+  color: #999;
+  flex-shrink: 0;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  text-align: center;
+}
+
+.empty-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  margin-top: 16px;
+}
+
+.empty-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-top: 8px;
+  max-width: 300px;
+}
+
+/* Filter Card */
+.filter-card {
+  min-width: 300px;
+  border-radius: 16px;
+}
+
+/* Order Details Card */
+.order-details-card {
+  border-radius: 16px 16px 0 0;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.order-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 16px;
+  color: #000;
+  font-weight: 500;
+}
+
+.total-value {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.products-list {
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.action-btn-large {
+  height: 56px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Map */
+.map-card {
+  background: white;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px;
+}
+
+.map-container-section {
+  padding: 0;
+  height: calc(100vh - 80px);
+}
+
+.uber-map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
 }
 </style>
