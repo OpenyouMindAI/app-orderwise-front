@@ -101,10 +101,21 @@ const getUser = async () => {
       }
     })
 
-    console.log(data?.roles, data?.roles?.length)
+    // Update the store with the new token BEFORE making the request
+    // This allows the axios interceptor to use the correct token
+    store.access_token = accessToken
+    store.token_type = tokenType
+    store.expires_In = route.params.expires_in
+
+    // Update axios headers manually
+    api.defaults.headers.common.authorization = `${tokenType} ${accessToken}`
+
+    // Make the request - it will now use the correct token
+    const { data } = await api.post('session/get-token', {})
 
     data.roles = data?.roles?.length > 0 ? data?.roles : [data.role]
 
+    // Update the complete store with user information
     store.setSessionData({
       ...route.params,
       user: data
@@ -113,8 +124,7 @@ const getUser = async () => {
   } catch (err) {
     console.log(err)
     error.value = true
-    notify(err.message, 'negative', 'warning')
+    notify(err?.response?.data?.message || err.message, 'negative', 'warning')
   }
 }
-
 </script>
