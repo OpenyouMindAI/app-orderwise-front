@@ -42,27 +42,6 @@
         </div>
       </div>
 
-      <!-- Filters Bar -->
-      <div class="filters-bar">
-        <q-select
-          v-model="statusFilter"
-          :options="statusOptions"
-          option-value="value"
-          option-label="label"
-          emit-value
-          map-options
-          dense
-          outlined
-          label="Filtrar por estatus"
-          class="status-filter"
-          @update:model-value="fetchPredefinedRoutes"
-        >
-          <template v-slot:prepend>
-            <q-icon name="filter_list" />
-          </template>
-        </q-select>
-      </div>
-
       <!-- Compact List -->
       <div v-if="sortedInvoices.length > 0" class="orders-list">
         <div
@@ -184,6 +163,28 @@
       </div>
     </div>
 
+    <!-- Status Tabs - Fixed Bottom -->
+    <div class="status-tabs-container-bottom">
+      <q-tabs
+        v-model="statusFilter"
+        dense
+        no-caps
+        active-color="primary"
+        indicator-color="primary"
+        align="justify"
+        class="status-tabs"
+        @update:model-value="fetchPredefinedRoutes"
+      >
+        <q-tab
+          v-for="option in statusOptions"
+          :key="option.value"
+          :name="option.value"
+          :label="option.label"
+          class="status-tab"
+        />
+      </q-tabs>
+    </div>
+
     <!-- Map Dialog - Uber Style -->
     <q-dialog
       v-model="showMapDialog"
@@ -293,7 +294,7 @@ const hasActiveRun = ref(false)
 const currentLocation = ref(null)
 
 /** @type {import('vue').Ref<string>} Current status filter for orders list */
-const statusFilter = ref('finished')
+const statusFilter = ref('all')
 
 /** @type {import('vue').Ref<boolean>} Controls map dialog visibility */
 const showMapDialog = ref(false)
@@ -302,7 +303,7 @@ const showMapDialog = ref(false)
 const mapViewMode = ref('complete')
 
 /** @type {import('vue').Ref<string>} Status filter for orders map view */
-const mapStatusFilter = ref('finished')
+const mapStatusFilter = ref('all')
 
 /** @type {import('vue').Ref<Object|null>} Google Maps instance */
 const map = ref(null)
@@ -322,10 +323,10 @@ const userSession = store.userSession
 
 /** @type {Array<Object>} Available status filter options */
 const statusOptions = [
-  { label: 'Solo Finalizadas', value: 'finished' },
+  { label: 'Todas', value: 'all' },
+  { label: 'Finalizadas', value: 'finished' },
   { label: 'En Proceso', value: 'on_process' },
-  { label: 'Pendientes', value: 'pending' },
-  { label: 'Todas', value: 'all' }
+  { label: 'Pendientes', value: 'pending' }
 ]
 
 // Lifecycle hook - check for active delivery run on mount
@@ -1181,20 +1182,77 @@ watch(mapStatusFilter, () => {
   border-radius: 6px;
 }
 
-/* Filters Bar */
-.filters-bar {
+/* Status Tabs - Fixed Bottom */
+.status-tabs-container-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: white;
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.status-filter {
-  max-width: 300px;
+.status-tabs {
+  background: white;
+}
+
+.status-tabs :deep(.q-tab) {
+  min-height: 56px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.status-tabs :deep(.q-tab--active) {
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.status-tabs :deep(.q-tab__indicator) {
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  top: 0;
+  bottom: auto;
+}
+
+/* Add padding to page container to prevent content from being hidden behind tabs */
+.page-container {
+  padding-bottom: 56px;
 }
 
 /* Map Dialog - Fullscreen without padding */
+.map-dialog-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+.map-dialog-fullscreen :deep(.q-dialog__backdrop) {
+  background: rgba(0, 0, 0, 0) !important;
+}
+
 .map-dialog-fullscreen :deep(.q-dialog__inner) {
   padding: 0 !important;
+  margin: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+}
+
+.map-dialog-fullscreen :deep(.q-dialog__inner--minimized) {
+  padding: 0 !important;
+}
+
+.map-dialog-fullscreen :deep(.q-dialog__inner--maximized) {
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
 }
 
 .map-dialog-card {
@@ -1204,6 +1262,8 @@ watch(mapStatusFilter, () => {
   max-height: 100vh !important;
   margin: 0 !important;
   border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
 }
 
 .map-card-section {
@@ -1211,6 +1271,7 @@ watch(mapStatusFilter, () => {
   height: 100vh;
   position: relative;
   padding: 0 !important;
+  overflow: hidden;
 }
 
 /* Close Button - Floating (Minimalist) */
@@ -1347,8 +1408,12 @@ watch(mapStatusFilter, () => {
 
 .route-map {
   width: 100%;
-  height: 100%;
-  position: relative;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /* Ensure Google Maps controls are visible */
