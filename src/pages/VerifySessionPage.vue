@@ -101,17 +101,9 @@ const getUser = async () => {
       }
     })
 
-    // Update the store with the new token BEFORE making the request
-    // This allows the axios interceptor to use the correct token
-    store.access_token = accessToken
-    store.token_type = tokenType
+    store.access_token = route.params.access_token
+    store.token_type = route.params.token_type
     store.expires_In = route.params.expires_in
-
-    // Update axios headers manually
-    api.defaults.headers.common.authorization = `${tokenType} ${accessToken}`
-
-    // Make the request - it will now use the correct token
-    const { data } = await api.post('session/get-token', {})
 
     data.roles = data?.roles?.length > 0 ? data?.roles : [data.role]
 

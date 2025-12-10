@@ -251,6 +251,18 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/ActiveInvoiceDeliveryPage.vue')
       },
+      {
+        path: 'delivery/monitor',
+        name: 'AdminDeliveryMonitor',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AdminDeliveryMonitorPage.vue')
+      },
+      {
+        path: 'delivery/history',
+        name: 'DeliveryRunHistory',
+        meta: { requiresAuth: true },
+        component: () => import('pages/DeliveryRunHistoryPage.vue')
+      },
       // Delivery Route Management System
       {
         path: 'delivery-routes',
