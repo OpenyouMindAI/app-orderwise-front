@@ -72,7 +72,7 @@
 
         <q-separator />
 
-        <q-tab-panels v-model="activeTab" animated style="height: calc(100vh - 65px); overflow-y: auto;">
+        <q-tab-panels v-model="activeTab" animated style="height: calc(100vh - 105px); overflow-y: auto;">
 
           <!-- Live Monitoring Tab -->
           <q-tab-panel name="live">
