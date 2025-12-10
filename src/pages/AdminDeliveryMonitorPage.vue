@@ -700,7 +700,7 @@ function updateMapMarkers () {
 function addCourierMarker (run) {
   // Get latest location from locations array
   const latestLocation = run.locations && run.locations.length > 0 ? run.locations[0] : null
-  
+
   let position = null
 
   if (latestLocation) {
@@ -715,7 +715,7 @@ function addCourierMarker (run) {
     const client = firstItem.invoice?.client
     const lat = client?.address?.latitude || client?.latitude
     const lng = client?.address?.longitude || client?.longitude
-    
+
     if (lat && lng) {
       position = {
         lat: parseFloat(lat),
@@ -763,7 +763,7 @@ function addCourierMarker (run) {
 
   // Obtener dirección usando Geocoding API
   const geocoder = new google.maps.Geocoder()
-  
+
   geocoder.geocode({ location: position }, (results, status) => {
     if (status === 'OK' && results[0]) {
       const address = results[0].formatted_address
@@ -1305,7 +1305,7 @@ async function drawRoute (run) {
  */
 function clearRunMarkers (runId) {
   console.log('🧹 Clearing markers for run:', runId)
-  
+
   // Clear courier marker
   const courierMarker = courierMarkers.value.get(runId)
   if (courierMarker) {
@@ -1582,13 +1582,13 @@ function initializeWebSocket () {
         console.log('📦 Delivery run status updated:', event)
         const runId = event.delivery_run?.id
         const newStatus = event.new_status || event.delivery_run?.status
-        
+
         // Si el status cambió a completed, limpiar marcadores y remover de activos
         if (newStatus === 'completed' && runId) {
           console.log('✅ Run completed via status update, cleaning up')
           clearRunMarkers(runId)
           activeRuns.value = activeRuns.value.filter(run => run.id !== runId)
-          
+
           if (selectedRun.value?.id === runId) {
             selectedRun.value = null
             resetAllMarkerStyles()
@@ -1619,10 +1619,10 @@ function initializeWebSocket () {
         console.log('✅ Delivery run completed:', event)
         // Remove completed run from active runs
         const completedRunId = event.delivery_run?.id
-        
+
         // Limpiar marcadores y rutas del run completado ANTES de removerlo
         clearRunMarkers(completedRunId)
-        
+
         // Remover de la lista de activos
         activeRuns.value = activeRuns.value.filter(run => run.id !== completedRunId)
 
