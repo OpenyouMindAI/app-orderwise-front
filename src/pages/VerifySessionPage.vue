@@ -93,16 +93,19 @@ const retry = async () => {
  */
 const getUser = async () => {
   try {
-    const { data } = await api.post('session/get-token', {}, {
+    console.log(route.query)
+    const { data } = await api.post('session/get-token', {
+      business_type_id: route.query.business_type_id
+    }, {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        authorization: `${route.params.token_type} ${route.params.access_token}`
+        authorization: `${route.params.token_type || 'Bearer'} ${route.params.access_token}`
       }
     })
 
     store.access_token = route.params.access_token
-    store.token_type = route.params.token_type
+    store.token_type = route.params.token_type || 'Bearer'
     store.expires_In = route.params.expires_in
 
     data.roles = data?.roles?.length > 0 ? data?.roles : [data.role]
