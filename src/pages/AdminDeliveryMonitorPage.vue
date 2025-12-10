@@ -1,6 +1,6 @@
 <template>
   <q-page>
-    <div class="row no-wrap" style="height: 100vh;">
+    <div class="row no-wrap" style="height: calc(100vh - 70px);">
       <!-- Map Section -->
       <div class="col" style="position: relative;">
         <!-- Map Container -->
@@ -57,7 +57,7 @@
       </div>
 
       <!-- Side Panel with Tabs -->
-      <div class="col-4" style="height: 100vh; border-left: 1px solid;" :class="$q.dark.isActive ? 'border-dark' : 'border'">
+      <div class="col-4" style="height: calc(100vh - 70px); border-left: 1px solid;" :class="$q.dark.isActive ? 'border-dark' : 'border'">
         <q-tabs
           v-model="activeTab"
           dense
