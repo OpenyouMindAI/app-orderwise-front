@@ -227,6 +227,19 @@
               </q-btn>
 
               <q-btn
+                  style="border-radius: 10px; padding: 5px 15px; margin-top: 4px;"
+                  dense
+                  :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                  :color="isUserBoxOpen ? 'negative' : 'primary'"
+                  :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+                  @click="handleCashBoxButtonClick"
+                >
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+                  </q-tooltip>
+                </q-btn>
+
+              <q-btn
                 id="tour-btn-cashflow"
                 icon="payments"
                 color="info"
