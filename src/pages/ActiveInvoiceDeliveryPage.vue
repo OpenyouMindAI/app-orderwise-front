@@ -36,8 +36,60 @@
       </q-card>
     </div>
 
+    <!-- Finish Route Button (when all delivered) -->
+    <div v-if="allOrdersDelivered" class="absolute-bottom q-ma-xs" style="z-index: 1001; pointer-events: none;">
+      <q-card dark class="bg-grey-9" style="border-radius: 12px; box-shadow: 0 -2px 8px rgba(0,0,0,0.4); pointer-events: auto; background: rgba(33, 33, 33, 0.95);">
+        <q-card-section class="q-pa-md">
+          <!-- Success Header -->
+          <div class="row items-center q-mb-sm">
+            <q-icon name="check_circle" color="positive" size="28px" class="q-mr-sm" />
+            <div class="col">
+              <div class="text-body1 text-weight-bold">¡Entregas Completadas!</div>
+              <div class="text-caption text-grey-5">Regresa a la sucursal</div>
+            </div>
+          </div>
+
+          <!-- Destination Info -->
+          <div class="q-mb-md q-pa-sm" style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 3px solid #10b981;">
+            <div class="row items-center">
+              <q-icon name="store" color="positive" size="20px" class="q-mr-sm" />
+              <div class="col">
+                <div class="text-caption text-grey-5" style="font-size: 10px;">DESTINO FINAL - SUCURSAL</div>
+                <div class="text-body2 text-weight-bold" style="font-size: 15px;">
+                  {{ originBranch?.name || deliveryRun?.branch_office?.name || 'Sucursal de Origen' }}
+                </div>
+                <div v-if="originBranch" class="text-caption text-grey-5" style="font-size: 10px; margin-top: 2px;">
+                  📍 Punto de retorno
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Distance Info -->
+          <div class="row items-center justify-center q-mb-sm q-pa-xs" style="background: rgba(255,255,255,0.05); border-radius: 6px;">
+            <q-icon :name="isNearOrigin ? 'location_on' : 'navigation'" :color="isNearOrigin ? 'positive' : 'grey-5'" size="18px" class="q-mr-xs" />
+            <div class="text-body2" :class="isNearOrigin ? 'text-positive' : 'text-grey-5'">
+              {{ isNearOrigin ? '¡Has llegado al origen!' : (distanceToOrigin ? `A ${(distanceToOrigin / 1000).toFixed(1)} km del origen` : 'Calculando distancia...') }}
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <q-btn
+            unelevated
+            no-caps
+            label="Finalizar Recorrido"
+            :color="isNearOrigin ? 'positive' : 'primary'"
+            icon="flag"
+            class="full-width"
+            style="border-radius: 8px; font-weight: bold; height: 50px; font-size: 15px;"
+            @click="attemptFinishRoute"
+          />
+        </q-card-section>
+      </q-card>
+    </div>
+
     <!-- Bottom Delivery Card - Compacto -->
-    <div class="absolute-bottom q-ma-xs" style="z-index: 1001; pointer-events: none;">
+    <div v-else class="absolute-bottom q-ma-xs" style="z-index: 1001; pointer-events: none;">
       <q-card dark class="bg-grey-9" style="border-radius: 12px 12px 0 0; box-shadow: 0 -2px 8px rgba(0,0,0,0.4); pointer-events: auto; background: rgba(33, 33, 33, 0.95);">
         <!-- Header Colapsable -->
         <div class="q-pa-sm" style="cursor: pointer;" @click="showDetails = !showDetails">
@@ -239,101 +291,310 @@ const router = useRouter()
 const $q = useQuasar()
 
 // Map and UI refs
+/**
+ * Reference to the map container DOM element
+ * @type {Ref<HTMLElement|null>}
+ */
 const mapContainer = ref(null)
+
+/**
+ * Google Maps instance
+ * @type {Ref<google.maps.Map|null>}
+ */
 const map = ref(null)
-const showOptions = ref(false)
-const showDetails = ref(false) // Colapsado por defecto para no tapar el mapa
+
+/**
+ * Controls visibility of delivery details card (collapsed by default to not cover map)
+ * @type {Ref<boolean>}
+ */
+const showDetails = ref(false)
+
+/**
+ * Indicates if a delivery is being marked as delivered
+ * @type {Ref<boolean>}
+ */
 const marking = ref(false)
+
+/**
+ * Indicates if courier has arrived at current delivery location
+ * @type {Ref<boolean>}
+ */
 const arrived = ref(false)
 
 // Payment refs
+/**
+ * Controls visibility of payment registration dialog
+ * @type {Ref<boolean>}
+ */
 const showPaymentDialog = ref(false)
+
+/**
+ * Payment data object
+ * @type {Ref<{amount: number|null, payment_method_id: number|null, photo: File|null, photoPreview: string|null}>}
+ */
 const payment = ref({
   amount: null,
   payment_method_id: null,
   photo: null,
   photoPreview: null
 })
+
+/**
+ * Reference to photo input element
+ * @type {Ref<HTMLInputElement|null>}
+ */
 const photoInput = ref(null)
+
+/**
+ * Indicates if payment is being saved
+ * @type {Ref<boolean>}
+ */
 const savingPayment = ref(false)
+
+/**
+ * Available payment methods from backend
+ * @type {Ref<Array<{label: string, value: number}>>}
+ */
 const paymentMethods = ref([])
-const pauseUpdates = ref(false) // Pausar actualizaciones durante registro de pagos
+
+/**
+ * Pauses location and route updates during payment registration
+ * @type {Ref<boolean>}
+ */
+const pauseUpdates = ref(false)
 
 // Delivery data
+/**
+ * Current delivery run object from backend
+ * @type {Ref<Object|null>}
+ */
 const deliveryRun = ref(null)
-const allDeliveries = ref([]) // All deliveries in order
+
+/**
+ * All deliveries in the run, ordered by stop_order
+ * @type {Ref<Array<Object>>}
+ */
+const allDeliveries = ref([])
+
+/**
+ * Index of current active delivery
+ * @type {Ref<number>}
+ */
 const currentDeliveryIndex = ref(0)
-const invoice = ref(null) // Current delivery
+
+/**
+ * Current delivery invoice object
+ * @type {Ref<Object|null>}
+ */
+const invoice = ref(null)
 
 // Location tracking
+/**
+ * Courier's current GPS position
+ * @type {Ref<{lat: number, lng: number}|null>}
+ */
 const currentPosition = ref(null)
+
+/**
+ * Geolocation watch ID for tracking
+ * @type {Ref<number|null>}
+ */
 const watchId = ref(null)
+
+/**
+ * Interval ID for sending location updates to server
+ * @type {Ref<number|null>}
+ */
 const locationUpdateInterval = ref(null)
-const LOCATION_UPDATE_FREQUENCY = 10000 // 10 seconds
+
+/**
+ * Frequency for sending location updates (10 seconds)
+ * @type {number}
+ */
+const LOCATION_UPDATE_FREQUENCY = 10000
 
 // Map elements
+/**
+ * Marker showing courier's current location
+ * @type {Ref<google.maps.Marker|null>}
+ */
 const courierMarker = ref(null)
+
+/**
+ * Array of markers for delivery locations
+ * @type {Ref<Array<google.maps.Marker>>}
+ */
 const deliveryMarkers = ref([])
-const completedPolylines = ref([]) // Red - completed routes
-const currentPolyline = ref(null) // Blue - current route
-const futurePolylines = ref([]) // Gray - future routes
+
+/**
+ * Polylines for completed routes (red color)
+ * @type {Ref<Array<google.maps.DirectionsRenderer>>}
+ */
+const completedPolylines = ref([])
+
+/**
+ * Polyline for current active route (blue color)
+ * @type {Ref<google.maps.DirectionsRenderer|null>}
+ */
+const currentPolyline = ref(null)
+
+/**
+ * Polylines for future pending routes (gray color)
+ * @type {Ref<Array<google.maps.DirectionsRenderer>>}
+ */
+const futurePolylines = ref([])
 
 // Route data
+/**
+ * Google Maps Directions Service instance
+ * @type {Ref<google.maps.DirectionsService|null>}
+ */
 const directionsService = ref(null)
 
+// Return to origin tracking
+/**
+ * Indicates if all deliveries have been completed
+ * @type {Ref<boolean>}
+ */
+const allOrdersDelivered = ref(false)
+
+/**
+ * Indicates if courier is within radius of origin branch
+ * @type {Ref<boolean>}
+ */
+const isNearOrigin = ref(false)
+
+/**
+ * Distance in meters from courier to origin branch
+ * @type {Ref<number|null>}
+ */
+const distanceToOrigin = ref(null)
+
+/**
+ * Origin branch office data (coordinates and name)
+ * @type {Ref<{lat: number, lng: number, name: string}|null>}
+ */
+const originBranch = ref(null)
+
+/**
+ * Polyline showing return route to origin
+ * @type {Ref<google.maps.DirectionsRenderer|null>}
+ */
+const returnPolyline = ref(null)
+
+/**
+ * Marker showing origin branch location
+ * @type {Ref<google.maps.Marker|null>}
+ */
+const originMarker = ref(null)
+
+/**
+ * Radius in meters to consider courier "near" origin (500 meters)
+ * @type {number}
+ */
+const ORIGIN_RADIUS = 500
+
 // Computed properties
+/**
+ * Total number of deliveries in the run
+ * @type {ComputedRef<number>}
+ */
 const totalDeliveries = computed(() => allDeliveries.value.length)
+
+/**
+ * Count of deliveries with 'delivered' status
+ * @type {ComputedRef<number>}
+ */
 const deliveredCount = computed(() => allDeliveries.value.filter(d => d.delivery_status === 'delivered').length)
+
+/**
+ * Overall progress as decimal (0 to 1)
+ * @type {ComputedRef<number>}
+ */
 const overallProgress = computed(() => totalDeliveries.value > 0 ? deliveredCount.value / totalDeliveries.value : 0)
 
+/**
+ * Current delivery client name
+ * @type {ComputedRef<string>}
+ */
 const currentClient = computed(() => invoice.value?.client?.name || 'Cliente')
+
+/**
+ * Current delivery address formatted string
+ * @type {ComputedRef<string>}
+ */
 const currentAddress = computed(() => {
   const addr = invoice.value?.client?.address
   if (!addr) return 'Dirección no disponible'
   return addr.formattedAddress || addr.street || addr.name || 'Dirección no disponible'
 })
 
+/**
+ * List of upcoming pending deliveries
+ * @type {ComputedRef<Array<Object>>}
+ */
 const nextDeliveries = computed(() => {
   return allDeliveries.value.slice(currentDeliveryIndex.value + 1)
     .filter(d => d.delivery_status === 'pending')
 })
 
 // Current route metrics
+/**
+ * Estimated time for current route in minutes
+ * @type {ComputedRef<number|string>}
+ */
 const currentRouteTime = computed(() => {
   const delivery = allDeliveries.value[currentDeliveryIndex.value]
   return delivery?.estimated_time || '-'
 })
 
+/**
+ * Distance for current route in kilometers
+ * @type {ComputedRef<string>}
+ */
 const currentRouteDistance = computed(() => {
   const delivery = allDeliveries.value[currentDeliveryIndex.value]
   return delivery?.distance ? delivery.distance.toFixed(1) : '-'
 })
 
-// Total remaining metrics
-const totalRemainingTime = computed(() => {
-  const remaining = allDeliveries.value.slice(currentDeliveryIndex.value)
-    .filter(d => d.delivery_status !== 'delivered')
-    .reduce((sum, d) => sum + (d.estimated_time || 0), 0)
-  return Math.ceil(remaining)
-})
-
-const totalRemainingDistance = computed(() => {
-  const remaining = allDeliveries.value.slice(currentDeliveryIndex.value)
-    .filter(d => d.delivery_status !== 'delivered')
-    .reduce((sum, d) => sum + (d.distance || 0), 0)
-  return remaining.toFixed(1)
-})
-
 // Payment computed properties
+/**
+ * Validates if payment form has required data
+ * @type {ComputedRef<boolean>}
+ */
 const isPaymentValid = computed(() => {
   return payment.value.amount > 0 && payment.value.payment_method_id
 })
 
 onMounted(async () => {
-  await loadDeliveryRun()
-  await initializeMap()
-  await startLocationTracking()
-  await loadPaymentMethods()
+  // Validate route params
+  if (!route.params.id) {
+    console.error('No delivery run ID provided')
+    $q.notify({
+      type: 'negative',
+      message: 'ID de recorrido no válido. Redirigiendo...',
+      position: 'top'
+    })
+    // Wait a bit before redirecting to avoid infinite loop
+    setTimeout(() => {
+      router.replace({ name: 'InvoiceDeliveryTray' })
+    }, 1000)
+    return
+  }
+
+  try {
+    await loadDeliveryRun()
+    await initializeMap()
+    await startLocationTracking()
+    await loadPaymentMethods()
+  } catch (error) {
+    console.error('Error initializing page:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar el recorrido',
+      position: 'top'
+    })
+  }
 })
 
 onUnmounted(() => {
@@ -347,6 +608,12 @@ watch(currentDeliveryIndex, async () => {
   }
 })
 
+/**
+ * Loads available payment methods from backend
+ * Sets first method as default selection
+ * @async
+ * @returns {Promise<void>}
+ */
 async function loadPaymentMethods () {
   try {
     const response = await api.get('/payment-methods')
@@ -363,6 +630,14 @@ async function loadPaymentMethods () {
   }
 }
 
+/**
+ * Loads delivery run data from backend
+ * Extracts origin branch information and delivery items
+ * Activates return-to-origin mode if all deliveries are completed
+ * @async
+ * @param {boolean} updateCurrentIndex - Whether to update current delivery index
+ * @returns {Promise<void>}
+ */
 async function loadDeliveryRun (updateCurrentIndex = true) {
   try {
     console.log('Loading delivery run:', route.params.id)
@@ -370,8 +645,26 @@ async function loadDeliveryRun (updateCurrentIndex = true) {
     deliveryRun.value = response.data.delivery_run
     allDeliveries.value = deliveryRun.value.items || []
 
-    console.log('Delivery run loaded:', deliveryRun.value)
-    console.log('All deliveries:', allDeliveries.value)
+    // Get origin branch information
+    console.log('Delivery route data:', deliveryRun.value)
+
+    // Try multiple paths to get branch
+    let branch = null
+    if (deliveryRun.value?.branch_office) {
+      branch = deliveryRun.value.branch_office
+    }
+
+    if (branch) {
+      originBranch.value = {
+        lat: parseFloat(branch?.address?.latitude),
+        lng: parseFloat(branch?.address?.longitude),
+        name: branch.name || branch.branch_name || 'Sucursal de Origen'
+      }
+      console.log('✅ Origin branch found:', originBranch.value)
+    } else {
+      console.error('❌ No origin branch found in delivery run data')
+      console.log('Available keys:', Object.keys(deliveryRun.value))
+    }
 
     // Only update current index if specified (not after marking as delivered)
     if (updateCurrentIndex) {
@@ -379,8 +672,6 @@ async function loadDeliveryRun (updateCurrentIndex = true) {
       const activeIndex = allDeliveries.value.findIndex(
         item => item.delivery_status === 'pending' || item.delivery_status === 'arrived'
       )
-
-      console.log('Active delivery index:', activeIndex)
 
       if (activeIndex !== -1) {
         currentDeliveryIndex.value = activeIndex
@@ -391,8 +682,71 @@ async function loadDeliveryRun (updateCurrentIndex = true) {
           arrived.value = true
         }
       } else {
-        $q.notify({ type: 'warning', message: 'No hay entregas pendientes', position: 'top' })
-        router.push({ name: 'InvoiceDeliveryTray' })
+        // No pending deliveries - check if all are delivered
+        const allDelivered = allDeliveries.value.every(
+          item => item.delivery_status === 'delivered'
+        )
+
+        if (allDelivered && allDeliveries.value.length > 0) {
+          // All deliveries completed - activate return to origin mode
+          console.log('All deliveries completed, activating return to origin mode')
+          allOrdersDelivered.value = true
+          currentDeliveryIndex.value = allDeliveries.value.length - 1
+          showDetails.value = false
+
+          $q.notify({
+            type: 'positive',
+            message: '¡Todas las entregas completadas! Regresa al origen para finalizar',
+            position: 'top',
+            timeout: 5000,
+            icon: 'check_circle'
+          })
+
+          // Draw return route and start tracking distance
+          if (map.value && originBranch.value) {
+            // Get current position if not available
+            if (!currentPosition.value) {
+              try {
+                const position = await new Promise((resolve, reject) => {
+                  navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                  })
+                })
+                currentPosition.value = {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                }
+              } catch (error) {
+                console.error('Error getting position:', error)
+              }
+            }
+
+            drawReturnToOriginRoute()
+
+            // Calculate initial distance
+            console.log('>>>>>', currentPosition.value)
+            if (currentPosition.value) {
+              const distance = calculateDistance(
+                currentPosition.value.lat,
+                currentPosition.value.lng,
+                originBranch.value.lat,
+                originBranch.value.lng
+              )
+              console.log({ distance, currentPosition, originBranch })
+              distanceToOrigin.value = distance
+              isNearOrigin.value = distance <= ORIGIN_RADIUS
+              console.log('Initial distance to origin:', distance, 'meters')
+            }
+          }
+        } else {
+          // No deliveries at all or error state
+          $q.notify({ type: 'warning', message: 'No hay entregas en este recorrido', position: 'top' })
+          setTimeout(() => {
+            router.push({ name: 'InvoiceDeliveryTray' })
+          }, 1500)
+        }
       }
     }
   } catch (error) {
@@ -717,6 +1071,23 @@ async function startLocationTracking () {
         lng: position.coords.longitude
       }
       updateCourierMarker()
+
+      // Calculate distance to origin if all orders delivered
+      if (allOrdersDelivered.value && originBranch.value) {
+        const distance = calculateDistance(
+          currentPosition.value.lat,
+          currentPosition.value.lng,
+          originBranch.value.lat,
+          originBranch.value.lng
+        )
+        distanceToOrigin.value = distance
+        isNearOrigin.value = distance <= ORIGIN_RADIUS
+
+        // Update courier marker position only (no need to redraw entire route)
+        if (courierMarker.value) {
+          courierMarker.value.setPosition(new google.maps.LatLng(currentPosition.value.lat, currentPosition.value.lng))
+        }
+      }
     },
     (error) => console.error('Error watching position:', error),
     {
@@ -728,7 +1099,7 @@ async function startLocationTracking () {
 
   // Send location to server every 10 seconds
   locationUpdateInterval.value = setInterval(async () => {
-    if (currentPosition.value) {
+    if (currentPosition.value && route.params.id) {
       try {
         await api.post(`/invoice-delivery-runs/${route.params.id}/update-location`, {
           latitude: currentPosition.value.lat,
@@ -763,7 +1134,7 @@ async function markDelivered () {
       deliveryRun.value = response.data.delivery_run
       allDeliveries.value = response.data.delivery_run.items || []
     }
-    
+
     arrived.value = true
 
     $q.notify({ type: 'positive', message: 'Entrega completada exitosamente', position: 'top' })
@@ -892,26 +1263,51 @@ async function continueToNext () {
 
   // Check if all deliveries are completed
   if (currentDeliveryIndex.value + 1 >= allDeliveries.value.length) {
-    // Es la última entrega - completar el delivery run
-    try {
-      await api.post(`/invoice-delivery-runs/${route.params.id}/complete`)
+    // Es la última entrega - activar modo retorno al origen
+    allOrdersDelivered.value = true
+    showDetails.value = false // Ocultar detalles de entrega
 
-      $q.notify({
-        type: 'positive',
-        message: '¡Todas las entregas completadas! Ruta finalizada.',
-        position: 'top',
-        timeout: 3000,
-        icon: 'celebration'
-      })
+    $q.notify({
+      type: 'positive',
+      message: '¡Todas las entregas completadas! Regresa al origen para finalizar',
+      position: 'top',
+      timeout: 5000,
+      icon: 'check_circle'
+    })
 
-      setTimeout(() => router.replace({ name: 'InvoiceDeliveryTray' }), 2000)
-    } catch (error) {
-      console.error('Error completing delivery run:', error)
-      $q.notify({
-        type: 'negative',
-        message: error.response?.data?.message || 'Error al finalizar ruta',
-        position: 'top'
-      })
+    // Get current position if not available
+    if (!currentPosition.value) {
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          })
+        })
+        currentPosition.value = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        }
+      } catch (error) {
+        console.error('Error getting position:', error)
+      }
+    }
+
+    // Mostrar ruta de regreso al origen
+    await drawReturnToOriginRoute()
+
+    // Calculate initial distance
+    if (currentPosition.value && originBranch.value) {
+      const distance = calculateDistance(
+        currentPosition.value.lat,
+        currentPosition.value.lng,
+        originBranch.value.lat,
+        originBranch.value.lng
+      )
+      distanceToOrigin.value = distance
+      isNearOrigin.value = distance <= ORIGIN_RADIUS
+      console.log('Initial distance to origin:', distance, 'meters')
     }
   } else {
     // Move to next delivery
@@ -921,6 +1317,246 @@ async function continueToNext () {
     drawAllRoutes()
     $q.notify({ type: 'info', message: 'Siguiente entrega', position: 'top' })
   }
+}
+
+async function drawReturnToOriginRoute () {
+  if (!currentPosition.value || !originBranch.value) {
+    console.error('No current position or origin branch')
+    console.log('Current position:', currentPosition.value)
+    console.log('Origin branch:', originBranch.value)
+    return
+  }
+
+  console.log('Drawing return route to origin:', originBranch.value)
+
+  try {
+    // Clear existing routes
+    clearRoutes()
+
+    // Draw route from current position to origin
+    const request = {
+      origin: new google.maps.LatLng(currentPosition.value.lat, currentPosition.value.lng),
+      destination: new google.maps.LatLng(originBranch.value.lat, originBranch.value.lng),
+      travelMode: google.maps.TravelMode.DRIVING
+    }
+
+    const result = await directionsService.value.route(request)
+    const renderer = new google.maps.DirectionsRenderer({
+      map: map.value,
+      directions: result,
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: '#10b981',
+        strokeWeight: 5,
+        strokeOpacity: 0.8
+      }
+    })
+
+    returnPolyline.value = renderer
+
+    // Remove old origin marker if exists
+    if (originMarker.value) {
+      originMarker.value.setMap(null)
+    }
+
+    // Add origin marker with VERY distinctive icon - DIFFERENT from delivery circles
+    originMarker.value = new google.maps.Marker({
+      position: { lat: originBranch.value.lat, lng: originBranch.value.lng },
+      map: map.value,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="70" height="90" viewBox="0 0 70 90">
+            <!-- Shadow -->
+            <ellipse cx="35" cy="85" rx="15" ry="3" fill="rgba(0,0,0,0.3)"/>
+            
+            <!-- Pin shape with gradient -->
+            <defs>
+              <linearGradient id="pinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <path d="M35 5 C20 5 8 17 8 32 C8 50 35 85 35 85 C35 85 62 50 62 32 C62 17 50 5 35 5 Z" 
+                  fill="url(#pinGradient)" stroke="white" stroke-width="4"/>
+            
+            <!-- White circle background -->
+            <circle cx="35" cy="30" r="16" fill="white"/>
+            
+            <!-- Building/Store icon -->
+            <g transform="translate(35, 30)">
+              <!-- Building body -->
+              <rect x="-10" y="-8" width="20" height="16" fill="#10b981" rx="1"/>
+              <!-- Roof -->
+              <path d="M -12 -8 L 0 -14 L 12 -8 Z" fill="#059669"/>
+              <!-- Windows -->
+              <rect x="-7" y="-5" width="3" height="3" fill="white" rx="0.5"/>
+              <rect x="-1" y="-5" width="3" height="3" fill="white" rx="0.5"/>
+              <rect x="5" y="-5" width="3" height="3" fill="white" rx="0.5"/>
+              <rect x="-7" y="0" width="3" height="3" fill="white" rx="0.5"/>
+              <rect x="-1" y="0" width="3" height="3" fill="white" rx="0.5"/>
+              <rect x="5" y="0" width="3" height="3" fill="white" rx="0.5"/>
+              <!-- Door -->
+              <rect x="-2" y="4" width="4" height="4" fill="white" rx="0.5"/>
+            </g>
+            
+            <!-- Label text -->
+            <text x="35" y="72" font-family="Arial, sans-serif" font-size="11" font-weight="bold" 
+                  text-anchor="middle" fill="white" stroke="#059669" stroke-width="3" paint-order="stroke">ORIGEN</text>
+            <text x="35" y="72" font-family="Arial, sans-serif" font-size="11" font-weight="bold" 
+                  text-anchor="middle" fill="white">ORIGEN</text>
+          </svg>
+        `),
+        scaledSize: new google.maps.Size(70, 90),
+        anchor: new google.maps.Point(35, 90)
+      },
+      title: originBranch.value.name || 'Sucursal de Origen',
+      zIndex: 10000,
+      animation: google.maps.Animation.BOUNCE,
+      optimized: false
+    })
+
+    // Stop bouncing after 3 seconds
+    setTimeout(() => {
+      if (originMarker.value) {
+        originMarker.value.setAnimation(null)
+      }
+    }, 3000)
+
+    // Add InfoWindow to origin marker
+    const infoWindow = new google.maps.InfoWindow({
+      content: `
+        <div style="padding: 8px; color: #000;">
+          <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">
+            🏢 ${originBranch.value.name || 'Sucursal de Origen'}
+          </div>
+          <div style="font-size: 12px; color: #666;">
+            Destino final del recorrido
+          </div>
+        </div>
+      `
+    })
+
+    // Show InfoWindow automatically
+    infoWindow.open(map.value, originMarker.value)
+
+    // Also show on click
+    originMarker.value.addListener('click', () => {
+      infoWindow.open(map.value, originMarker.value)
+    })
+
+    // Update courier marker
+    if (courierMarker.value) {
+      courierMarker.value.setPosition(new google.maps.LatLng(currentPosition.value.lat, currentPosition.value.lng))
+    }
+
+    // Fit bounds
+    const bounds = new google.maps.LatLngBounds()
+    bounds.extend(new google.maps.LatLng(currentPosition.value.lat, currentPosition.value.lng))
+    bounds.extend(new google.maps.LatLng(originBranch.value.lat, originBranch.value.lng))
+    map.value.fitBounds(bounds)
+  } catch (error) {
+    console.error('Error drawing return route:', error)
+  }
+}
+
+function calculateDistance (lat1, lng1, lat2, lng2) {
+  const R = 6371e3 // Earth radius in meters
+  const φ1 = lat1 * Math.PI / 180
+  const φ2 = lat2 * Math.PI / 180
+  const Δφ = (lat2 - lat1) * Math.PI / 180
+  const Δλ = (lng2 - lng1) * Math.PI / 180
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  return R * c // Distance in meters
+}
+
+async function attemptFinishRoute () {
+  // Determine dialog content based on proximity
+  const isNear = isNearOrigin.value
+  const branchName = originBranch.value?.name || 'la sucursal de origen'
+  
+  let title, message, dialogType
+  
+  if (isNear) {
+    // Near origin - positive confirmation
+    title = '¡Has llegado al origen!'
+    message = `Estás en ${branchName}. ¿Deseas finalizar el recorrido?`
+    dialogType = 'positive'
+  } else {
+    // Far from origin - warning
+    const distanceKm = distanceToOrigin.value ? (distanceToOrigin.value / 1000).toFixed(1) : '?'
+    title = '⚠️ No estás en el origen'
+    message = `Estás a ${distanceKm} km de ${branchName}. Se recomienda estar a menos de 500m del origen. ¿Deseas finalizar el recorrido de todas formas?`
+    dialogType = 'warning'
+  }
+
+  // Show confirmation dialog
+  $q.dialog({
+    title: title,
+    message: message,
+    cancel: {
+      label: 'Cancelar',
+      flat: true,
+      color: 'grey'
+    },
+    ok: {
+      label: 'Terminar Recorrido',
+      color: isNear ? 'positive' : 'warning',
+      unelevated: true,
+      icon: isNear ? 'check_circle' : 'warning'
+    },
+    persistent: false
+  }).onOk(async () => {
+    await finishRoute()
+  })
+}
+
+async function finishRoute () {
+  try {
+    // Call API to complete delivery run
+    await api.post(`/invoice-delivery-runs/${route.params.id}/complete`)
+
+    // Stop location tracking
+    stopLocationTracking()
+
+    $q.notify({
+      type: 'positive',
+      message: '¡Recorrido finalizado exitosamente!',
+      icon: 'check_circle',
+      position: 'top'
+    })
+
+    // Redirect to delivery tray
+    router.push({ name: 'InvoiceDeliveryTray' })
+  } catch (error) {
+    console.error('Error completing delivery run:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al finalizar el recorrido',
+      position: 'top'
+    })
+  }
+}
+
+function clearRoutes () {
+  if (currentPolyline.value) {
+    currentPolyline.value.setMap(null)
+    currentPolyline.value = null
+  }
+  completedPolylines.value.forEach(p => p.setMap(null))
+  completedPolylines.value = []
+  futurePolylines.value.forEach(p => p.setMap(null))
+  futurePolylines.value = []
+  if (returnPolyline.value) {
+    returnPolyline.value.setMap(null)
+    returnPolyline.value = null
+  }
+  deliveryMarkers.value.forEach(m => m.setMap(null))
+  deliveryMarkers.value = []
 }
 </script>
 

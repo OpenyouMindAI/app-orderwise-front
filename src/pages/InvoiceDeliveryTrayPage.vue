@@ -163,8 +163,37 @@
       </div>
     </div>
 
+    <!-- Finish Route Button - Floating (appears when all orders delivered) -->
+    <div v-if="allOrdersDelivered" class="finish-route-container">
+      <div class="finish-route-info">
+        <div class="info-icon">
+          <q-icon name="check_circle" size="20px" color="positive" />
+        </div>
+        <div class="info-text">
+          <div class="info-title">Todas las órdenes entregadas</div>
+          <div class="info-subtitle">
+            {{ isNearOrigin ? 'Estás cerca del origen' : `${(distanceToOrigin / 1000).toFixed(1)} km al origen` }}
+          </div>
+        </div>
+      </div>
+      <q-btn
+        unelevated
+        no-caps
+        :label="isNearOrigin ? 'Finalizar Recorrido' : 'Regresa al origen para finalizar'"
+        :color="isNearOrigin ? 'positive' : 'grey-6'"
+        :disable="!isNearOrigin"
+        icon="flag"
+        class="finish-route-btn"
+        @click="finishRoute"
+      >
+        <q-tooltip v-if="!isNearOrigin">
+          Debes estar a menos de {{ ORIGIN_RADIUS }}m del origen para finalizar
+        </q-tooltip>
+      </q-btn>
+    </div>
+
     <!-- Status Tabs - Fixed Bottom -->
-    <div class="status-tabs-container-bottom">
+    <div v-if="!allOrdersDelivered" class="status-tabs-container-bottom">
       <q-tabs
         v-model="statusFilter"
         dense
@@ -173,7 +202,7 @@
         indicator-color="primary"
         align="justify"
         class="status-tabs"
-        @update:model-value="fetchPredefinedRoutes"
+        @update:model-value="handleStatusFilterChange"
       >
         <q-tab
           v-for="option in statusOptions"
@@ -192,19 +221,29 @@
       transition-show="slide-up"
       transition-hide="slide-down"
       class="map-dialog-fullscreen"
+      :persistent="allOrdersDelivered"
+      :no-esc-dismiss="allOrdersDelivered"
+      :no-backdrop-dismiss="allOrdersDelivered"
     >
       <q-card class="map-dialog-card">
         <q-card-section class="q-pa-none map-card-section">
           <!-- Close Button - Floating -->
           <q-btn
+            v-if="!allOrdersDelivered"
             flat
             dense
             round
             icon="chevron_left"
             size="md"
             class="close-btn-floating"
-            @click="showMapDialog = false"
+            @click="handleCloseMap"
           />
+          
+          <!-- Info when all delivered - can't close map -->
+          <div v-else class="map-info-badge">
+            <q-icon name="info" size="16px" />
+            <span>Completa el recorrido para cerrar</span>
+          </div>
 
           <!-- Map Container -->
           <div id="routeMap" class="route-map">
@@ -214,8 +253,28 @@
             </div>
           </div>
 
+          <!-- Finish Route Button in Map (when all delivered) -->
+          <div v-if="allOrdersDelivered" class="map-finish-route-container">
+            <div class="map-finish-info">
+              <q-icon name="check_circle" size="20px" color="positive" />
+              <span class="map-finish-text">
+                {{ isNearOrigin ? '¡Estás en el origen!' : `${(distanceToOrigin / 1000).toFixed(1)} km al origen` }}
+              </span>
+            </div>
+            <q-btn
+              unelevated
+              no-caps
+              :label="isNearOrigin ? 'Finalizar Recorrido' : 'Acércate al origen'"
+              :color="isNearOrigin ? 'positive' : 'grey-7'"
+              :disable="!isNearOrigin"
+              icon="flag"
+              class="map-finish-btn"
+              @click="finishRoute"
+            />
+          </div>
+
           <!-- Bottom Tabs - Uber Style -->
-          <div class="map-bottom-container">
+          <div v-if="!allOrdersDelivered" class="map-bottom-container">
             <!-- Floating Tabs -->
             <div class="map-tabs-modern">
               <div
@@ -272,56 +331,139 @@ import { authentication } from 'src/stores/module-authentication'
 const router = useRouter()
 const $q = useQuasar()
 
-/** @type {import('vue').Ref<Array>} Array of selected invoices for delivery */
+/**
+ * Array of selected invoices for delivery
+ * @type {import('vue').Ref<Array>}
+ */
 const selectedInvoices = ref([])
 
-/** @type {import('vue').Ref<Array>} Array of assigned delivery routes */
+/**
+ * Array of assigned delivery routes
+ * @type {import('vue').Ref<Array>}
+ */
 const assignedRoutes = ref([])
 
-/** @type {import('vue').Ref<Array>} Sorted and filtered invoices list */
+/**
+ * Sorted and filtered invoices list
+ * @type {import('vue').Ref<Array>}
+ */
 const sortedInvoices = ref([])
 
-/** @type {import('vue').Ref<boolean>} Loading state for main content */
+/**
+ * Loading state for main content
+ * @type {import('vue').Ref<boolean>}
+ */
 const loading = ref(false)
 
-/** @type {import('vue').Ref<boolean>} Loading state for route optimization */
+/**
+ * Loading state for route optimization
+ * @type {import('vue').Ref<boolean>}
+ */
 const optimizingRoute = ref(false)
 
-/** @type {import('vue').Ref<boolean>} Whether courier has an active delivery run */
+/**
+ * Whether courier has an active delivery run
+ * @type {import('vue').Ref<boolean>}
+ */
 const hasActiveRun = ref(false)
 
-/** @type {import('vue').Ref<Object|null>} Current GPS location of the courier */
+/**
+ * Current GPS location of the courier
+ * @type {import('vue').Ref<Object|null>}
+ */
 const currentLocation = ref(null)
 
-/** @type {import('vue').Ref<string>} Current status filter for orders list */
+/**
+ * Current status filter for orders list
+ * @type {import('vue').Ref<string>}
+ */
 const statusFilter = ref('all')
 
-/** @type {import('vue').Ref<boolean>} Controls map dialog visibility */
+/**
+ * Controls map dialog visibility
+ * @type {import('vue').Ref<boolean>}
+ */
 const showMapDialog = ref(false)
 
-/** @type {import('vue').Ref<string>} Current map view mode (complete or simulated) */
+/**
+ * Current map view mode (complete or simulated)
+ * @type {import('vue').Ref<string>}
+ */
 const mapViewMode = ref('complete')
 
-/** @type {import('vue').Ref<string>} Status filter for orders map view */
+/**
+ * Status filter for orders map view
+ * @type {import('vue').Ref<string>}
+ */
 const mapStatusFilter = ref('all')
 
-/** @type {import('vue').Ref<Object|null>} Google Maps instance */
+/**
+ * Google Maps instance
+ * @type {import('vue').Ref<Object|null>}
+ */
 const map = ref(null)
 
-/** @type {import('vue').Ref<Array>} Array of Google Maps marker objects */
+/**
+ * Array of Google Maps marker objects
+ * @type {import('vue').Ref<Array>}
+ */
 const mapMarkers = ref([])
 
-/** @type {import('vue').Ref<Array>} Array of DirectionsRenderer objects for route segments */
+/**
+ * Array of DirectionsRenderer objects for route segments
+ * @type {import('vue').Ref<Array>}
+ */
 const routePaths = ref([])
 
-/** @type {import('vue').Ref<boolean>} Loading state for map initialization */
+/**
+ * Loading state for map initialization
+ * @type {import('vue').Ref<boolean>}
+ */
 const loadingMap = ref(false)
 
-// Authentication store and user session
-const store = authentication()
-const userSession = store.userSession
+/**
+ * Whether all orders are delivered
+ * @type {import('vue').Ref<boolean>}
+ */
+const allOrdersDelivered = ref(false)
 
-/** @type {Array<Object>} Available status filter options */
+/**
+ * Whether courier is near origin to finish route
+ * @type {import('vue').Ref<boolean>}
+ */
+const isNearOrigin = ref(false)
+
+/**
+ * Distance to origin in meters
+ * @type {import('vue').Ref<number|null>}
+ */
+const distanceToOrigin = ref(null)
+
+/**
+ * Watch ID for geolocation tracking
+ * @type {import('vue').Ref<number|null>}
+ */
+const watchId = ref(null)
+
+/**
+ * Origin branch coordinates
+ * @type {import('vue').Ref<Object|null>}
+ */
+const originBranch = ref(null)
+
+/**
+ * Radius in meters to consider "near origin" (500m = 0.5km)
+ * @type {number}
+ */
+const ORIGIN_RADIUS = 500
+
+// Authentication store
+const store = authentication()
+
+/**
+ * Available status filter options
+ * @type {Array<Object>}
+ */
 const statusOptions = [
   { label: 'Todas', value: 'all' },
   { label: 'Finalizadas', value: 'finished' },
@@ -347,19 +489,28 @@ onMounted(async () => {
 async function checkActiveRun () {
   try {
     const response = await api.get('/invoice-delivery-runs/active')
-    if (response.data.delivery_run) {
+    if (response.data.delivery_run && response.data.delivery_run.id) {
       hasActiveRun.value = true
+      console.log('Active delivery run found:', response.data.delivery_run.id)
+      
       $q.notify({
         type: 'info',
         message: 'Tienes una entrega activa',
         position: 'top'
       })
-      router.push({
-        name: 'ActiveInvoiceDelivery',
-        params: { id: response.data.delivery_run.id }
-      })
+      
+      // Only redirect if we have a valid ID
+      if (response.data.delivery_run.id) {
+        router.push({
+          name: 'ActiveInvoiceDelivery',
+          params: { id: response.data.delivery_run.id.toString() }
+        })
+      }
+    } else {
+      hasActiveRun.value = false
     }
   } catch (error) {
+    console.error('Error checking active run:', error)
     hasActiveRun.value = false
   }
 }
@@ -418,11 +569,14 @@ async function startMultipleDeliveries () {
   optimizingRoute.value = true
 
   try {
-    // Optimize route order
-    const optimizedOrder = await optimizeRoute(selectedInvoices.value)
+    // Usar el orden establecido en la ruta (stop_order) sin optimizar
+    // Las rutas ya vienen ordenadas desde el backend
+    const orderedInvoices = [...selectedInvoices.value].sort((a, b) => {
+      return (a.stop_order || 0) - (b.stop_order || 0)
+    })
 
     // Prepare invoice data with product quantities
-    const invoicesData = optimizedOrder.map(invoice => ({
+    const invoicesData = orderedInvoices.map(invoice => ({
       invoice_id: invoice.id,
       products: (invoice.products || []).map(product => ({
         product_id: product.id,
@@ -430,7 +584,7 @@ async function startMultipleDeliveries () {
       }))
     })).filter(invoice => invoice.products.length > 0)
 
-    // Start delivery with optimized order
+    // Start delivery with established route order
     const response = await api.post('/invoice-delivery-runs/start', {
       invoices: invoicesData
     })
@@ -439,7 +593,7 @@ async function startMultipleDeliveries () {
 
     $q.notify({
       type: 'positive',
-      message: `Ruta optimizada: ${optimizedOrder.length} entregas. Ahorro estimado: ${optimizedOrder.savings || 0} min`,
+      message: `Viaje iniciado: ${orderedInvoices.length} entregas en el orden establecido`,
       position: 'top',
       timeout: 3000
     })
@@ -461,11 +615,15 @@ async function startMultipleDeliveries () {
 }
 
 /**
+ * FUNCIÓN DESHABILITADA - Ya no se optimiza la ruta
+ * Se respeta el orden establecido en DeliveryRoute (stop_order)
+ * 
  * Optimizes the delivery route order using backend algorithm
  * @async
  * @param {Array<Object>} invoices - Array of invoice objects to optimize
  * @returns {Promise<Array<Object>>} Optimized array of invoices
  */
+/*
 async function optimizeRoute (invoices) {
   if (invoices.length <= 1) {
     return invoices
@@ -498,6 +656,7 @@ async function optimizeRoute (invoices) {
     return invoices
   }
 }
+*/
 
 /**
  * Gets the courier's current GPS location
@@ -1126,6 +1285,327 @@ watch(mapStatusFilter, () => {
     renderSimulatedRoute()
   }
 })
+
+// Watch for changes in orders to check if all are delivered
+watch(sortedInvoices, (newInvoices) => {
+  checkIfAllOrdersDelivered(newInvoices)
+}, { deep: true })
+
+/**
+ * Checks if all orders in the route are delivered
+ * @param {Array} invoices - Array of invoices to check
+ * @returns {void}
+ */
+function checkIfAllOrdersDelivered (invoices) {
+  if (invoices.length === 0) {
+    allOrdersDelivered.value = false
+    return
+  }
+
+  // Check if all invoices have delivery_person_id and are delivered
+  const allDelivered = invoices.every(invoice =>
+    invoice.delivery_person_id && invoice.status === 'delivered'
+  )
+
+  if (allDelivered && !allOrdersDelivered.value) {
+    allOrdersDelivered.value = true
+    startLocationTracking()
+
+    // Abrir el mapa automáticamente para mostrar ruta de regreso
+    showMapDialog.value = true
+    setTimeout(() => {
+      showReturnRouteOnMap()
+    }, 500)
+
+    $q.notify({
+      type: 'positive',
+      message: '¡Todas las órdenes entregadas! Regresa al origen para finalizar',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 5000
+    })
+  } else if (!allDelivered && !allOrdersDelivered.value) {
+    // Solo resetear si no estábamos en modo "todas entregadas"
+    // Una vez que todas están entregadas, mantener el estado hasta finalizar
+    allOrdersDelivered.value = false
+    stopLocationTracking()
+  }
+  // Si allOrdersDelivered.value ya es true, mantenerlo así hasta que se finalice manualmente
+}
+
+/**
+ * Starts continuous location tracking to monitor distance to origin
+ * @returns {void}
+ */
+function startLocationTracking () {
+  if (!navigator.geolocation) {
+    console.error('Geolocation not supported')
+    return
+  }
+
+  // Get origin coordinates
+  if (assignedRoutes.value.length > 0) {
+    const route = assignedRoutes.value[0]
+    if (route.origin) {
+      originBranch.value = {
+        lat: parseFloat(route.origin.latitude),
+        lng: parseFloat(route.origin.longitude),
+        name: route.origin.name
+      }
+    }
+  }
+
+  if (!originBranch.value) {
+    console.error('No origin branch found')
+    return
+  }
+
+  // Start watching position
+  watchId.value = navigator.geolocation.watchPosition(
+    (position) => {
+      const currentPos = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      }
+      
+      currentLocation.value = currentPos
+      
+      // Calculate distance to origin
+      const distance = calculateDistance(
+        currentPos.lat,
+        currentPos.lng,
+        originBranch.value.lat,
+        originBranch.value.lng
+      )
+      
+      distanceToOrigin.value = distance
+      isNearOrigin.value = distance <= ORIGIN_RADIUS
+      
+      // Update map route if map is open
+      if (showMapDialog.value && map.value) {
+        showReturnRouteOnMap()
+      }
+      
+      console.log(`Distance to origin: ${distance.toFixed(0)}m, Near: ${isNearOrigin.value}`)
+    },
+    (error) => {
+      console.error('Error tracking location:', error)
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 10000
+    }
+  )
+}
+
+/**
+ * Stops location tracking
+ * @returns {void}
+ */
+function stopLocationTracking () {
+  if (watchId.value !== null) {
+    navigator.geolocation.clearWatch(watchId.value)
+    watchId.value = null
+  }
+}
+
+/**
+ * Calculates distance between two coordinates using Haversine formula
+ * @param {number} lat1 - Latitude of first point
+ * @param {number} lng1 - Longitude of first point
+ * @param {number} lat2 - Latitude of second point
+ * @param {number} lng2 - Longitude of second point
+ * @returns {number} Distance in meters
+ */
+function calculateDistance (lat1, lng1, lat2, lng2) {
+  const R = 6371e3 // Earth radius in meters
+  const φ1 = lat1 * Math.PI / 180
+  const φ2 = lat2 * Math.PI / 180
+  const Δφ = (lat2 - lat1) * Math.PI / 180
+  const Δλ = (lng2 - lng1) * Math.PI / 180
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  return R * c // Distance in meters
+}
+
+/**
+ * Handles status filter change
+ * Prevents reloading if all orders are delivered
+ * @returns {void}
+ */
+function handleStatusFilterChange () {
+  if (!allOrdersDelivered.value) {
+    fetchPredefinedRoutes()
+  }
+}
+
+/**
+ * Handles closing the map dialog
+ * Only allows closing if all orders are not delivered
+ * @returns {void}
+ */
+function handleCloseMap () {
+  if (!allOrdersDelivered.value) {
+    showMapDialog.value = false
+  }
+}
+
+/**
+ * Finishes the delivery route and returns courier to dashboard
+ * @async
+ * @returns {Promise<void>}
+ */
+async function finishRoute () {
+  if (!isNearOrigin.value) {
+    $q.notify({
+      type: 'warning',
+      message: 'Debes estar cerca del origen para finalizar el recorrido',
+      position: 'top'
+    })
+    return
+  }
+
+  $q.dialog({
+    title: 'Finalizar Recorrido',
+    message: '¿Estás seguro de que deseas finalizar el recorrido? Has completado todas las entregas.',
+    cancel: {
+      label: 'Cancelar',
+      flat: true,
+      color: 'grey'
+    },
+    ok: {
+      label: 'Finalizar',
+      color: 'positive',
+      unelevated: true
+    },
+    persistent: false
+  }).onOk(async () => {
+    try {
+      // Stop location tracking
+      stopLocationTracking()
+
+      // Clear state
+      allOrdersDelivered.value = false
+      isNearOrigin.value = false
+      distanceToOrigin.value = null
+
+      // Close map
+      showMapDialog.value = false
+
+      $q.notify({
+        type: 'positive',
+        message: '¡Recorrido finalizado exitosamente!',
+        icon: 'flag',
+        position: 'top'
+      })
+
+      // Reload orders
+      await fetchPredefinedRoutes()
+    } catch (error) {
+      console.error('Error finishing route:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al finalizar el recorrido',
+        position: 'top'
+      })
+    }
+  })
+}
+
+/**
+ * Shows the return route on the map from current location to origin
+ * @async
+ * @returns {Promise<void>}
+ */
+async function showReturnRouteOnMap () {
+  if (!map.value || !currentLocation.value || !originBranch.value) {
+    console.error('Map, current location or origin not available')
+    return
+  }
+
+  try {
+    await loadGoogleMaps()
+
+    // Clear previous map elements
+    clearMapElements()
+
+    const bounds = new window.google.maps.LatLngBounds()
+
+    // Add current location marker (courier)
+    const courierMarker = new window.google.maps.Marker({
+      position: { lat: currentLocation.value.lat, lng: currentLocation.value.lng },
+      map: map.value,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 14,
+        fillColor: '#3b82f6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 3
+      },
+      label: {
+        text: '📍',
+        fontSize: '16px'
+      },
+      title: 'Tu ubicación'
+    })
+    mapMarkers.value.push(courierMarker)
+    bounds.extend(new window.google.maps.LatLng(currentLocation.value.lat, currentLocation.value.lng))
+
+    // Add origin marker
+    const originMarker = new window.google.maps.Marker({
+      position: { lat: originBranch.value.lat, lng: originBranch.value.lng },
+      map: map.value,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 16,
+        fillColor: '#10b981',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 3
+      },
+      label: {
+        text: '🏢',
+        fontSize: '18px'
+      },
+      title: originBranch.value.name || 'Origen'
+    })
+    mapMarkers.value.push(originMarker)
+    bounds.extend(new window.google.maps.LatLng(originBranch.value.lat, originBranch.value.lng))
+
+    // Draw route from current location to origin
+    const directionsService = new window.google.maps.DirectionsService()
+    const result = await directionsService.route({
+      origin: { lat: currentLocation.value.lat, lng: currentLocation.value.lng },
+      destination: { lat: originBranch.value.lat, lng: originBranch.value.lng },
+      travelMode: window.google.maps.TravelMode.DRIVING
+    })
+
+    const renderer = new window.google.maps.DirectionsRenderer({
+      map: map.value,
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: '#10b981',
+        strokeWeight: 5,
+        strokeOpacity: 0.8
+      },
+      preserveViewport: false
+    })
+
+    renderer.setDirections(result)
+    routePaths.value.push(renderer)
+
+    // Fit bounds
+    map.value.fitBounds(bounds)
+  } catch (error) {
+    console.error('Error showing return route:', error)
+  }
+}
 </script>
 
 <style scoped>
@@ -1182,6 +1662,62 @@ watch(mapStatusFilter, () => {
   border-radius: 6px;
 }
 
+/* Finish Route Container - Fixed Bottom */
+.finish-route-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  z-index: 100;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.12);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.finish-route-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f0fdf4;
+  border-radius: 12px;
+  border: 1px solid #86efac;
+}
+
+.info-icon {
+  flex-shrink: 0;
+}
+
+.info-text {
+  flex: 1;
+}
+
+.info-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+  margin-bottom: 2px;
+}
+
+.info-subtitle {
+  font-size: 12px;
+  color: #15803d;
+}
+
+.finish-route-btn {
+  width: 100%;
+  height: 56px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 /* Status Tabs - Fixed Bottom */
 .status-tabs-container-bottom {
   position: fixed;
@@ -1221,6 +1757,11 @@ watch(mapStatusFilter, () => {
 /* Add padding to page container to prevent content from being hidden behind tabs */
 .page-container {
   padding-bottom: 56px;
+}
+
+/* Extra padding when finish route container is visible */
+.page-container:has(+ .finish-route-container) {
+  padding-bottom: 180px;
 }
 
 /* Map Dialog - Fullscreen without padding */
@@ -1292,6 +1833,24 @@ watch(mapStatusFilter, () => {
   transform: scale(1.05);
 }
 
+/* Map Info Badge */
+.map-info-badge {
+  position: absolute;
+  top: 15px;
+  left: 12px;
+  z-index: 1001;
+  background: #3b82f6;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 /* Google Maps Controls - Fix z-index */
 .route-map :deep(.gm-style .gm-style-mtc),
 .route-map :deep(.gm-style button),
@@ -1354,6 +1913,46 @@ watch(mapStatusFilter, () => {
 .map-tab-modern span {
   font-size: 13px;
   font-weight: 600;
+}
+
+/* Finish Route in Map */
+.map-finish-route-container {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  width: calc(100% - 32px);
+  max-width: 400px;
+}
+
+.map-finish-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 100px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.map-finish-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.map-finish-btn {
+  width: 100%;
+  height: 56px;
+  border-radius: 100px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Filter - Minimalist */
