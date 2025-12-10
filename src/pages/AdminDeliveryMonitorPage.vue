@@ -1,6 +1,6 @@
 <template>
   <q-page>
-    <div class="row no-wrap" style="height: calc(100vh - 65px);">
+    <div class="row no-wrap" style="height: calc(100vh - 57px);">
       <!-- Map Section -->
       <div class="col" style="position: relative;">
         <!-- Map Container -->
@@ -57,7 +57,7 @@
       </div>
 
       <!-- Side Panel with Tabs -->
-      <div class="col-4" style="height: calc(100vh - 65px); border-left: 1px solid;" :class="$q.dark.isActive ? 'border-dark' : 'border'">
+      <div class="col-4" style="height: calc(100vh - 57px); border-left: 1px solid;" :class="$q.dark.isActive ? 'border-dark' : 'border'">
         <q-tabs
           v-model="activeTab"
           dense
@@ -72,23 +72,38 @@
 
         <q-separator />
 
-        <q-tab-panels v-model="activeTab" animated style="height: calc(100vh - 105px); overflow-y: auto;">
+        <q-tab-panels v-model="activeTab" animated style="height: calc(100vh - 115px); overflow-y: auto;">
 
           <!-- Live Monitoring Tab -->
           <q-tab-panel name="live">
             <!-- Header -->
-            <div class="q-pa-md">
-              <div class="text-h6 text-weight-bold">
-                {{ selectedRun ? `Recorrido #${selectedRun.id}` : 'Selecciona un recorrido' }}
+            <div class="row items-center justify-between q-mb-md">
+              <div class="col">
+                <div class="text-h6 text-weight-bold">
+                  {{ selectedRun ? `Recorrido #${selectedRun.id}` : 'Selecciona un recorrido' }}
+                </div>
+                <div v-if="selectedRun" class="text-caption text-grey">
+                  {{ selectedRun.delivery_person?.name || 'Repartidor' }}
+                </div>
+                <!-- Returning to Origin Badge -->
+                <div v-if="selectedRun && isRunReturningToOrigin(selectedRun)" class="q-mt-sm">
+                  <q-chip color="info" text-color="white" icon="home" size="sm">
+                    Retornando al origen
+                  </q-chip>
+                </div>
               </div>
-              <div v-if="selectedRun" class="text-caption text-grey">
-                {{ selectedRun.delivery_person?.name || 'Repartidor' }}
-              </div>
-              <!-- Returning to Origin Badge -->
-              <div v-if="selectedRun && isRunReturningToOrigin(selectedRun)" class="q-mt-sm">
-                <q-chip color="info" text-color="white" icon="home" size="sm">
-                  Retornando al origen
-                </q-chip>
+              <!-- Deselect Button -->
+              <div v-if="selectedRun" class="col-auto">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="close"
+                  color="grey"
+                  @click="selectedRun = null; resetAllMarkerStyles()"
+                >
+                  <q-tooltip>Deseleccionar</q-tooltip>
+                </q-btn>
               </div>
             </div>
 
@@ -232,7 +247,7 @@
           <!-- History Tab -->
           <q-tab-panel name="history">
             <!-- Filters -->
-            <div class="q-pa-xs">
+            <div>
               <div class="text-subtitle1 text-weight-bold q-mb-sm">Historial de Recorridos</div>
 
               <div class="row q-col-gutter-xs q-mb-xs">
@@ -345,6 +360,7 @@
 </template>
 
 <script setup>
+/* global google */
 import { ref, computed, onMounted, onBeforeUnmount, getCurrentInstance } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
@@ -537,10 +553,10 @@ const estimatedDistanceRemaining = computed(() => {
 })
 
 onMounted(async () => {
+  initializeWebSocket()
   await initializeMap()
   await loadActiveRuns()
   await loadDeliveryPersons()
-  initializeWebSocket()
 })
 
 onBeforeUnmount(() => {
@@ -617,6 +633,39 @@ async function loadActiveRuns () {
 }
 
 /**
+ * Load a single delivery run and update it in the list
+ * @async
+ * @param {number} runId - Delivery run ID
+ * @returns {Promise<void>}
+ */
+async function loadSingleRun (runId) {
+  try {
+    const response = await api.get(`/invoice-delivery-runs/${runId}`)
+    const updatedRun = response.data.delivery_run
+
+    if (!updatedRun) return
+
+    // Find and update the run in activeRuns
+    const index = activeRuns.value.findIndex(run => run.id === runId)
+    if (index !== -1) {
+      activeRuns.value[index] = updatedRun
+
+      // Update selected run if it's the one being updated
+      if (selectedRun.value?.id === runId) {
+        selectedRun.value = updatedRun
+      }
+
+      // Update map markers for this run
+      updateMapMarkers()
+
+      console.log('✅ Run updated:', runId)
+    }
+  } catch (error) {
+    console.error('Error loading single run:', error)
+  }
+}
+
+/**
  * Updates all markers on the map
  * @returns {void}
  */
@@ -651,23 +700,48 @@ function updateMapMarkers () {
 function addCourierMarker (run) {
   // Get latest location from locations array
   const latestLocation = run.locations && run.locations.length > 0 ? run.locations[0] : null
-  if (!latestLocation) return
+  
+  let position = null
 
-  const position = {
-    lat: parseFloat(latestLocation.latitude),
-    lng: parseFloat(latestLocation.longitude)
+  if (latestLocation) {
+    // Usar ubicación GPS si está disponible
+    position = {
+      lat: parseFloat(latestLocation.latitude),
+      lng: parseFloat(latestLocation.longitude)
+    }
+  } else if (run.items && run.items.length > 0) {
+    // Fallback: usar ubicación de la primera entrega si no hay GPS todavía
+    const firstItem = run.items[0]
+    const client = firstItem.invoice?.client
+    const lat = client?.address?.latitude || client?.latitude
+    const lng = client?.address?.longitude || client?.longitude
+    
+    if (lat && lng) {
+      position = {
+        lat: parseFloat(lat),
+        lng: parseFloat(lng)
+      }
+      console.log('📍 Using first delivery location as courier marker (no GPS yet)')
+    }
+  }
+
+  // Si no hay ubicación disponible, no crear marcador
+  if (!position) {
+    console.warn('⚠️ No location available for courier marker')
+    return
   }
 
   const marker = new google.maps.Marker({
     position,
     map: map.value,
     icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 12,
+      path: 'M17.402,0H5.643C2.526,0,0,3.467,0,6.584v34.804c0,3.116,2.526,5.644,5.643,5.644h11.759c3.116,0,5.644-2.527,5.644-5.644 V6.584C23.044,3.467,20.518,0,17.402,0z M22.057,14.188v11.665l-2.729,0.351v-4.806L22.057,14.188z M20.625,10.773 c-1.016,3.9-2.219,8.51-2.219,8.51H4.638l-2.222-8.51C2.417,10.773,11.3,7.755,20.625,10.773z M3.748,21.713v4.492l-2.73-0.349 V14.502L3.748,21.713z M1.018,37.938V27.579l2.73,0.343v8.196L1.018,37.938z M2.575,40.882l2.218-3.336h13.771l2.219,3.336H2.575z M19.328,35.805v-7.872l2.729-0.355v10.048L19.328,35.805z',
       fillColor: '#2196F3',
       fillOpacity: 1,
-      strokeColor: 'white',
-      strokeWeight: 3
+      strokeColor: '#FFFFFF',
+      strokeWeight: 2,
+      scale: 0.7,
+      anchor: new google.maps.Point(11.5, 23.5)
     },
     title: run.delivery_person?.name || 'Repartidor',
     zIndex: 1000
@@ -678,21 +752,87 @@ function addCourierMarker (run) {
     selectRun(run)
   })
 
-  // Add info window
+  // Calcular entregas completadas y totales para este run
+  const deliveredCount = run.items?.filter(item => item.delivery_status === 'delivered').length || 0
+  const totalCount = run.items?.length || 0
+
+  // Crear info window con dirección
   const infoWindow = new google.maps.InfoWindow({
-    content: `
-      <div style="color: #000; padding: 8px;">
-        <div style="font-weight: bold; margin-bottom: 4px;">
-          ${run.delivery_person?.name || 'Repartidor'}
+    content: 'Cargando...'
+  })
+
+  // Obtener dirección usando Geocoding API
+  const geocoder = new google.maps.Geocoder()
+  
+  geocoder.geocode({ location: position }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      const address = results[0].formatted_address
+      infoWindow.setContent(`
+        <div style="font-family: 'Roboto', Arial, sans-serif; padding: 0; margin: 0; min-width: 200px; max-width: 280px;">
+          <div style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #2196F3;">
+            <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+              <span style="color: white; font-size: 18px;">🚗</span>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 14px; color: #1a1a1a; margin-bottom: 2px;">
+                ${run.delivery_person?.name || 'Repartidor'}
+              </div>
+              <div style="font-size: 11px; color: #666; font-weight: 500;">
+                Recorrido #${run.id}
+              </div>
+            </div>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; font-size: 12px; color: #444; margin-bottom: 4px;">
+              <span style="margin-right: 6px;">📍</span>
+              <span style="font-weight: 500;">Ubicación actual:</span>
+            </div>
+            <div style="font-size: 11px; color: #666; line-height: 1.4; padding-left: 22px;">
+              ${address}
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; background: #f5f5f5; padding: 8px 10px; border-radius: 6px; margin-top: 8px;">
+            <div style="display: flex; align-items: center; font-size: 12px; color: #444;">
+              <span style="margin-right: 6px;">📦</span>
+              <span style="font-weight: 500;">Entregas:</span>
+            </div>
+            <div style="font-weight: 700; font-size: 13px; color: ${deliveredCount === totalCount ? '#4CAF50' : '#2196F3'};">
+              ${deliveredCount} / ${totalCount}
+            </div>
+          </div>
         </div>
-        <div style="font-size: 12px; color: #666;">
-          Recorrido #${run.id}
+      `)
+    } else {
+      // Si falla el geocoding, mostrar sin dirección
+      infoWindow.setContent(`
+        <div style="font-family: 'Roboto', Arial, sans-serif; padding: 0; margin: 0; min-width: 200px;">
+          <div style="padding: 12px;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #2196F3;">
+              <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                <span style="color: white; font-size: 18px;">🚗</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 14px; color: #1a1a1a; margin-bottom: 2px;">
+                  ${run.delivery_person?.name || 'Repartidor'}
+                </div>
+                <div style="font-size: 11px; color: #666; font-weight: 500;">
+                  Recorrido #${run.id}
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #f5f5f5; padding: 8px 10px; border-radius: 6px;">
+              <div style="display: flex; align-items: center; font-size: 12px; color: #444;">
+                <span style="margin-right: 6px;">📦</span>
+                <span style="font-weight: 500;">Entregas:</span>
+              </div>
+              <div style="font-weight: 700; font-size: 13px; color: ${deliveredCount === totalCount ? '#4CAF50' : '#2196F3'};">
+                ${deliveredCount} / ${totalCount}
+              </div>
+            </div>
+          </div>
         </div>
-        <div style="font-size: 12px; color: #666;">
-          ${selectedRunDeliveredCount.value} / ${selectedRunTotalCount.value} entregas
-        </div>
-      </div>
-    `
+      `)
+    }
   })
 
   marker.addListener('mouseover', () => {
@@ -812,22 +952,78 @@ function addOriginMarker (run) {
     zIndex: 9999
   })
 
-  // Add info window
+  // Add info window with address
   const infoWindow = new google.maps.InfoWindow({
-    content: `
-      <div style="padding: 8px; color: #000;">
-        <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">
-          🏢 ${run.branch_office.name || 'Sucursal de Origen'}
+    content: 'Cargando...'
+  })
+
+  // Obtener dirección usando Geocoding API
+  const geocoder = new google.maps.Geocoder()
+  geocoder.geocode({ location: position }, (results, status) => {
+    if (status === 'OK' && results[0]) {
+      const address = results[0].formatted_address
+      infoWindow.setContent(`
+        <div style="font-family: 'Roboto', Arial, sans-serif; padding: 0; margin: 0; min-width: 220px; max-width: 300px;">
+          <div style="padding: 12px;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #10b981;">
+              <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                <span style="color: white; font-size: 20px;">🏢</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 14px; color: #1a1a1a; margin-bottom: 2px;">
+                  ${run.branch_office.name || 'Sucursal de Origen'}
+                </div>
+                <div style="font-size: 11px; color: #10b981; font-weight: 600;">
+                  Destino de retorno
+                </div>
+              </div>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; font-size: 12px; color: #444; margin-bottom: 4px;">
+                <span style="margin-right: 6px;">📍</span>
+                <span style="font-weight: 500;">Dirección:</span>
+              </div>
+              <div style="font-size: 11px; color: #666; line-height: 1.4; padding-left: 22px;">
+                ${address}
+              </div>
+            </div>
+          </div>
         </div>
-        <div style="font-size: 12px; color: #666;">
-          Destino de retorno
+      `)
+    } else {
+      // Fallback sin dirección
+      infoWindow.setContent(`
+        <div style="font-family: 'Roboto', Arial, sans-serif; padding: 0; margin: 0; min-width: 220px;">
+          <div style="padding: 12px;">
+            <div style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #10b981;">
+              <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                <span style="color: white; font-size: 20px;">🏢</span>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 14px; color: #1a1a1a; margin-bottom: 2px;">
+                  ${run.branch_office.name || 'Sucursal de Origen'}
+                </div>
+                <div style="font-size: 11px; color: #10b981; font-weight: 600;">
+                  Destino de retorno
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    `
+      `)
+    }
   })
 
   marker.addListener('click', () => {
     infoWindow.open(map.value, marker)
+  })
+
+  marker.addListener('mouseover', () => {
+    infoWindow.open(map.value, marker)
+  })
+
+  marker.addListener('mouseout', () => {
+    infoWindow.close()
   })
 
   // Store marker with deliveryMarkers for this run
@@ -837,12 +1033,76 @@ function addOriginMarker (run) {
 }
 
 /**
- * Draws route for a delivery run
+ * Clears route polylines for a specific delivery run
+ * @param {number} runId - Delivery run ID
+ * @returns {void}
+ */
+function clearRoutePolylines (runId) {
+  const polylines = routePolylines.value.get(runId)
+  if (polylines) {
+    if (polylines.completed) {
+      polylines.completed.setMap(null)
+    }
+    if (polylines.pending) {
+      polylines.pending.setMap(null)
+    }
+    if (polylines.returnToOrigin) {
+      polylines.returnToOrigin.setMap(null)
+    }
+    // Don't clear GPS trail here, it's updated separately
+  }
+}
+
+/**
+ * Updates GPS trail for a delivery run
  * @param {Object} run - Delivery run object
  * @returns {void}
  */
+function updateGPSTrail (run) {
+  if (!run.locations || run.locations.length < 2) return
+
+  // Remove old GPS trail
+  const existingPolylines = routePolylines.value.get(run.id)
+  if (existingPolylines?.gpsTrail) {
+    existingPolylines.gpsTrail.setMap(null)
+  }
+
+  // Create path from all locations (reversed because they're ordered desc)
+  const gpsPath = run.locations.map(loc => ({
+    lat: parseFloat(loc.latitude),
+    lng: parseFloat(loc.longitude)
+  })).reverse()
+
+  // Draw new GPS trail (green line showing actual path)
+  const gpsTrail = new google.maps.Polyline({
+    path: gpsPath,
+    geodesic: true,
+    strokeColor: '#4CAF50',
+    strokeOpacity: 0.8,
+    strokeWeight: 4,
+    map: map.value,
+    zIndex: 100
+  })
+
+  // Store the GPS trail
+  if (!routePolylines.value.has(run.id)) {
+    routePolylines.value.set(run.id, {})
+  }
+  routePolylines.value.get(run.id).gpsTrail = gpsTrail
+
+  console.log('🛣️ GPS trail updated with', gpsPath.length, 'points')
+}
+
+/**
+ * Draws route for a delivery run
+ * @param {Object} run - Delivery run object
+ * @returns {Promise<void>}
+ */
 async function drawRoute (run) {
-  if (!directionsService.value || !run.items || run.items.length === 0) return
+  if (!directionsService.value || !run.items || run.items.length === 0) {
+    console.log('⚠️ Cannot draw route: missing data')
+    return
+  }
 
   const waypoints = []
   const completedWaypoints = []
@@ -866,17 +1126,28 @@ async function drawRoute (run) {
     }
   })
 
-  if (waypoints.length < 2) return
+  if (waypoints.length === 0) {
+    console.log('⚠️ No valid waypoints found')
+    return
+  }
+
+  console.log('🗺️ Drawing route:', {
+    total: waypoints.length,
+    completed: completedWaypoints.length,
+    pending: pendingWaypoints.length
+  })
 
   try {
     // Draw completed route (red)
-    if (completedWaypoints.length > 0) {
+    if (completedWaypoints.length >= 2) {
       const completedRequest = {
-        origin: waypoints[0].location,
+        origin: completedWaypoints[0].location,
         destination: completedWaypoints[completedWaypoints.length - 1].location,
-        waypoints: completedWaypoints.slice(0, -1),
+        waypoints: completedWaypoints.length > 2 ? completedWaypoints.slice(1, -1) : [],
         travelMode: google.maps.TravelMode.DRIVING
       }
+
+      console.log('🔴 Drawing completed route with', completedWaypoints.length, 'points')
 
       const completedResult = await directionsService.value.route(completedRequest)
       const completedRenderer = new google.maps.DirectionsRenderer({
@@ -898,38 +1169,168 @@ async function drawRoute (run) {
 
     // Draw pending route (grey)
     if (pendingWaypoints.length > 0) {
+      // Determinar punto de origen para la ruta pendiente
+      let originPos
+
+      // Si hay ubicación GPS actual, usar esa
       const latestLocation = run.locations && run.locations.length > 0 ? run.locations[0] : null
-      const currentPos = latestLocation
-        ? new google.maps.LatLng(parseFloat(latestLocation.latitude), parseFloat(latestLocation.longitude))
-        : waypoints[completedWaypoints.length].location
-
-      const pendingRequest = {
-        origin: currentPos,
-        destination: pendingWaypoints[pendingWaypoints.length - 1].location,
-        waypoints: pendingWaypoints.slice(0, -1),
-        travelMode: google.maps.TravelMode.DRIVING
+      if (latestLocation) {
+        originPos = new google.maps.LatLng(parseFloat(latestLocation.latitude), parseFloat(latestLocation.longitude))
+        console.log('📍 Using GPS location as origin')
+      } else if (completedWaypoints.length > 0) {
+        // Si hay entregas completadas, usar la última
+        originPos = completedWaypoints[completedWaypoints.length - 1].location
+        console.log('📍 Using last completed delivery as origin')
+      } else {
+        // Si no hay nada completado, usar la primera entrega pendiente como origen
+        originPos = pendingWaypoints[0].location
+        console.log('📍 Using first pending delivery as origin')
       }
 
-      const pendingResult = await directionsService.value.route(pendingRequest)
-      const pendingRenderer = new google.maps.DirectionsRenderer({
-        map: map.value,
-        directions: pendingResult,
-        suppressMarkers: true,
-        polylineOptions: {
-          strokeColor: '#9E9E9E',
-          strokeWeight: 5,
-          strokeOpacity: 0.5
+      // Si solo hay una entrega pendiente
+      if (pendingWaypoints.length === 1) {
+        const pendingRequest = {
+          origin: originPos,
+          destination: pendingWaypoints[0].location,
+          travelMode: google.maps.TravelMode.DRIVING
         }
-      })
 
-      if (!routePolylines.value.has(run.id)) {
-        routePolylines.value.set(run.id, {})
+        console.log('⚪ Drawing pending route to single destination')
+
+        const pendingResult = await directionsService.value.route(pendingRequest)
+        const pendingRenderer = new google.maps.DirectionsRenderer({
+          map: map.value,
+          directions: pendingResult,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#9E9E9E',
+            strokeWeight: 5,
+            strokeOpacity: 0.5
+          }
+        })
+
+        if (!routePolylines.value.has(run.id)) {
+          routePolylines.value.set(run.id, {})
+        }
+        routePolylines.value.get(run.id).pending = pendingRenderer
+      } else {
+        // Múltiples entregas pendientes
+        const pendingRequest = {
+          origin: originPos,
+          destination: pendingWaypoints[pendingWaypoints.length - 1].location,
+          waypoints: pendingWaypoints.slice(0, -1),
+          travelMode: google.maps.TravelMode.DRIVING
+        }
+
+        console.log('⚪ Drawing pending route with', pendingWaypoints.length, 'points')
+
+        const pendingResult = await directionsService.value.route(pendingRequest)
+        const pendingRenderer = new google.maps.DirectionsRenderer({
+          map: map.value,
+          directions: pendingResult,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#9E9E9E',
+            strokeWeight: 5,
+            strokeOpacity: 0.5
+          }
+        })
+
+        if (!routePolylines.value.has(run.id)) {
+          routePolylines.value.set(run.id, {})
+        }
+        routePolylines.value.get(run.id).pending = pendingRenderer
       }
-      routePolylines.value.get(run.id).pending = pendingRenderer
     }
+
+    // Draw return to origin route (green) if all deliveries are completed and returning to origin
+    if (pendingWaypoints.length === 0 && completedWaypoints.length > 0 && run.branch_office) {
+      const branchLat = parseFloat(run.branch_office.address?.latitude || run.branch_office.latitude)
+      const branchLng = parseFloat(run.branch_office.address?.longitude || run.branch_office.longitude)
+
+      if (branchLat && branchLng) {
+        const branchLocation = new google.maps.LatLng(branchLat, branchLng)
+        const latestLocation = run.locations && run.locations.length > 0 ? run.locations[0] : null
+        const currentPos = latestLocation
+          ? new google.maps.LatLng(parseFloat(latestLocation.latitude), parseFloat(latestLocation.longitude))
+          : completedWaypoints[completedWaypoints.length - 1].location
+
+        const returnRequest = {
+          origin: currentPos,
+          destination: branchLocation,
+          travelMode: google.maps.TravelMode.DRIVING
+        }
+
+        console.log('🟢 Drawing return to origin route')
+
+        try {
+          const returnResult = await directionsService.value.route(returnRequest)
+          const returnRenderer = new google.maps.DirectionsRenderer({
+            map: map.value,
+            directions: returnResult,
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#4CAF50',
+              strokeWeight: 5,
+              strokeOpacity: 0.7
+            }
+          })
+
+          if (!routePolylines.value.has(run.id)) {
+            routePolylines.value.set(run.id, {})
+          }
+          routePolylines.value.get(run.id).returnToOrigin = returnRenderer
+        } catch (error) {
+          console.error('Error drawing return route:', error)
+        }
+      }
+    }
+
+    console.log('✅ Route drawn successfully')
   } catch (error) {
-    console.error('Error drawing route:', error)
+    console.error('❌ Error drawing route:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al dibujar la ruta en el mapa',
+      position: 'top',
+      timeout: 2000
+    })
   }
+}
+
+/**
+ * Clears markers and routes for a specific delivery run
+ * @param {number} runId - Delivery run ID
+ * @returns {void}
+ */
+function clearRunMarkers (runId) {
+  console.log('🧹 Clearing markers for run:', runId)
+  
+  // Clear courier marker
+  const courierMarker = courierMarkers.value.get(runId)
+  if (courierMarker) {
+    courierMarker.setMap(null)
+    courierMarkers.value.delete(runId)
+  }
+
+  // Clear delivery markers
+  const deliveryMarkersArray = deliveryMarkers.value.get(runId)
+  if (deliveryMarkersArray) {
+    deliveryMarkersArray.forEach(marker => marker.setMap(null))
+    deliveryMarkers.value.delete(runId)
+  }
+
+  // Clear route polylines
+  const polylines = routePolylines.value.get(runId)
+  if (polylines) {
+    if (polylines.completed) polylines.completed.setMap(null)
+    if (polylines.pending) polylines.pending.setMap(null)
+    if (polylines.gpsTrail) polylines.gpsTrail.setMap(null)
+    if (polylines.returnToOrigin) polylines.returnToOrigin.setMap(null)
+    routePolylines.value.delete(runId)
+  }
+
+  console.log('✅ Markers cleared for run:', runId)
 }
 
 /**
@@ -948,6 +1349,8 @@ function clearAllMarkers () {
   routePolylines.value.forEach(polylines => {
     if (polylines.completed) polylines.completed.setMap(null)
     if (polylines.pending) polylines.pending.setMap(null)
+    if (polylines.gpsTrail) polylines.gpsTrail.setMap(null)
+    if (polylines.returnToOrigin) polylines.returnToOrigin.setMap(null)
   })
   routePolylines.value.clear()
 }
@@ -975,34 +1378,180 @@ function fitMapBounds () {
 }
 
 /**
- * Selects a delivery run
+ * Updates route styles for selected run (blue) and non-selected runs (original colors)
+ * @param {number} selectedRunId - ID of the selected run
+ * @returns {void}
+ */
+function updateRouteStyles (selectedRunId) {
+  routePolylines.value.forEach((polylines, runId) => {
+    if (runId === selectedRunId) {
+      // Rutas seleccionadas: AZUL
+      if (polylines.completed) {
+        const directions = polylines.completed.getDirections()
+        if (directions) {
+          polylines.completed.setDirections(directions)
+          polylines.completed.setOptions({
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#2196F3',
+              strokeWeight: 6,
+              strokeOpacity: 0.9
+            }
+          })
+        }
+      }
+      if (polylines.pending) {
+        const directions = polylines.pending.getDirections()
+        if (directions) {
+          polylines.pending.setDirections(directions)
+          polylines.pending.setOptions({
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#2196F3',
+              strokeWeight: 6,
+              strokeOpacity: 0.7
+            }
+          })
+        }
+      }
+    } else {
+      // Rutas no seleccionadas: colores originales más tenues
+      if (polylines.completed) {
+        const directions = polylines.completed.getDirections()
+        if (directions) {
+          polylines.completed.setDirections(directions)
+          polylines.completed.setOptions({
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#F44336',
+              strokeWeight: 4,
+              strokeOpacity: 0.4
+            }
+          })
+        }
+      }
+      if (polylines.pending) {
+        const directions = polylines.pending.getDirections()
+        if (directions) {
+          polylines.pending.setDirections(directions)
+          polylines.pending.setOptions({
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#9E9E9E',
+              strokeWeight: 4,
+              strokeOpacity: 0.3
+            }
+          })
+        }
+      }
+    }
+  })
+}
+
+/**
+ * Resets all route styles to default colors
+ * @returns {void}
+ */
+function resetAllRouteStyles () {
+  routePolylines.value.forEach((polylines) => {
+    if (polylines.completed) {
+      const directions = polylines.completed.getDirections()
+      if (directions) {
+        polylines.completed.setDirections(directions)
+        polylines.completed.setOptions({
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#F44336',
+            strokeWeight: 5,
+            strokeOpacity: 0.7
+          }
+        })
+      }
+    }
+    if (polylines.pending) {
+      const directions = polylines.pending.getDirections()
+      if (directions) {
+        polylines.pending.setDirections(directions)
+        polylines.pending.setOptions({
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#9E9E9E',
+            strokeWeight: 5,
+            strokeOpacity: 0.5
+          }
+        })
+      }
+    }
+  })
+}
+
+/**
+ * Selects or deselects a delivery run
  * @param {Object} run - Delivery run object
  * @returns {void}
  */
 function selectRun (run) {
+  // Si ya está seleccionado, deseleccionar
+  if (selectedRun.value?.id === run.id) {
+    selectedRun.value = null
+    // Restaurar todos los marcadores y rutas a su estado normal
+    resetAllMarkerStyles()
+    resetAllRouteStyles()
+    return
+  }
+
+  // Seleccionar nuevo run
   selectedRun.value = run
 
-  // Highlight selected courier marker
+  // Actualizar estilos de todos los marcadores
   courierMarkers.value.forEach((marker, id) => {
     if (id === run.id) {
+      // Marcador seleccionado: carro amarillo/naranja
       marker.setIcon({
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 15,
-        fillColor: '#2196F3',
+        path: 'M17.402,0H5.643C2.526,0,0,3.467,0,6.584v34.804c0,3.116,2.526,5.644,5.643,5.644h11.759c3.116,0,5.644-2.527,5.644-5.644 V6.584C23.044,3.467,20.518,0,17.402,0z M22.057,14.188v11.665l-2.729,0.351v-4.806L22.057,14.188z M20.625,10.773 c-1.016,3.9-2.219,8.51-2.219,8.51H4.638l-2.222-8.51C2.417,10.773,11.3,7.755,20.625,10.773z M3.748,21.713v4.492l-2.73-0.349 V14.502L3.748,21.713z M1.018,37.938V27.579l2.73,0.343v8.196L1.018,37.938z M2.575,40.882l2.218-3.336h13.771l2.219,3.336H2.575z M19.328,35.805v-7.872l2.729-0.355v10.048L19.328,35.805z',
+        fillColor: '#FF9800',
         fillOpacity: 1,
         strokeColor: '#FFEB3B',
-        strokeWeight: 4
+        strokeWeight: 3,
+        scale: 0.8,
+        anchor: new google.maps.Point(11.5, 23.5)
       })
+      marker.setZIndex(2000)
     } else {
+      // Marcadores no seleccionados: carro azul normal
       marker.setIcon({
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
+        path: 'M17.402,0H5.643C2.526,0,0,3.467,0,6.584v34.804c0,3.116,2.526,5.644,5.643,5.644h11.759c3.116,0,5.644-2.527,5.644-5.644 V6.584C23.044,3.467,20.518,0,17.402,0z M22.057,14.188v11.665l-2.729,0.351v-4.806L22.057,14.188z M20.625,10.773 c-1.016,3.9-2.219,8.51-2.219,8.51H4.638l-2.222-8.51C2.417,10.773,11.3,7.755,20.625,10.773z M3.748,21.713v4.492l-2.73-0.349 V14.502L3.748,21.713z M1.018,37.938V27.579l2.73,0.343v8.196L1.018,37.938z M2.575,40.882l2.218-3.336h13.771l2.219,3.336H2.575z M19.328,35.805v-7.872l2.729-0.355v10.048L19.328,35.805z',
         fillColor: '#2196F3',
         fillOpacity: 1,
-        strokeColor: 'white',
-        strokeWeight: 3
+        strokeColor: '#FFFFFF',
+        strokeWeight: 2,
+        scale: 0.7,
+        anchor: new google.maps.Point(11.5, 23.5)
       })
+      marker.setZIndex(1000)
     }
+  })
+
+  // Actualizar estilos de todas las rutas
+  updateRouteStyles(run.id)
+}
+
+/**
+ * Resets all courier marker styles to default
+ * @returns {void}
+ */
+function resetAllMarkerStyles () {
+  courierMarkers.value.forEach((marker) => {
+    marker.setIcon({
+      path: 'M17.402,0H5.643C2.526,0,0,3.467,0,6.584v34.804c0,3.116,2.526,5.644,5.643,5.644h11.759c3.116,0,5.644-2.527,5.644-5.644 V6.584C23.044,3.467,20.518,0,17.402,0z M22.057,14.188v11.665l-2.729,0.351v-4.806L22.057,14.188z M20.625,10.773 c-1.016,3.9-2.219,8.51-2.219,8.51H4.638l-2.222-8.51C2.417,10.773,11.3,7.755,20.625,10.773z M3.748,21.713v4.492l-2.73-0.349 V14.502L3.748,21.713z M1.018,37.938V27.579l2.73,0.343v8.196L1.018,37.938z M2.575,40.882l2.218-3.336h13.771l2.219,3.336H2.575z M19.328,35.805v-7.872l2.729-0.355v10.048L19.328,35.805z',
+      fillColor: '#2196F3',
+      fillOpacity: 1,
+      strokeColor: '#FFFFFF',
+      strokeWeight: 2,
+      scale: 0.7,
+      anchor: new google.maps.Point(11.5, 23.5)
+    })
+    marker.setZIndex(1000)
   })
 }
 
@@ -1021,31 +1570,79 @@ function initializeWebSocket () {
       return
     }
 
+    console.log('echo configurado')
+
     // Listen for location updates on delivery-tracking channel
     echo.channel('delivery-tracking')
-      .listen('DeliveryLocationUpdated', (event) => {
+      .listen('.DeliveryLocationUpdated', (event) => {
         console.log('📍 Location updated:', event)
         updateCourierLocation(event.delivery_run_id, event.latitude, event.longitude)
       })
-      .listen('DeliveryStatusUpdated', (event) => {
-        console.log('📦 Delivery status updated:', event)
-        updateDeliveryStatus(event.delivery_run_id, event.item_id, event.status)
+      .listen('.DeliveryRunStatusUpdated', (event) => {
+        console.log('📦 Delivery run status updated:', event)
+        const runId = event.delivery_run?.id
+        const newStatus = event.new_status || event.delivery_run?.status
+        
+        // Si el status cambió a completed, limpiar marcadores y remover de activos
+        if (newStatus === 'completed' && runId) {
+          console.log('✅ Run completed via status update, cleaning up')
+          clearRunMarkers(runId)
+          activeRuns.value = activeRuns.value.filter(run => run.id !== runId)
+          
+          if (selectedRun.value?.id === runId) {
+            selectedRun.value = null
+            resetAllMarkerStyles()
+          }
+        } else if (runId) {
+          // Para otros cambios de status, recargar y actualizar
+          loadSingleRun(runId)
+          setTimeout(() => updateMapMarkers(), 500)
+        }
       })
-      .listen('DeliveryRunStarted', (event) => {
+      .listen('.DeliveryRunStarted', (event) => {
         console.log('🚀 Delivery run started:', event)
         // Reload all active runs to include the new one
         loadActiveRuns()
+
+        $q.notify({
+          type: 'positive',
+          message: `Nueva ruta iniciada por ${event.delivery_run?.delivery_person?.name || 'repartidor'}`,
+          position: 'top',
+          icon: 'local_shipping',
+          timeout: 3000
+        })
+
+        // Actualizar mapa
+        setTimeout(() => updateMapMarkers(), 500)
       })
-      .listen('DeliveryRunCompleted', (event) => {
+      .listen('.DeliveryRunCompleted', (event) => {
         console.log('✅ Delivery run completed:', event)
         // Remove completed run from active runs
-        activeRuns.value = activeRuns.value.filter(run => run.id !== event.delivery_run_id)
-        updateMapMarkers()
+        const completedRunId = event.delivery_run?.id
+        
+        // Limpiar marcadores y rutas del run completado ANTES de removerlo
+        clearRunMarkers(completedRunId)
+        
+        // Remover de la lista de activos
+        activeRuns.value = activeRuns.value.filter(run => run.id !== completedRunId)
 
         // Deselect if this was the selected run
-        if (selectedRun.value?.id === event.delivery_run_id) {
+        if (selectedRun.value?.id === completedRunId) {
           selectedRun.value = null
+          resetAllMarkerStyles()
         }
+
+        $q.notify({
+          type: 'positive',
+          message: `Ruta completada por ${event.delivery_run?.delivery_person?.name || 'repartidor'}`,
+          position: 'top',
+          icon: 'check_circle',
+          timeout: 3000
+        })
+
+        // NO llamar a updateMapMarkers() aquí porque clearRunMarkers ya limpió todo
+        // y no queremos redibujar las rutas que ya están en el mapa
+        console.log('🧹 Run removed from map and active runs list')
       })
 
     console.log('✅ WebSocket initialized - Real-time updates active')
@@ -1062,9 +1659,17 @@ function initializeWebSocket () {
  * @returns {void}
  */
 function updateCourierLocation (runId, latitude, longitude) {
+  console.log('📍 Updating courier location:', { runId, latitude, longitude })
+
+  // Update marker position
   const marker = courierMarkers.value.get(runId)
   if (marker) {
-    marker.setPosition(new google.maps.LatLng(latitude, longitude))
+    const newPosition = new google.maps.LatLng(latitude, longitude)
+    marker.setPosition(newPosition)
+
+    // Smooth animation
+    marker.setAnimation(google.maps.Animation.BOUNCE)
+    setTimeout(() => marker.setAnimation(null), 500)
   }
 
   // Update run data - add new location to locations array
@@ -1082,6 +1687,18 @@ function updateCourierLocation (runId, latitude, longitude) {
     // Keep only last 50 locations
     if (run.locations.length > 50) {
       run.locations = run.locations.slice(0, 50)
+    }
+
+    // Redraw the GPS trail in real-time (like Uber)
+    updateGPSTrail(run)
+
+    // Redraw routes to update pending route from current position
+    clearRoutePolylines(runId)
+    drawRoute(run)
+
+    // If this is the selected run, update the sidebar info
+    if (selectedRun.value?.id === runId) {
+      selectedRun.value = run
     }
   }
 }
@@ -1120,6 +1737,7 @@ function clearRouteForRun (runId) {
   if (polylines) {
     if (polylines.completed) polylines.completed.setMap(null)
     if (polylines.pending) polylines.pending.setMap(null)
+    if (polylines.gpsTrail) polylines.gpsTrail.setMap(null)
     routePolylines.value.delete(runId)
   }
 }

@@ -610,7 +610,7 @@
               <q-icon name="info" color="orange" />
             </template>
             <div class="text-body2">
-              Actualmente estás usando una <strong>cuenta demo</strong>. 
+              Actualmente estás usando una <strong>cuenta demo</strong>.
               Al crear tu empresa, todos tus datos se guardarán en tu propia cuenta.
             </div>
           </q-banner>
@@ -974,7 +974,7 @@ export default {
       .notification((notification) => {
         this.setNotification(notification)
       })
-    
+
     // Listen for subscription updates
     window.addEventListener('subscription-updated', () => {
       this.loadSubscriptionInfo()
@@ -1180,7 +1180,7 @@ export default {
           this.currentSubscription = null
           this.maxBranches = 1
         }
-        
+
         // Load current branch count
         await this.loadBranchCount()
       } catch (error) {
