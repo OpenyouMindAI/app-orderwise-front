@@ -93,14 +93,13 @@ const retry = async () => {
  */
 const getUser = async () => {
   try {
-    console.log(route.query, route.params)
     const { data } = await api.post('session/get-token', {
       business_type_id: route.query.business_type_id
     }, {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        authorization: `${route.params.token_type || 'Bearer'} ${route.params.access_token}`
+        Authorization: `${route.params.token_type || 'Bearer'} ${route.params.access_token}`
       }
     })
 
@@ -115,6 +114,9 @@ const getUser = async () => {
       ...route.params,
       user: data
     })
+
+    console.log(route.query, route.params)
+
     router.push({ name: route.params.redirect })
   } catch (err) {
     console.log(err)
