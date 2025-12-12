@@ -93,7 +93,7 @@ const retry = async () => {
  */
 const getUser = async () => {
   try {
-    console.log(route.query)
+    console.log(route.query, route.params)
     const { data } = await api.post('session/get-token', {
       business_type_id: route.query.business_type_id
     }, {
