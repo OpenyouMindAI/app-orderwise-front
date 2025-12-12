@@ -60,7 +60,7 @@ const validModule = ($store, to, next) => {
   return next()
 }
 
-const modeleExcept = ['Profile', 'ChangeCompany']
+const modeleExcept = ['Profile', 'ChangeCompany', 'VerifySession']
 
 export default boot(async ({ router, store }) => {
   router.beforeEach(async (to, from, next) => {
@@ -100,7 +100,7 @@ export default boot(async ({ router, store }) => {
     }
     api.interceptors.response.use(null, async (error) => {
       const $store = authentication()
-      if (error.response.status === 401) {
+      if (error.response.status === 401 && !modeleExcept.includes(to.name)) {
         console.warn('⚠️ Error 401: No autorizado - Token inválido o expirado')
         notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
         await $store.logout()
