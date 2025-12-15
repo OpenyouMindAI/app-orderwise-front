@@ -3638,6 +3638,15 @@ export default {
         total += product.subtotal
       })
       this.totalBill = total
+      this.resetPaymentsOnProductsChange()
+    },
+    /**
+     * Reset payments when products change
+     */
+    resetPaymentsOnProductsChange () {
+      if (this.payments && this.payments.length > 0) {
+        this.payments = []
+      }
     },
     /**
      * Check if the stock is valid
