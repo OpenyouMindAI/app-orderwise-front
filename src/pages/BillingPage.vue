@@ -41,8 +41,8 @@
       <span class="text-subtitle2">{{ invoice?.code }}</span>
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
-      <div class="row q-col-gutter-sm billing-panel-container">
-        <div class="col-6">
+      <div class="billing-panel-container">
+        <div>
           <!-- Panel de facturación -->
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales -->
@@ -165,125 +165,7 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="justify-start col-xl-9 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
-              <q-btn
-                id="tour-btn-cobrar"
-                style="border-radius: 10px; padding: 5px 15px"
-                label="Cobrar"
-                icon="payments"
-                color="positive"
-                dense
-                :disable="products.length <= 0"
-                @click="dialogPayment = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F1
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobrar
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                id="tour-btn-cobro-parcial"
-                style="border-radius: 10px; padding: 5px 15px"
-                label="Cobro Parcial"
-                icon="splitscreen"
-                color="primary"
-                dense
-                :disable="products.length <= 0"
-                @click="showPartialPaymentModal = true"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobro parcial / dividir cuenta
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                id="tour-btn-mesas"
-                style="border-radius: 10px; padding: 5px 15px"
-                color="primary"
-                icon="table_restaurant"
-                dense
-                label="Mesas"
-                :loading="loadingLivingRoom"
-                @click="dialogTable = true"
-                v-if="companyConfig.is_table"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F10
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Seleccionar mesas
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                id="tour-btn-cashflow"
-                icon="payments"
-                color="info"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
-                style="border-radius: 10px; padding: 5px 15px"
-                @click="cashflow = true"
-              >
-                <q-badge
-                  color="swap_horiz"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F11
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Entrada y salida de dinero
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                id="tour-btn-buscar"
-                style="border-radius: 10px; padding: 5px 15px"
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
-                icon="search"
-                color="teal"
-                dense
-                @click="searchInvoice = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F12
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Buscar factura
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                id="tour-btn-borrar"
-                style="border-radius: 10px; padding: 5px 15px"
-                icon="delete"
-                color="negative"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Borrar factura
-                </q-tooltip>
-              </q-btn>
-            </div>
-            <div class="col-12" id="tour-tabla-articulos">
+            <div class="col-12" id="tour-products-table">
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
@@ -713,165 +595,300 @@
             </div>
           </div>
         </div>
-        <div class="col-6" ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
-          <div>
-            <!-- Filtros fijos arriba -->
-            <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
-              <div class="row q-col-gutter-xs">
-                <div class="col-6" id="tour-select-categoria">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    clearable
-                    label="Categorías"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="category"
-                    :options="categories"
-                    @filter="filterCategories"
-                  />
-                </div>
-                <div class="col-6" id="tour-input-buscar-producto">
-                  <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
-                    <template v-slot:append>
-                      <q-icon name="search" />
-                    </template>
-                  </q-input>
-                </div>
+        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
+
+          <!-- Botones de acción arriba de todo -->
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+            <div class="flex q-gutter-sm justify-start">
+              <!-- Abrir/Cerrar caja -->
+              <!-- Cobrar -->
+              <q-btn
+                id="tour-btn-cobrar"
+                style="border-radius: 10px; padding: 5px 15px"
+                label="Cobrar"
+                icon="payments"
+                color="positive"
+                dense
+                :disable="products.length <= 0"
+                @click="dialogPayment = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F1
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Cobrar
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                id="tour-btn-cobro-parcial"
+                style="border-radius: 10px; padding: 5px 15px"
+                label="Cobro Parcial"
+                icon="splitscreen"
+                color="primary"
+                dense
+                :disable="products.length <= 0"
+                @click="showPartialPaymentModal = true"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Cobro parcial / dividir cuenta
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                id="tour-btn-mesas"
+                style="border-radius: 10px; padding: 5px 15px"
+                color="orange"
+                icon="table_restaurant"
+                dense
+                label="Mesas"
+                :loading="loadingLivingRoom"
+                @click="dialogTable = true"
+                v-if="companyConfig.is_table"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F10
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Seleccionar mesas
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                id="tour-btn-cashflow"
+                icon="payments"
+                color="info"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
+                style="border-radius: 10px; padding: 5px 15px"
+                @click="cashflow = true"
+              >
+                <q-badge
+                  color="swap_horiz"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F11
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Entrada y salida de dinero
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                id="tour-btn-buscar"
+                style="border-radius: 10px; padding: 5px 15px"
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
+                icon="search"
+                color="teal"
+                dense
+                @click="searchInvoice = true"
+              >
+                <q-badge
+                  color="negative"
+                  align="bottom"
+                  floating
+                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                >
+                  F12
+                </q-badge>
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Buscar factura
+                </q-tooltip>
+              </q-btn>
+              <q-btn
+                v-if="openCashBox"
+                style="border-radius: 10px; padding: 5px 15px;"
+                dense
+                :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                :color="isUserBoxOpen ? 'brown-10' : 'primary'"
+                :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+                @click="handleCashBoxButtonClick"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
+                </q-tooltip>
+              </q-btn>
+              <!-- Borrar -->
+              <q-btn
+                id="tour-btn-borrar"
+                style="border-radius: 10px; padding: 5px 15px"
+                icon="delete"
+                color="negative"
+                dense
+                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
+                @click="clear"
+              >
+                <q-tooltip class="text-body2" anchor="bottom middle">
+                  Borrar factura
+                </q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+
+          <!-- Filtros fijos arriba -->
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+            <div class="row q-col-gutter-xs">
+              <div class="col-6" id="tour-select-categoria">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  clearable
+                  label="Categorías"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="category"
+                  :options="categories"
+                  @filter="filterCategories"
+                />
+              </div>
+              <div class="col-6" id="tour-input-buscar-producto">
+                <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
+                  <template v-slot:append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
               </div>
             </div>
+          </div>
 
-            <!-- Productos con scroll -->
-            <div
-              id="tour-seccion-productos"
-              ref="productsScrollContainer"
-              class="product-container-scroll"
-              style="flex: 1; overflow-y: auto; padding: 0.5rem;"
-              @scroll="handleProductsScroll"
-            >
-              <!-- Grid de productos y skeleton juntos -->
-              <div class="row q-col-gutter-xs">
-                <!-- Productos existentes -->
+          <!-- Productos con scroll -->
+          <div
+            id="tour-seccion-productos"
+            ref="productsScrollContainer"
+            class="product-container-scroll"
+            style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+            @scroll="handleProductsScroll"
+          >
+            <!-- Grid de productos y skeleton juntos -->
+            <div class="row q-col-gutter-xs">
+              <!-- Productos existentes -->
+              <div
+                v-for="product in allProducts"
+                :key="product.id"
+                class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                style="padding: 1px;"
+              >
+                <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
+                  <q-img
+                    style="height: 150px; width: 100%; border-radius: 10px;"
+                    :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                    @click="product.is_promotion ? openPromoDialog(product) : validateProduct(product, true)"
+                  >
+                    <div class="absolute-full text-body2 flex flex-center text-bold text-center">
+                      {{ product.name }}
+                      <q-badge v-if="!validStockProduct(product, 1)" color="negative" floating style="top: 3px; right: 3px;">
+                        Sin stock
+                      </q-badge>
+                    </div>
+                    <q-tooltip class="text-body2">
+                      {{ product.name }}
+                    </q-tooltip>
+                  </q-img>
+                </q-card>
+              </div>
+
+              <!-- Skeleton loader en la misma fila -->
+              <template v-if="loadingProducts">
                 <div
-                  v-for="product in allProducts"
-                  :key="product.id"
+                  v-for="n in skeletonCount"
+                  :key="`skeleton-${n}`"
                   class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
                   style="padding: 1px;"
                 >
-                  <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
-                    <q-img
-                      style="height: 150px; width: 100%; border-radius: 10px;"
-                      :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
-                      @click="product.is_promotion ? openPromoDialog(product) : validateProduct(product, true)"
-                    >
-                      <div class="absolute-full text-body2 flex flex-center text-bold text-center">
-                        {{ product.name }}
-                        <q-badge v-if="!validStockProduct(product, 1)" color="negative" floating style="top: 3px; right: 3px;">
-                          Sin stock
-                        </q-badge>
-                      </div>
-                      <q-tooltip class="text-body2">
-                        {{ product.name }}
-                      </q-tooltip>
-                    </q-img>
+                  <q-card class="my-card" style="border-radius: 10px;">
+                    <q-skeleton
+                      height="150px"
+                      width="100%"
+                      style="border-radius: 10px;"
+                    />
                   </q-card>
                 </div>
+              </template>
+            </div>
 
-                <!-- Skeleton loader en la misma fila -->
-                <template v-if="loadingProducts">
-                  <div
-                    v-for="n in skeletonCount"
-                    :key="`skeleton-${n}`"
-                    class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
-                    style="padding: 1px;"
-                  >
-                    <q-card class="my-card" style="border-radius: 10px;">
-                      <q-skeleton
-                        height="150px"
-                        width="100%"
-                        style="border-radius: 10px;"
-                      />
-                    </q-card>
+            <!-- Mensaje cuando no hay productos -->
+            <div v-if="!loadingProducts && allProducts.length === 0" class="text-center q-pa-lg text-grey">
+              <q-icon name="inventory_2" size="3rem" />
+              <div class="text-h6 q-mt-md">No se encontraron productos</div>
+            </div>
+          </div>
+
+          <!-- Total fijo abajo -->
+          <div style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
+            <q-list separator bordered style="border-radius: 10px;">
+              <q-item v-if="tableSelected.length">
+                <q-item-section>
+                  Mesas
+                </q-item-section>
+                <q-item-section side>
+                  {{ tableSelected.length }}
+                </q-item-section>
+              </q-item>
+              <!-- Tasa de cambio -->
+              <q-item v-if="exchangeRate" class="bg-blue-1">
+                <q-item-section>
+                  <div class="text-subtitle2 text-weight-medium">Tasa de cambio</div>
+                  <div class="text-caption text-grey-7">
+                    1 {{ coin?.symbol || '' }} = {{ exchangeRate.amount }} {{ exchangeRate.coin?.symbol || '' }}
                   </div>
-                </template>
-              </div>
-
-              <!-- Mensaje cuando no hay productos -->
-              <div v-if="!loadingProducts && allProducts.length === 0" class="text-center q-pa-lg text-grey">
-                <q-icon name="inventory_2" size="3rem" />
-                <div class="text-h6 q-mt-md">No se encontraron productos</div>
-              </div>
-            </div>
-
-            <!-- Total fijo abajo -->
-            <div style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
-              <q-list separator bordered style="border-radius: 10px;">
-                <q-item v-if="tableSelected.length">
-                  <q-item-section>
-                    Mesas
-                  </q-item-section>
-                  <q-item-section side>
-                    {{ tableSelected.length }}
-                  </q-item-section>
-                </q-item>
-                <!-- Tasa de cambio -->
-                <q-item v-if="exchangeRate" class="bg-blue-1">
-                  <q-item-section>
-                    <div class="text-subtitle2 text-weight-medium">Tasa de cambio</div>
-                    <div class="text-caption text-grey-7">
-                      1 {{ coin?.symbol || '' }} = {{ exchangeRate.amount }} {{ exchangeRate.coin?.symbol || '' }}
-                    </div>
-                  </q-item-section>
-                </q-item>
-                <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
-                  <q-item-section>
-                    TOTAL
-                  </q-item-section>
-                  <q-item-section v-if="coin" side class="text-white">
-                    <div style="display: flex; align-items: center; gap: 7px">
-                      <span>
-                        {{ coin.symbol }}
-                      </span>
-                      <span>
-                        {{ formatNumber(totalBill) }}
-                      </span>
-                      <span v-if="exchangeRate">
-                        |
-                      </span>
-                      <span v-if="exchangeRate">
-                        {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
-                      </span>
-                    </div>
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section v-if="pendingPayment >= 0">
-                    TOTAL POR COBRAR
-                  </q-item-section>
-                  <q-item-section v-else>
-                    VUELTO
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    <div style="display: flex; align-items: center; gap: 7px">
-                      <span>
-                        {{ coin.symbol }}
-                      </span>
-                      <span>
-                        {{ formatNumber(Math.abs(pendingPayment)) }}
-                      </span>
-                      <span v-if="exchangeRate">
-                        |
-                      </span>
-                      <span v-if="exchangeRate">
-                        {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
-                      </span>
-                    </div>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </div>
+                </q-item-section>
+              </q-item>
+              <q-item class="bg-positive text-white text-h5 text-bold" style="border-radius: 10px 10px 0px 0px;">
+                <q-item-section>
+                  TOTAL
+                </q-item-section>
+                <q-item-section v-if="coin" side class="text-white">
+                  <div style="display: flex; align-items: center; gap: 7px">
+                    <span>
+                      {{ coin.symbol }}
+                    </span>
+                    <span>
+                      {{ formatNumber(totalBill) }}
+                    </span>
+                    <span v-if="exchangeRate">
+                      |
+                    </span>
+                    <span v-if="exchangeRate">
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
+                    </span>
+                  </div>
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section v-if="pendingPayment >= 0">
+                  TOTAL POR COBRAR
+                </q-item-section>
+                <q-item-section v-else>
+                  VUELTO
+                </q-item-section>
+                <q-item-section side v-if="coin">
+                  <div style="display: flex; align-items: center; gap: 7px">
+                    <span>
+                      {{ coin.symbol }}
+                    </span>
+                    <span>
+                      {{ formatNumber(Math.abs(pendingPayment)) }}
+                    </span>
+                    <span v-if="exchangeRate">
+                      |
+                    </span>
+                    <span v-if="exchangeRate">
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
+                    </span>
+                  </div>
+                </q-item-section>
+              </q-item>
+            </q-list>
           </div>
         </div>
       </div>
@@ -1388,7 +1405,7 @@ export default {
           description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
         },
         {
-          target: '#tour-tabla-articulos',
+          target: '#tour-products-table',
           title: '📦 Lista de Artículos',
           description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
         },
@@ -4699,9 +4716,617 @@ export default {
   border-color: #1976d2;
 }
 
-/* Estilos específicos de BillingPage (los estilos comunes ahora están en app.scss) */
+/* Modern Product Card Styles */
 .product-container {
   position: relative;
+}
+
+.modern-product-card {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.modern-product-card--selected {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 3px #10b981;
+}
+
+.selection-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #10b981;
+  border-radius: 50%;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+  z-index: 3;
+  backdrop-filter: blur(4px);
+}
+
+.product-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  z-index: 2;
+  text-align: center;
+}
+
+.product-name {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quantity-controls {
+  position: absolute;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quantity-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quantity-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quantity-btn--minus {
+  background: #ef4444;
+  color: white;
+}
+
+.quantity-btn--minus:hover:not(:disabled) {
+  background: #dc2626;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.quantity-btn--plus {
+  background: #10b981;
+  color: white;
+}
+
+.quantity-btn--plus:hover:not(:disabled) {
+  background: #059669;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.quantity-display {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1f2937;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.image-preview-card {
+  transition: transform 0.2s ease;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.02);
+}
+
+.product-name-overlay {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(2px);
+}
+
+/* Modern Navigation Buttons */
+.modern-nav-btn {
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modern-nav-btn--secondary {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e5e7eb;
+}
+
+.modern-nav-btn--secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-nav-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+}
+
+.modern-nav-btn--success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  font-size: 15px;
+}
+
+.modern-nav-btn--success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Upload Zone Styles */
+.upload-zone {
+  background: rgba(25, 118, 210, 0.08);
+  border: 2px dashed var(--q-primary);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+}
+
+.upload-zone:hover {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.12);
+  border-color: var(--q-primary);
+}
+
+.upload-zone-active {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.15);
+  border-color: var(--q-primary);
+  transform: scale(1.02);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: var(--q-primary);
+  font-weight: 500;
+}
+
+.upload-btn {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* Dark mode support */
+.body--dark .upload-zone {
+  background: rgba(144, 202, 249, 0.1);
+  border-color: #90caf9;
+}
+
+.body--dark .upload-zone:hover {
+  background: rgba(144, 202, 249, 0.15);
+}
+
+.body--dark .upload-text {
+  color: #90caf9;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .upload-zone {
+    min-height: 80px;
+    padding: 12px;
+  }
+
+  .upload-text {
+    font-size: 12px;
+  }
+}
+
+.billing-panel-container {
+  display: grid;
+  grid-template-columns: calc(58.333% - 0.5rem) calc(41.666% - 0.5rem);
+  gap: 1rem;
+}
+
+/* Responsive: Móvil no aplica altura fija */
+@media (max-width: 599px) {
+  .billing-panel-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1440px) {
+  .billing-panel-container {
+    grid-template-columns: calc(50% - 0.5rem) calc(50% - 0.5rem);
+  }
+}
+
+.product-container-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Thumb translúcido */
+.product-container-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+}
+
+/* Estilos para el formulario moderno de cliente */
+.client-form-card {
+  background: white !important;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--q-separator-color);
+}
+
+.body--dark .client-form-card {
+  background: #1e1e1e !important;
+}
+
+.client-form-header {
+  background: var(--q-primary) !important;
+  padding: 20px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.client-form-header .text-h6 {
+  font-weight: 700;
+  font-size: 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.client-form-body {
+  background: white;
+  padding: 32px;
+  padding-bottom: 24px;
+  position: relative;
+  color: #333;
+}
+
+.body--dark .client-form-body {
+  background: #1e1e1e;
+  color: white;
+}
+
+.client-form-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--q-primary), #00bcd4, var(--q-primary));
+}
+
+.form-field-wrapper {
+  margin-bottom: 12px;
+}
+
+.client-form-input {
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.client-form-input :deep(.q-field__control) {
+  border-radius: 12px !important;
+  min-height: 60px;
+  border: none !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #f8f9fa;
+  position: relative;
+  color: #333;
+}
+
+.client-form-input :deep(.q-field__control):before {
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+.client-form-input :deep(.q-field__control):after {
+  border-radius: 12px !important;
+  border: none !important;
+}
+
+/* Estilos globales para TODOS los inputs - incluyendo AddressComponent */
+:deep(.q-field__control) {
+  border-radius: 12px !important;
+}
+
+:deep(.q-input .q-field__control) {
+  border-radius: 12px !important;
+}
+
+:deep(.q-select .q-field__control) {
+  border-radius: 12px !important;
+}
+
+.body--dark .client-form-input :deep(.q-field__control) {
+  background: #2a2a2a;
+  color: white;
+}
+
+.client-form-input :deep(.q-field__control):hover {
+  border-color: var(--q-primary);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.client-form-input :deep(.q-field__native) {
+  color: inherit !important;
+  font-weight: 500;
+  padding: 12px 20px 8px 20px; /* Más padding arriba para dar espacio al label */
+}
+
+/* Labels mejorados con más espacio */
+.client-form-input :deep(.q-field__label) {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  left: 20px;
+  top: 8px !important; /* Más espacio arriba para separar del texto */
+  transition: all 0.3s ease;
+  color: #6b7280 !important;
+}
+
+.body--dark .client-form-input :deep(.q-field__label) {
+  color: #9ca3af !important;
+}
+
+/* Focus effects mejorados */
+.client-form-input :deep(.q-field--focused .q-field__control) {
+  border-color: var(--q-primary) !important;
+  box-shadow: 0 0 0 4px var(--q-primary-alpha, rgba(25, 118, 210, 0.15));
+  transform: scale(1.02);
+}
+
+.client-form-input :deep(.q-field--focused .q-field__label) {
+  color: var(--q-primary) !important;
+  transform: translateY(-32px) scale(0.85); /* Ajustado para el nuevo espaciado */
+  font-weight: 700;
+}
+
+/* Estilos adicionales para mejor presentación */
+.form-field-wrapper {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.text-grey-5 {
+  color: #6b7280 !important;
+  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.body--dark .text-grey-5 {
+  color: #9ca3af !important;
+}
+
+.client-form-input :deep(.q-field__control):before {
+  border-color: var(--q-separator-color) !important;
+}
+
+/* Bordes en tema claro */
+.body--light .client-form-input :deep(.q-field__control):before {
+  border-color: #e0e0e0 !important;
+}
+
+/* Bordes en tema oscuro */
+.body--dark .client-form-input :deep(.q-field__control):before {
+  border-color: #616161 !important;
+}
+
+.client-form-input :deep(.q-field__control):hover:before {
+  border-color: var(--q-primary) !important;
+}
+
+.client-form-input :deep(.q-field--focused .q-field__control):before,
+.client-form-input :deep(.q-field--focused .q-field__control):after {
+  border-color: var(--q-primary) !important;
+}
+
+/* Campo nombre con asterisco rojo */
+.client-form-input :deep(.q-field--error .q-field__label) {
+  color: #f44336 !important;
+}
+
+.client-form-input :deep(.q-field--error .q-field__control):before {
+  border-color: #f44336 !important;
+}
+
+/* Select dropdown */
+.client-form-input :deep(.q-field__append) {
+  color: #b0b0b0;
+}
+
+.client-form-actions-improved {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 32px;
+  background: white;
+  margin-top: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .client-form-actions-improved {
+  background: #1e1e1e;
+}
+
+/* Campo nombre más elegante y destacado */
+.client-form-name-input {
+  margin-bottom: 24px;
+}
+
+.client-form-name-input :deep(.q-field__control) {
+  min-height: 64px !important;
+  font-size: 18px;
+  border: 3px solid var(--q-primary);
+  border-radius: 16px;
+  background: #f0f8ff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.body--dark .client-form-name-input :deep(.q-field__control) {
+  background: #2a2a2a;
+}
+
+.client-form-name-input :deep(.q-field__native) {
+  font-size: 18px !important;
+  font-weight: 600;
+  padding: 0 24px;
+}
+
+.client-form-name-input :deep(.q-field__label) {
+  font-size: 16px !important;
+  font-weight: 700;
+  left: 24px;
+  color: var(--q-primary) !important;
+}
+
+.client-form-name-input :deep(.q-field--focused .q-field__control) {
+  border-color: var(--q-primary) !important;
+  box-shadow: 0 0 0 6px var(--q-primary-alpha, rgba(25, 118, 210, 0.15));
+  transform: scale(1.03);
+}
+
+.client-form-save-btn {
+  background: var(--q-primary) !important;
+  color: white !important;
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 120px;
+  height: 40px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form-save-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.client-form-save-btn:hover::before {
+  left: 100%;
+}
+
+.client-form-save-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Checkbox styling */
+.client-form-checkbox {
+  color: #b0b0b0;
+}
+
+.client-form-checkbox :deep(.q-checkbox__inner) {
+  color: var(--q-primary);
+}
+
+.client-form-checkbox :deep(.q-checkbox__label) {
+  color: #b0b0b0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .client-form-actions-improved {
+    position: static;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 0 20px 20px;
+  }
+  .client-form-body {
+    padding: 16px;
+    padding-bottom: 16px;
+  }
 }
 
 /* Tour Styles */
@@ -4824,4 +5449,5 @@ export default {
     font-size: 13px;
   }
 }
+
 </style>
