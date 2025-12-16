@@ -888,35 +888,35 @@ export default {
      * @returns {String}
      */
     subscriptionPlan () {
-      return this.authStore.subscriptionPlan || 'Free'
+      return this.store.subscriptionPlan || 'Free'
     },
     /**
      * Get subscription days left from store
      * @returns {Number}
      */
     subscriptionDaysLeft () {
-      return this.authStore.subscriptionDaysLeft
+      return this.store.subscriptionDaysLeft
     },
     /**
      * Get current subscription from store
      * @returns {Object}
      */
     currentSubscription () {
-      return this.authStore.currentSubscription
+      return this.store.currentSubscription
     },
     /**
      * Get max branches from store
      * @returns {Number}
      */
     maxBranches () {
-      return this.authStore.maxBranches
+      return this.store.maxBranches
     },
     /**
      * Get current branch count from store
      * @returns {Number}
      */
     currentBranchCount () {
-      return this.authStore.currentBranchCount
+      return this.store.currentBranchCount
     }
   },
   watch: {
@@ -1178,7 +1178,7 @@ export default {
      */
     async loadSubscriptionInfo () {
       // Use Pinia store to load and store subscription data
-      await this.authStore.loadSubscriptionInfo()
+      await this.store.loadSubscriptionInfo()
 
       // Load current branch count
       await this.loadBranchCount()
@@ -1194,10 +1194,10 @@ export default {
         const count = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
 
         // Save to Pinia store
-        this.authStore.setCurrentBranchCount(count)
+        this.store.setCurrentBranchCount(count)
       } catch (error) {
         console.error('Error loading branch count:', error)
-        this.authStore.setCurrentBranchCount(0)
+        this.store.setCurrentBranchCount(0)
       }
     },
     /**
