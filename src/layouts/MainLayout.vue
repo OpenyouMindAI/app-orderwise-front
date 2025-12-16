@@ -823,31 +823,6 @@ export default {
        */
       showSubscriptionDialog: false,
       /**
-       * Subscription plan name
-       * @type {String}
-       */
-      subscriptionPlan: 'Free',
-      /**
-       * Subscription days left
-       * @type {Number}
-       */
-      subscriptionDaysLeft: null,
-      /**
-       * Current subscription data
-       * @type {Object}
-       */
-      currentSubscription: null,
-      /**
-       * Max branches allowed
-       * @type {Number}
-       */
-      maxBranches: 1,
-      /**
-       * Current branch count
-       * @type {Number}
-       */
-      currentBranchCount: 0,
-      /**
        * Show create company dialog
        * @type {Boolean}
        */
@@ -907,6 +882,41 @@ export default {
     },
     canAddMoreBranches () {
       return this.currentBranchCount < this.maxBranches
+    },
+    /**
+     * Get subscription plan from store
+     * @returns {String}
+     */
+    subscriptionPlan () {
+      return this.authStore.subscriptionPlan || 'Free'
+    },
+    /**
+     * Get subscription days left from store
+     * @returns {Number}
+     */
+    subscriptionDaysLeft () {
+      return this.authStore.subscriptionDaysLeft
+    },
+    /**
+     * Get current subscription from store
+     * @returns {Object}
+     */
+    currentSubscription () {
+      return this.authStore.currentSubscription
+    },
+    /**
+     * Get max branches from store
+     * @returns {Number}
+     */
+    maxBranches () {
+      return this.authStore.maxBranches
+    },
+    /**
+     * Get current branch count from store
+     * @returns {Number}
+     */
+    currentBranchCount () {
+      return this.authStore.currentBranchCount
     }
   },
   watch: {
@@ -1167,28 +1177,11 @@ export default {
      * Load subscription information
      */
     async loadSubscriptionInfo () {
-      try {
-        const { data } = await api.get('subscriptions/current')
-        if (data.subscription) {
-          this.subscriptionPlan = data.plan.name
-          this.subscriptionDaysLeft = data.days_until_expiration
-          this.currentSubscription = data.subscription
-          this.maxBranches = data.subscription.branch_offices_count || 1
-        } else {
-          this.subscriptionPlan = 'Free'
-          this.subscriptionDaysLeft = null
-          this.currentSubscription = null
-          this.maxBranches = 1
-        }
+      // Use Pinia store to load and store subscription data
+      await this.authStore.loadSubscriptionInfo()
 
-        // Load current branch count
-        await this.loadBranchCount()
-      } catch (error) {
-        console.error('Error loading subscription:', error)
-        this.subscriptionPlan = 'Free'
-        this.subscriptionDaysLeft = null
-        this.maxBranches = 1
-      }
+      // Load current branch count
+      await this.loadBranchCount()
     },
     /**
      * Load current branch count
@@ -1198,10 +1191,13 @@ export default {
         const { data } = await api.get('branch-offices', {
           params: { paginate: false }
         })
-        this.currentBranchCount = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+        const count = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+
+        // Save to Pinia store
+        this.authStore.setCurrentBranchCount(count)
       } catch (error) {
         console.error('Error loading branch count:', error)
-        this.currentBranchCount = 0
+        this.authStore.setCurrentBranchCount(0)
       }
     },
     /**

@@ -946,7 +946,6 @@ onMounted(async () => {
   // Verificar si debe mostrar el tour
   const hasSeenTour = localStorage.getItem('has_seen_company_config_tour')
   const needsTour = localStorage.getItem('needs_company_config_tour')
-  
   // Mostrar tour si:
   // 1. Nunca lo ha visto (primera visita)
   // 2. O viene marcado como que necesita el tour
@@ -1000,8 +999,12 @@ const initializeAddress = () => {
 
 // Computed
 const isFreePlan = computed(() => {
-  const subscription = userSession?.subscription
-  return !subscription || subscription?.subscription_plan?.slug === 'free'
+  // Use subscription data from Pinia store
+  const subscriptionPlan = store.subscriptionPlan
+  const currentSubscription = store.currentSubscription
+
+  // Check if no subscription or if it's the free plan
+  return !currentSubscription || !subscriptionPlan || subscriptionPlan.toLowerCase() === 'free'
 })
 
 const totalSteps = computed(() => isFreePlan.value ? 5 : 7)

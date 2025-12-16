@@ -47,7 +47,32 @@ export const authentication = defineStore('authentication', {
        * Is demo account
        * @type {Boolean}
        */
-      isDemo: false
+      isDemo: false,
+      /**
+       * Current subscription plan name
+       * @type {String}
+       */
+      subscriptionPlan: null,
+      /**
+       * Days left until subscription expires
+       * @type {Number}
+       */
+      subscriptionDaysLeft: null,
+      /**
+       * Current subscription object
+       * @type {Object}
+       */
+      currentSubscription: null,
+      /**
+       * Maximum branches allowed in current plan
+       * @type {Number}
+       */
+      maxBranches: 1,
+      /**
+       * Current branch count
+       * @type {Number}
+       */
+      currentBranchCount: 0
     }
   },
   actions: {
@@ -76,6 +101,9 @@ export const authentication = defineStore('authentication', {
         this.refresh_token = null
         this.userSession = null
         this.branchOffice = null
+
+        // Clear subscription data
+        this.clearSubscriptionData()
 
         // Guardar tema antes de limpiar localStorage
         const savedTheme = localStorage.getItem('app-theme')
@@ -167,6 +195,51 @@ export const authentication = defineStore('authentication', {
 
     setBranchOffice (branchOffice) {
       this.branchOffice = branchOffice
+    },
+    /**
+     * Set subscription data
+     * @param {Object} subscriptionData - Subscription information
+     */
+    setSubscriptionData (subscriptionData) {
+      this.subscriptionPlan = subscriptionData.plan?.name || 'Free'
+      this.subscriptionDaysLeft = subscriptionData.days_until_expiration || null
+      this.currentSubscription = subscriptionData.subscription || null
+      this.maxBranches = subscriptionData.subscription?.branch_offices_count || 1
+    },
+    /**
+     * Set current branch count
+     * @param {Number} count - Number of branches
+     */
+    setCurrentBranchCount (count) {
+      this.currentBranchCount = count
+    },
+    /**
+     * Load subscription information from API
+     */
+    async loadSubscriptionInfo () {
+      try {
+        const { data } = await api.get('subscriptions/current')
+        this.setSubscriptionData(data)
+        return data
+      } catch (error) {
+        console.error('Error loading subscription:', error)
+        // Set default values on error
+        this.subscriptionPlan = 'Free'
+        this.subscriptionDaysLeft = null
+        this.currentSubscription = null
+        this.maxBranches = 1
+        return null
+      }
+    },
+    /**
+     * Clear subscription data (on logout)
+     */
+    clearSubscriptionData () {
+      this.subscriptionPlan = null
+      this.subscriptionDaysLeft = null
+      this.currentSubscription = null
+      this.maxBranches = 1
+      this.currentBranchCount = 0
     }
   },
   getters: {
@@ -199,6 +272,62 @@ export const authentication = defineStore('authentication', {
      */
     isDemoGetter (state) {
       return state.isDemo
+    },
+    /**
+     * Get subscription plan name
+     * @param {*} state
+     * @returns {String} subscription plan name
+     */
+    subscriptionPlanGetter (state) {
+      return state.subscriptionPlan || 'Free'
+    },
+    /**
+     * Get days left until subscription expires
+     * @param {*} state
+     * @returns {Number} days left
+     */
+    subscriptionDaysLeftGetter (state) {
+      return state.subscriptionDaysLeft
+    },
+    /**
+     * Get current subscription object
+     * @param {*} state
+     * @returns {Object} current subscription
+     */
+    currentSubscriptionGetter (state) {
+      return state.currentSubscription
+    },
+    /**
+     * Get maximum branches allowed
+     * @param {*} state
+     * @returns {Number} max branches
+     */
+    maxBranchesGetter (state) {
+      return state.maxBranches
+    },
+    /**
+     * Get current branch count
+     * @param {*} state
+     * @returns {Number} current branch count
+     */
+    currentBranchCountGetter (state) {
+      return state.currentBranchCount
+    },
+    /**
+     * Check if subscription is active
+     * @param {*} state
+     * @returns {Boolean} is active
+     */
+    isSubscriptionActive (state) {
+      return state.currentSubscription?.status === 'active'
+    },
+    /**
+     * Check if subscription is in trial
+     * @param {*} state
+     * @returns {Boolean} is trial
+     */
+    isSubscriptionTrial (state) {
+      return state.currentSubscription?.status === 'trial'
     }
   },
   persist: true
