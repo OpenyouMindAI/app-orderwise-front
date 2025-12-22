@@ -920,6 +920,37 @@ export default {
     canAddMoreBranches () {
       return this.currentBranchCount < this.maxBranches
     },
+    filteredDataMenu () {
+      if (!this.menuSearch) return this.dataMenu
+
+      const searchLower = this.menuSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+      return this.dataMenu.map(section => {
+        // Filter modules that match the search term
+        const filteredModules = section.modules.filter(module => {
+          const title = (module.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          return title.includes(searchLower)
+        })
+
+        // If section has matching modules, return section with those modules
+        if (filteredModules.length > 0) {
+          return {
+            ...section,
+            modules: filteredModules
+          }
+        }
+
+        // Also check if section name matches
+        const sectionName = (section.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        if (sectionName.includes(searchLower)) {
+          // If section name matches, should we show all modules?
+          // Maybe better to show the section with original modules if the user is searching for the section.
+          return section
+        }
+
+        return null
+      }).filter(section => section !== null)
+    },
     /**
      * Get subscription plan from store
      * @returns {String}
