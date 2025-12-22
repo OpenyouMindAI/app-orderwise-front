@@ -177,6 +177,7 @@ export default {
        * @type {String}
        */
       password: '',
+      redirect: null,
 
       btnDisable: false,
       urlDownload: null,
@@ -253,6 +254,7 @@ export default {
         const urlParams = new URLSearchParams(window.location.search)
         const username = urlParams.get('username')
         const password = urlParams.get('password')
+        const redirect = urlParams.get('redirect')
 
         // Solo ejecutar auto-login si ambos parámetros existen
         if (username && password) {
@@ -261,6 +263,7 @@ export default {
           // Asignar valores a los campos
           this.username = username
           this.password = password
+          this.redirect = redirect
 
           // Mostrar loading
           this.$q.loading.show({
@@ -722,7 +725,7 @@ export default {
           notify('Usuario no tiene permisos', 'negative', 'warning')
           return
         }
-        this.$router.push({ name: 'Tutorial' })
+        this.$router.push({ name: this.redirect || 'Tutorial' })
         this.btnDisable = false
       } catch (error) {
         Notify.create({
