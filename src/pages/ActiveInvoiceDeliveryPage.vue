@@ -285,6 +285,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { loadGoogleMaps, darkMapStyles } from 'src/config/maps'
+import { echo } from 'src/boot/pusher'
 
 const route = useRoute()
 const router = useRouter()
@@ -587,6 +588,9 @@ onMounted(async () => {
     await initializeMap()
     await startLocationTracking()
     await loadPaymentMethods()
+
+    // Configurar listeners de Pusher para actualizaciones en tiempo real
+    setupPusherListeners()
   } catch (error) {
     console.error('Error initializing page:', error)
     $q.notify({
@@ -599,6 +603,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   stopLocationTracking()
+  cleanupPusherListeners()
 })
 
 // Watch for delivery changes to update routes
@@ -754,6 +759,77 @@ async function loadDeliveryRun (updateCurrentIndex = true) {
     $q.notify({ type: 'negative', message: 'Error al cargar información', position: 'top' })
     router.push({ name: 'InvoiceDeliveryTray' })
   }
+}
+
+/**
+ * Configurar listeners de Pusher para actualizaciones en tiempo real
+ */
+function setupPusherListeners () {
+  if (!echo || !deliveryRun.value) return
+
+  const deliveryRunId = deliveryRun.value.id
+
+  console.log('🔴 Configurando Pusher para delivery run:', deliveryRunId)
+
+  // Escuchar canal específico del delivery run
+  echo.channel(`delivery-run.${deliveryRunId}`)
+    .listen('DeliveryRunStatusUpdated', (data) => {
+      console.log('📡 DeliveryRunStatusUpdated:', data)
+      // Recargar datos sin cambiar el índice actual
+      loadDeliveryRun(false)
+      $q.notify({
+        type: 'info',
+        message: 'Entrega actualizada',
+        position: 'top',
+        timeout: 2000
+      })
+    })
+    .listen('DeliveryRunCompleted', (data) => {
+      console.log('📡 DeliveryRunCompleted:', data)
+      $q.notify({
+        type: 'positive',
+        message: '¡Ruta completada!',
+        position: 'top',
+        icon: 'check_circle'
+      })
+      setTimeout(() => {
+        router.push({ name: 'InvoiceDeliveryTray' })
+      }, 2000)
+    })
+
+  // Escuchar canal general de tracking
+  echo.channel('delivery-tracking')
+    .listen('DeliveryLocationUpdated', (data) => {
+      if (data.delivery_run_id === deliveryRunId) {
+        console.log('📍 Ubicación actualizada:', data)
+        // Actualizar marcador de posición en el mapa si es necesario
+      }
+    })
+    .listen('DeliveryRunStarted', (data) => {
+      if (data.delivery_run?.id === deliveryRunId) {
+        console.log('🚀 Ruta iniciada:', data)
+        loadDeliveryRun(false)
+      }
+    })
+
+  console.log('✅ Pusher listeners configurados')
+}
+
+/**
+ * Limpiar listeners de Pusher
+ */
+function cleanupPusherListeners () {
+  if (!echo || !deliveryRun.value) return
+
+  const deliveryRunId = deliveryRun.value.id
+
+  console.log('🔴 Limpiando Pusher listeners')
+
+  // Dejar canales
+  echo.leave(`delivery-run.${deliveryRunId}`)
+  echo.leave('delivery-tracking')
+
+  console.log('✅ Pusher listeners limpiados')
 }
 
 async function initializeMap () {

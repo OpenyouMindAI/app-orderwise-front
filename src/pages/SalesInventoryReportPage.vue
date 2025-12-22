@@ -778,10 +778,10 @@ export default {
       try {
         // Load KPIs
         await this.loadKpis()
-        
+
         // Load detailed data
         await this.loadDetailedData()
-        
+
         // Load chart data
         await this.loadChartData()
       } catch (error) {
@@ -801,7 +801,7 @@ export default {
       const { data } = await api.get('sales-inventory-report/detailed', {
         params: {
           ...this.filters,
-          page: page,
+          page,
           per_page: this.pagination.rowsPerPage
         }
       })
@@ -1179,15 +1179,19 @@ export default {
           params: this.filters,
           responseType: 'blob'
         })
-        
-        const url = window.URL.createObjectURL(new Blob([response.data]))
+
+        const blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+        const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
         link.setAttribute('download', `reporte-ventas-inventario-${new Date().getTime()}.xlsx`)
         document.body.appendChild(link)
         link.click()
         link.remove()
-        
+        window.URL.revokeObjectURL(url)
+
         notify('Reporte exportado exitosamente', 'positive', 'check_circle')
       } catch (error) {
         notify('Error al exportar el reporte', 'negative', 'error')
@@ -1203,7 +1207,7 @@ export default {
           params: this.filters,
           responseType: 'blob'
         })
-        
+
         const url = window.URL.createObjectURL(new Blob([response.data]))
         const link = document.createElement('a')
         link.href = url
@@ -1211,7 +1215,7 @@ export default {
         document.body.appendChild(link)
         link.click()
         link.remove()
-        
+
         notify('Reporte exportado exitosamente', 'positive', 'check_circle')
       } catch (error) {
         notify('Error al exportar el reporte', 'negative', 'error')

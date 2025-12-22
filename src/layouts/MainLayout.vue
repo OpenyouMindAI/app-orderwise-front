@@ -860,31 +860,6 @@ export default {
        */
       showSubscriptionDialog: false,
       /**
-       * Subscription plan name
-       * @type {String}
-       */
-      subscriptionPlan: 'Free',
-      /**
-       * Subscription days left
-       * @type {Number}
-       */
-      subscriptionDaysLeft: null,
-      /**
-       * Current subscription data
-       * @type {Object}
-       */
-      currentSubscription: null,
-      /**
-       * Max branches allowed
-       * @type {Number}
-       */
-      maxBranches: 1,
-      /**
-       * Current branch count
-       * @type {Number}
-       */
-      currentBranchCount: 0,
-      /**
        * Show create company dialog
        * @type {Boolean}
        */
@@ -945,36 +920,40 @@ export default {
     canAddMoreBranches () {
       return this.currentBranchCount < this.maxBranches
     },
-    filteredDataMenu () {
-      if (!this.menuSearch) return this.dataMenu
-
-      const searchLower = this.menuSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-
-      return this.dataMenu.map(section => {
-        // Filter modules that match the search term
-        const filteredModules = section.modules.filter(module => {
-          const title = (module.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          return title.includes(searchLower)
-        })
-
-        // If section has matching modules, return section with those modules
-        if (filteredModules.length > 0) {
-          return {
-            ...section,
-            modules: filteredModules
-          }
-        }
-
-        // Also check if section name matches
-        const sectionName = (section.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        if (sectionName.includes(searchLower)) {
-          // If section name matches, should we show all modules?
-          // Maybe better to show the section with original modules if the user is searching for the section.
-          return section
-        }
-
-        return null
-      }).filter(section => section !== null)
+    /**
+     * Get subscription plan from store
+     * @returns {String}
+     */
+    subscriptionPlan () {
+      return this.store.subscriptionPlan || 'Free'
+    },
+    /**
+     * Get subscription days left from store
+     * @returns {Number}
+     */
+    subscriptionDaysLeft () {
+      return this.store.subscriptionDaysLeft
+    },
+    /**
+     * Get current subscription from store
+     * @returns {Object}
+     */
+    currentSubscription () {
+      return this.store.currentSubscription
+    },
+    /**
+     * Get max branches from store
+     * @returns {Number}
+     */
+    maxBranches () {
+      return this.store.maxBranches
+    },
+    /**
+     * Get current branch count from store
+     * @returns {Number}
+     */
+    currentBranchCount () {
+      return this.store.currentBranchCount
     }
   },
   watch: {
@@ -1235,28 +1214,11 @@ export default {
      * Load subscription information
      */
     async loadSubscriptionInfo () {
-      try {
-        const { data } = await api.get('subscriptions/current')
-        if (data.subscription) {
-          this.subscriptionPlan = data.plan.name
-          this.subscriptionDaysLeft = data.days_until_expiration
-          this.currentSubscription = data.subscription
-          this.maxBranches = data.subscription.branch_offices_count || 1
-        } else {
-          this.subscriptionPlan = 'Free'
-          this.subscriptionDaysLeft = null
-          this.currentSubscription = null
-          this.maxBranches = 1
-        }
+      // Use Pinia store to load and store subscription data
+      await this.store.loadSubscriptionInfo()
 
-        // Load current branch count
-        await this.loadBranchCount()
-      } catch (error) {
-        console.error('Error loading subscription:', error)
-        this.subscriptionPlan = 'Free'
-        this.subscriptionDaysLeft = null
-        this.maxBranches = 1
-      }
+      // Load current branch count
+      await this.loadBranchCount()
     },
     /**
      * Load current branch count
@@ -1266,10 +1228,13 @@ export default {
         const { data } = await api.get('branch-offices', {
           params: { paginate: false }
         })
-        this.currentBranchCount = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+        const count = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+
+        // Save to Pinia store
+        this.store.setCurrentBranchCount(count)
       } catch (error) {
         console.error('Error loading branch count:', error)
-        this.currentBranchCount = 0
+        this.store.setCurrentBranchCount(0)
       }
     },
     /**

@@ -633,20 +633,19 @@ async function fetchBranches () {
 async function downloadInvoiceTable () {
   loadingStates.value.export = true
   try {
-    const response = await api.post('dashboard/export-table', { ...getFilters() }, {
+    const { data } = await api.get('dashboard/export-table', {
+      params: getFilters(),
       responseType: 'blob'
     })
-    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const blob = new Blob([data])
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = 'ventas.xlsx'
     document.body.appendChild(link)
     link.click()
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(link)
-    }, 100)
+    link.remove()
+
     notify('Archivo exportado correctamente', 'positive', 'download')
   } catch (error) {
     notify('Error al exportar la tabla', 'negative', 'warning')
