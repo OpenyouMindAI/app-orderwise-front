@@ -24,6 +24,18 @@
             @click="leftDrawerOpen = !leftDrawerOpen"
           />
 
+          <!-- Search Button (New Location) -->
+          <q-btn
+            flat
+            dense
+            round
+            class="menu-btn q-ml-sm"
+            icon="search"
+            @click="leftDrawerOpen = true; showSearchInput = !showSearchInput; $nextTick(() => { if(showSearchInput) $refs.searchInput.focus() })"
+          >
+            <q-tooltip>Buscar en el menú</q-tooltip>
+          </q-btn>
+
           <q-separator dark vertical inset class="q-mx-sm" />
 
           <div v-if="!$q.screen.lt.sm" class="logo-container-with-badge">
@@ -455,63 +467,86 @@
       bordered
       show-if-above
       class="q-pa-none relative modern-drawer"
-      :style="
-          !$q.screen.lt.md
-            ? 'max-height: calc(100vh - 94px);'
-            : 'max-height: calc(100vh - 46px);'
-        "
     >
-      <div v-if="$q.screen.lt.md" class="flex flex-center modern-drawer-header q-py-sm">
-        <img
-          :src="userSession?.company_session?.url || logo.white"
-          width="155px"
-          style="max-height: 50px"
-          alt="logo"
-        />
-        <q-tooltip :offset="[10, 10]">
-          {{ userSession?.company_session?.name }}
-        </q-tooltip>
-      </div>
-      <q-expansion-item
-        v-for="category_module in dataMenu"
-        expand-separator
-        :key="category_module.id"
-        :icon="category_module.icon"
-        default-opened
-        :label="category_module.name"
-      >
-        <div v-for="list in category_module.modules" :key="list.id">
-          <q-item
-            v-if="
-              validateRole(list.roles) &&
-              list.name != 'home' &&
-              list.visible !== false
-            "
-            v-ripple
-            clickable
-            active-class="my-menu-link"
-            :active="list.link === $route.name"
-          >
-            <q-item-section v-if="list.icon" avatar class="q-ml-sm">
-              <q-icon :name="list.icon" />
-            </q-item-section>
-            <q-item-section @click="changeRoute(list.link, list.title)">
-              <q-item-label>
-                {{ list.title }}
-              </q-item-label>
-            </q-item-section>
-          </q-item>
+      <div class="column fit">
+        <div v-if="$q.screen.lt.md" class="flex flex-center modern-drawer-header q-py-sm">
+          <img
+            :src="userSession?.company_session?.url || logo.white"
+            width="155px"
+            style="max-height: 50px"
+            alt="logo"
+          />
+          <q-tooltip :offset="[10, 10]">
+            {{ userSession?.company_session?.name }}
+          </q-tooltip>
         </div>
-      </q-expansion-item>
-      <div
-        class="modern-drawer-footer text-white flex flex-center q-gutter-sm q-mt-xs q-pb-sm absolute-bottom"
-      >
-        <span class="text-subtitle1"> Powered by </span>
-        <q-img
-          src="https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/white.png"
-          width="70px"
-          alt="Qbits"
-        />
+        <transition name="slide-fade">
+          <div class="q-px-md q-pt-md q-pb-sm search-container" v-if="showSearchInput">
+            <q-input
+              ref="searchInput"
+              v-model="menuSearch"
+              dense
+              outlined
+              placeholder="Buscar"
+              class="menu-search-input"
+              bg-color="white"
+              autofocus
+            >
+              <template v-slot:append>
+                <q-icon
+                  name="close"
+                  class="cursor-pointer"
+                  @click="showSearchInput = false; menuSearch = ''"
+                />
+              </template>
+            </q-input>
+          </div>
+        </transition>
+
+        <q-scroll-area class="col">
+          <q-expansion-item
+            v-for="category_module in filteredDataMenu"
+            expand-separator
+            :key="category_module.id"
+            :icon="category_module.icon"
+            default-opened
+            :label="category_module.name"
+          >
+            <div v-for="list in category_module.modules" :key="list.id">
+              <q-item
+                v-if="
+                  validateRole(list.roles) &&
+                  list.name != 'home' &&
+                  list.visible !== false
+                "
+                v-ripple
+                clickable
+                active-class="my-menu-link"
+                :active="list.link === $route.name"
+                @click="changeRoute(list.link, list.title)"
+              >
+                <q-item-section v-if="list.icon" avatar class="q-ml-sm">
+                  <q-icon :name="list.icon" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>
+                    {{ list.title }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </div>
+          </q-expansion-item>
+        </q-scroll-area>
+        <div
+          class="modern-drawer-footer text-white flex flex-center q-gutter-sm q-mt-xs q-pb-sm"
+        >
+          <span class="text-subtitle1"> Powered by </span>
+          <q-img
+            src="https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/white.png"
+            width="70px"
+            alt="Qbits"
+          />
+        </div>
       </div>
     </q-drawer>
     <q-dialog v-model="arcaDialog">
@@ -795,6 +830,8 @@ export default {
       labelDrown: null,
       dataMenu: [],
       active: true,
+      menuSearch: '',
+      showSearchInput: false,
       visibleLoading: false,
       titleApp: null,
       route: '',
@@ -907,6 +944,37 @@ export default {
     },
     canAddMoreBranches () {
       return this.currentBranchCount < this.maxBranches
+    },
+    filteredDataMenu () {
+      if (!this.menuSearch) return this.dataMenu
+
+      const searchLower = this.menuSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+      return this.dataMenu.map(section => {
+        // Filter modules that match the search term
+        const filteredModules = section.modules.filter(module => {
+          const title = (module.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          return title.includes(searchLower)
+        })
+
+        // If section has matching modules, return section with those modules
+        if (filteredModules.length > 0) {
+          return {
+            ...section,
+            modules: filteredModules
+          }
+        }
+
+        // Also check if section name matches
+        const sectionName = (section.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        if (sectionName.includes(searchLower)) {
+          // If section name matches, should we show all modules?
+          // Maybe better to show the section with original modules if the user is searching for the section.
+          return section
+        }
+
+        return null
+      }).filter(section => section !== null)
     }
   },
   watch: {
@@ -2566,4 +2634,26 @@ export default {
     transform: scale(0.95);
   }
 }
+  /* Animation */
+  .slide-fade-enter-active,
+  .slide-fade-leave-active {
+    transition: all 0.3s ease-out;
+    max-height: 80px;
+    opacity: 1;
+    overflow: hidden;
+  }
+
+  .slide-fade-enter-from,
+  .slide-fade-leave-to {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .search-container {
+    overflow: hidden;
+  }
 </style>
