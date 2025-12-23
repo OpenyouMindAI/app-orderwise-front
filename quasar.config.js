@@ -115,7 +115,7 @@ export default configure(function (/* ctx */) {
     capacitor: {
       hideSplashscreen: true,
       iosStatusBarPadding: true,
-      appName: 'Orderwise'
+      appName: 'Qbits'
     },
 
     electron: {

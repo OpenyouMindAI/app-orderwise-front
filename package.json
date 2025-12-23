@@ -1,8 +1,8 @@
 {
   "name": "orderwise",
   "version": "0.0.1",
-  "description": "Orderwise",
-  "productName": "Orderwise",
+  "description": "Qbits",
+  "productName": "Qbits",
   "author": "palma001 <palmaluis1997@gmail.com>",
   "private": true,
   "scripts": {

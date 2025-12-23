@@ -616,7 +616,64 @@
       transition-show="scale"
       transition-hide="scale"
     >
-      <q-card class="create-company-card" style="min-width: 500px; max-width: 600px;">
+      <q-card v-if="isDemo" class="demo-register-card" style="min-width: 500px; max-width: 600px; overflow: hidden;">
+        <!-- Header con gradiente atractivo -->
+        <div class="demo-register-header">
+          <q-btn
+            flat
+            round
+            dense
+            icon="close"
+            color="white"
+            @click="closeCreateCompanyDialog"
+            class="absolute-top-right q-ma-md"
+            style="z-index: 10;"
+          />
+
+          <div class="demo-register-icon-container">
+            <q-icon name="rocket_launch" size="64px" color="white" class="demo-register-icon" />
+          </div>
+
+          <div class="text-h5 text-weight-bold text-white q-mt-md">
+            ¡Bienvenido a la era digital!
+          </div>
+          <div class="text-body2 text-white q-mt-sm" style="opacity: 0.95;">
+            Crea tu cuenta gratis y desbloquea todas las funcionalidades
+          </div>
+        </div>
+
+        <!-- Contenido -->
+        <q-card-section class="q-pa-xl">
+          <!-- Beneficios -->
+          <div class="q-mb-lg">
+            <div class="demo-benefit-item">
+              <q-icon name="check_circle" color="positive" size="24px" />
+              <span>Gestión completa de tu negocio</span>
+            </div>
+            <div class="demo-benefit-item">
+              <q-icon name="check_circle" color="positive" size="24px" />
+              <span>Control de stock</span>
+            </div>
+            <div class="demo-benefit-item">
+              <q-icon name="check_circle" color="positive" size="24px" />
+              <span>Reportes y estadísticas en tiempo real</span>
+            </div>
+            <div class="demo-benefit-item">
+              <q-icon name="check_circle" color="positive" size="24px" />
+              <span>Soporte técnico dedicado</span>
+            </div>
+          </div>
+
+          <!-- Botón de Google mejorado -->
+          <google-register-button @success="handleGoogleRegisterSuccess" @error="handleGoogleRegisterError" />
+
+          <!-- Texto adicional -->
+          <div class="text-center q-mt-md text-caption text-grey-7">
+            Al registrarte, aceptas nuestros <a href="https://politicas.qbits.com.ar" target="_blank">términos y condiciones</a>
+          </div>
+        </q-card-section>
+      </q-card>
+      <q-card class="create-company-card" style="min-width: 500px; max-width: 600px;" v-else>
         <!-- Header con gradiente -->
         <q-card-section class="create-company-header">
           <div class="row items-center">
@@ -797,6 +854,7 @@ import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import GoogleRegisterButton from 'src/components/Auth/GoogleRegisterButton.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -814,7 +872,7 @@ import {
 } from '@capacitor/barcode-scanner'
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog, AddressComponent },
+  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog, AddressComponent, GoogleRegisterButton },
   data () {
     return {
       logo,
@@ -907,7 +965,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice', 'setBranchOffice', 'access_token', 'refresh_token', 'expires_In', 'token_type']),
+    ...mapState(authentication, ['userSession', 'branchOffice', 'isDemo', 'setBranchOffice', 'access_token', 'refresh_token', 'expires_In', 'token_type']),
     ...mapState(darkModeStore, ['darkMode']),
     /**
      * Check if current page has tour available
@@ -1130,6 +1188,26 @@ export default {
         placeId: '',
         types: []
       }
+    },
+    /**
+     * Handle Google register success
+     */
+    handleGoogleRegisterSuccess (data) {
+      // Si necesita setup de empresa, mantener el diálogo abierto
+      if (data.needsCompanySetup) {
+        // Pre-llenar email de empresa con el email de Google
+        this.companyData.company_email = data.userInfo.email
+        // Mantener el diálogo abierto para que complete los datos
+      } else {
+        // Si no necesita setup, cerrar el diálogo
+        this.closeCreateCompanyDialog()
+      }
+    },
+    /**
+     * Handle Google register error
+     */
+    handleGoogleRegisterError (error) {
+      console.error('Error en registro con Google:', error)
     },
     /**
      * Handle company address selected
@@ -2652,4 +2730,77 @@ export default {
   .search-container {
     overflow: hidden;
   }
+
+  /* Demo Register Card Styles */
+.demo-register-card {
+  border-radius: 20px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+}
+
+.demo-register-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 15px 32px;
+  text-align: center;
+  position: relative;
+}
+
+.demo-register-icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+  animation: float 3s ease-in-out infinite;
+}
+
+.demo-register-icon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.demo-benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  font-size: 15px;
+  color: #374151;
+  animation: slideInLeft 0.5s ease-out backwards;
+}
+
+.demo-benefit-item:nth-child(1) { animation-delay: 0.1s; }
+.demo-benefit-item:nth-child(2) { animation-delay: 0.2s; }
+.demo-benefit-item:nth-child(3) { animation-delay: 0.3s; }
+.demo-benefit-item:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 </style>

@@ -166,3 +166,21 @@ export function getInitials (fullName) {
 
   return `${firstNameInitial}${surnameInitial}`
 }
+
+/**
+ * Debounce function to limit the rate at which a function can fire
+ * @param {Function} func - Function to debounce
+ * @param {Number} wait - Time to wait in milliseconds
+ * @returns {Function} Debounced function
+ */
+export function debounce (func, wait = 500) {
+  let timeout
+  return function executedFunction (...args) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}

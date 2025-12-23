@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Orderwise</string>
-    <string name="title_activity_main">Orderwise</string>
+    <string name="app_name">Qbits</string>
+    <string name="title_activity_main">Qbits</string>
     <string name="package_name">orderwise.qbitsinc.com</string>
     <string name="custom_url_scheme">orderwise.qbitsinc.com</string>
 </resources>

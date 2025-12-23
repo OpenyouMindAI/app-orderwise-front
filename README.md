@@ -1,6 +1,6 @@
-# Orderwise (orderwise)
+# Qbits (orderwise)
 
-Orderwise
+Qbits
 
 ## Install the dependencies
 ```bash

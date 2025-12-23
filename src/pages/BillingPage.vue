@@ -165,137 +165,6 @@
                 </q-tooltip>
               </q-btn>
             </div>
-            <div class="justify-start col-xl-9 col-lg-12 col-md-12 col-sm-12 col-xs-12 flex q-gutter-sm" id="buttons-bar">
-              <q-btn
-                id="tour-btn-cobrar"
-                style="border-radius: 10px; padding: 5px 15px"
-                label="Cobrar"
-                icon="payments"
-                color="positive"
-                dense
-                :disable="products.length <= 0"
-                @click="dialogPayment = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F1
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobrar
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                id="tour-btn-cobro-parcial"
-                style="border-radius: 10px; padding: 5px 15px"
-                label="Cobro Parcial"
-                icon="splitscreen"
-                color="primary"
-                dense
-                :disable="products.length <= 0"
-                @click="showPartialPaymentModal = true"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Cobro parcial / dividir cuenta
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                id="tour-btn-mesas"
-                style="border-radius: 10px; padding: 5px 15px"
-                color="primary"
-                icon="table_restaurant"
-                dense
-                label="Mesas"
-                :loading="loadingLivingRoom"
-                @click="dialogTable = true"
-                v-if="companyConfig.is_table"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F10
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Seleccionar mesas
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                  style="border-radius: 10px; padding: 5px 15px; margin-top: 4px;"
-                  dense
-                  :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
-                  :color="isUserBoxOpen ? 'negative' : 'primary'"
-                  :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
-                  @click="handleCashBoxButtonClick"
-                >
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
-                  </q-tooltip>
-                </q-btn>
-
-              <q-btn
-                id="tour-btn-cashflow"
-                icon="payments"
-                color="info"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
-                style="border-radius: 10px; padding: 5px 15px"
-                @click="cashflow = true"
-              >
-                <q-badge
-                  color="swap_horiz"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F11
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Entrada y salida de dinero
-                </q-tooltip>
-              </q-btn>
-
-              <q-btn
-                id="tour-btn-buscar"
-                style="border-radius: 10px; padding: 5px 15px"
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
-                icon="search"
-                color="teal"
-                dense
-                @click="searchInvoice = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                >
-                  F12
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Buscar factura
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                id="tour-btn-borrar"
-                style="border-radius: 10px; padding: 5px 15px"
-                icon="delete"
-                color="negative"
-                dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Borrar factura
-                </q-tooltip>
-              </q-btn>
-            </div>
             <div class="col-12" id="tour-tabla-articulos">
               <!-- Desktop view -->
               <q-table
@@ -1467,7 +1336,7 @@ import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatDate, formatNumber, loading, notify, BALANZA_PREFIXES } from 'src/const/mixins'
+import { formatDate, formatNumber, loading, notify, BALANZA_PREFIXES, debounce } from 'src/const/mixins'
 import eventBus from 'src/utils/eventBus'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
@@ -2165,8 +2034,10 @@ export default {
       deep: true
     },
     invoiceShare (data) {
-      // Enviar inmediatamente sin debounce adicional
-      this.sendInvoiceUpdate(data)
+      // Usar debounce para limitar peticiones al servidor (1 segundo)
+      if (this.debouncedSendInvoiceUpdate) {
+        this.debouncedSendInvoiceUpdate(data)
+      }
     },
     quantityDialog (data) {
       if (!data) {
@@ -2282,6 +2153,8 @@ export default {
     this.getExchangeRates()
     this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
+
+    this.debouncedSendInvoiceUpdate = debounce(this.sendInvoiceUpdate, 1000)
   },
   methods: {
     /**

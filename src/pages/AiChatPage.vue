@@ -8,7 +8,7 @@
             <q-icon name="smart_toy" size="32px" color="primary" />
             <div class="header-text">
               <div class="header-title">Asistente IA</div>
-              <div class="header-subtitle">Orderwise Assistant</div>
+              <div class="header-subtitle">Qbits Assistant</div>
             </div>
           </div>
           <q-btn
@@ -122,7 +122,7 @@
               <q-icon name="smart_toy" />
             </q-avatar>
             <div class="header-info">
-              <div class="chat-name">Asistente Orderwise</div>
+              <div class="chat-name">Asistente Qbits</div>
               <div class="chat-status">
                 <q-icon name="circle" size="8px" color="positive" />
                 En línea

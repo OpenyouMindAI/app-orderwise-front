@@ -1,6 +1,6 @@
 {
   "appId": "orderwise.qbitsinc.com",
-  "appName": "Orderwise",
+  "appName": "Qbits",
   "webDir": "www",
   "plugins": {
     "StatusBar": {
