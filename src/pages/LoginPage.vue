@@ -11,12 +11,11 @@
     <div class="login-card">
       <!-- Logo -->
       <div class="logo-section">
-        <q-img :src="logo.color" class="logo-img"/>
+        <q-img :src="qBitsLogo.black" class="logo-img"/>
       </div>
-
       <!-- Título -->
       <div class="header-section">
-        <span class="welcome-title">Bienvenido</span>
+        <span class="welcome-title">Bienvenido a</span>
         <p class="welcome-subtitle">Accede a tu cuenta para continuar</p>
       </div>
 
@@ -140,7 +139,7 @@
         <q-icon name="laptop_mac" size="18px" color="grey-6"/>
         <span class="footer-text">Powered by</span>
         <a href="https://site.qbitsinc.com" target="_blank">
-          <q-img :src="qBitsLogo.white" class="qbits-logo"/>
+          <q-img :src="qBitsLogo.black" class="qbits-logo"/>
         </a>
       </div>
     </div>
@@ -864,7 +863,7 @@ export default {
 }
 
 .logo-img {
-  width: 180px;
+  width: 130px;
   max-width: 80%;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
 }
