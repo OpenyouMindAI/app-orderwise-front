@@ -165,29 +165,8 @@
               </div>
             </div>
             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
-              <div class="flex">
+              <div>
                 <q-btn
-                  color="info"
-                  icon="qr_code_scanner"
-                  style="height: 100%"
-                  @click.stop="startScanner"
-                  v-if="!$q.platform.is.nativeMobile"
-                >
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    Escanear código
-                  </q-tooltip>
-                </q-btn>
-              </div>
-              <q-fab
-                color="primary"
-                icon="tune"
-                type="button"
-                direction="down"
-                padding="sm"
-                vertical-actions-align="right"
-              >
-                <!-- FAB Cliente -->
-                <q-fab-action
                   color="secondary"
                   icon="person"
                   :label="client?.name || 'Cliente'"
@@ -241,8 +220,29 @@
                       </q-card-actions>
                     </q-card>
                   </q-popup-proxy>
-                </q-fab-action>
-
+                </q-btn>
+              </div>
+              <div class="flex">
+                <q-btn
+                  color="info"
+                  icon="qr_code_scanner"
+                  style="height: 100%"
+                  @click.stop="startScanner"
+                  v-if="!$q.platform.is.nativeMobile"
+                >
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Escanear código
+                  </q-tooltip>
+                </q-btn>
+              </div>
+              <q-fab
+                color="primary"
+                icon="tune"
+                type="button"
+                direction="down"
+                padding="sm"
+                vertical-actions-align="right"
+              >
                 <!-- FAB Tipo de Factura -->
                 <q-fab-action
                   color="accent"
@@ -384,6 +384,7 @@
                   label="Cobro Parcial"
                   label-position="right"
                   :disable="products.length <= 0"
+                  v-if="companyConfig.is_table"
                   @click="showPartialPaymentModal = true"
                 />
 
@@ -6123,9 +6124,8 @@ export default {
 
 /* Mobile Cart Styles */
 .mobile-cart-container {
-  height: calc(50vh - 60px);
+  max-height: calc(50vh - 60px);
   overflow-y: auto;
-  background: #f8f9fa;
   border-radius: 8px;
   padding: 6px;
 }
@@ -6138,6 +6138,7 @@ export default {
 
 .cart-item {
   background: white;
+  color: black;
   border-radius: 6px;
   padding: 8px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
