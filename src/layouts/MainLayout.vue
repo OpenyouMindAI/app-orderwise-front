@@ -877,6 +877,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useThemeStore } from 'src/stores/themeStore'
+import { useFbq } from 'vue3-facebook-pixel'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1207,13 +1208,11 @@ export default {
      * Handle Google register success
      */
     handleGoogleRegisterSuccess (data) {
-      // Si necesita setup de empresa, mantener el diálogo abierto
+      const fbq = useFbq()
+      fbq.event('Purchase', data)
       if (data.needsCompanySetup) {
-        // Pre-llenar email de empresa con el email de Google
         this.companyData.company_email = data.userInfo.email
-        // Mantener el diálogo abierto para que complete los datos
       } else {
-        // Si no necesita setup, cerrar el diálogo
         this.closeCreateCompanyDialog()
       }
     },
