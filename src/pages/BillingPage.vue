@@ -712,8 +712,8 @@
                 </div>
               </div>
             </div>
-            <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <div class="col-6" v-if="isNotLocal">
+            <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
+              <div class="col-12" v-if="isNotLocal">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
               <div class="col-12" v-if="isNotLocal">
