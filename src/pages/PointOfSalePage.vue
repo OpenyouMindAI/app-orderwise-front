@@ -297,83 +297,101 @@
       </transition>
 
       <!-- Add Client Dialog -->
-      <q-dialog v-model="showAddClientDialog">
-        <q-card style="min-width: 350px;" class="dialog-card">
-          <q-card-section>
+      <q-dialog v-model="showAddClientDialog" :maximized="$q.screen.lt.sm">
+        <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+          <q-card-section class="row items-center text-white bg-primary">
             <div class="text-h6">Agregar Nuevo Cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <q-card-section class="q-pt-none">
-            <q-input
-              v-model="newClient.name"
-              label="Nombre completo *"
-              outlined
-              class="q-mb-md input-style"
-            />
-            <q-input
-              v-model="newClient.email"
-              label="Email *"
-              type="email"
-              outlined
-              class="q-mb-md input-style"
-            />
-
-            <div class="row q-col-gutter-sm q-mb-md">
-              <div class="col-6">
-                <q-select
-                  v-model="newClient.document_type"
-                  :options="documentTypes"
-                  label="Tipo Doc."
-                  option-label="Desc"
-                  option-value="id"
-                  outlined
-                  use-input
-                  input-debounce="0"
-                  @filter="getDocumentTypes"
-                  class="input-style"
-                />
-              </div>
-              <div class="col-6">
-                <q-input
-                  v-model="newClient.document_number"
-                  label="Nro. Documento"
-                  outlined
-                  class="input-style"
-                />
-              </div>
+          <q-card-section class="row q-col-gutter-sm">
+            <!-- Nombre -->
+            <div class="col-12">
+              <q-input
+                v-model="newClient.name"
+                label="Nombre completo *"
+                outlined
+                class="input-style"
+              />
             </div>
 
-            <q-select
-              v-model="newClient.condition_iva_receptor"
-              :options="conditionIvaReceptors"
-              label="Condición de IVA"
-              option-label="name"
-              option-value="code"
-              outlined
-              use-input
-              input-debounce="0"
-              @filter="getConditionIvaReceptor"
-              class="q-mb-md input-style"
-            />
+            <!-- Email -->
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="newClient.email"
+                label="Email *"
+                type="email"
+                outlined
+                class="input-style"
+              />
+            </div>
 
-            <q-input
-              v-model="newClient.users.phone_number"
-              label="Teléfono"
-              outlined
-              class="q-mb-md input-style"
-            />
-            <q-checkbox
-              v-model="newClient.is_credit"
-              label="¿Maneja cuenta corriente?"
-              class="input-style"
-            />
+            <!-- Teléfono -->
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="newClient.users.phone_number"
+                label="Teléfono"
+                outlined
+                class="input-style"
+              />
+            </div>
+
+            <!-- Tipo y Número de Documento -->
+            <div class="col-12 col-md-6">
+              <q-select
+                v-model="newClient.document_type"
+                :options="documentTypes"
+                label="Tipo Doc."
+                option-label="Desc"
+                option-value="id"
+                outlined
+                use-input
+                input-debounce="0"
+                @filter="getDocumentTypes"
+                class="input-style"
+              />
+            </div>
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="newClient.document_number"
+                label="Nro. Documento"
+                outlined
+                class="input-style"
+              />
+            </div>
+
+            <!-- Condición IVA -->
+            <div class="col-12">
+              <q-select
+                v-model="newClient.condition_iva_receptor"
+                :options="conditionIvaReceptors"
+                label="Condición de IVA"
+                option-label="name"
+                option-value="code"
+                outlined
+                use-input
+                input-debounce="0"
+                @filter="getConditionIvaReceptor"
+                class="input-style"
+              />
+            </div>
+
+            <div class="col-12">
+              <q-checkbox
+                v-model="newClient.is_credit"
+                label="¿Maneja cuenta corriente?"
+                class="input-style"
+              />
+            </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="text-primary">
+          <q-card-actions align="right" class="text-primary q-pa-md">
             <q-btn flat label="Cancelar" @click="toggleClientDialog(false)" />
             <q-btn
-              flat
-              label="Agregar"
+              icon="save"
+              color="primary"
+              label="GUARDAR"
               :disable="!isNewClientValid"
               @click="addNewClient"
             />
