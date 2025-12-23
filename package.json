@@ -64,6 +64,7 @@
     "vue-i18n": "^9.0.0",
     "vue-qrcode-reader": "^5.7.2",
     "vue-router": "^4.0.0",
+    "vue3-facebook-pixel": "^1.0.4",
     "vue3-xlsx": "^1.1.2",
     "vuedraggable": "^4.1.0",
     "vuefire": "^2.2.5"

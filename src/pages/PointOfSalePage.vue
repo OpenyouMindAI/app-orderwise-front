@@ -12,6 +12,9 @@
           <div class="keypad-section q-pa-md flex column items-center justify-center col-12">
             <!-- Display Container -->
             <div class="display-container">
+              <div v-if="activeOperator" class="display-history text-grey-7">
+                {{ formattedPreviousValue }} {{ activeOperator }}
+              </div>
               <div class="display-text">{{ formattedValue }}</div>
               <q-btn
                 flat
@@ -25,44 +28,50 @@
               />
             </div>
 
-            <!-- Numeric Keypad -->
+            <!-- Arithmetic Keypad (4x4) -->
             <div class="keypad q-mt-md">
+              <!-- Row 1 -->
+              <q-btn label="1" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('1')" />
+              <q-btn label="2" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('2')" />
+              <q-btn label="3" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('3')" />
+              <q-btn label="÷" unelevated class="keypad-btn operator-btn" v-ripple @click="handleOperator('/')" />
+
+              <!-- Row 2 -->
+              <q-btn label="4" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('4')" />
+              <q-btn label="5" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('5')" />
+              <q-btn label="6" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('6')" />
+              <q-btn label="×" unelevated class="keypad-btn operator-btn" v-ripple @click="handleOperator('*')" />
+
+              <!-- Row 3 -->
+              <q-btn label="7" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('7')" />
+              <q-btn label="8" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('8')" />
+              <q-btn label="9" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('9')" />
+              <q-btn label="-" unelevated class="keypad-btn operator-btn" v-ripple @click="handleOperator('-')" />
+
+              <!-- Row 4 -->
+              <q-btn label="00" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('00')" />
+              <q-btn label="0" unelevated class="keypad-btn" v-ripple @click="handleDigitInput('0')" />
               <q-btn
-                v-for="n in keypadNumbers"
-                :key="n"
-                :label="n.toString()"
-                round
+                v-if="activeOperator"
+                label="="
                 unelevated
-                class="keypad-btn"
+                color="white"
+                text-color="black"
+                class="keypad-btn operator-btn equal-btn"
                 v-ripple
-                @click="handleDigitInput(n.toString())"
+                @click="calculate"
               />
               <q-btn
-                label="00"
-                round
-                unelevated
-                class="keypad-btn"
-                v-ripple
-                @click="handleDigitInput('00')"
-              />
-              <q-btn
-                label="0"
-                round
-                unelevated
-                class="keypad-btn"
-                v-ripple
-                @click="handleDigitInput('0')"
-              />
-              <q-btn
-                v-if="canProceedFromKeypad"
-                icon="send"
-                round
+                v-else
+                icon="arrow_forward"
                 unelevated
                 color="primary"
-                class="keypad-btn send-btn"
+                class="keypad-btn send-btn-new"
                 v-ripple
+                :disable="!canProceedFromKeypad"
                 @click="proceedToPaymentMethods"
               />
+              <q-btn label="+" unelevated class="keypad-btn operator-btn" v-ripple @click="handleOperator('+')" />
             </div>
           </div>
         </div>
@@ -413,7 +422,6 @@ import { authentication } from 'src/stores/module-authentication'
 // =============================================
 // CONSTANTS & CONFIGURATION
 // =============================================
-const KEYPAD_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 const MAX_INPUT_LENGTH = 9
 
 const PAYMENT_VIEW_CONFIG = {
@@ -491,6 +499,11 @@ const isWaitingForTransfer = ref(false)
 const transferTimeout = ref(null)
 const transferPaymentDetails = ref(null)
 
+// Arithmetic State
+const previousValue = ref(0)
+const activeOperator = ref(null)
+const isWaitingNextValue = ref(false)
+
 const transferDetailsList = computed(() => {
   if (!transferPaymentDetails.value) return []
 
@@ -515,8 +528,13 @@ const formattedValue = computed(() => {
   return `$${number.toFixed(2)}`
 })
 
-const keypadNumbers = computed(() => KEYPAD_NUMBERS)
-// const invoiceOptions = computed(() => INVOICE_OPTIONS_CONFIG)
+const formattedPreviousValue = computed(() => {
+  if (!previousValue.value) return '$0.00'
+  const number = previousValue.value / 100
+  return `$${number.toFixed(2)}`
+})
+
+const invoiceOptions = computed(() => INVOICE_OPTIONS_CONFIG)
 
 // Navigation Computed
 const canProceedFromKeypad = computed(() => inputValue.value.length > 0)
@@ -717,15 +735,70 @@ const resetAllState = () => {
 // =============================================
 
 const handleDigitInput = (digit) => {
-  if (inputValue.value.length < MAX_INPUT_LENGTH) {
-    inputValue.value += digit
+  if (isWaitingNextValue.value && activeOperator.value) {
+    inputValue.value = digit
+    isWaitingNextValue.value = false
+  } else {
+    if (inputValue.value.length < MAX_INPUT_LENGTH) {
+      if (inputValue.value === '0' || isWaitingNextValue.value) {
+        inputValue.value = digit
+        isWaitingNextValue.value = false
+      } else {
+        inputValue.value += digit
+      }
+    }
   }
 }
 
 const handleBackspace = () => {
+  if (isWaitingNextValue.value) {
+    inputValue.value = '0'
+    isWaitingNextValue.value = false
+    return
+  }
   if (inputValue.value.length > 0) {
     inputValue.value = inputValue.value.slice(0, -1)
+    if (inputValue.value === '') inputValue.value = '0'
   }
+}
+
+const handleOperator = (op) => {
+  if (activeOperator.value && !isWaitingNextValue.value) {
+    calculate()
+  }
+  previousValue.value = parseInt(inputValue.value || '0', 10)
+  activeOperator.value = op
+  isWaitingNextValue.value = true
+}
+
+const calculate = () => {
+  if (!activeOperator.value) return
+
+  const currentValue = parseInt(inputValue.value || '0', 10)
+  let result = 0
+
+  switch (activeOperator.value) {
+    case '+':
+      result = previousValue.value + currentValue
+      break
+    case '-':
+      result = previousValue.value - currentValue
+      break
+    case '*':
+      result = Math.round((previousValue.value * currentValue) / 100)
+      break
+    case '/':
+      if (currentValue === 0) {
+        result = 0 // Avoid division by zero
+      } else {
+        result = Math.round((previousValue.value / currentValue) * 100)
+      }
+      break
+  }
+
+  inputValue.value = Math.max(0, result).toString()
+  activeOperator.value = null
+  isWaitingNextValue.value = true
 }
 
 const handleKeyPress = (e) => {
@@ -735,7 +808,21 @@ const handleKeyPress = (e) => {
     handleDigitInput(e.key)
   } else if (e.key === 'Backspace') {
     handleBackspace()
-  } else if (e.key === 'Enter' && canProceedFromKeypad.value) {
+  } else if (e.key === 'Enter') {
+    handleDynamicButton()
+  } else if (['+', '-', '*', '/'].includes(e.key)) {
+    handleOperator(e.key)
+  } else if (e.key === 'x' || e.key === 'X') {
+    handleOperator('*')
+  } else if (e.key === '=') {
+    calculate()
+  }
+}
+
+const handleDynamicButton = () => {
+  if (activeOperator.value) {
+    calculate()
+  } else {
     proceedToPaymentMethods()
   }
 }
@@ -1299,40 +1386,60 @@ onUnmounted(() => {
   color: #333;
 }
 
+.display-history {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
 .backspace-btn {
   color: #555;
   position: absolute;
   right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .keypad {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  width: 280px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 320px;
   grid-template-rows: repeat(4, 1fr);
 }
 
 .keypad-btn {
-  font-size: 1.5rem;
-  font-weight: 400;
-  background-color: #f0f0f0;
+  font-size: 1.50rem;
+  font-weight: 500;
+  background-color: #f5f5f5;
   color: #333;
-  width: 75px;
-  height: 75px;
+  width: 68px;
+  height: 68px;
+  border-radius: 12px !important;
+  transition: all 0.2s ease;
 }
 
 .keypad-btn:hover {
-  background-color: #e0e0e0;
+  background-color: #eeeeee;
+  transform: translateY(-1px);
 }
 
-.send-btn {
+.operator-btn {
+  background-color: #fdfdfd;
+  color: #555;
+  border: 1px solid #eee;
+}
+
+.equal-btn {
+  background-color: #f8f8f8;
+  font-weight: 600;
+}
+
+.send-btn-new {
   background-color: var(--q-primary) !important;
   color: white !important;
-  grid-column: 3;
-  grid-row: 4;
+}
+
+.send-btn-new:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed;
 }
 
 .send-btn:hover {
