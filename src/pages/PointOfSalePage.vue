@@ -358,7 +358,7 @@ const KEYPAD_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 const MAX_INPUT_LENGTH = 9
 
 const PAYMENT_VIEW_CONFIG = {
-  EFE: { icon: 'payments', title: 'Pago en Efectivo', spinner: false },
+  EFE: { icon: 'payments', title: 'Confirmar Pago', spinner: false },
   MPTR: { icon: 'sync_alt', title: 'Esperando Transferencia', spinner: true },
   DEB: { icon: 'credit_card', title: 'Procesando Débito', spinner: true },
   CRE: { icon: 'credit_card', title: 'Procesando Crédito', spinner: true },
@@ -515,7 +515,7 @@ const getInvoiceTypeLabel = (invType) => {
 
 // Payment Method Helpers
 const getPaymentMethodAcronyms = () =>
-  validPaymentMethods.value.map(p => p.acronym)
+  validPaymentMethods.value.map(p => p.acronym || 'EFE')
 
 const isPaymentView = (view) =>
   Object.keys(PAYMENT_VIEW_CONFIG).includes(view)
@@ -531,17 +531,15 @@ const shouldShowSpinner = (view) =>
 
 // Payment Method Validation
 const validatePaymentMethod = (method) => {
-  // Verificar que tenga acrónimo y que no esté vacío
-  return method.acronym &&
-         typeof method.acronym === 'string' &&
-         method.acronym.trim().length > 0
+  // Verificar que tenga nombre (antes requería acrónimo no vacío)
+  return method.name && method.name.trim().length > 0
 }
 
 const filterValidPaymentMethods = (methods) => {
   return methods.filter(method => {
     const isValid = validatePaymentMethod(method)
     if (!isValid) {
-      console.warn(`Payment method "${method.name}" (ID: ${method.id}) filtered out: missing or invalid acronym`)
+      console.warn(`Payment method "${method.name}" (ID: ${method.id}) filtered out: missing name`)
     }
     return isValid
   })
@@ -563,7 +561,8 @@ const getNextViewAfterPaymentMethods = () => {
     case 3: // Factura A / B
       return 'invoice-options'
     default: // Consumidor Final
-      return selectedPaymentMethod.value?.acronym || 'payment-methods'
+      // Si tiene acrónimo, usarlo. Si no, usar 'EFE' por defecto.
+      return selectedPaymentMethod.value?.acronym || 'EFE'
   }
 }
 
@@ -727,9 +726,10 @@ const proceedToNextStep = () => {
 }
 
 const proceedToPaymentView = () => {
-  if (!selectedPaymentMethod.value?.acronym) return
+  if (!selectedPaymentMethod.value) return
   setTransition('slide-forward')
-  currentView.value = selectedPaymentMethod.value.acronym
+  // Usar acrónimo si existe, sino 'EFE'
+  currentView.value = selectedPaymentMethod.value.acronym || 'EFE'
 }
 
 const createInvoice = async () => {
