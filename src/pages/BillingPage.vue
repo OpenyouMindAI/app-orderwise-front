@@ -45,10 +45,10 @@
         <div>
           <!-- Panel de facturación -->
           <div class="row q-col-gutter-sm">
-            <!-- Selectores principales -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;" class="col-12">
+            <!-- Selectores principales - Solo desktop -->
+            <div v-if="$q.screen.gt.sm" class="billing-selects-desktop col-12">
               <!-- Select cliente -->
-              <div id="select-client">
+              <div id="select-client" class="billing-select-item">
                 <q-select
                   filled
                   dense
@@ -73,7 +73,7 @@
               </div>
 
               <!-- Select tipo de factura -->
-              <div id="tour-tipo-factura">
+              <div id="tour-tipo-factura" class="billing-select-item">
                 <q-select
                   filled
                   dense
@@ -94,7 +94,7 @@
               </div>
 
               <!-- Select tipo de factura (Arca) -->
-              <div v-if="invoiceType.bill">
+              <div v-if="invoiceType.bill" class="billing-select-item">
                 <q-select
                   filled
                   dense
@@ -115,7 +115,7 @@
               </div>
 
               <!-- Select tipo de servicio -->
-              <div id="tour-type-service">
+              <div id="tour-type-service" class="billing-select-item">
                 <q-select
                   filled
                   dense
@@ -134,38 +134,305 @@
                   label="Tipo de servicio"
                 />
               </div>
-
-              <!-- Espacio donde estaba el boton de caja - ahora vacío -->
+              <div class="col-12" :class="$q.screen.lt.md ? 'billing-barcode-mobile' : ''" style="width: 100% !important;" id="tour-barcode">
+                <q-input
+                  filled
+                  dense
+                  v-model="barcode"
+                  autofocus
+                  label="Código"
+                  ref="barcode"
+                  style="width: 100% !important; max-width: none !important;"
+                  @keyup.enter="processBarcode(barcode)"
+                  @focus="scanner = false"
+                  @blur="scanner = true"
+                  :class="$q.screen.lt.md ? 'compact-input' : ''"
+                />
+                <q-btn
+                  :style="$q.screen.lt.md ? 'border-radius: 10px; padding: 8px 16px; margin-top: 6px; width: 100%;' : 'border-radius: 10px; padding: 5px 15px; margin-top: 8px;'"
+                  color="primary"
+                  icon="qr_code_scanner"
+                  label="Escanear"
+                  class="q-px-sm"
+                  dense
+                  @click.stop="startScanner"
+                  v-if="$q.platform.is.nativeMobile"
+                >
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Escanear código
+                  </q-tooltip>
+                </q-btn>
+              </div>
             </div>
-            <div class="col-12" style="width: 100% !important;" id="tour-barcode">
-              <q-input
-                filled
-                dense
-                v-model="barcode"
-                autofocus
-                label="Código"
-                ref="barcode"
-                style="width: 100% !important; max-width: none !important;"
-                @keyup.enter="processBarcode(barcode)"
-                @focus="scanner = false"
-                @blur="scanner = true"
-              />
-              <q-btn
-                style="border-radius: 10px; padding: 5px 15px; margin-top: 8px;"
+            <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
+              <div>
+                <q-btn
+                  color="secondary"
+                  icon="person"
+                  :label="client?.name || 'Cliente'"
+                  label-position="left"
+                >
+                  <q-popup-proxy @before-show="loadClientsData()">
+                    <q-card class="fab-popup-card">
+                      <q-card-section class="fab-popup-header">
+                        <div class="text-h6">Seleccionar Cliente</div>
+                        <q-btn flat round dense icon="close" v-close-popup />
+                      </q-card-section>
+                      <q-separator />
+                      <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
+                        <q-inner-loading :showing="loadingClients">
+                          <q-spinner-dots size="50px" color="primary" />
+                        </q-inner-loading>
+                        <q-input
+                          v-model="clientSearch"
+                          placeholder="Buscar cliente..."
+                          dense
+                          outlined
+                          class="q-ma-sm"
+                        >
+                          <template v-slot:prepend>
+                            <q-icon name="search" />
+                          </template>
+                        </q-input>
+                        <q-list class="fab-popup-list">
+                          <q-item
+                            v-for="c in filteredClientsForFab"
+                            :key="c.id"
+                            clickable
+                            v-ripple
+                            :active="client?.id === c.id"
+                            @click="client = c; clientSearch = ''"
+                            v-close-popup
+                          >
+                            <q-item-section>
+                              <q-item-label>{{ c.name }}</q-item-label>
+                              <q-item-label caption>{{ c.document_number }}</q-item-label>
+                            </q-item-section>
+                            <q-item-section side v-if="client?.id === c.id">
+                              <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card-section>
+                      <q-separator />
+                      <q-card-actions align="right">
+                        <q-btn flat color="primary" icon="add" label="Nuevo" @click="openAddClient = true" v-close-popup />
+                      </q-card-actions>
+                    </q-card>
+                  </q-popup-proxy>
+                </q-btn>
+              </div>
+              <div class="flex">
+                <q-btn
+                  color="info"
+                  icon="qr_code_scanner"
+                  style="height: 100%"
+                  @click.stop="startScanner"
+                  v-if="!$q.platform.is.nativeMobile"
+                >
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Escanear código
+                  </q-tooltip>
+                </q-btn>
+              </div>
+              <q-fab
                 color="primary"
-                icon="qr_code_scanner"
-                label="Escanear"
-                class="q-px-sm"
-                dense
-                @click.stop="startScanner"
-                v-if="$q.platform.is.nativeMobile"
+                icon="tune"
+                type="button"
+                direction="down"
+                padding="sm"
+                vertical-actions-align="right"
               >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Escanear código
-                </q-tooltip>
-              </q-btn>
+                <!-- FAB Tipo de Factura -->
+                <q-fab-action
+                  color="accent"
+                  icon="receipt"
+                  :label="invoiceType?.name || 'Tipo'"
+                  label-position="left"
+                >
+                  <q-popup-proxy @before-show="loadInvoiceTypesData(); showArcaSelector = false" ref="invoiceTypePopup">
+                    <q-card class="fab-popup-card">
+                      <q-card-section class="fab-popup-header">
+                        <div class="text-h6">
+                          {{ showArcaSelector ? 'Tipo Factura (Arca)' : 'Tipo de Factura' }}
+                        </div>
+                        <q-btn flat round dense icon="close" v-close-popup />
+                      </q-card-section>
+                      <q-separator />
+
+                      <!-- Lista de tipos de factura -->
+                      <q-card-section v-if="!showArcaSelector" class="q-pa-none" style="position: relative; min-height: 200px;">
+                        <q-inner-loading :showing="loadingInvoiceTypes">
+                          <q-spinner-dots size="50px" color="primary" />
+                        </q-inner-loading>
+                        <q-list class="fab-popup-list">
+                          <q-item
+                            v-for="type in invoiceTypes"
+                            :key="type.id"
+                            clickable
+                            v-ripple
+                            :active="invoiceType?.id === type.id"
+                            @click="selectInvoiceType(type)"
+                          >
+                            <q-item-section>
+                              <q-item-label>{{ type.name }}</q-item-label>
+                            </q-item-section>
+                            <q-item-section side v-if="invoiceType?.id === type.id">
+                              <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card-section>
+
+                      <!-- Lista de tipos Arca (cuando se requiere) -->
+                      <q-card-section v-else class="q-pa-none" style="position: relative; min-height: 200px;">
+                        <q-inner-loading :showing="loadingVoucherTypes">
+                          <q-spinner-dots size="50px" color="primary" />
+                        </q-inner-loading>
+                        <q-input
+                          v-model="voucherSearch"
+                          placeholder="Buscar tipo de factura Arca..."
+                          dense
+                          outlined
+                          class="q-ma-sm"
+                        >
+                          <template v-slot:prepend>
+                            <q-icon name="search" />
+                          </template>
+                        </q-input>
+                        <q-list class="fab-popup-list">
+                          <q-item
+                            v-for="voucher in filteredVoucherTypesForFab"
+                            :key="voucher.id"
+                            clickable
+                            v-ripple
+                            :active="voucherType?.id === voucher.id"
+                            @click="voucherType = voucher; voucherSearch = ''"
+                            v-close-popup
+                          >
+                            <q-item-section>
+                              <q-item-label>{{ voucher.Desc }}</q-item-label>
+                            </q-item-section>
+                            <q-item-section side v-if="voucherType?.Id === voucher.Id">
+                              <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card-section>
+
+                      <!-- Botón volver (cuando está en selector Arca) -->
+                      <q-card-actions v-if="showArcaSelector" align="left">
+                        <q-btn flat icon="arrow_back" label="Volver" @click="showArcaSelector = false" />
+                      </q-card-actions>
+                    </q-card>
+                  </q-popup-proxy>
+                </q-fab-action>
+
+                <!-- FAB Tipo de Servicio -->
+                <q-fab-action
+                  color="positive"
+                  icon="category"
+                  :label="typeOfService?.name || 'Servicio'"
+                  label-position="left"
+                >
+                  <q-popup-proxy @before-show="loadTypeOfServicesData()">
+                    <q-card class="fab-popup-card">
+                      <q-card-section class="fab-popup-header">
+                        <div class="text-h6">Tipo de Servicio</div>
+                        <q-btn flat round dense icon="close" v-close-popup />
+                      </q-card-section>
+                      <q-separator />
+                      <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
+                        <q-inner-loading :showing="loadingTypeOfServices">
+                          <q-spinner-dots size="50px" color="primary" />
+                        </q-inner-loading>
+                        <q-list class="fab-popup-list">
+                          <q-item
+                            v-for="service in typeOfServices"
+                            :key="service.id"
+                            clickable
+                            v-ripple
+                            :active="typeOfService?.id === service.id"
+                            @click="typeOfService = service"
+                            v-close-popup
+                          >
+                            <q-item-section>
+                              <q-item-label>{{ service.name }}</q-item-label>
+                            </q-item-section>
+                            <q-item-section side v-if="typeOfService?.id === service.id">
+                              <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card-section>
+                    </q-card>
+                  </q-popup-proxy>
+                </q-fab-action>
+              </q-fab>
+              <q-fab
+                square
+                type="button"
+                color="orange"
+                icon="more_vert"
+                direction="down"
+                padding="sm"
+                vertical-actions-align="right"
+              >
+                <q-fab-action
+                  color="primary"
+                  icon="splitscreen"
+                  label="Cobro Parcial"
+                  label-position="right"
+                  :disable="products.length <= 0"
+                  v-if="companyConfig.is_table"
+                  @click="showPartialPaymentModal = true"
+                />
+
+                <q-fab-action
+                  v-if="companyConfig.is_table"
+                  color="orange"
+                  icon="table_restaurant"
+                  label="Mesas"
+                  label-position="right"
+                  :loading="loadingLivingRoom"
+                  @click="dialogTable = true"
+                />
+
+                <q-fab-action
+                  color="info"
+                  icon="payments"
+                  label="Entrada/Salida"
+                  label-position="right"
+                  @click="cashflow = true"
+                />
+
+                <q-fab-action
+                  color="teal"
+                  icon="search"
+                  label="Buscar"
+                  label-position="right"
+                  @click="searchInvoice = true"
+                />
+
+                <q-fab-action
+                  v-if="openCashBox"
+                  :color="isUserBoxOpen ? 'brown-10' : 'primary'"
+                  :icon="isUserBoxOpen ? 'highlight_off' : 'point_of_sale'"
+                  :label="isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja'"
+                  label-position="right"
+                  @click="handleCashBoxButtonClick"
+                />
+
+                <q-fab-action
+                  color="negative"
+                  icon="delete"
+                  label="Borrar"
+                  label-position="right"
+                  @click="clear"
+                />
+              </q-fab>
             </div>
-            <div class="col-12" id="tour-tabla-articulos">
+            <div class="col-12 articles-section" :class="{ 'articles-section-hidden': productsFullscreen }" id="tour-tabla-articulos">
               <!-- Desktop view -->
               <q-table
                 v-if="$q.screen.gt.xs"
@@ -366,111 +633,111 @@
                 </template>
               </q-table>
 
-              <!-- Mobile view -->
-              <div v-else>
-                <div class="text-h6 q-mb-md">Artículos</div>
-                <div class="q-gutter-y-md">
-                  <q-card v-for="(product, rowIndex) in products" :key="rowIndex" flat bordered class="product-card">
-                    <q-card-section>
-                      <div class="row items-center justify-between q-mb-sm q-pr-sm">
-                        <div class="text-subtitle1 text-weight-bold">
-                          {{ product.barcode }} - {{ product.name }}
-                        </div>
-                        <q-badge floating class="q-pa-none" style="background-color: transparent;">
-                          <q-btn icon="delete" size="sm" color="negative" flat round @click="deleteProduct({ rowIndex })" />
-                        </q-badge>
-                      </div>
-                      <div class="row q-mb-xs">
-                        <div class="col-4 text-grey column text-left">
-                          <span>Precio:</span>
-                          <div>
-                            {{ formatNumber(product.price) }}
-                            <q-icon
-                              v-if="userSession.is_root || !setPermissionsByUser(['CJ'])"
-                              name="edit"
-                              size="xs"
-                              color="primary"
-                              class="q-ml-xs cursor-pointer"
+              <!-- Mobile view - Cart style -->
+              <div v-else-if="products.length > 0" class="mobile-cart-container">
+                <div class="mobile-cart-list">
+                  <div
+                    v-for="(product, rowIndex) in products"
+                    :key="rowIndex"
+                    class="cart-item"
+                  >
+                    <!-- Single row layout -->
+                    <div class="cart-item-row">
+                      <!-- Delete button -->
+                      <q-btn
+                        icon="close"
+                        flat
+                        dense
+                        round
+                        size="xs"
+                        color="grey-6"
+                        class="cart-delete-btn"
+                        @click="deleteProduct({ rowIndex })"
+                      />
+                      <!-- Product info -->
+                      <div class="cart-item-info">
+                        <span class="cart-item-name">{{ product.name }}</span>
+                        <span class="cart-item-price">
+                          {{ coin?.symbol }} {{ formatNumber(product.price) }}
+                          <q-popup-edit
+                            v-if="userSession?.is_root || !setPermissionsByUser(['CJ'])"
+                            v-model.number="product.price"
+                            auto-save
+                            v-slot="scope"
+                            @update:model-value="calculate(product)"
+                          >
+                            <q-input
+                              label="Precio"
+                              type="number"
+                              v-model.number="scope.value"
+                              dense
+                              autofocus
+                              @keyup.enter="scope.set"
                             />
-                            <q-popup-edit
-                              v-if="userSession?.is_root || !setPermissionsByUser(['CJ'])"
-                              v-model.number="product.price"
-                              auto-save
-                              v-slot="scope"
-                              @update:model-value="calculate(product)"
-                            >
-                              <q-input
-                                label="Precio"
-                                type="number"
-                                v-model.number="scope.value"
-                                autofocus
-                                @keyup.enter="scope.set"
-                              />
-                            </q-popup-edit>
-                          </div>
-                        </div>
-                        <div class="col-4 text-grey text-center">
-                          <span>Cantidad:</span>
-                          <div>
-                            {{ formatNumber(product.quantity) }}
-                            <q-icon
-                              name="edit"
-                              size="xs"
-                              color="primary"
-                              class="q-ml-xs cursor-pointer"
-                            />
-                            <q-popup-edit
-                              v-model.number="product.quantity"
-                              auto-save
-                              v-slot="scope"
-                              :model-value="Number(product.quantity).toFixed(2)"
-                              @update:model-value="calculate(product)"
-                            >
-                              <q-input
-                                label="Cantidad"
-                                type="number"
-                                :model-value="Number(scope.value).toFixed(2)"
-                                v-model.number="scope.value"
-                                autofocus
-                                @keyup.enter="scope.set"
-                              />
-                            </q-popup-edit>
-                          </div>
-                        </div>
-                        <div class="col-4 text-grey text-center">
-                          <div class="col-5 text-grey">Subtotal:</div>
-                          <div class="col-7 text-weight-bold">{{ formatNumber(product.subtotal) }}</div>
-                        </div>
+                          </q-popup-edit>
+                        </span>
                       </div>
-                    </q-card-section>
-                  </q-card>
+                      <!-- Quantity controls -->
+                      <div class="quantity-controls">
+                        <q-btn
+                          icon="remove"
+                          unelevated
+                          dense
+                          round
+                          size="xs"
+                          color="grey-3"
+                          text-color="dark"
+                          @click="product.quantity > 1 ? (product.quantity--, calculate(product)) : deleteProduct({ rowIndex })"
+                        />
+                        <span class="quantity-value" @click.stop>
+                          {{ product.quantity }}
+                          <q-popup-edit
+                            v-model.number="product.quantity"
+                            auto-save
+                            v-slot="scope"
+                            @update:model-value="calculate(product)"
+                          >
+                            <q-input
+                              label="Cantidad"
+                              type="number"
+                              v-model.number="scope.value"
+                              dense
+                              autofocus
+                              @keyup.enter="scope.set"
+                            />
+                          </q-popup-edit>
+                        </span>
+                        <q-btn
+                          icon="add"
+                          unelevated
+                          dense
+                          round
+                          size="xs"
+                          color="primary"
+                          @click="product.quantity++; calculate(product)"
+                        />
+                      </div>
+                      <!-- Subtotal -->
+                      <div class="cart-item-subtotal">
+                        {{ formatNumber(product.subtotal) }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <!-- <div class="col-6" v-if="Number(typeOfService.code) !== '4'">
-                <q-select
-                  filled
-                  dense
-                  label="Moneda"
-                  option-label="name"
-                  option-value="id"
-                  v-model="coin"
-                  :options="coins"
-                  @filter="getCoins"
-                />
-              </div> -->
-              <div class="col-6" v-if="Number(typeOfService.code) !== 4">
+              <div class="col-6" v-if="isNotLocal">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12" v-if="Number(typeOfService.code) !== 4">
+              <div class="col-12" v-if="isNotLocal">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
               </div>
-              <div class="col-12" id="tour-descripcion">
+              <div class="col-12" id="tour-descripcion" v-if="isNotLocal">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
@@ -595,17 +862,15 @@
             </div>
           </div>
         </div>
-        <div ref="productsSection" style="display: flex; flex-direction: column; height: calc(100vh - 104px);">
-
+        <div ref="productsSection" class="products-section" :class="{ 'products-section-fullscreen': productsFullscreen }">
           <!-- Botones de acción arriba de todo -->
-          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;" v-if="$q.screen.gt.sm">
             <div class="flex q-gutter-sm justify-start">
-              <!-- Abrir/Cerrar caja -->
-              <!-- Cobrar -->
+              <!-- Botón Cobrar - Siempre visible -->
               <q-btn
                 id="tour-btn-cobrar"
                 style="border-radius: 10px; padding: 5px 15px"
-                label="Cobrar"
+                :label="$q.screen.lt.md ? 'Cobrar' : 'Cobrar'"
                 icon="payments"
                 color="positive"
                 dense
@@ -653,7 +918,7 @@
                   color="negative"
                   align="bottom"
                   floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                  v-if="!$q.platform.is.nativeMobile"
                 >
                   F10
                 </q-badge>
@@ -666,7 +931,7 @@
                 icon="payments"
                 color="info"
                 dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Entrada / Salida' : ''"
+                label="Entrada / Salida"
                 style="border-radius: 10px; padding: 5px 15px"
                 @click="cashflow = true"
               >
@@ -674,7 +939,7 @@
                   color="swap_horiz"
                   align="bottom"
                   floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                  v-if="!$q.platform.is.nativeMobile"
                 >
                   F11
                 </q-badge>
@@ -685,7 +950,7 @@
               <q-btn
                 id="tour-btn-buscar"
                 style="border-radius: 10px; padding: 5px 15px"
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Buscar': ''"
+                label="Buscar"
                 icon="search"
                 color="teal"
                 dense
@@ -695,7 +960,7 @@
                   color="negative"
                   align="bottom"
                   floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                  v-if="!$q.platform.is.nativeMobile"
                 >
                   F12
                 </q-badge>
@@ -716,14 +981,13 @@
                   {{ isUserBoxOpen ? 'Cerrar caja' : 'Abrir caja' }}
                 </q-tooltip>
               </q-btn>
-              <!-- Borrar -->
               <q-btn
                 id="tour-btn-borrar"
                 style="border-radius: 10px; padding: 5px 15px"
                 icon="delete"
                 color="negative"
                 dense
-                :label="$q.screen.gt.sm && !$q.platform.is.nativeMobile ? 'Borrar': ''"
+                label="Borrar"
                 @click="clear"
               >
                 <q-tooltip class="text-body2" anchor="bottom middle">
@@ -734,30 +998,37 @@
           </div>
 
           <!-- Filtros fijos arriba -->
-          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
-            <div class="row q-col-gutter-xs">
-              <div class="col-6" id="tour-select-categoria">
-                <q-select
-                  use-input
-                  filled
-                  dense
-                  clearable
-                  label="Categorías"
-                  input-debounce="0"
-                  option-label="name"
-                  option-value="id"
-                  v-model="category"
-                  :options="categories"
-                  @filter="filterCategories"
-                />
-              </div>
-              <div class="col-6" id="tour-input-buscar-producto">
-                <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
-                  <template v-slot:append>
-                    <q-icon name="search" />
-                  </template>
-                </q-input>
-              </div>
+          <div class="row q-col-gutter-xs">
+            <div class="col-6" id="tour-select-categoria">
+              <q-select
+                use-input
+                filled
+                dense
+                clearable
+                label="Categorías"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                v-model="category"
+                :options="categories"
+                @filter="filterCategories"
+              />
+            </div>
+            <div class="col-6" id="tour-input-buscar-producto">
+              <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
+                <template v-slot:append>
+                  <q-btn
+                    v-if="$q.screen.lt.md"
+                    :icon="productsFullscreen ? 'fullscreen_exit' : 'fullscreen'"
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    @click="productsFullscreen = !productsFullscreen"
+                  />
+                  <q-icon v-else name="search" />
+                </template>
+              </q-input>
             </div>
           </div>
 
@@ -767,6 +1038,7 @@
             ref="productsScrollContainer"
             class="product-container-scroll"
             style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+            :style="$q.screen.lt.md ? 'padding-bottom: 80px !important;' : ''"
             @scroll="handleProductsScroll"
           >
             <!-- Grid de productos y skeleton juntos -->
@@ -823,8 +1095,8 @@
             </div>
           </div>
 
-          <!-- Total fijo abajo -->
-          <div style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
+          <!-- Total fijo abajo - Solo desktop -->
+          <div v-if="$q.screen.gt.sm" style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
             <q-list separator bordered style="border-radius: 10px;">
               <q-item v-if="tableSelected.length">
                 <q-item-section>
@@ -892,6 +1164,36 @@
           </div>
         </div>
       </div>
+
+      <!-- Botón flotante Cobrar para móvil con totales -->
+      <q-page-sticky v-if="$q.screen.lt.md" position="bottom" :offset="[0, 12]">
+        <q-btn
+          id="tour-btn-cobrar-mobile"
+          class="cobrar-floating-btn"
+          color="positive"
+          :disable="products.length <= 0"
+          @click="dialogPayment = true"
+          no-caps
+          unelevated
+        >
+          <div class="cobrar-btn-content">
+            <div class="cobrar-btn-row">
+              <div class="cobrar-btn-left">
+                <q-icon name="payments" size="20px" />
+                <div class="cobrar-btn-text">
+                  <span class="cobrar-btn-title">Cobrar</span>
+                </div>
+              </div>
+              <div class="cobrar-btn-right">
+                <span class="total-amount">{{ coin?.symbol }} {{ formatNumber(totalBill) }}</span>
+                <span v-if="exchangeRate" class="exchange-amount">
+                  {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </q-btn>
+      </q-page-sticky>
     </q-form>
 
     <!-- Promo Selection Dialog -->
@@ -1098,7 +1400,7 @@
           <q-btn flat icon="close" round size="md" v-close-popup/>
         </q-card-section>
         <q-card-section>
-          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center">
+          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center q-gutter-md">
             <div class="col-10">
               <q-input
                 name="search"
@@ -1352,6 +1654,7 @@ import PartialPaymentModal from 'src/components/PartialPaymentModal.vue'
 import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
 import FileComponent from 'src/components/FileComponent.vue'
+import { LOCAL } from 'src/const/typeOfServices.js'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1381,6 +1684,7 @@ export default {
     return {
       // Tour System
       tourStore,
+      LOCAL,
       showTour: false,
       currentTourStep: 0,
       tourSteps: [
@@ -1753,6 +2057,29 @@ export default {
        */
       client: null,
       /**
+       * Client search for FAB popup
+       * @type {String}
+       */
+      clientSearch: '',
+      /**
+       * Voucher search for FAB popup
+       * @type {String}
+       */
+      voucherSearch: '',
+      /**
+       * Show Arca selector in invoice type popup
+       * @type {Boolean}
+       */
+      showArcaSelector: false,
+      /**
+       * Loading states for FAB popups
+       * @type {Object}
+       */
+      loadingClients: false,
+      loadingInvoiceTypes: false,
+      loadingTypeOfServices: false,
+      loadingVoucherTypes: false,
+      /**
        * Table selected
        * @type {Array}
        */
@@ -1772,6 +2099,11 @@ export default {
        * @type {Boolean}
        */
       modelScan: false,
+      /**
+       * Products fullscreen mode (mobile)
+       * @type {Boolean}
+       */
+      productsFullscreen: false,
       /**
        * Tables
        * @type {Array}
@@ -1949,6 +2281,24 @@ export default {
     ...mapState(authentication, ['userSession', 'branchOffice']),
     branchOfficeCharged () {
       return this.branchOffice
+    },
+    filteredClientsForFab () {
+      if (!this.clientSearch) return this.clients
+      const search = this.clientSearch.toLowerCase()
+      return this.clients.filter(c => 
+        c.name?.toLowerCase().includes(search) || 
+        c.document_number?.toLowerCase().includes(search)
+      )
+    },
+    filteredVoucherTypesForFab () {
+      if (!this.voucherSearch) return this.voucherTypes
+      const search = this.voucherSearch.toLowerCase()
+      return this.voucherTypes.filter(v => 
+        v.Desc?.toLowerCase().includes(search)
+      )
+    },
+    isNotLocal () {
+      return Number(this.typeOfService.code) !== this.LOCAL
     },
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
@@ -2193,6 +2543,119 @@ export default {
       // Usar tourStore en lugar de localStorage
       this.tourStore.startTour()
       this.updateTourPosition()
+    },
+
+    /**
+     * Load clients data - Reutilizable para selectores y FABs
+     * @param {String} searchValue - Valor de búsqueda opcional
+     */
+    async loadClientsData (searchValue = '') {
+      this.loadingClients = true
+      try {
+        const { data } = await this.$api.get('clients', {
+          params: {
+            sortBy: 'id',
+            sortOrder: 'desc',
+            dataSearch: {
+              name: searchValue,
+              document_number: searchValue
+            }
+          }
+        })
+        this.clients = data
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      } finally {
+        this.loadingClients = false
+      }
+    },
+
+    /**
+     * Load invoice types data - Reutilizable para selectores y FABs
+     * @param {String} searchValue - Valor de búsqueda opcional
+     */
+    async loadInvoiceTypesData (searchValue = '') {
+      this.loadingInvoiceTypes = true
+      try {
+        const { data } = await this.$api.get('invoice-types', {
+          params: {
+            dataSearch: {
+              name: searchValue
+            }
+          }
+        })
+        this.invoiceTypes = data
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      } finally {
+        this.loadingInvoiceTypes = false
+      }
+    },
+
+    /**
+     * Load type of services data - Reutilizable para selectores y FABs
+     * @param {String} searchValue - Valor de búsqueda opcional
+     */
+    async loadTypeOfServicesData (searchValue = '') {
+      this.loadingTypeOfServices = true
+      try {
+        const { data } = await this.$api.get('type-of-services', {
+          params: {
+            dataSearch: {
+              name: searchValue
+            }
+          }
+        })
+        this.typeOfServices = data
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      } finally {
+        this.loadingTypeOfServices = false
+      }
+    },
+
+    /**
+     * Load voucher types data - Reutilizable para selectores y FABs
+     */
+    async loadVoucherTypesData () {
+      this.loadingVoucherTypes = true
+      try {
+        const { data } = await apiArca.get('metadata/voucher-types', {
+          params: {
+            user: {
+              name: this.userSession.name,
+              email: this.userSession.email
+            }
+          }
+        })
+        this.voucherTypes = data
+      } catch (err) {
+        notify(err.message, 'negative', 'warning')
+      } finally {
+        this.loadingVoucherTypes = false
+      }
+    },
+
+    /**
+     * Select invoice type and show Arca selector if needed
+     * @param {Object} type - Invoice type selected
+     */
+    async selectInvoiceType (type) {
+      this.invoiceType = type
+      // Si el tipo de factura requiere Arca (bill: true)
+      if (type.bill) {
+        // Mostrar selector de Arca primero (para que se vea el loading)
+        this.showArcaSelector = true
+        // Cargar tipos de voucher Arca
+        await this.loadVoucherTypesData()
+      } else {
+        // Si no requiere Arca, cerrar el popup
+        this.showArcaSelector = false
+        // Cerrar el popup programáticamente
+        if (this.$refs.invoiceTypePopup) {
+          this.$refs.invoiceTypePopup.hide()
+        }
+      }
     },
 
     /**
@@ -2603,21 +3066,8 @@ export default {
      * @param {Callback} update update options
      */
     async getVoucherTypes (value, update) {
-      try {
-        const { data } = await apiArca.get('metadata/voucher-types', {
-          params: {
-            user: {
-              name: this.userSession.name,
-              email: this.userSession.email
-            }
-          }
-        })
-        update(() => {
-          this.voucherTypes = data
-        })
-      } catch (err) {
-        notify(err.message, 'negative', 'warning')
-      }
+      await this.loadVoucherTypesData()
+      update(() => {})
     },
     /**
      * Select category
@@ -2948,25 +3398,9 @@ export default {
      * @param {Callback} update update options
      */
     filterInvoiceTypes (value, update) {
-      this.$api.get('invoice-types', {
-        params: {
-          dataSearch: {
-            name: value
-          }
-        }
+      this.loadInvoiceTypesData(value).then(() => {
+        update(() => {})
       })
-        .then(({ data }) => {
-          update(() => {
-            this.invoiceTypes = data
-          })
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
     },
     /**
      * Select category
@@ -2974,25 +3408,9 @@ export default {
      * @param {Callback} update update options
      */
     filterTypeOfServices (value, update) {
-      this.$api.get('type-of-services', {
-        params: {
-          dataSearch: {
-            name: value
-          }
-        }
+      this.loadTypeOfServicesData(value).then(() => {
+        update(() => {})
       })
-        .then(({ data }) => {
-          update(() => {
-            this.typeOfServices = data
-          })
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
     },
     /**
      * Select category
@@ -3053,28 +3471,9 @@ export default {
      * @param {Callback} update update options
      */
     filterClients (value, update) {
-      this.$api.get('clients', {
-        params: {
-          sortBy: 'id',
-          sortOrder: 'desc',
-          dataSearch: {
-            name: value,
-            document_number: value
-          }
-        }
+      this.loadClientsData(value).then(() => {
+        update(() => {})
       })
-        .then(({ data }) => {
-          update(() => {
-            this.clients = data
-          })
-        })
-        .catch(err => {
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
     },
     /**
      * Free table
@@ -3491,7 +3890,7 @@ export default {
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,
         products: this.products,
-        status: this.invoice?.status || Number(this.typeOfService.code) === 4 ? 'delivered' : 'pending',
+        status: this.invoice?.status || this.isNotLocal ? 'pending' : 'delivered',
         payments: this.payments.filter(payment => payment.amount > 0).map(payment => ({
           ...payment,
           payment_type: paymentType
@@ -4788,7 +5187,6 @@ export default {
 }
 
 .quantity-controls {
-  position: absolute;
   bottom: 1rem;
   display: flex;
   align-items: center;
@@ -5452,6 +5850,362 @@ export default {
   .tour-description {
     font-size: 13px;
   }
+}
+
+/* ===== Billing Selects Optimization ===== */
+/* Desktop - mantiene el diseño actual */
+.billing-selects-desktop {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.billing-select-item {
+  width: 100%;
+}
+
+/* ===== FAB Floating Action Buttons (Mobile) ===== */
+:deep(.q-fab) {
+  z-index: 2000;
+}
+
+:deep(.q-fab__actions) {
+  padding-bottom: 8px;
+}
+
+:deep(.q-fab-action) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+:deep(.q-fab-action:hover) {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+:deep(.q-fab-action .q-btn__content) {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* FAB Popup Card */
+.fab-popup-card {
+  min-width: 320px;
+  max-width: 90vw;
+  max-height: 70vh;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.fab-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.body--dark .fab-popup-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+}
+
+.fab-popup-header .text-h6 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.fab-popup-header .q-btn {
+  color: white;
+}
+
+/* FAB Popup List */
+.fab-popup-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.fab-popup-list .q-item {
+  padding: 12px 20px;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .fab-popup-list .q-item {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.fab-popup-list .q-item:last-child {
+  border-bottom: none;
+}
+
+.fab-popup-list .q-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.body--dark .fab-popup-list .q-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fab-popup-list .q-item.q-item--active {
+  background: linear-gradient(135deg, rgba(var(--q-primary-rgb), 0.1) 0%, rgba(var(--q-primary-rgb), 0.05) 100%);
+}
+
+.fab-popup-list .q-item__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.body--dark .fab-popup-list .q-item__label {
+  color: #e5e7eb;
+}
+
+.fab-popup-list .q-item__label--caption {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.body--dark .fab-popup-list .q-item__label--caption {
+  color: #9ca3af;
+}
+
+/* Search input in popup */
+.fab-popup-card .q-input {
+  margin: 12px 16px;
+}
+
+.fab-popup-card .q-field__control {
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.body--dark .fab-popup-card .q-field__control {
+  background: #2d3748;
+}
+
+/* Barcode section en móvil */
+.billing-barcode-mobile {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+/* ===== Botón Flotante Cobrar (Mobile) ===== */
+.cobrar-floating-btn {
+  width: calc(100vw - 24px);
+  max-width: 500px;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.cobrar-floating-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cobrar-btn-content {
+  width: 100%;
+  padding: 10px 16px;
+}
+
+.cobrar-btn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cobrar-btn-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.cobrar-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.1;
+}
+
+.cobrar-btn-title {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cobrar-btn-info {
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.7;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.cobrar-btn-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.total-amount {
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.exchange-amount {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.pending-amount {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+/* Mobile header section with transition */
+.mobile-header-section {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  text-align: right;
+  gap: 8px;
+  padding-bottom: 2px;
+  position: relative;
+  z-index: 100;
+}
+
+.mobile-header-hidden {
+  display: none;
+}
+
+/* Products section */
+.products-section {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 104px);
+  transition: height 0.3s ease;
+}
+
+.products-section-fullscreen {
+  height: calc(100vh - 56px);
+}
+
+/* Articles section with transition */
+.articles-section {
+  max-height: 500px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease, padding 0.3s ease;
+}
+
+.articles-section-hidden {
+  max-height: 0;
+  opacity: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Mobile Cart Styles */
+.mobile-cart-container {
+  max-height: calc(50vh - 60px);
+  overflow-y: auto;
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.mobile-cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cart-item {
+  background: white;
+  color: black;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.cart-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-delete-btn {
+  flex-shrink: 0;
+}
+
+.cart-item-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+
+.cart-item-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.cart-item-price {
+  font-size: 10px;
+  color: #888;
+  cursor: pointer;
+}
+
+.quantity-controls {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  padding: 2px 4px;
+}
+
+.quantity-controls .q-btn {
+  min-width: 24px !important;
+  min-height: 24px !important;
+}
+
+.quantity-value {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cart-item-subtotal {
+  font-size: 13px;
+  font-weight: 700;
+  color: #21BA45;
+  white-space: nowrap;
+  min-width: 55px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 </style>
