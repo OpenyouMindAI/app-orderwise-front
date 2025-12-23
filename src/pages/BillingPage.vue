@@ -726,18 +726,6 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row">
-              <!-- <div class="col-6" v-if="Number(typeOfService.code) !== '4'">
-                <q-select
-                  filled
-                  dense
-                  label="Moneda"
-                  option-label="name"
-                  option-value="id"
-                  v-model="coin"
-                  :options="coins"
-                  @filter="getCoins"
-                />
-              </div> -->
               <div class="col-6" v-if="isNotLocal">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
@@ -875,10 +863,10 @@
         </div>
         <div ref="productsSection" class="products-section" :class="{ 'products-section-fullscreen': productsFullscreen }">
           <!-- Botones de acción arriba de todo -->
-          <div style="flex-shrink: 0; padding-bottom: 0.5rem;">
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;" v-if="$q.screen.gt.sm">
             <div class="flex q-gutter-sm justify-start">
               <!-- Botón Cobrar - Siempre visible -->
-              <template v-if="$q.screen.gt.sm">
+              <template>
                 <q-btn
                   id="tour-btn-cobrar"
                   style="border-radius: 10px; padding: 5px 15px"
@@ -1050,7 +1038,8 @@
             id="tour-seccion-productos"
             ref="productsScrollContainer"
             class="product-container-scroll"
-            style="flex: 1; overflow-y: auto; padding: 0.5rem;" :style="$q.screen.lt.md ? 'padding-bottom: 80px !important;' : ''"
+            style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+            :style="$q.screen.lt.md ? 'padding-bottom: 80px !important;' : ''"
             @scroll="handleProductsScroll"
           >
             <!-- Grid de productos y skeleton juntos -->
@@ -1194,16 +1183,12 @@
                 <q-icon name="payments" size="20px" />
                 <div class="cobrar-btn-text">
                   <span class="cobrar-btn-title">Cobrar</span>
-                  <span class="cobrar-btn-info">{{ client?.name }} • {{ typeOfService?.name }}</span>
                 </div>
               </div>
               <div class="cobrar-btn-right">
                 <span class="total-amount">{{ coin?.symbol }} {{ formatNumber(totalBill) }}</span>
                 <span v-if="exchangeRate" class="exchange-amount">
                   {{ exchangeRate.coin?.symbol }} {{ formatNumber(totalBill * exchangeRate.amount) }}
-                </span>
-                <span v-if="pendingPayment !== totalBill" class="pending-amount">
-                  {{ pendingPayment >= 0 ? 'Falta:' : 'Vuelto:' }} {{ coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment)) }}
                 </span>
               </div>
             </div>
@@ -5203,7 +5188,6 @@ export default {
 }
 
 .quantity-controls {
-  position: absolute;
   bottom: 1rem;
   display: flex;
   align-items: center;
@@ -6016,7 +6000,6 @@ export default {
 .cobrar-floating-btn {
   width: calc(100vw - 24px);
   max-width: 500px;
-  min-height: 56px;
   border-radius: 12px;
   padding: 0;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -6077,12 +6060,12 @@ export default {
 
 .total-amount {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .exchange-amount {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   opacity: 0.85;
   white-space: nowrap;
@@ -6102,17 +6085,13 @@ export default {
   justify-content: flex-end;
   text-align: right;
   gap: 8px;
-  max-height: 200px;
-  overflow: hidden;
-  opacity: 1;
-  transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease, padding 0.3s ease;
+  padding-bottom: 2px;
+  position: relative;
+  z-index: 100;
 }
 
 .mobile-header-hidden {
-  max-height: 0;
-  opacity: 0;
-  margin: 0 !important;
-  padding: 0 !important;
+  display: none;
 }
 
 /* Products section */
@@ -6199,14 +6178,21 @@ export default {
 }
 
 .quantity-controls {
-  display: flex;
+  display: flex !important;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex-shrink: 0;
+  border-radius: 16px;
+  padding: 2px 4px;
+}
+
+.quantity-controls .q-btn {
+  min-width: 24px !important;
+  min-height: 24px !important;
 }
 
 .quantity-value {
-  min-width: 24px;
+  min-width: 20px;
   text-align: center;
   font-weight: 600;
   font-size: 13px;
@@ -6218,7 +6204,7 @@ export default {
   font-weight: 700;
   color: #21BA45;
   white-space: nowrap;
-  min-width: 60px;
+  min-width: 55px;
   text-align: right;
   flex-shrink: 0;
 }
