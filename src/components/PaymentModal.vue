@@ -1,6 +1,6 @@
 <template>
-  <q-dialog :model-value="show" :maximized="$q.screen.lt.sm" @update:model-value="$emit('update:show', $event)">
-    <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
+  <q-dialog :model-value="show" @update:model-value="$emit('update:show', $event)">
+    <q-card style="width: 900px; max-width: 95vw;">
       <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
         <span class="text-h6">Desglose de pago</span>
         <q-btn flat icon="close" round size="md" @click="closeModal"/>
@@ -41,8 +41,8 @@
             class="q-mb-md"
           />
 
-          <!-- Payments Table -->
-          <q-markup-table class="q-mb-md">
+          <!-- Payments Table - Desktop -->
+          <q-markup-table class="q-mb-md" v-if="$q.screen.gt.xs">
             <thead>
               <tr>
                 <th class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">✅</th>
@@ -115,6 +115,96 @@
               </tr>
             </tbody>
           </q-markup-table>
+
+          <!-- Payments Cards - Mobile -->
+          <div v-else class="payment-cards-mobile q-mb-md">
+            <div
+              v-for="(payment, index) in localPayments"
+              :key="payment.id || index"
+              class="payment-card-item"
+            >
+              <div class="payment-card-header">
+                <div class="payment-card-title">
+                  <q-checkbox
+                    v-if="userSession?.company_session?.company_config?.other?.partial_billing"
+                    v-model="payment.checked"
+                    dense
+                    class="q-mr-xs"
+                  />
+                  <span class="payment-method-name">{{ payment.name }}</span>
+                </div>
+                <div class="payment-card-actions">
+                  <q-btn
+                    v-if="payment.acronym === 'MPQA'"
+                    icon="qr_code"
+                    color="secondary"
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    @click="$emit('qr-payment', payment)"
+                  />
+                  <q-btn
+                    icon="delete"
+                    color="negative"
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    @click="deletePayment(index)"
+                  />
+                </div>
+              </div>
+              <div class="payment-card-body">
+                <div class="payment-card-row">
+                  <span class="payment-label">Monto:</span>
+                  <span class="payment-value payment-amount">
+                    {{ formatNumber(payment.amount) }}
+                    <q-popup-edit
+                      :model-value="payment.amount"
+                      @update:model-value="updatePaymentAmount(payment, index, $event)"
+                      auto-save
+                      v-slot="scope"
+                    >
+                      <q-input
+                        v-model.number="scope.value"
+                        autofocus
+                        dense
+                        @keyup.enter="scope.set"
+                      />
+                    </q-popup-edit>
+                  </span>
+                </div>
+                <div class="payment-card-row" v-if="exchangeRate">
+                  <span class="payment-label">T. Cambio:</span>
+                  <span class="payment-value">{{ exchangeRate.coin?.symbol }} {{ formatNumber(payment.amount * exchangeRate.amount) }}</span>
+                </div>
+                <div class="payment-card-row">
+                  <span class="payment-label">Ref:</span>
+                  <span class="payment-value">
+                    {{ payment.reference || '-' }}
+                    <q-popup-edit
+                      :model-value="payment.reference"
+                      @update:model-value="updatePaymentReference(payment, index, $event)"
+                      auto-save
+                      v-slot="scope"
+                    >
+                      <q-input
+                        v-model="scope.value"
+                        autofocus
+                        dense
+                        @keyup.enter="scope.set"
+                      />
+                    </q-popup-edit>
+                  </span>
+                </div>
+                <div class="payment-card-row" v-if="payment.discount_percentage">
+                  <span class="payment-label">Desc:</span>
+                  <span class="payment-value">{{ payment.discount_percentage }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Payment Summary -->
           <q-item style="border: none !important">
@@ -690,5 +780,74 @@ export default {
   min-width: 20px;
   height: 16px;
   line-height: 16px;
+}
+
+/* Mobile Payment Cards */
+.payment-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payment-card-item {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.payment-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.payment-card-title {
+  display: flex;
+  align-items: center;
+}
+
+.payment-method-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.payment-card-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.payment-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.payment-card-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.payment-label {
+  font-size: 11px;
+  color: #888;
+}
+
+.payment-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+}
+
+.payment-amount {
+  font-weight: 700;
+  color: #21BA45;
+  font-size: 14px;
 }
 </style>
