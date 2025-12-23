@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="modelValue" :maximized="$q.screen.lt.sm">
-    <q-card :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
+  <q-dialog v-model="modelValue">
+    <q-card style="width: 900px; max-width: 90vw;">
       <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
         <span class="text-h6">Desglose de pago</span>
         <q-btn flat icon="close" round size="md" v-close-popup/>

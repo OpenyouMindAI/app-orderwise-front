@@ -31,6 +31,7 @@
             round
             class="menu-btn q-ml-sm"
             icon="search"
+            v-if="$q.screen.gt.md"
             @click="leftDrawerOpen = true; showSearchInput = !showSearchInput; $nextTick(() => { if(showSearchInput) $refs.searchInput.focus() })"
           >
             <q-tooltip>Buscar en el menú</q-tooltip>
@@ -68,7 +69,7 @@
         <q-space />
 
         <!-- Branch Office Indicator -->
-        <div v-if="branchOffice" class="branch-indicator">
+        <div v-if="branchOffice && branchOffices.lenght > 1" class="branch-indicator">
           <q-chip
             dense
             square
@@ -109,13 +110,12 @@
             <q-btn
               v-if="store.isDemo"
               outline
-              no-caps
               dense
               class="create-btn-v0"
               @click="showCreateCompanyDialog = true"
             >
               <q-icon name="rocket_launch" size="16px" class="q-mr-xs rocket-icon" />
-              <span v-if="!$q.screen.lt.sm">Mi Empresa</span>
+              <span>Mi Empresa</span>
 
               <q-tooltip class="bg-grey-9">
                 Crea tu empresa y comienza gratis
@@ -176,128 +176,128 @@
 
           <!-- Herramientas -->
           <q-btn flat dense icon="apps" round>
-          <q-tooltip class="text-body2">
-            Herramientas
-          </q-tooltip>
-          <q-popup-proxy>
-            <q-banner>
-              <div class="full-width text-center q-mb-xs">
-                <span class="text-subtitle2">
-                  Herramientas
-                </span>
-              </div>
-              <q-separator />
-              <div class="q-mt-sm">
-                <q-btn
-                  icon="sync_alt"
-                  round
-                  flat
-                  :color="$route.name === 'ChangeCompany' ? 'secondary' : ''"
-                  @click="changeRoute('ChangeCompany', 'Cambio de empresa')"
-                >
-                  <q-tooltip> Cambio de empresa </q-tooltip>
-                </q-btn>
-                <q-btn
-                  icon="store"
-                  round
-                  flat
-                >
-                  <q-tooltip>
-                    {{ branchOffice?.name }}
-                  </q-tooltip>
-                  <q-menu>
-                    <q-list>
-                      <q-item
-                        clickable
-                        v-ripple
-                        v-for="bo in branchOffices"
-                        :key="bo.id"
-                        :active="bo.id === branchOffice?.id"
-                        @click="changeBranchOffice(bo)"
-                      >
-                        <q-item-section thumbnail class="q-pa-sm">
-                          <q-icon name="store" />
-                        </q-item-section>
-                        <q-item-section>
-                          <q-item-label>
-                            {{ bo.name }}
-                          </q-item-label>
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-menu>
-                </q-btn>
-                <q-btn
-                  flat
-                  round
-                  :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
-                  aria-label="dark_mode"
-                  @click="setTheme"
-                >
-                  <q-tooltip :offset="[10, 10]">
-                    {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  icon="share"
-                  round
-                  flat
-                  @click="copyCatalog"
-                >
-                  <q-tooltip>
-                    Copiar link
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  icon="update"
-                  flat
-                  round
-                  @click="update"
-                />
-                <q-btn
-                  icon="cable"
-                  flat
-                  round
-                  @click="openDialogArca"
-                >
-                  <q-tooltip>
-                    Conectar con el ARCA
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  icon="play_circle"
-                  round
-                  flat
-                  :color="$route.name === 'Tutorial' ? 'secondary' : ''"
-                  @click="changeRoute('Tutorial', 'Tutoriales')"
-                >
-                  <q-tooltip>
-                    Tutoriales
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  round
-                  flat
-                  icon="print"
-                  href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/printer_ui_win_0.19.zip"
-                  target="_blank"
-                  type="a"
-                />
-                <q-btn
-                  round
-                  flat
-                  icon="android"
-                  href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
-                  target="_blank"
-                  type="a"
-                >
-                  <q-tooltip class="text-body2">
-                    Actualizar app
-                  </q-tooltip>
-                </q-btn>
-              </div>
-            </q-banner>
-          </q-popup-proxy>
+            <q-tooltip class="text-body2">
+              Herramientas
+            </q-tooltip>
+            <q-popup-proxy>
+              <q-banner>
+                <div class="full-width text-center q-mb-xs">
+                  <span class="text-subtitle2">
+                    Herramientas
+                  </span>
+                </div>
+                <q-separator />
+                <div class="q-mt-sm">
+                  <q-btn
+                    icon="sync_alt"
+                    round
+                    flat
+                    :color="$route.name === 'ChangeCompany' ? 'secondary' : ''"
+                    @click="changeRoute('ChangeCompany', 'Cambio de empresa')"
+                  >
+                    <q-tooltip> Cambio de empresa </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="store"
+                    round
+                    flat
+                  >
+                    <q-tooltip>
+                      {{ branchOffice?.name }}
+                    </q-tooltip>
+                    <q-menu>
+                      <q-list>
+                        <q-item
+                          clickable
+                          v-ripple
+                          v-for="bo in branchOffices"
+                          :key="bo.id"
+                          :active="bo.id === branchOffice?.id"
+                          @click="changeBranchOffice(bo)"
+                        >
+                          <q-item-section thumbnail class="q-pa-sm">
+                            <q-icon name="store" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label>
+                              {{ bo.name }}
+                            </q-item-label>
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
+                    aria-label="dark_mode"
+                    @click="setTheme"
+                  >
+                    <q-tooltip :offset="[10, 10]">
+                      {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
+                    </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="share"
+                    round
+                    flat
+                    @click="copyCatalog"
+                  >
+                    <q-tooltip>
+                      Copiar link
+                    </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="update"
+                    flat
+                    round
+                    @click="update"
+                  />
+                  <q-btn
+                    icon="cable"
+                    flat
+                    round
+                    @click="openDialogArca"
+                  >
+                    <q-tooltip>
+                      Conectar con el ARCA
+                    </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    icon="play_circle"
+                    round
+                    flat
+                    :color="$route.name === 'Tutorial' ? 'secondary' : ''"
+                    @click="changeRoute('Tutorial', 'Tutoriales')"
+                  >
+                    <q-tooltip>
+                      Tutoriales
+                    </q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    round
+                    flat
+                    icon="print"
+                    href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/printer_ui_win_0.19.zip"
+                    target="_blank"
+                    type="a"
+                  />
+                  <q-btn
+                    round
+                    flat
+                    icon="android"
+                    href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
+                    target="_blank"
+                    type="a"
+                  >
+                    <q-tooltip class="text-body2">
+                      Actualizar app
+                    </q-tooltip>
+                  </q-btn>
+                </div>
+              </q-banner>
+            </q-popup-proxy>
           </q-btn>
 
           <!-- Notificaciones -->
@@ -469,16 +469,29 @@
       class="q-pa-none relative modern-drawer"
     >
       <div class="column fit">
-        <div v-if="$q.screen.lt.md" class="flex flex-center modern-drawer-header q-py-sm">
-          <img
-            :src="userSession?.company_session?.url || logo.white"
-            width="155px"
-            style="max-height: 50px"
-            alt="logo"
-          />
-          <q-tooltip :offset="[10, 10]">
-            {{ userSession?.company_session?.name }}
-          </q-tooltip>
+        <div v-if="$q.screen.lt.md" class="drawer-mobile-header">
+          <div class="drawer-logo-wrapper">
+            <img
+              :src="userSession?.company_session?.url || logo.white"
+              class="drawer-logo-img"
+              alt="logo"
+            />
+            <q-tooltip :offset="[10, 10]">
+              {{ userSession?.company_session?.name }}
+            </q-tooltip>
+          </div>
+          <div class="drawer-header-actions">
+            <q-btn
+              flat
+              round
+              dense
+              icon="search"
+              class="drawer-action-btn"
+              @click="leftDrawerOpen = true; showSearchInput = !showSearchInput; $nextTick(() => { if(showSearchInput) $refs.searchInput.focus() })"
+            >
+              <q-tooltip>Buscar en el menú</q-tooltip>
+            </q-btn>
+          </div>
         </div>
         <transition name="slide-fade">
           <div class="q-px-md q-pt-md q-pb-sm search-container" v-if="showSearchInput">
@@ -537,15 +550,16 @@
             </div>
           </q-expansion-item>
         </q-scroll-area>
-        <div
-          class="modern-drawer-footer text-white flex flex-center q-gutter-sm q-mt-xs q-pb-sm"
-        >
-          <span class="text-subtitle1"> Powered by </span>
-          <q-img
-            src="https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/white.png"
-            width="70px"
-            alt="Qbits"
-          />
+        <div class="modern-drawer-footer">
+          <!-- Powered by -->
+          <div class="drawer-footer-brand">
+            <span class="footer-brand-text">Powered by</span>
+            <q-img
+              src="https://pub-bb022121e814439fb336626c2041cea3.r2.dev/QBits/white.png"
+              width="60px"
+              alt="Qbits"
+            />
+          </div>
         </div>
       </div>
     </q-drawer>
@@ -1974,6 +1988,81 @@ export default {
   transform: scale(0.95);
 }
 
+/* ===== Drawer Mobile Header ===== */
+.drawer-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.body--dark .drawer-mobile-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.drawer-mobile-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.drawer-logo-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  z-index: 1;
+}
+
+.drawer-logo-img {
+  max-width: 140px;
+  max-height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  transition: transform 0.3s ease;
+}
+
+.drawer-logo-img:hover {
+  transform: scale(1.02);
+}
+
+.drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.drawer-action-btn {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+}
+
+.drawer-action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.drawer-action-btn:active {
+  transform: scale(0.95);
+}
+
 /* Drawer Styles */
 .modern-drawer-header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
@@ -1983,6 +2072,59 @@ export default {
 .modern-drawer-footer {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   transition: background 0.3s ease;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Close Section */
+.drawer-close-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drawer-close-btn {
+  width: 100%;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.drawer-close-btn:active {
+  transform: translateY(0);
+}
+
+.drawer-close-btn :deep(.q-icon) {
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+/* Footer Brand */
+.drawer-footer-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+}
+
+.footer-brand-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
 }
 
 /* Menu Items */
