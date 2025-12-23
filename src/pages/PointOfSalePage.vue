@@ -194,17 +194,19 @@
 
             <div class="invoice-options-container">
               <q-btn
-                v-for="option in invoiceOptions"
-                :key="option.id"
-                :label="option.name"
-                :icon="option.icon"
+                v-for="option in voucherTypes"
+                :key="getVoucherTypeId(option)"
                 unelevated
                 rounded
-                align="left"
                 class="invoice-option-btn q-mb-md full-width button-style"
                 :class="getInvoiceOptionButtonClass(option)"
                 @click="selectInvoiceOption(option)"
-              />
+              >
+                <div class="row items-center no-wrap full-width text-left">
+                  <q-icon :name="option.icon || 'description'" size="24px" class="q-mr-md" />
+                  <span style="white-space: normal; line-height: 1.2;">{{ option.Desc }}</span>
+                </div>
+              </q-btn>
             </div>
           </div>
         </div>
@@ -436,11 +438,11 @@ const INVOICE_TYPES_CONFIG = [
   { id: 3, name: 'Factura A / B', icon: 'receipt_long' }
 ]
 
-const INVOICE_OPTIONS_CONFIG = [
-  { id: 1, name: 'Opción 1 - Factura A', icon: 'receipt' },
-  { id: 2, name: 'Opción 2 - Factura B', icon: 'description' },
-  { id: 3, name: 'Opción 3 - Nota de Crédito', icon: 'note_add' }
-]
+// const INVOICE_OPTIONS_CONFIG = [
+//   { id: 1, name: 'Opción 1 - Factura A', icon: 'receipt' },
+//   { id: 2, name: 'Opción 2 - Factura B', icon: 'description' },
+//   { id: 3, name: 'Opción 3 - Nota de Crédito', icon: 'note_add' }
+// ]
 
 // =============================================
 // COMPOSABLES & STORES
@@ -475,6 +477,7 @@ const invoiceTypes = ref(INVOICE_TYPES_CONFIG)
 const clients = ref([])
 const documentTypes = ref([])
 const conditionIvaReceptors = ref([])
+const voucherTypes = ref([])
 
 // Client Management State
 const clientSearch = ref('')
@@ -684,10 +687,21 @@ const getClientButtonClass = (client) => ({
   'bg-grey-3 text-black': selectedClient.value?.id !== client.id
 })
 
-const getInvoiceOptionButtonClass = (option) => ({
-  'bg-blue-6 text-white': selectedInvoiceOption.value?.id === option.id,
-  'bg-grey-3 text-black': selectedInvoiceOption.value?.id !== option.id
-})
+const getVoucherTypeId = (option) => option?.id || option?.Id
+
+const getInvoiceOptionButtonClass = (option) => {
+  const optionId = getVoucherTypeId(option)
+  const selectedId = selectedInvoiceOption.value ? getVoucherTypeId(selectedInvoiceOption.value) : null
+
+  if (optionId === undefined || selectedId === undefined || selectedId === null) {
+    return 'bg-grey-3 text-black'
+  }
+
+  return {
+    'bg-blue-6 text-white': selectedId === optionId,
+    'bg-grey-3 text-black': selectedId !== optionId
+  }
+}
 
 // =============================================
 // STATE MANAGEMENT FUNCTIONS
@@ -900,6 +914,15 @@ const createInvoice = async () => {
 
     const totalAmount = parseInt(inputValue.value, 10) / 100
 
+    // Validar si requiere voucherType y lo tiene
+    if (selectedInvoiceType.value?.id === 3 && !selectedInvoiceOption.value) {
+      $q.notify({
+        message: 'Debe seleccionar un tipo de comprobante (A, B, etc.)',
+        type: 'warning'
+      })
+      return
+    }
+
     const paymentData = {
       payment_method_id: selectedPaymentMethod.value?.id,
       amount: totalAmount,
@@ -924,7 +947,7 @@ const createInvoice = async () => {
       coin_id: coin.id,
       description: '',
       type_of_service_id: typeOfService.id,
-      invoice_type_id: 2, // ID para 'Ticket'
+      invoice_type_id: selectedInvoiceType.value.id, // Use selected invoice type ID
       user_created_id: userSession.id,
       branch_office_id: branchOffice.id,
       exchange_rate: 0,
@@ -933,7 +956,7 @@ const createInvoice = async () => {
       status: 'delivered',
       electronic_invoice: null,
       payments,
-      voucherType: null
+      voucherType: selectedInvoiceType.value?.id === 3 ? selectedInvoiceOption.value : null // Include voucherType
     }
     await api.post('/invoices', payload)
   } catch (error) {
@@ -1240,6 +1263,27 @@ const fetchPaymentMethods = async () => {
   }
 }
 
+const getVoucherTypes = async () => {
+  try {
+    const userSession = authStore.userSession
+    const { data } = await apiArca.get('metadata/voucher-types', {
+      params: {
+        user: {
+          name: userSession.name,
+          email: userSession.email
+        }
+      }
+    })
+    voucherTypes.value = data
+  } catch (err) {
+    $q.notify({
+      message: err.message || 'Error al obtener tipos de comprobante',
+      type: 'negative',
+      icon: 'warning'
+    })
+  }
+}
+
 const initializeData = async () => {
   // Set default selections
   if (invoiceTypes.value.length > 0) {
@@ -1249,7 +1293,8 @@ const initializeData = async () => {
   // Fetch data
   await Promise.all([
     fetchPaymentMethods(),
-    fetchClients()
+    fetchClients(),
+    getVoucherTypes() // Fetch voucher types on mount
   ])
 }
 
@@ -1422,9 +1467,10 @@ onUnmounted(() => {
 }
 
 .invoice-option-btn {
-  font-size: 1.1rem;
+  font-size: 1rem;
   text-transform: none;
-  justify-content: flex-start;
+  min-height: 64px;
+  padding: 12px 16px;
 }
 
 .payment-methods-container {
@@ -1439,6 +1485,9 @@ onUnmounted(() => {
 
 .invoice-options-container {
   width: 100%;
+  max-height: calc(100dvh - 250px);
+  overflow-y: auto;
+  padding-right: 5px; /* Prevent scrollbar overlap content */
 }
 
 /* =============================================
