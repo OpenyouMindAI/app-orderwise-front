@@ -1,7 +1,7 @@
 <template>
-  <q-dialog v-model="show" :maximized="$q.screen.lt.sm" @hide="onHide">
-    <q-card :style="$q.screen.lt.sm ? '' : 'width: 800px; max-width: 80vw;'">
-      <q-form @submit="saveCashflow" class="column full-height">
+  <q-dialog v-model="show" @hide="onHide">
+    <q-card :style="$q.screen.lt.sm ? 'min-width: 90vw;' : 'width: 800px; max-width: 80vw;'">
+      <q-form @submit="saveCashflow" class="column">
         <!-- Header -->
         <q-card-section class="q-py-sm flex justify-between items-center bg-primary text-white">
           <div class="row items-center q-gutter-sm">
@@ -383,7 +383,7 @@
         </q-card-section>
 
         <!-- Footer Actions (solo para pasos 3 y 4) -->
-        <q-card-actions v-if="$q.screen.lt.sm && currentStep >= 3" align="between" class="q-pa-md mobile-footer">
+        <q-card-actions v-if="$q.screen.lt.sm && currentStep >= 3" align="between" class="q-pa-xs mobile-footer">
           <q-space v-if="currentStep === 4" />
           <q-btn
             v-if="currentStep === 3"
@@ -961,16 +961,6 @@ export default {
 
 .step-header {
   text-align: center;
-}
-
-/* Mobile footer fixed */
-.mobile-footer {
-  position: sticky;
-  bottom: 0;
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 10;
 }
 
 /* Flow option cards */
