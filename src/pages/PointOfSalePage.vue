@@ -306,44 +306,101 @@
       </transition>
 
       <!-- Add Client Dialog -->
-      <q-dialog v-model="showAddClientDialog">
-        <q-card style="min-width: 350px;" class="dialog-card">
-          <q-card-section>
+      <q-dialog v-model="showAddClientDialog" :maximized="$q.screen.lt.sm">
+        <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+          <q-card-section class="row items-center text-white bg-primary">
             <div class="text-h6">Agregar Nuevo Cliente</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <q-card-section class="q-pt-none">
-            <q-input
-              v-model="newClient.name"
-              label="Nombre completo"
-              outlined
-              class="q-mb-md input-style"
-            />
-            <q-input
-              v-model="newClient.email"
-              label="Email"
-              type="email"
-              outlined
-              class="q-mb-md input-style"
-            />
-            <q-input
-              v-model="newClient.users.phone_number"
-              label="Teléfono"
-              outlined
-              class="q-mb-md input-style"
-            />
-            <q-checkbox
-              v-model="newClient.is_credit"
-              label="¿Maneja cuenta corriente?"
-              class="input-style"
-            />
+          <q-card-section class="row q-col-gutter-sm">
+            <!-- Nombre -->
+            <div class="col-12">
+              <q-input
+                v-model="newClient.name"
+                label="Nombre completo *"
+                outlined
+                class="input-style"
+              />
+            </div>
+
+            <!-- Email -->
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="newClient.email"
+                label="Email *"
+                type="email"
+                outlined
+                class="input-style"
+              />
+            </div>
+
+            <!-- Teléfono -->
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="newClient.users.phone_number"
+                label="Teléfono"
+                outlined
+                class="input-style"
+              />
+            </div>
+
+            <!-- Tipo y Número de Documento -->
+            <div class="col-12 col-md-6">
+              <q-select
+                v-model="newClient.document_type"
+                :options="documentTypes"
+                label="Tipo Doc."
+                option-label="Desc"
+                option-value="id"
+                outlined
+                use-input
+                input-debounce="0"
+                @filter="getDocumentTypes"
+                class="input-style"
+              />
+            </div>
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="newClient.document_number"
+                label="Nro. Documento"
+                outlined
+                class="input-style"
+              />
+            </div>
+
+            <!-- Condición IVA -->
+            <div class="col-12">
+              <q-select
+                v-model="newClient.condition_iva_receptor"
+                :options="conditionIvaReceptors"
+                label="Condición de IVA"
+                option-label="name"
+                option-value="code"
+                outlined
+                use-input
+                input-debounce="0"
+                @filter="getConditionIvaReceptor"
+                class="input-style"
+              />
+            </div>
+
+            <div class="col-12">
+              <q-checkbox
+                v-model="newClient.is_credit"
+                label="¿Maneja cuenta corriente?"
+                class="input-style"
+              />
+            </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="text-primary">
+          <q-card-actions align="right" class="text-primary q-pa-md">
             <q-btn flat label="Cancelar" @click="toggleClientDialog(false)" />
             <q-btn
-              flat
-              label="Agregar"
+              icon="save"
+              color="primary"
+              label="GUARDAR"
               :disable="!isNewClientValid"
               @click="addNewClient"
             />
@@ -356,7 +413,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, getCurrentInstance } from 'vue'
-import { api } from 'src/boot/axios'
+import { api, apiArca } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 
@@ -416,6 +473,8 @@ const paymentMethods = ref([])
 const validPaymentMethods = ref([]) // Solo métodos con acrónimo válido
 const invoiceTypes = ref(INVOICE_TYPES_CONFIG)
 const clients = ref([])
+const documentTypes = ref([])
+const conditionIvaReceptors = ref([])
 
 // Client Management State
 const clientSearch = ref('')
@@ -424,6 +483,9 @@ const newClient = ref({
   email: '',
   phone_number: '',
   is_credit: false,
+  document_type: null,
+  document_number: '',
+  condition_iva_receptor: null,
   users: {
     phone_number: ''
   }
@@ -933,45 +995,109 @@ const toggleClientDialog = (show) => {
   showAddClientDialog.value = show
 }
 
-const addNewClient = () => {
+const getDocumentTypes = async (val, update) => {
+  try {
+    const userSession = authStore.userSession
+    const { data } = await apiArca.get('metadata/document-types', {
+      params: {
+        user: {
+          name: userSession.name,
+          email: userSession.email
+        }
+      }
+    })
+    update(() => {
+      documentTypes.value = data
+    })
+  } catch (err) {
+    console.error('Error fetching document types:', err)
+    $q.notify({
+      message: 'Ocurrió un error al obtener tipos de documento',
+      color: 'negative'
+    })
+  }
+}
+
+const getConditionIvaReceptor = async (val, update) => {
+  try {
+    const userSession = authStore.userSession
+    const { data } = await apiArca.get('metadata/condition-iva-receptors', {
+      params: {
+        user: {
+          name: userSession.name,
+          email: userSession.email
+        }
+      }
+    })
+    update(() => {
+      conditionIvaReceptors.value = data
+    })
+  } catch (err) {
+    console.error('Error fetching IVA conditions:', err)
+    $q.notify({
+      message: 'Ocurrió un error al obtener condiciones de IVA',
+      color: 'negative'
+    })
+  }
+}
+
+const addNewClient = async () => {
   if (!isNewClientValid.value) {
     $q.notify({
       type: 'negative',
-      message: 'Nombre y email son obligatorios',
+      message: 'Por favor complete los campos requeridos.',
       position: 'top'
     })
     return
   }
 
-  const newId = Math.max(0, ...clients.value.map(c => c.id)) + 1
-  const clientData = {
-    id: newId,
-    name: newClient.value.name.trim(),
-    email: newClient.value.email.trim(),
-    phone_number: newClient.value.users.phone_number.trim(),
-    is_credit: newClient.value.is_credit || false
-  }
+  try {
+    const clientData = { ...newClient.value }
 
-  clients.value.push(clientData)
-  selectedClient.value = clientData
-
-  // Reset form
-  newClient.value = {
-    name: '',
-    email: '',
-    phone_number: '',
-    is_credit: false,
-    users: {
-      phone_number: ''
+    // Format fields as JSON string if they are objects (matching ClientPage logic)
+    if (clientData.document_type && typeof clientData.document_type === 'object') {
+      clientData.document_type = JSON.stringify(clientData.document_type)
     }
-  }
-  toggleClientDialog(false)
 
-  $q.notify({
-    type: 'positive',
-    message: 'Cliente agregado exitosamente',
-    position: 'top'
-  })
+    if (clientData.condition_iva_receptor && typeof clientData.condition_iva_receptor === 'object') {
+      clientData.condition_iva_receptor = JSON.stringify(clientData.condition_iva_receptor)
+    }
+
+    const { data } = await api.post('clients', clientData)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Cliente agregado exitosamente.',
+      position: 'top'
+    })
+
+    // Refresh clients list and select the new one
+    await fetchClients()
+    const createdClient = data.data
+    if (createdClient) {
+      selectClient(createdClient)
+    }
+
+    showAddClientDialog.value = false
+    // Reset form
+    newClient.value = {
+      name: '',
+      email: '',
+      phone_number: '',
+      is_credit: false,
+      document_type: null,
+      document_number: '',
+      condition_iva_receptor: null,
+      users: { phone_number: '' }
+    }
+  } catch (error) {
+    console.error('Error adding client:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al agregar el cliente.',
+      position: 'top'
+    })
+  }
 }
 
 // =============================================
