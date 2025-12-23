@@ -148,20 +148,6 @@
                   @blur="scanner = true"
                   :class="$q.screen.lt.md ? 'compact-input' : ''"
                 />
-                <q-btn
-                  :style="$q.screen.lt.md ? 'border-radius: 10px; padding: 8px 16px; margin-top: 6px; width: 100%;' : 'border-radius: 10px; padding: 5px 15px; margin-top: 8px;'"
-                  color="primary"
-                  icon="qr_code_scanner"
-                  label="Escanear"
-                  class="q-px-sm"
-                  dense
-                  @click.stop="startScanner"
-                  v-if="$q.platform.is.nativeMobile"
-                >
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    Escanear código
-                  </q-tooltip>
-                </q-btn>
               </div>
             </div>
             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
@@ -228,7 +214,7 @@
                   icon="qr_code_scanner"
                   style="height: 100%"
                   @click.stop="startScanner"
-                  v-if="!$q.platform.is.nativeMobile"
+                  v-if="$q.platform.is.nativeMobile"
                 >
                   <q-tooltip class="text-body2" anchor="bottom middle">
                     Escanear código
