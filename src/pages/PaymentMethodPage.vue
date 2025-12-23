@@ -39,7 +39,6 @@
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <!-- TODO: -->
           <q-card-section class="q-pt-sm row q-col-gutter-sm">
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
@@ -57,6 +56,12 @@
                 label="Porcentaje de descuento"
                 type="number"
                 v-model.number="paymentMethod.percentage"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="paymentMethod.bill"
+                label="¿Facturar?"
               />
             </div>
 
@@ -188,7 +193,8 @@ export default {
     return {
       paymentMethods: [],
       paymentMethod: {
-        attributes: [{}]
+        attributes: [{}],
+        bill: false
       },
       deleteLoading: {},
       filter: '',
@@ -287,7 +293,8 @@ export default {
       this.openAddPaymentMethod = false
       this.openEditPaymentMethod = false
       this.paymentMethod = {
-        attributes: [{}]
+        attributes: [{}],
+        bill: false
       }
     },
     /**
@@ -346,7 +353,8 @@ export default {
           this.openAddPaymentMethod = false
           this.visible = false
           this.paymentMethod = {
-            attributes: [{}]
+            attributes: [{}],
+            bill: false
           }
           Notify.create({
             message: 'Método de pago creado exitosamente',
@@ -379,7 +387,8 @@ export default {
       const payload = {
         name: this.paymentMethod.name,
         attributes: this.paymentMethod.attributes,
-        percentage: this.paymentMethod.percentage
+        percentage: this.paymentMethod.percentage,
+        bill: this.paymentMethod.bill
       }
       console.log('Data send:', payload)
       this.$api.put(`payment-methods/${this.paymentMethod.id}`, payload)
@@ -389,7 +398,8 @@ export default {
           this.openEditPaymentMethod = false
           this.visible = false
           this.paymentMethod = {
-            attributes: [{}]
+            attributes: [{}],
+            bill: false
           }
           Notify.create({
             message: 'Método de pago editado exitosamente',
