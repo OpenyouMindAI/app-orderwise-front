@@ -95,7 +95,16 @@ export const authentication = defineStore('authentication', {
      */
     async logout () {
       try {
-        // await axios.post(this.pageInfo.LOGOUT)
+        // Cerrar sesión en el backend (revocar token)
+        if (this.access_token) {
+          try {
+            await api.post('authentication/logout')
+          } catch (e) {
+            console.warn('Error al cerrar sesión en backend:', e)
+          }
+        }
+
+        // Limpiar datos locales
         this.access_token = null
         this.token_type = null
         this.expires_In = null
@@ -125,17 +134,9 @@ export const authentication = defineStore('authentication', {
           console.log('✅ Preferencia de selector restaurada:', showThemeSelector)
         }
 
-        // localStorage.removeItem('client')
-        // localStorage.removeItem('command')
-        // localStorage.removeItem('products')
-        // localStorage.removeItem('tableSelected')
-        // localStorage.removeItem('payments')
-        // localStorage.removeItem('category-command')
-        // localStorage.removeItem('branchOffice-command')
-        // localStorage.removeItem('')
         return true
       } catch (error) {
-        throw error.response.data
+        throw error.response?.data || error
       }
     },
     /**
