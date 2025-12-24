@@ -37,7 +37,8 @@ export default configure(function (/* ctx */) {
       // 'background-mode',
       'statusbar',
       'pixel',
-      'company-config'
+      'company-config',
+      'session-tracking'
     ],
 
     css: [

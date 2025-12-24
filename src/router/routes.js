@@ -295,6 +295,12 @@ const routes = [
         component: () => import('pages/SessionsManagerPage.vue')
       },
       {
+        path: 'session-monitor',
+        name: 'SessionMonitor',
+        meta: { requiresAuth: true, title: 'Monitor de Sesiones' },
+        component: () => import('pages/SessionMonitorPage.vue')
+      },
+      {
         path: 'dashboard-manager',
         name: 'DashboardManager',
         meta: { requiresAuth: true },

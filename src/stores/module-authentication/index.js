@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from 'src/boot/axios'
+import { connectSession } from 'src/boot/session-tracking'
 
 export const authentication = defineStore('authentication', {
   state: () => {
@@ -186,6 +187,10 @@ export const authentication = defineStore('authentication', {
           true
         )
         this.setSessionData(data)
+
+        // Connect session tracking after successful login
+        connectSession(this)
+
         return data.user
       } catch (error) {
         console.log(error)
