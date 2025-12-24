@@ -5862,12 +5862,6 @@ export default {
 
 :deep(.q-fab-action) {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
-}
-
-:deep(.q-fab-action:hover) {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 :deep(.q-fab-action .q-btn__content) {
@@ -5890,13 +5884,9 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  background: var(--q-primary);
   color: white;
   border-radius: 16px 16px 0 0;
-}
-
-.body--dark .fab-popup-header {
-  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
 }
 
 .fab-popup-header .text-h6 {
@@ -5917,65 +5907,26 @@ export default {
 
 .fab-popup-list .q-item {
   padding: 12px 20px;
-  transition: all 0.2s ease;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.body--dark .fab-popup-list .q-item {
-  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 .fab-popup-list .q-item:last-child {
   border-bottom: none;
 }
 
-.fab-popup-list .q-item:hover {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.body--dark .fab-popup-list .q-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.fab-popup-list .q-item.q-item--active {
-  background: linear-gradient(135deg, rgba(var(--q-primary-rgb), 0.1) 0%, rgba(var(--q-primary-rgb), 0.05) 100%);
-}
-
 .fab-popup-list .q-item__label {
   font-size: 14px;
   font-weight: 500;
-  color: #1a1a1a;
 }
 
-.body--dark .fab-popup-list .q-item__label {
-  color: #e5e7eb;
-}
-
-.fab-popup-list .q-item__label--caption {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-.body--dark .fab-popup-list .q-item__label--caption {
-  color: #9ca3af;
-}
-
-/* Search input in popup */
 .fab-popup-card .q-input {
   margin: 12px 16px;
 }
 
 .fab-popup-card .q-field__control {
   border-radius: 10px;
-  background: #f9fafb;
 }
 
-.body--dark .fab-popup-card .q-field__control {
-  background: #2d3748;
-}
-
-/* Barcode section en móvil */
 .billing-barcode-mobile {
   margin-top: 0;
   margin-bottom: 8px;
@@ -5985,15 +5936,10 @@ export default {
 .cobrar-floating-btn {
   width: calc(100vw - 24px);
   max-width: 500px;
+  min-height: 56px;
   border-radius: 12px;
   padding: 0;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
-}
-
-.cobrar-floating-btn:active {
-  transform: scale(0.98);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .cobrar-btn-content {
@@ -6010,30 +5956,14 @@ export default {
 
 .cobrar-btn-left {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  padding-top: 2px;
-}
-
-.cobrar-btn-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  line-height: 1.1;
 }
 
 .cobrar-btn-title {
   font-size: 16px;
   font-weight: 700;
   white-space: nowrap;
-}
-
-.cobrar-btn-info {
-  font-size: 9px;
-  font-weight: 500;
-  opacity: 0.7;
-  white-space: nowrap;
-  letter-spacing: 0.2px;
 }
 
 .cobrar-btn-right {
@@ -6045,12 +5975,12 @@ export default {
 
 .total-amount {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 16px;
   white-space: nowrap;
 }
 
 .exchange-amount {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   opacity: 0.85;
   white-space: nowrap;
@@ -6084,19 +6014,16 @@ export default {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 104px);
-  transition: height 0.3s ease;
 }
 
 .products-section-fullscreen {
   height: calc(100vh - 56px);
 }
 
-/* Articles section with transition */
+/* Articles section */
 .articles-section {
   max-height: 500px;
   overflow: hidden;
-  opacity: 1;
-  transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease, padding 0.3s ease;
 }
 
 .articles-section-hidden {
