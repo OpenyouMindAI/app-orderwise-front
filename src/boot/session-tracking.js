@@ -12,9 +12,11 @@ let idleTimeout = null
 let currentStatus = 'offline'
 let presenceChannel = null
 let routerInstance = null
+let lastStatusUpdate = 0 // Timestamp of last status update
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 const HEARTBEAT_INTERVAL_MS = 30 * 1000 // 30 seconds
+const STATUS_UPDATE_THROTTLE_MS = 5 * 1000 // 5 seconds minimum between status updates
 
 // Public routes that should NOT trigger tracking
 const PUBLIC_ROUTES = [
@@ -133,12 +135,19 @@ async function trackModule (moduleName, url) {
 }
 
 /**
- * Update session status
+ * Update session status (throttled to prevent excessive calls)
  */
 async function updateStatus (status) {
   if (!isConnected || !sessionUuid || currentStatus === status) return
 
+  // Throttle: only allow status updates every 5 seconds
+  const now = Date.now()
+  if (now - lastStatusUpdate < STATUS_UPDATE_THROTTLE_MS) {
+    return
+  }
+
   try {
+    lastStatusUpdate = now
     await api.post('user-sessions/update-status', {
       session_uuid: sessionUuid,
       status
@@ -185,14 +194,24 @@ function stopHeartbeat () {
 /**
  * Setup idle detection
  */
+let activityDebounceTimeout = null
 function setupIdleDetection () {
-  const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
+  // Reduced events - mousemove removed to prevent excessive triggers
+  const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
 
   const resetIdleTimer = () => {
-    if (currentStatus === 'idle') {
-      updateStatus('online')
+    // Debounce activity detection to prevent rapid-fire calls
+    if (activityDebounceTimeout) {
+      clearTimeout(activityDebounceTimeout)
     }
 
+    activityDebounceTimeout = setTimeout(() => {
+      if (currentStatus === 'idle') {
+        updateStatus('online')
+      }
+    }, 500) // Wait 500ms before updating status
+
+    // Reset idle timeout
     if (idleTimeout) {
       clearTimeout(idleTimeout)
     }
