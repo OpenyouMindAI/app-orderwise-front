@@ -62,7 +62,35 @@ const validModule = ($store, to, next) => {
 
 const modeleExcept = ['Profile', 'ChangeCompany', 'VerifySession']
 
+// Flag to prevent multiple 401 handling
+let isHandling401 = false
+
 export default boot(async ({ router, store }) => {
+  // Register interceptor ONCE, outside of beforeEach
+  api.interceptors.response.use(null, async (error) => {
+    const $store = authentication()
+
+    // Prevent multiple 401 handling
+    if (error.response?.status === 401 && !isHandling401) {
+      isHandling401 = true
+      console.warn('⚠️ Error 401: No autorizado - Token inválido o expirado')
+      notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
+
+      // Use forceLogout to avoid backend call (token already invalid)
+      await $store.forceLogout()
+      router.push('/login')
+
+      // Reset flag after delay
+      setTimeout(() => {
+        isHandling401 = false
+      }, 2000)
+    } else if (error.response?.status === 403) {
+      console.error('Acceso denegado: ', error.response)
+      notify('No tienes permisos para acceder a este recurso', 'negative', 'warning')
+    }
+    return Promise.reject(error)
+  })
+
   router.beforeEach(async (to, from, next) => {
     const $store = authentication()
     try {
@@ -77,13 +105,12 @@ export default boot(async ({ router, store }) => {
         if (tokenExpired) {
           console.warn('⚠️ Token de sesión vencido o inactivo')
           notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
-          await $store.logout()
+          await $store.forceLogout()
           return next('/login')
         }
       }
 
       api.defaults.headers.common.authorization = `${$store?.token_type} ${$store?.access_token}`
-      // apiQPay.defaults.headers.common['X-Company-Token'] = 'c5c4bb6f-e7cc-4287-99d4-0a82ddec4da7'
       apiQPay.defaults.headers.common['X-Company-Token'] = $store?.userSession?.company_session?.company_config?.other?.qpay_id
       apiArca.defaults.headers.common['X-Company-External-Id'] = $store?.userSession?.company_session?.document_number
       if (requiresAuth) {
@@ -98,18 +125,5 @@ export default boot(async ({ router, store }) => {
       console.error(error)
       next('/login')
     }
-    api.interceptors.response.use(null, async (error) => {
-      const $store = authentication()
-      if (error.response.status === 401 && !modeleExcept.includes(to.name)) {
-        console.warn('⚠️ Error 401: No autorizado - Token inválido o expirado')
-        notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
-        await $store.logout()
-        router.push('/login')
-      } else if (error.response.status === 403) {
-        console.error('Acceso denegado: ', error.response)
-        notify('No tienes permisos para acceder a este recurso', 'negative', 'warning')
-      }
-      return Promise.reject(error)
-    })
   })
 })

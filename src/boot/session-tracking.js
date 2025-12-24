@@ -285,7 +285,12 @@ function cleanup () {
 /**
  * Handle force disconnect from admin or timeout
  */
+let isHandlingForceDisconnect = false
 function handleForceDisconnect (store, action = 'force_disconnected') {
+  // Prevent multiple calls
+  if (isHandlingForceDisconnect) return
+  isHandlingForceDisconnect = true
+
   // Show notification to user based on action type
   const message = action === 'timeout'
     ? 'Tu sesión ha expirado por inactividad'
@@ -302,14 +307,18 @@ function handleForceDisconnect (store, action = 'force_disconnected') {
   // Cleanup session tracking
   cleanup()
 
-  // Clear store and localStorage
-  store.logout()
-  localStorage.removeItem('session_uuid')
+  // Clear store and localStorage - use forceLogout to avoid backend call (token already revoked)
+  store.forceLogout()
 
   // Redirect to login
   if (routerInstance) {
     routerInstance.push({ name: 'Login' })
   }
+
+  // Reset flag after a delay
+  setTimeout(() => {
+    isHandlingForceDisconnect = false
+  }, 2000)
 }
 
 /**

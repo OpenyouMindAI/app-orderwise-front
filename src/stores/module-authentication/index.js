@@ -91,15 +91,21 @@ export const authentication = defineStore('authentication', {
     },
     /**
      * Logout
+     * @param {Boolean} callBackend - Si debe llamar al backend para revocar token (default: true)
      * @returns {Boolean} true or false
      */
-    async logout () {
+    async logout (callBackend = true) {
+      // Prevent multiple logout calls
+      if (this._isLoggingOut) return true
+      this._isLoggingOut = true
+
       try {
-        // Cerrar sesión en el backend (revocar token)
-        if (this.access_token) {
+        // Cerrar sesión en el backend (revocar token) - solo si se indica
+        if (callBackend && this.access_token) {
           try {
             await api.post('authentication/logout')
           } catch (e) {
+            // Ignore errors - token might already be revoked
             console.warn('Error al cerrar sesión en backend:', e)
           }
         }
@@ -120,24 +126,30 @@ export const authentication = defineStore('authentication', {
         const showThemeSelector = localStorage.getItem('show-theme-selector')
 
         console.log('🔒 Cerrando sesión...')
-        console.log('💾 Tema guardado antes de limpiar:', savedTheme)
 
         localStorage.clear()
 
         // Restaurar tema después de limpiar
         if (savedTheme) {
           localStorage.setItem('app-theme', savedTheme)
-          console.log('✅ Tema restaurado:', savedTheme)
         }
         if (showThemeSelector) {
           localStorage.setItem('show-theme-selector', showThemeSelector)
-          console.log('✅ Preferencia de selector restaurada:', showThemeSelector)
         }
 
         return true
       } catch (error) {
         throw error.response?.data || error
+      } finally {
+        this._isLoggingOut = false
       }
+    },
+    /**
+     * Force logout - Solo limpia datos locales sin llamar al backend
+     * Usado cuando el admin fuerza desconexión o el token ya fue revocado
+     */
+    forceLogout () {
+      return this.logout(false)
     },
     /**
      * Toggle hide amounts
