@@ -300,7 +300,7 @@ const routes = [
         meta: { requiresAuth: true, title: 'Monitor de Sesiones' },
         component: () => import('pages/SessionMonitorPage.vue')
       },
-      {
+            {
         path: 'dashboard-manager',
         name: 'DashboardManager',
         meta: { requiresAuth: true },
