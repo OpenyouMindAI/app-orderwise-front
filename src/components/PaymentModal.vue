@@ -42,7 +42,7 @@
           />
 
           <!-- Payments Table - Desktop -->
-          <q-markup-table class="q-mb-md" v-if="$q.screen.gt.xs">
+          <q-markup-table class="q-mb-md" style="max-width: 100%; overflow: auto;" v-if="$q.screen.gt.xs">
             <thead>
               <tr>
                 <th class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">✅</th>
@@ -559,10 +559,13 @@ export default {
     }
 
     const appendPayment = (payment) => {
-      const paymentFund = localPayments.value.find(p => p.payment_method_id === payment.payment_method_id)
+      const paymentFund = localPayments.value.find(
+        p => p.payment_method_id === payment.payment_method_id &&
+        !p.invoice_payment_id
+      )
       if (paymentFund) {
-        paymentFund.amount = payment.amount
-        paymentFund.discount_amount = payment.discount_amount
+        paymentFund.amount = paymentFund.amount + payment.amount
+        paymentFund.discount_amount = paymentFund.discount_amount + payment.discount_amount
       } else {
         localPayments.value.push(payment)
       }

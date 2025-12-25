@@ -2396,14 +2396,12 @@ export default {
       if (isActive) {
         // Cerrar modal de caja cuando el tour se active
         if (this.showCashBoxDialog) {
-          console.log('🎓 Tour activado - Cerrando modal de caja temporalmente')
           this.showCashBoxDialog = false
           this.tourStore.setPendingModal('cashBox', true)
         }
       } else {
         // Reabrir modales pendientes cuando el tour termine
         if (this.tourStore.getPendingModal('cashBox')) {
-          console.log('✅ Tour terminado - Reabriendo modal de caja')
           this.$nextTick(() => {
             this.showCashBoxDialog = true
           })
@@ -3202,9 +3200,6 @@ export default {
      * Reemplaza el antiguo setPagination con una API más simple
      */
     reloadProducts () {
-      console.log('🔄 Recargando productos desde página 1')
-
-      // Actualizar objeto pagination para resetear a página 1
       this.pagination = {
         ...this.pagination,
         page: 1
@@ -3529,12 +3524,6 @@ export default {
     getAllProducts (params, append = false) {
       this.loadingProducts = true
 
-      console.log(`${append ? '➕' : '🔄'} ${append ? 'Agregando' : 'Cargando'} productos:`, {
-        pagina: params.page,
-        porPagina: params.perPage,
-        append
-      })
-
       this.$api.get('products', {
         params: {
           ...params,
@@ -3558,24 +3547,12 @@ export default {
             ]
           }))
 
-          const prevCount = this.allProducts.length
-
           if (append) {
             // Scroll infinito: agregar productos al final
             this.allProducts = [...this.allProducts, ...newProducts]
-            console.log('✓ Productos agregados:', {
-              nuevos: newProducts.length,
-              anterior: prevCount,
-              actual: this.allProducts.length,
-              total: data.total
-            })
           } else {
             // Carga inicial: reemplazar productos
             this.allProducts = newProducts
-            console.log('✓ Productos cargados:', {
-              cantidad: newProducts.length,
-              total: data.total
-            })
           }
 
           this.pagination.rowsNumber = data.total
@@ -3606,40 +3583,21 @@ export default {
       const scrollHeight = container.scrollHeight
       const clientHeight = container.clientHeight
 
-      // Detectar si está cerca del fondo (100px antes del final)
       const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100
 
-      // Solo continuar si está cerca del fondo y no está cargando
       if (!isNearBottom || this.loadingProducts) {
         return
       }
-
-      // Verificar si hay más productos por cargar
       const currentProductsCount = this.allProducts.length
       const totalProducts = this.pagination.rowsNumber
 
-      // Si ya se cargaron todos los productos, no hacer nada
       if (currentProductsCount >= totalProducts) {
-        console.log('✓ Todos los productos ya están cargados:', {
-          cargados: currentProductsCount,
-          total: totalProducts
-        })
         return
       }
 
-      // Calcular la siguiente página
       const currentPage = Math.floor(currentProductsCount / this.pagination.rowsPerPage)
       const nextPage = currentPage + 1
 
-      console.log('📦 Cargando más productos:', {
-        paginaActual: currentPage,
-        proximaPagina: nextPage,
-        productosCargados: currentProductsCount,
-        totalProductos: totalProducts,
-        restantes: totalProducts - currentProductsCount
-      })
-
-      // Cargar más productos
       const params = {
         sortOrder: 'desc',
         sortBy: 'sold',
@@ -3698,6 +3656,7 @@ export default {
       invoicePayments?.forEach(payment => {
         this.payments.push({
           id: payment.payment_method_id,
+          invoice_payment_id: payment.id,
           payment_method_id: payment.payment_method_id,
           name: payment.payment_method.name,
           amount: payment.amount,
@@ -3751,7 +3710,6 @@ export default {
         this.typeOfService = invoice.type_of_service
 
         this.searchInvoice = false
-        this.setPayments(invoice.invoice_payments)
         this.$router.push({
           name: 'Billing',
           query: {
@@ -3762,6 +3720,7 @@ export default {
         this.deliveryDate = invoice.delivery_date
         this.calculateTotal()
         this.search = ''
+        this.setPayments(invoice.invoice_payments)
       } else {
         notify('No se encontró la factura', 'negative', 'warning')
       }
@@ -4342,7 +4301,6 @@ export default {
 
       // No mostrar el modal si el tour está activo o va a comenzar
       if (this.tourStore.isTourActiveOrPending) {
-        console.log('🎓 Tour activo o por iniciar - Modal de caja pospuesto')
         this.tourStore.setPendingModal('cashBox', true)
         return
       }
