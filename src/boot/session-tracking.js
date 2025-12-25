@@ -15,8 +15,8 @@ let routerInstance = null
 let lastStatusUpdate = 0 // Timestamp of last status update
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
-const HEARTBEAT_INTERVAL_MS = 30 * 1000 // 30 seconds
-const STATUS_UPDATE_THROTTLE_MS = 5 * 1000 // 5 seconds minimum between status updates
+const HEARTBEAT_INTERVAL_MS = 60 * 1000 // 60 seconds (was 30s - reduced API calls)
+const STATUS_UPDATE_THROTTLE_MS = 10 * 1000 // 10 seconds minimum between status updates (was 5s)
 
 // Public routes that should NOT trigger tracking
 const PUBLIC_ROUTES = [

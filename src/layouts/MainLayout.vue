@@ -1133,7 +1133,6 @@ export default {
   },
   created () {
     this.loadingPage()
-    this.getDataNotification()
     this.checkMultipleScreens()
     this.loadSubscriptionInfo()
   },

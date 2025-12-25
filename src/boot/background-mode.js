@@ -9,8 +9,8 @@ import { echo } from './pusher'
 const CONFIG = {
   MAX_RECONNECT_ATTEMPTS: 10,
   RECONNECT_DELAY: 2000,
-  PING_INTERVAL: 20000,
-  BACKGROUND_TASK_INTERVAL: 30000,
+  PING_INTERVAL: 60000, // 60s (was 20s - reduced to avoid excessive checks)
+  BACKGROUND_TASK_INTERVAL: 60000, // 60s (was 30s - unified with PING_INTERVAL)
   WAKE_LOCK_TIMEOUT: 300000
 }
 
