@@ -901,6 +901,13 @@ export default {
           label: 'Total',
           field: 'total',
           format: val => formatNumber(val)
+        },
+        {
+          name: 'pending',
+          align: 'right',
+          label: 'Pendiente por pagar',
+          field: 'pending',
+          format: val => formatNumber(val)
         }
       ],
       /**
