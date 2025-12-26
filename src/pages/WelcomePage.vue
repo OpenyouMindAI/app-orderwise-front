@@ -1,112 +1,259 @@
 <template>
-  <q-page class="flex flex-center bg-grey-1">
-    <div class="welcome-container q-pa-md">
+  <q-page class="flex flex-center" style="background: #fafafa;">
+    <div class="welcome-container q-pa-lg">
       <!-- Header Section -->
-      <div class="text-center q-mb-xl">
-        <q-icon name="rocket_launch" size="64px" color="primary" class="q-mb-md" />
-        <div class="text-h3 text-weight-bold q-my-none text-grey-9">Bienvenido a OrderWise</div>
-        <div class="text-h6 text-grey-6 q-mt-sm">
-          Comienza tu viaje completando estas misiones esenciales para configurar tu negocio.
+      <div class="text-center q-mb-lg">
+        <div class="text-h4 text-weight-light text-grey-8 q-mb-xs">Bienvenido a OrderWise</div>
+        <div class="text-body1 text-grey-6">
+          Configura tu negocio en 5 pasos simples
         </div>
       </div>
 
-      <!-- Tasks Accordion -->
-      <q-list bordered class="rounded-borders bg-white shadow-1">
+      <!-- Tasks List -->
+      <q-list class="task-list">
         <q-expansion-item
           v-for="(task, index) in tasks"
           :key="index"
           group="tasks"
-          :icon="task.icon"
+          :icon="task.completed ? 'check_circle' : task.icon"
           :label="task.title"
           :caption="task.caption"
-          header-class="text-weight-medium text-grey-9"
-          expand-icon-class="text-primary"
+          header-class="task-header"
+          expand-icon-class="text-grey-5"
+          :class="['task-item', { 'task-completed': task.completed }]"
         >
-          <q-card>
-            <q-card-section class="q-pt-none">
-              <div class="text-body1 text-grey-7 q-mb-md">
-                {{ task.description }}
-              </div>
-              <div class="text-right">
-                <q-btn
-                  unelevated
-                  color="primary"
-                  :label="task.buttonLabel"
-                  :to="{ name: task.routeName }"
-                  icon-right="arrow_forward"
-                />
-              </div>
-            </q-card-section>
+          <q-card flat class="q-pa-md">
+            <div class="text-body2 text-grey-7 q-mb-md">
+              {{ task.description }}
+            </div>
+            <div class="text-right">
+              <q-btn
+                flat
+                color="primary"
+                :label="task.buttonLabel"
+                :to="{ name: task.routeName }"
+                icon-right="arrow_forward"
+                no-caps
+              />
+            </div>
           </q-card>
         </q-expansion-item>
       </q-list>
 
       <!-- Footer Help -->
-      <div class="text-center q-mt-xl text-grey-6">
-        <div>¿Necesitas ayuda? Revisa nuestros <a href="#" class="text-primary" style="text-decoration: none" @click.prevent="$router.push({ name: 'Tutorial' })">tutoriales</a> o contacta soporte.</div>
+      <div class="text-center q-mt-lg">
+        <div class="text-caption text-grey-5">
+          ¿Necesitas ayuda? <a href="#" class="text-primary" style="text-decoration: none; font-weight: 500" @click.prevent="$router.push({ name: 'Tutorial' })">Ver tutoriales</a>
+        </div>
       </div>
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref /*, onMounted */ } from 'vue'
+// import { api } from 'boot/axios'
 
 const tasks = ref([
   {
     title: 'Completa los Datos de tu Empresa',
     caption: 'Configuración inicial',
     icon: 'business',
-    description: 'Para comenzar, necesitamos que completes la información básica de tu empresa. Esto asegurará que tus facturas y documentos salgan con los datos correctos.',
-    buttonLabel: 'Ir a Configuración',
-    routeName: 'CompanyConfig'
+    description: 'Información básica de tu empresa para facturas y documentos.',
+    buttonLabel: 'Configurar',
+    routeName: 'CompanyConfig',
+    completed: true
   },
   {
     title: 'Crea tu primera Sucursal',
     caption: 'Expande tu negocio',
     icon: 'store',
-    description: 'Registra tu primera sucursal u oficina. Aquí es donde gestionarás tu inventario y realizarás tus ventas.',
+    description: 'Registra tu primera sucursal para gestionar inventario y ventas.',
     buttonLabel: 'Gestionar Sucursales',
-    routeName: 'BranchOffice'
+    routeName: 'BranchOffice',
+    completed: false
   },
   {
     title: 'Registra tu primer Producto',
     caption: 'Llena tu inventario',
     icon: 'inventory_2',
-    description: 'Agrega productos a tu catálogo. Puedes incluir detalles como precio, costo, y control de stock.',
-    buttonLabel: 'Ir a Productos',
-    routeName: 'Product'
+    description: 'Agrega productos con precios, costos y control de stock.',
+    buttonLabel: 'Agregar Productos',
+    routeName: 'Product',
+    completed: false
   },
   {
     title: 'Realiza tu primera Venta',
     caption: 'Empieza a facturar',
     icon: 'point_of_sale',
-    description: '¡Es hora de vender! Utiliza el punto de venta para registrar tu primera transacción y ver cómo se mueve tu inventario.',
-    buttonLabel: 'Ir al Punto de Venta',
-    routeName: 'PointOfSale'
+    description: 'Registra tu primera transacción y observa el movimiento del inventario.',
+    buttonLabel: 'Ir a Ventas',
+    routeName: 'PointOfSale',
+    completed: false
   },
   {
     title: 'Invita a tu Equipo',
     caption: 'Colaboración',
     icon: 'group_add',
-    description: 'OrderWise es mejor en equipo. Invita a tus colaboradores y asigna roles y permisos específicos.',
+    description: 'Invita colaboradores y asigna roles específicos.',
     buttonLabel: 'Gestionar Usuarios',
-    routeName: 'User'
+    routeName: 'User',
+    completed: false
   }
 ])
+
+/*
+// Función para verificar el estado de completado de las tareas
+const checkTasksCompletion = async () => {
+  try {
+    // Task 1: Verificar si hay datos de empresa
+    try {
+      const { data: company } = await api.get('companies')
+      if (company && (Array.isArray(company) ? company.length > 0 : company.id)) {
+        tasks.value[0].completed = true
+      }
+    } catch (e) {
+      // Si falla, asumimos que no está completa
+    }
+
+    // Task 2: Verificar si hay sucursales
+    try {
+      const { data: branches } = await api.get('branch-offices')
+      if (branches && Array.isArray(branches) && branches.length > 0) {
+        tasks.value[1].completed = true
+      }
+    } catch (e) {
+      // Si falla, asumimos que no está completa
+    }
+
+    // Task 3: Verificar si hay productos
+    try {
+      const { data: products } = await api.get('products')
+      if (products && Array.isArray(products) && products.length > 0) {
+        tasks.value[2].completed = true
+      }
+    } catch (e) {
+      // Si falla, asumimos que no está completa
+    }
+
+    // Task 4: Verificar si hay ventas/facturas
+    try {
+      const { data: invoices } = await api.get('invoices')
+      if (invoices && Array.isArray(invoices) && invoices.length > 0) {
+        tasks.value[3].completed = true
+      }
+    } catch (e) {
+      // Si falla, asumimos que no está completa
+    }
+
+    // Task 5: Verificar si hay usuarios (más de uno, ya que el actual cuenta)
+    try {
+      const { data: users } = await api.get('users')
+      if (users && Array.isArray(users) && users.length > 1) {
+        tasks.value[4].completed = true
+      }
+    } catch (e) {
+      // Si falla, asumimos que no está completa
+    }
+  } catch (error) {
+    console.error('Error al verificar el estado de las tareas:', error)
+  }
+}
+
+// Verificar el estado al montar el componente
+onMounted(() => {
+  checkTasksCompletion()
+})
+*/
 </script>
 
 <style scoped>
 .welcome-container {
   width: 100%;
-  max-width: 800px;
+  max-width: 720px;
 }
 
-.q-expansion-item {
-  border-bottom: 1px solid #f0f0f0;
+.task-list {
+  background: transparent;
 }
 
-.q-expansion-item:last-child {
-  border-bottom: none;
+.task-item {
+  background: white;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
 }
+
+/* .task-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+} */
+
+.task-header {
+  padding: 16px 20px;
+  font-weight: 500;
+  color: #424242;
+}
+
+:deep(.q-card) {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+:deep(.q-item__section--avatar) {
+  min-width: 40px;
+  color: #757575;
+}
+
+:deep(.q-item__label--caption) {
+  color: #9e9e9e;
+  font-size: 0.75rem;
+}
+
+:deep(.q-expansion-item) {
+  transition: all 0.3s ease;
+}
+
+:deep(.q-expansion-item:hover),
+:deep(.q-expansion-item:focus-within) {
+  transform: translateX(5px);
+  box-shadow: inset 0 0 0 2px var(--q-primary);
+}
+
+/* Eliminar todos los efectos hover de Quasar */
+:deep(.q-item:hover),
+:deep(.q-focusable:hover),
+:deep(.q-hoverable:hover),
+:deep(.q-expansion-item__toggle-icon:hover) {
+  background: transparent !important;
+  color: inherit !important;
+  transform: none !important;
+}
+
+:deep(.q-item:hover > .q-focus-helper) {
+  background: transparent !important;
+  opacity: 0 !important;
+}
+
+:deep(.q-expansion-item__container:hover) {
+  background: none !important;
+}
+
+/* Estilos para tareas completadas */
+.task-completed {
+  opacity: 0.6;
+}
+
+.task-completed :deep(.q-item__section--avatar) {
+  color: #4caf50 !important;
+}
+
+.task-completed :deep(.q-item__label) {
+  text-decoration: line-through;
+}
+
+.task-completed:hover {
+  opacity: 0.7;
+}
+
 </style>
