@@ -387,14 +387,6 @@
                 class="input-style"
               />
             </div>
-
-            <div class="col-12">
-              <q-checkbox
-                v-model="newClient.is_credit"
-                label="¿Maneja cuenta corriente?"
-                class="input-style"
-              />
-            </div>
           </q-card-section>
 
           <q-card-actions align="right" class="text-primary q-pa-md">

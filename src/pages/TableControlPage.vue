@@ -753,12 +753,6 @@
                 rows="2"
               />
             </div>
-            <div class="col-12">
-              <q-checkbox
-                v-model="clientAdded.is_credit"
-                label="¿Maneja cuenta corriente?"
-              />
-            </div>
           </q-card-section>
           <q-card-actions align="right" class="text-primary">
             <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="loadingClient"/>
