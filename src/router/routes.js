@@ -300,7 +300,7 @@ const routes = [
         meta: { requiresAuth: true, title: 'Monitor de Sesiones' },
         component: () => import('pages/SessionMonitorPage.vue')
       },
-            {
+      {
         path: 'dashboard-manager',
         name: 'DashboardManager',
         meta: { requiresAuth: true },
@@ -377,6 +377,12 @@ const routes = [
         name: 'AiChat',
         meta: { requiresAuth: true },
         component: () => import('src/pages/AiChatPage.vue')
+      },
+      {
+        path: 'welcome',
+        name: 'Welcome',
+        meta: { requiresAuth: true },
+        component: () => import('pages/WelcomePage.vue')
       }
     ]
   },
