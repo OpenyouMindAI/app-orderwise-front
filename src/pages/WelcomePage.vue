@@ -2,11 +2,9 @@
   <q-page class="flex flex-center" style="background: #fafafa;">
     <div class="welcome-container q-pa-lg">
       <!-- Header Section -->
-      <div class="text-center q-mb-lg">
-        <div class="text-h4 text-weight-light text-grey-8 q-mb-xs">Bienvenido a OrderWise</div>
-        <div class="text-body1 text-grey-6">
-          Configura tu negocio en 5 pasos simples
-        </div>
+      <div class="text-center q-mb-xl">
+        <div class="text-h3 text-weight-light text-grey-8 q-mb-sm">Bienvenido a Qbits</div>
+        <div class="text-h6 text-grey-6 text-weight-light">Completa tus primeros pasos para empezar a gestionar tu negocio.</div>
       </div>
 
       <!-- Tasks List -->
@@ -23,7 +21,7 @@
           :class="['task-item', { 'task-completed': task.completed }]"
         >
           <q-card flat class="q-pa-md">
-            <div class="text-body2 text-grey-7 q-mb-md">
+            <div class="text-body1 text-grey-7 q-mb-lg">
               {{ task.description }}
             </div>
             <div class="text-right">
@@ -40,10 +38,25 @@
         </q-expansion-item>
       </q-list>
 
+      <!-- Progress Section at Bottom -->
+      <div class="progress-container q-mt-xl text-center">
+        <div class="flex flex-center q-gutter-x-xs">
+          <div
+            v-for="n in totalCount"
+            :key="n"
+            class="progress-segment"
+            :class="{ 'segment-active': n <= completedCount }"
+          ></div>
+        </div>
+        <div class="text-subtitle1 text-grey-6 q-mt-md">
+          Has completado {{ completedCount }} de {{ totalCount }} tareas fundamentales
+        </div>
+      </div>
+
       <!-- Footer Help -->
-      <div class="text-center q-mt-lg">
-        <div class="text-caption text-grey-5">
-          ¿Necesitas ayuda? <a href="#" class="text-primary" style="text-decoration: none; font-weight: 500" @click.prevent="$router.push({ name: 'Tutorial' })">Ver tutoriales</a>
+      <div class="text-center q-mt-xl">
+        <div class="text-body2 text-grey-6">
+          ¿Necesitas ayuda? <a href="#" class="text-primary" style="text-decoration: none; font-weight: 600" @click.prevent="$router.push({ name: 'Tutorial' })">Ver tutoriales</a>
         </div>
       </div>
     </div>
@@ -51,7 +64,7 @@
 </template>
 
 <script setup>
-import { ref /*, onMounted */ } from 'vue'
+import { ref, computed /*, onMounted */ } from 'vue'
 // import { api } from 'boot/axios'
 
 const tasks = ref([
@@ -101,6 +114,9 @@ const tasks = ref([
     completed: false
   }
 ])
+
+const completedCount = computed(() => tasks.value.filter(t => t.completed).length)
+const totalCount = computed(() => tasks.value.length)
 
 /*
 // Función para verificar el estado de completado de las tareas
@@ -190,7 +206,7 @@ onMounted(() => {
 } */
 
 .task-header {
-  padding: 16px 20px;
+  padding: 20px 24px;
   font-weight: 500;
   color: #424242;
 }
@@ -205,9 +221,14 @@ onMounted(() => {
   color: #757575;
 }
 
+:deep(.q-item__label) {
+  font-size: 1.1rem;
+}
+
 :deep(.q-item__label--caption) {
   color: #9e9e9e;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
+  margin-top: 4px;
 }
 
 :deep(.q-expansion-item) {
@@ -256,4 +277,16 @@ onMounted(() => {
   opacity: 0.7;
 }
 
+.progress-segment {
+  width: 32px;
+  height: 4px;
+  border-radius: 10px;
+  background: #eeeeee;
+  transition: all 0.4s ease;
+}
+
+.segment-active {
+  background: var(--q-primary);
+  box-shadow: 0 0 10px rgba(var(--q-primary), 0.2);
+}
 </style>
