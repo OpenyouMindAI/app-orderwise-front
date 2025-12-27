@@ -3625,6 +3625,7 @@ export default {
           data.forEach(promotion => {
             this.allProducts.unshift({
               ...promotion,
+              barcode: promotion.code,
               is_bundle: true,
               is_promotion: true,
               cost: this.sumCostPromotion(promotion.promotion_details),
