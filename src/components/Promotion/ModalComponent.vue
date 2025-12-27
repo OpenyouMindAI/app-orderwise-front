@@ -63,7 +63,7 @@
                           <div class="row q-col-gutter-sm">
                             <div class="col-4">
                               <q-input
-                                v-model="promotion.barcode"
+                                v-model="promotion.code"
                                 label="Código"
                                 filled
                                 dense
@@ -608,7 +608,7 @@ const productModifierForm = ref({
 const getInitialPromotionState = () => ({
   name: '',
   description: '',
-  barcode: '',
+  code: '',
   channels: ['pos'],
   start_date: null,
   end_date: null,

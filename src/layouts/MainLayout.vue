@@ -980,7 +980,16 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice', 'isDemo', 'setBranchOffice', 'access_token', 'refresh_token', 'expires_In', 'token_type']),
+    ...mapState(authentication, [
+      'userSession',
+      'branchOffice',
+      'isDemo',
+      'setBranchOffice',
+      'access_token',
+      'refresh_token',
+      'expires_In',
+      'token_type'
+    ]),
     ...mapState(darkModeStore, ['darkMode']),
     /**
      * Check if current page has tour available
@@ -1749,6 +1758,16 @@ export default {
       this.getDataNotification()
       this.getBrachOffice()
       this.cuit = this.userSession?.company_session?.document_number
+      this.loadingTasks()
+    },
+    async loadingTasks () {
+      try {
+        const { data } = await this.$api.get('tasks')
+        this.tasks = data
+        console.log(data)
+      } catch (error) {
+        console.log(error)
+      }
     },
     /**
      * Inicializar sistema de temas
