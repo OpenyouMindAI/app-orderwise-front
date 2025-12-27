@@ -144,6 +144,13 @@ export default {
           sortable: true
         },
         {
+          name: 'code',
+          align: 'left',
+          label: 'Codigo',
+          field: 'code',
+          sortable: true
+        },
+        {
           name: 'name',
           align: 'left',
           label: 'Nombre',
