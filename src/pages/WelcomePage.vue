@@ -64,115 +64,77 @@
 </template>
 
 <script setup>
-import { ref, computed /*, onMounted */ } from 'vue'
-// import { api } from 'boot/axios'
+import { ref, computed, onMounted } from 'vue'
+import { api } from 'boot/axios'
 
 const tasks = ref([
   {
+    id: 'company_config',
     title: 'Completa los Datos de tu Empresa',
     caption: 'Configuración inicial',
     icon: 'business',
     description: 'Información básica de tu empresa para facturas y documentos.',
     buttonLabel: 'Configurar',
-    routeName: 'CompanyConfig',
-    completed: true
+    routeName: 'CompanyConfig'
   },
   {
+    id: 'branch_office',
     title: 'Crea tu primera Sucursal',
     caption: 'Expande tu negocio',
     icon: 'store',
     description: 'Registra tu primera sucursal para gestionar inventario y ventas.',
     buttonLabel: 'Gestionar Sucursales',
-    routeName: 'BranchOffice',
-    completed: false
+    routeName: 'BranchOffice'
   },
   {
+    id: 'product',
     title: 'Registra tu primer Producto',
     caption: 'Llena tu inventario',
     icon: 'inventory_2',
     description: 'Agrega productos con precios, costos y control de stock.',
     buttonLabel: 'Agregar Productos',
-    routeName: 'Product',
-    completed: false
+    routeName: 'Product'
   },
   {
+    id: 'point_of_sale',
     title: 'Realiza tu primera Venta',
     caption: 'Empieza a facturar',
     icon: 'point_of_sale',
     description: 'Registra tu primera transacción y observa el movimiento del inventario.',
     buttonLabel: 'Ir a Ventas',
-    routeName: 'PointOfSale',
-    completed: false
+    routeName: 'PointOfSale'
   },
   {
+    id: 'user',
     title: 'Invita a tu Equipo',
     caption: 'Colaboración',
     icon: 'group_add',
     description: 'Invita colaboradores y asigna roles específicos.',
     buttonLabel: 'Gestionar Usuarios',
-    routeName: 'User',
-    completed: false
+    routeName: 'User'
   }
 ])
 
 const completedCount = computed(() => tasks.value.filter(t => t.completed).length)
 const totalCount = computed(() => tasks.value.length)
 
-/*
-// Función para verificar el estado de completado de las tareas
+/**
+ * Verifica el estado de completado de las tareas consultando el endpoint del backend
+ */
 const checkTasksCompletion = async () => {
   try {
-    // Task 1: Verificar si hay datos de empresa
-    try {
-      const { data: company } = await api.get('companies')
-      if (company && (Array.isArray(company) ? company.length > 0 : company.id)) {
-        tasks.value[0].completed = true
-      }
-    } catch (e) {
-      // Si falla, asumimos que no está completa
-    }
+    const { data } = await api.get('/onboarding/tasks/status')
 
-    // Task 2: Verificar si hay sucursales
-    try {
-      const { data: branches } = await api.get('branch-offices')
-      if (branches && Array.isArray(branches) && branches.length > 0) {
-        tasks.value[1].completed = true
+    // Actualizar el estado de cada tarea basándose en la respuesta del backend
+    data.tasks.forEach(backendTask => {
+      const taskIndex = tasks.value.findIndex(t => t.id === backendTask.id)
+      if (taskIndex !== -1) {
+        tasks.value[taskIndex].completed = backendTask.completed
       }
-    } catch (e) {
-      // Si falla, asumimos que no está completa
-    }
-
-    // Task 3: Verificar si hay productos
-    try {
-      const { data: products } = await api.get('products')
-      if (products && Array.isArray(products) && products.length > 0) {
-        tasks.value[2].completed = true
-      }
-    } catch (e) {
-      // Si falla, asumimos que no está completa
-    }
-
-    // Task 4: Verificar si hay ventas/facturas
-    try {
-      const { data: invoices } = await api.get('invoices')
-      if (invoices && Array.isArray(invoices) && invoices.length > 0) {
-        tasks.value[3].completed = true
-      }
-    } catch (e) {
-      // Si falla, asumimos que no está completa
-    }
-
-    // Task 5: Verificar si hay usuarios (más de uno, ya que el actual cuenta)
-    try {
-      const { data: users } = await api.get('users')
-      if (users && Array.isArray(users) && users.length > 1) {
-        tasks.value[4].completed = true
-      }
-    } catch (e) {
-      // Si falla, asumimos que no está completa
-    }
+    })
   } catch (error) {
     console.error('Error al verificar el estado de las tareas:', error)
+    // En caso de error, las tareas mantienen su estado inicial (false)
   }
 }
 
@@ -180,7 +142,6 @@ const checkTasksCompletion = async () => {
 onMounted(() => {
   checkTasksCompletion()
 })
-*/
 </script>
 
 <style scoped>
