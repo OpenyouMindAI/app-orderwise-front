@@ -912,6 +912,7 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
+// import { useFbq } from 'vue3-facebook-pixel'
 
 export default {
   name: 'MainLayout',
@@ -1266,8 +1267,8 @@ export default {
      * Handle Google register success
      */
     handleGoogleRegisterSuccess (data) {
-      const fbq = useFbq()
-      fbq.event('Purchase', data)
+      // const fbq = useFbq()
+      // fbq.event('Purchase', data)
       if (data.needsCompanySetup) {
         this.companyData.company_email = data.userInfo.email
       } else {
