@@ -38,12 +38,6 @@ export const useTourStore = defineStore('tour', {
       this.isActive = localStorage.getItem('tour_active') === 'true'
       this.needsBillingTour = localStorage.getItem('needs_billing_tour') === 'true'
       this.hasSeenBillingTour = localStorage.getItem('has_seen_billing_tour') === 'true'
-
-      console.log('🎓 Tour Store inicializado:', {
-        isActive: this.isActive,
-        needsBillingTour: this.needsBillingTour,
-        hasSeenBillingTour: this.hasSeenBillingTour
-      })
     },
 
     /**
@@ -52,7 +46,6 @@ export const useTourStore = defineStore('tour', {
     startTour () {
       this.isActive = true
       localStorage.setItem('tour_active', 'true')
-      console.log('🎓 Tour iniciado')
     },
 
     /**

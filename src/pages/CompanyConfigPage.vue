@@ -838,12 +838,16 @@ import ScheduleCompany from 'src/components/Company/ScheduleCompany.vue'
 import { logo, notify, setFiles } from '../const/mixins'
 import { api, apiArca } from 'src/boot/axios'
 import { ref, computed, nextTick, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import eventBus from 'src/utils/eventBus'
 import FileComponent from 'src/components/FileComponent.vue'
 import IntegrationComponent from '../components/CompanyConfig/IntegrationComponent.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
-import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
+
+const router = useRouter()
+const $q = useQuasar()
 
 // Reactive data
 const coins = ref([])
@@ -943,19 +947,37 @@ onMounted(async () => {
     console.error('Error loading business types:', error)
   }
 
-  // Verificar si debe mostrar el tour
-  const hasSeenTour = localStorage.getItem('has_seen_company_config_tour')
-  const needsTour = localStorage.getItem('needs_company_config_tour')
-  // Mostrar tour si:
-  // 1. Nunca lo ha visto (primera visita)
-  // 2. O viene marcado como que necesita el tour
-  if (hasSeenTour !== 'true' || needsTour === 'true') {
-    localStorage.removeItem('needs_company_config_tour')
-    // Esperar a que el DOM esté listo
+  // Verificar si viene desde WelcomePage
+  const activateFromWelcome = localStorage.getItem('activate_tour_from_welcome')
+  const selectedTask = localStorage.getItem('welcome_selected_task')
+
+  if (activateFromWelcome === 'true' && selectedTask === 'CompanyConfig') {
+    // Limpiar flags de activación
+    localStorage.removeItem('activate_tour_from_welcome')
+    localStorage.removeItem('welcome_selected_task')
+
+    // Marcar que viene desde Welcome
+    localStorage.setItem('came_from_welcome_config', 'true')
+
+    // Ir directamente al paso 3 (Facturación)
+    step.value = 3
+
+    // Activar tour automáticamente
     await nextTick()
     setTimeout(() => {
       startTour()
     }, 500)
+  } else {
+    // Verificar si debe mostrar el tour (comportamiento normal)
+    const hasSeenTour = localStorage.getItem('has_seen_company_config_tour')
+    const needsTour = localStorage.getItem('needs_company_config_tour')
+    if (hasSeenTour !== 'true' || needsTour === 'true') {
+      localStorage.removeItem('needs_company_config_tour')
+      await nextTick()
+      setTimeout(() => {
+        startTour()
+      }, 500)
+    }
   }
 
   // Listen for tour activation from navbar
@@ -1436,13 +1458,10 @@ const onSubmitConfig = async () => {
         point_of_sale: companyConfig.value.point_of_sale,
         default_price_list: companyConfig.value.other.default_price_list
       }
-      // Enviamos la configuración al nuevo endpoint
       const { data } = await api.post('branch-office-configs', payload)
 
-      // Actualizamos el estado de la sucursal en Pinia con la respuesta
       store.setBranchOffice(data)
     } else {
-      // Lógica de guardado para los otros pasos (configuración general de la empresa)
       const { data } = await api.post('company-configs', {
         coin_id: companyConfig.value?.coin?.id,
         type_of_service_id: companyConfig.value?.typeOfService?.id,
@@ -1463,6 +1482,9 @@ const onSubmitConfig = async () => {
     }
 
     notify('Guardado exitosamente', 'positive', 'check_circle')
+
+    // Verificar si debe preguntar por continuar o mostrar celebración
+    await checkContinueConfiguration()
 
     // Avanzar al siguiente paso
     step.value = getNextStep(step.value)
@@ -1518,6 +1540,86 @@ const finishTour = () => {
   showTour.value = false
   localStorage.setItem('has_seen_company_config_tour', 'true')
   notify('¡Tour completado!', 'positive', 'check_circle')
+}
+
+/**
+ * Check if should continue configuration
+ */
+const checkContinueConfiguration = async () => {
+  const cameFromWelcome = localStorage.getItem('came_from_welcome_config')
+
+  if (cameFromWelcome === 'true') {
+    localStorage.removeItem('came_from_welcome_config')
+
+    // Verificar si el progreso está al 100%
+    const progressData = await checkIfComplete()
+
+    if (progressData.isComplete) {
+      // Mostrar celebración al 100%
+      showCelebration()
+    } else {
+      // Preguntar si quiere continuar con la siguiente tarea
+      setTimeout(() => {
+        $q.dialog({
+          title: '¡Configuración guardada! ✅',
+          message: '¿Deseas continuar con la siguiente tarea de configuración?',
+          cancel: {
+            label: 'Más tarde',
+            color: 'grey-7',
+            flat: true
+          },
+          ok: {
+            label: 'Continuar',
+            color: 'primary',
+            unelevated: true
+          },
+          persistent: false
+        }).onOk(() => {
+          router.push({ name: 'Welcome' })
+        })
+      }, 500)
+    }
+  }
+}
+
+/**
+ * Check if all tasks are complete (100%)
+ */
+const checkIfComplete = async () => {
+  try {
+    const { data } = await api.get('/onboarding/tasks/status')
+    const tasks = data.tasks || []
+    const total = tasks.length
+    const completed = tasks.filter(t => t.count > 0 || (t.multiple && Object.values(t.multiple).every(v => v))).length
+    const percentage = Math.round((completed / total) * 100)
+
+    return {
+      isComplete: percentage === 100,
+      percentage
+    }
+  } catch (error) {
+    console.error('Error checking completion:', error)
+    return { isComplete: false, percentage: 0 }
+  }
+}
+
+/**
+ * Show celebration dialog when 100% complete
+ */
+const showCelebration = async () => {
+  try {
+    const { data } = await api.post('/companies/mark-configured')
+    store.setCompanySession({
+      ...company.value,
+      company_config: data
+    })
+    const CelebrationDialog = await import('src/components/CelebrationDialog.vue')
+    $q.dialog({
+      component: CelebrationDialog.default
+    })
+  } catch (error) {
+    console.error('Error marking company as configured:', error)
+  }
 }
 
 /**
@@ -1647,101 +1749,6 @@ const handleAddressSelected = (selectedAddress) => {
       lng: address.value?.longitude
     }
   })
-}
-
-/**
- * Start configuration tour with Driver.js
- */
-const startConfigTour = () => {
-  // Construir pasos dinámicamente según los steps disponibles
-  const tourSteps = [
-    {
-      element: '.steps-nav',
-      popover: {
-        title: '¡Bienvenido a la Configuración! 🎉',
-        description: 'Te guiaremos por las diferentes secciones para configurar tu empresa. Puedes navegar entre ellas haciendo clic en cada paso.',
-        side: 'bottom',
-        align: 'center'
-      }
-    }
-  ]
-
-  // Agregar pasos según los steps disponibles
-  const stepElements = document.querySelectorAll('.step-nav-item')
-  stepElements.forEach((element, index) => {
-    const stepTitle = element.querySelector('.step-nav-label')?.textContent || ''
-
-    let description = ''
-    let icon = ''
-
-    switch (stepTitle) {
-      case 'Empresa':
-        icon = '📋'
-        description = 'Aquí configuras la información básica de tu empresa: nombre, documento, logo, dirección y datos de contacto.'
-        break
-      case 'Sucursal':
-        icon = '🏪'
-        description = 'Configura los valores predeterminados para esta sucursal: punto de venta y lista de precios.'
-        break
-      case 'Facturación':
-        icon = '🧾'
-        description = 'Define la configuración de facturación: cliente por defecto, tipo de factura, método de pago, moneda y datos fiscales.'
-        break
-      case 'Tienda':
-        icon = '🛒'
-        description = 'Personaliza tu tienda digital: colores, banner y configuración visual para tus clientes.'
-        break
-      case 'Pantalla':
-        icon = '📺'
-        description = 'Configura la pantalla de visualización para tus clientes: tipo de servicio y opciones de display.'
-        break
-      case 'Dispositivos':
-        icon = '🖨️'
-        description = 'Configura tus dispositivos: impresora y balanza para el punto de venta.'
-        break
-      case 'Integraciones':
-        icon = '🔗'
-        description = 'Conecta tu sistema con servicios externos como ARCA para facturación electrónica.'
-        break
-    }
-
-    if (description) {
-      tourSteps.push({
-        element: `.step-nav-item:nth-child(${index + 1})`,
-        popover: {
-          title: `${icon} ${stepTitle}`,
-          description,
-          side: 'bottom',
-          align: 'start'
-        }
-      })
-    }
-  })
-
-  // Paso final
-  tourSteps.push({
-    popover: {
-      title: '✅ ¡Listo para Comenzar!',
-      description: 'Ahora puedes configurar cada sección a tu ritmo. Recuerda guardar los cambios en cada paso. ¡Éxito! 🚀',
-      side: 'center',
-      align: 'center'
-    }
-  })
-
-  const driverObj = driver({
-    showProgress: true,
-    showButtons: ['next', 'previous', 'close'],
-    steps: tourSteps,
-    nextBtnText: 'Siguiente →',
-    prevBtnText: '← Anterior',
-    doneBtnText: '¡Entendido!',
-    progressText: '{{current}} de {{total}}',
-    onDestroyStarted: () => {
-      driverObj.destroy()
-    }
-  })
-
-  driverObj.drive()
 }
 </script>
 

@@ -156,14 +156,9 @@ export const useThemeStore = defineStore('theme', {
 
   actions: {
     initTheme () {
-      console.log('🎨 Inicializando sistema de temas...')
-
       // Cargar tema desde localStorage
       const savedTheme = localStorage.getItem('app-theme')
       const showSelector = localStorage.getItem('show-theme-selector')
-
-      console.log('📦 Tema guardado:', savedTheme)
-      console.log('👁️ Mostrar selector:', showSelector)
 
       // Usar tourStore en lugar de localStorage
       const tourStore = useTourStore()
@@ -172,18 +167,13 @@ export const useThemeStore = defineStore('theme', {
       // Si hay un tema guardado, usarlo
       if (savedTheme && this.themes[savedTheme]) {
         this.currentTheme = savedTheme
-        this.showThemeSelector = false // No mostrar modal si ya hay tema
-        console.log('✅ Tema cargado desde localStorage:', savedTheme)
+        this.showThemeSelector = false
       } else {
-        // Primera vez: usar tema por defecto y mostrar selector
-        console.log('⚠️ Primera vez - Usando tema por defecto: purple')
         this.currentTheme = 'purple'
         // Solo mostrar si no se ha cerrado antes Y no hay tour activo/por iniciar
         if ((showSelector === null || showSelector === 'true') && !tourStore.isTourActiveOrPending) {
           this.showThemeSelector = true
-          console.log('👁️ Mostrando selector de temas (primera vez)')
         } else if (tourStore.isTourActiveOrPending) {
-          console.log('🎓 Tour activo o por iniciar - Selector de temas pospuesto')
           tourStore.setPendingModal('themeSelector', true)
         }
       }
@@ -191,25 +181,18 @@ export const useThemeStore = defineStore('theme', {
       // Si el usuario cerró el modal, respetarlo
       if (showSelector === 'false') {
         this.showThemeSelector = false
-        console.log('🚫 Selector deshabilitado por el usuario')
       }
 
       this.applyTheme()
-      console.log('🎨 Tema aplicado:', this.currentTheme)
     },
 
     setTheme (themeName) {
-      console.log('setTheme llamado con:', themeName)
-      console.log('Temas disponibles:', Object.keys(this.themes))
-
       if (this.themes[themeName]) {
         this.currentTheme = themeName
 
         // Guardar en localStorage
         try {
           localStorage.setItem('app-theme', themeName)
-          console.log('✅ Tema guardado en localStorage:', themeName)
-          console.log('✅ Verificación localStorage:', localStorage.getItem('app-theme'))
         } catch (error) {
           console.error('❌ Error al guardar en localStorage:', error)
         }
@@ -223,8 +206,6 @@ export const useThemeStore = defineStore('theme', {
     applyTheme () {
       const theme = this.theme
       const root = document.documentElement
-
-      console.log('🎨 Aplicando tema:', this.currentTheme)
 
       // Aplicar variables CSS
       root.style.setProperty('--primary', theme.primary)
@@ -240,9 +221,6 @@ export const useThemeStore = defineStore('theme', {
       if (window.Quasar && window.Quasar.colors) {
         window.Quasar.colors.setBrand('primary', theme.primary)
         window.Quasar.colors.setBrand('secondary', theme.secondary)
-        console.log('✅ Colores de Quasar actualizados')
-        console.log('   Primary:', theme.primary)
-        console.log('   Secondary:', theme.secondary)
       }
 
       // También actualizar las variables SCSS de Quasar dinámicamente
@@ -253,7 +231,6 @@ export const useThemeStore = defineStore('theme', {
       setTimeout(() => {
         const event = new Event('theme-changed')
         window.dispatchEvent(event)
-        console.log('🔄 DOM actualizado con nuevo tema')
       }, 100)
     },
 
@@ -262,8 +239,6 @@ export const useThemeStore = defineStore('theme', {
       localStorage.setItem('show-theme-selector', 'false')
       // Asegurar que el tema actual esté guardado
       localStorage.setItem('app-theme', this.currentTheme)
-      console.log('🚫 Selector ocultado permanentemente')
-      console.log('💾 Tema actual guardado:', this.currentTheme)
     },
 
     showThemeSelectorModal () {

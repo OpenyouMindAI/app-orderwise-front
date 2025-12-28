@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="showDialog" persistent>
+  <q-dialog v-model="showDialog" persistent v-if="!isWelcomePage">
     <q-card class="theme-selector-card">
       <q-card-section class="card-header">
         <div class="header-content">
@@ -76,14 +76,19 @@
 import { useThemeStore } from 'src/stores/themeStore'
 import { useTourStore } from 'src/stores/tourStore'
 import { computed, ref, watch, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 
 export default {
   name: 'FloatingThemeSelector',
   setup () {
     const themeStore = useThemeStore()
     const tourStore = useTourStore()
+    const route = useRoute()
     const showDialog = ref(themeStore.showThemeSelector)
     const selectedTheme = ref(themeStore.currentTheme)
+
+    // Detectar si estamos en WelcomePage
+    const isWelcomePage = computed(() => route.name === 'Welcome')
 
     const themes = computed(() => themeStore.allThemes)
     const currentTheme = computed(() => selectedTheme.value)
@@ -100,7 +105,6 @@ export default {
     const checkTourStatus = () => {
       // Tour se activó
       if (tourStore.isActive && !previousTourState && showDialog.value) {
-        console.log('🎓 Tour detectado - Cerrando selector de temas temporalmente')
         tourStore.setPendingModal('themeSelector', true)
         showDialog.value = false
         themeStore.showThemeSelector = false
@@ -109,7 +113,6 @@ export default {
       // Tour terminó
       if (!tourStore.isActive && previousTourState) {
         if (tourStore.getPendingModal('themeSelector')) {
-          console.log('✅ Tour terminado - Reabriendo selector de temas')
           setTimeout(() => {
             showDialog.value = true
             themeStore.showThemeSelector = true
@@ -129,22 +132,10 @@ export default {
     })
 
     const selectTheme = (themeName) => {
-      console.log('🎯 Usuario seleccionó tema:', themeName)
       selectedTheme.value = themeName
 
       // Aplicar inmediatamente para vista previa
       themeStore.setTheme(themeName)
-
-      // Verificar que se guardó
-      setTimeout(() => {
-        const saved = localStorage.getItem('app-theme')
-        console.log('🔍 Verificación después de guardar:', saved)
-        if (saved === themeName) {
-          console.log('✅ Tema guardado correctamente')
-        } else {
-          console.error('❌ Error: tema no se guardó correctamente')
-        }
-      }, 100)
     }
 
     const closeSelector = () => {
@@ -162,8 +153,6 @@ export default {
     const applyAndClose = () => {
       // Guardar el tema seleccionado
       themeStore.setTheme(selectedTheme.value)
-      console.log('Tema aplicado y guardado:', selectedTheme.value)
-      console.log('LocalStorage:', localStorage.getItem('app-theme'))
       closeSelector()
     }
 
@@ -176,6 +165,7 @@ export default {
       closeSelector,
       closeForever,
       applyAndClose,
+      isWelcomePage
     }
   }
 }

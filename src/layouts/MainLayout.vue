@@ -316,8 +316,6 @@
             </q-popup-proxy>
           </q-btn>
 
-          <q-separator dark vertical inset class="q-mx-sm" />
-
           <!-- Profile -->
           <q-btn
             v-if="userSession"
@@ -326,138 +324,138 @@
             round
             class="profile-btn"
           >
-          <q-avatar size="36px" class="profile-avatar">
-            <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
-            <q-icon v-else name="person" size="24px" />
-          </q-avatar>
-          <q-menu class="profile-menu" transition-show="jump-down" transition-hide="jump-up">
-            <q-card class="profile-card" flat bordered>
-              <!-- Profile Header -->
-              <div class="profile-header-modern">
-                <div class="profile-header-content">
-                  <q-avatar size="48px" class="profile-avatar-modern">
-                    <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
-                    <q-icon v-else name="person" size="28px" />
-                  </q-avatar>
-                  <div class="profile-info">
-                    <div class="profile-name">{{ ucwords(`${userSession.name}`) }}</div>
-                    <div class="profile-email">{{ userSession.email }}</div>
+            <q-avatar size="36px" class="profile-avatar">
+              <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
+              <q-icon v-else name="person" size="24px" />
+            </q-avatar>
+            <q-menu class="profile-menu" transition-show="jump-down" transition-hide="jump-up">
+              <q-card class="profile-card" flat bordered>
+                <!-- Profile Header -->
+                <div class="profile-header-modern">
+                  <div class="profile-header-content">
+                    <q-avatar size="48px" class="profile-avatar-modern">
+                      <img v-if="userSession.avatar" :src="userSession.avatar" alt="Profile" />
+                      <q-icon v-else name="person" size="28px" />
+                    </q-avatar>
+                    <div class="profile-info">
+                      <div class="profile-name">{{ ucwords(`${userSession.name}`) }}</div>
+                      <div class="profile-email">{{ userSession.email }}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Plan Info / Demo Action -->
-              <div>
-                <q-item
-                  v-if="store.isDemo"
-                  clickable
-                  v-ripple
-                  class="demo-action-item"
-                  @click="showCreateCompanyDialog = true"
-                  v-close-popup
-                >
-                  <q-item-section avatar class="min-width-auto">
-                    <div class="demo-icon-wrapper">
-                      <q-icon name="workspace_premium" color="amber" size="22px" />
-                    </div>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-body2 text-weight-bold">Demo</q-item-label>
-                    <q-item-label caption class="text-caption demo-caption">Crea tu empresa</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <div class="rocket-wrapper">
-                      <q-icon name="rocket_launch" size="20px" class="rocket-icon" color="primary" />
-                    </div>
-                  </q-item-section>
-                </q-item>
-                <div v-else class="plan-compact">
-                  <q-icon name="workspace_premium" color="primary" size="16px" />
-                  <span class="text-caption q-ml-xs"><strong>Plan: {{ subscriptionPlan }}</strong></span>
-                </div>
-              </div>
-
-              <!-- Profile Actions -->
-              <div>
-                <q-list dense class="q-py-none q-my-none">
+                <!-- Plan Info / Demo Action -->
+                <div>
                   <q-item
-                    v-ripple
+                    v-if="store.isDemo"
                     clickable
-                    dense
-                    class="profile-action-item-compact"
-                    @click="changeRoute('Profile', 'Perfil')"
+                    v-ripple
+                    class="demo-action-item"
+                    @click="showCreateCompanyDialog = true"
                     v-close-popup
                   >
                     <q-item-section avatar class="min-width-auto">
-                      <div class="action-icon-wrapper">
-                        <q-icon name="account_circle" color="primary" size="20px" />
+                      <div class="demo-icon-wrapper">
+                        <q-icon name="workspace_premium" color="amber" size="22px" />
                       </div>
                     </q-item-section>
                     <q-item-section>
-                      <q-item-label class="text-body2 text-weight-medium">Mi Perfil</q-item-label>
-                      <q-item-label caption class="text-caption action-caption">Ver y editar información</q-item-label>
-                    </q-item-section>
-                  </q-item>
-
-                  <q-item
-                    v-ripple
-                    clickable
-                    dense
-                    class="profile-action-item-compact"
-                    @click="setTheme"
-                  >
-                    <q-item-section avatar class="min-width-auto">
-                      <div class="action-icon-wrapper">
-                        <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" color="primary" size="20px" />
-                      </div>
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-body2 text-weight-medium">{{ $q.dark.isActive ? 'Modo Claro' : 'Modo Oscuro' }}</q-item-label>
-                      <q-item-label caption class="text-caption action-caption">Cambiar tema</q-item-label>
-                    </q-item-section>
-                  </q-item>
-
-                  <!-- Subscription Plans (Solo para super_admin) -->
-                  <q-item
-                    v-if="userSession.is_super_admin"
-                    v-ripple
-                    clickable
-                    dense
-                    class="profile-action-item-compact"
-                    @click="openSubscriptionDialog"
-                    v-close-popup
-                  >
-                    <q-item-section avatar class="min-width-auto">
-                      <div class="action-icon-wrapper">
-                        <q-icon name="workspace_premium" color="primary" size="20px" />
-                      </div>
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label class="text-body2 text-weight-medium">Suscripción</q-item-label>
-                      <q-item-label caption class="text-caption action-caption">Gestionar plan</q-item-label>
+                      <q-item-label class="text-body2 text-weight-bold">Demo</q-item-label>
+                      <q-item-label caption class="text-caption demo-caption">Crea tu empresa</q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                      <q-icon name="chevron_right" size="16px" color="grey-6" />
+                      <div class="rocket-wrapper">
+                        <q-icon name="rocket_launch" size="20px" class="rocket-icon" color="primary" />
+                      </div>
                     </q-item-section>
                   </q-item>
-                </q-list>
-              </div>
+                  <div v-else class="plan-compact">
+                    <q-icon name="workspace_premium" color="primary" size="16px" />
+                    <span class="text-caption q-ml-xs"><strong>Plan: {{ subscriptionPlan }}</strong></span>
+                  </div>
+                </div>
 
-              <!-- Logout Button -->
-              <div class="logout-container-modern">
-                <q-btn
-                  unelevated
-                  color="negative"
-                  icon-right="logout"
-                  label="Cerrar Sesión"
-                  class="full-width logout-btn-modern"
-                  @click="logoutAt"
-                  v-close-popup
-                  no-caps
-                />
-              </div>
-            </q-card>
-          </q-menu>
+                <!-- Profile Actions -->
+                <div>
+                  <q-list dense class="q-py-none q-my-none">
+                    <q-item
+                      v-ripple
+                      clickable
+                      dense
+                      class="profile-action-item-compact"
+                      @click="changeRoute('Profile', 'Perfil')"
+                      v-close-popup
+                    >
+                      <q-item-section avatar class="min-width-auto">
+                        <div class="action-icon-wrapper">
+                          <q-icon name="account_circle" color="primary" size="20px" />
+                        </div>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-body2 text-weight-medium">Mi Perfil</q-item-label>
+                        <q-item-label caption class="text-caption action-caption">Ver y editar información</q-item-label>
+                      </q-item-section>
+                    </q-item>
+
+                    <q-item
+                      v-ripple
+                      clickable
+                      dense
+                      class="profile-action-item-compact"
+                      @click="setTheme"
+                    >
+                      <q-item-section avatar class="min-width-auto">
+                        <div class="action-icon-wrapper">
+                          <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" color="primary" size="20px" />
+                        </div>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-body2 text-weight-medium">{{ $q.dark.isActive ? 'Modo Claro' : 'Modo Oscuro' }}</q-item-label>
+                        <q-item-label caption class="text-caption action-caption">Cambiar tema</q-item-label>
+                      </q-item-section>
+                    </q-item>
+
+                    <!-- Subscription Plans (Solo para super_admin) -->
+                    <q-item
+                      v-if="userSession.is_super_admin"
+                      v-ripple
+                      clickable
+                      dense
+                      class="profile-action-item-compact"
+                      @click="openSubscriptionDialog"
+                      v-close-popup
+                    >
+                      <q-item-section avatar class="min-width-auto">
+                        <div class="action-icon-wrapper">
+                          <q-icon name="workspace_premium" color="primary" size="20px" />
+                        </div>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-body2 text-weight-medium">Suscripción</q-item-label>
+                        <q-item-label caption class="text-caption action-caption">Gestionar plan</q-item-label>
+                      </q-item-section>
+                      <q-item-section side>
+                        <q-icon name="chevron_right" size="16px" color="grey-6" />
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </div>
+
+                <!-- Logout Button -->
+                <div class="logout-container-modern">
+                  <q-btn
+                    unelevated
+                    color="negative"
+                    icon-right="logout"
+                    label="Cerrar Sesión"
+                    class="full-width logout-btn-modern"
+                    @click="logoutAt"
+                    v-close-popup
+                    no-caps
+                  />
+                </div>
+              </q-card>
+            </q-menu>
           </q-btn>
         </div>
       </q-toolbar>
@@ -613,6 +611,35 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <!-- Floating Onboarding Button -->
+    <q-page-sticky
+      v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
+      position="bottom-right"
+      :offset="[18, 18]"
+      style="z-index: 2000;"
+    >
+      <q-btn
+        fab
+        icon="school"
+        color="primary"
+        class="onboarding-fab"
+        @click="openOnboardingTour"
+      >
+        <q-tooltip anchor="center left" self="center right" :offset="[10, 0]">
+          Configuración guiada ({{ onboardingProgress }}% completado)
+        </q-tooltip>
+        <q-badge
+          v-if="onboardingProgress < 100"
+          color="orange"
+          floating
+          rounded
+        >
+          {{ onboardingProgress }}%
+        </q-badge>
+      </q-btn>
+    </q-page-sticky>
+
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
@@ -630,7 +657,7 @@
       transition-show="scale"
       transition-hide="scale"
     >
-      <q-card v-if="isDemo" class="demo-register-card" style="min-width: 500px; max-width: 600px; overflow: hidden;">
+      <q-card v-if="isDemo" class="demo-register-card" style="width: 480px; max-width: 90vh; overflow: hidden;">
         <!-- Header con gradiente atractivo -->
         <div class="demo-register-header">
           <q-btn
@@ -645,10 +672,10 @@
           />
 
           <div class="demo-register-icon-container">
-            <q-icon name="rocket_launch" size="64px" color="white" class="demo-register-icon" />
+            <q-icon name="rocket_launch" size="44px" color="white" class="demo-register-icon" />
           </div>
 
-          <div class="text-h5 text-weight-bold text-white q-mt-md">
+          <div class="text-h6 text-weight-bold text-white q-mt-md">
             ¡Bienvenido a la era digital!
           </div>
           <div class="text-body2 text-white q-mt-sm" style="opacity: 0.95;">
@@ -877,7 +904,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useThemeStore } from 'src/stores/themeStore'
-import { useFbq } from 'vue3-facebook-pixel'
+import { useRouter, useRoute } from 'vue-router'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -885,6 +912,7 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
+
 export default {
   name: 'MainLayout',
   components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog, AddressComponent, GoogleRegisterButton },
@@ -963,7 +991,14 @@ export default {
         country: '',
         zipCode: '',
         latitude: null,
-        longitude: null,
+        longitude: null
+      },
+      /**
+       * Onboarding data
+       */
+      showOnboardingFab: false,
+      onboardingProgress: 0,
+      tasks: {
         formattedAddress: '',
         placeId: '',
         types: []
@@ -1067,6 +1102,13 @@ export default {
      */
     currentBranchCount () {
       return this.store.currentBranchCount
+    },
+    /**
+     * Check if current route is Welcome page
+     * @returns {Boolean}
+     */
+    isWelcomePage () {
+      return this.route?.name === 'Welcome'
     }
   },
   watch: {
@@ -1126,6 +1168,14 @@ export default {
           })
         }
       }
+    }
+  },
+  setup () {
+    const router = useRouter()
+    const route = useRoute()
+    return {
+      router,
+      route
     }
   },
   mounted () {
@@ -1760,14 +1810,50 @@ export default {
       this.cuit = this.userSession?.company_session?.document_number
       this.loadingTasks()
     },
+    /**
+     * Loading tasks
+     */
     async loadingTasks () {
       try {
-        const { data } = await this.$api.get('tasks')
+        // No hacer peticiones si la empresa ya está configurada al 100%
+        const isConfigured = this.userSession?.company_session?.configured
+        if (isConfigured) {
+          this.showOnboardingFab = false
+          this.onboardingProgress = 100
+          return
+        }
+
+        const { data } = await this.$api.get('onboarding/tasks/status')
         this.tasks = data
-        console.log(data)
+        // Calcular progreso
+        if (data.tasks) {
+          let completed = 0
+          const total = data.tasks.length
+          data.tasks.forEach(task => {
+            if (task.route === 'CompanyConfig' && task.multiple) {
+              if (task.multiple.client && task.multiple.type_of_service && task.multiple.invoice_type) {
+                completed++
+              }
+            } else if (task.count > 0) {
+              completed++
+            }
+          })
+          this.onboardingProgress = Math.round((completed / total) * 100)
+          // Mostrar FAB solo si no está completado al 100%
+          const hasCompletedAny = completed > 0
+          const isDismissed = localStorage.getItem('onboarding_dismissed') === 'true'
+          const isCompletedPermanently = localStorage.getItem('onboarding_completed') === 'true'
+          this.showOnboardingFab = !isCompletedPermanently && (hasCompletedAny || !isDismissed)
+        }
       } catch (error) {
         console.log(error)
       }
+    },
+    /**
+     * Open onboarding tour
+     */
+    openOnboardingTour () {
+      this.$router.push({ name: 'Welcome' })
     },
     /**
      * Inicializar sistema de temas
@@ -1775,12 +1861,7 @@ export default {
     initializeTheme () {
       try {
         const themeStore = useThemeStore()
-        console.log('🎨 Inicializando tema desde MainLayout...')
         themeStore.initTheme()
-
-        const savedTheme = localStorage.getItem('app-theme')
-        console.log('📦 Tema guardado en localStorage:', savedTheme)
-        console.log('🎨 Tema actual del store:', themeStore.currentTheme)
       } catch (error) {
         console.error('❌ Error al inicializar tema:', error)
       }
@@ -2907,8 +2988,8 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100px;
-  height: 100px;
+  width: 70px;
+  height: 70px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   backdrop-filter: blur(10px);

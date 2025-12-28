@@ -349,6 +349,7 @@ import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import eventBus from 'src/utils/eventBus'
+import { api } from 'boot/axios'
 export default {
   data () {
     return {
@@ -735,11 +736,14 @@ export default {
           this.openAddCategory = false
           this.visible = false
           this.closeModal()
+
           Notify.create({
             message: 'Categoría creada exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
+
+          this.checkContinueConfiguration()
         })
         .catch(err => {
           this.visible = false
@@ -975,6 +979,21 @@ export default {
      * Check and start tour on first visit
      */
     checkAndStartTour () {
+      const activateFromWelcome = localStorage.getItem('activate_tour_from_welcome')
+      const selectedTask = localStorage.getItem('welcome_selected_task')
+
+      if (activateFromWelcome === 'true' && selectedTask === 'Category') {
+        localStorage.removeItem('activate_tour_from_welcome')
+        localStorage.removeItem('welcome_selected_task')
+
+        localStorage.setItem('came_from_welcome_category', 'true')
+
+        setTimeout(() => {
+          this.startMainTour()
+        }, 500)
+        return
+      }
+
       const hasSeenMainTour = localStorage.getItem('has_seen_category_main_tour')
       if (hasSeenMainTour !== 'true') {
         setTimeout(() => {
@@ -1031,6 +1050,87 @@ export default {
       this.currentTourStep = 0
       localStorage.setItem('has_seen_category_main_tour', 'true')
       notify('¡Tour completado! Ya conoces cómo gestionar categorías.', 'positive', 'check_circle')
+    },
+    /**
+     * Check if should continue configuration
+     */
+    async checkContinueConfiguration () {
+      // Solo preguntar si viene desde WelcomePage
+      const cameFromWelcome = localStorage.getItem('came_from_welcome_category')
+
+      if (cameFromWelcome === 'true') {
+        // Limpiar flag
+        localStorage.removeItem('came_from_welcome_category')
+
+        // Verificar si el progreso está al 100%
+        const progressData = await this.checkIfComplete()
+
+        if (progressData.isComplete) {
+          // Mostrar celebración al 100%
+          this.showCelebration()
+        } else {
+          // Preguntar si quiere continuar con la siguiente tarea
+          setTimeout(() => {
+            this.$q.dialog({
+              title: '¡Categorías configuradas! ✅',
+              message: '¿Deseas continuar con la siguiente tarea de configuración?',
+              cancel: {
+                label: 'Más tarde',
+                color: 'grey-7',
+                flat: true
+              },
+              ok: {
+                label: 'Continuar',
+                color: 'primary',
+                unelevated: true
+              },
+              persistent: false
+            }).onOk(() => {
+              this.$router.push({ name: 'Welcome' })
+            })
+          }, 500)
+        }
+      }
+    },
+    /**
+     * Check if all tasks are complete (100%)
+     */
+    async checkIfComplete () {
+      try {
+        const { data } = await api.get('/onboarding/tasks/status')
+        const tasks = data.tasks || []
+        const total = tasks.length
+        const completed = tasks.filter(t => t.count > 0 || (t.multiple && Object.values(t.multiple).every(v => v))).length
+        const percentage = Math.round((completed / total) * 100)
+
+        return {
+          isComplete: percentage === 100,
+          percentage
+        }
+      } catch (error) {
+        console.error('Error checking completion:', error)
+        return { isComplete: false, percentage: 0 }
+      }
+    },
+    /**
+     * Show celebration dialog when 100% complete
+     */
+    async showCelebration () {
+      // Actualizar empresa como configurada
+      try {
+        const companyId = this.userSession?.company_session?.id
+        await api.post('/companies/mark-configured', {
+          company_id: companyId
+        })
+      } catch (error) {
+        console.error('Error marking company as configured:', error)
+      }
+
+      // Mostrar diálogo de celebración con confeti
+      const CelebrationDialog = await import('src/components/CelebrationDialog.vue')
+      this.$q.dialog({
+        component: CelebrationDialog.default
+      })
     },
     /**
      * Update tour position

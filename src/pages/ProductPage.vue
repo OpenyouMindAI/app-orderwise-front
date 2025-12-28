@@ -1774,7 +1774,7 @@
 </template>
 
 <script>
-import { mapState } from 'pinia'
+import { mapActions, mapState } from 'pinia'
 import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
@@ -1783,6 +1783,7 @@ import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
 import eventBus from 'src/utils/eventBus'
+import { api } from 'boot/axios'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -2243,15 +2244,12 @@ export default {
       } else if (e.key === 'Backspace') {
         this.profitPercentageValue = Math.max(0, Math.floor(this.profitPercentageValue / 10))
       }
-
-      // Calcular precio solo cuando el usuario escribe
       this.formatProfitPercentage()
     },
     initializeProfitPercentage () {
       const profitPercentage = parseFloat(this.product.profit_percentage || 0)
       this.profitPercentageValue = Math.max(0, Math.round(profitPercentage * 100))
       this.profitPercentageDisplay = (this.profitPercentageValue / 100).toFixed(2)
-      // No calcular precio automáticamente
     },
 
     initializePriceListMargin (priceList) {
@@ -2369,24 +2367,20 @@ export default {
     },
 
     filterProducts () {
-      // Reiniciar los parámetros de búsqueda para evitar conflictos
       this.params.dataSearch = {}
 
       const dataEqualFilter = {}
       const dataSearch = {}
 
-      // Filtros de texto (búsqueda parcial)
       if (this.filters.name) dataSearch.name = this.filters.name
       if (this.filters.description) dataSearch.description = this.filters.description
       if (this.filters.barcode) dataSearch.barcode = this.filters.barcode
 
-      // Filtros de selección (coincidencia exacta)
       if (this.filters.category_id) dataEqualFilter.category_id = this.filters.category_id.id
       if (this.filters.measurement_unit_id) dataEqualFilter.unit_of_measure_id = this.filters.measurement_unit_id.id
       if (this.filters.is_pack !== null) dataEqualFilter.is_bundle = this.filters.is_pack.value
       if (this.filters.is_addon !== null) dataEqualFilter.is_addons = this.filters.is_addon.value
       if (this.filters.show_in_catalog !== null) {
-        // Convertir a string para asegurar que el backend procese el valor '0'
         dataEqualFilter.show_catalog = this.filters.show_in_catalog.value === 1
       }
 
@@ -2929,11 +2923,15 @@ export default {
           this.openAddProduct = false
           this.visible = false
           this.closeModal()
+
           Notify.create({
             message: 'Producto creado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
+
+          // Verificar si viene desde WelcomePage para preguntar si continuar
+          this.checkContinueConfiguration()
         })
         .catch(err => {
           this.visible = false
@@ -3231,6 +3229,26 @@ export default {
      * Check and start tour on first visit
      */
     checkAndStartTour () {
+      // Verificar si viene desde WelcomePage
+      const activateFromWelcome = localStorage.getItem('activate_tour_from_welcome')
+      const selectedTask = localStorage.getItem('welcome_selected_task')
+
+      if (activateFromWelcome === 'true' && selectedTask === 'Product') {
+        // Limpiar flags de activación
+        localStorage.removeItem('activate_tour_from_welcome')
+        localStorage.removeItem('welcome_selected_task')
+
+        // Marcar que viene desde Welcome para preguntar después de configurar
+        localStorage.setItem('came_from_welcome_product', 'true')
+
+        // Activar tour automáticamente
+        setTimeout(() => {
+          this.startMainTour()
+        }, 500)
+        return
+      }
+
+      // Comportamiento normal: verificar si ya vio el tour
       const hasSeenTour = localStorage.getItem('has_seen_product_main_tour')
       if (hasSeenTour !== 'true') {
         this.$nextTick(() => {
@@ -3295,6 +3313,88 @@ export default {
       this.currentTourStep = 0
       localStorage.setItem('has_seen_product_main_tour', 'true')
       notify('¡Tour completado! Ya conoces cómo gestionar productos.', 'positive', 'check_circle')
+    },
+    /**
+     * Check if should continue configuration
+     */
+    async checkContinueConfiguration () {
+      // Solo preguntar si viene desde WelcomePage
+      const cameFromWelcome = localStorage.getItem('came_from_welcome_product')
+
+      if (cameFromWelcome === 'true') {
+        // Limpiar flag
+        localStorage.removeItem('came_from_welcome_product')
+
+        // Verificar si el progreso está al 100%
+        const progressData = await this.checkIfComplete()
+
+        if (progressData.isComplete) {
+          // Mostrar celebración al 100%
+          this.showCelebration()
+        } else {
+          // Preguntar si quiere continuar con la siguiente tarea
+          setTimeout(() => {
+            this.$q.dialog({
+              title: '¡Productos configurados! ✅',
+              message: '¿Deseas continuar con la siguiente tarea de configuración?',
+              cancel: {
+                label: 'Más tarde',
+                color: 'grey-7',
+                flat: true
+              },
+              ok: {
+                label: 'Continuar',
+                color: 'primary',
+                unelevated: true
+              },
+              persistent: false
+            }).onOk(() => {
+              // Volver a WelcomePage para continuar
+              this.$router.push({ name: 'Welcome' })
+            })
+          }, 500)
+        }
+      }
+    },
+    /**
+     * Check if all tasks are complete (100%)
+     */
+    async checkIfComplete () {
+      try {
+        const { data } = await api.get('/onboarding/tasks/status')
+        const tasks = data.tasks || []
+        const total = tasks.length
+        const completed = tasks.filter(t => t.count > 0 || (t.multiple && Object.values(t.multiple).every(v => v))).length
+        const percentage = Math.round((completed / total) * 100)
+
+        return {
+          isComplete: percentage === 100,
+          percentage
+        }
+      } catch (error) {
+        console.error('Error checking completion:', error)
+        return { isComplete: false, percentage: 0 }
+      }
+    },
+    /**
+     * Show celebration dialog when 100% complete
+     */
+    async showCelebration () {
+      // Actualizar empresa como configurada
+      try {
+        const companyId = this.userSession?.company_session?.id
+        await api.post('/companies/mark-configured', {
+          company_id: companyId
+        })
+      } catch (error) {
+        console.error('Error marking company as configured:', error)
+      }
+
+      // Mostrar diálogo de celebración con confeti
+      const CelebrationDialog = await import('src/components/CelebrationDialog.vue')
+      this.$q.dialog({
+        component: CelebrationDialog.default
+      })
     },
     /**
      * Update tour position
@@ -3400,7 +3500,8 @@ export default {
           }
         }, 300)
       })
-    }
+    },
+    ...mapActions(authentication, ['setCompanySession'])
   }
 }
 </script>
