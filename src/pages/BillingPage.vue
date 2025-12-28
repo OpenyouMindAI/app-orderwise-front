@@ -1608,6 +1608,14 @@
       :show-modal="showDetailsModal"
     />
     <BarcodeScanner @barcode-scanned="processBarcode" v-if="scanner" />
+
+    <OnboardingValidationModal
+      v-model="showValidationModal"
+      :type="validationType"
+      page="billing"
+      @action="handleValidationAction"
+    />
+
   </q-page>
 </template>
 
@@ -1620,7 +1628,7 @@ import { formatDate, formatNumber, loading, notify, BALANZA_PREFIXES, debounce }
 import eventBus from 'src/utils/eventBus'
 import DrawerTable from 'src/components/Table/DrawerTable.vue'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
-import { apiArca } from 'src/boot/axios'
+import { apiArca, api } from 'src/boot/axios'
 import { useCommandStore } from 'src/stores/command'
 import { useTourStore } from 'src/stores/tourStore'
 import { usePaymentNotifier } from 'src/boot/payment-notifier'
@@ -1632,6 +1640,7 @@ import PartialPaymentModal from 'src/components/PartialPaymentModal.vue'
 import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
 import FileComponent from 'src/components/FileComponent.vue'
+import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import { LOCAL } from 'src/const/typeOfServices.js'
 import {
   CapacitorBarcodeScanner,
@@ -1653,7 +1662,8 @@ export default {
     CashBoxDialog,
     TransferMpDialog,
     CashflowModal,
-    FileComponent
+    FileComponent,
+    OnboardingValidationModal
   },
   data () {
     const tourStore = useTourStore()
@@ -2082,6 +2092,8 @@ export default {
        * @type {Boolean}
        */
       productsFullscreen: false,
+      showValidationModal: false,
+      validationType: 'category', // 'category' | 'product'
       /**
        * Tables
        * @type {Array}
@@ -2263,15 +2275,15 @@ export default {
     filteredClientsForFab () {
       if (!this.clientSearch) return this.clients
       const search = this.clientSearch.toLowerCase()
-      return this.clients.filter(c => 
-        c.name?.toLowerCase().includes(search) || 
+      return this.clients.filter(c =>
+        c.name?.toLowerCase().includes(search) ||
         c.document_number?.toLowerCase().includes(search)
       )
     },
     filteredVoucherTypesForFab () {
       if (!this.voucherSearch) return this.voucherTypes
       const search = this.voucherSearch.toLowerCase()
-      return this.voucherTypes.filter(v => 
+      return this.voucherTypes.filter(v =>
         v.Desc?.toLowerCase().includes(search)
       )
     },
@@ -2401,7 +2413,12 @@ export default {
       }
     }
   },
-  mounted () {
+  async mounted () {
+    const isValid = await this.checkOnboardingStatus()
+    if (isValid) {
+      await this.checkCashBoxStatus()
+      this.checkAndStartTour()
+    }
     /**
      * Get products with pagination
      */
@@ -2477,12 +2494,45 @@ export default {
     this.getPaymentMethods()
     this.listenPayments()
     this.getExchangeRates()
-    this.checkCashBoxStatus()
     if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
 
     this.debouncedSendInvoiceUpdate = debounce(this.sendInvoiceUpdate, 1000)
   },
   methods: {
+    handleValidationAction () {
+      if (this.validationType === 'category') {
+        this.$router.push({ name: 'Category' })
+      } else {
+        this.$router.push({ name: 'Product' })
+      }
+    },
+    async checkOnboardingStatus () {
+      try {
+        const { data } = await api.get('/onboarding/tasks/status')
+        if (data && data.tasks) {
+          const categoryTask = data.tasks.find(t => t.route === 'Category')
+          const productTask = data.tasks.find(t => t.route === 'Product')
+
+          // Validar Categoría primero
+          if (categoryTask && categoryTask.count === 0) {
+            this.validationType = 'category'
+            this.showValidationModal = true
+            return false
+          }
+
+          // Validar Producto después
+          if (productTask && productTask.count === 0) {
+            this.validationType = 'product'
+            this.showValidationModal = true
+            return false
+          }
+        }
+        return true
+      } catch (error) {
+        console.error('Error checking onboarding status:', error)
+        return true
+      }
+    },
     /**
      * Check and start tour if needed
      */
