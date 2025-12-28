@@ -370,6 +370,7 @@
         </q-table>
       </div>
     </div>
+
     <q-dialog v-model="openEditProduct" persistent :maximized="$q.screen.lt.sm">
       <q-card style="width: 1200px; max-width: 95vw;">
         <q-card-section class="row items-center bg-primary text-white q-py-sm">
@@ -1375,6 +1376,13 @@
       </q-card>
     </q-dialog>
 
+    <OnboardingValidationModal
+      v-model="showValidationModal"
+      type="category"
+      page="product"
+      @action="goToCategories"
+    />
+
     <!-- Diálogo de columnas -->
     <q-dialog v-model="columnDialog" position="right" seamless>
       <q-card style="width: 400px; max-width: 80vw;">
@@ -1779,6 +1787,7 @@ import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
 import PackProduct from 'src/components/Product/PackProduct.vue'
+import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
@@ -1792,10 +1801,11 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 export default {
-  components: { StockProduct, PackProduct, BulkPriceDialog },
+  components: { StockProduct, PackProduct, BulkPriceDialog, OnboardingValidationModal },
   data () {
     return {
       qrDialog: false,
+      showValidationModal: false,
       qrCodes: [],
       loadingQr: false,
       loadingPdf: false,
@@ -1968,15 +1978,16 @@ export default {
       tourCardStyle: {}
     }
   },
-  mounted () {
+  async mounted () {
+    const isValid = await this.checkOnboardingStatus()
+    if (isValid) {
+      this.checkAndStartTour()
+    }
     this.setPagination({
       pagination: this.paginationConfig,
       filter: undefined
     })
     this.getUnitOfMeasures()
-
-    // Check and start tour on first visit
-    this.checkAndStartTour()
 
     // Listen for tour activation from navbar
     eventBus.on('activate-page-tour', (pageName) => {
@@ -2038,6 +2049,25 @@ export default {
     this.getMeasurementUnits()
   },
   methods: {
+    async checkOnboardingStatus () {
+      try {
+        const { data } = await api.get('/onboarding/tasks/status')
+        if (data && data.tasks) {
+          const categoryTask = data.tasks.find(t => t.route === 'Category')
+          if (categoryTask && categoryTask.count === 0) {
+            this.showValidationModal = true
+            return false
+          }
+        }
+        return true
+      } catch (error) {
+        console.error('Error checking onboarding status:', error)
+        return true // Fallback to allow tour if error
+      }
+    },
+    goToCategories () {
+      this.$router.push({ name: 'Category' })
+    },
     /**
      * Toggle multiple selection mode
      */
