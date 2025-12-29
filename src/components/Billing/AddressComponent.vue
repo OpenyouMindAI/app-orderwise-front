@@ -144,6 +144,10 @@ const props = defineProps({
       placeId: '',
       types: []
     })
+  },
+  label: {
+    type: String,
+    default: 'Buscar dirección de entrega'
   }
 })
 
@@ -591,27 +595,6 @@ const cleanupMap = () => {
     marker.value = null
   }
   map.value = null
-}
-
-const handleManualAddressInput = () => {
-  if (!address.value || address.value.trim().length < 3) return
-
-  // Crear un objeto de dirección manual cuando Google Maps no está disponible
-  addressDetails.value = {
-    name: '',
-    street: address.value.trim(),
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
-    latitude: null,
-    longitude: null,
-    formattedAddress: address.value.trim(),
-    placeId: '',
-    types: ['manual_input']
-  }
-
-  emit('address-selected', addressDetails.value)
 }
 
 // Nueva función para editar dirección

@@ -362,11 +362,12 @@
                 </q-input>
               </div>
 
-              <!-- Documento y Teléfono en la misma fila -->
+              <!-- Documento -->
               <div class="col-12 col-sm-6">
                 <q-input
                   v-model="companyForm.company_document"
-                  label="CUIT / RUT / Documento *"
+                  label="Documento *"
+                  placeholder="Ej: 20-12345678-9"
                   filled
                   dense
                   :rules="[val => !!val || 'El documento es requerido']"
@@ -377,18 +378,50 @@
                 </q-input>
               </div>
 
+              <!-- Teléfono con Selector de País -->
               <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="companyForm.company_phone"
-                  label="Teléfono *"
-                  filled
-                  dense
-                  :rules="[val => !!val || 'El teléfono es requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="phone" />
-                  </template>
-                </q-input>
+                <div class="row q-col-gutter-xs">
+                  <div class="col-4">
+                     <q-select
+                      v-model="selectedCountry"
+                      :options="countryOptions"
+                      option-label="flag"
+                      filled
+                      dense
+                      emit-value
+                      map-options
+                      behavior="menu"
+                      :display-value="selectedCountry ? selectedCountry.flag : '🌍'"
+                    >
+                      <template v-slot:option="scope">
+                        <q-item v-bind="scope.itemProps">
+                          <q-item-section avatar>
+                            <q-item-label>{{ scope.opt.flag }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label>{{ scope.opt.label }}</q-item-label>
+                            <q-item-label caption>{{ scope.opt.code }}</q-item-label>
+                          </q-item-section>
+                        </q-item>
+                      </template>
+                    </q-select>
+                  </div>
+                  <div class="col-8">
+                    <q-input
+                      v-model="companyForm.company_phone"
+                      label="Teléfono *"
+                      :prefix="selectedCountry ? selectedCountry.code : ''"
+                      filled
+                      dense
+                      :rules="phoneRule"
+                      type="tel"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="phone" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
               </div>
 
               <!-- Email -->
@@ -457,6 +490,7 @@
                 <AddressComponent
                   :initial-address="companyAddressData"
                   @address-selected="handleCompanyAddressSelected"
+                  label="Dirección fiscal"
                 />
               </div>
             </div>
@@ -541,6 +575,33 @@ const loadingDemo = ref(false)
 const registeredCredentials = ref({
   email: '',
   password: ''
+})
+
+// Validation & Country Data
+const selectedCountry = ref(null)
+const countryOptions = [
+  { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
+  { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
+  { label: 'México', code: '+52', mask: '## #### ####', regex: /^(\+?52)?\s?1?\s?(\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}$/, flag: '🇲🇽' },
+  { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
+  { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
+  { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
+  { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
+  { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
+]
+
+// Set default country (e.g., Argentina as base)
+selectedCountry.value = countryOptions[0]
+
+// Phone validation rule
+const phoneRule = computed(() => {
+  return [
+    val => !!val || 'El teléfono es requerido',
+    val => {
+      if (!selectedCountry.value || !selectedCountry.value.regex) return true
+      return selectedCountry.value.regex.test(val) || `Formato inválido para ${selectedCountry.value.label}`
+    }
+  ]
 })
 
 // Company address data
