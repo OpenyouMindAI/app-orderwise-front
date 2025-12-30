@@ -353,7 +353,6 @@
                   v-model="companyForm.company_name"
                   label="Nombre de la Empresa *"
                   filled
-                  dense
                   :rules="[val => !!val || 'El nombre es requerido']"
                 >
                   <template v-slot:prepend>
@@ -369,7 +368,6 @@
                   label="Documento *"
                   placeholder="Ej: 20-12345678-9"
                   filled
-                  dense
                   :rules="[val => !!val || 'El documento es requerido']"
                 >
                   <template v-slot:prepend>
@@ -387,7 +385,6 @@
                       :options="countryOptions"
                       option-label="flag"
                       filled
-                      dense
                       emit-value
                       map-options
                       behavior="menu"
@@ -412,7 +409,6 @@
                       label="Teléfono *"
                       :prefix="selectedCountry ? selectedCountry.code : ''"
                       filled
-                      dense
                       :rules="phoneRule"
                       type="tel"
                     >
@@ -431,7 +427,6 @@
                   label="Email de la Empresa *"
                   type="email"
                   filled
-                  dense
                   :rules="[
                     val => !!val || 'El email es requerido',
                     val => /.+@.+\..+/.test(val) || 'Email inválido'
@@ -452,7 +447,6 @@
                   option-value="id"
                   label="Rubro / Tipo de Negocio *"
                   filled
-                  dense
                   use-input
                   input-debounce="300"
                   @filter="filterBusinessTypes"
@@ -477,7 +471,6 @@
                   v-model="companyForm.copy_test_products"
                   label="Copiar productos y categorías de ejemplo"
                   color="primary"
-                  dense
                   class="q-mt-xs"
                 >
                   <q-tooltip class="bg-grey-8">
