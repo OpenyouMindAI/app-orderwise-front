@@ -828,7 +828,15 @@ const register = async () => {
   try {
     loading.value = true
 
-    const { data } = await api.post('authentication/register', form.value)
+    // Preparar payload concatenando el código del país al número de teléfono
+    const payload = {
+      ...form.value,
+      phone_number: form.value.phone_number
+        ? `${selectedCountry.value?.code || ''}${form.value.phone_number}`.trim()
+        : ''
+    }
+
+    const { data } = await api.post('authentication/register', payload)
 
     // Guardar token en localStorage INMEDIATAMENTE
     localStorage.setItem('access_token', data.access_token)
