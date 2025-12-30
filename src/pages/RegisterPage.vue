@@ -855,7 +855,7 @@ const register = async () => {
     // Mostrar modal de opciones (Demo o Registrar)
     showCompanyOptions.value = true
   } catch (error) {
-    const message = error.response?.data?.message || 'Error al registrar usuario'
+    const message = error.response?.data?.message || error.message || 'Error al registrar usuario'
     notify(message, 'negative', 'warning')
   } finally {
     loading.value = false
