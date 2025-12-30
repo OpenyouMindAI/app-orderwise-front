@@ -362,7 +362,7 @@
               </div>
 
               <!-- Documento -->
-              <div class="col-12 col-sm-6">
+              <div class="col-12">
                 <q-input
                   v-model="companyForm.company_document"
                   label="Documento *"
@@ -376,48 +376,50 @@
                 </q-input>
               </div>
 
-              <!-- Teléfono con Selector de País -->
-              <div class="col-12 col-sm-6">
-                <div class="row q-col-gutter-xs">
-                  <div class="col-5">
-                     <q-select
-                      v-model="selectedCountry"
-                      :options="countryOptions"
-                      option-label="flag"
-                      filled
-                      emit-value
-                      map-options
-                      behavior="menu"
-                      :display-value="selectedCountry ? `${selectedCountry.flag} ${selectedCountry.code}` : '🌍'"
-                    >
-                      <template v-slot:option="scope">
-                        <q-item v-bind="scope.itemProps">
-                          <q-item-section avatar>
-                            <q-item-label>{{ scope.opt.flag }}</q-item-label>
-                          </q-item-section>
-                          <q-item-section>
-                            <q-item-label>{{ scope.opt.label }}</q-item-label>
-                            <q-item-label caption>{{ scope.opt.code }}</q-item-label>
-                          </q-item-section>
-                        </q-item>
-                      </template>
-                    </q-select>
-                  </div>
-                  <div class="col-7">
-                    <q-input
-                      v-model="companyForm.company_phone"
-                      label="Teléfono *"
-                      :prefix="selectedCountry ? selectedCountry.code : ''"
-                      filled
-                      :rules="phoneRule"
-                      type="tel"
-                    >
-                      <template v-slot:prepend>
-                        <q-icon name="phone" />
-                      </template>
-                    </q-input>
-                  </div>
-                </div>
+              <!-- País -->
+              <div class="col-12 col-sm-4">
+                <q-select
+                  v-model="selectedCountry"
+                  :options="countryOptions"
+                  option-label="label"
+                  filled
+                  emit-value
+                  map-options
+                  behavior="menu"
+                  label="País *"
+                >
+                  <template v-slot:prepend>
+                    <span style="font-size: 20px; color: rgba(0, 0, 0, 1) !important;">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
+                  </template>
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section avatar>
+                        <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption>{{ scope.opt.code }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Teléfono -->
+              <div class="col-12 col-sm-8">
+                <q-input
+                  v-model="companyForm.company_phone"
+                  label="Teléfono *"
+                  :prefix="selectedCountry ? selectedCountry.code : ''"
+                  filled
+                  :rules="phoneRule"
+                  type="tel"
+                  placeholder="Ej: 11 1234 5678"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="phone" />
+                  </template>
+                </q-input>
               </div>
 
               <!-- Email -->
