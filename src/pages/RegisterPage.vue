@@ -59,18 +59,60 @@
         </div>
 
         <!-- Input Teléfono -->
-        <div class="input-container">
-          <q-input
-            v-model="form.phone_number"
-            placeholder="Teléfono (opcional)"
-            dark
-            class="custom-input"
-            hide-bottom-space
-          >
-            <template v-slot:prepend>
-              <q-icon name="phone" color="primary" size="20px"/>
-            </template>
-          </q-input>
+        <div class="input-container phone-input-container">
+          <div class="row">
+            <!-- País -->
+            <div class="col-4">
+              <q-select
+                v-model="selectedCountry"
+                :options="countryOptions"
+                option-label="label"
+                dark
+                class="custom-input country-select"
+                hide-bottom-space
+                emit-value
+                map-options
+                behavior="menu"
+                popup-content-class="country-dropdown"
+                dense
+                borderless
+              >
+                <template v-slot:selected>
+                  <div class="row items-center no-wrap">
+                    <span class="country-flag q-mr-xs">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
+                    <span class="text-caption ellipsis">{{ selectedCountry ? selectedCountry.code : '' }}</span>
+                  </div>
+                </template>
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section avatar>
+                      <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.label }}</q-item-label>
+                      <q-item-label caption>{{ scope.opt.code }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
+
+            <!-- Teléfono -->
+            <div class="col-8 q-pl-sm">
+              <q-input
+                v-model="form.phone_number"
+                placeholder="Teléfono"
+                dark
+                class="custom-input"
+                hide-bottom-space
+                type="tel"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="phone" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
+          </div>
         </div>
 
         <!-- Input Contraseña -->
@@ -1879,6 +1921,32 @@ const registerWithGoogle = async () => {
 .register-link:hover {
   color: #764ba2;
   text-decoration: underline;
+}
+
+/* Country Flag Styling */
+.country-flag {
+  font-size: 20px;
+  color: rgba(0, 0, 0, 1) !important;
+}
+
+/* Phone input container specific adjustments */
+.phone-input-container .country-select :deep(.q-field__control) {
+  padding-left: 12px;
+  padding-right: 4px;
+}
+
+.phone-input-container .row {
+  margin: 0;
+}
+
+.phone-input-container .q-col-gutter-sm {
+  margin-left: -4px;
+  margin-right: -4px;
+}
+
+.phone-input-container .q-col-gutter-sm > div {
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 /* Responsive */
