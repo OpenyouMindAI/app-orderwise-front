@@ -29,6 +29,7 @@
             placeholder="Nombre completo"
             dark
             class="custom-input"
+            hide-bottom-space
             :rules="[val => !!val || 'El nombre es requerido']"
           >
             <template v-slot:prepend>
@@ -45,6 +46,7 @@
             placeholder="Correo electrónico"
             dark
             class="custom-input"
+            hide-bottom-space
             :rules="[
               val => !!val || 'El correo es requerido',
               val => /.+@.+\..+/.test(val) || 'Correo inválido'
@@ -63,6 +65,7 @@
             placeholder="Teléfono (opcional)"
             dark
             class="custom-input"
+            hide-bottom-space
           >
             <template v-slot:prepend>
               <q-icon name="phone" color="primary" size="20px"/>
@@ -78,6 +81,7 @@
             placeholder="Contraseña"
             dark
             class="custom-input"
+            hide-bottom-space
             :rules="[
               val => !!val || 'La contraseña es requerida',
               val => val.length >= 8 || 'Mínimo 8 caracteres'
@@ -106,6 +110,7 @@
             placeholder="Confirmar contraseña"
             dark
             class="custom-input"
+            hide-bottom-space
             :rules="[
               val => !!val || 'Confirma tu contraseña',
               val => val === form.password || 'Las contraseñas no coinciden'
@@ -1181,7 +1186,7 @@ const registerWithGoogle = async () => {
 
 /* Inputs */
 .input-container {
-  margin-bottom: 10px;
+  margin-bottom: 1rem;
   animation: slideUp 0.5s ease-out backwards;
 }
 
