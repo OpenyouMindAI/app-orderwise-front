@@ -1211,6 +1211,20 @@ const registerWithGoogle = async () => {
   padding: 0 20px;
 }
 
+.custom-input :deep(.q-field__prepend) {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+}
+
+.custom-input :deep(.q-field__append) {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+}
+
 .custom-input :deep(.q-field__control):hover {
   background: #ffffff;
   border-color: #667eea;
