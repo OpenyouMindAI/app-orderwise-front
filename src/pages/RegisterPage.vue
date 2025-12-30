@@ -379,7 +379,7 @@
               <!-- Teléfono con Selector de País -->
               <div class="col-12 col-sm-6">
                 <div class="row q-col-gutter-xs">
-                  <div class="col-4">
+                  <div class="col-5">
                      <q-select
                       v-model="selectedCountry"
                       :options="countryOptions"
@@ -388,7 +388,7 @@
                       emit-value
                       map-options
                       behavior="menu"
-                      :display-value="selectedCountry ? selectedCountry.flag : '🌍'"
+                      :display-value="selectedCountry ? `${selectedCountry.flag} ${selectedCountry.code}` : '🌍'"
                     >
                       <template v-slot:option="scope">
                         <q-item v-bind="scope.itemProps">
@@ -403,7 +403,7 @@
                       </template>
                     </q-select>
                   </div>
-                  <div class="col-8">
+                  <div class="col-7">
                     <q-input
                       v-model="companyForm.company_phone"
                       label="Teléfono *"
