@@ -4,7 +4,7 @@
       ref="inputRef"
       :model-value="displayAddress"
       @update:model-value="handleAddressInput"
-      label="Buscar dirección de entrega"
+      :label="label"
       filled
       clearable
       :loading="loading"
