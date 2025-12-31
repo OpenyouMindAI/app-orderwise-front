@@ -3407,7 +3407,7 @@ export default {
 
           // Recargar el producto para obtener la nueva imagen
           const response = await this.$api.get(`products/${this.product.id}`)
-          this.product = response.data
+          this.product.images = response.data.images
 
           // Refrescar la lista de productos
           this.getProducts()
