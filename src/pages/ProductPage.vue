@@ -114,6 +114,23 @@
                   </q-item-section>
                 </q-item>
 
+                <q-separator />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openAiImageDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="auto_awesome" color="orange" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Generar imágenes con IA</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
                 <q-item
                   id="tour-btn-exportar"
                   clickable
@@ -278,6 +295,23 @@
                   </q-item-section>
                 </q-item>
 
+                <q-separator />
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="openAiImageDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="auto_awesome" color="orange" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Generar imágenes con IA</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
                 <q-item
                   id="tour-btn-exportar-desktop"
                   clickable
@@ -414,11 +448,11 @@
                             label="Código de barra"
                             dense
                             @keyup.enter="getOneProduct(product.barcode)"
-                        >
-                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
-                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
-                          </template>
-                        </q-input>
+                          >
+                            <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                              <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                            </template>
+                          </q-input>
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-input
@@ -644,7 +678,7 @@
                               :key="index"
                               class="col-6 col-sm-4 col-md-4"
                             >
-                              <q-card flat class="image-preview-card">
+                              <q-card flat class="image-preview-card cursor-pointer" @click="openImageViewer(index)">
                                 <q-img
                                   :src="image.url"
                                   :ratio="1"
@@ -657,8 +691,11 @@
                                       color="negative"
                                       round
                                       dense
-                                      @click="deleteImage(image, index)"
+                                      @click.stop="deleteImage(image, index)"
                                     />
+                                  </div>
+                                  <div class="absolute-bottom text-center bg-transparent">
+                                    <q-icon name="zoom_in" color="white" size="sm" />
                                   </div>
                                 </q-img>
                               </q-card>
@@ -674,12 +711,23 @@
                             o haz clic para seleccionar archivos
                           </div>
                         </div>
-                        <q-btn
-                          color="primary"
-                          label="Seleccionar Imágenes"
-                          @click="$refs.fileInput.click()"
-                          unelevated
-                        />
+                        <div class="row q-gutter-sm justify-center">
+                          <q-btn
+                            color="primary"
+                            label="Seleccionar Imágenes"
+                            icon="upload"
+                            @click="$refs.fileInput.click()"
+                            unelevated
+                          />
+                          <q-btn
+                            color="orange"
+                            label="Generar con IA"
+                            icon="auto_awesome"
+                            @click="generateSingleProductImage"
+                            unelevated
+                            :loading="generatingSingleImage"
+                          />
+                        </div>
                         <input
                           ref="fileInput"
                           type="file"
@@ -1778,6 +1826,170 @@
         </q-card>
       </div>
     </transition>
+
+    <!-- Visor de imágenes profesional -->
+    <q-dialog v-model="imageViewerDialog" @hide="closeImageViewer" maximized transition-show="fade" transition-hide="fade">
+      <div class="image-viewer-container">
+        <!-- Close button -->
+        <q-btn
+          icon="close"
+          flat
+          round
+          size="lg"
+          color="white"
+          class="image-viewer-close"
+          @click="closeImageViewer"
+        >
+          <q-tooltip>Cerrar (ESC)</q-tooltip>
+        </q-btn>
+
+        <!-- Image counter -->
+        <div class="image-viewer-counter" v-if="product.images.length > 1">
+          {{ currentImageIndex + 1 }} / {{ product.images.length }}
+        </div>
+
+        <!-- Main image -->
+        <div class="image-viewer-main">
+          <q-img
+            :src="product.images[currentImageIndex]?.url"
+            fit="contain"
+            class="image-viewer-img"
+          >
+            <template v-slot:error>
+              <div class="absolute-full flex flex-center text-white">
+                <q-icon name="broken_image" size="64px" />
+              </div>
+            </template>
+          </q-img>
+        </div>
+
+        <!-- Navigation arrows (only if multiple images) -->
+        <template v-if="product.images.length > 1">
+          <q-btn
+            icon="chevron_left"
+            flat
+            round
+            size="xl"
+            color="white"
+            class="image-viewer-nav image-viewer-nav-left"
+            @click="previousImage"
+            :disable="currentImageIndex === 0"
+          >
+            <q-tooltip>Anterior</q-tooltip>
+          </q-btn>
+
+          <q-btn
+            icon="chevron_right"
+            flat
+            round
+            size="xl"
+            color="white"
+            class="image-viewer-nav image-viewer-nav-right"
+            @click="nextImage"
+            :disable="currentImageIndex === product.images.length - 1"
+          >
+            <q-tooltip>Siguiente</q-tooltip>
+          </q-btn>
+        </template>
+
+        <!-- Thumbnails (only if multiple images) -->
+        <div class="image-viewer-thumbnails" v-if="product.images.length > 1">
+          <div
+            v-for="(image, index) in product.images"
+            :key="index"
+            class="image-viewer-thumbnail"
+            :class="{ 'active': index === currentImageIndex }"
+            @click="currentImageIndex = index"
+          >
+            <q-img :src="image.url" :ratio="1" />
+          </div>
+        </div>
+      </div>
+    </q-dialog>
+
+    <!-- Diálogo de generación de imágenes con IA -->
+    <q-dialog v-model="aiImageDialog" persistent>
+      <q-card style="min-width: 400px; max-width: 500px;">
+        <q-card-section class="bg-orange text-white">
+          <div class="text-h6">
+            <q-icon name="auto_awesome" size="24px" class="q-mr-sm" />
+            Generar Imágenes con IA
+          </div>
+        </q-card-section>
+
+        <q-card-section v-if="!aiImageLoading">
+          <div class="text-body1 q-mb-md">
+            Selecciona qué productos deseas procesar:
+          </div>
+
+          <q-option-group
+            v-model="aiImageOption"
+            :options="[
+              { label: `Productos seleccionados (${selection.length})`, value: 'selected', disable: selection.length === 0 },
+              { label: 'Todos los productos sin imágenes', value: 'all_without_images' }
+            ]"
+            color="orange"
+          />
+
+          <q-banner class="bg-info text-white q-mt-md">
+            <template v-slot:avatar>
+              <q-icon name="info" />
+            </template>
+            La IA generará imágenes profesionales basadas en el nombre y descripción de cada producto.
+          </q-banner>
+        </q-card-section>
+
+        <q-card-section v-if="aiImageLoading">
+          <div class="text-center q-mb-md">
+            <q-icon name="auto_awesome" size="64px" color="orange" class="rotating" />
+          </div>
+
+          <div class="text-h6 text-center q-mb-sm">
+            Generando imágenes...
+          </div>
+
+          <div class="text-body2 text-center text-grey-7 q-mb-md">
+            {{ aiImageProgress.current }}
+          </div>
+
+          <q-linear-progress
+            :value="aiImageProgress.total > 0 ? aiImageProgress.processed / aiImageProgress.total : 0"
+            color="orange"
+            size="12px"
+            class="q-mb-sm"
+          />
+
+          <div class="row justify-between text-caption text-grey-7">
+            <div>
+              Procesados: {{ aiImageProgress.processed }} / {{ aiImageProgress.total }}
+            </div>
+            <div>
+              {{ Math.round((aiImageProgress.processed / aiImageProgress.total) * 100) }}%
+            </div>
+          </div>
+
+          <div v-if="aiImageProgress.failed > 0" class="text-caption text-negative q-mt-sm">
+            Fallidos: {{ aiImageProgress.failed }}
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            label="Cancelar"
+            flat
+            @click="closeAiImageDialog"
+            :disable="aiImageLoading"
+          />
+          <q-btn
+            label="Generar"
+            color="orange"
+            @click="generateAiImages"
+            :loading="aiImageLoading"
+            :disable="aiImageLoading || (aiImageOption === 'selected' && selection.length === 0)"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -1841,6 +2053,18 @@ export default {
       massiveStockDialog: false,
       massiveStockQuantity: null,
       isDragOver: false,
+      aiImageDialog: false,
+      aiImageLoading: false,
+      aiImageOption: 'all_without_images',
+      aiImageProgress: {
+        total: 0,
+        processed: 0,
+        failed: 0,
+        current: ''
+      },
+      generatingSingleImage: false,
+      imageViewerDialog: false,
+      currentImageIndex: 0,
       company: null,
       addonsProducts: [],
       addonsProductsOptions: [],
@@ -3163,6 +3387,146 @@ export default {
       }
     },
     /**
+     * Generate single product image with AI
+     */
+    async generateSingleProductImage () {
+      if (!this.product.id) {
+        notify('Debe guardar el producto primero', 'warning', 'warning')
+        return
+      }
+
+      try {
+        this.generatingSingleImage = true
+
+        const { data } = await this.$api.post('ai-chats/generate-product-images', {
+          product_ids: [this.product.id]
+        })
+
+        if (data.results.processed > 0) {
+          notify('Imagen generada exitosamente', 'positive', 'check_circle')
+
+          // Recargar el producto para obtener la nueva imagen
+          const response = await this.$api.get(`products/${this.product.id}`)
+          this.product = response.data
+
+          // Refrescar la lista de productos
+          this.getProducts()
+        } else if (data.results.failed > 0) {
+          notify('Error al generar la imagen', 'negative', 'error')
+        }
+      } catch (error) {
+        notify(error.response?.data?.message || 'Error al generar imagen con IA', 'negative', 'error')
+      } finally {
+        this.generatingSingleImage = false
+      }
+    },
+    /**
+     * Open image viewer
+     */
+    openImageViewer (index) {
+      this.currentImageIndex = index
+      this.imageViewerDialog = true
+    },
+    /**
+     * Close image viewer
+     */
+    closeImageViewer () {
+      this.imageViewerDialog = false
+      this.currentImageIndex = 0
+    },
+    /**
+     * Navigate to previous image
+     */
+    previousImage () {
+      if (this.currentImageIndex > 0) {
+        this.currentImageIndex--
+      }
+    },
+    /**
+     * Navigate to next image
+     */
+    nextImage () {
+      if (this.currentImageIndex < this.product.images.length - 1) {
+        this.currentImageIndex++
+      }
+    },
+    /**
+     * Open AI Image Dialog
+     */
+    openAiImageDialog () {
+      this.aiImageDialog = true
+      this.aiImageOption = this.selection.length > 0 ? 'selected' : 'all_without_images'
+    },
+    /**
+     * Close AI Image Dialog
+     */
+    closeAiImageDialog () {
+      if (!this.aiImageLoading) {
+        this.aiImageDialog = false
+        this.aiImageProgress = {
+          total: 0,
+          processed: 0,
+          failed: 0,
+          current: ''
+        }
+      }
+    },
+    /**
+     * Generate AI Images
+     */
+    async generateAiImages () {
+      try {
+        this.aiImageLoading = true
+
+        const payload = {}
+
+        if (this.aiImageOption === 'selected') {
+          payload.product_ids = this.selection.map(p => p.id)
+          this.aiImageProgress.total = this.selection.length
+        } else {
+          payload.generate_all_without_images = true
+          // Estimamos el total, se actualizará con la respuesta
+          this.aiImageProgress.total = 1
+        }
+
+        this.aiImageProgress.current = 'Iniciando generación de imágenes...'
+
+        const { data } = await this.$api.post('ai-chats/generate-product-images', payload)
+
+        this.aiImageProgress.total = data.results.total
+        this.aiImageProgress.processed = data.results.processed
+        this.aiImageProgress.failed = data.results.failed
+
+        if (data.results.processed > 0) {
+          notify(`Se generaron ${data.results.processed} imágenes exitosamente`, 'positive', 'check_circle')
+
+          // Refrescar la lista de productos
+          this.getProducts()
+
+          // Limpiar selección
+          this.selection = []
+        }
+
+        if (data.results.failed > 0) {
+          notify(`${data.results.failed} productos fallaron al generar imagen`, 'warning', 'warning')
+        }
+
+        if (data.results.total === 0) {
+          notify('No hay productos para procesar', 'info', 'info')
+        }
+
+        // Cerrar el diálogo después de un breve delay
+        setTimeout(() => {
+          this.closeAiImageDialog()
+        }, 2000)
+      } catch (error) {
+        notify(error.response?.data?.message || 'Error al generar imágenes con IA', 'negative', 'error')
+        this.closeAiImageDialog()
+      } finally {
+        this.aiImageLoading = false
+      }
+    },
+    /**
      * Download all QR codes as PDF
      */
     async downloadAllQrAsPdf () {
@@ -3921,6 +4285,170 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Rotating animation for AI icon */
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotating 2s linear infinite;
+}
+
+/* Image Viewer Professional Styles */
+.image-viewer-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+}
+
+.image-viewer-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 9002;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.image-viewer-close:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.image-viewer-counter {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  padding: 8px 20px;
+  border-radius: 20px;
+  z-index: 9002;
+}
+
+.image-viewer-main {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 100px;
+}
+
+.image-viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.image-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 9002;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.image-viewer-nav:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.image-viewer-nav-left {
+  left: 20px;
+}
+
+.image-viewer-nav-right {
+  right: 20px;
+}
+
+.image-viewer-thumbnails {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  z-index: 9002;
+  max-width: 90vw;
+  overflow-x: auto;
+}
+
+.image-viewer-thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.image-viewer-thumbnail:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.image-viewer-thumbnail.active {
+  border-color: white;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .image-viewer-main {
+    padding: 60px 20px 100px 20px;
+  }
+
+  .image-viewer-nav {
+    display: none;
+  }
+
+  .image-viewer-thumbnails {
+    bottom: 10px;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .image-viewer-thumbnail {
+    width: 50px;
+    height: 50px;
+  }
+
+  .image-viewer-counter {
+    top: 10px;
+    font-size: 14px;
+    padding: 6px 16px;
+  }
+
+  .image-viewer-close {
+    top: 10px;
+    right: 10px;
   }
 }
 

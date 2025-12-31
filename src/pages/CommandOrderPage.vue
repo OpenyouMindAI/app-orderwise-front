@@ -257,6 +257,21 @@
                     />
                   </div>
                 </div>
+
+                <!-- Payment Button (if pending balance) -->
+                <div v-if="invoice.pending > 0" class="q-mt-sm">
+                  <q-btn
+                    color="green"
+                    size="sm"
+                    dense
+                    no-caps
+                    class="full-width"
+                    @click.stop="openPaymentDialogFromCard(invoice)"
+                  >
+                    <q-icon name="payments" size="16px" class="q-mr-xs" />
+                    <span class="text-caption">Cobrar {{ formatNumber(invoice.pending) }}</span>
+                  </q-btn>
+                </div>
               </div>
             </q-card>
           </template>
@@ -695,6 +710,13 @@
               :loading="cancelLoading"
               @click="cancelInvoice"
             />
+            <q-btn
+              v-if="!role.deliveryPerson && invoice?.products?.length > 0 && invoice?.pending > 0"
+              color="green"
+              label="Cobrar"
+              icon="payments"
+              @click="openPaymentDialog"
+            />
             <q-btn color="secondary" label="Ticket" icon="print" @click="print(invoice)" />
             <q-btn color="primary" icon="check_circle" label="Guardar" :loading="loadingEdit" @click="saveEdit()" />
           </div>
@@ -1046,6 +1068,69 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Payment Dialog -->
+    <q-dialog v-model="paymentDialog" persistent>
+      <q-card style="width: 500px; max-width: 90vw;">
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">Registrar Pago</div>
+          <div class="text-caption">Factura #{{ invoice?.code }}</div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-subtitle2 q-mb-md">
+            Total de la factura: <strong class="text-primary">{{ formatNumber(invoice.pending) }}</strong>
+          </div>
+
+          <q-input
+            v-model.number="paymentForm.amount"
+            label="Monto a pagar"
+            type="number"
+            step="0.01"
+            filled
+            :rules="[val => val > 0 || 'Debe ser mayor a 0', val => val <= calculateTotal() || 'Excede el total']"
+          />
+
+          <q-select
+            v-model="paymentForm.payment_method_id"
+            :options="paymentMethods"
+            option-value="id"
+            option-label="name"
+            emit-value
+            map-options
+            label="Método de pago"
+            filled
+            class="q-mt-md"
+            @filter=getPaymentMethods
+          />
+
+          <q-input
+            v-model="paymentForm.reference"
+            label="Referencia (opcional)"
+            filled
+            class="q-mt-md"
+          />
+
+          <q-banner class="bg-info text-white q-mt-md">
+            <template #avatar>
+              <q-icon name="info" />
+            </template>
+            El pago se registrará con la fecha de hoy.
+          </q-banner>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn label="Cancelar" flat @click="closePaymentDialog" />
+          <q-btn
+            label="Registrar Pago"
+            color="primary"
+            :loading="savingPayment"
+            :disable="!canRegisterPayment"
+            @click="registerPayment"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -1286,6 +1371,18 @@ const allDriversData = ref([])
 const driverMarkers = ref({})
 const driverPolylines = ref({})
 const allDriversInterval = ref(null)
+
+/**
+ * Payment Dialog variables
+ */
+const paymentDialog = ref(false)
+const paymentMethods = ref([])
+const paymentForm = ref({
+  amount: 0,
+  payment_method_id: null,
+  reference: ''
+})
+const savingPayment = ref(false)
 
 /**
  * List status
@@ -1926,6 +2023,172 @@ const cancelInvoice = async () => {
 }
 
 /**
+ * Get payment methods
+ */
+const getPaymentMethods = async (value, update) => {
+  try {
+    const { data } = await api.get('payment-methods', {
+      params: {
+        dataSearch: {
+          name: value
+        }
+      }
+    })
+    update(() => {
+      paymentMethods.value = data
+    })
+  } catch (error) {
+    notify('Error al cargar métodos de pago', 'negative', 'error')
+  }
+}
+
+/**
+ * Calculate total amount from invoice products
+ */
+const calculateTotal = () => {
+  if (!invoice.value?.products) return 0
+  return invoice.value.products.reduce((sum, product) => {
+    return sum + (product.pivot.price * product.pivot.amount)
+  }, 0)
+}
+
+/**
+ * Can register payment computed
+ */
+const canRegisterPayment = computed(() => {
+  return paymentForm.value.amount > 0 &&
+         paymentForm.value.amount <= calculateTotal() &&
+         paymentForm.value.payment_method_id
+})
+
+/**
+ * Get today's date in YYYY-MM-DD format
+ */
+const getTodayDate = () => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Open payment dialog
+ */
+const openPaymentDialog = async () => {
+  if (!invoice.value?.products || invoice.value.products.length === 0) {
+    notify('Debe tener al menos un producto para cobrar', 'warning', 'warning')
+    return
+  }
+
+  // Reset form with pending amount
+  paymentForm.value = {
+    amount: invoice.value.pending || calculateTotal(),
+    payment_method_id: null,
+    reference: ''
+  }
+  paymentDialog.value = true
+}
+
+/**
+ * Open payment dialog from card
+ */
+const openPaymentDialogFromCard = async (invoiceData) => {
+  if (!invoiceData?.products || invoiceData.products.length === 0) {
+    notify('Debe tener al menos un producto para cobrar', 'warning', 'warning')
+    return
+  }
+
+  if (!invoiceData.pending || invoiceData.pending <= 0) {
+    notify('Esta factura no tiene saldo pendiente', 'info', 'info')
+    return
+  }
+
+  // Set the invoice as current
+  invoice.value = invoiceData
+
+  // Reset form with pending amount
+  paymentForm.value = {
+    amount: invoiceData.pending,
+    reference: ''
+  }
+  paymentDialog.value = true
+}
+
+/**
+ * Close payment dialog
+ */
+const closePaymentDialog = () => {
+  paymentDialog.value = false
+  paymentForm.value = {
+    amount: 0,
+    payment_method_id: null,
+    reference: ''
+  }
+}
+
+/**
+ * Register payment for invoice
+ */
+const registerPayment = async () => {
+  try {
+    savingPayment.value = true
+
+    // Create payment data with today's date
+    const paymentData = {
+      amount: paymentForm.value.amount,
+      payment_method_id: paymentForm.value.payment_method_id,
+      branch_office_id: invoice.value.branch_office_id,
+      date: getTodayDate(),
+      reference: paymentForm.value.reference,
+      invoice_id: invoice.value.id
+    }
+
+    // Register payment
+    const { data } = await api.post(`client-statement/clients/${invoice.value.client_id}/payments`, paymentData)
+
+    notify('Pago registrado exitosamente', 'positive', 'check_circle')
+
+    closePaymentDialog()
+
+    // Update invoice locally without additional request
+    const newBalance = data.new_balance || 0
+    const newPayment = data.payment
+
+    // Update invoice.value with new balance and payment
+    if (invoice.value) {
+      invoice.value.pending = newBalance
+      invoice.value.balance = newBalance
+      
+      // Add new payment to invoice_payments array
+      if (newPayment && invoice.value.invoice_payments) {
+        invoice.value.invoice_payments.push({
+          id: newPayment.id,
+          amount: newPayment.amount,
+          payment_method_id: newPayment.payment_method_id,
+          payment_method: newPayment.paymentMethod,
+          date: newPayment.date,
+          reference: newPayment.reference,
+          created_at: newPayment.created_at
+        })
+      }
+
+      // Update the invoice in the statuses array (in the board)
+      statuses.value.forEach(status => {
+        const index = status.data.findIndex(inv => inv.id === invoice.value.id)
+        if (index !== -1) {
+          status.data[index] = { ...status.data[index], pending: newBalance, balance: newBalance }
+        }
+      })
+    }
+  } catch (error) {
+    notify(error.response?.data?.message || 'Error al registrar el pago', 'negative', 'error')
+  } finally {
+    savingPayment.value = false
+  }
+}
+
+/**
  * Toggle promotion details visibility
  * @param {Number} promotionId promotion id
  */
@@ -1952,14 +2215,14 @@ const getStatusTimeline = (invoice) => {
   }
 
   const timeline = []
-  const history = [...invoice.status_history].sort((a, b) => 
+  const history = [...invoice.status_history].sort((a, b) =>
     new Date(a.created_at) - new Date(b.created_at)
   )
 
   history.forEach((event, index) => {
     const config = statusConfig[event.status] || { label: event.status, icon: 'circle', color: 'grey' }
     const eventDate = new Date(event.created_at)
-    
+
     let duration = null
     if (index < history.length - 1) {
       const nextEvent = history[index + 1]
@@ -1976,7 +2239,7 @@ const getStatusTimeline = (invoice) => {
       date: formatDate(event.created_at, 'DD/MM/YYYY HH:mm:ss'),
       icon: config.icon,
       color: config.color,
-      duration: duration,
+      duration,
       user: event.user?.name || event.actor?.name || null
     })
   })
@@ -1993,7 +2256,7 @@ const getTotalTime = (invoice) => {
     return 'N/A'
   }
 
-  const history = [...invoice.status_history].sort((a, b) => 
+  const history = [...invoice.status_history].sort((a, b) =>
     new Date(a.created_at) - new Date(b.created_at)
   )
 
