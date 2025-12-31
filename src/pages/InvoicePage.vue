@@ -332,7 +332,7 @@
             </div>
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
               <!-- Sección de Archivos Adjuntos (Solo visualización) -->
-              <div class="col-12" v-if="invoice && invoice.invoice_files && invoice.invoice_files.length > 0">
+              <div class="col-12" v-if="invoice && invoice.files && invoice.files.length > 0">
                 <q-card flat bordered>
                   <q-card-section class="q-pb-none">
                     <div class="row items-center q-mb-sm">
@@ -344,7 +344,7 @@
                       </div>
                       <div class="col-auto">
                         <q-chip dense color="primary" text-color="white" size="sm">
-                          {{ invoice.invoice_files.length }}
+                          {{ invoice.files.length }}
                         </q-chip>
                       </div>
                     </div>
@@ -353,7 +353,7 @@
                   <q-card-section class="q-pt-sm">
                     <div class="invoice-files-grid">
                       <div
-                        v-for="(file, index) in invoice.invoice_files"
+                        v-for="(file, index) in invoice.files"
                         :key="index"
                         class="invoice-file-item"
                         @click="openGallery(index)"
@@ -659,7 +659,7 @@
     <!-- Image Gallery -->
     <ImageGalleryComponent
       v-model="showGallery"
-      :images="invoice && invoice.invoice_files ? invoice.invoice_files : []"
+      :images="invoice && invoice.files ? invoice.files : []"
       :initial-index="selectedFileIndex"
       :loop="true"
       :show-thumbnails="true"

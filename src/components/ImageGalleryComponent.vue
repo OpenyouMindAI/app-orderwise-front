@@ -212,8 +212,7 @@ export default {
     },
     images: {
       type: Array,
-      required: true,
-      validator: (value) => Array.isArray(value) && value.length > 0
+      required: true
     },
     initialIndex: {
       type: Number,
