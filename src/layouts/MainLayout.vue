@@ -32,9 +32,9 @@
             class="menu-btn q-ml-sm"
             icon="search"
             v-if="$q.screen.gt.md"
-            @click="leftDrawerOpen = true; showSearchInput = !showSearchInput; $nextTick(() => { if(showSearchInput) $refs.searchInput.focus() })"
+            @click="toggleSearch"
           >
-            <q-tooltip>Buscar en el menú</q-tooltip>
+            <q-tooltip>Buscar en el menú ({{ $q.platform.is.mac ? '⌘K' : 'Ctrl+K' }})</q-tooltip>
           </q-btn>
 
           <q-separator dark vertical inset class="q-mx-sm" />
@@ -485,9 +485,9 @@
               dense
               icon="search"
               class="drawer-action-btn"
-              @click="leftDrawerOpen = true; showSearchInput = !showSearchInput; $nextTick(() => { if(showSearchInput) $refs.searchInput.focus() })"
+              @click="toggleSearch"
             >
-              <q-tooltip>Buscar en el menú</q-tooltip>
+              <q-tooltip>Buscar en el menú ({{ $q.platform.is.mac ? '⌘K' : 'Ctrl+K' }})</q-tooltip>
             </q-btn>
           </div>
         </div>
@@ -1190,6 +1190,12 @@ export default {
     window.addEventListener('subscription-updated', () => {
       this.loadSubscriptionInfo()
     })
+
+    // Listen for global keyboard shortcuts
+    window.addEventListener('keydown', this.handleGlobalKeyDown)
+  },
+  unmounted () {
+    window.removeEventListener('keydown', this.handleGlobalKeyDown)
   },
   created () {
     this.loadingPage()
@@ -1197,6 +1203,29 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Handle global keyboard shortcuts
+     * @param {KeyboardEvent} e event
+     */
+    handleGlobalKeyDown (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        this.toggleSearch()
+      }
+    },
+    /**
+     * Toggle menu search and focus
+     */
+    toggleSearch () {
+      this.leftDrawerOpen = true
+      this.menuSearch = ''
+      this.showSearchInput = !this.showSearchInput
+      this.$nextTick(() => {
+        if (this.showSearchInput && this.$refs.searchInput) {
+          this.$refs.searchInput.focus()
+        }
+      })
+    },
     /**
      * Activate tour for current page
      */
