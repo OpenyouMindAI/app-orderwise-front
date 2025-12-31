@@ -11,7 +11,7 @@
     <div class="register-card">
       <!-- Logo -->
       <div class="logo-section">
-        <q-img :src="logo.color" class="logo-img"/>
+        <q-img :src="qBitsLogo.black" class="logo-img"/>
       </div>
 
       <!-- Título -->
@@ -212,10 +212,19 @@
 
         <!-- Link a Login -->
         <div class="register-link-container">
-          <span class="register-text">¿Ya tienes cuenta?</span>
+          <span class="register-text">¿Ya tienes cuenta? </span>
           <router-link to="/login" class="register-link">Inicia sesión</router-link>
         </div>
       </q-form>
+
+      <!-- Footer -->
+      <div class="footer-container">
+        <q-icon name="laptop_mac" size="18px" color="grey-6"/>
+        <span class="footer-text">Powered by</span>
+        <a href="https://site.qbitsinc.com" target="_blank">
+          <q-img :src="qBitsLogo.black" class="qbits-logo"/>
+        </a>
+      </div>
     </div>
 
     <!-- Modal de Setup de Empresa -->
@@ -591,7 +600,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from 'src/boot/axios'
-import { logo, notify } from 'src/const/mixins'
+import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 
@@ -1090,6 +1099,25 @@ const registerWithGoogle = async () => {
 </script>
 
 <style scoped>
+
+  /* Footer */
+.footer-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  animation: fadeIn 0.5s ease-out 1.2s backwards;
+}
+
+/* Logo */
+.qbits-logo {
+  width: 65px;
+  display: inline-block;
+}
+
 /* Contenedor principal */
 .register-container {
   position: relative;
