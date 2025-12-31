@@ -106,6 +106,7 @@
                 class="custom-input"
                 hide-bottom-space
                 type="tel"
+                :rules="phoneRule"
               >
                 <template v-slot:prepend>
                   <q-icon name="phone" color="primary" size="20px"/>
@@ -392,149 +393,166 @@
 
         <q-card-section class="q-pa-md" style="max-height: 60vh; overflow-y: auto;">
           <q-form @submit="setupCompany">
-            <!-- Grid de inputs -->
-            <div class="row q-col-gutter-sm">
-              <!-- Nombre de la empresa -->
-              <div class="col-12">
-                <q-input
-                  v-model="companyForm.company_name"
-                  label="Nombre de la Empresa *"
-                  filled
-                  :rules="[val => !!val || 'El nombre es requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="business" />
-                  </template>
-                </q-input>
-              </div>
+            <!-- Nombre de la empresa -->
+            <div class="input-container">
+              <q-input
+                v-model="companyForm.company_name"
+                placeholder="Nombre de la Empresa *"
+                borderless
+                class="custom-input"
+                hide-bottom-space
+                :rules="[val => !!val || 'El nombre es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="business" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
 
-              <!-- Documento -->
-              <div class="col-12">
-                <q-input
-                  v-model="companyForm.company_document"
-                  label="Documento *"
-                  placeholder="Ej: 20-12345678-9"
-                  filled
-                  :rules="[val => !!val || 'El documento es requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="badge" />
-                  </template>
-                </q-input>
-              </div>
+            <!-- Documento -->
+            <div class="input-container">
+              <q-input
+                v-model="companyForm.company_document"
+                placeholder="Documento (Ej: 20-12345678-9) *"
+                borderless
+                class="custom-input"
+                hide-bottom-space
+                :rules="[val => !!val || 'El documento es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="badge" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
 
-              <!-- País -->
-              <div class="col-12 col-sm-4">
-                <q-select
-                  v-model="selectedCountry"
-                  :options="countryOptions"
-                  option-label="label"
-                  filled
-                  emit-value
-                  map-options
-                  behavior="menu"
-                  label="País *"
-                >
-                  <template v-slot:prepend>
-                    <span style="font-size: 20px; color: rgba(0, 0, 0, 1) !important;">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
-                  </template>
-                  <template v-slot:option="scope">
-                    <q-item v-bind="scope.itemProps">
-                      <q-item-section avatar>
-                        <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
-                      </q-item-section>
-                      <q-item-section>
-                        <q-item-label>{{ scope.opt.label }}</q-item-label>
-                        <q-item-label caption>{{ scope.opt.code }}</q-item-label>
-                      </q-item-section>
-                    </q-item>
-                  </template>
-                </q-select>
-              </div>
+            <!-- Teléfono con Selector de País -->
+            <div class="input-container phone-input-container">
+              <div class="row">
+                <!-- País -->
+                <div class="col-4">
+                  <q-select
+                    v-model="selectedCountry"
+                    :options="countryOptions"
+                    option-label="label"
+                    class="custom-input country-select"
+                    hide-bottom-space
+                    emit-value
+                    map-options
+                    behavior="menu"
+                    popup-content-class="country-dropdown"
+                    dense
+                    borderless
+                  >
+                    <template v-slot:selected>
+                      <div class="row items-center no-wrap">
+                        <span class="country-flag q-mr-xs">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
+                        <span class="text-caption ellipsis">{{ selectedCountry ? selectedCountry.code : '' }}</span>
+                      </div>
+                    </template>
+                    <template v-slot:option="scope">
+                      <q-item v-bind="scope.itemProps">
+                        <q-item-section avatar>
+                          <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label>{{ scope.opt.label }}</q-item-label>
+                          <q-item-label caption>{{ scope.opt.code }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </template>
+                  </q-select>
+                </div>
 
-              <!-- Teléfono -->
-              <div class="col-12 col-sm-8">
-                <q-input
-                  v-model="companyForm.company_phone"
-                  label="Teléfono *"
-                  :prefix="selectedCountry ? selectedCountry.code : ''"
-                  filled
-                  :rules="phoneRule"
-                  type="tel"
-                  placeholder="Ej: 11 1234 5678"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="phone" />
-                  </template>
-                </q-input>
+                <!-- Input Teléfono -->
+                <div class="col-8 q-pl-sm">
+                  <q-input
+                    v-model="companyForm.company_phone"
+                    placeholder="Teléfono (Ej: 11 1234 5678) *"
+                    borderless
+                    class="custom-input"
+                    :rules="phoneRule"
+                    type="tel"
+                    hide-bottom-space
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="phone" color="primary" size="20px"/>
+                    </template>
+                  </q-input>
+                </div>
               </div>
+            </div>
 
-              <!-- Email -->
-              <div class="col-12">
-                <q-input
-                  v-model="companyForm.company_email"
-                  label="Email de la Empresa *"
-                  type="email"
-                  filled
-                  :rules="[
-                    val => !!val || 'El email es requerido',
-                    val => /.+@.+\..+/.test(val) || 'Email inválido'
-                  ]"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="email" />
-                  </template>
-                </q-input>
-              </div>
+            <!-- Email -->
+            <div class="input-container">
+              <q-input
+                v-model="companyForm.company_email"
+                placeholder="Email de la Empresa *"
+                type="email"
+                borderless
+                class="custom-input"
+                hide-bottom-space
+                :rules="[
+                  val => !!val || 'El email es requerido',
+                  val => /.+@.+\..+/.test(val) || 'Email inválido'
+                ]"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="email" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
 
-              <!-- Rubro -->
-              <div class="col-12">
-                <q-select
-                  v-model="companyForm.business_type"
-                  :options="businessTypes"
-                  option-label="name"
-                  option-value="id"
-                  label="Rubro / Tipo de Negocio *"
-                  filled
-                  use-input
-                  input-debounce="300"
-                  @filter="filterBusinessTypes"
-                  :rules="[val => !!val || 'El rubro es requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="category" />
-                  </template>
-                  <template v-slot:no-option>
-                    <q-item>
-                      <q-item-section class="text-grey">
-                        No hay resultados
-                      </q-item-section>
-                    </q-item>
-                  </template>
-                </q-select>
-              </div>
+            <!-- Rubro -->
+            <div class="input-container">
+              <q-select
+                v-model="companyForm.business_type"
+                :options="businessTypes"
+                option-label="name"
+                option-value="id"
+                placeholder="Rubro / Tipo de Negocio *"
+                class="custom-input"
+                use-input
+                input-debounce="300"
+                @filter="filterBusinessTypes"
+                :rules="[val => !!val || 'El rubro es requerido']"
+                hide-bottom-space
+                behavior="menu"
+                borderless
+              >
+                <template v-slot:prepend>
+                  <q-icon name="category" color="primary" size="20px"/>
+                </template>
+                <template v-slot:no-option>
+                  <q-item>
+                    <q-item-section class="text-grey">
+                      No hay resultados
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
 
-              <!-- Checkbox de copiar productos -->
-              <div class="col-12">
-                <q-checkbox
-                  v-model="companyForm.copy_test_products"
-                  label="Copiar productos y categorías de ejemplo"
-                  color="primary"
-                  class="q-mt-xs"
-                >
-                  <q-tooltip class="bg-grey-8">
-                    Te ayudará a empezar más rápido con datos de prueba del mismo rubro
-                  </q-tooltip>
-                </q-checkbox>
-              </div>
-              <!-- Dirección con AddressComponent -->
-              <div class="col-12 q-mt-sm">
-                <AddressComponent
-                  :initial-address="companyAddressData"
-                  @address-selected="handleCompanyAddressSelected"
-                  label="Dirección fiscal"
-                />
-              </div>
+            <!-- Checkbox de copiar productos -->
+            <div class="input-container">
+              <q-checkbox
+                v-model="companyForm.copy_test_products"
+                label="Copiar productos y categorías de ejemplo"
+                color="primary"
+              >
+                <q-tooltip class="bg-grey-8">
+                  Te ayudará a empezar más rápido con datos de prueba del mismo rubro
+                </q-tooltip>
+              </q-checkbox>
+            </div>
+
+            <!-- Dirección con AddressComponent -->
+            <div class="input-container">
+              <AddressComponent
+                :initial-address="companyAddressData"
+                @address-selected="handleCompanyAddressSelected"
+                label="Dirección fiscal"
+                is-custom-styled
+              />
             </div>
           </q-form>
         </q-card-section>
@@ -640,8 +658,9 @@ const phoneRule = computed(() => {
   return [
     val => !!val || 'El teléfono es requerido',
     val => {
+      if (!val) return true // Permitir vacío si no es obligatorio (aunque arriba dice required)
       if (!selectedCountry.value || !selectedCountry.value.regex) return true
-      return selectedCountry.value.regex.test(val) || `Formato inválido para ${selectedCountry.value.label}`
+      return selectedCountry.value.regex.test(val) || `Formato inválido (Ej: ${selectedCountry.value.mask.replace(/#/g, '0')})`
     }
   ]
 })
@@ -804,7 +823,10 @@ const setupCompany = async () => {
     // Preparar payload con business_type_id
     const payload = {
       ...companyForm.value,
-      business_type_id: companyForm.value.business_type?.id
+      business_type_id: companyForm.value.business_type?.id,
+      company_phone: companyForm.value.company_phone
+        ? `${selectedCountry.value?.code || ''}${companyForm.value.company_phone}`.trim()
+        : ''
     }
 
     await api.post('authentication/setup-company', payload)
@@ -1257,27 +1279,42 @@ const registerWithGoogle = async () => {
   }
 }
 
+/* Estilos unificados para inputs */
+.custom-input :deep(.q-field__control),
+.custom-input :deep(.q-field__native) {
+  min-height: 44px !important;
+  height: 44px !important;
+  max-height: 44px !important;
+}
+
 .custom-input :deep(.q-field__control) {
-  height: 44px;
   border-radius: 12px;
   background: #f9fafb;
   border: 1.5px solid #e5e7eb;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 20px;
+  padding: 0 12px; /* Ajustado padding horizontal */
+  display: flex !important;
+  align-items: center !important;
 }
 
-.custom-input :deep(.q-field__prepend) {
-  height: 44px;
-  display: flex;
-  align-items: center;
-  padding-right: 8px;
+.custom-input :deep(.q-field__control-container) {
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
-.custom-input :deep(.q-field__append) {
-  height: 44px;
-  display: flex;
-  align-items: center;
-  padding-left: 8px;
+.custom-input :deep(.q-field__native) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1; /* Para evitar que el texto afecte la altura */
+}
+
+.custom-input :deep(.q-field__native)::placeholder {
+  color: #9ca3af;
 }
 
 .custom-input :deep(.q-field__control):hover {
@@ -1294,14 +1331,13 @@ const registerWithGoogle = async () => {
   transform: translateY(-1px);
 }
 
-.custom-input :deep(.q-field__native) {
-  color: #1f2937;
-  font-size: 14px;
-  padding-left: 8px;
-}
-
-.custom-input :deep(.q-field__native)::placeholder {
-  color: #9ca3af;
+.custom-input :deep(.q-field__prepend),
+.custom-input :deep(.q-field__append) {
+  height: 44px !important;
+  min-height: 44px !important;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
 }
 
 /* Botón Registrarse */

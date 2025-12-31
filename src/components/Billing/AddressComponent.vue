@@ -1,21 +1,24 @@
 <template>
-  <div class="places-input-container">
+  <div class="places-input-container" ref="placesContainer">
     <q-input
       ref="inputRef"
       :model-value="displayAddress"
       @update:model-value="handleAddressInput"
-      :label="label"
-      filled
+      :label="isCustomStyled ? undefined : label"
+      :placeholder="isCustomStyled ? label : undefined"
+      :filled="!isCustomStyled"
+      :borderless="isCustomStyled"
       clearable
       :loading="loading"
       class="places-input"
+      :class="{ 'custom-input-look': isCustomStyled }"
       input-class="places-input-field"
       label-color="grey-6"
       color="primary"
       @clear="resetAddress"
     >
       <template #prepend>
-        <q-icon name="place" color="grey-6" size="20px" />
+        <q-icon name="place" :color="isCustomStyled ? 'primary' : 'grey-6'" size="20px" />
       </template>
 
       <template #append>
@@ -45,6 +48,7 @@
         </q-icon>
       </template>
     </q-input>
+
     <!-- Modal del mapa optimizado -->
     <q-dialog
       v-model="mapModal"
@@ -113,20 +117,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, watchEffect } from 'vue'
 import { loadGoogleMaps } from 'src/boot/google-maps'
 
-const emit = defineEmits(['address-selected'])
+// ============================================================================
+// DEFINICIONES Y PROPS
+// ============================================================================
 
-const inputRef = ref(null)
-const address = ref('')
-const displayAddress = ref('')
-const autocomplete = ref(null)
-const loading = ref(false)
-const mapModal = ref(false)
-const map = ref(null)
-const marker = ref(null)
-const geocodingAddress = ref(false)
+const emit = defineEmits(['address-selected'])
 
 const props = defineProps({
   initialAddress: {
@@ -148,8 +146,27 @@ const props = defineProps({
   label: {
     type: String,
     default: 'Buscar dirección de entrega'
+  },
+  isCustomStyled: {
+    type: Boolean,
+    default: false
   }
 })
+
+// ============================================================================
+// ESTADO REACTIVO
+// ============================================================================
+
+const placesContainer = ref(null)
+const inputRef = ref(null)
+const address = ref('')
+const displayAddress = ref('')
+const autocomplete = ref(null)
+const loading = ref(false)
+const mapModal = ref(false)
+const map = ref(null)
+const marker = ref(null)
+const geocodingAddress = ref(false)
 
 const addressDetails = ref({
   name: '',
@@ -165,283 +182,324 @@ const addressDetails = ref({
   types: []
 })
 
-// Carga inicial
-onMounted(async () => {
-  // Cargar dirección inicial si existe
-  loadInitialAddress()
+// ============================================================================
+// ALMACENAMIENTO DE OBSERVERS Y CLEANUP
+// - Guardamos TODAS las referencias para limpieza correcta en onUnmounted
+// ============================================================================
 
-  // Dar tiempo para que el componente se monte completamente
-  await nextTick()
-  await initializeComponent()
+let cachedInputElement = null // Referencia guardada al input para updatePacWidth
+let mutationObserver = null
+let resizeObserver = null
+let styleObserver = null
+let widthUpdateInterval = null
+const eventListeners = [] // Array para guardar listeners y removerlos
+
+// ============================================================================
+// UTILIDADES
+// ============================================================================
+
+/**
+ * Obtiene el elemento input del DOM de forma consistente.
+ * Primero intenta usar la referencia cacheada, luego busca en el contenedor.
+ * @returns {HTMLInputElement|null}
+ */
+const getInputElement = () => {
+  // Si ya tenemos referencia cacheada válida, usarla
+  if (cachedInputElement && document.body.contains(cachedInputElement)) {
+    return cachedInputElement
+  }
+
+  // Estrategias de búsqueda ordenadas por especificidad
+  const searchStrategies = [
+    // 1. Buscar dentro del contenedor del componente (más específico)
+    () => placesContainer.value?.querySelector('input'),
+    // 2. Buscar por clase específica
+    () => document.querySelector('.places-input-container input'),
+    () => document.querySelector('.places-input input'),
+    // 3. Fallback con clase de Quasar
+    () => document.querySelector('.q-field input')
+  ]
+
+  for (const strategy of searchStrategies) {
+    const el = strategy()
+    if (el) {
+      // Verificar que pertenece a nuestro contenedor si es posible
+      if (placesContainer.value && !placesContainer.value.contains(el)) {
+        continue
+      }
+      cachedInputElement = el
+      return el
+    }
+  }
+
+  // Fallback final sin verificación de contenedor
+  const fallback = document.querySelector('.places-input-container input')
+  if (fallback) {
+    cachedInputElement = fallback
+  }
+  return fallback
+}
+
+/**
+ * Crea un objeto addressDetails vacío
+ */
+const createEmptyAddressDetails = () => ({
+  name: '',
+  street: '',
+  city: '',
+  state: '',
+  country: '',
+  zipCode: '',
+  latitude: null,
+  longitude: null,
+  formattedAddress: '',
+  placeId: '',
+  types: []
 })
 
-// Función para cargar dirección inicial de forma segura
+// ============================================================================
+// CARGA DE DIRECCIÓN INICIAL (Simplificado)
+// ============================================================================
+
+/**
+ * Carga la dirección inicial desde props de forma segura.
+ * Maneja tanto objetos como strings JSON.
+ */
 const loadInitialAddress = () => {
-  try {
-    if (!props.initialAddress) {
-      address.value = ''
-      return
-    }
-
-    let initial = props.initialAddress
-
-    console.log('🔍 loadInitialAddress - Tipo:', typeof initial)
-    console.log('🔍 loadInitialAddress - Valor:', initial)
-    console.log('🔍 formattedAddress:', initial.formattedAddress)
-    console.log('🔍 name:', initial.name)
-    console.log('🔍 street:', initial.street)
-
-    // Si viene como string JSON, parsearlo
-    if (typeof initial === 'string') {
-      try {
-        initial = JSON.parse(initial)
-        console.log('✅ Parseado como JSON:', initial)
-      } catch (e) {
-        // Si no es JSON válido, usar como dirección simple
-        console.log('📝 Usando string directo:', initial)
-        address.value = String(initial)
-        return
-      }
-    }
-
-    // Verificar que sea un objeto válido
-    if (typeof initial !== 'object' || initial === null) {
-      console.log('⚠️ No es un objeto válido')
-      address.value = ''
-      return
-    }
-
-    // Cargar dirección en el input (priorizar formattedAddress)
-    let addressText = ''
-
-    if (initial.formattedAddress && initial.formattedAddress !== '') {
-      addressText = String(initial.formattedAddress)
-    } else if (initial.name && initial.name !== '') {
-      addressText = String(initial.name)
-    } else if (initial.street && initial.street !== '') {
-      addressText = String(initial.street)
-    }
-
-    console.log('📍 Dirección a mostrar:', addressText)
-    console.log('📍 Tipo de addressText:', typeof addressText)
-
-    // Solo actualizar si hay un texto válido
-    if (addressText && addressText !== '') {
-      address.value = addressText
-      displayAddress.value = addressText
-    } else {
-      console.log('⚠️ No hay dirección válida para mostrar')
-      address.value = ''
-      displayAddress.value = ''
-    }
-
-    // Cargar detalles completos si existen
-    if (initial.formattedAddress || initial.latitude || initial.name) {
-      addressDetails.value = {
-        name: initial.name || '',
-        street: initial.street || '',
-        city: initial.city || '',
-        state: initial.state || '',
-        country: initial.country || '',
-        zipCode: initial.zipCode || '',
-        latitude: initial.latitude || null,
-        longitude: initial.longitude || null,
-        formattedAddress: initial.formattedAddress || '',
-        placeId: initial.placeId || '',
-        types: initial.types || []
-      }
-    }
-  } catch (error) {
-    console.error('❌ Error loading initial address:', error)
+  if (!props.initialAddress) {
     address.value = ''
-  }
-}
-
-// Watch para cambios en initialAddress
-watch(() => props.initialAddress, (newAddress) => {
-  if (newAddress) {
-    loadInitialAddress()
-  }
-}, { deep: true, immediate: true })
-
-// Watch para asegurar que address siempre sea string
-watch(address, (newVal) => {
-  if (typeof newVal === 'string') {
-    displayAddress.value = newVal
-  } else if (typeof newVal === 'object' && newVal !== null) {
-    // Si es un objeto, extraer el string
-    if (newVal.formattedAddress) {
-      displayAddress.value = String(newVal.formattedAddress)
-    } else if (newVal.name) {
-      displayAddress.value = String(newVal.name)
-    } else {
-      displayAddress.value = ''
-    }
-  } else {
     displayAddress.value = ''
+    return
   }
-})
 
-// Manejar cambios en el input
-const handleAddressInput = (value) => {
-  address.value = value
-  displayAddress.value = value
-}
+  let initial = props.initialAddress
 
-// Limpieza al desmontar
-onUnmounted(() => {
-  cleanup()
-})
-
-const initializeComponent = async () => {
-  loading.value = true
-  try {
-    const loaded = await loadGoogleMaps()
-    if (!loaded) {
-      // Google Maps no disponible, usar modo manual
+  // Parsear si es string JSON
+  if (typeof initial === 'string') {
+    try {
+      initial = JSON.parse(initial)
+    } catch {
+      // No es JSON, usar como dirección simple
+      address.value = String(initial)
+      displayAddress.value = String(initial)
       return
     }
+  }
 
-    // Estrategia alternativa: buscar el input directamente en el DOM del componente
-    await nextTick()
-    await new Promise(resolve => setTimeout(resolve, 300))
+  // Verificar que sea objeto válido
+  if (typeof initial !== 'object' || initial === null) {
+    address.value = ''
+    displayAddress.value = ''
+    return
+  }
 
-    // Estrategia alternativa: buscar el input directamente en el DOM del componente
-    // sin depender del template ref que no se está bindeando correctamente
-    await nextTick()
-    await new Promise(resolve => setTimeout(resolve, 300))
+  // Determinar texto a mostrar (priorizar formattedAddress)
+  const addressText = initial.formattedAddress || initial.name || initial.street || ''
 
-    await initAutocomplete()
-  } catch (error) {
-    console.error('Error inicializando AddressComponent:', error)
-    // No reintentar en caso de error, mantener el componente funcional sin autocomplete
-  } finally {
-    loading.value = false
+  if (addressText) {
+    address.value = String(addressText)
+    displayAddress.value = String(addressText)
+  }
+
+  // Cargar detalles completos si existen
+  if (initial.formattedAddress || initial.latitude || initial.name) {
+    addressDetails.value = {
+      name: initial.name || '',
+      street: initial.street || '',
+      city: initial.city || '',
+      state: initial.state || '',
+      country: initial.country || '',
+      zipCode: initial.zipCode || '',
+      latitude: initial.latitude || null,
+      longitude: initial.longitude || null,
+      formattedAddress: initial.formattedAddress || '',
+      placeId: initial.placeId || '',
+      types: initial.types || []
+    }
   }
 }
 
-const initAutocomplete = async () => {
-  try {
-    // Evitar múltiples inicializaciones
-    if (autocomplete.value) {
-      console.info('Autocomplete ya inicializado, evitando duplicación')
-      return
+// ============================================================================
+// MANEJO DEL PAC-CONTAINER (Ancho del menú de sugerencias)
+// - Solución agresiva: interval + ResizeObserver + StyleObserver
+// ============================================================================
+
+/**
+ * Actualiza el ancho y posición del pac-container para que coincida con el contenedor.
+ * Usa cssText para forzar estilos inline más fuertes.
+ * Usa places-input-container como referencia de ancho y posición (no el input).
+ */
+const updatePacWidth = () => {
+  const pacContainer = document.querySelector('.pac-container.custom-pac-container')
+  const inputContainer = placesContainer.value
+
+  if (pacContainer && inputContainer) {
+    const rect = inputContainer.getBoundingClientRect()
+    const width = rect.width
+    const left = rect.left + window.scrollX
+
+    const currentWidth = parseFloat(pacContainer.style.width) || 0
+    const currentLeft = parseFloat(pacContainer.style.left) || 0
+
+    // Solo actualizar si difiere para evitar loops
+    if (Math.abs(currentWidth - width) > 1 || Math.abs(currentLeft - left) > 1) {
+      // Preservar otros estilos y forzar width y left
+      const existingStyles = pacContainer.style.cssText
+        .replace(/width:[^;]+;?/g, '')
+        .replace(/left:[^;]+;?/g, '')
+      pacContainer.style.cssText = `width: ${width}px !important; left: ${left}px !important; ${existingStyles}`
     }
+  }
+}
 
-    // Estrategia alternativa: buscar directamente en el DOM sin usar refs
-    // Buscar el input dentro del componente actual usando selectores específicos
-    let inputElement = null
+/**
+ * Inicia actualización agresiva del ancho usando setInterval temporal.
+ * Se ejecuta cada 50ms durante 2 segundos cuando el input tiene foco.
+ */
+const startAggressiveWidthUpdate = () => {
+  // Limpiar interval previo si existe
+  if (widthUpdateInterval) {
+    clearInterval(widthUpdateInterval)
+  }
 
-    // Intentar diferentes estrategias de búsqueda con reintentos
-    const searchStrategies = [
-      () => document.querySelector('.places-input-container input'),
-      () => document.querySelector('.places-input input'),
-      () => document.querySelector('.q-field input'),
-      () => {
-        const container = document.querySelector('.places-input-container')
-        return container?.querySelector('input')
-      },
-      () => {
-        // Buscar cualquier input dentro de un q-field que tenga la clase places-input
-        return document.querySelector('.q-field.places-input input')
-      }
-    ]
+  let elapsed = 0
+  const intervalMs = 50
+  const duration = 2000
 
-    // Intentar múltiples veces con pequeñas esperas
-    for (let attempt = 0; attempt < 3 && !inputElement; attempt++) {
-      for (const strategy of searchStrategies) {
-        inputElement = strategy()
-        if (inputElement) {
-          break
+  widthUpdateInterval = setInterval(() => {
+    updatePacWidth()
+    elapsed += intervalMs
+
+    if (elapsed >= duration) {
+      clearInterval(widthUpdateInterval)
+      widthUpdateInterval = null
+    }
+  }, intervalMs)
+}
+
+/**
+ * Configura el pac-container cuando se detecta en el DOM.
+ * Aplica estilos y observa cambios de estilo para revertir overrides de Google.
+ * Usa places-input-container como referencia de ancho y posición.
+ */
+const setupPacContainer = (node) => {
+  node.classList.add('custom-pac-container')
+
+  const inputContainer = placesContainer.value
+  if (!inputContainer) return
+
+  // Forzar ancho y posición inicial con cssText usando el contenedor
+  const rect = inputContainer.getBoundingClientRect()
+  const width = rect.width
+  const left = rect.left + window.scrollX
+  node.style.cssText = `width: ${width}px !important; left: ${left}px !important;`
+
+  // Limpiar observer previo si existe
+  if (styleObserver) {
+    styleObserver.disconnect()
+  }
+
+  // Observar cambios de estilo para revertir overrides de Google
+  styleObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+        const containerRect = placesContainer.value?.getBoundingClientRect()
+        if (!containerRect) return
+
+        const requiredWidth = containerRect.width
+        const requiredLeft = containerRect.left + window.scrollX
+        const currentWidth = parseFloat(node.style.width) || 0
+        const currentLeft = parseFloat(node.style.left) || 0
+
+        if (Math.abs(currentWidth - requiredWidth) > 1 || Math.abs(currentLeft - requiredLeft) > 1) {
+          const existingStyles = node.style.cssText
+            .replace(/width:[^;]+;?/g, '')
+            .replace(/left:[^;]+;?/g, '')
+          node.style.cssText = `width: ${requiredWidth}px !important; left: ${requiredLeft}px !important; ${existingStyles}`
         }
       }
+    }
+  })
 
-      if (!inputElement && attempt < 2) {
-        await new Promise(resolve => setTimeout(resolve, 200))
+  styleObserver.observe(node, { attributes: true, attributeFilter: ['style'] })
+}
+
+// ============================================================================
+// AUTOCOMPLETE DE GOOGLE MAPS
+// ============================================================================
+
+const initAutocomplete = async () => {
+  if (autocomplete.value) return
+
+  const inputElement = getInputElement()
+  if (!inputElement) {
+    console.warn('[AddressComponent] Input element no encontrado')
+    return
+  }
+
+  if (!window.google?.maps?.places?.Autocomplete) {
+    console.warn('[AddressComponent] Google Maps Places API no disponible')
+    return
+  }
+
+  // Observer para capturar el pac-container cuando se añade al DOM
+  mutationObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.classList?.contains('pac-container')) {
+          setupPacContainer(node)
+          return
+        }
       }
     }
+  })
+  mutationObserver.observe(document.body, { childList: true, subtree: false })
 
-    if (!inputElement) {
-      // Debug: mostrar toda la estructura disponible
-      const container = document.querySelector('.places-input-container')
-      console.error('Debug - No se encontró input element:', {
-        container,
-        containerHTML: container?.outerHTML,
-        allInputs: document.querySelectorAll('input'),
-        qFieldInputs: document.querySelectorAll('.q-field input')
-      })
+  // Crear instancia de Autocomplete
+  autocomplete.value = new window.google.maps.places.Autocomplete(inputElement, {
+    types: ['geocode', 'establishment'],
+    componentRestrictions: { country: 'ar' },
+    fields: ['address_components', 'geometry', 'formatted_address', 'name', 'place_id', 'types']
+  })
 
-      throw new Error('Input element no encontrado en el DOM del componente')
+  // Fallback: buscar pac-container si ya existe
+  setTimeout(() => {
+    const containers = document.querySelectorAll('.pac-container')
+    if (containers.length > 0) {
+      const lastContainer = containers[containers.length - 1]
+      setupPacContainer(lastContainer)
     }
+  }, 1000)
 
-    if (!window.google?.maps?.places?.Autocomplete) {
-      throw new Error('Google Maps Places API no disponible')
-    }
+  // ResizeObserver permanente para el input
+  resizeObserver = new ResizeObserver(() => updatePacWidth())
+  resizeObserver.observe(inputElement)
 
-    // NOTA IMPORTANTE: Google Maps API Warning Conocido
-    // Google muestra un warning sobre la deprecación de Autocomplete (marzo 2025)
-    // Usando google.maps.places.Autocomplete (estable hasta marzo 2025+)
-    // La migración a PlaceAutocompleteElement se realizará en versiones futuras
-
-    autocomplete.value = new window.google.maps.places.Autocomplete(inputElement, {
-      types: ['geocode', 'establishment'],
-      componentRestrictions: { country: 'ar' },
-      fields: ['address_components', 'geometry', 'formatted_address', 'name', 'place_id', 'types']
-    })
-
-    autocomplete.value.addListener('place_changed', () => {
-      onPlaceChanged().catch(() => {})
-    })
-  } catch (error) {
-    // Silencioso: usar modo manual
+  // Event listeners con tracking para cleanup
+  const addTrackedListener = (target, event, handler, options) => {
+    target.addEventListener(event, handler, options)
+    eventListeners.push({ target, event, handler, options })
   }
+
+  addTrackedListener(inputElement, 'input', updatePacWidth)
+  addTrackedListener(inputElement, 'focus', () => {
+    updatePacWidth()
+    startAggressiveWidthUpdate() // Iniciar actualización agresiva al hacer focus
+  })
+  addTrackedListener(window, 'scroll', updatePacWidth, true)
+
+  // Listener del autocomplete
+  autocomplete.value.addListener('place_changed', () => {
+    onPlaceChanged().catch((err) => console.warn('[AddressComponent] Error en place_changed:', err))
+  })
 }
 
-const handlePlaceSelection = async (place) => {
-  try {
-    if (!place?.geometry) {
-      // Lugar sin geometría, usar modo manual
-      return
-    }
-
-    address.value = place.formattedAddress || place.name || ''
-    addressDetails.value = {
-      name: place.name || '',
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      latitude: place.geometry.location.lat(),
-      longitude: place.geometry.location.lng(),
-      formattedAddress: place.formatted_address || '',
-      placeId: place.place_id || '',
-      types: place.types || []
-    }
-
-    if (place.address_components) {
-      parseAddressComponents(place.address_components)
-    }
-
-    emit('address-selected', addressDetails.value)
-  } catch (error) {
-    // Error silencioso al procesar lugar
-  }
-}
-
-const onPlaceChanged = async () => {
-  try {
-    if (!autocomplete.value) return
-
-    const place = autocomplete.value.getPlace()
-    await handlePlaceSelection(place)
-  } catch (error) {
-    console.error('Error procesando lugar:', error)
-  }
-}
+// ============================================================================
+// PROCESAMIENTO DE LUGAR SELECCIONADO
+// ============================================================================
 
 const parseAddressComponents = (components) => {
-  components.forEach((component) => {
+  for (const component of components) {
     const type = component.types[0]
     switch (type) {
       case 'street_number':
@@ -463,8 +521,48 @@ const parseAddressComponents = (components) => {
         addressDetails.value.zipCode = component.long_name
         break
     }
-  })
+  }
 }
+
+const handlePlaceSelection = async (place) => {
+  if (!place?.geometry) {
+    console.warn('[AddressComponent] Lugar seleccionado sin geometría')
+    return
+  }
+
+  address.value = place.formatted_address || place.name || ''
+  displayAddress.value = address.value
+
+  addressDetails.value = {
+    name: place.name || '',
+    street: '',
+    city: '',
+    state: '',
+    country: '',
+    zipCode: '',
+    latitude: place.geometry.location.lat(),
+    longitude: place.geometry.location.lng(),
+    formattedAddress: place.formatted_address || '',
+    placeId: place.place_id || '',
+    types: place.types || []
+  }
+
+  if (place.address_components) {
+    parseAddressComponents(place.address_components)
+  }
+
+  emit('address-selected', addressDetails.value)
+}
+
+const onPlaceChanged = async () => {
+  if (!autocomplete.value) return
+  const place = autocomplete.value.getPlace()
+  await handlePlaceSelection(place)
+}
+
+// ============================================================================
+// GEOCODIFICACIÓN Y MAPA
+// ============================================================================
 
 const geocodeAddress = async () => {
   if (!addressDetails.value.formattedAddress || !window.google?.maps) {
@@ -475,7 +573,6 @@ const geocodeAddress = async () => {
 
   try {
     const geocoder = new window.google.maps.Geocoder()
-
     const result = await new Promise((resolve, reject) => {
       geocoder.geocode(
         {
@@ -493,17 +590,13 @@ const geocodeAddress = async () => {
     })
 
     if (result.geometry) {
-      // Actualizar coordenadas sin perder la dirección original
       addressDetails.value.latitude = result.geometry.location.lat()
       addressDetails.value.longitude = result.geometry.location.lng()
-
-      // Emitir actualización con coordenadas
       emit('address-selected', addressDetails.value)
-
       return true
     }
   } catch (error) {
-    console.warn('Error al geocodificar dirección:', error)
+    console.warn('[AddressComponent] Error al geocodificar:', error.message)
   } finally {
     geocodingAddress.value = false
   }
@@ -512,7 +605,6 @@ const geocodeAddress = async () => {
 }
 
 const showMapModal = async () => {
-  // Si ya tiene coordenadas, mostrar directamente
   if (addressDetails.value.latitude) {
     mapModal.value = true
     await nextTick()
@@ -520,7 +612,6 @@ const showMapModal = async () => {
     return
   }
 
-  // Si no tiene coordenadas pero tiene dirección, hacer geocoding
   if (addressDetails.value.formattedAddress) {
     await geocodeAddress()
     if (addressDetails.value.latitude) {
@@ -532,39 +623,41 @@ const showMapModal = async () => {
 }
 
 const initMap = () => {
-  try {
-    const container = document.getElementById('map-container')
-    if (!container || !window.google?.maps) return
+  const container = document.getElementById('map-container')
+  if (!container || !window.google?.maps) {
+    console.warn('[AddressComponent] No se pudo inicializar el mapa')
+    return
+  }
 
-    container.innerHTML = ''
+  container.innerHTML = ''
 
-    const location = new window.google.maps.LatLng(addressDetails.value.latitude, addressDetails.value.longitude)
+  const location = new window.google.maps.LatLng(
+    addressDetails.value.latitude,
+    addressDetails.value.longitude
+  )
 
-    map.value = new window.google.maps.Map(container, {
-      center: location,
-      zoom: 15,
-      mapTypeId: window.google.maps.MapTypeId.ROADMAP
+  map.value = new window.google.maps.Map(container, {
+    center: location,
+    zoom: 15,
+    mapTypeId: window.google.maps.MapTypeId.ROADMAP
+  })
+
+  marker.value = new window.google.maps.Marker({
+    position: location,
+    map: map.value,
+    title: addressDetails.value.name || addressDetails.value.formattedAddress
+  })
+
+  if (addressDetails.value.types?.includes('establishment')) {
+    const infoWindow = new window.google.maps.InfoWindow({
+      content: `
+        <div style="padding: 10px;">
+          <strong>${addressDetails.value.name}</strong><br>
+          ${addressDetails.value.formattedAddress}
+        </div>
+      `
     })
-
-    marker.value = new window.google.maps.Marker({
-      position: location,
-      map: map.value,
-      title: addressDetails.value.name || addressDetails.value.formattedAddress
-    })
-
-    if (addressDetails.value.types?.includes('establishment')) {
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div style="padding: 10px;">
-            <strong>${addressDetails.value.name}</strong><br>
-            ${addressDetails.value.formattedAddress}
-          </div>
-        `
-      })
-      infoWindow.open(map.value, marker.value)
-    }
-  } catch (error) {
-    // Error silencioso al inicializar mapa
+    infoWindow.open(map.value, marker.value)
   }
 }
 
@@ -581,13 +674,32 @@ const openDirections = () => {
   window.open(`${baseUrl}&${params.toString()}`, '_blank')
 }
 
-const cleanup = () => {
-  if (autocomplete.value && window.google?.maps?.event) {
-    window.google.maps.event.clearInstanceListeners(autocomplete.value)
-    autocomplete.value = null
-  }
-  cleanupMap()
+// ============================================================================
+// MANEJO DE INPUT
+// ============================================================================
+
+const handleAddressInput = (value) => {
+  address.value = value
+  displayAddress.value = value
 }
+
+const resetAddress = () => {
+  address.value = ''
+  displayAddress.value = ''
+  addressDetails.value = createEmptyAddressDetails()
+  emit('address-selected', null)
+}
+
+const editAddress = () => {
+  if (addressDetails.value.formattedAddress) {
+    address.value = addressDetails.value.formattedAddress
+    addressDetails.value = createEmptyAddressDetails()
+  }
+}
+
+// ============================================================================
+// LIMPIEZA Y CLEANUP
+// ============================================================================
 
 const cleanupMap = () => {
   if (marker.value) {
@@ -597,45 +709,110 @@ const cleanupMap = () => {
   map.value = null
 }
 
-// Nueva función para editar dirección
-const editAddress = () => {
-  if (addressDetails.value.formattedAddress) {
-    address.value = addressDetails.value.formattedAddress
-    // Limpiar los detalles para permitir nueva edición
-    addressDetails.value = {
-      name: '',
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      latitude: null,
-      longitude: null,
-      formattedAddress: '',
-      placeId: '',
-      types: []
-    }
+const cleanup = () => {
+  // Limpiar interval de actualización de ancho
+  if (widthUpdateInterval) {
+    clearInterval(widthUpdateInterval)
+    widthUpdateInterval = null
+  }
+
+  // Desconectar MutationObserver
+  if (mutationObserver) {
+    mutationObserver.disconnect()
+    mutationObserver = null
+  }
+
+  // Desconectar ResizeObserver
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+
+  // Desconectar StyleObserver
+  if (styleObserver) {
+    styleObserver.disconnect()
+    styleObserver = null
+  }
+
+  // Remover todos los event listeners trackeados
+  for (const { target, event, handler, options } of eventListeners) {
+    target.removeEventListener(event, handler, options)
+  }
+  eventListeners.length = 0
+
+  // Limpiar autocomplete de Google
+  if (autocomplete.value && window.google?.maps?.event) {
+    window.google.maps.event.clearInstanceListeners(autocomplete.value)
+    autocomplete.value = null
+  }
+
+  // Limpiar referencia cacheada
+  cachedInputElement = null
+
+  cleanupMap()
+}
+
+// ============================================================================
+// INICIALIZACIÓN Y CICLO DE VIDA
+// ============================================================================
+
+const initializeComponent = async () => {
+  loading.value = true
+  try {
+    const loaded = await loadGoogleMaps()
+    if (!loaded) return
+
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 300))
+    await initAutocomplete()
+  } catch (error) {
+    console.warn('[AddressComponent] Error inicializando:', error.message)
+  } finally {
+    loading.value = false
   }
 }
 
-const resetAddress = () => {
-  address.value = ''
-  displayAddress.value = ''
-  addressDetails.value = {
-    name: '',
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
-    latitude: null,
-    longitude: null,
-    formattedAddress: '',
-    placeId: '',
-    types: []
+onMounted(async () => {
+  loadInitialAddress()
+  await nextTick()
+  await initializeComponent()
+})
+
+onUnmounted(() => {
+  cleanup()
+})
+
+// ============================================================================
+// WATCHERS (Consolidados)
+// ============================================================================
+
+// Watch para cambios en initialAddress
+watch(
+  () => props.initialAddress,
+  (newAddress) => {
+    if (newAddress) {
+      loadInitialAddress()
+    }
+  },
+  { deep: true }
+)
+
+// WatchEffect para sincronizar address con displayAddress
+// Reemplaza el watch individual de address
+watchEffect(() => {
+  const val = address.value
+  if (typeof val === 'string') {
+    displayAddress.value = val
+  } else if (typeof val === 'object' && val !== null) {
+    displayAddress.value = val.formattedAddress || val.name || ''
+  } else {
+    displayAddress.value = ''
   }
-  emit('address-selected', null)
-}
+})
+
+// ============================================================================
+// EXPOSE
+// ============================================================================
 
 defineExpose({
   resetAddress,
@@ -643,7 +820,100 @@ defineExpose({
 })
 </script>
 
+<style>
+/* Estilos Globales para el dropdown de Google Maps (style in body) */
+.pac-container.custom-pac-container {
+  /* Position absolute y top/left son manejados por Google Maps en el body */
+  /* Solo forzamos estilos visuales y override de width (que se hace por JS style inline, pero aquí aseguramos box-sizing) */
+  box-sizing: border-box !important;
+  border-radius: 12px !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  font-family: inherit !important;
+  z-index: 9999 !important; /* High z-index to be on top of modals */
+  background-color: white !important;
+  margin-top: 4px !important; /* Un pequeño espaciado del input */
+}
+
+.pac-item {
+  padding: 10px 16px !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  border-top: 1px solid #f3f4f6 !important;
+  line-height: 1.5 !important;
+}
+
+.pac-item:first-child {
+  border-top: none !important;
+}
+
+.pac-item:hover {
+  background-color: #f9fafb !important;
+}
+
+.pac-item .pac-icon {
+  margin-top: 2px !important;
+}
+
+.pac-item-query {
+  font-size: 14px !important;
+  color: #111827 !important;
+  font-weight: 500 !important;
+}
+
+.pac-matched {
+  font-weight: 700 !important;
+  color: #4f46e5 !important;
+}
+</style>
+
 <style scoped>
+/* Estilos Custom para imitar RegisterPage */
+.custom-input-look {
+  height: 44px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  padding: 0 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex !important;
+  align-items: center !important;
+}
+
+.custom-input-look:hover {
+  background: #ffffff;
+  border-color: #667eea;
+}
+
+.custom-input-look:focus-within {
+  background: #ffffff;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.custom-input-look :deep(.q-field__control) {
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+}
+
+.custom-input-look :deep(.q-field__native) {
+  min-height: 44px !important;
+  height: 44px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: normal;
+}
+
+.custom-input-look :deep(.q-field__prepend),
+.custom-input-look :deep(.q-field__append) {
+  height: 44px !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 8px !important;
+}
+
 /* Input container */
 .places-input-container {
   width: 100%;
