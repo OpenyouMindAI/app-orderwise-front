@@ -6,7 +6,7 @@
 
       <q-card-section class="celebration-content">
         <div class="celebration-icon">
-          <q-icon name="celebration" size="80px" color="primary" />
+          <q-icon name="celebration" size="80px" color="white" />
         </div>
 
         <div class="celebration-title">
@@ -40,18 +40,16 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDialogPluginComponent } from 'quasar'
 
 const router = useRouter()
-const { onDialogOK } = useDialogPluginComponent()
 
 const show = ref(true)
 const confettiCanvas = ref(null)
 let animationId = null
 
 const goToBilling = () => {
-  onDialogOK()
   router.push({ name: 'Billing' })
+  show.value = false
 }
 
 // Confetti animation
