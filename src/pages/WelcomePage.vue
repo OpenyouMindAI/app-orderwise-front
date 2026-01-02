@@ -58,13 +58,13 @@
           <q-icon name="rocket_launch" size="35px" class="logo-icon" />
         </div>
         <h1 class="welcome-title">Bienvenido</h1>
-        <p class="welcome-subtitle">Configura tu negocio en minutos</p>
+        <p class="welcome-subtitle q-pb-md">Configura tu negocio en minutos</p>
       </div>
 
       <!-- Progress Ring -->
       <div class="progress-section">
         <div class="progress-ring-container">
-          <svg class="progress-ring" width="160" height="160">
+          <svg class="progress-ring" width="160" height="160" style="overflow: visible;">
             <circle
               class="progress-ring-track"
               cx="80"
