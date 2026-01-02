@@ -1,8 +1,8 @@
 <template>
-  <button 
-    type="button" 
-    class="demo-google-btn" 
-    @click="handleGoogleRegister" 
+  <button
+    type="button"
+    class="demo-google-btn"
+    @click="handleGoogleRegister"
     :disabled="loading"
   >
     <q-spinner v-if="loading" color="grey-8" size="20px"/>
@@ -24,6 +24,7 @@ import { useRouter } from 'vue-router'
 import { authentication } from 'src/stores/module-authentication'
 import { notify } from 'src/const/mixins'
 import { api } from 'src/boot/axios'
+import { useFbq } from 'vue3-facebook-pixel'
 
 const router = useRouter()
 const store = authentication()
@@ -99,13 +100,7 @@ const handleGoogleRegister = async () => {
               name: userInfo.name,
               email: userInfo.email
             })
-
-            // Guardar sesión completa en el store
-            store.setSessionData(data)
-
             notify('Registro exitoso con Google', 'positive', 'check_circle')
-
-            // Emitir evento de éxito con datos del usuario
             emit('success', {
               user: data,
               userInfo,

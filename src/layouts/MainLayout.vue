@@ -912,7 +912,6 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
-// import { useFbq } from 'vue3-facebook-pixel'
 
 export default {
   name: 'MainLayout',
@@ -1116,7 +1115,6 @@ export default {
     showCreateCompanyDialog (val) {
       if (val) {
         this.loadBusinessTypes()
-        // Pre-llenar email con el del usuario
         this.companyData.business_type = this.userSession?.company_session?.business_type
         if (this.userSession?.email) {
           this.companyData.company_email = this.userSession.email
@@ -1173,10 +1171,8 @@ export default {
   },
   setup () {
     const router = useRouter()
-    const route = useRoute()
     return {
-      router,
-      route
+      router
     }
   },
   mounted () {
@@ -1296,8 +1292,6 @@ export default {
      * Handle Google register success
      */
     handleGoogleRegisterSuccess (data) {
-      // const fbq = useFbq()
-      // fbq.event('Purchase', data)
       if (data.needsCompanySetup) {
         this.companyData.company_email = data.userInfo.email
       } else {
