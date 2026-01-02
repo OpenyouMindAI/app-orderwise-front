@@ -158,7 +158,7 @@
                   :label="client?.name || 'Cliente'"
                   label-position="left"
                 >
-                  <q-popup-proxy @before-show="loadClientsData()" v-model="mobileMenuState.clientOpen">
+                  <q-popup-proxy @before-show="loadClientsData()" v-model="clientMenuOpen">
                     <q-card class="fab-popup-card">
                       <q-card-section class="fab-popup-header">
                         <div class="text-h6">Seleccionar Cliente</div>
@@ -228,7 +228,7 @@
                 direction="down"
                 padding="sm"
                 vertical-actions-align="right"
-                v-model="mobileMenuState.centerFabOpen"
+                v-model="centerFabOpen"
               >
                 <!-- FAB Tipo de Factura -->
                 <q-fab-action
@@ -364,7 +364,7 @@
                 direction="down"
                 padding="sm"
                 vertical-actions-align="right"
-                v-model="mobileMenuState.rightFabOpen"
+                v-model="rightFabOpen"
               >
                 <q-fab-action
                   color="primary"
@@ -1675,11 +1675,7 @@ export default {
       // Tour System
       tourStore,
       LOCAL,
-      mobileMenuState: {
-        clientOpen: false,
-        centerFabOpen: false,
-        rightFabOpen: false
-      },
+      activeMobileMenu: null, // 'client', 'center', 'right' or null
       showTour: false,
       currentTourStep: 0,
       tourSteps: [
@@ -2331,27 +2327,34 @@ export default {
       return emptySpaces === productsPerRow ? productsPerRow : emptySpaces
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
-    ...mapState(useCommandStore, ['setInvoice'])
+    ...mapState(useCommandStore, ['setInvoice']),
+    clientMenuOpen: {
+      get () {
+        return this.activeMobileMenu === 'client'
+      },
+      set (val) {
+        this.activeMobileMenu = val ? 'client' : null
+      }
+    },
+    centerFabOpen: {
+      get () {
+        return this.activeMobileMenu === 'center'
+      },
+      set (val) {
+        this.activeMobileMenu = val ? 'center' : null
+      }
+    },
+    rightFabOpen: {
+      get () {
+        return this.activeMobileMenu === 'right'
+      },
+      set (val) {
+        this.activeMobileMenu = val ? 'right' : null
+      }
+    }
   },
   watch: {
-    'mobileMenuState.clientOpen' (val) {
-      if (val) {
-        this.mobileMenuState.centerFabOpen = false
-        this.mobileMenuState.rightFabOpen = false
-      }
-    },
-    'mobileMenuState.centerFabOpen' (val) {
-      if (val) {
-        this.mobileMenuState.clientOpen = false
-        this.mobileMenuState.rightFabOpen = false
-      }
-    },
-    'mobileMenuState.rightFabOpen' (val) {
-      if (val) {
-        this.mobileMenuState.clientOpen = false
-        this.mobileMenuState.centerFabOpen = false
-      }
-    },
+
     client (client) {
       this.invoiceShare = { ...this.invoiceShare, client }
       // Actualizar la dirección cuando se selecciona un cliente
