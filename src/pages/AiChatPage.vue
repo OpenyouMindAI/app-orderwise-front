@@ -29,7 +29,7 @@
             <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
               <q-spinner color="primary" size="40px" />
             </div>
-            
+
             <div v-else-if="chats.length === 0" class="empty-state">
               <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
               <div class="empty-text">No hay conversaciones</div>
@@ -42,45 +42,54 @@
               />
             </div>
 
-            <q-list v-else>
-              <q-item
+            <div v-else class="chats-list-wrapper">
+              <div
                 v-for="chat in chats"
                 :key="chat.id"
-                clickable
-                v-ripple
-                :active="selectedChat?.id === chat.id"
+                class="chat-item-wrapper"
+                :class="{ 'active': selectedChat?.id === chat.id }"
                 @click="selectChat(chat)"
-                class="chat-item"
               >
-                <q-item-section avatar>
-                  <q-avatar color="primary" text-color="white">
-                    <q-icon name="smart_toy" />
-                  </q-avatar>
-                </q-item-section>
-
-                <q-item-section>
-                  <q-item-label class="chat-title">{{ chat.title || 'Nueva conversación' }}</q-item-label>
-                  <q-item-label caption lines="1" class="chat-preview">
-                    {{ chat.last_message?.content || 'Sin mensajes' }}
-                  </q-item-label>
-                </q-item-section>
-
-                <q-item-section side>
-                  <q-item-label caption>{{ formatDate(chat.last_message_at) }}</q-item-label>
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    size="sm"
-                    icon="delete"
-                    color="negative"
-                    @click.stop="deleteChat(chat)"
-                  >
-                    <q-tooltip>Eliminar</q-tooltip>
-                  </q-btn>
-                </q-item-section>
-              </q-item>
-            </q-list>
+                <div class="chat-item-content">
+                  <div class="chat-avatar">
+                    <q-avatar size="49px" color="primary" text-color="white">
+                      <q-icon name="smart_toy" size="24px" />
+                    </q-avatar>
+                  </div>
+                  <div class="chat-info">
+                    <div class="chat-header-row">
+                      <div class="chat-title">{{ chat.title || 'Nueva conversación' }}</div>
+                    </div>
+                    <div class="chat-preview">{{ truncateMessage(chat.last_message?.content) || 'Sin mensajes' }}</div>
+                  </div>
+                  <div class="chat-meta">
+                    <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
+                    <div class="chat-actions" @click.stop>
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        size="sm"
+                        icon="expand_more"
+                        color="grey-6"
+                        class="menu-btn"
+                      >
+                        <q-menu>
+                          <q-list>
+                            <q-item clickable v-close-popup @click="deleteChat(chat)">
+                              <q-item-section avatar>
+                                <q-icon name="delete" color="negative" />
+                              </q-item-section>
+                              <q-item-section>Eliminar</q-item-section>
+                            </q-item>
+                          </q-list>
+                        </q-menu>
+                      </q-btn>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </q-scroll-area>
         </div>
       </div>
@@ -142,7 +151,7 @@
                   <div class="message-bubble">
                     <div class="message-content" v-html="formatMessage(message.content)"></div>
                     <div class="message-time">{{ formatTime(message.created_at) }}</div>
-                    
+
                     <!-- Mostrar tutoriales si existen -->
                     <div v-if="message.metadata?.tutorials?.length > 0" class="tutorials-section">
                       <div class="tutorials-title">
@@ -174,37 +183,30 @@
             </q-scroll-area>
           </div>
 
-          <!-- Input de mensaje -->
-          <div class="message-input-container">
-            <q-input
-              v-model="newMessage"
-              outlined
-              placeholder="Escribe tu mensaje..."
-              class="message-input"
-              @keyup.enter="sendMessage"
-              :disable="isTyping"
-              autogrow
-              :max-height="100"
-            >
-              <template v-slot:prepend>
-                <q-icon name="sentiment_satisfied_alt" class="cursor-pointer" color="grey-6">
-                  <q-menu>
-                    <div class="q-pa-md">Emojis próximamente</div>
-                  </q-menu>
-                </q-icon>
-              </template>
-              <template v-slot:append>
-                <q-btn
-                  round
-                  dense
-                  flat
-                  icon="send"
-                  color="primary"
-                  @click="sendMessage"
-                  :disable="!newMessage.trim() || isTyping"
-                />
-              </template>
-            </q-input>
+          <div class="q-pa-md">
+            <div class="input-wrapper">
+              <div class="input-field">
+                <q-input
+                  v-model="newMessage"
+                  placeholder="Escribe un mensaje"
+                  filled
+                  autogrow
+                  @keyup.enter.exact="sendMessage"
+                >
+                  <template v-slot:append>
+                    <q-btn
+                      round
+                      icon="send"
+                      size="md"
+                      style="border-radius: 100px;"
+                      color="primary"
+                      @click="sendMessage"
+                      :disable="!newMessage.trim() || isTyping"
+                    />
+                  </template>
+                </q-input>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -242,7 +244,7 @@ import { es } from 'date-fns/locale'
 
 export default {
   name: 'AiChatPage',
-  data() {
+  data () {
     return {
       chats: [],
       selectedChat: null,
@@ -256,15 +258,15 @@ export default {
   },
   computed: {
     ...mapState(authentication, ['userSession']),
-    currentCompany() {
+    currentCompany () {
       return this.userSession?.company_session
     }
   },
-  mounted() {
+  mounted () {
     this.loadChats()
   },
   methods: {
-    async loadChats() {
+    async loadChats () {
       this.loading = true
       try {
         const { data } = await api.get('ai-chats', {
@@ -282,7 +284,7 @@ export default {
       }
     },
 
-    async selectChat(chat) {
+    async selectChat (chat) {
       this.selectedChat = chat
       this.loading = true
       try {
@@ -301,7 +303,7 @@ export default {
       }
     },
 
-    createNewChat() {
+    createNewChat () {
       if (!this.currentCompany) {
         this.$q.notify({
           type: 'warning',
@@ -327,7 +329,7 @@ export default {
         try {
           const { data } = await api.post('ai-chats', {
             company_id: this.currentCompany.id,
-            message: message
+            message
           })
 
           this.chats.unshift(data)
@@ -353,7 +355,7 @@ export default {
       })
     },
 
-    async sendMessage() {
+    async sendMessage () {
       if (!this.newMessage.trim() || this.isTyping) return
 
       const messageText = this.newMessage
@@ -392,7 +394,6 @@ export default {
 
         await this.$nextTick()
         this.scrollToBottom()
-
       } catch (error) {
         console.error('Error sending message:', error)
         this.$q.notify({
@@ -405,7 +406,7 @@ export default {
       }
     },
 
-    deleteChat(chat) {
+    deleteChat (chat) {
       this.$q.dialog({
         title: 'Confirmar',
         message: '¿Estás seguro de eliminar esta conversación?',
@@ -435,12 +436,12 @@ export default {
       })
     },
 
-    openTutorial(tutorial) {
+    openTutorial (tutorial) {
       this.selectedTutorial = tutorial
       this.showTutorialDialog = true
     },
 
-    formatMessage(content) {
+    formatMessage (content) {
       if (!content) return ''
 
       let formatted = content.replace(
@@ -453,17 +454,17 @@ export default {
       return formatted
     },
 
-    formatDate(date) {
+    formatDate (date) {
       if (!date) return ''
       return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
     },
 
-    formatTime(date) {
+    formatTime (date) {
       if (!date) return ''
       return format(new Date(date), 'HH:mm', { locale: es })
     },
 
-    scrollToBottom() {
+    scrollToBottom () {
       const container = this.$refs.messagesContainer
       if (container) {
         const scrollArea = container.querySelector('.q-scrollarea__container')
@@ -473,8 +474,15 @@ export default {
       }
     },
 
-    getVideoUrl(path) {
+    getVideoUrl (path) {
       return `${process.env.VUE_APP_API_URL}/storage/${path}`
+    },
+
+    truncateMessage (message) {
+      if (!message) return ''
+      const maxLength = 29
+      if (message.length <= maxLength) return message
+      return message.substring(0, maxLength) + '...'
     }
   }
 }
@@ -482,23 +490,23 @@ export default {
 
 <style lang="scss" scoped>
 .ai-chat-page {
-  height: calc(100vh - 50px);
+  height: calc(100vh - 60px);
   overflow: hidden;
 }
 
 .chat-container {
   display: flex;
   height: 100%;
-  background: #fff;
+  background: var(--q-page);
 }
 
 // Sidebar
 .chat-sidebar {
   width: 380px;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
+  background: white;
 
   @media (max-width: 1023px) {
     width: 100%;
@@ -511,12 +519,13 @@ export default {
 }
 
 .sidebar-header {
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 16px;
+  background: var(--q-primary);
   color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 60px;
 }
 
 .header-content {
@@ -531,27 +540,38 @@ export default {
 }
 
 .header-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
 }
 
 .header-subtitle {
-  font-size: 12px;
-  opacity: 0.9;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .new-chat-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
   color: white;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
   }
 }
 
 .chat-list {
   flex: 1;
   overflow: hidden;
+  background: white;
+}
+
+.body--dark .chat-sidebar {
+  background: #1e1e1e;
+  border-right-color: rgba(255, 255, 255, 0.12);
+}
+
+.body--dark .chat-list {
+  background: #1e1e1e;
 }
 
 .empty-state {
@@ -566,32 +586,115 @@ export default {
 .empty-text {
   margin-top: 16px;
   font-size: 16px;
-  color: #666;
+  color: var(--q-secondary);
   margin-bottom: 16px;
 }
 
-.chat-item {
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 0.2s;
+.chats-list-wrapper {
+  padding: 0;
+}
+
+.chat-item-wrapper {
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
   &:hover {
-    background: #f5f5f5;
+    background: rgba(0, 0, 0, 0.04);
   }
 
-  &.q-item--active {
-    background: #e3f2fd;
-    border-left: 3px solid #1976d2;
+  &.active {
+    background: rgba(var(--q-primary-rgb), 0.08);
   }
+}
+
+.body--dark .chat-item-wrapper {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active {
+    background: rgba(var(--q-primary-rgb), 0.15);
+  }
+}
+
+.chat-item-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+  position: relative;
+}
+
+.chat-avatar {
+  flex-shrink: 0;
+}
+
+.chat-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chat-header-row {
+  display: flex;
+  align-items: center;
 }
 
 .chat-title {
-  font-weight: 500;
-  font-size: 15px;
+  font-weight: 400;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.chat-time {
+  font-size: 12px;
+  opacity: 0.6;
+  white-space: nowrap;
 }
 
 .chat-preview {
-  color: #666;
-  font-size: 13px;
+  opacity: 0.7;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 20px;
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .menu-btn {
+    opacity: 0.6;
+    transition: all 0.2s;
+
+    &:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+}
+
+.body--dark .chat-actions .menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 // Main chat area
@@ -599,7 +702,11 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: #f0f2f5;
+}
+
+.body--dark .chat-main {
+  background: #0b141a;
 
   @media (max-width: 1023px) {
     width: 100%;
@@ -622,14 +729,13 @@ export default {
 
 .empty-title {
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 400;
   margin-top: 24px;
-  color: #333;
 }
 
 .empty-subtitle {
   font-size: 16px;
-  color: #666;
+  opacity: 0.7;
   margin-top: 12px;
   max-width: 500px;
   line-height: 1.6;
@@ -642,27 +748,34 @@ export default {
 }
 
 .chat-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #fff;
+  background: white;
+  min-height: 60px;
+}
+
+.body--dark .chat-header {
+  background: #202c33;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .header-info {
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
 .chat-name {
-  font-weight: 600;
+  font-weight: 500;
   font-size: 16px;
 }
 
 .chat-status {
-  font-size: 12px;
-  color: #666;
+  font-size: 13px;
+  opacity: 0.7;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -671,25 +784,50 @@ export default {
 .messages-container {
   flex: 1;
   overflow: hidden;
-  background: #f5f5f5;
+  position: relative;
+  background: #e5ddd5;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M25 25 L75 25 L50 75 Z" fill="%23000000" opacity="0.04"/></svg>');
+    background-repeat: repeat;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+}
+
+.body--dark .messages-container {
+  background: #0b141a;
+
+  &::before {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M25 25 L75 25 L50 75 Z" fill="%23ffffff" opacity="0.03"/></svg>');
+  }
 }
 
 .messages-list {
-  padding: 24px;
+  padding: 20px;
   min-height: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .message-wrapper {
   display: flex;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 
   &.user-message {
     justify-content: flex-end;
 
     .message-bubble {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--q-primary);
       color: white;
-      border-radius: 18px 18px 4px 18px;
+      border-radius: 7.5px 7.5px 0 7.5px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -698,17 +836,29 @@ export default {
 
     .message-bubble {
       background: white;
-      color: #333;
-      border-radius: 18px 18px 18px 4px;
+      color: #000;
+      border-radius: 7.5px 7.5px 7.5px 0;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
   }
 }
 
+.body--dark .message-wrapper {
+  &.assistant-message .message-bubble {
+    background: #202c33;
+    color: #e9edef;
+  }
+
+  &.user-message .message-bubble {
+    color: white;
+  }
+}
+
 .message-bubble {
-  max-width: 70%;
-  padding: 12px 16px;
+  max-width: 65%;
+  padding: 6px 7px 8px 9px;
   word-wrap: break-word;
+  position: relative;
 
   @media (max-width: 768px) {
     max-width: 85%;
@@ -716,62 +866,61 @@ export default {
 }
 
 .message-content {
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 14.2px;
+  line-height: 19px;
 
   :deep(a.message-link) {
-    color: inherit;
-    text-decoration: underline;
+    color: var(--q-accent);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 }
 
 .message-time {
   font-size: 11px;
-  margin-top: 6px;
+  margin-top: 4px;
   opacity: 0.7;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
 }
 
 .tutorials-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.assistant-message .tutorials-section {
-  border-top-color: rgba(0, 0, 0, 0.1);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .tutorials-title {
   font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 500;
+  margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 6px;
+  opacity: 0.8;
 }
 
 .tutorial-item {
-  padding: 8px;
-  margin-top: 6px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   transition: background 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.1);
-  }
-}
-
-.user-message .tutorial-item {
-  background: rgba(255, 255, 255, 0.2);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -779,13 +928,17 @@ export default {
 .typing-indicator {
   display: flex;
   gap: 4px;
-  padding: 16px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 7.5px 7.5px 7.5px 0;
+  width: fit-content;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 
   span {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #999;
+    background: rgba(0, 0, 0, 0.4);
     animation: typing 1.4s infinite;
 
     &:nth-child(2) {
@@ -801,24 +954,89 @@ export default {
 @keyframes typing {
   0%, 60%, 100% {
     transform: translateY(0);
-    opacity: 0.7;
+    opacity: 0.5;
   }
   30% {
-    transform: translateY(-10px);
+    transform: translateY(-4px);
     opacity: 1;
   }
 }
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
 
-// Message input
-.message-input-container {
-  padding: 16px 24px;
-  background: #fff;
-  border-top: 1px solid #e0e0e0;
+.attach-btn {
+  opacity: 0.6;
+  margin-bottom: 4px;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.body--dark .attach-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.input-field {
+  flex: 1;
 }
 
 .message-input {
   :deep(.q-field__control) {
-    border-radius: 24px;
+    border-radius: 8px;
+    background: #f0f2f5;
+    min-height: 42px;
+
+    &::before {
+      border: none;
+    }
+
+    &::after {
+      border: none;
+    }
+  }
+
+  :deep(.q-field__native) {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+}
+
+.body--dark .message-input {
+  :deep(.q-field__control) {
+    background: #b4b9bc;
+  }
+
+  :deep(.q-field__native) {
+    color: #e9edef;
+  }
+
+  :deep(.q-field__control-container) {
+    padding: 0;
+  }
+}
+
+.send-btn {
+  background: var(--q-primary);
+  color: white;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 4px;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+
+  :deep(.q-icon) {
+    font-size: 20px;
   }
 }
 </style>

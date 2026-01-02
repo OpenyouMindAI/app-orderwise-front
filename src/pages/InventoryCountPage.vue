@@ -694,200 +694,200 @@
     </q-dialog>
 
     <!-- Report Detail Dialog -->
-  <q-dialog v-model="showReportDetail" maximized transition-show="slide-up" transition-hide="slide-down">
-    <q-card class="column no-wrap">
-      <!-- Modern Header -->
-      <q-card-section class="row items-center q-pa-md bg-primary text-white">
-        <q-btn
-          icon="arrow_back"
-          flat
-          round
-          dense
-          v-close-popup
-          class="q-mr-sm"
-        />
-        <div class="text-h6 text-weight-medium">Detalle del Conteo</div>
-        <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
-      </q-card-section>
+    <q-dialog v-model="showReportDetail" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="column no-wrap">
+        <!-- Modern Header -->
+        <q-card-section class="row items-center q-pa-md bg-primary text-white">
+          <q-btn
+            icon="arrow_back"
+            flat
+            round
+            dense
+            v-close-popup
+            class="q-mr-sm"
+          />
+          <div class="text-h6 text-weight-medium">Detalle del Conteo</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
 
-      <!-- Scrollable Content -->
-      <q-card-section class="col scroll q-pa-none">
-        <div class="q-pa-md q-gutter-md">
+        <!-- Scrollable Content -->
+        <q-card-section class="col scroll q-pa-none">
+          <div class="q-pa-md q-gutter-md">
 
-          <!-- Report Info Card -->
-          <q-card flat bordered class="rounded-borders">
-            <q-card-section class="q-pa-md">
-              <div class="text-subtitle1 text-weight-medium q-mb-md text-grey-8">
-                <q-icon name="info" class="q-mr-xs" />
-                Información del Reporte
-              </div>
-
-              <div class="row q-gutter-md">
-                <div class="col-12 col-sm-6">
-                  <div class="text-caption text-grey-6 q-mb-xs">Usuario</div>
-                  <div class="text-body1 text-weight-medium">{{ selectedReport?.user?.name }}</div>
-                </div>
-
-                <div class="col-12 col-sm-6" v-if="userSession.is_root">
-                  <div class="text-caption text-grey-6 q-mb-xs">Desviaciones</div>
-                  <div class="row q-gutter-xs">
-                    <q-chip
-                      color="positive"
-                      text-color="white"
-                      size="sm"
-                      icon="trending_up"
-                    >
-                      +{{ selectedReport?.positive_deviations || 0 }}
-                    </q-chip>
-                    <q-chip
-                      color="negative"
-                      text-color="white"
-                      size="sm"
-                      icon="trending_down"
-                    >
-                      -{{ selectedReport?.negative_deviations || 0 }}
-                    </q-chip>
-                  </div>
-                </div>
-
-                <div class="col-12">
-                  <div class="text-caption text-grey-6 q-mb-xs">Fecha</div>
-                  <div class="text-body1 text-weight-medium">{{ formatDate(selectedReport?.created_at) }}</div>
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-
-          <!-- Detail Filters Card -->
-          <q-card flat bordered class="rounded-borders" v-if="userSession.is_root">
-            <q-expansion-item
-              v-model="showDetailFilters"
-              icon="tune"
-              label="Filtros de Detalle"
-              header-class="text-subtitle1 text-weight-medium text-grey-8 q-pa-md"
-              expand-icon-class="text-grey-6"
-            >
-              <q-separator />
+            <!-- Report Info Card -->
+            <q-card flat bordered class="rounded-borders">
               <q-card-section class="q-pa-md">
-                <div class="row q-col-gutter-md">
-                  <div class="col-12 col-md-4">
-                    <q-select
-                      v-model="detailFilters.deviationType"
-                      :options="deviationOptions"
-                      label="Tipo de Desviación"
-                      outlined
-                      dense
-                      clearable
-                      color="primary"
-                    />
+                <div class="text-subtitle1 text-weight-medium q-mb-md text-grey-8">
+                  <q-icon name="info" class="q-mr-xs" />
+                  Información del Reporte
+                </div>
+
+                <div class="row q-gutter-md">
+                  <div class="col-12 col-sm-6">
+                    <div class="text-caption text-grey-6 q-mb-xs">Usuario</div>
+                    <div class="text-body1 text-weight-medium">{{ selectedReport?.user?.name }}</div>
                   </div>
-                  <div class="col-12 col-md-4">
-                    <q-input
-                      v-model="detailFilters.productName"
-                      label="Nombre del Producto"
-                      outlined
-                      dense
-                      clearable
-                      color="primary"
-                    />
+
+                  <div class="col-12 col-sm-6" v-if="userSession.is_root">
+                    <div class="text-caption text-grey-6 q-mb-xs">Desviaciones</div>
+                    <div class="row q-gutter-xs">
+                      <q-chip
+                        color="positive"
+                        text-color="white"
+                        size="sm"
+                        icon="trending_up"
+                      >
+                        +{{ selectedReport?.positive_deviations || 0 }}
+                      </q-chip>
+                      <q-chip
+                        color="negative"
+                        text-color="white"
+                        size="sm"
+                        icon="trending_down"
+                      >
+                        -{{ selectedReport?.negative_deviations || 0 }}
+                      </q-chip>
+                    </div>
                   </div>
-                  <div class="col-12 col-md-4">
-                    <q-input
-                      v-model="detailFilters.barcode"
-                      label="Código de Barras"
-                      outlined
-                      dense
-                      clearable
-                      color="primary"
-                    />
+
+                  <div class="col-12">
+                    <div class="text-caption text-grey-6 q-mb-xs">Fecha</div>
+                    <div class="text-body1 text-weight-medium">{{ formatDate(selectedReport?.created_at) }}</div>
                   </div>
                 </div>
               </q-card-section>
-            </q-expansion-item>
-          </q-card>
+            </q-card>
 
-          <!-- Products List Card -->
-          <q-card flat bordered class="rounded-borders">
-            <q-card-section class="q-pa-md q-pb-sm">
-              <div class="row items-center">
-                <div class="text-subtitle1 text-weight-medium text-grey-8">
-                  <q-icon name="inventory_2" class="q-mr-xs" />
-                  Productos del Conteo
-                </div>
-                <q-space />
-                <q-badge color="primary" rounded>
-                  {{ filteredReportProducts.length }}
-                </q-badge>
-              </div>
-            </q-card-section>
-
-            <q-separator />
-
-            <!-- Products List -->
-            <div class="q-pa-none">
-              <q-virtual-scroll
-                :items="filteredReportProducts"
-                separator
-                v-slot="{ item: product, index }"
-                style="max-height: 60vh;"
+            <!-- Detail Filters Card -->
+            <q-card flat bordered class="rounded-borders" v-if="userSession.is_root">
+              <q-expansion-item
+                v-model="showDetailFilters"
+                icon="tune"
+                label="Filtros de Detalle"
+                header-class="text-subtitle1 text-weight-medium text-grey-8 q-pa-md"
+                expand-icon-class="text-grey-6"
               >
-                <q-item class="q-pa-md">
-                  <q-item-section avatar>
-                    <q-avatar
-                      :color="getDeviationColor(product)"
-                      text-color="white"
-                      size="md"
-                    >
-                      <q-icon :name="getDeviationIcon(product)" />
-                    </q-avatar>
-                  </q-item-section>
+                <q-separator />
+                <q-card-section class="q-pa-md">
+                  <div class="row q-col-gutter-md">
+                    <div class="col-12 col-md-4">
+                      <q-select
+                        v-model="detailFilters.deviationType"
+                        :options="deviationOptions"
+                        label="Tipo de Desviación"
+                        outlined
+                        dense
+                        clearable
+                        color="primary"
+                      />
+                    </div>
+                    <div class="col-12 col-md-4">
+                      <q-input
+                        v-model="detailFilters.productName"
+                        label="Nombre del Producto"
+                        outlined
+                        dense
+                        clearable
+                        color="primary"
+                      />
+                    </div>
+                    <div class="col-12 col-md-4">
+                      <q-input
+                        v-model="detailFilters.barcode"
+                        label="Código de Barras"
+                        outlined
+                        dense
+                        clearable
+                        color="primary"
+                      />
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-expansion-item>
+            </q-card>
 
-                  <q-item-section>
-                    <q-item-label class="text-body1 text-weight-medium">
-                      {{ product.product?.name }}
-                    </q-item-label>
-                    <q-item-label caption class="text-body2 text-grey-6">
-                      {{ product.product?.barcode }}
-                    </q-item-label>
-                    <q-item-label caption v-if="userSession.is_root" class="text-body2 q-mt-xs">
-                      <span class="text-grey-7">Stock: {{ product.current_stock }}</span>
-                      <span class="text-grey-7 q-mx-xs">•</span>
-                      <span class="text-grey-7">Contado: {{ product.quantity }}</span>
-                      <span class="q-mx-xs">•</span>
-                      <span :class="getDeviationTextClass(product)" class="text-weight-medium">
-                        {{ getDeviationText(product) }}
-                      </span>
-                      <span class="q-mx-xs">•</span>
-                      <span class="text-grey-7">Vendidos durante el conteo: {{ product.sales_during_count || 0 }}</span>
-                    </q-item-label>
-                  </q-item-section>
+            <!-- Products List Card -->
+            <q-card flat bordered class="rounded-borders">
+              <q-card-section class="q-pa-md q-pb-sm">
+                <div class="row items-center">
+                  <div class="text-subtitle1 text-weight-medium text-grey-8">
+                    <q-icon name="inventory_2" class="q-mr-xs" />
+                    Productos del Conteo
+                  </div>
+                  <q-space />
+                  <q-badge color="primary" rounded>
+                    {{ filteredReportProducts.length }}
+                  </q-badge>
+                </div>
+              </q-card-section>
 
-                  <q-item-section side>
-                    <q-chip
-                      :color="userSession.is_root ? getDeviationColor(product) : 'primary'"
-                      text-color="white"
-                      size="md"
-                    >
-                      {{ product.quantity }}
-                    </q-chip>
-                  </q-item-section>
-                </q-item>
-              </q-virtual-scroll>
+              <q-separator />
 
-              <!-- Empty State -->
-              <div v-if="filteredReportProducts.length === 0" class="text-center q-pa-xl">
-                <q-icon name="inventory_2" size="4rem" color="grey-4" />
-                <div class="text-h6 text-grey-6 q-mt-md">No hay productos</div>
-                <div class="text-body2 text-grey-5">No se encontraron productos con los filtros aplicados</div>
+              <!-- Products List -->
+              <div class="q-pa-none">
+                <q-virtual-scroll
+                  :items="filteredReportProducts"
+                  separator
+                  v-slot="{ item: product, index }"
+                  style="max-height: 60vh;"
+                >
+                  <q-item class="q-pa-md">
+                    <q-item-section avatar>
+                      <q-avatar
+                        :color="getDeviationColor(product)"
+                        text-color="white"
+                        size="md"
+                      >
+                        <q-icon :name="getDeviationIcon(product)" />
+                      </q-avatar>
+                    </q-item-section>
+
+                    <q-item-section>
+                      <q-item-label class="text-body1 text-weight-medium">
+                        {{ product.product?.name }}
+                      </q-item-label>
+                      <q-item-label caption class="text-body2 text-grey-6">
+                        {{ product.product?.barcode }}
+                      </q-item-label>
+                      <q-item-label caption v-if="userSession.is_root" class="text-body2 q-mt-xs">
+                        <span class="text-grey-7">Stock: {{ product.current_stock }}</span>
+                        <span class="text-grey-7 q-mx-xs">•</span>
+                        <span class="text-grey-7">Contado: {{ product.quantity }}</span>
+                        <span class="q-mx-xs">•</span>
+                        <span :class="getDeviationTextClass(product)" class="text-weight-medium">
+                          {{ getDeviationText(product) }}
+                        </span>
+                        <span class="q-mx-xs">•</span>
+                        <span class="text-grey-7">Vendidos durante el conteo: {{ product.sales_during_count || 0 }}</span>
+                      </q-item-label>
+                    </q-item-section>
+
+                    <q-item-section side>
+                      <q-chip
+                        :color="userSession.is_root ? getDeviationColor(product) : 'primary'"
+                        text-color="white"
+                        size="md"
+                      >
+                        {{ product.quantity }}
+                      </q-chip>
+                    </q-item-section>
+                  </q-item>
+                </q-virtual-scroll>
+
+                <!-- Empty State -->
+                <div v-if="filteredReportProducts.length === 0" class="text-center q-pa-xl">
+                  <q-icon name="inventory_2" size="4rem" color="grey-4" />
+                  <div class="text-h6 text-grey-6 q-mt-md">No hay productos</div>
+                  <div class="text-body2 text-grey-5">No se encontraron productos con los filtros aplicados</div>
+                </div>
               </div>
-            </div>
-          </q-card>
+            </q-card>
 
-        </div>
-      </q-card-section>
-    </q-card>
-  </q-dialog>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
 
     <!-- Success notification -->
     <q-dialog v-model="showSuccess">
@@ -1100,9 +1100,9 @@ const initializeComponent = async () => {
       await getCountProducts()
     }
 
-    userSession.is_root = userSession.is_root || setPermissionsByUser(['SAM'])
+    const isRoot = userSession.is_root || setPermissionsByUser(['SAM'])
 
-    if (userSession.is_root) {
+    if (isRoot) {
       await loadUsers()
     }
   } catch (error) {
