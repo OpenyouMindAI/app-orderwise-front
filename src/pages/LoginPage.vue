@@ -15,7 +15,7 @@
       </div>
       <!-- Título -->
       <div class="header-section">
-        <span class="welcome-title">Bienvenido a</span>
+        <span class="welcome-title">Bienvenido</span>
         <p class="welcome-subtitle">Accede a tu cuenta para continuar</p>
       </div>
 
@@ -831,7 +831,7 @@ export default {
   z-index: 10;
   width: 90%;
   max-width: 440px;
-  padding: 24px 28px 20px;
+  padding: 14px 18px 12px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -1084,7 +1084,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 46px;
+  min-height: 46px;
   border: none;
   border-radius: 12px;
   font-size: 14px;
