@@ -158,7 +158,7 @@
                   :label="client?.name || 'Cliente'"
                   label-position="left"
                 >
-                  <q-popup-proxy @before-show="loadClientsData()">
+                  <q-popup-proxy @before-show="loadClientsData()" v-model="mobileMenuState.clientOpen">
                     <q-card class="fab-popup-card">
                       <q-card-section class="fab-popup-header">
                         <div class="text-h6">Seleccionar Cliente</div>
@@ -228,6 +228,7 @@
                 direction="down"
                 padding="sm"
                 vertical-actions-align="right"
+                v-model="mobileMenuState.centerFabOpen"
               >
                 <!-- FAB Tipo de Factura -->
                 <q-fab-action
@@ -363,6 +364,7 @@
                 direction="down"
                 padding="sm"
                 vertical-actions-align="right"
+                v-model="mobileMenuState.rightFabOpen"
               >
                 <q-fab-action
                   color="primary"
@@ -1673,6 +1675,11 @@ export default {
       // Tour System
       tourStore,
       LOCAL,
+      mobileMenuState: {
+        clientOpen: false,
+        centerFabOpen: false,
+        rightFabOpen: false
+      },
       showTour: false,
       currentTourStep: 0,
       tourSteps: [
@@ -2327,6 +2334,24 @@ export default {
     ...mapState(useCommandStore, ['setInvoice'])
   },
   watch: {
+    'mobileMenuState.clientOpen' (val) {
+      if (val) {
+        this.mobileMenuState.centerFabOpen = false
+        this.mobileMenuState.rightFabOpen = false
+      }
+    },
+    'mobileMenuState.centerFabOpen' (val) {
+      if (val) {
+        this.mobileMenuState.clientOpen = false
+        this.mobileMenuState.rightFabOpen = false
+      }
+    },
+    'mobileMenuState.rightFabOpen' (val) {
+      if (val) {
+        this.mobileMenuState.clientOpen = false
+        this.mobileMenuState.centerFabOpen = false
+      }
+    },
     client (client) {
       this.invoiceShare = { ...this.invoiceShare, client }
       // Actualizar la dirección cuando se selecciona un cliente
@@ -2498,6 +2523,7 @@ export default {
 
     this.debouncedSendInvoiceUpdate = debounce(this.sendInvoiceUpdate, 1000)
   },
+
   methods: {
     handleValidationAction () {
       if (this.validationType === 'category') {
