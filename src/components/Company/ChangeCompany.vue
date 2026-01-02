@@ -47,7 +47,7 @@
                 class="bg-grey"
                 >
                 <img
-                  :src="org.url || whiteLogo"
+                  :src="org.url"
                   class="company-logo"
                   style="height: 70px;" fit="contain"
                 />
@@ -141,7 +141,7 @@
 
         <q-card-section class="q-pt-lg">
           <div class="text-center q-mb-md bg-grey rounded-borders q-pa-md" style="max-height: 100px;">
-            <q-img :src="company.url || whiteLogo" class="full-width" style="height: 70px;" fit="contain"/>
+            <q-img :src="company.url" class="full-width" style="height: 70px;" fit="contain"/>
           </div>
 
           <q-form @submit="updateSession">
@@ -182,7 +182,6 @@ import { authentication } from 'src/stores/module-authentication'
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
-import { formatDate } from '../../const/mixins'
 
 const props = defineProps({
   companies: {
