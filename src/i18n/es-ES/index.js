@@ -2324,7 +2324,7 @@ export default {
     companyName: 'Nombre de la empresa',
     document: 'Documento',
     email: 'Correo electrónico',
-    users.phone_number: 'Teléfono',
+    'users.phone_number': 'Teléfono',
     address: 'Dirección',
     continue: 'Continuar',
     required: 'Requerido',

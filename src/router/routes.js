@@ -388,7 +388,7 @@ const routes = [
   },
   {
     path: '/',
-    component: () => import('layouts/OrderLayout.vue'),
+    component: () => import('layouts/MobileLayout.vue'),
     children: [
       {
         path: 'catalog/:company_id/:branch_office_id',

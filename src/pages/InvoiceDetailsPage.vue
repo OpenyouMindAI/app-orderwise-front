@@ -299,7 +299,6 @@ export default {
     this.initializeTheme()
 
     this.getInvoice()
-    this.getAllProducts()
     this.setInvoiceChannel(this.invoice)
   },
   beforeUnmount () {
@@ -354,13 +353,6 @@ export default {
       } catch (error) {
         console.error('Error al inicializar tema:', error)
       }
-    },
-    /**
-     * Get all products
-     * @param {Object} params params to search
-     */
-    getAllProducts () {
-      this.files = this.$companyConfig.files
     },
     /**
      * Set invoice data

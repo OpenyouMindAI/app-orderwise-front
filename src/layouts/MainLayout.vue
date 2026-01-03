@@ -179,124 +179,99 @@
             <q-tooltip class="text-body2">
               Herramientas
             </q-tooltip>
-            <q-popup-proxy>
-              <q-banner>
-                <div class="full-width text-center q-mb-xs">
-                  <span class="text-subtitle2">
-                    Herramientas
-                  </span>
+            <q-popup-proxy class="tools-popup">
+              <q-card flat class="tools-card">
+                <!-- Header -->
+                <div class="tools-header">
+                  <q-icon name="apps" size="20px" />
+                  <span class="tools-title">Herramientas</span>
                 </div>
-                <q-separator />
-                <div class="q-mt-sm">
-                  <q-btn
-                    icon="sync_alt"
-                    round
-                    flat
-                    :color="$route.name === 'ChangeCompany' ? 'secondary' : ''"
+
+                <!-- Tools Grid -->
+                <div class="tools-grid">
+                  <!-- Cambio de empresa -->
+                  <div
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'ChangeCompany' }"
                     @click="changeRoute('ChangeCompany', 'Cambio de empresa')"
                   >
-                    <q-tooltip> Cambio de empresa </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="store"
-                    round
-                    flat
-                  >
-                    <q-tooltip>
-                      {{ branchOffice?.name }}
-                    </q-tooltip>
-                    <q-menu>
-                      <q-list>
+                    <q-icon name="sync_alt" size="24px" />
+                    <span class="tool-label">Empresa</span>
+                  </div>
+
+                  <!-- Sucursal -->
+                  <div class="tool-item" v-if="branchOffices.length > 1">
+                    <q-icon name="store" size="24px" />
+                    <span class="tool-label">Sucursal</span>
+                    <q-menu anchor="bottom middle" self="top middle">
+                      <q-list dense class="branch-menu">
                         <q-item
-                          clickable
-                          v-ripple
                           v-for="bo in branchOffices"
                           :key="bo.id"
+                          clickable
+                          v-ripple
                           :active="bo.id === branchOffice?.id"
                           @click="changeBranchOffice(bo)"
                         >
-                          <q-item-section thumbnail class="q-pa-sm">
-                            <q-icon name="store" />
+                          <q-item-section avatar>
+                            <q-icon name="store" size="18px" />
                           </q-item-section>
                           <q-item-section>
-                            <q-item-label>
-                              {{ bo.name }}
-                            </q-item-label>
+                            <q-item-label class="text-caption">{{ bo.name }}</q-item-label>
                           </q-item-section>
                         </q-item>
                       </q-list>
                     </q-menu>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
-                    aria-label="dark_mode"
-                    @click="setTheme"
-                  >
-                    <q-tooltip :offset="[10, 10]">
-                      {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="share"
-                    round
-                    flat
-                    @click="copyCatalog"
-                  >
-                    <q-tooltip>
-                      Copiar link
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="update"
-                    flat
-                    round
-                    @click="update"
-                  />
-                  <q-btn
-                    icon="cable"
-                    flat
-                    round
-                    @click="openDialogArca"
-                  >
-                    <q-tooltip>
-                      Conectar con el ARCA
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="play_circle"
-                    round
-                    flat
-                    :color="$route.name === 'Tutorial' ? 'secondary' : ''"
+                  </div>
+
+                  <!-- Tema -->
+                  <div class="tool-item" @click="setTheme">
+                    <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" size="24px" />
+                    <span class="tool-label">Tema</span>
+                  </div>
+
+                  <div class="tool-item" @click="copyCatalog">
+                    <q-icon name="share" size="24px" />
+                    <span class="tool-label">Compartir</span>
+                  </div>
+
+                  <div class="tool-item" @click="update">
+                    <q-icon name="refresh" size="24px" />
+                    <span class="tool-label">Actualizar</span>
+                  </div>
+                  <div
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'Tutorial' }"
                     @click="changeRoute('Tutorial', 'Tutoriales')"
                   >
-                    <q-tooltip>
-                      Tutoriales
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    round
-                    flat
-                    icon="print"
+                    <q-icon name="play_circle" size="24px" />
+                    <span class="tool-label">Tutoriales</span>
+                  </div>
+                  <a
                     href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/printer_ui_win_0.19.zip"
                     target="_blank"
-                    type="a"
-                  />
-                  <q-btn
-                    round
-                    flat
-                    icon="android"
+                    class="tool-item tool-link"
+                  >
+                    <q-icon name="print" size="24px" />
+                    <span class="tool-label">Impresora</span>
+                  </a>
+                  <a
                     href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
                     target="_blank"
-                    type="a"
+                    class="tool-item tool-link"
                   >
-                    <q-tooltip class="text-body2">
-                      Actualizar app
-                    </q-tooltip>
-                  </q-btn>
+                    <q-icon name="android" size="24px" />
+                    <span class="tool-label">App</span>
+                  </a>
                 </div>
-              </q-banner>
+                <div class="tools-section">
+                  <div class="integrations-grid">
+                    <div class="integration-item" @click="openDialogArca">
+                      <img src="images/circle-arca.png" alt="ARCA" class="integration-logo" />
+                    </div>
+                  </div>
+                </div>
+              </q-card>
             </q-popup-proxy>
           </q-btn>
 
@@ -904,7 +879,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useThemeStore } from 'src/stores/themeStore'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1291,9 +1266,11 @@ export default {
     /**
      * Handle Google register success
      */
-    handleGoogleRegisterSuccess (data) {
+    async handleGoogleRegisterSuccess (data) {
       if (data.needsCompanySetup) {
+        await this.store.setSessionData(data.user)
         this.companyData.company_email = data.userInfo.email
+        this.showCreateCompanyDialog = true
       } else {
         this.closeCreateCompanyDialog()
       }
@@ -1429,12 +1406,8 @@ export default {
      */
     async loadBranchCount () {
       try {
-        const { data } = await api.get('branch-offices', {
-          params: { paginate: false }
-        })
-        const count = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+        const count = this.branchOffices.length
 
-        // Save to Pinia store
         this.store.setCurrentBranchCount(count)
       } catch (error) {
         console.error('Error loading branch count:', error)
@@ -1677,29 +1650,90 @@ export default {
     },
 
     async openDialogArca () {
-      if (this.userSession?.company_session?.billing) {
-        try {
-          loading(true)
+      try {
+        // Validación 2: Verificar que no sea cuenta demo
+        if (this.isDemo) {
+          notify('Crea una empresa real para acceder a las integraciones', 'info', 'info')
+          this.showCreateCompanyDialog = true
+          return
+        }
+
+        loading(true)
+
+        const hasApiAccess = await this.verifyApiAccess()
+
+        if (!hasApiAccess) {
+          notify('Tu plan actual no incluye acceso a integraciones. Actualiza tu plan.', 'warning', 'upgrade')
+          this.showSubscriptionDialog = true
+          return
+        }
+
+        // Validación 4: Verificar datos de facturación
+        if (!this.userSession?.company_session?.billing) {
+          const documentNumber = this.userSession?.company_session?.document_number
+          const userName = this.userSession?.name
+          const userEmail = this.userSession?.email
+
+          if (!documentNumber || !userName || !userEmail) {
+            notify('Datos de empresa incompletos. Contacta al administrador.', 'negative', 'error')
+            return
+          }
+
           const { data } = await this.$apiArca('companies', {
             params: {
               user: {
-                name: this.userSession.name,
-                email: this.userSession.email
+                name: userName,
+                email: userEmail
               },
-              document_number: this.userSession?.company_session?.document_number
+              document_number: documentNumber
             }
           })
+
+          // Validar respuesta
+          if (!data?.certificate_url || !data?.key_url) {
+            throw new Error('Respuesta inválida del servidor ARCA')
+          }
+
           this.download = {
             certificate_url: data.certificate_url,
             key_url: data.key_url
           }
-        } catch (error) {
-          notify(error.message, 'negative', 'warning')
-        } finally {
-          loading(false)
+
+          // Abrir diálogo solo si todo fue exitoso
+          this.arcaDialog = true
         }
+      } catch (error) {
+        this.arcaDialog = true
+      } finally {
+        loading(false)
       }
-      this.arcaDialog = true
+    },
+
+    /**
+     * Verificar acceso a API desde el backend (no confiar en localStorage)
+     */
+    async verifyApiAccess () {
+      try {
+        // Llamar al backend para verificar la suscripción actual
+        const { data } = await this.$api.get('subscriptions/current')
+
+        // Actualizar el store con datos verificados del backend
+        if (data.subscription) {
+          this.store.currentSubscription = data.subscription
+          this.store.subscriptionPlan = data.subscription.plan?.name
+          this.store.subscriptionDaysLeft = data.days_left
+          this.store.maxBranches = data.subscription.plan?.max_branches || 1
+
+          // Retornar si tiene acceso a API
+          return data.subscription.plan?.has_api_access === true
+        }
+
+        return false
+      } catch (error) {
+        console.error('[Subscription] Verification error:', error)
+        // En caso de error, denegar acceso por seguridad
+        return false
+      }
     },
     /**
      * Get all products
@@ -1714,11 +1748,9 @@ export default {
         })
         .then(({ data }) => {
           this.modules = data
-          localStorage.setItem('sections', JSON.stringify(this.modules))
         })
         .catch((err) => {
           console.log(err)
-          this.modules = JSON.parse(localStorage.getItem('sections'))
         })
     },
     /**
@@ -1826,8 +1858,6 @@ export default {
      */
     loadingPage () {
       this.$q.dark.set(this.darkMode)
-      // Inicializar tema
-      this.initializeTheme()
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
@@ -1878,17 +1908,6 @@ export default {
      */
     openOnboardingTour () {
       this.$router.push({ name: 'Welcome' })
-    },
-    /**
-     * Inicializar sistema de temas
-     */
-    initializeTheme () {
-      try {
-        const themeStore = useThemeStore()
-        themeStore.initTheme()
-      } catch (error) {
-        console.error('❌ Error al inicializar tema:', error)
-      }
     },
     /**
      * Change route
@@ -3065,6 +3084,207 @@ export default {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Tools Popup Styles */
+.tools-card {
+  min-width: 280px;
+  max-width: 320px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+body.body--dark .tools-card {
+  background: rgba(30, 30, 30, 0.98);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.tools-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
+  color: white;
+}
+
+.tools-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 16px;
+}
+
+.tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.1);
+    transform: translateY(-2px);
+  }
+
+  &.tool-active {
+    background: rgba(var(--q-primary-rgb), 0.15);
+    color: var(--q-primary);
+
+    .q-icon {
+      color: var(--q-primary);
+    }
+  }
+
+  .q-icon {
+    color: #374151;
+    transition: color 0.3s ease;
+  }
+}
+
+body.body--dark .tool-item {
+  background: rgba(255, 255, 255, 0.05);
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.2);
+  }
+
+  &.tool-active {
+    background: rgba(var(--q-primary-rgb), 0.25);
+  }
+
+  .q-icon {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.tool-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+  opacity: 0.8;
+}
+
+.branch-menu {
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tools-section {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 6px 16px;
+}
+
+body.body--dark .tools-section {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  opacity: 0.7;
+}
+
+.integrations-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.integration-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+body.body--dark .integration-item {
+  background: rgba(255, 255, 255, 0.05);
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.2);
+  }
+}
+
+.integration-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.integration-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .tools-card {
+    min-width: 260px;
+    max-width: 280px;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .tool-item {
+    padding: 10px 6px;
+    gap: 4px;
+  }
+
+  .tool-label {
+    font-size: 10px;
+  }
+
+  .tools-section {
+    padding: 12px;
   }
 }
 </style>

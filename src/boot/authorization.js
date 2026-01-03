@@ -66,26 +66,21 @@ const modeleExcept = ['Profile', 'ChangeCompany', 'VerifySession']
 let isHandling401 = false
 
 export default boot(async ({ router, store }) => {
-  // Register interceptor ONCE, outside of beforeEach
   api.interceptors.response.use(null, async (error) => {
     const $store = authentication()
 
-    // Prevent multiple 401 handling
     if (error.response?.status === 401 && !isHandling401) {
       isHandling401 = true
-      console.warn('⚠️ Error 401: No autorizado - Token inválido o expirado')
       notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
 
-      // Use forceLogout to avoid backend call (token already invalid)
       await $store.forceLogout()
+
       router.push('/login')
 
-      // Reset flag after delay
       setTimeout(() => {
         isHandling401 = false
       }, 2000)
     } else if (error.response?.status === 403) {
-      console.error('Acceso denegado: ', error.response)
       notify('No tienes permisos para acceder a este recurso', 'negative', 'warning')
     }
     return Promise.reject(error)
@@ -97,22 +92,17 @@ export default boot(async ({ router, store }) => {
       const requiresAuth = to.matched.some(
         (record) => record.meta.requiresAuth
       )
+
       const validation = await $store.initStore()
 
-      // Validate token expiration and session status
       if (requiresAuth && !validation) {
         const tokenExpired = isTokenExpired($store)
         if (tokenExpired) {
-          console.warn('⚠️ Token de sesión vencido o inactivo')
           notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
           await $store.forceLogout()
           return next('/login')
         }
       }
-
-      api.defaults.headers.common.authorization = `${$store?.token_type} ${$store?.access_token}`
-      apiQPay.defaults.headers.common['X-Company-Token'] = $store?.userSession?.company_session?.company_config?.other?.qpay_id
-      apiArca.defaults.headers.common['X-Company-External-Id'] = $store?.userSession?.company_session?.document_number
       if (requiresAuth) {
         if (validation) return next('/login')
         if ($store?.userSession?.is_root) return next()

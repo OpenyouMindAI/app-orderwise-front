@@ -75,6 +75,7 @@ async function connectSession (store) {
     const fingerprint = generateFingerprint()
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
+    console.log(store.access_token)
     const { data } = await api.post('user-sessions/connect', {
       fingerprint,
       timezone
@@ -85,14 +86,8 @@ async function connectSession (store) {
       localStorage.setItem('session_uuid', sessionUuid)
       isConnected = true
       currentStatus = 'online'
-
-      // Start heartbeat
       startHeartbeat()
-
-      // Setup idle detection
       setupIdleDetection()
-
-      console.log('[SessionTracking] Connected:', sessionUuid)
     }
   } catch (error) {
     console.error('[SessionTracking] Connection error:', error)
@@ -162,14 +157,24 @@ async function updateStatus (status) {
  * Send heartbeat
  */
 async function sendHeartbeat () {
-  if (!isConnected || !sessionUuid) return
+  const store = authentication()
+
+  // Validar que haya sesión activa antes de enviar heartbeat
+  if (!isConnected || !sessionUuid || !store.access_token) {
+    // Si no hay sesión activa, detener el heartbeat
+    stopHeartbeat()
+    return
+  }
 
   try {
     await api.post('user-sessions/heartbeat', {
       session_uuid: sessionUuid
     })
   } catch (error) {
-    // Silent fail
+    // Si hay error 401, detener heartbeat
+    if (error.response?.status === 401) {
+      stopHeartbeat()
+    }
   }
 }
 
@@ -177,6 +182,13 @@ async function sendHeartbeat () {
  * Start heartbeat interval
  */
 function startHeartbeat () {
+  const store = authentication()
+
+  // Solo iniciar heartbeat si hay sesión activa
+  if (!isConnected || !sessionUuid || !store.access_token) {
+    return
+  }
+
   stopHeartbeat()
   heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS)
 }
@@ -286,6 +298,7 @@ function cleanup () {
  * Handle force disconnect from admin or timeout
  */
 let isHandlingForceDisconnect = false
+
 function handleForceDisconnect (store, action = 'force_disconnected') {
   // Prevent multiple calls
   if (isHandlingForceDisconnect) return
@@ -348,14 +361,11 @@ export default boot(async ({ app, router }) => {
   const store = authentication()
   routerInstance = router
 
-  // Only connect when user is authenticated and not on public route
   if (store.access_token && store.userSession) {
     await connectSession(store)
-    // Join presence channel to listen for force disconnect
     joinPresenceChannel(store)
   }
 
-  // Watch for route changes to track module navigation
   router.afterEach((to) => {
     // Skip tracking for public routes or if not connected
     if (!isConnected || !sessionUuid) return
@@ -366,12 +376,10 @@ export default boot(async ({ app, router }) => {
     trackModule(moduleName, to.fullPath)
   })
 
-  // Listen for logout to disconnect session
   window.addEventListener('user-logout', () => {
     disconnectSession('logout')
   })
 
-  // Expose tracking functions globally
   app.config.globalProperties.$sessionTracking = {
     connect: () => {
       connectSession(store)
