@@ -1951,7 +1951,7 @@ export default {
      */
     startDemoReminder () {
       // Solo iniciar si es cuenta demo
-      if (!this.isDemo) {
+      if (!this.isDemo || this.userSession?.is_root) {
         return
       }
 
