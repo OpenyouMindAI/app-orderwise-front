@@ -986,7 +986,12 @@ export default {
       /**
        * Store instance
        */
-      store: authentication()
+      store: authentication(),
+      /**
+       * Demo reminder interval
+       * @type {Number}
+       */
+      demoReminderInterval: null
     }
   },
   computed: {
@@ -1164,6 +1169,11 @@ export default {
 
     // Listen for global keyboard shortcuts
     window.addEventListener('keydown', this.handleGlobalKeyDown)
+
+    this.startDemoReminder()
+  },
+  beforeUnmount () {
+    this.stopDemoReminder()
   },
   unmounted () {
     window.removeEventListener('keydown', this.handleGlobalKeyDown)
@@ -1345,6 +1355,8 @@ export default {
           refresh_token: this.refresh_token,
           is_demo: false // Ya no es demo
         })
+
+        this.stopDemoReminder()
 
         // Cerrar diálogo
         this.showCreateCompanyDialog = false
@@ -1933,6 +1945,41 @@ export default {
     validateDevice (device) {
       return this.$q.platform.is[device]
     },
+    /**
+     * Start demo reminder interval
+     * Shows create company dialog every 5 minutes for demo accounts
+     */
+    startDemoReminder () {
+      // Solo iniciar si es cuenta demo
+      if (!this.isDemo) {
+        return
+      }
+
+      // Limpiar intervalo existente si hay uno
+      this.stopDemoReminder()
+
+      // Configurar intervalo de 5 minutos (300000 ms)
+      this.demoReminderInterval = setInterval(() => {
+        // Verificar nuevamente si sigue siendo demo (por si cambió)
+        if (this.isDemo) {
+          this.showCreateCompanyDialog = true
+        } else {
+          // Si ya no es demo, detener el intervalo
+          this.stopDemoReminder()
+        }
+      }, 300000)
+    },
+
+    /**
+     * Stop demo reminder interval
+     */
+    stopDemoReminder () {
+      if (this.demoReminderInterval) {
+        clearInterval(this.demoReminderInterval)
+        this.demoReminderInterval = null
+      }
+    },
+
     /**
      * Logout map actions
      */
