@@ -130,6 +130,12 @@ const routes = [
         component: () => import('pages/SubscriptionPlansPage.vue')
       },
       {
+        path: 'admin-dashboard',
+        name: 'AdminDashboard',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AdminDashboard.vue')
+      },
+      {
         path: 'command-orders',
         meta: { requiresAuth: true },
         name: 'CommandOrder',
