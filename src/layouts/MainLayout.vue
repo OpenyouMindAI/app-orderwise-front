@@ -943,7 +943,7 @@ export default {
       showSearchInput: false,
       visibleLoading: false,
       titleApp: null,
-      route: '',
+      menuRoute: '',
       modules: [],
       /**
        * Status menu
@@ -1205,6 +1205,9 @@ export default {
           })
         }
       }
+    },
+    $route (to, from) {
+      this.loadingTasks()
     }
   },
   setup () {
@@ -1213,6 +1216,7 @@ export default {
       router
     }
   },
+
   mounted () {
     this.$echo
       .private('App.Models.User.' + this.userSession.id)
@@ -1984,7 +1988,7 @@ export default {
      */
     changeRoute (data, listName) {
       this.$router.push({ name: data })
-      this.route = data
+      this.menuRoute = data
       this.titleApp = listName
     },
     /**
