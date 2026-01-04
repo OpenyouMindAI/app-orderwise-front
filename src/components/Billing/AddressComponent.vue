@@ -392,7 +392,13 @@ const setupPacContainer = (node) => {
   const rect = inputContainer.getBoundingClientRect()
   const width = rect.width
   const left = rect.left + window.scrollX
-  node.style.cssText = `width: ${width}px !important; left: ${left}px !important;`
+
+  // Preservar estilos existentes (especialmente display: none)
+  const existingStyles = node.style.cssText
+    .replace(/width:[^;]+;?/g, '')
+    .replace(/left:[^;]+;?/g, '')
+
+  node.style.cssText = `width: ${width}px !important; left: ${left}px !important; ${existingStyles}`
 
   // Limpiar observer previo si existe
   if (styleObserver) {
