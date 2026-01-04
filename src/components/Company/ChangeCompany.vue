@@ -275,25 +275,26 @@ const updateSession = async () => {
       username: user.username || user.email,
       password: password.value
     })
-    
+
     // Actualizar token si viene en la respuesta
     if (data.access_token) {
       localStorage.setItem('token', data.access_token)
       api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
     }
-    
+
     store.setBranchOffice(null)
     store.setSessionData(data)
-    
+
     confirmDialog.value = false
-    
+
     $q.notify({
       message: 'Cambio realizado exitosamente, se actualizarán los datos en unos segundos',
       color: 'positive',
       progress: true,
       timeout: 1000
     })
-    setTimeout(() => window.location.reload(), 2000)
+    console.log(data)
+    // setTimeout(() => window.location.reload(), 2000)
   } catch (error) {
     $q.notify({
       type: 'negative',
