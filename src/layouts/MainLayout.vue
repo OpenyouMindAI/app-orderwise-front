@@ -31,7 +31,7 @@
             round
             class="menu-btn q-ml-sm"
             icon="search"
-            v-if="$q.screen.gt.md"
+            v-if="$q.screen.gt.sm"
             @click="toggleSearch"
           >
             <q-tooltip>Buscar en el menú ({{ $q.platform.is.mac ? '⌘K' : 'Ctrl+K' }})</q-tooltip>
@@ -134,6 +134,27 @@
             class="tour-btn-navbar"
           >
             <q-tooltip>Ver tutorial de esta página</q-tooltip>
+          </q-btn>
+
+          <!-- Botón de Renovar Suscripción (cuando el banner está cerrado) -->
+          <q-btn
+            v-if="showRenewButton"
+            flat
+            dense
+            round
+            @click="showSubscriptionDialog = true"
+            :class="['renew-subscription-btn', renewButtonClass]"
+          >
+            <q-icon name="warning" size="20px" />
+            <q-badge
+              v-if="subscriptionDaysLeft !== null"
+              floating
+              color="red"
+              :label="subscriptionDaysLeft"
+            />
+            <q-tooltip>
+              {{ renewButtonTooltip }}
+            </q-tooltip>
           </q-btn>
 
           <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
@@ -583,6 +604,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -624,7 +646,11 @@
       v-model="showSubscriptionDialog"
       @subscription-updated="onSubscriptionUpdated"
     />
-
+    <SubscriptionExpirationBanner
+      :is-demo="isDemo"
+      @open-subscription-dialog="showSubscriptionDialog = true"
+      @banner-dismissed="handleBannerDismissed"
+    />
     <!-- Create Company Dialog -->
     <q-dialog
       v-model="showCreateCompanyDialog"
@@ -869,6 +895,7 @@ import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
+import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import GoogleRegisterButton from 'src/components/Auth/GoogleRegisterButton.vue'
 import { authentication } from 'src/stores/module-authentication'
@@ -878,7 +905,6 @@ import eventBus from 'src/utils/eventBus'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
-import { useThemeStore } from 'src/stores/themeStore'
 import { useRouter } from 'vue-router'
 import {
   CapacitorBarcodeScanner,
@@ -890,7 +916,14 @@ import {
 
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog, AddressComponent, GoogleRegisterButton },
+  components: {
+    NotificationComponent,
+    FloatingThemeSelector,
+    SubscriptionPlansDialog,
+    SubscriptionExpirationBanner,
+    AddressComponent,
+    GoogleRegisterButton
+  },
   data () {
     return {
       logo,
@@ -991,7 +1024,12 @@ export default {
        * Demo reminder interval
        * @type {Number}
        */
-      demoReminderInterval: null
+      demoReminderInterval: null,
+      /**
+       * Subscription renewal button state
+       * @type {Boolean}
+       */
+      showRenewButton: false
     }
   },
   computed: {
@@ -1089,6 +1127,26 @@ export default {
      */
     isWelcomePage () {
       return this.route?.name === 'Welcome'
+    },
+    /**
+     * Renewal button class based on days left
+     * @returns {String}
+     */
+    renewButtonClass () {
+      if (this.subscriptionDaysLeft === null) return ''
+      if (this.subscriptionDaysLeft <= 2) return 'renew-critical'
+      if (this.subscriptionDaysLeft <= 5) return 'renew-warning'
+      return 'renew-info'
+    },
+    /**
+     * Renewal button tooltip
+     * @returns {String}
+     */
+    renewButtonTooltip () {
+      if (this.subscriptionDaysLeft === null) return 'Renovar suscripción'
+      if (this.subscriptionDaysLeft === 0) return '¡Tu suscripción vence hoy! Haz clic para renovar'
+      if (this.subscriptionDaysLeft === 1) return '¡Tu suscripción vence mañana! Haz clic para renovar'
+      return `Tu suscripción vence en ${this.subscriptionDaysLeft} días. Haz clic para renovar`
     }
   },
   watch: {
@@ -1407,11 +1465,16 @@ export default {
      * Load subscription information
      */
     async loadSubscriptionInfo () {
-      // Use Pinia store to load and store subscription data
       await this.store.loadSubscriptionInfo()
-
-      // Load current branch count
       await this.loadBranchCount()
+    },
+    /**
+     * Handle banner dismissed event
+     */
+    handleBannerDismissed (data) {
+      if (!this.isDemo && data.daysLeft !== null && data.daysLeft <= 7 && data.daysLeft >= 0) {
+        this.showRenewButton = true
+      }
     },
     /**
      * Load current branch count
@@ -1431,12 +1494,6 @@ export default {
      */
     goToAddBranch () {
       this.$router.push('/branch-offices')
-    },
-    /**
-     * Open subscription dialog
-     */
-    openSubscriptionDialog () {
-      this.showSubscriptionDialog = true
     },
     /**
      * Handle subscription updated event
@@ -3332,6 +3389,63 @@ body.body--dark .integration-item {
 
   .tools-section {
     padding: 12px;
+  }
+}
+
+/* Renew Subscription Button in Navbar */
+.renew-subscription-btn {
+  position: relative;
+  animation: pulse-glow 2s ease-in-out infinite;
+
+  &.renew-info {
+    color: #3b82f6;
+  }
+
+  &.renew-warning {
+    color: #f59e0b;
+  }
+
+  &.renew-critical {
+    color: #ef4444;
+    animation: pulse-urgent 1s ease-in-out infinite;
+  }
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes pulse-urgent {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+body.body--dark .renew-subscription-btn {
+  &.renew-info {
+    color: #60a5fa;
+  }
+
+  &.renew-warning {
+    color: #fbbf24;
+  }
+
+  &.renew-critical {
+    color: #f87171;
   }
 }
 </style>

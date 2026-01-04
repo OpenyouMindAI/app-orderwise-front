@@ -68,8 +68,13 @@ let isHandling401 = false
 export default boot(async ({ router, store }) => {
   api.interceptors.response.use(null, async (error) => {
     const $store = authentication()
-
     if (error.response?.status === 401 && !isHandling401) {
+      const isCompanyChange = error.config?.url?.includes('session/company')
+
+      if (isCompanyChange) {
+        return Promise.reject(error)
+      }
+
       isHandling401 = true
       notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
 

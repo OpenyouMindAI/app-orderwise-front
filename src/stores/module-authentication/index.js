@@ -239,8 +239,6 @@ export const authentication = defineStore('authentication', {
         this.setSubscriptionData(data)
         return data
       } catch (error) {
-        console.error('Error loading subscription:', error)
-        // Set default values on error
         this.subscriptionPlan = 'Free'
         this.subscriptionDaysLeft = null
         this.currentSubscription = null
