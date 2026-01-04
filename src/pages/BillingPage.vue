@@ -158,7 +158,7 @@
                   :label="client?.name || 'Cliente'"
                   label-position="left"
                 >
-                  <q-popup-proxy @before-show="loadClientsData()">
+                  <q-popup-proxy @before-show="loadClientsData()" v-model="clientMenuOpen">
                     <q-card class="fab-popup-card">
                       <q-card-section class="fab-popup-header">
                         <div class="text-h6">Seleccionar Cliente</div>
@@ -228,6 +228,7 @@
                 direction="down"
                 padding="sm"
                 vertical-actions-align="right"
+                v-model="centerFabOpen"
               >
                 <!-- FAB Tipo de Factura -->
                 <q-fab-action
@@ -363,6 +364,7 @@
                 direction="down"
                 padding="sm"
                 vertical-actions-align="right"
+                v-model="rightFabOpen"
               >
                 <q-fab-action
                   color="primary"
@@ -1673,6 +1675,7 @@ export default {
       // Tour System
       tourStore,
       LOCAL,
+      activeMobileMenu: null, // 'client', 'center', 'right' or null
       showTour: false,
       currentTourStep: 0,
       tourSteps: [
@@ -2324,9 +2327,34 @@ export default {
       return emptySpaces === productsPerRow ? productsPerRow : emptySpaces
     },
     ...mapState(authentication, ['userSession', 'branchOffice']),
-    ...mapState(useCommandStore, ['setInvoice'])
+    ...mapState(useCommandStore, ['setInvoice']),
+    clientMenuOpen: {
+      get () {
+        return this.activeMobileMenu === 'client'
+      },
+      set (val) {
+        this.activeMobileMenu = val ? 'client' : null
+      }
+    },
+    centerFabOpen: {
+      get () {
+        return this.activeMobileMenu === 'center'
+      },
+      set (val) {
+        this.activeMobileMenu = val ? 'center' : null
+      }
+    },
+    rightFabOpen: {
+      get () {
+        return this.activeMobileMenu === 'right'
+      },
+      set (val) {
+        this.activeMobileMenu = val ? 'right' : null
+      }
+    }
   },
   watch: {
+
     client (client) {
       this.invoiceShare = { ...this.invoiceShare, client }
       // Actualizar la dirección cuando se selecciona un cliente
@@ -2498,6 +2526,7 @@ export default {
 
     this.debouncedSendInvoiceUpdate = debounce(this.sendInvoiceUpdate, 1000)
   },
+
   methods: {
     handleValidationAction () {
       if (this.validationType === 'category') {
