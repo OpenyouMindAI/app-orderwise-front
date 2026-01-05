@@ -1587,6 +1587,13 @@ const checkContinueConfiguration = async () => {
  */
 const checkIfComplete = async () => {
   try {
+    const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+    if (isConfigured) {
+      return {
+        isComplete: true,
+        percentage: 100
+      }
+    }
     const { data } = await api.get('/onboarding/tasks/status')
     const tasks = data.tasks || []
     const total = tasks.length
@@ -1611,7 +1618,7 @@ const showCelebration = async () => {
     const { data } = await api.post('/companies/mark-configured')
     store.setCompanySession({
       ...company.value,
-      company_config: data
+      company_config: data.data
     })
     const CelebrationDialog = await import('src/components/CelebrationDialog.vue')
     $q.dialog({

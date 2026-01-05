@@ -2536,6 +2536,10 @@ export default {
       }
     },
     async checkOnboardingStatus () {
+      const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+      if (isConfigured) {
+        return true
+      }
       try {
         const { data } = await api.get('/onboarding/tasks/status')
         if (data && data.tasks) {
