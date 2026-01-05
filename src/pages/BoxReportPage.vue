@@ -1724,14 +1724,14 @@ export default {
       this.appliedBranchOfficeSelect = [...this.branchOfficeSelect]
 
       // Verificar si la fecha seleccionada es hoy
-      const today = date.formatDate(new Date(), 'YYYY-MM-DD')
-      const isToday = this.panel === 'day' && this.day === today
+      // const today = date.formatDate(new Date(), 'YYYY-MM-DD')
+      // const isToday = this.panel === 'day' && this.day === today
 
       // Si NO es hoy, limpiar el turno para mostrar totalizado
-      if (!isToday && this.cashBoxUser) {
-        this.cashBoxUser = null
-        this.cashBoxUsers = []
-      }
+      // if (!isToday && this.cashBoxUser) {
+      //   this.cashBoxUser = null
+      //   this.cashBoxUsers = []
+      // }
 
       this.params = this.formatFilter()
       this.params.cashbox_user_id = this.cashBoxUser?.id || null
