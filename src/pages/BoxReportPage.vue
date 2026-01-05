@@ -98,7 +98,7 @@
                <q-icon name="assessment" size="md" class="q-mr-sm"/>
                <div class="col text-center">
                  <div class="text-h5 text-weight-bold" :class="getProfitColor(categoryTotalsTotals.category_total)">
-                   {{ formatNumber(categoryTotalsTotals.category_total) }}
+                   {{ formatNumber(categoryTotalsTotals.category_total || 0) }}
                  </div>
                  <!-- <div class="text-h5 text-weight-bold" :class="getProfitColor(getTotalProfit())">
                    {{ formatNumber(getTotalProfit()) }}
