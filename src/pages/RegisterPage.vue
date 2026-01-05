@@ -678,6 +678,7 @@
 <script setup>
 import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
@@ -685,6 +686,7 @@ import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 
 const router = useRouter()
 const store = authentication()
+const $q = useQuasar()
 
 // Form data
 const form = ref({
@@ -1343,15 +1345,129 @@ const assignDemo = async () => {
 }
 
 /**
+ * Inicializar Google Auth para móvil
+ */
+const initializeGoogleAuthMobile = async () => {
+  try {
+    console.log('Initializing Google Auth for mobile...')
+    console.log('Platform info:', {
+      isNativeMobile: $q.platform.is.nativeMobile,
+      isCapacitor: $q.platform.is.capacitor,
+      hasCapacitor: !!window.Capacitor,
+      platform: $q.platform
+    })
+
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
+    console.log('Client ID:', clientId)
+
+    await GoogleAuth.initialize({
+      clientId,
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true
+    })
+
+    console.log('Google Auth initialized successfully on mount')
+  } catch (error) {
+    console.error('Error initializing Google Auth on mount:', error)
+    console.error('Init error details:', error.message)
+  }
+}
+
+/**
+ * Register with Google - Mobile
+ */
+const registerWithGoogleMobile = async () => {
+  try {
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+    console.log('GoogleAuth plugin loaded')
+    console.log('Attempting Google sign in...')
+
+    const result = await GoogleAuth.signIn()
+    console.log('Google sign in result:', result)
+
+    if (result && result.email) {
+      const userInfo = {
+        email: result.email,
+        name: result.name || result.displayName,
+        sub: result.id,
+        picture: result.imageUrl
+      }
+
+      console.log('User info:', userInfo)
+
+      // Codificar datos en base64
+      const credential = btoa(JSON.stringify({
+        email: userInfo.email,
+        name: userInfo.name,
+        google_id: userInfo.sub,
+        picture: userInfo.picture
+      }))
+
+      // Registrar con backend
+      const { data } = await api.post('authentication/register/google', {
+        credential,
+        name: userInfo.name,
+        email: userInfo.email
+      })
+
+      // Guardar sesión completa en el store
+      store.setSessionData(data)
+
+      notify('Registro exitoso con Google', 'positive', 'check_circle')
+
+      // Mostrar modal de setup de empresa
+      if (data.needs_company_setup) {
+        isGoogleRegister.value = true
+        companyForm.value.company_email = userInfo.email
+        await loadBusinessTypes()
+        showCompanyOptions.value = true
+      } else {
+        router.push('/')
+      }
+    } else {
+      loadingGoogle.value = false
+      console.error('Invalid result from Google:', result)
+      notify('No se pudo obtener información de Google', 'negative', 'warning')
+    }
+  } catch (error) {
+    loadingGoogle.value = false
+    console.error('Mobile Google register error:', error)
+    console.error('Error message:', error.message)
+
+    // Si el usuario canceló, no mostrar error
+    if (error.message && (
+      error.message.toLowerCase().includes('cancel') ||
+      error.message.toLowerCase().includes('user_cancelled') ||
+      error.code === 12501
+    )) {
+      console.log('User cancelled register')
+      return
+    }
+
+    notify('Error al registrar con Google: ' + (error.message || 'Error desconocido'), 'negative', 'warning')
+  }
+}
+
+/**
  * Register with Google
  */
 const registerWithGoogle = async () => {
   try {
     loadingGoogle.value = true
 
-    // Inicializar Google Sign-In
+    // Detectar si es móvil nativo (Capacitor)
+    if ($q.platform.is.nativeMobile && window.Capacitor) {
+      await registerWithGoogleMobile()
+      return
+    }
+
+    // Web: Inicializar Google Sign-In
     if (!window.google) {
       notify('Error al cargar Google Sign-In', 'negative', 'warning')
+      loadingGoogle.value = false
       return
     }
 
@@ -1419,6 +1535,16 @@ const registerWithGoogle = async () => {
     loadingGoogle.value = false
   }
 }
+
+/**
+ * On mounted - Inicializar Google Auth
+ */
+onMounted(async () => {
+  // Inicializar Google Auth para móvil si es Capacitor
+  if ($q.platform.is.nativeMobile && window.Capacitor) {
+    await initializeGoogleAuthMobile()
+  }
+})
 
 </script>
 

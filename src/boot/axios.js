@@ -1,6 +1,7 @@
 import { boot } from 'quasar/wrappers'
 import axios from 'axios'
 import { api } from './services'
+import { authentication } from 'src/stores/module-authentication'
 
 // Be careful when using SSR for cross-request state pollution
 // due to creating a Singleton instance here;
@@ -18,6 +19,11 @@ export default boot(({ app }) => {
   app.config.globalProperties.$axios = axios
   // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
   //       so you won't necessarily have to import axios in each vue file
+  const $store = authentication()
+
+  api.defaults.headers.common.authorization = `${$store?.token_type} ${$store?.access_token}`
+  apiQPay.defaults.headers.common['X-Company-Token'] = $store?.userSession?.company_session?.company_config?.other?.qpay_id
+  apiArca.defaults.headers.common['X-Company-External-Id'] = $store?.userSession?.company_session?.document_number
 
   app.config.globalProperties.$api = api
 

@@ -31,14 +31,12 @@ export default configure(function (/* ctx */) {
       'axios',
       'pinia',
       'authorization',
+      'session-tracking',
       'VueHtmlToPaper',
       'pusher',
       'payment-notifier',
-      // 'background-mode',
       'statusbar',
-      'pixel',
-      'company-config',
-      'session-tracking'
+      'pixel'
     ],
 
     css: [

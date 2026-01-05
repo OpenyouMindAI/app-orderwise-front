@@ -1097,6 +1097,13 @@ export default {
      */
     async checkIfComplete () {
       try {
+        const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+        if (isConfigured) {
+          return {
+            isComplete: true,
+            percentage: 100
+          }
+        }
         const { data } = await api.get('/onboarding/tasks/status')
         const tasks = data.tasks || []
         const total = tasks.length

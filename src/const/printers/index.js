@@ -1,6 +1,5 @@
 import { Device } from '@capacitor/device'
 import { authentication } from 'src/stores/module-authentication'
-import { companyConfig } from 'src/boot/company-config'
 import { notify } from '../mixins'
 import { sendCommand, sendTicket, sendInvoice } from './preview'
 import { directCommandPrint as directCommandPrintBluetooth, directTicketPrint as directTicketPrintBluetooth } from './bluetooth'
@@ -17,7 +16,8 @@ const getConfig = async () => {
   return {
     device,
     user: store?.userSession,
-    branchOffice: store?.branchOffice
+    branchOffice: store?.branchOffice,
+    companyConfig: store.userSession?.company_session?.company_config
   }
 }
 
@@ -30,7 +30,7 @@ const getConfig = async () => {
 export const commandPrint = async (data, printer = null) => {
   try {
     const info = await Device.getInfo()
-    const { device, user } = await getConfig()
+    const { device, user, companyConfig } = await getConfig()
     if (!companyConfig?.other?.directPrint) {
       await sendCommand(data, user)
       return
@@ -63,7 +63,7 @@ export const commandPrint = async (data, printer = null) => {
 
 export const ticketPrint = async (data, printer = null) => {
   try {
-    const { device, user } = await getConfig()
+    const { device, user, companyConfig } = await getConfig()
     if (!companyConfig?.other?.directPrint) {
       await sendTicket(data, user)
       return

@@ -465,7 +465,7 @@ export default {
       }
     }
   },
-  mounted () {
+  async mounted () {
     // Inicializar profile con datos del usuario
     this.profile = {
       first_name: this.userSession.name || '',
@@ -487,6 +487,11 @@ export default {
 
     // Cargar Google SDK
     this.loadGoogleScript()
+
+    // Inicializar Google Auth para móvil si es Capacitor
+    if (this.$q.platform.is.nativeMobile && window.Capacitor) {
+      await this.initializeGoogleAuthMobile()
+    }
   },
   methods: {
     getInitials () {
@@ -687,6 +692,37 @@ export default {
     },
 
     /**
+     * Inicializar Google Auth para móvil
+     */
+    async initializeGoogleAuthMobile () {
+      try {
+        console.log('Initializing Google Auth for mobile...')
+        console.log('Platform info:', {
+          isNativeMobile: this.$q.platform.is.nativeMobile,
+          isCapacitor: this.$q.platform.is.capacitor,
+          hasCapacitor: !!window.Capacitor,
+          platform: this.$q.platform
+        })
+
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
+        console.log('Client ID:', clientId)
+
+        await GoogleAuth.initialize({
+          clientId,
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: true
+        })
+
+        console.log('Google Auth initialized successfully on mount')
+      } catch (error) {
+        console.error('Error initializing Google Auth on mount:', error)
+        console.error('Init error details:', error.message)
+      }
+    },
+
+    /**
      * Cargar script de Google
      */
     loadGoogleScript () {
@@ -721,11 +757,120 @@ export default {
     },
 
     /**
+     * Vincular cuenta de Google - Mobile
+     */
+    async linkGoogleAccountMobile () {
+      try {
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+        console.log('GoogleAuth plugin loaded')
+        console.log('Attempting Google sign in...')
+
+        const result = await GoogleAuth.signIn()
+        console.log('Google sign in result:', result)
+
+        if (result && result.email) {
+          const userInfo = {
+            email: result.email,
+            name: result.name || result.displayName,
+            sub: result.id,
+            picture: result.imageUrl
+          }
+
+          console.log('User info:', userInfo)
+
+          // Crear credential con toda la info
+          const credential = btoa(JSON.stringify({
+            email: userInfo.email,
+            sub: userInfo.sub,
+            name: userInfo.name,
+            picture: userInfo.picture
+          }))
+
+          // Vincular cuenta en el backend
+          const response = await this.$api.post('/auth/social/link', {
+            provider: 'google',
+            credential,
+            email: userInfo.email
+          })
+
+          this.linkedAccounts.google = userInfo.email
+
+          // Si Google devolvió foto y no tenemos avatar, actualizar
+          if (userInfo.picture && !this.profile.avatar) {
+            this.profile.avatar = userInfo.picture
+          }
+
+          this.$q.notify({
+            message: 'Tu cuenta de Google se vinculó correctamente',
+            icon: 'check_circle',
+            color: 'positive'
+          })
+        } else {
+          this.loadingGoogle = false
+          console.error('Invalid result from Google:', result)
+          this.$q.notify({
+            message: 'No se pudo obtener información de Google',
+            icon: 'warning',
+            color: 'negative'
+          })
+        }
+      } catch (error) {
+        this.loadingGoogle = false
+        console.error('Mobile Google link error:', error)
+        console.error('Error message:', error.message)
+
+        // Si el usuario canceló, no mostrar error
+        if (error.message && (
+          error.message.toLowerCase().includes('cancel') ||
+          error.message.toLowerCase().includes('user_cancelled') ||
+          error.code === 12501
+        )) {
+          console.log('User cancelled link')
+          return
+        }
+
+        if (error.response?.status === 409) {
+          this.$q.notify({
+            message: 'Este correo ya está vinculado a otra cuenta',
+            icon: 'warning',
+            color: 'warning',
+            actions: [{
+              label: 'Cambiar correo de cuenta',
+              color: 'white',
+              handler: () => { this.modals.email = true }
+            }]
+          })
+        } else if (error.response?.status === 401 || error.response?.status === 400) {
+          this.$q.notify({
+            message: 'No pudimos verificar Google. Intenta nuevamente.',
+            icon: 'warning',
+            color: 'negative'
+          })
+        } else {
+          this.$q.notify({
+            message: error.response?.data?.message || 'Error al vincular cuenta de Google',
+            icon: 'warning',
+            color: 'negative'
+          })
+        }
+      }
+    },
+
+    /**
      * Vincular cuenta de Google
      */
     linkGoogleAccount () {
+      this.loadingGoogle = true
+
+      // Detectar si es móvil nativo (Capacitor)
+      if (this.$q.platform.is.nativeMobile && window.Capacitor) {
+        this.linkGoogleAccountMobile()
+        return
+      }
+
+      // Web: usar Google SDK
       if (this.googleClient) {
-        this.loadingGoogle = true
         try {
           this.googleClient.requestAccessToken()
         } catch (error) {
@@ -737,6 +882,7 @@ export default {
           })
         }
       } else {
+        this.loadingGoogle = false
         this.$q.notify({
           message: 'Google no está disponible',
           icon: 'warning',

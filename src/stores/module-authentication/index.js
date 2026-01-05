@@ -100,6 +100,7 @@ export const authentication = defineStore('authentication', {
       this._isLoggingOut = true
 
       try {
+        console.log(callBackend)
         // Cerrar sesión en el backend (revocar token) - solo si se indica
         if (callBackend && this.access_token) {
           try {
@@ -170,6 +171,7 @@ export const authentication = defineStore('authentication', {
      * @param  {Object} data
      */
     setSessionData (data) {
+      console.log(data)
       this.userSession = data.user
       this.access_token = data.access_token
       this.token_type = data.token_type
@@ -177,11 +179,8 @@ export const authentication = defineStore('authentication', {
       this.refresh_token = data.refresh_token
       this.isDemo = data.is_demo || false
 
-      // Calculate token expiration time
       if (data.expires_in) {
-        // expires_in is in seconds, convert to milliseconds and add to current time
         this.setTimeOut = Date.now() + (data.expires_in * 1000)
-        console.log('🔐 Token expira en:', new Date(this.setTimeOut).toLocaleString())
       }
 
       api.defaults.headers.common.authorization = `${this.token_type} ${this.access_token}`
@@ -240,8 +239,6 @@ export const authentication = defineStore('authentication', {
         this.setSubscriptionData(data)
         return data
       } catch (error) {
-        console.error('Error loading subscription:', error)
-        // Set default values on error
         this.subscriptionPlan = 'Free'
         this.subscriptionDaysLeft = null
         this.currentSubscription = null

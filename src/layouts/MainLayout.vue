@@ -31,7 +31,7 @@
             round
             class="menu-btn q-ml-sm"
             icon="search"
-            v-if="$q.screen.gt.md"
+            v-if="$q.screen.gt.sm"
             @click="toggleSearch"
           >
             <q-tooltip>Buscar en el menú ({{ $q.platform.is.mac ? '⌘K' : 'Ctrl+K' }})</q-tooltip>
@@ -136,7 +136,26 @@
             <q-tooltip>Ver tutorial de esta página</q-tooltip>
           </q-btn>
 
-          <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
+          <q-btn
+            v-if="showRenewButton"
+            flat
+            dense
+            round
+            @click="showSubscriptionDialog = true"
+            :class="['renew-subscription-btn', renewButtonClass]"
+          >
+            <q-icon name="warning" size="20px" />
+            <q-badge
+              v-if="subscriptionDaysLeft !== null"
+              floating
+              color="red"
+              :label="subscriptionDaysLeft"
+            />
+            <q-tooltip>
+              {{ renewButtonTooltip }}
+            </q-tooltip>
+          </q-btn>
+
           <q-btn
             flat
             dense
@@ -148,7 +167,6 @@
             <q-tooltip>Segunda pantalla</q-tooltip>
           </q-btn>
 
-          <!-- Botón de escaneo QR -->
           <q-btn
             flat
             dense
@@ -160,7 +178,6 @@
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
 
-          <!-- Botón Chat con IA -->
           <q-btn
             flat
             dense
@@ -179,124 +196,99 @@
             <q-tooltip class="text-body2">
               Herramientas
             </q-tooltip>
-            <q-popup-proxy>
-              <q-banner>
-                <div class="full-width text-center q-mb-xs">
-                  <span class="text-subtitle2">
-                    Herramientas
-                  </span>
+            <q-popup-proxy class="tools-popup">
+              <q-card flat class="tools-card">
+                <!-- Header -->
+                <div class="tools-header">
+                  <q-icon name="apps" size="20px" />
+                  <span class="tools-title">Herramientas</span>
                 </div>
-                <q-separator />
-                <div class="q-mt-sm">
-                  <q-btn
-                    icon="sync_alt"
-                    round
-                    flat
-                    :color="$route.name === 'ChangeCompany' ? 'secondary' : ''"
+
+                <!-- Tools Grid -->
+                <div class="tools-grid">
+                  <!-- Cambio de empresa -->
+                  <div
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'ChangeCompany' }"
                     @click="changeRoute('ChangeCompany', 'Cambio de empresa')"
                   >
-                    <q-tooltip> Cambio de empresa </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="store"
-                    round
-                    flat
-                  >
-                    <q-tooltip>
-                      {{ branchOffice?.name }}
-                    </q-tooltip>
-                    <q-menu>
-                      <q-list>
+                    <q-icon name="sync_alt" size="24px" />
+                    <span class="tool-label">Empresa</span>
+                  </div>
+
+                  <!-- Sucursal -->
+                  <div class="tool-item" v-if="branchOffices.length > 1">
+                    <q-icon name="store" size="24px" />
+                    <span class="tool-label">Sucursal</span>
+                    <q-menu anchor="bottom middle" self="top middle">
+                      <q-list dense class="branch-menu">
                         <q-item
-                          clickable
-                          v-ripple
                           v-for="bo in branchOffices"
                           :key="bo.id"
+                          clickable
+                          v-ripple
                           :active="bo.id === branchOffice?.id"
                           @click="changeBranchOffice(bo)"
                         >
-                          <q-item-section thumbnail class="q-pa-sm">
-                            <q-icon name="store" />
+                          <q-item-section avatar>
+                            <q-icon name="store" size="18px" />
                           </q-item-section>
                           <q-item-section>
-                            <q-item-label>
-                              {{ bo.name }}
-                            </q-item-label>
+                            <q-item-label class="text-caption">{{ bo.name }}</q-item-label>
                           </q-item-section>
                         </q-item>
                       </q-list>
                     </q-menu>
-                  </q-btn>
-                  <q-btn
-                    flat
-                    round
-                    :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
-                    aria-label="dark_mode"
-                    @click="setTheme"
-                  >
-                    <q-tooltip :offset="[10, 10]">
-                      {{ $q.dark.isActive ? "Modo claro" : "Modo oscuro" }}
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="share"
-                    round
-                    flat
-                    @click="copyCatalog"
-                  >
-                    <q-tooltip>
-                      Copiar link
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="update"
-                    flat
-                    round
-                    @click="update"
-                  />
-                  <q-btn
-                    icon="cable"
-                    flat
-                    round
-                    @click="openDialogArca"
-                  >
-                    <q-tooltip>
-                      Conectar con el ARCA
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="play_circle"
-                    round
-                    flat
-                    :color="$route.name === 'Tutorial' ? 'secondary' : ''"
+                  </div>
+
+                  <!-- Tema -->
+                  <div class="tool-item" @click="setTheme">
+                    <q-icon :name="$q.dark.isActive ? 'light_mode' : 'dark_mode'" size="24px" />
+                    <span class="tool-label">Tema</span>
+                  </div>
+
+                  <div class="tool-item" @click="copyCatalog">
+                    <q-icon name="share" size="24px" />
+                    <span class="tool-label">Compartir</span>
+                  </div>
+
+                  <div class="tool-item" @click="update">
+                    <q-icon name="refresh" size="24px" />
+                    <span class="tool-label">Actualizar</span>
+                  </div>
+                  <div
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'Tutorial' }"
                     @click="changeRoute('Tutorial', 'Tutoriales')"
                   >
-                    <q-tooltip>
-                      Tutoriales
-                    </q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    round
-                    flat
-                    icon="print"
+                    <q-icon name="play_circle" size="24px" />
+                    <span class="tool-label">Tutoriales</span>
+                  </div>
+                  <a
                     href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/printer_ui_win_0.19.zip"
                     target="_blank"
-                    type="a"
-                  />
-                  <q-btn
-                    round
-                    flat
-                    icon="android"
+                    class="tool-item tool-link"
+                  >
+                    <q-icon name="print" size="24px" />
+                    <span class="tool-label">Impresora</span>
+                  </a>
+                  <a
                     href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
                     target="_blank"
-                    type="a"
+                    class="tool-item tool-link"
                   >
-                    <q-tooltip class="text-body2">
-                      Actualizar app
-                    </q-tooltip>
-                  </q-btn>
+                    <q-icon name="android" size="24px" />
+                    <span class="tool-label">App</span>
+                  </a>
                 </div>
-              </q-banner>
+                <div class="tools-section">
+                  <div class="integrations-grid">
+                    <div class="integration-item" @click="openDialogArca">
+                      <img src="images/circle-arca.png" alt="ARCA" class="integration-logo" />
+                    </div>
+                  </div>
+                </div>
+              </q-card>
             </q-popup-proxy>
           </q-btn>
 
@@ -608,11 +600,11 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
     <q-page-container>
       <router-view />
     </q-page-container>
 
-    <!-- Floating Onboarding Button -->
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
       position="bottom-right"
@@ -644,12 +636,16 @@
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
 
-    <!-- Subscription Plans Dialog -->
     <subscription-plans-dialog
+      v-if="showSubscriptionDialog"
       v-model="showSubscriptionDialog"
       @subscription-updated="onSubscriptionUpdated"
     />
-
+    <SubscriptionExpirationBanner
+      :is-demo="isDemo"
+      @open-subscription-dialog="showSubscriptionDialog = true"
+      @banner-dismissed="handleBannerDismissed"
+    />
     <!-- Create Company Dialog -->
     <q-dialog
       v-model="showCreateCompanyDialog"
@@ -894,6 +890,7 @@ import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
+import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import GoogleRegisterButton from 'src/components/Auth/GoogleRegisterButton.vue'
 import { authentication } from 'src/stores/module-authentication'
@@ -903,8 +900,7 @@ import eventBus from 'src/utils/eventBus'
 import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
-import { useThemeStore } from 'src/stores/themeStore'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -912,11 +908,17 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
-// import { useFbq } from 'vue3-facebook-pixel'
 
 export default {
   name: 'MainLayout',
-  components: { NotificationComponent, FloatingThemeSelector, SubscriptionPlansDialog, AddressComponent, GoogleRegisterButton },
+  components: {
+    NotificationComponent,
+    FloatingThemeSelector,
+    SubscriptionPlansDialog,
+    SubscriptionExpirationBanner,
+    AddressComponent,
+    GoogleRegisterButton
+  },
   data () {
     return {
       logo,
@@ -1012,7 +1014,17 @@ export default {
       /**
        * Store instance
        */
-      store: authentication()
+      store: authentication(),
+      /**
+       * Demo reminder interval
+       * @type {Number}
+       */
+      demoReminderInterval: null,
+      /**
+       * Subscription renewal button state
+       * @type {Boolean}
+       */
+      showRenewButton: false
     }
   },
   computed: {
@@ -1110,13 +1122,32 @@ export default {
      */
     isWelcomePage () {
       return this.route?.name === 'Welcome'
+    },
+    /**
+     * Renewal button class based on days left
+     * @returns {String}
+     */
+    renewButtonClass () {
+      if (this.subscriptionDaysLeft === null) return ''
+      if (this.subscriptionDaysLeft <= 2) return 'renew-critical'
+      if (this.subscriptionDaysLeft <= 5) return 'renew-warning'
+      return 'renew-info'
+    },
+    /**
+     * Renewal button tooltip
+     * @returns {String}
+     */
+    renewButtonTooltip () {
+      if (this.subscriptionDaysLeft === null) return 'Renovar suscripción'
+      if (this.subscriptionDaysLeft === 0) return '¡Tu suscripción vence hoy! Haz clic para renovar'
+      if (this.subscriptionDaysLeft === 1) return '¡Tu suscripción vence mañana! Haz clic para renovar'
+      return `Tu suscripción vence en ${this.subscriptionDaysLeft} días. Haz clic para renovar`
     }
   },
   watch: {
     showCreateCompanyDialog (val) {
       if (val) {
         this.loadBusinessTypes()
-        // Pre-llenar email con el del usuario
         this.companyData.business_type = this.userSession?.company_session?.business_type
         if (this.userSession?.email) {
           this.companyData.company_email = this.userSession.email
@@ -1176,10 +1207,8 @@ export default {
   },
   setup () {
     const router = useRouter()
-    const route = useRoute()
     return {
-      router,
-      route
+      router
     }
   },
 
@@ -1197,6 +1226,11 @@ export default {
 
     // Listen for global keyboard shortcuts
     window.addEventListener('keydown', this.handleGlobalKeyDown)
+
+    this.startDemoReminder()
+  },
+  beforeUnmount () {
+    this.stopDemoReminder()
   },
   unmounted () {
     window.removeEventListener('keydown', this.handleGlobalKeyDown)
@@ -1299,11 +1333,11 @@ export default {
     /**
      * Handle Google register success
      */
-    handleGoogleRegisterSuccess (data) {
-      // const fbq = useFbq()
-      // fbq.event('Purchase', data)
+    async handleGoogleRegisterSuccess (data) {
       if (data.needsCompanySetup) {
+        await this.store.setSessionData(data.user)
         this.companyData.company_email = data.userInfo.email
+        this.showCreateCompanyDialog = true
       } else {
         this.closeCreateCompanyDialog()
       }
@@ -1379,6 +1413,8 @@ export default {
           is_demo: false // Ya no es demo
         })
 
+        this.stopDemoReminder()
+
         // Cerrar diálogo
         this.showCreateCompanyDialog = false
 
@@ -1428,23 +1464,24 @@ export default {
      * Load subscription information
      */
     async loadSubscriptionInfo () {
-      // Use Pinia store to load and store subscription data
       await this.store.loadSubscriptionInfo()
-
-      // Load current branch count
       await this.loadBranchCount()
+    },
+    /**
+     * Handle banner dismissed event
+     */
+    handleBannerDismissed (data) {
+      if (!this.isDemo && data.daysLeft !== null && data.daysLeft <= 7 && data.daysLeft >= 0) {
+        this.showRenewButton = true
+      }
     },
     /**
      * Load current branch count
      */
     async loadBranchCount () {
       try {
-        const { data } = await api.get('branch-offices', {
-          params: { paginate: false }
-        })
-        const count = Array.isArray(data) ? data.length : (data.data ? data.data.length : 0)
+        const count = this.branchOffices.length
 
-        // Save to Pinia store
         this.store.setCurrentBranchCount(count)
       } catch (error) {
         console.error('Error loading branch count:', error)
@@ -1456,12 +1493,6 @@ export default {
      */
     goToAddBranch () {
       this.$router.push('/branch-offices')
-    },
-    /**
-     * Open subscription dialog
-     */
-    openSubscriptionDialog () {
-      this.showSubscriptionDialog = true
     },
     /**
      * Handle subscription updated event
@@ -1687,29 +1718,90 @@ export default {
     },
 
     async openDialogArca () {
-      if (this.userSession?.company_session?.billing) {
-        try {
-          loading(true)
+      try {
+        // Validación 2: Verificar que no sea cuenta demo
+        if (this.isDemo) {
+          notify('Crea una empresa real para acceder a las integraciones', 'info', 'info')
+          this.showCreateCompanyDialog = true
+          return
+        }
+
+        loading(true)
+
+        const hasApiAccess = await this.verifyApiAccess()
+
+        if (!hasApiAccess) {
+          notify('Tu plan actual no incluye acceso a integraciones. Actualiza tu plan.', 'warning', 'upgrade')
+          this.showSubscriptionDialog = true
+          return
+        }
+
+        // Validación 4: Verificar datos de facturación
+        if (!this.userSession?.company_session?.billing) {
+          const documentNumber = this.userSession?.company_session?.document_number
+          const userName = this.userSession?.name
+          const userEmail = this.userSession?.email
+
+          if (!documentNumber || !userName || !userEmail) {
+            notify('Datos de empresa incompletos. Contacta al administrador.', 'negative', 'error')
+            return
+          }
+
           const { data } = await this.$apiArca('companies', {
             params: {
               user: {
-                name: this.userSession.name,
-                email: this.userSession.email
+                name: userName,
+                email: userEmail
               },
-              document_number: this.userSession?.company_session?.document_number
+              document_number: documentNumber
             }
           })
+
+          // Validar respuesta
+          if (!data?.certificate_url || !data?.key_url) {
+            throw new Error('Respuesta inválida del servidor ARCA')
+          }
+
           this.download = {
             certificate_url: data.certificate_url,
             key_url: data.key_url
           }
-        } catch (error) {
-          notify(error.message, 'negative', 'warning')
-        } finally {
-          loading(false)
+
+          // Abrir diálogo solo si todo fue exitoso
+          this.arcaDialog = true
         }
+      } catch (error) {
+        this.arcaDialog = true
+      } finally {
+        loading(false)
       }
-      this.arcaDialog = true
+    },
+
+    /**
+     * Verificar acceso a API desde el backend (no confiar en localStorage)
+     */
+    async verifyApiAccess () {
+      try {
+        // Llamar al backend para verificar la suscripción actual
+        const { data } = await this.$api.get('subscriptions/current')
+
+        // Actualizar el store con datos verificados del backend
+        if (data.subscription) {
+          this.store.currentSubscription = data.subscription
+          this.store.subscriptionPlan = data.subscription.plan?.name
+          this.store.subscriptionDaysLeft = data.days_left
+          this.store.maxBranches = data.subscription.plan?.max_branches || 1
+
+          // Retornar si tiene acceso a API
+          return data.subscription.plan?.has_api_access === true
+        }
+
+        return false
+      } catch (error) {
+        console.error('[Subscription] Verification error:', error)
+        // En caso de error, denegar acceso por seguridad
+        return false
+      }
     },
     /**
      * Get all products
@@ -1724,11 +1816,9 @@ export default {
         })
         .then(({ data }) => {
           this.modules = data
-          localStorage.setItem('sections', JSON.stringify(this.modules))
         })
         .catch((err) => {
           console.log(err)
-          this.modules = JSON.parse(localStorage.getItem('sections'))
         })
     },
     /**
@@ -1836,8 +1926,6 @@ export default {
      */
     loadingPage () {
       this.$q.dark.set(this.darkMode)
-      // Inicializar tema
-      this.initializeTheme()
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
@@ -1849,8 +1937,8 @@ export default {
      */
     async loadingTasks () {
       try {
-        // No hacer peticiones si la empresa ya está configurada al 100%
-        const isConfigured = this.userSession?.company_session?.configured
+        const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+
         if (isConfigured) {
           this.showOnboardingFab = false
           this.onboardingProgress = 100
@@ -1878,6 +1966,19 @@ export default {
           const isDismissed = localStorage.getItem('onboarding_dismissed') === 'true'
           const isCompletedPermanently = localStorage.getItem('onboarding_completed') === 'true'
           this.showOnboardingFab = !isCompletedPermanently && (hasCompletedAny || !isDismissed)
+
+          if (this.onboardingProgress === 100) {
+            try {
+              const { data } = await api.post('/companies/mark-configured')
+              console.log(data)
+              this.setCompanySession({
+                ...this.userSession.company_session,
+                company_config: data.data
+              })
+            } catch (error) {
+              console.error('Error marking company as configured:', error)
+            }
+          }
         }
       } catch (error) {
         console.log(error)
@@ -1888,17 +1989,6 @@ export default {
      */
     openOnboardingTour () {
       this.$router.push({ name: 'Welcome' })
-    },
-    /**
-     * Inicializar sistema de temas
-     */
-    initializeTheme () {
-      try {
-        const themeStore = useThemeStore()
-        themeStore.initTheme()
-      } catch (error) {
-        console.error('❌ Error al inicializar tema:', error)
-      }
     },
     /**
      * Change route
@@ -1924,6 +2014,41 @@ export default {
     validateDevice (device) {
       return this.$q.platform.is[device]
     },
+    /**
+     * Start demo reminder interval
+     * Shows create company dialog every 5 minutes for demo accounts
+     */
+    startDemoReminder () {
+      // Solo iniciar si es cuenta demo
+      if (!this.isDemo || this.userSession?.is_root) {
+        return
+      }
+
+      // Limpiar intervalo existente si hay uno
+      this.stopDemoReminder()
+
+      // Configurar intervalo de 5 minutos (300000 ms)
+      this.demoReminderInterval = setInterval(() => {
+        // Verificar nuevamente si sigue siendo demo (por si cambió)
+        if (this.isDemo) {
+          this.showCreateCompanyDialog = true
+        } else {
+          // Si ya no es demo, detener el intervalo
+          this.stopDemoReminder()
+        }
+      }, 300000)
+    },
+
+    /**
+     * Stop demo reminder interval
+     */
+    stopDemoReminder () {
+      if (this.demoReminderInterval) {
+        clearInterval(this.demoReminderInterval)
+        this.demoReminderInterval = null
+      }
+    },
+
     /**
      * Logout map actions
      */
@@ -3075,6 +3200,264 @@ export default {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* Tools Popup Styles */
+.tools-card {
+  min-width: 280px;
+  max-width: 320px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+body.body--dark .tools-card {
+  background: rgba(30, 30, 30, 0.98);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.tools-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
+  color: white;
+}
+
+.tools-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 16px;
+}
+
+.tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.1);
+    transform: translateY(-2px);
+  }
+
+  &.tool-active {
+    background: rgba(var(--q-primary-rgb), 0.15);
+    color: var(--q-primary);
+
+    .q-icon {
+      color: var(--q-primary);
+    }
+  }
+
+  .q-icon {
+    color: #374151;
+    transition: color 0.3s ease;
+  }
+}
+
+body.body--dark .tool-item {
+  background: rgba(255, 255, 255, 0.05);
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.2);
+  }
+
+  &.tool-active {
+    background: rgba(var(--q-primary-rgb), 0.25);
+  }
+
+  .q-icon {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.tool-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+  opacity: 0.8;
+}
+
+.branch-menu {
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tools-section {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 6px 16px;
+}
+
+body.body--dark .tools-section {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  opacity: 0.7;
+}
+
+.integrations-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.integration-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+body.body--dark .integration-item {
+  background: rgba(255, 255, 255, 0.05);
+
+  &:hover {
+    background: rgba(var(--q-primary-rgb), 0.2);
+  }
+}
+
+.integration-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.integration-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .tools-card {
+    min-width: 260px;
+    max-width: 280px;
+  }
+
+  .tools-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .tool-item {
+    padding: 10px 6px;
+    gap: 4px;
+  }
+
+  .tool-label {
+    font-size: 10px;
+  }
+
+  .tools-section {
+    padding: 12px;
+  }
+}
+
+/* Renew Subscription Button in Navbar */
+.renew-subscription-btn {
+  position: relative;
+  animation: pulse-glow 2s ease-in-out infinite;
+
+  &.renew-info {
+    color: #3b82f6;
+  }
+
+  &.renew-warning {
+    color: #f59e0b;
+  }
+
+  &.renew-critical {
+    color: #ef4444;
+    animation: pulse-urgent 1s ease-in-out infinite;
+  }
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes pulse-urgent {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+body.body--dark .renew-subscription-btn {
+  &.renew-info {
+    color: #60a5fa;
+  }
+
+  &.renew-warning {
+    color: #fbbf24;
+  }
+
+  &.renew-critical {
+    color: #f87171;
   }
 }
 </style>

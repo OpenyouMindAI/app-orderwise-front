@@ -15,7 +15,7 @@
       </div>
       <!-- Título -->
       <div class="header-section">
-        <span class="welcome-title">Bienvenido a</span>
+        <span class="welcome-title">Bienvenido</span>
         <p class="welcome-subtitle">Accede a tu cuenta para continuar</p>
       </div>
 
@@ -77,7 +77,7 @@
             dense
             class="remember-checkbox"
           />
-          <a href="#" class="forgot-password-link">¿Olvidaste tu contraseña?</a>
+          <a href="#" class="forgot-password-link" @click.prevent="showForgotPasswordDialog = true">¿Olvidaste tu contraseña?</a>
         </div>
 
         <!-- Botón Iniciar Sesión -->
@@ -143,6 +143,30 @@
         </a>
       </div>
     </div>
+
+    <!-- Password Reset Dialogs -->
+    <ForgotPasswordDialog
+      v-model="showForgotPasswordDialog"
+      @code-sent="handleCodeSent"
+    />
+
+    <VerifyResetCodeDialog
+      v-model="showVerifyCodeDialog"
+      :identifier="resetData.identifier"
+      :channel="resetData.channel"
+      :session-token="resetData.sessionToken"
+      :expires-at="resetData.expiresAt"
+      @code-verified="handleCodeVerified"
+      @resend-requested="handleResendRequested"
+    />
+
+    <NewPasswordDialog
+      v-model="showNewPasswordDialog"
+      :identifier="resetData.identifier"
+      :code="resetData.code"
+      :session-token="resetData.sessionToken"
+      @password-reset="handlePasswordReset"
+    />
   </div>
 </template>
 <script>
@@ -152,8 +176,17 @@ import { mapActions, mapState } from 'pinia'
 import { authentication } from 'stores/module-authentication'
 import { notify } from '../const/mixins'
 import { darkModeStore } from '../stores/darkModeStore'
+import ForgotPasswordDialog from 'src/components/ForgotPasswordDialog.vue'
+import VerifyResetCodeDialog from 'src/components/VerifyResetCodeDialog.vue'
+import NewPasswordDialog from 'src/components/NewPasswordDialog.vue'
+
 export default {
   name: 'LoginPage',
+  components: {
+    ForgotPasswordDialog,
+    VerifyResetCodeDialog,
+    NewPasswordDialog
+  },
   data () {
     return {
       qBitsLogo,
@@ -166,6 +199,17 @@ export default {
       facebookLoading: false,
       googleClient: null,
       facebookSDKLoaded: false,
+      // Password reset flow
+      showForgotPasswordDialog: false,
+      showVerifyCodeDialog: false,
+      showNewPasswordDialog: false,
+      resetData: {
+        identifier: '',
+        channel: '',
+        sessionToken: null,
+        expiresAt: null,
+        code: ''
+      },
       /**
        * Email User
        * @type {String}
@@ -747,6 +791,55 @@ export default {
         this.btnDisable = false
       }
     },
+
+    /**
+     * Manejar cuando se envía el código de recuperación
+     */
+    handleCodeSent (data) {
+      this.resetData.identifier = data.identifier
+      this.resetData.channel = data.channel
+      this.resetData.sessionToken = data.sessionToken
+      this.resetData.expiresAt = data.expiresAt
+      this.showVerifyCodeDialog = true
+    },
+
+    /**
+     * Manejar cuando se verifica el código correctamente
+     */
+    handleCodeVerified (data) {
+      this.resetData.code = data.code
+      this.showNewPasswordDialog = true
+    },
+
+    /**
+     * Manejar cuando se solicita reenviar el código
+     */
+    handleResendRequested (data) {
+      this.resetData.sessionToken = data.sessionToken
+      this.resetData.expiresAt = data.expiresAt
+    },
+
+    /**
+     * Manejar cuando se resetea la contraseña exitosamente
+     */
+    handlePasswordReset (data) {
+      if (data.success) {
+        notify('Contraseña actualizada exitosamente. Ahora puede iniciar sesión.', 'positive', 'check_circle')
+        // Limpiar datos de reseteo
+        this.resetData = {
+          identifier: '',
+          channel: '',
+          sessionToken: null,
+          expiresAt: null,
+          code: ''
+        }
+        // Opcional: pre-llenar el campo de usuario si es email
+        if (this.resetData.identifier && this.resetData.identifier.includes('@')) {
+          this.username = this.resetData.identifier
+        }
+      }
+    },
+
     ...mapActions(authentication, ['login', 'setSessionData'])
   }
 }
@@ -831,7 +924,7 @@ export default {
   z-index: 10;
   width: 90%;
   max-width: 440px;
-  padding: 24px 28px 20px;
+  padding: 14px 18px 12px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -1084,7 +1177,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 46px;
+  min-height: 46px;
   border: none;
   border-radius: 12px;
   font-size: 14px;

@@ -526,8 +526,6 @@ const formattedPreviousValue = computed(() => {
   return `$${number.toFixed(2)}`
 })
 
-const invoiceOptions = computed(() => INVOICE_OPTIONS_CONFIG)
-
 // Navigation Computed
 const canProceedFromKeypad = computed(() => inputValue.value.length > 0)
 
@@ -939,7 +937,7 @@ const createInvoice = async () => {
       coin_id: coin.id,
       description: '',
       type_of_service_id: typeOfService.id,
-      invoice_type_id: selectedInvoiceType.value.id, // Use selected invoice type ID
+      invoice_type_id: selectedInvoiceType.value.id,
       user_created_id: userSession.id,
       branch_office_id: branchOffice.id,
       exchange_rate: 0,

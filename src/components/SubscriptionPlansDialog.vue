@@ -1,7 +1,7 @@
 <template>
   <div>
-    <q-dialog v-model="showDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card flat class="fullscreen-pricing">
+    <q-dialog v-model="showDialog" persistent :maximized="isMobile" transition-show="slide-up" transition-hide="slide-down">
+      <q-card flat class="futuristic-pricing">
         <!-- Close Button -->
         <q-btn
           icon="close"
@@ -9,101 +9,114 @@
           round
           dense
           v-close-popup
-          class="close-btn-fixed"
+          class="close-btn"
         />
 
+        <!-- Animated Background -->
+        <div class="bg-gradient"></div>
+
         <!-- Content Container -->
-        <div class="pricing-content">
+        <div class="pricing-container">
           <!-- Header -->
           <div class="pricing-header">
-            <div class="text-h4 text-weight-bold text-center q-mb-sm">
+            <div class="header-title">
               Elige tu plan
             </div>
-            <div class="text-subtitle1 text-center text-grey-7 q-mb-lg">
+            <div class="header-subtitle">
               Selecciona el plan que mejor se adapte a tus necesidades
             </div>
           </div>
 
           <!-- Plans Grid -->
-          <div class="pricing-grid">
+          <div class="plans-grid">
             <div
-              v-for="plan in plans"
+              v-for="plan in plans.filter(p => p.slug?.toLowerCase() !== 'free')"
               :key="plan.id"
-              class="plan-wrapper"
+              :class="[
+                'plan-card',
+                {
+                  'plan-featured': plan.slug?.toLowerCase()?.toLowerCase() === 'pro',
+                  'plan-current': isCurrentPlan(plan)
+                }
+              ]"
             >
-              <div
-                :class="[
-                  'pricing-card',
-                  {
-                    'pricing-card-featured': plan.slug === 'pro',
-                    'pricing-card-current': isCurrentPlan(plan)
-                  }
-                ]"
-              >
-                <!-- Plan Name -->
-                <div class="card-plan-name">{{ plan.name }}</div>
-
-                <!-- Price (local currency if available) -->
-                <div class="card-price">
-                  <span v-if="plan.price === 0" class="price-value">$0</span>
-                  <template v-else>
-                    <span class="price-value">
-                      {{ getPlanCurrencySymbol(plan) }}{{ getPlanLocalPrice(plan) }}
-                    </span>
-                  </template>
-                  <span class="price-period">/ mes</span>
-                </div>
-
-                <div class="card-subtitle">{{ plan.description }}</div>
-
-                <!-- CTA Button -->
-                <q-btn
-                  unelevated
-                  :color="plan.slug === 'pro' ? 'white' : 'primary'"
-                  :text-color="plan.slug === 'pro' ? 'primary' : 'white'"
-                  :label="getActionLabel(plan)"
-                  :class="['full-width', 'card-cta-btn', plan.slug === 'pro' ? 'btn-featured' : '']"
-                  @click="selectPlan(plan)"
-                  :loading="loading"
-                  :disable="isCurrentPlan(plan) || plan.slug === 'free'"
-                />
-
-                <!-- Features List -->
-                <div class="card-features">
-                  <div
-                    v-for="(feature, index) in plan.features"
-                    :key="index"
-                    class="card-feature-item"
-                  >
-                    <q-icon name="check_circle" size="18px" :color="plan.slug === 'pro' ? 'white' : 'positive'" />
-                    <span>{{ feature }}</span>
-                  </div>
-                </div>
-
-                <!-- Pro Team Branch Pricing (usa cálculo del backend con conversión) -->
-                <div v-if="plan.slug === 'pro_team'" class="branch-pricing">
-                  <div class="branch-pricing-label">
-                    Sucursales adicionales: ${{ plan.price_per_branch }}/mes c/u
-                  </div>
-                  <q-input
-                    v-model.number="branchCount"
-                    type="number"
-                    min="1"
-                    dense
-                    filled
-                    label="Número de sucursales"
-                    @update:model-value="() => calculateProTeamPrice(plan)"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="store" size="18px" />
-                    </template>
-                  </q-input>
-                  <div class="branch-pricing-total">
-                    Total: {{ getPlanCurrencySymbol(plan) }}{{ proTeamTotalPrice }}/mes
-                  </div>
-                </div>
-
+              <!-- Featured Badge -->
+              <div v-if="plan.slug?.toLowerCase() === 'pro'" class="featured-badge">
+                <q-icon name="star" size="14px" />
+                <span>Más Popular</span>
               </div>
+
+              <!-- Current Badge -->
+              <div v-if="isCurrentPlan(plan)" class="current-badge">
+                <q-icon name="check_circle" size="14px" />
+                <span>Plan Actual</span>
+              </div>
+
+              <!-- Plan Header -->
+              <div class="plan-header">
+                <div class="plan-name">{{ plan.name }}</div>
+                <div class="plan-description">{{ plan.description }}</div>
+              </div>
+
+              <!-- Price -->
+              <div class="plan-price">
+                <div class="price-wrapper">
+                  <span v-if="plan.price === 0" class="price-amount">Gratis</span>
+                  <template v-else>
+                    <span class="price-currency">{{ getPlanCurrencySymbol(plan) }}</span>
+                    <span class="price-amount">{{ getPlanLocalPrice(plan) }}</span>
+                    <span class="price-period">/mes</span>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Features -->
+              <div class="plan-features">
+                <div
+                  v-for="(feature, index) in plan.features"
+                  :key="index"
+                  class="feature-item"
+                >
+                  <q-icon name="check" size="16px" class="feature-icon" />
+                  <span>{{ feature }}</span>
+                </div>
+              </div>
+
+              <!-- Pro Team Branch Pricing -->
+              <div v-if="plan.slug?.toLowerCase() === 'pro_team'" class="branch-config">
+                <div class="branch-divider"></div>
+                <div class="branch-label">
+                  Sucursales adicionales: ${{ plan.price_per_branch }}/mes
+                </div>
+                <q-input
+                  v-model.number="branchCount"
+                  type="number"
+                  min="1"
+                  outlined
+                  dense
+                  label="Número de sucursales"
+                  class="branch-input"
+                  @update:model-value="() => calculateProTeamPrice(plan)"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="store" size="18px" />
+                  </template>
+                </q-input>
+                <div class="branch-total">
+                  Total: {{ getPlanCurrencySymbol(plan) }}{{ proTeamTotalPrice }}/mes
+                </div>
+              </div>
+
+              <!-- Action Button -->
+              <q-btn
+                unelevated
+                no-caps
+                :label="getActionLabel(plan)"
+                :class="['action-btn', plan.slug?.toLowerCase() === 'pro' ? 'action-btn-featured' : '']"
+                @click="selectPlan(plan)"
+                :loading="loading"
+                :disable="isCurrentPlan(plan) || plan.slug?.toLowerCase() === 'free'"
+              />
             </div>
           </div>
         </div>
@@ -149,9 +162,9 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
-import { date } from 'quasar'
 
 export default {
   name: 'SubscriptionPlansDialog',
@@ -163,6 +176,7 @@ export default {
   },
   emits: ['update:modelValue', 'subscription-updated'],
   setup (props, { emit }) {
+    const $q = useQuasar()
     const plans = ref([])
     const currentSubscription = ref(null)
     const loading = ref(false)
@@ -177,6 +191,8 @@ export default {
       set: (val) => emit('update:modelValue', val)
     })
 
+    const isMobile = computed(() => $q.screen.lt.sm)
+
     const daysLeft = computed(() => {
       if (!currentSubscription.value) return 0
       const end = new Date(currentSubscription.value.end_date)
@@ -186,17 +202,17 @@ export default {
     })
 
     const isCurrentPlan = (plan) => {
-      if (!currentSubscription.value) return plan.slug === 'free'
+      if (!currentSubscription.value) return plan.slug?.toLowerCase() === 'free'
       return currentSubscription.value.plan.id === plan.id
     }
 
     const canUpgrade = (plan) => {
-      if (plan.slug === 'free') return false
+      if (plan.slug?.toLowerCase() === 'free') return false
       if (!currentSubscription.value) return true
 
       const currentPlanOrder = { free: 0, pro: 1, pro_team: 2 }
-      const currentOrder = currentPlanOrder[currentSubscription.value.plan.slug] || 0
-      const targetOrder = currentPlanOrder[plan.slug] || 0
+      const currentOrder = currentPlanOrder[currentSubscription.value.plan.slug?.toLowerCase()] || 0
+      const targetOrder = currentPlanOrder[plan.slug?.toLowerCase()] || 0
 
       return targetOrder > currentOrder
     }
@@ -257,7 +273,7 @@ export default {
           [plan.id]: data
         }
 
-        if (plan.slug === 'pro_team') {
+        if (plan.slug?.toLowerCase() === 'pro_team') {
           proTeamTotalPrice.value = data.total_price_local
             ? formatNumber(data.total_price_local)
             : formatNumber(data.total_price_usd)
@@ -268,7 +284,7 @@ export default {
     }
 
     const calculateProTeamPrice = async (plan) => {
-      if (plan.slug !== 'pro_team') return
+      if (plan.slug?.toLowerCase() !== 'pro_team') return
       await fetchPlanPricing(plan, branchCount.value)
     }
 
@@ -279,7 +295,7 @@ export default {
 
         // Cargar precios (y conversión) para todos los planes
         for (const plan of plans.value) {
-          const branches = plan.slug === 'pro_team' ? branchCount.value : 1
+          const branches = plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1
           await fetchPlanPricing(plan, branches)
         }
       } catch (error) {
@@ -310,7 +326,7 @@ export default {
      */
     const selectPlan = async (plan) => {
       // Si el plan es Free, no requiere pago
-      if (plan.slug === 'free') {
+      if (plan.slug?.toLowerCase() === 'free') {
         notify('El plan Free no requiere pago', 'info', 'info')
         return
       }
@@ -321,7 +337,7 @@ export default {
         // Crear link de pago con Checkout Pro
         const response = await api.post('mercadopago/create-payment', {
           subscription_plan_id: plan.id,
-          branch_offices_count: plan.slug === 'pro_team' ? branchCount.value : 1,
+          branch_offices_count: plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1,
           months: 1
         })
 
@@ -401,6 +417,7 @@ export default {
 
     return {
       showDialog,
+      isMobile,
       plans,
       currentSubscription,
       loading,
@@ -428,208 +445,243 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-.fullscreen-pricing {
-  background: #fafafa;
-  height: 100vh;
+.futuristic-pricing {
+  position: relative;
+  background: #1a1a1a;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
   overflow-y: auto;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border-radius: 16px;
+
+  /* Custom Scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0 16px 16px 0;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
 }
 
-.close-btn-fixed {
+.q-dark .futuristic-pricing {
+  background: #1a1a1a;
+}
+
+body:not(.q-dark) .futuristic-pricing {
+  background: #f8f9fa;
+
+  /* Custom Scrollbar Light Mode */
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+}
+
+.bg-gradient {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 100;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 16px 16px 0 0;
 }
 
-.pricing-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 24px 40px;
+body:not(.q-dark) .bg-gradient {
+  opacity: 0.05;
+}
+
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  color: white;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.5);
+  }
+}
+
+body:not(.q-dark) .close-btn {
+  background: rgba(255, 255, 255, 0.8);
+  color: #1a1a1a;
+
+  &:hover {
+    background: rgba(255, 255, 255, 1);
+  }
+}
+
+.pricing-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 24px;
 }
 
 .pricing-header {
-  margin-bottom: 40px;
-
-  .text-h4 {
-    font-family: 'Inter', sans-serif;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-  }
-
-  .text-subtitle1 {
-    font-family: 'Inter', sans-serif;
-    font-weight: 400;
-  }
+  text-align: center;
+  margin-bottom: 20px;
 }
 
-.pricing-grid {
+.header-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: white;
+}
+
+body:not(.q-dark) .header-title {
+  color: #1a1a1a;
+  -webkit-text-fill-color: #1a1a1a;
+  background: none;
+}
+
+.header-subtitle {
+  font-size: 14px;
+  opacity: 0.7;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+body:not(.q-dark) .header-subtitle {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.plans-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  max-width: 1000px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  max-width: 100%;
   margin: 0 auto;
 }
 
-.pricing-card {
-  background: white;
-  border-radius: 12px;
-  padding: 32px 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  font-family: 'Inter', sans-serif;
+.plan-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+  color: white;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+}
+
+body:not(.q-dark) .plan-card {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  color: #1a1a1a;
+
+  &:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   }
 
-  &.pricing-card-featured {
-    background: var(--q-primary);
-    color: white;
-    transform: scale(1.05);
-    box-shadow: 0 8px 32px rgba(var(--q-primary-rgb), 0.3);
+  &.plan-featured {
+    background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
+    border: 2px solid transparent;
+    transform: scale(1);
+    box-shadow: 0 8px 32px rgba(var(--q-primary-rgb), 0.4);
 
-    .card-plan-name,
-    .price-value,
-    .card-subtitle,
-    .card-feature-item {
+    .plan-name,
+    .plan-description,
+    .price-currency,
+    .price-amount,
+    .price-period,
+    .feature-item {
       color: white;
     }
 
-    .price-period {
-      color: rgba(255, 255, 255, 0.8);
+    .feature-icon {
+      color: white;
     }
 
     &:hover {
-      transform: scale(1.05) translateY(-4px);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 48px rgba(var(--q-primary-rgb), 0.5);
     }
   }
 
-  &.pricing-card-current {
+  &.plan-current {
     border: 2px solid var(--q-primary);
+    box-shadow: 0 0 40px rgba(var(--q-primary-rgb), 0.3);
   }
 }
 
-.card-plan-name {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 16px;
-  text-align: center;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: -0.3px;
-}
-
-.card-price {
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.price-value {
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: -1.5px;
-}
-
-.price-period {
-  font-size: 15px;
-  color: #666;
-  margin-left: 4px;
-  font-weight: 500;
-}
-
-.card-subtitle {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 24px;
-  min-height: 40px;
-  font-weight: 400;
-  line-height: 1.4;
-}
-
-.card-cta-btn {
-  height: 44px;
-  border-radius: 8px;
-  font-weight: 600;
-  text-transform: none;
-  margin-bottom: 24px;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: -0.2px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-  transition: all 0.2s ease;
-
-  &:hover:not(:disabled) {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
-    transform: translateY(-1px);
-  }
-
-  &.btn-featured {
-    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3) !important;
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.4) !important;
-    }
-  }
-}
-
-.card-features {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.card-feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  font-size: 14px;
-  line-height: 1.5;
-  font-weight: 500;
-}
-
-.plan-card-modern {
-  position: relative;
-  height: 100%;
-  padding: 20px 16px;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  background: white;
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
-
-  &:hover {
-    border-color: #999;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  }
-
-  &.plan-card-current {
-    border: 1.5px solid var(--q-primary);
-    background: rgba(var(--q-primary-rgb), 0.02);
-  }
-
-  &.plan-card-popular {
-    border: 1.5px solid #000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  }
-}
-
-.popular-badge {
+.featured-badge {
   position: absolute;
-  top: -10px;
+  top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 3px 10px;
-  background: #000;
-  color: white;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
   font-size: 11px;
   font-weight: 600;
+  color: white;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.current-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--q-primary);
   border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
   letter-spacing: 0.3px;
 }
 
@@ -638,111 +690,168 @@ export default {
 }
 
 .plan-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #000;
-  margin-bottom: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
 }
 
 .plan-description {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.4;
+  font-size: 13px;
+  opacity: 0.7;
+  line-height: 1.5;
 }
 
 .plan-price {
   margin-bottom: 16px;
+}
+
+.price-wrapper {
   display: flex;
   align-items: baseline;
-  gap: 2px;
+  gap: 4px;
 }
 
 .price-currency {
   font-size: 18px;
   font-weight: 600;
-  color: #000;
+  opacity: 0.8;
 }
 
 .price-amount {
   font-size: 32px;
   font-weight: 700;
-  color: #000;
+  letter-spacing: -2px;
   line-height: 1;
 }
 
 .price-period {
-  font-size: 13px;
-  color: #666;
-  margin-left: 2px;
+  font-size: 14px;
+  opacity: 0.6;
+  margin-left: 4px;
 }
 
 .plan-features {
-  flex: 1;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .feature-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
   font-size: 13px;
-  color: #333;
-  line-height: 1.4;
+  line-height: 1.5;
+  opacity: 0.9;
 }
 
 .feature-icon {
-  color: #000;
-  margin-top: 1px;
+  margin-top: 2px;
   flex-shrink: 0;
+  color: var(--q-primary);
+
+  .plan-featured & {
+    color: white;
+  }
 }
 
-.branch-pricing {
+.branch-config {
+  margin-bottom: 20px;
+}
+
+.branch-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
   margin-bottom: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e5e5;
 }
 
-.branch-pricing-label {
+body:not(.q-dark) .branch-divider {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.branch-label {
   font-size: 12px;
-  color: #666;
-  margin-bottom: 8px;
+  opacity: 0.7;
+  margin-bottom: 10px;
 }
 
-.branch-pricing-total {
+.branch-input {
+  margin-bottom: 10px;
+}
+
+.branch-total {
   font-size: 14px;
   font-weight: 600;
   color: var(--q-primary);
-  margin-top: 6px;
-}
-
-.plan-action {
-  margin-top: auto;
 }
 
 .action-btn {
-  height: 36px;
-  border-radius: 6px;
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.2px;
-  text-transform: none;
+  letter-spacing: 0.3px;
+  background: var(--q-primary);
+  color: white;
+  transition: all 0.3s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--q-primary-rgb), 0.4);
+  }
+
+  &.action-btn-featured {
+    background: white;
+    color: var(--q-primary);
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+    }
+  }
 }
 
-.cancel-section {
-  text-align: center;
-  padding-top: 12px;
-  border-top: 1px solid #e5e5e5;
-}
+@media (max-width: 768px) {
+  .futuristic-pricing {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 
-.cancel-btn {
-  text-transform: none;
-  font-size: 12px;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  .bg-gradient {
+    border-radius: 0;
+  }
 
-  &:hover {
-    opacity: 1;
+  .pricing-container {
+    padding: 16px;
+  }
+
+  .header-title {
+    font-size: 24px;
+  }
+
+  .header-subtitle {
+    font-size: 13px;
+  }
+
+  .plans-grid {
+    gap: 12px;
+  }
+
+  .plan-card {
+    padding: 16px 20px;
+  }
+
+  .plan-card.plan-featured {
+    transform: scale(1);
+
+    &:hover {
+      transform: translateY(-4px);
+    }
+  }
+
+  .price-amount {
+    font-size: 28px;
   }
 }
 </style>
