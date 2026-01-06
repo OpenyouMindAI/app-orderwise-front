@@ -283,8 +283,20 @@
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
-                    <div class="integration-item" @click="openDialogArca">
-                      <img src="images/circle-arca.png" alt="ARCA" class="integration-logo" />
+                    <div class="integration-item" @click="openDialogArca" style="position: relative;">
+                      <img
+                        src="images/circle-arca.png"
+                        alt="ARCA"
+                        class="integration-logo"
+                      >
+                      <premium-badge
+                        :show="subscriptionPlan === 'Free'"
+                        :size="15"
+                        top="0px"
+                        right="4px"
+                        padding="4px"
+                        tooltip-text="PREMIUM"
+                      />
                     </div>
                   </div>
                 </div>
@@ -893,6 +905,7 @@ import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import GoogleRegisterButton from 'src/components/Auth/GoogleRegisterButton.vue'
+import PremiumBadge from 'src/components/PremiumBadge.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -917,7 +930,8 @@ export default {
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
     AddressComponent,
-    GoogleRegisterButton
+    GoogleRegisterButton,
+    PremiumBadge
   },
   data () {
     return {
