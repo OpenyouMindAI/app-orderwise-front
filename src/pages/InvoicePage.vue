@@ -62,6 +62,7 @@
         @row-click="editInvoice"
         @request="setPagination"
         no-data-label="Registro no encontrado"
+        :grid="$q.screen.lt.md"
       >
         <template v-slot:loading>
           <q-inner-loading showing color="primary" />
@@ -88,6 +89,91 @@
             </q-input>
           </div>
         </template>
+
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+            <q-card class="cursor-pointer q-hoverable shadow-2" style="border-radius: 12px" @click="editInvoice(null, props.row)">
+              <span class="q-focus-helper"></span>
+
+              <q-card-section class="row justify-between items-start" style="padding: 0.5rem !important">
+                <div class="column">
+                   <div class="text-subtitle1 text-weight-bold text-primary">{{ props.row.code }}</div>
+                   <div class="text-caption text-grey-7">{{ props.row.invoice_type?.name }}</div>
+                </div>
+                <div class="column items-end">
+                   <q-badge
+                     v-if="props.row.status"
+                     :color="status[props.row.status]?.color"
+                     :label="status[props.row.status]?.label"
+                     class="q-py-xs q-px-sm"
+                     rounded
+                   />
+                </div>
+              </q-card-section>
+
+              <q-separator spaced inset style="margin: 0 !important"/>
+
+              <q-card-section style="padding: 0.5rem !important">
+                <div class="row q-col-gutter-xs">
+                  <div class="col-8">
+                     <div class="text-caption text-grey-6">Cliente</div>
+                     <div class="text-body2 text-weight-medium ellipsis">{{ props.row.client?.name || '-' }}</div>
+                  </div>
+                  <div class="col-4 text-right">
+                     <div class="text-caption text-grey-6">Fecha</div>
+                     <div class="text-body2">{{ props.row.created_at?.split('T')[0] || '-' }}</div>
+                  </div>
+                  <div class="col-12 q-mt-xs" v-if="props.row.seller">
+                     <div class="text-caption text-grey-6">Vendedor</div>
+                     <div class="text-body2">{{ props.row.seller.name }}</div>
+                  </div>
+                </div>
+              </q-card-section>
+
+              <q-card-section style="padding: 0 !important">
+                 <div class="row items-center justify-between bg-grey-1 q-pa-sm" style="border-radius: 8px">
+                    <div>
+                      <div class="text-caption text-grey-7">Total</div>
+                      <div class="text-h6 text-primary lh-100">{{ formatNumber(props.row.total) }}</div>
+                    </div>
+                    <div>
+                      <q-btn
+                        round
+                        color="negative"
+                        icon="restart_alt"
+                        size="md"
+                        v-if="!props.row.billing && props.row?.electronic_invoice?.fields?.error"
+                        @click.stop="alertBeforeSend(props.row)"
+                      >
+                         <q-tooltip>Error: {{ props.row?.electronic_invoice?.fields?.message }}</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        round
+                        color="warning"
+                        icon="send"
+                        size="md"
+                        v-else-if="!props.row.billing"
+                        @click.stop="alertBeforeSend(props.row)"
+                      >
+                         <q-tooltip>Facturar</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        round
+                        color="positive"
+                        icon="check_circle"
+                        size="md"
+                        v-if="props.row.billing"
+                        @click.stop
+                      >
+                         <q-tooltip>Facturado</q-tooltip>
+                      </q-btn>
+                    </div>
+                 </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </template>
+
         <template v-slot:body-cell-status="props">
           <q-td :props="props" v-if="props.value">
             <q-badge
@@ -232,7 +318,8 @@
                 >
                   <q-card>
                     <q-card-section class="q-pa-xs">
-                      <q-markup-table dense>
+                      <!-- Desktop Table -->
+                      <q-markup-table dense v-if="$q.screen.gt.xs">
                         <thead>
                           <tr>
                             <th class="text-left">Código</th>
@@ -325,6 +412,74 @@
                           </template>
                         </tbody>
                       </q-markup-table>
+
+                      <!-- Mobile List View -->
+                      <div v-else class="q-gutter-y-sm">
+                        <!-- Products Loop -->
+                        <div v-for="product in invoice.products" :key="product.id" class="bg-grey-1 q-pa-sm" style="border-radius: 8px">
+                          <div class="row items-start justify-between no-wrap">
+                            <div class="col q-pr-sm">
+                              <div class="text-subtitle2 text-weight-medium">{{ product.name }}</div>
+                              <div class="text-caption text-grey-7">{{ product.barcode }}</div>
+                            </div>
+                            <div class="col-auto text-right">
+                               <div class="text-subtitle2 text-weight-bold text-primary">{{ formatNumber(product.pivot.amount * product.pivot.price) }}</div>
+                               <div class="text-caption text-grey-8">{{ formatNumber(product.pivot.amount) }} x {{ formatNumber(product.pivot.price) }}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Promotions Loop -->
+                        <div v-for="promotion in invoice.promotions" :key="promotion.id" class="bg-grey-1 q-pa-sm" style="border-radius: 8px">
+                          <div class="row items-start justify-between no-wrap">
+                            <div class="col q-pr-sm">
+                              <div class="text-subtitle2 text-weight-medium">{{ promotion.name }}</div>
+                              <div class="text-caption text-grey-7">{{ promotion.barcode || 'Promoción' }}</div>
+                            </div>
+                            <div class="col-auto text-right">
+                               <div class="text-subtitle2 text-weight-bold text-primary">{{ formatNumber(promotion.final_price || promotion.pivot.price) }}</div>
+                               <div class="text-caption text-grey-8">Cant: {{ formatNumber(promotion.pivot.quantity) }}</div>
+                            </div>
+                          </div>
+
+                          <!-- Expand Details Button -->
+                          <div class="row justify-center q-mt-xs" v-if="promotion.pivot && promotion.pivot.promotion_details && promotion.pivot.promotion_details.length > 0">
+                             <q-btn
+                                flat
+                                dense
+                                size="sm"
+                                color="primary"
+                                :icon-right="promotionExpanded[promotion.id] ? 'expand_less' : 'expand_more'"
+                                label="Detalles"
+                                @click="togglePromotionDetails(promotion.id)"
+                             />
+                          </div>
+
+                          <!-- Promotion Details -->
+                          <div v-if="promotionExpanded[promotion.id] && promotion.pivot && promotion.pivot.promotion_details" class="q-mt-sm q-pa-sm bg-white" style="border-radius: 6px">
+                              <div v-for="group in promotion.pivot.promotion_details" :key="group.id" class="q-mb-md last-no-margin">
+                                  <div class="text-caption text-weight-bold q-mb-xs">
+                                    {{ group.name }} ({{ group.quantity }})
+                                  </div>
+                                  <div class="q-pl-sm" style="border-left: 2px solid #eee">
+                                    <div v-if="group.products && group.products.length > 0">
+                                      <div
+                                        v-for="prod in group.products.filter(p => p.pivot && p.pivot.quantity > 0)"
+                                        :key="prod.id"
+                                        class="row justify-between items-center q-mb-xs"
+                                      >
+                                        <span class="text-caption col ellipsis">{{ prod.name }}</span>
+                                        <span class="text-caption text-weight-bold col-auto q-ml-sm">{{ prod.pivot.quantity }}</span>
+                                      </div>
+                                    </div>
+                                    <div v-else class="text-caption text-grey-6">
+                                      Sin selección
+                                    </div>
+                                  </div>
+                              </div>
+                          </div>
+                        </div>
+                      </div>
                     </q-card-section>
                   </q-card>
                 </q-expansion-item>
