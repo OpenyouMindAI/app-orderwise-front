@@ -1,7 +1,9 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
+      <div class="col-12 text-right q-gutter-sm">
+        <q-btn color="teal" @click="exportClients" icon="download" label="Exportar" />
+        <q-btn color="indigo" @click="openImportDialog" icon="upload" label="Importar" />
         <q-btn color="primary" @click="openNewClientModal" icon="add_circle"/>
       </div>
       <div class="col-12">
@@ -279,6 +281,199 @@
         </q-form>
       </q-card>
     </q-dialog>
+
+    <!-- Import Dialog -->
+    <q-dialog v-model="showImportDialog" persistent>
+      <q-card style="width: 700px; max-width: 90vw;">
+        <!-- Header -->
+        <q-card-section class="row items-center text-white bg-indigo">
+          <q-icon name="upload_file" size="md" class="q-mr-sm" />
+          <div class="text-h6">Importar Clientes</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeImportDialog" />
+        </q-card-section>
+
+        <!-- Content -->
+        <q-card-section class="q-pa-lg">
+          <!-- Step 1: Download Template -->
+          <div class="import-step q-mb-lg">
+            <div class="row items-center q-mb-md">
+              <div class="import-step-number">1</div>
+              <div class="text-subtitle1 text-weight-medium">Descarga la plantilla (opcional)</div>
+            </div>
+            <q-btn
+              unelevated
+              color="primary"
+              icon="download"
+              label="Descargar Plantilla Excel"
+              @click="exportClients"
+              class="full-width"
+              style="border-radius: 8px;"
+              size="md"
+            />
+            <div class="text-caption text-grey-7 q-mt-sm q-ml-sm">
+              Exporta tus clientes actuales como plantilla o descarga una vacía
+            </div>
+          </div>
+
+          <!-- Step 2: Upload File -->
+          <div class="import-step q-mb-lg">
+            <div class="row items-center q-mb-md">
+              <div class="import-step-number">2</div>
+              <div class="text-subtitle1 text-weight-medium">Sube tu archivo</div>
+            </div>
+
+            <!-- Dropzone -->
+            <div
+              class="import-dropzone"
+              :class="{ 'dropzone-active': isDragging, 'dropzone-has-file': importFile }"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleFileDrop"
+              @click="triggerFileInput"
+            >
+              <input
+                ref="fileInputImport"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                @change="handleFileSelect"
+                style="display: none;"
+              />
+
+              <div v-if="!importFile" class="dropzone-content">
+                <q-icon name="cloud_upload" size="48px" color="primary" class="q-mb-md" />
+                <div class="text-h6 text-weight-medium q-mb-xs">
+                  Arrastra tu archivo aquí
+                </div>
+                <div class="text-body2 text-grey-7 q-mb-md">
+                  o haz clic para seleccionar
+                </div>
+                <div class="text-caption text-grey-6">
+                  Formatos: .xlsx, .xls, .csv • Máx. 10MB
+                </div>
+              </div>
+
+              <div v-else class="dropzone-file-info">
+                <div class="row items-center">
+                  <q-icon name="description" size="40px" color="positive" class="q-mr-md" />
+                  <div class="col">
+                    <div class="text-subtitle1 text-weight-medium">
+                      {{ importFile.name }}
+                    </div>
+                    <div class="text-caption text-grey-7">
+                      {{ formatFileSize(importFile.size) }} • {{ importPreview.length }} registros
+                    </div>
+                  </div>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="close"
+                    color="grey-7"
+                    @click.stop="removeImportFile"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview -->
+          <div v-if="importPreview.length > 0" class="import-step">
+            <div class="row items-center q-mb-md">
+              <div class="import-step-number">3</div>
+              <div class="text-subtitle1 text-weight-medium">Vista previa</div>
+            </div>
+            <q-card flat bordered class="preview-card">
+              <q-list separator>
+                <q-item v-for="(client, index) in importPreview.slice(0, 5)" :key="index">
+                  <q-item-section avatar>
+                    <q-avatar color="primary" text-color="white" size="sm">
+                      {{ index + 1 }}
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-medium">{{ client.name }}</q-item-label>
+                    <q-item-label caption>{{ client.email || 'Sin email' }} • {{ client.document_number || 'Sin documento' }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+              <q-separator />
+              <div class="q-pa-sm text-center text-caption text-grey-7">
+                Mostrando 5 de {{ importPreview.length }} registros
+              </div>
+            </q-card>
+          </div>
+        </q-card-section>
+
+        <!-- Actions -->
+        <q-card-actions class="q-pa-lg q-pt-none">
+          <q-btn
+            flat
+            label="Cancelar"
+            @click="closeImportDialog"
+            color="grey-8"
+            class="q-px-lg"
+            style="border-radius: 8px;"
+          />
+          <q-space />
+          <q-btn
+            unelevated
+            color="positive"
+            label="Importar"
+            @click="importClients"
+            :disable="!importFile"
+            :loading="importLoading"
+            icon-right="upload"
+            class="q-px-xl"
+            style="border-radius: 8px;"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Import Results Dialog -->
+    <q-dialog v-model="showImportResults">
+      <q-card style="width: 600px; max-width: 80vw;">
+        <q-card-section class="row items-center text-white" :class="importResults.errors.length > 0 ? 'bg-orange' : 'bg-positive'">
+          <q-icon :name="importResults.errors.length > 0 ? 'warning' : 'check_circle'" size="md" class="q-mr-sm" />
+          <div class="text-h6">Resultado de la importación</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <div class="q-mb-md">
+            <p class="text-body1">
+              <strong>Importados:</strong> {{ importResults.imported }} clientes
+            </p>
+            <p class="text-body1" v-if="importResults.skipped > 0">
+              <strong>Omitidos:</strong> {{ importResults.skipped }} clientes (ya existían)
+            </p>
+          </div>
+
+          <div v-if="importResults.errors.length > 0">
+            <p class="text-body2 text-weight-bold text-negative">Errores:</p>
+            <q-list bordered separator dense>
+              <q-item v-for="(error, index) in importResults.errors" :key="index">
+                <q-item-section>
+                  <q-item-label caption>Fila {{ error.row }}</q-item-label>
+                  <q-item-label class="text-negative">{{ error.message }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn
+            label="Cerrar"
+            color="primary"
+            v-close-popup
+            @click="getClients()"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -289,6 +484,7 @@ import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import * as XLSX from 'xlsx'
 export default {
   components: {
     AddressComponent
@@ -299,6 +495,17 @@ export default {
       documentTypes: [],
       client: {},
       filter: '',
+      showImportDialog: false,
+      importFile: null,
+      importPreview: [],
+      importLoading: false,
+      isDragging: false,
+      showImportResults: false,
+      importResults: {
+        imported: 0,
+        skipped: 0,
+        errors: []
+      },
       /**
        * Address component key for resetting
        * @type {Number}
@@ -692,6 +899,205 @@ export default {
 
       // Actualizar los campos de dirección para el formulario
       this.address = address
+    },
+    /**
+     * Export clients to Excel
+     */
+    async exportClients () {
+      try {
+        this.visible = true
+        const { data } = await this.$api.post('clients/export')
+
+        if (!data.data || data.data.length === 0) {
+          Notify.create({
+            message: 'No hay clientes para exportar',
+            icon: 'warning',
+            color: 'orange'
+          })
+          this.visible = false
+          return
+        }
+
+        // Create worksheet from data
+        const ws = XLSX.utils.json_to_sheet(data.data)
+
+        // Create workbook
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Clientes')
+
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 10)
+        const filename = `clientes_${timestamp}.xlsx`
+
+        // Download file
+        XLSX.writeFile(wb, filename)
+
+        this.visible = false
+        Notify.create({
+          message: `${data.total} clientes exportados exitosamente`,
+          icon: 'check_circle',
+          color: 'positive'
+        })
+      } catch (err) {
+        this.visible = false
+        console.error('Error exporting clients:', err)
+        Notify.create({
+          message: err.response?.data?.message || 'Error al exportar clientes',
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
+    },
+    /**
+     * Open import dialog
+     */
+    openImportDialog () {
+      this.showImportDialog = true
+      this.importFile = null
+      this.importPreview = []
+    },
+    /**
+     * Close import dialog
+     */
+    closeImportDialog () {
+      this.showImportDialog = false
+      this.importFile = null
+      this.importPreview = []
+      this.isDragging = false
+    },
+    /**
+     * Trigger file input click
+     */
+    triggerFileInput () {
+      this.$refs.fileInputImport?.click()
+    },
+    /**
+     * Handle file drop
+     */
+    handleFileDrop (e) {
+      this.isDragging = false
+      const files = e.dataTransfer.files
+      if (files.length > 0) {
+        this.importFile = files[0]
+        this.handleFileSelect({ target: { files: [files[0]] } })
+      }
+    },
+    /**
+     * Remove import file
+     */
+    removeImportFile () {
+      this.importFile = null
+      this.importPreview = []
+    },
+    /**
+     * Format file size
+     */
+    formatFileSize (bytes) {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    },
+    /**
+     * Handle file selection and preview
+     */
+    async handleFileSelect (event) {
+      const file = event.target?.files?.[0] || event
+      if (!file) {
+        this.importPreview = []
+        return
+      }
+
+      this.importFile = file
+
+      try {
+        const reader = new FileReader()
+
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result)
+            const workbook = XLSX.read(data, { type: 'array' })
+
+            // Get first sheet
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+
+            // Convert to JSON
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet)
+
+            this.importPreview = jsonData
+
+            if (jsonData.length === 0) {
+              Notify.create({
+                message: 'El archivo está vacío',
+                icon: 'warning',
+                color: 'orange'
+              })
+            }
+          } catch (err) {
+            console.error('Error parsing file:', err)
+            Notify.create({
+              message: 'Error al leer el archivo',
+              icon: 'warning',
+              color: 'negative'
+            })
+          }
+        }
+        
+        reader.readAsArrayBuffer(file)
+      } catch (err) {
+        console.error('Error reading file:', err)
+        Notify.create({
+          message: 'Error al procesar el archivo',
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
+    },
+    /**
+     * Import clients from file
+     */
+    async importClients () {
+      if (this.importPreview.length === 0) {
+        Notify.create({
+          message: 'No hay datos para importar',
+          icon: 'warning',
+          color: 'orange'
+        })
+        return
+      }
+
+      try {
+        this.importLoading = true
+
+        const { data } = await this.$api.post('clients/import', {
+          clients: this.importPreview
+        })
+
+        this.importResults = {
+          imported: data.imported,
+          skipped: data.skipped,
+          errors: data.errors || []
+        }
+
+        this.showImportDialog = false
+        this.showImportResults = true
+        this.importLoading = false
+        
+        Notify.create({
+          message: data.message,
+          icon: 'check_circle',
+          color: 'positive'
+        })
+      } catch (err) {
+        this.importLoading = false
+        console.error('Error importing clients:', err)
+        Notify.create({
+          message: err.response?.data?.message || 'Error al importar clientes',
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
     }
   }
 }
@@ -709,5 +1115,113 @@ export default {
 
 .address-cell:hover {
   color: var(--q-primary);
+}
+
+/* Import Dialog Styles */
+.import-close-btn {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.import-close-btn:hover {
+  opacity: 1;
+}
+
+.opacity-70 {
+  opacity: 0.7;
+}
+
+.import-step {
+  position: relative;
+}
+
+.import-step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--q-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-right: 12px;
+  font-size: 14px;
+}
+
+/* Dropzone Styles */
+.import-dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.02);
+}
+
+.body--dark .import-dropzone {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.05);
+}
+
+.import-dropzone:hover {
+  border-color: var(--q-primary);
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.body--dark .import-dropzone:hover {
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.1);
+}
+
+.dropzone-active {
+  border-color: var(--q-primary);
+  background: rgba(var(--q-primary-rgb, 25, 118, 210), 0.1);
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(var(--q-primary-rgb, 25, 118, 210), 0.2);
+}
+
+.dropzone-has-file {
+  border-style: solid;
+  border-color: var(--q-positive);
+  background: rgba(76, 175, 80, 0.05);
+  padding: 20px;
+}
+
+.body--dark .dropzone-has-file {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+.dropzone-file-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.preview-card {
+  border-radius: 8px;
+  overflow: hidden;
 }
 </style>

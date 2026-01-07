@@ -2275,6 +2275,10 @@ export default {
   methods: {
     async checkOnboardingStatus () {
       try {
+        const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+        if (isConfigured) {
+          return true
+        }
         const { data } = await api.get('/onboarding/tasks/status')
         if (data && data.tasks) {
           const categoryTask = data.tasks.find(t => t.route === 'Category')
@@ -3755,6 +3759,13 @@ export default {
      */
     async checkIfComplete () {
       try {
+        const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+        if (isConfigured) {
+          return {
+            isComplete: true,
+            percentage: 100
+          }
+        }
         const { data } = await api.get('/onboarding/tasks/status')
         const tasks = data.tasks || []
         const total = tasks.length
@@ -3774,17 +3785,15 @@ export default {
      * Show celebration dialog when 100% complete
      */
     async showCelebration () {
-      // Actualizar empresa como configurada
       try {
-        const companyId = this.userSession?.company_session?.id
-        await api.post('/companies/mark-configured', {
-          company_id: companyId
+        const { data } = await api.post('/companies/mark-configured')
+        this.setCompanySession({
+          ...this.userSession.company_session,
+          company_config: data.data
         })
       } catch (error) {
         console.error('Error marking company as configured:', error)
       }
-
-      // Mostrar diálogo de celebración con confeti
       const CelebrationDialog = await import('src/components/CelebrationDialog.vue')
       this.$q.dialog({
         component: CelebrationDialog.default

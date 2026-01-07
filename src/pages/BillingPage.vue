@@ -42,7 +42,7 @@
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
       <div class="billing-panel-container">
-        <div>
+        <div style="min-width: 0;">
           <!-- Panel de facturación -->
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales - Solo desktop -->
@@ -2536,6 +2536,10 @@ export default {
       }
     },
     async checkOnboardingStatus () {
+      const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+      if (isConfigured) {
+        return true
+      }
       try {
         const { data } = await api.get('/onboarding/tasks/status')
         if (data && data.tasks) {

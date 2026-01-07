@@ -136,7 +136,6 @@
             <q-tooltip>Ver tutorial de esta página</q-tooltip>
           </q-btn>
 
-          <!-- Botón de Renovar Suscripción (cuando el banner está cerrado) -->
           <q-btn
             v-if="showRenewButton"
             flat
@@ -157,7 +156,6 @@
             </q-tooltip>
           </q-btn>
 
-          <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
           <q-btn
             flat
             dense
@@ -169,7 +167,6 @@
             <q-tooltip>Segunda pantalla</q-tooltip>
           </q-btn>
 
-          <!-- Botón de escaneo QR -->
           <q-btn
             flat
             dense
@@ -181,7 +178,6 @@
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
 
-          <!-- Botón Chat con IA -->
           <q-btn
             flat
             dense
@@ -287,8 +283,20 @@
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
-                    <div class="integration-item" @click="openDialogArca">
-                      <img src="images/circle-arca.png" alt="ARCA" class="integration-logo" />
+                    <div class="integration-item" @click="openDialogArca" style="position: relative;">
+                      <img
+                        src="images/circle-arca.png"
+                        alt="ARCA"
+                        class="integration-logo"
+                      >
+                      <premium-badge
+                        :show="subscriptionPlan === 'Free'"
+                        :size="15"
+                        top="0px"
+                        right="4px"
+                        padding="4px"
+                        tooltip-text="PREMIUM"
+                      />
                     </div>
                   </div>
                 </div>
@@ -609,7 +617,6 @@
       <router-view />
     </q-page-container>
 
-    <!-- Floating Onboarding Button -->
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
       position="bottom-right"
@@ -641,8 +648,8 @@
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
 
-    <!-- Subscription Plans Dialog -->
     <subscription-plans-dialog
+      v-if="showSubscriptionDialog"
       v-model="showSubscriptionDialog"
       @subscription-updated="onSubscriptionUpdated"
     />
@@ -898,6 +905,7 @@ import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import GoogleRegisterButton from 'src/components/Auth/GoogleRegisterButton.vue'
+import PremiumBadge from 'src/components/PremiumBadge.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -922,7 +930,8 @@ export default {
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
     AddressComponent,
-    GoogleRegisterButton
+    GoogleRegisterButton,
+    PremiumBadge
   },
   data () {
     return {
@@ -1942,8 +1951,8 @@ export default {
      */
     async loadingTasks () {
       try {
-        // No hacer peticiones si la empresa ya está configurada al 100%
-        const isConfigured = this.userSession?.company_session?.configured
+        const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+
         if (isConfigured) {
           this.showOnboardingFab = false
           this.onboardingProgress = 100
@@ -1971,6 +1980,19 @@ export default {
           const isDismissed = localStorage.getItem('onboarding_dismissed') === 'true'
           const isCompletedPermanently = localStorage.getItem('onboarding_completed') === 'true'
           this.showOnboardingFab = !isCompletedPermanently && (hasCompletedAny || !isDismissed)
+
+          if (this.onboardingProgress === 100) {
+            try {
+              const { data } = await api.post('/companies/mark-configured')
+              console.log(data)
+              this.setCompanySession({
+                ...this.userSession.company_session,
+                company_config: data.data
+              })
+            } catch (error) {
+              console.error('Error marking company as configured:', error)
+            }
+          }
         }
       } catch (error) {
         console.log(error)

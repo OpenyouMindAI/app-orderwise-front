@@ -410,8 +410,32 @@
                     />
                   </div>
 
+                  <!-- Cashbox Totals Summary -->
+                  <div class="cashbox-totals-summary q-mb-md">
+                    <div class="row q-col-gutter-sm">
+                      <div class="col-12 col-sm-4">
+                        <div class="total-card expected-card">
+                          <div class="total-label">Esperado</div>
+                          <div class="total-value">{{ formatCurrency(cashbox.totals?.withdrawals_sum || 0) }}</div>
+                        </div>
+                      </div>
+                      <div class="col-12 col-sm-4">
+                        <div class="total-card actual-card">
+                          <div class="total-label">Contado</div>
+                          <div class="total-value">{{ formatCurrency(cashbox.totals?.report_sum || 0) }}</div>
+                        </div>
+                      </div>
+                      <div class="col-12 col-sm-4">
+                        <div class="total-card sales-card">
+                          <div class="total-label">Ventas</div>
+                          <div class="total-value">{{ formatCurrency(cashbox.totals?.paid_sales_sum || 0) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- Withdrawal Items - Compact Design -->
-                  <div class="withdrawals-list-compact">
+                  <div v-if="cashbox.withdrawals && cashbox.withdrawals.length > 0" class="withdrawals-list-compact">
                     <div
                       v-for="withdrawal in cashbox.withdrawals"
                       :key="withdrawal.id"
@@ -2965,6 +2989,107 @@ export default {
   .modern-input {
     width: 100% !important;
   }
+}
+
+/* Cashbox Totals Summary */
+.cashbox-totals-summary {
+  margin-bottom: 16px;
+}
+
+.total-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.total-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.expected-card {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.actual-card {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.sales-card {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.total-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.total-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.expected-card .total-value {
+  color: #2563eb;
+}
+
+.actual-card .total-value {
+  color: #059669;
+}
+
+.sales-card .total-value {
+  color: #d97706;
+}
+
+/* Dark mode for totals */
+.body--dark .total-card {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.body--dark .expected-card {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  border-color: #3b82f6;
+}
+
+.body--dark .actual-card {
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  border-color: #10b981;
+}
+
+.body--dark .sales-card {
+  background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+  border-color: #f59e0b;
+}
+
+.body--dark .total-label {
+  color: #9ca3af;
+}
+
+.body--dark .total-value {
+  color: #f1f5f9;
+}
+
+.body--dark .expected-card .total-value {
+  color: #93c5fd;
+}
+
+.body--dark .actual-card .total-value {
+  color: #6ee7b7;
+}
+
+.body--dark .sales-card .total-value {
+  color: #fcd34d;
 }
 
 /* Print styles */
