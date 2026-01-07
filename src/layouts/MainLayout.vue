@@ -289,6 +289,7 @@
                         alt="ARCA"
                         class="integration-logo"
                       >
+                      {{ console.log(subscriptionPlan) }}
                       <premium-badge
                         :show="subscriptionPlan === 'Free'"
                         :size="15"
@@ -1798,7 +1799,6 @@ export default {
       try {
         // Llamar al backend para verificar la suscripción actual
         const { data } = await this.$api.get('subscriptions/current')
-
         // Actualizar el store con datos verificados del backend
         if (data.subscription) {
           this.store.currentSubscription = data.subscription

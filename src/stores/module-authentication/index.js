@@ -73,7 +73,12 @@ export const authentication = defineStore('authentication', {
        * Current branch count
        * @type {Number}
        */
-      currentBranchCount: 0
+      currentBranchCount: 0,
+      /**
+       * Has API access
+       * @type {Boolean}
+       */
+      hasApiAccess: false
     }
   },
   actions: {
@@ -222,6 +227,7 @@ export const authentication = defineStore('authentication', {
       this.subscriptionDaysLeft = subscriptionData.days_until_expiration || null
       this.currentSubscription = subscriptionData.subscription || null
       this.maxBranches = subscriptionData.subscription?.branch_offices_count || 1
+      this.hasApiAccess = subscriptionData?.api_access || false
     },
     /**
      * Set current branch count
