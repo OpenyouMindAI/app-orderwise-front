@@ -2235,7 +2235,7 @@ export default {
           },
           // Código de barras omitido en móvil
           {
-            target: '#tour-products-table-mobile',
+            target: '#tour-products-table, #tour-products-table-mobile',
             title: '📦 Lista de Artículos',
             description: 'Aquí aparecen los productos agregados. Puedes editar cantidades y eliminar productos.',
             mobileAction: () => {
