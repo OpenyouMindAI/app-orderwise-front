@@ -423,6 +423,7 @@
             <div class="col-12 articles-section" :class="{ 'articles-section-hidden': productsFullscreen }" id="tour-tabla-articulos">
               <!-- Desktop view -->
               <q-table
+                id="tour-products-table"
                 v-if="$q.screen.gt.xs"
                 row-key="id"
                 title="Artículos"
@@ -1678,83 +1679,7 @@ export default {
       activeMobileMenu: null, // 'client', 'center', 'right' or null
       showTour: false,
       currentTourStep: 0,
-      tourSteps: [
-        {
-          target: '#select-client',
-          title: '👤 Seleccionar Cliente',
-          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
-        },
-        {
-          target: '#tour-tipo-factura',
-          title: '🧾 Tipo de Factura',
-          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
-        },
-        {
-          target: '#tour-type-service',
-          title: '🍽️ Tipo de Servicio',
-          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
-        },
-        {
-          target: '#tour-barcode',
-          title: '🔍 Código de Barras',
-          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
-        },
-        {
-          target: '#tour-products-table',
-          title: '📦 Lista de Artículos',
-          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
-        },
-        {
-          target: '#tour-descripcion',
-          title: '📝 Descripción',
-          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.'
-        },
-        {
-          target: '#tour-btn-cobrar',
-          title: '💰 Botón Cobrar (F1)',
-          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
-        },
-        {
-          target: '#tour-btn-cobro-parcial',
-          title: '💳 Cobro Parcial',
-          description: 'Permite dividir la cuenta entre varios clientes o realizar pagos parciales. Útil para grupos que desean pagar por separado.'
-        },
-        {
-          target: '#tour-btn-mesas',
-          title: '🪑 Botón Mesas (F10)',
-          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
-        },
-        {
-          target: '#tour-btn-cashflow',
-          title: '💵 Entrada/Salida de Dinero (F11)',
-          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
-        },
-        {
-          target: '#tour-btn-buscar',
-          title: '🔎 Buscar Factura (F12)',
-          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
-        },
-        {
-          target: '#tour-btn-borrar',
-          title: '🗑️ Borrar Factura',
-          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
-        },
-        {
-          target: '#tour-select-categoria',
-          title: '🏷️ Filtro de Categorías',
-          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
-        },
-        {
-          target: '#tour-input-buscar-producto',
-          title: '🔍 Buscar Producto',
-          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
-        },
-        {
-          target: '#tour-seccion-productos',
-          title: '🛍️ Sección de Productos',
-          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
-        }
-      ],
+      // tourSteps moved to computed for dynamic filtering
       spotlightStyle: {},
       tourCardStyle: {},
 
@@ -2271,6 +2196,88 @@ export default {
     }
   },
   computed: {
+    tourSteps () {
+      const allSteps = [
+        {
+          target: '#select-client',
+          title: '👤 Seleccionar Cliente',
+          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
+        },
+        {
+          target: '#tour-tipo-factura',
+          title: '🧾 Tipo de Factura',
+          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
+        },
+        {
+          target: '#tour-type-service',
+          title: '🍽️ Tipo de Servicio',
+          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
+        },
+        {
+          target: '#tour-barcode',
+          title: '🔍 Código de Barras',
+          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
+        },
+        {
+          target: '#tour-products-table',
+          title: '📦 Lista de Artículos',
+          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
+        },
+        {
+          target: '#tour-descripcion',
+          title: '📝 Descripción',
+          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.'
+        },
+        {
+          target: '#tour-btn-cobrar',
+          title: '💰 Botón Cobrar (F1)',
+          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
+        },
+        {
+          target: '#tour-btn-cobro-parcial',
+          title: '💳 Cobro Parcial',
+          description: 'Permite dividir la cuenta entre varios clientes o realizar pagos parciales. Útil para grupos que desean pagar por separado.'
+        },
+        {
+          target: '#tour-btn-mesas',
+          title: '🪑 Botón Mesas (F10)',
+          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
+        },
+        {
+          target: '#tour-btn-cashflow',
+          title: '💵 Entrada/Salida de Dinero (F11)',
+          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
+        },
+        {
+          target: '#tour-btn-buscar',
+          title: '🔎 Buscar Factura (F12)',
+          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
+        },
+        {
+          target: '#tour-btn-borrar',
+          title: '🗑️ Borrar Factura',
+          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
+        },
+        {
+          target: '#tour-select-categoria',
+          title: '🏷️ Filtro de Categorías',
+          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
+        },
+        {
+          target: '#tour-input-buscar-producto',
+          title: '🔍 Buscar Producto',
+          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
+        },
+        {
+          target: '#tour-seccion-productos',
+          title: '🛍️ Sección de Productos',
+          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
+        }
+      ]
+
+      // Filtrar pasos basado en condiciones
+      return allSteps.filter(step => !step.condition || step.condition())
+    },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     branchOfficeCharged () {
       return this.branchOffice
@@ -2601,7 +2608,11 @@ export default {
       this.currentTourStep = 0
       // Usar tourStore en lugar de localStorage
       this.tourStore.startTour()
-      this.updateTourPosition()
+
+      // Esperar a que Vue actualice el DOM antes de posicionar
+      this.$nextTick(() => {
+        this.updateTourPosition()
+      })
     },
 
     /**
@@ -2768,6 +2779,18 @@ export default {
         const step = this.tourSteps[this.currentTourStep]
         const element = document.querySelector(step.target)
 
+        // Si el elemento no existe o no está visible, saltar al siguiente paso
+        if (!element || element.offsetParent === null) {
+          // Elemento no existe o está oculto (display: none)
+          if (this.currentTourStep < this.tourSteps.length - 1) {
+            this.currentTourStep++
+            this.updateTourPosition() // Recursivo para verificar el siguiente
+          } else {
+            this.finishTour() // Ya no hay más pasos
+          }
+          return
+        }
+
         if (element) {
           // Scroll to element first
           element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
@@ -2786,68 +2809,61 @@ export default {
               height: `${rect.height + 20}px`
             }
 
-            // Position tour card with better logic
+            // Position tour card
             const cardWidth = 400
             const cardHeight = 280
             const padding = 20
             const viewportHeight = window.innerHeight
             const viewportWidth = window.innerWidth
 
-            let cardTop = rect.top + scrollTop
-            let cardLeft = rect.left + scrollLeft
+            // Identificar tipo de elemento
+            const isProductSection = ['#tour-seccion-productos'].includes(step.target)
+            const isRightElement = ['#tour-btn-cobrar', '#tour-btn-cobro-parcial', '#tour-btn-mesas', '#tour-btn-cashflow', '#tour-btn-buscar', '#tour-btn-borrar', '#tour-select-categoria', '#tour-input-buscar-producto'].includes(step.target)
 
-            // Detectar si es la sección de productos o categorías/búsqueda
-            const isProductSection = step.target === '#tour-seccion-productos' ||
-                                    step.target === '#tour-select-categoria' ||
-                                    step.target === '#tour-input-buscar-producto'
+            let cardTop, cardLeft, cardRight = null
 
             if (isProductSection) {
-              // Para sección de productos, posicionar a la IZQUIERDA del elemento
-              // Calcular posición: elemento.left - ancho del card - espacio
-              const spaceFromElement = 30 // Espacio entre el card y el elemento
-              cardLeft = rect.left + scrollLeft - cardWidth - spaceFromElement
-
-              // Si no cabe a la izquierda, posicionar en el borde izquierdo con margen
-              if (cardLeft < padding) {
-                cardLeft = padding
-              }
-
-              // Centrar verticalmente con el elemento
-              cardTop = rect.top + scrollTop + (rect.height / 2) - (cardHeight / 2)
-            } else {
-              // Para otros elementos, posicionar DEBAJO
+              // Posicionar a la izquierda del elemento
+              cardLeft = Math.max(padding, rect.left + scrollLeft - cardWidth - 30)
+              cardTop = rect.top + scrollTop + (rect.height - cardHeight) / 2
+            } else if (isRightElement) {
+              // Posicionar debajo alineado a la derecha
+              cardRight = viewportWidth - rect.right - scrollLeft - 10
               cardTop = rect.bottom + scrollTop + padding
 
-              // If card goes below viewport, position it above the element
-              if (rect.bottom + cardHeight + padding > viewportHeight) {
+              // Si no cabe abajo, ponerlo arriba
+              if (cardTop + cardHeight > scrollTop + viewportHeight) {
+                cardTop = rect.top + scrollTop - cardHeight - padding
+              }
+            } else {
+              // Posicionar debajo del elemento
+              cardLeft = rect.left + scrollLeft - 10
+              cardTop = rect.bottom + scrollTop + padding
+
+              // Si no cabe abajo, ponerlo arriba
+              if (cardTop + cardHeight > scrollTop + viewportHeight) {
                 cardTop = rect.top + scrollTop - cardHeight - padding
               }
 
-              // If still goes above viewport, position it in the middle
-              if (cardTop < scrollTop) {
-                cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+              // Solo ajustar si se sale completamente del viewport
+              if (cardLeft + cardWidth > viewportWidth) {
+                cardLeft = viewportWidth - cardWidth - padding
+              }
+              if (cardLeft < 0) {
+                cardLeft = padding
               }
             }
 
-            // Adjust horizontal position
-            if (cardLeft + cardWidth > viewportWidth) {
-              cardLeft = viewportWidth - cardWidth - padding
-            }
-            if (cardLeft < 0) {
-              cardLeft = padding
+            // Ajustes finales de viewport (solo para productSection)
+            if (isProductSection && cardLeft !== undefined) {
+              cardLeft = Math.max(padding, Math.min(cardLeft, viewportWidth - cardWidth - padding))
             }
 
-            // Adjust vertical position to keep in viewport
-            if (cardTop + cardHeight > scrollTop + viewportHeight) {
-              cardTop = scrollTop + viewportHeight - cardHeight - padding
-            }
-            if (cardTop < scrollTop) {
-              cardTop = scrollTop + padding
-            }
+            cardTop = Math.max(scrollTop + padding, Math.min(cardTop, scrollTop + viewportHeight - cardHeight - padding))
 
             this.tourCardStyle = {
               top: `${cardTop}px`,
-              left: `${cardLeft}px`
+              ...(cardRight !== null ? { right: `${cardRight}px` } : { left: `${cardLeft}px` })
             }
           }, 300)
         }
