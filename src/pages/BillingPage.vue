@@ -1,5 +1,5 @@
 <template>
-  <q-page padding>
+  <q-page class="q-pa-sm">
     <!-- Tour Overlay -->
     <div v-if="showTour" class="tour-overlay">
       <div class="tour-spotlight" :style="spotlightStyle"></div>
@@ -36,9 +36,16 @@
       </q-card>
     </div>
 
-    <div v-if="$route.query.id">
-      <span class="text-subtitle1">Factura número: </span>
-      <span class="text-subtitle2">{{ invoice?.code }}</span>
+    <div v-if="$route.query.id" class="invoice-header-compact q-mb-sm">
+      <q-chip
+        square
+        color="primary"
+        text-color="white"
+        icon="receipt_long"
+        class="invoice-chip"
+      >
+        <span class="text-weight-medium">{{ invoice?.code }}</span>
+      </q-chip>
     </div>
     <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
       <div class="billing-panel-container">
@@ -3517,15 +3524,11 @@ export default {
      * @param {Object} table  table data
      */
     async selectInvoice (table) {
-      // Selecting invoice from table
-
       loading(true)
       const invoiceOne = table.invoices[0]
       await this.getInvoiceOne(invoiceOne.id)
       this.dialogTable = false
       loading(false)
-
-      // Invoice loaded from table
     },
     /**
      * Free table
@@ -3752,6 +3755,7 @@ export default {
         }
         this.loadingSearch = false
         this.invoice = invoice
+        this.invoice.status = this.isDelivered ? 'delivered' : invoice.status
         this.products = invoice.products.map(product => {
           return {
             ...product,
@@ -3778,6 +3782,7 @@ export default {
         this.calculateTotal()
         this.search = ''
         this.setPayments(invoice.invoice_payments)
+        this.isDelivered = false
       } else {
         notify('No se encontró la factura', 'negative', 'warning')
       }
@@ -3788,6 +3793,7 @@ export default {
      */
     async handleInvoiceSelected (invoice) {
       if (invoice && invoice.id) {
+        this.isDelivered = true
         await this.getInvoiceOne(invoice.id)
       }
     },
@@ -3882,6 +3888,8 @@ export default {
       // Determinar si es cuenta corriente (CC) o contado
       const isCuentaCorriente = this.invoiceType?.acronym_serie === 'CC'
       const paymentType = isCuentaCorriente ? 'credit' : 'cash'
+
+      console.log(this.invoice?.status || (this.isNotLocal ? 'pending' : 'delivered'))
 
       const invoiceModel = {
         ...this.invoice,
@@ -6143,6 +6151,25 @@ export default {
   min-width: 55px;
   text-align: right;
   flex-shrink: 0;
+}
+
+/* Invoice Header Compact */
+.invoice-header-compact {
+  display: flex;
+  align-items: center;
+}
+
+.invoice-chip {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.invoice-chip:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 </style>

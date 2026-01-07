@@ -189,16 +189,42 @@
                     </div>
                   </template>
                   <template v-else-if="col.name === 'actions'">
-                    <q-btn
-                      flat
-                      round
-                      dense
-                      color="primary"
-                      icon="arrow_outward"
-                      @click.stop="selectInvoice(props.row)"
-                    >
-                      <q-tooltip>Editar factura</q-tooltip>
-                    </q-btn>
+                    <div class="row q-gutter-xs no-wrap">
+                      <q-btn
+                        v-if="props.row.pending <= 0"
+                        flat
+                        round
+                        dense
+                        size="sm"
+                        color="positive"
+                        icon="check_circle"
+                        @click.stop="markAsDelivered(props.row)"
+                      >
+                        <q-tooltip>Marcar como entregada</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        size="sm"
+                        color="primary"
+                        icon="edit"
+                        @click.stop="selectInvoice(props.row)"
+                      >
+                        <q-tooltip>Editar factura</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        size="sm"
+                        color="negative"
+                        icon="delete"
+                        @click.stop="removeFromList(props.row)"
+                      >
+                        <q-tooltip>Eliminar</q-tooltip>
+                      </q-btn>
+                    </div>
                   </template>
                 </component>
               </q-td>
@@ -237,15 +263,42 @@
               <div class="row items-center justify-between q-mb-sm">
                 <div class="text-subtitle1 text-weight-bold text-primary" v-html="highlightText(invoice.code)">
                 </div>
-                <q-btn
-                  flat
-                  round
-                  dense
-                  color="primary"
-                  icon="arrow_outward"
-                  size="sm"
-                  @click.stop="selectInvoice(invoice)"
-                />
+                <div class="row q-gutter-xs no-wrap">
+                  <q-btn
+                    v-if="invoice.pending <= 0"
+                    flat
+                    round
+                    dense
+                    size="sm"
+                    color="positive"
+                    icon="check_circle"
+                    @click.stop="markAsDelivered(invoice)"
+                  >
+                    <q-tooltip>Marcar como entregada</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    size="sm"
+                    color="primary"
+                    icon="edit"
+                    @click.stop="selectInvoice(invoice)"
+                  >
+                    <q-tooltip>Editar factura</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    size="sm"
+                    color="negative"
+                    icon="delete"
+                    @click.stop="removeFromList(invoice)"
+                  >
+                    <q-tooltip>Eliminar</q-tooltip>
+                  </q-btn>
+                </div>
               </div>
 
               <!-- Client -->
@@ -531,6 +584,86 @@ export default {
       return `${before}<mark class="search-highlight">${match}</mark>${after}`
     }
 
+    const markAsDelivered = async (invoice) => {
+      try {
+        $q.dialog({
+          title: 'Confirmar entrega',
+          message: `¿Marcar la factura ${invoice.code} como entregada?`,
+          cancel: {
+            label: 'Cancelar',
+            flat: true,
+            color: 'grey'
+          },
+          ok: {
+            label: 'Marcar como entregada',
+            color: 'positive',
+            unelevated: true
+          },
+          persistent: true
+        }).onOk(async () => {
+          loading.value = true
+          try {
+            await api.put(`invoices/${invoice.id}`, {
+              ...invoice,
+              status: 'delivered'
+            })
+
+            $q.notify({
+              type: 'positive',
+              message: 'Factura marcada como entregada',
+              icon: 'check_circle',
+              position: 'top-right'
+            })
+
+            // Reload invoices
+            await fetchPendingInvoices()
+          } catch (error) {
+            console.error('Error marking invoice as delivered:', error)
+            $q.notify({
+              type: 'negative',
+              message: 'Error al marcar la factura como entregada',
+              caption: error.response?.data?.message || error.message,
+              position: 'top-right'
+            })
+          } finally {
+            loading.value = false
+          }
+        })
+      } catch (error) {
+        console.error('Error in markAsDelivered:', error)
+      }
+    }
+
+    const editInvoice = (invoice) => {
+      emit('invoice-selected', invoice)
+      showDialog.value = false
+    }
+
+    const removeFromList = (invoice) => {
+      $q.dialog({
+        title: 'Eliminar de la lista',
+        message: `¿Estás seguro de que deseas eliminar la factura ${invoice.code} de la lista? Esta acción solo la ocultará de esta búsqueda.`,
+        cancel: {
+          label: 'Cancelar',
+          flat: true,
+          color: 'grey'
+        },
+        ok: {
+          label: 'Eliminar',
+          color: 'negative',
+          unelevated: true
+        },
+        persistent: true
+      }).onOk(async () => {
+        try {
+          await api.delete(`invoices/${invoice.id}`)
+          await fetchPendingInvoices()
+        } catch (error) {
+          console.log(error)
+        }
+      })
+    }
+
     watch(() => props.modelValue, (newVal) => {
       if (newVal) {
         fetchPendingInvoices()
@@ -554,7 +687,10 @@ export default {
       toggleExpand,
       toggleMobileExpand,
       formatQuantity,
-      highlightText
+      highlightText,
+      markAsDelivered,
+      editInvoice,
+      removeFromList
     }
   }
 }
