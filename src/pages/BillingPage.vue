@@ -2369,7 +2369,8 @@ export default {
         {
           target: '#tour-descripcion',
           title: '📝 Descripción',
-          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.'
+          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.',
+          condition: () => this.isNotLocal
         },
         {
           target: '#tour-btn-cobrar',
@@ -2956,18 +2957,24 @@ export default {
             // Wait for scroll to finish before calculating positions
             setTimeout(() => {
               const rect = element.getBoundingClientRect()
-              const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-              const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
               const isMobile = this.$q.screen.lt.md
               const viewportHeight = window.innerHeight
               const viewportWidth = window.innerWidth
 
               // Update spotlight position
+              // Calcular posición relativa al overlay para evitar problemas con scroll
+              const overlay = document.querySelector('.tour-overlay')
+              let overlayRect = { top: 0, left: 0 }
+              if (overlay) {
+                overlayRect = overlay.getBoundingClientRect()
+              }
+
+              // Update spotlight position
               this.spotlightStyle = {
-                top: `${rect.top + scrollTop - 10}px`,
-                left: `${rect.left + scrollLeft - 10}px`,
-                width: `${rect.width + 20}px`,
-                height: `${rect.height + 20}px`
+                top: `${rect.top - overlayRect.top - 6}px`,
+                left: `${rect.left - overlayRect.left - 6}px`,
+                width: `${rect.width + 12}px`,
+                height: `${rect.height + 12}px`
               }
 
               // En móvil: posicionar tarjeta fija en la parte inferior
@@ -2982,10 +2989,16 @@ export default {
                 return
               }
 
-              // Position tour card (desktop)
+              // Posicionar tarjeta (Desktop) relativa al overlay
               const cardWidth = 400
               const cardHeight = 280
               const padding = 20
+
+              // Definir coordenadas base relativas al overlay
+              const relTop = rect.top - overlayRect.top
+              const relBottom = rect.bottom - overlayRect.top
+              const relLeft = rect.left - overlayRect.left
+              const relRight = rect.right - overlayRect.left
 
               // Identificar tipo de elemento
               const isProductSection = ['#tour-seccion-productos'].includes(step.target)
@@ -2995,29 +3008,32 @@ export default {
 
               if (isProductSection) {
               // Posicionar a la izquierda del elemento
-                cardLeft = Math.max(padding, rect.left + scrollLeft - cardWidth - 30)
-                cardTop = rect.top + scrollTop + (rect.height - cardHeight) / 2
+                cardLeft = Math.max(padding, relLeft - cardWidth - 30)
+                cardTop = relTop + (rect.height - cardHeight) / 2
               } else if (isRightElement) {
               // Posicionar debajo alineado a la derecha
-                cardRight = viewportWidth - rect.right - scrollLeft - 10
-                cardTop = rect.bottom + scrollTop + padding
+                cardRight = viewportWidth - rect.right - 10 // Right es relativo al viewport width
+                // Convertir right a coordenada left relativa al overlay si es necesario, o mantener right fijo
+                // Mejor usar left calculado relativo al overlay:
+                cardLeft = relRight - cardWidth
+                cardTop = relBottom + padding
 
-                // Si no cabe abajo, ponerlo arriba
-                if (cardTop + cardHeight > scrollTop + viewportHeight) {
-                  cardTop = rect.top + scrollTop - cardHeight - padding
+                // Si no cabe abajo (usando viewport para chequear), ponerlo arriba
+                if (rect.bottom + cardHeight + padding > viewportHeight) {
+                  cardTop = relTop - cardHeight - padding
                 }
               } else {
               // Posicionar debajo del elemento
-                cardLeft = rect.left + scrollLeft - 10
-                cardTop = rect.bottom + scrollTop + padding
+                cardLeft = relLeft - 10
+                cardTop = relBottom + padding
 
                 // Si no cabe abajo, ponerlo arriba
-                if (cardTop + cardHeight > scrollTop + viewportHeight) {
-                  cardTop = rect.top + scrollTop - cardHeight - padding
+                if (rect.bottom + cardHeight + padding > viewportHeight) {
+                  cardTop = relTop - cardHeight - padding
                 }
 
                 // Solo ajustar si se sale completamente del viewport
-                if (cardLeft + cardWidth > viewportWidth) {
+                if (rect.left + cardWidth > viewportWidth) {
                   cardLeft = viewportWidth - cardWidth - padding
                 }
                 if (cardLeft < 0) {
@@ -3025,16 +3041,14 @@ export default {
                 }
               }
 
-              // Ajustes finales de viewport (solo para productSection)
-              if (isProductSection && cardLeft !== undefined) {
-                cardLeft = Math.max(padding, Math.min(cardLeft, viewportWidth - cardWidth - padding))
-              }
-
-              cardTop = Math.max(scrollTop + padding, Math.min(cardTop, scrollTop + viewportHeight - cardHeight - padding))
+              // Ajustes finales de top para no salir del overlay
+              // (Opcional, pero asegura que no quede negativo)
+              if (cardTop < 0) cardTop = padding
 
               this.tourCardStyle = {
                 top: `${cardTop}px`,
-                ...(cardRight !== null ? { right: `${cardRight}px` } : { left: `${cardLeft}px` })
+                left: isRightElement ? 'auto' : `${cardLeft}px`,
+                right: isRightElement ? `${cardRight}px` : 'auto'
               }
             }, 300)
           }
@@ -5941,7 +5955,7 @@ export default {
 
 /* Tour Styles */
 .tour-overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
