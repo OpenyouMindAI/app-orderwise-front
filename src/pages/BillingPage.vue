@@ -1381,6 +1381,7 @@
         </template>
       </drawer-table>
     </q-dialog>
+
     <search-pending-invoices-dialog
       v-model="searchInvoice"
       @invoice-selected="handleInvoiceSelected"
@@ -1593,6 +1594,9 @@
       @action="handleValidationAction"
     />
 
+    <q-inner-loading :showing="loadingSearch">
+      <q-spinner-gears size="90px" color="primary" />
+    </q-inner-loading>
   </q-page>
 </template>
 

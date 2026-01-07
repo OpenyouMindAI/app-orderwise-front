@@ -8,7 +8,7 @@
       <!-- Header -->
       <q-card-section class="row items-center bg-primary text-white q-py-sm">
         <q-icon name="search" size="md" class="q-mr-sm" />
-        <div class="text-h6">Buscar Facturas Pendientes</div>
+        <div class="text-h6">Buscar Facturas</div>
         <q-space />
         <q-btn icon="close" flat round dense v-close-popup />
       </q-card-section>
@@ -118,10 +118,10 @@
             </q-td>
           </template>
 
-          <template v-slot:body-cell-paid="props">
+          <template v-slot:body-cell-pending="props">
             <q-td :props="props">
-              <div :class="props.row.paid >= props.row.total ? 'text-positive' : 'text-warning'">
-                {{ formatCurrency(props.row.paid || 0) }}
+              <div :class="props.row.pending <= 0 ? 'text-positive' : 'text-warning'">
+                {{ formatCurrency(props.row.pending || 0) }}
               </div>
             </q-td>
           </template>
@@ -133,7 +133,7 @@
                 round
                 dense
                 color="primary"
-                icon="edit"
+                icon="arrow_outward"
                 @click="selectInvoice(props.row)"
               >
                 <q-tooltip>Editar factura</q-tooltip>
@@ -142,7 +142,7 @@
           </template>
 
           <template v-slot:body="props">
-            <q-tr :props="props" @click="selectInvoice(props.row)" style="cursor: pointer;">
+            <q-tr :props="props" style="cursor: pointer;">
               <q-td v-for="col in props.cols" :key="col.name" :props="props">
                 <component :is="'div'">
                   <template v-if="col.name === 'code'">
@@ -183,9 +183,9 @@
                   <template v-else-if="col.name === 'total'">
                     <div class="text-weight-bold">{{ formatCurrency(props.row.total) }}</div>
                   </template>
-                  <template v-else-if="col.name === 'paid'">
-                    <div :class="props.row.paid >= props.row.total ? 'text-positive' : 'text-warning'">
-                      {{ formatCurrency(props.row.paid || 0) }}
+                  <template v-else-if="col.name === 'pending'">
+                    <div :class="props.row.pending <= 0 ? 'text-positive' : 'text-warning'">
+                      {{ formatCurrency(props.row.pending || 0) }}
                     </div>
                   </template>
                   <template v-else-if="col.name === 'actions'">
@@ -194,7 +194,7 @@
                       round
                       dense
                       color="primary"
-                      icon="edit"
+                      icon="arrow_outward"
                       @click.stop="selectInvoice(props.row)"
                     >
                       <q-tooltip>Editar factura</q-tooltip>
@@ -242,7 +242,7 @@
                   round
                   dense
                   color="primary"
-                  icon="edit"
+                  icon="arrow_outward"
                   size="sm"
                   @click.stop="selectInvoice(invoice)"
                 />
@@ -311,12 +311,12 @@
                   <div class="text-h6 text-weight-bold">{{ formatCurrency(invoice.total) }}</div>
                 </div>
                 <div class="text-right">
-                  <div class="text-caption text-grey-6">Pagado</div>
+                  <div class="text-caption text-grey-6">Por pagar</div>
                   <div
                     class="text-subtitle1 text-weight-bold"
-                    :class="invoice.paid >= invoice.total ? 'text-positive' : 'text-warning'"
+                    :class="invoice.pending <= 0 ? 'text-positive' : 'text-warning'"
                   >
-                    {{ formatCurrency(invoice.paid || 0) }}
+                    {{ formatCurrency(invoice.pending || 0) }}
                   </div>
                 </div>
               </div>
@@ -399,9 +399,9 @@ export default {
         sortable: true
       },
       {
-        name: 'paid',
-        label: 'Pagado',
-        field: 'paid',
+        name: 'pending',
+        label: 'Por Pagar',
+        field: 'pending',
         align: 'right',
         sortable: true
       },
@@ -438,8 +438,9 @@ export default {
       try {
         const { data } = await api.get('invoices', {
           params: {
-            status: 'pending',
-            per_page: 100
+            whereIn: {
+              status: ['pending', 'on_process', 'finished']
+            }
           }
         })
         invoices.value = data.data || data
