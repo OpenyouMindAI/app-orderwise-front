@@ -1381,35 +1381,10 @@
         </template>
       </drawer-table>
     </q-dialog>
-    <q-dialog v-model="searchInvoice">
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-card-section class="q-py-sm bg-primary text-white flex justify-between items-center">
-          <span class="text-h6">Buscar factura</span>
-          <q-btn flat icon="close" round size="md" v-close-popup/>
-        </q-card-section>
-        <q-card-section>
-          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center q-gutter-md">
-            <div class="col-10">
-              <q-input
-                name="search"
-                autocomplete="search"
-                v-model="search"
-                color="primary"
-                label="Número de factura"
-                filled
-                clearable
-                type="search"
-                required
-                autofocus
-              />
-            </div>
-            <div class="col-auto text-right">
-              <q-btn type="submit" color="primary" icon="search" size="lg" :loading="loadingSearch"/>
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+    <search-pending-invoices-dialog
+      v-model="searchInvoice"
+      @invoice-selected="handleInvoiceSelected"
+    />
 
     <!-- Cash Box Dialog -->
     <CashBoxDialog
@@ -1643,6 +1618,7 @@ import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
+import SearchPendingInvoicesDialog from 'src/components/SearchPendingInvoicesDialog.vue'
 import { LOCAL } from 'src/const/typeOfServices.js'
 import {
   CapacitorBarcodeScanner,
@@ -1665,7 +1641,8 @@ export default {
     TransferMpDialog,
     CashflowModal,
     FileComponent,
-    OnboardingValidationModal
+    OnboardingValidationModal,
+    SearchPendingInvoicesDialog
   },
   data () {
     const tourStore = useTourStore()
@@ -3799,6 +3776,15 @@ export default {
         this.setPayments(invoice.invoice_payments)
       } else {
         notify('No se encontró la factura', 'negative', 'warning')
+      }
+    },
+    /**
+     * Handle invoice selected from search dialog
+     * @param {Object} invoice - Selected invoice
+     */
+    async handleInvoiceSelected (invoice) {
+      if (invoice && invoice.id) {
+        await this.getInvoiceOne(invoice.id)
       }
     },
     /**
