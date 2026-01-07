@@ -153,6 +153,7 @@
             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
               <div>
                 <q-btn
+                  id="tour-cliente-mobile"
                   color="secondary"
                   icon="person"
                   :label="client?.name || 'Cliente'"
@@ -222,6 +223,7 @@
                 </q-btn>
               </div>
               <q-fab
+                id="tour-fab-config"
                 color="primary"
                 icon="tune"
                 type="button"
@@ -232,6 +234,7 @@
               >
                 <!-- FAB Tipo de Factura -->
                 <q-fab-action
+                  id="tour-tipo-factura-mobile"
                   color="accent"
                   icon="receipt"
                   :label="invoiceType?.name || 'Tipo'"
@@ -317,6 +320,7 @@
 
                 <!-- FAB Tipo de Servicio -->
                 <q-fab-action
+                  id="tour-type-service-mobile"
                   color="positive"
                   icon="category"
                   :label="typeOfService?.name || 'Servicio'"
@@ -357,6 +361,7 @@
                 </q-fab-action>
               </q-fab>
               <q-fab
+                id="tour-fab-opciones"
                 square
                 type="button"
                 color="orange"
@@ -367,6 +372,7 @@
                 v-model="rightFabOpen"
               >
                 <q-fab-action
+                  id="tour-btn-cobro-parcial-mobile"
                   color="primary"
                   icon="splitscreen"
                   label="Cobro Parcial"
@@ -377,6 +383,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-mesas-mobile"
                   v-if="companyConfig.is_table"
                   color="orange"
                   icon="table_restaurant"
@@ -387,6 +394,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-cashflow-mobile"
                   color="info"
                   icon="payments"
                   label="Entrada/Salida"
@@ -395,6 +403,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-buscar-mobile"
                   color="teal"
                   icon="search"
                   label="Buscar"
@@ -412,6 +421,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-borrar-mobile"
                   color="negative"
                   icon="delete"
                   label="Borrar"
@@ -623,7 +633,11 @@
               </q-table>
 
               <!-- Mobile view - Cart style -->
-              <div v-else-if="products.length > 0" class="mobile-cart-container">
+              <div
+                v-else-if="products.length > 0"
+                id="tour-products-table-mobile"
+                class="mobile-cart-container"
+              >
                 <div class="mobile-cart-list">
                   <div
                     v-for="(product, rowIndex) in products"
@@ -2197,6 +2211,135 @@ export default {
   },
   computed: {
     tourSteps () {
+      const isMobile = this.$q.screen.lt.md
+
+      // En móvil: mismos pasos conceptuales que desktop, pero apuntando a elementos móviles
+      if (isMobile) {
+        const mobileSteps = [
+          {
+            target: '#tour-cliente-mobile',
+            title: '👤 Seleccionar Cliente',
+            description: 'Toca aquí para seleccionar o agregar un cliente para la factura.'
+          },
+          {
+            target: '#tour-tipo-factura-mobile',
+            title: '🧾 Tipo de Factura',
+            description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc.',
+            mobileAction: () => { this.centerFabOpen = true }
+          },
+          {
+            target: '#tour-type-service-mobile',
+            title: '🍽️ Tipo de Servicio',
+            description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc.',
+            mobileAction: () => { this.centerFabOpen = true }
+          },
+          // Código de barras omitido en móvil
+          {
+            target: '#tour-products-table-mobile',
+            title: '📦 Lista de Artículos',
+            description: 'Aquí aparecen los productos agregados. Puedes editar cantidades y eliminar productos.',
+            mobileAction: () => {
+              this.centerFabOpen = false
+              this.rightFabOpen = false
+              // Agregar producto falso si la lista está vacía
+              if (this.products.length === 0) {
+                this.products.push({
+                  id: 999999,
+                  name: 'Producto de Ejemplo',
+                  price: 150.00,
+                  quantity: 1,
+                  amount: 1,
+                  subtotal: 150.00,
+                  isTourFakeProduct: true
+                })
+              }
+            }
+          },
+          {
+            target: '#tour-descripcion',
+            title: '📝 Descripción',
+            description: 'Agrega notas o comentarios adicionales sobre la factura.',
+            mobileAction: () => {
+              this.centerFabOpen = false
+              this.rightFabOpen = false
+              // Limpiar producto falso si existe
+              const fakeIndex = this.products.findIndex(p => p.isTourFakeProduct)
+              if (fakeIndex !== -1) {
+                this.products.splice(fakeIndex, 1)
+              }
+            }
+          },
+          {
+            target: '#tour-btn-cobrar-mobile',
+            title: '💰 Botón Cobrar',
+            description: 'Toca este botón para procesar el cobro y finalizar la venta.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-btn-cobro-parcial-mobile',
+            title: '💳 Cobro Parcial',
+            description: 'Divide la cuenta entre varios clientes o realiza pagos parciales.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-mesas-mobile',
+            title: '🪑 Mesas',
+            description: 'Administra las mesas del restaurante y asigna pedidos.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-cashflow-mobile',
+            title: '💵 Entrada/Salida de Dinero',
+            description: 'Registra entradas y salidas de dinero en efectivo.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-buscar-mobile',
+            title: '🔎 Buscar Factura',
+            description: 'Busca facturas anteriores por número, cliente o fecha.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-borrar-mobile',
+            title: '🗑️ Borrar Factura',
+            description: 'Limpia todos los productos y datos de la factura actual.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-select-categoria',
+            title: '🏷️ Filtro de Categorías',
+            description: 'Filtra los productos por categoría para encontrarlos más rápido.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-input-buscar-producto',
+            title: '🔍 Buscar Producto',
+            description: 'Busca productos por nombre o código.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-seccion-productos',
+            title: '🛍️ Sección de Productos',
+            description: 'Toca un producto para agregarlo a la factura.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          }
+        ]
+
+        // Filtrar pasos que no aplican según configuración
+        return mobileSteps.filter(step => {
+          // Filtrar cobro parcial y mesas si is_table está deshabilitado
+          if (step.target === '#tour-btn-cobro-parcial-mobile' || step.target === '#tour-btn-mesas-mobile') {
+            return this.companyConfig?.is_table
+          }
+          // Filtrar descripción si es servicio local
+          if (step.target === '#tour-descripcion') {
+            return this.isNotLocal
+          }
+          return true
+        })
+      }
+
+      // Desktop: pasos originales
       const allSteps = [
         {
           target: '#select-client',
@@ -2764,6 +2907,13 @@ export default {
       this.showTour = false
       // Usar tourStore en lugar de localStorage
       this.tourStore.finishTour()
+
+      // Limpiar producto falso si existe (por si se cierra el tour en ese paso)
+      const fakeIndex = this.products.findIndex(p => p.isTourFakeProduct)
+      if (fakeIndex !== -1) {
+        this.products.splice(fakeIndex, 1)
+      }
+
       this.$q.notify({
         message: '¡Tour completado! Ya puedes comenzar a facturar',
         color: 'positive',
@@ -2777,96 +2927,118 @@ export default {
     updateTourPosition () {
       this.$nextTick(() => {
         const step = this.tourSteps[this.currentTourStep]
-        const element = document.querySelector(step.target)
 
-        // Si el elemento no existe o no está visible, saltar al siguiente paso
-        if (!element || element.offsetParent === null) {
-          // Elemento no existe o está oculto (display: none)
-          if (this.currentTourStep < this.tourSteps.length - 1) {
-            this.currentTourStep++
-            this.updateTourPosition() // Recursivo para verificar el siguiente
-          } else {
-            this.finishTour() // Ya no hay más pasos
-          }
-          return
+        // Ejecutar acción móvil si existe (para abrir menús, etc)
+        if (this.$q.screen.lt.md && step.mobileAction) {
+          step.mobileAction()
         }
 
-        if (element) {
-          // Scroll to element first
-          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+        // Dar un pequeño tiempo para que la acción móvil se complete (ej: abrir menú)
+        setTimeout(() => {
+          const element = document.querySelector(step.target)
 
-          // Wait for scroll to finish before calculating positions
-          setTimeout(() => {
-            const rect = element.getBoundingClientRect()
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-
-            // Update spotlight position
-            this.spotlightStyle = {
-              top: `${rect.top + scrollTop - 10}px`,
-              left: `${rect.left + scrollLeft - 10}px`,
-              width: `${rect.width + 20}px`,
-              height: `${rect.height + 20}px`
-            }
-
-            // Position tour card
-            const cardWidth = 400
-            const cardHeight = 280
-            const padding = 20
-            const viewportHeight = window.innerHeight
-            const viewportWidth = window.innerWidth
-
-            // Identificar tipo de elemento
-            const isProductSection = ['#tour-seccion-productos'].includes(step.target)
-            const isRightElement = ['#tour-btn-cobrar', '#tour-btn-cobro-parcial', '#tour-btn-mesas', '#tour-btn-cashflow', '#tour-btn-buscar', '#tour-btn-borrar', '#tour-select-categoria', '#tour-input-buscar-producto'].includes(step.target)
-
-            let cardTop, cardLeft, cardRight = null
-
-            if (isProductSection) {
-              // Posicionar a la izquierda del elemento
-              cardLeft = Math.max(padding, rect.left + scrollLeft - cardWidth - 30)
-              cardTop = rect.top + scrollTop + (rect.height - cardHeight) / 2
-            } else if (isRightElement) {
-              // Posicionar debajo alineado a la derecha
-              cardRight = viewportWidth - rect.right - scrollLeft - 10
-              cardTop = rect.bottom + scrollTop + padding
-
-              // Si no cabe abajo, ponerlo arriba
-              if (cardTop + cardHeight > scrollTop + viewportHeight) {
-                cardTop = rect.top + scrollTop - cardHeight - padding
-              }
+          // Si el elemento no existe o no está visible, saltar al siguiente paso
+          if (!element || element.offsetParent === null) {
+            // Elemento no existe o está oculto (display: none)
+            if (this.currentTourStep < this.tourSteps.length - 1) {
+              this.currentTourStep++
+              this.updateTourPosition() // Recursivo para verificar el siguiente
             } else {
+              this.finishTour() // Ya no hay más pasos
+            }
+            return
+          }
+
+          if (element) {
+            // Scroll to element first
+            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+            // Wait for scroll to finish before calculating positions
+            setTimeout(() => {
+              const rect = element.getBoundingClientRect()
+              const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+              const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+              const isMobile = this.$q.screen.lt.md
+              const viewportHeight = window.innerHeight
+              const viewportWidth = window.innerWidth
+
+              // Update spotlight position
+              this.spotlightStyle = {
+                top: `${rect.top + scrollTop - 10}px`,
+                left: `${rect.left + scrollLeft - 10}px`,
+                width: `${rect.width + 20}px`,
+                height: `${rect.height + 20}px`
+              }
+
+              // En móvil: posicionar tarjeta fija en la parte inferior
+              if (isMobile) {
+                this.tourCardStyle = {
+                  position: 'fixed',
+                  bottom: '100px',
+                  left: '16px',
+                  right: '16px',
+                  top: 'auto'
+                }
+                return
+              }
+
+              // Position tour card (desktop)
+              const cardWidth = 400
+              const cardHeight = 280
+              const padding = 20
+
+              // Identificar tipo de elemento
+              const isProductSection = ['#tour-seccion-productos'].includes(step.target)
+              const isRightElement = ['#tour-btn-cobrar', '#tour-btn-cobro-parcial', '#tour-btn-mesas', '#tour-btn-cashflow', '#tour-btn-buscar', '#tour-btn-borrar', '#tour-select-categoria', '#tour-input-buscar-producto'].includes(step.target)
+
+              let cardTop, cardLeft, cardRight = null
+
+              if (isProductSection) {
+              // Posicionar a la izquierda del elemento
+                cardLeft = Math.max(padding, rect.left + scrollLeft - cardWidth - 30)
+                cardTop = rect.top + scrollTop + (rect.height - cardHeight) / 2
+              } else if (isRightElement) {
+              // Posicionar debajo alineado a la derecha
+                cardRight = viewportWidth - rect.right - scrollLeft - 10
+                cardTop = rect.bottom + scrollTop + padding
+
+                // Si no cabe abajo, ponerlo arriba
+                if (cardTop + cardHeight > scrollTop + viewportHeight) {
+                  cardTop = rect.top + scrollTop - cardHeight - padding
+                }
+              } else {
               // Posicionar debajo del elemento
-              cardLeft = rect.left + scrollLeft - 10
-              cardTop = rect.bottom + scrollTop + padding
+                cardLeft = rect.left + scrollLeft - 10
+                cardTop = rect.bottom + scrollTop + padding
 
-              // Si no cabe abajo, ponerlo arriba
-              if (cardTop + cardHeight > scrollTop + viewportHeight) {
-                cardTop = rect.top + scrollTop - cardHeight - padding
+                // Si no cabe abajo, ponerlo arriba
+                if (cardTop + cardHeight > scrollTop + viewportHeight) {
+                  cardTop = rect.top + scrollTop - cardHeight - padding
+                }
+
+                // Solo ajustar si se sale completamente del viewport
+                if (cardLeft + cardWidth > viewportWidth) {
+                  cardLeft = viewportWidth - cardWidth - padding
+                }
+                if (cardLeft < 0) {
+                  cardLeft = padding
+                }
               }
 
-              // Solo ajustar si se sale completamente del viewport
-              if (cardLeft + cardWidth > viewportWidth) {
-                cardLeft = viewportWidth - cardWidth - padding
+              // Ajustes finales de viewport (solo para productSection)
+              if (isProductSection && cardLeft !== undefined) {
+                cardLeft = Math.max(padding, Math.min(cardLeft, viewportWidth - cardWidth - padding))
               }
-              if (cardLeft < 0) {
-                cardLeft = padding
+
+              cardTop = Math.max(scrollTop + padding, Math.min(cardTop, scrollTop + viewportHeight - cardHeight - padding))
+
+              this.tourCardStyle = {
+                top: `${cardTop}px`,
+                ...(cardRight !== null ? { right: `${cardRight}px` } : { left: `${cardLeft}px` })
               }
-            }
-
-            // Ajustes finales de viewport (solo para productSection)
-            if (isProductSection && cardLeft !== undefined) {
-              cardLeft = Math.max(padding, Math.min(cardLeft, viewportWidth - cardWidth - padding))
-            }
-
-            cardTop = Math.max(scrollTop + padding, Math.min(cardTop, scrollTop + viewportHeight - cardHeight - padding))
-
-            this.tourCardStyle = {
-              top: `${cardTop}px`,
-              ...(cardRight !== null ? { right: `${cardRight}px` } : { left: `${cardLeft}px` })
-            }
-          }, 300)
-        }
+            }, 300)
+          }
+        }, 300)
       })
     },
 
@@ -5874,17 +6046,43 @@ export default {
 /* Responsive tour */
 @media (max-width: 768px) {
   .tour-card {
-    min-width: 300px;
-    max-width: 90vw;
-    left: 5vw !important;
+    position: fixed !important;
+    bottom: 100px !important;
+    left: 16px !important;
+    right: 16px !important;
+    top: auto !important;
+    min-width: auto;
+    max-width: none;
+    z-index: 10001;
+  }
+
+  .tour-header {
+    padding: 10px 14px;
   }
 
   .tour-title {
-    font-size: 18px;
+    font-size: 16px;
+    margin-bottom: 8px;
   }
 
   .tour-description {
     font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .tour-card .q-card-actions {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .tour-card .q-card-actions .q-btn {
+    min-height: 44px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .tour-spotlight {
+    border-width: 3px;
   }
 }
 
