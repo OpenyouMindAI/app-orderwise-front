@@ -79,7 +79,6 @@
                 </q-select>
               </div>
 
-              <!-- Select tipo de factura -->
               <div id="tour-tipo-factura" class="billing-select-item">
                 <q-select
                   filled
@@ -100,7 +99,6 @@
                 />
               </div>
 
-              <!-- Select tipo de factura (Arca) -->
               <div v-if="invoiceType.bill" class="billing-select-item">
                 <q-select
                   filled
@@ -121,7 +119,6 @@
                 />
               </div>
 
-              <!-- Select tipo de servicio -->
               <div id="tour-type-service" class="billing-select-item">
                 <q-select
                   filled
@@ -664,6 +661,7 @@
                             <q-input
                               label="Precio"
                               type="number"
+                              @focus="e => e.target.select()"
                               v-model.number="scope.value"
                               dense
                               autofocus
@@ -695,6 +693,7 @@
                             <q-input
                               label="Cantidad"
                               type="number"
+                              @focus="e => e.target.select()"
                               v-model.number="scope.value"
                               dense
                               autofocus
@@ -722,17 +721,17 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
-              <div class="col-12" v-if="isNotLocal">
+              <div class="col-12" v-if="isDelivery">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12" v-if="isNotLocal">
+              <div class="col-12" v-if="isDelivery">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
               </div>
-              <div class="col-12" id="tour-descripcion" v-if="isNotLocal">
+              <div class="col-12" id="tour-descripcion" v-if="isDelivery">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
@@ -1630,7 +1629,7 @@ import CashflowModal from 'src/components/CashflowModal.vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import SearchPendingInvoicesDialog from 'src/components/SearchPendingInvoicesDialog.vue'
-import { LOCAL } from 'src/const/typeOfServices.js'
+import { LOCAL, DELIVERY } from 'src/const/typeOfServices.js'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1663,6 +1662,7 @@ export default {
       // Tour System
       tourStore,
       LOCAL,
+      DELIVERY,
       activeMobileMenu: null, // 'client', 'center', 'right' or null
       showTour: false,
       currentTourStep: 0,
@@ -2280,6 +2280,9 @@ export default {
     },
     isNotLocal () {
       return Number(this.typeOfService.code) !== this.LOCAL
+    },
+    isDelivery () {
+      return Number(this.typeOfService.code) === this.DELIVERY
     },
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
