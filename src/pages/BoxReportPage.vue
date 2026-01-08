@@ -52,8 +52,8 @@
 
         <!-- Filtros de turno -->
         <q-btn
-          :color="cashBoxUser ? 'green' : 'grey-5'"
-          :text-color="cashBoxUser ? 'white' : 'grey-8'"
+          :color="cashBoxUser && isToday ? 'green' : 'grey-5'"
+          :text-color="cashBoxUser && isToday ? 'white' : 'grey-8'"
           icon="schedule"
           label="Turno en curso"
           rounded
