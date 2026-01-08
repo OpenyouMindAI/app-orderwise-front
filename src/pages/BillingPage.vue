@@ -1659,11 +1659,10 @@ export default {
     tourStore.initFromLocalStorage()
 
     return {
-      // Tour System
       tourStore,
       LOCAL,
       DELIVERY,
-      activeMobileMenu: null, // 'client', 'center', 'right' or null
+      activeMobileMenu: null,
       showTour: false,
       currentTourStep: 0,
       tourSteps: [
