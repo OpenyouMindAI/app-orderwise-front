@@ -74,22 +74,32 @@
     <q-select
       v-if="$q.platform.is.mobile"
       ref="selectRefMobile"
-      filled
+      :filled="!isCustomStyled"
+      :borderless="isCustomStyled"
       v-model="model"
       use-input
       input-debounce="0"
-      :label="label"
+      :label="isCustomStyled ? undefined : label"
+      :placeholder="isCustomStyled ? label : undefined"
       :options="options"
       @filter="filterFn"
       behavior="dialog"
       :loading="loading"
       clearable
       hide-selected
+      hide-dropdown-icon
       fill-input
       class="places-input"
+      :class="{ 'custom-input-look': isCustomStyled }"
+      input-class="places-input-field"
+      label-color="grey-6"
+      color="primary"
       @update:model-value="onSelection"
       @clear="resetAddress"
     >
+      <template #prepend>
+        <q-icon name="place" :color="isCustomStyled ? 'primary' : 'grey-6'" size="20px" />
+      </template>
       <template #option="scope">
         <q-item v-bind="scope.itemProps">
           <q-item-section avatar>
@@ -669,24 +679,17 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Estilos Custom para imitar RegisterPage */
 .custom-input-look {
-  height: 44px;
-  border-radius: 12px;
-  background: #f9fafb;
-  border: 1.5px solid #e5e7eb;
-  padding: 0 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex !important;
-  align-items: center !important;
+  /* Removed styles applied to root to match RegisterPage pattern */
+  width: 100%;
 }
 
-.custom-input-look:hover {
+.custom-input-look :deep(.q-field__control):hover {
   background: #ffffff;
   border-color: #667eea;
 }
 
-.custom-input-look:focus-within {
+.custom-input-look :deep(.q-field__control):focus-within {
   background: #ffffff;
   border-color: #667eea;
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
@@ -695,7 +698,13 @@ defineExpose({
 .custom-input-look :deep(.q-field__control) {
   min-height: 44px !important;
   height: 44px !important;
-  padding: 0 !important;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  padding: 0 12px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex !important;
+  align-items: center !important;
 }
 
 .custom-input-look :deep(.q-field__native) {
