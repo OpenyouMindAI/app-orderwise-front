@@ -160,6 +160,7 @@
             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
               <div>
                 <q-btn
+                  id="tour-cliente-mobile"
                   color="secondary"
                   icon="person"
                   :label="client?.name || 'Cliente'"
@@ -229,6 +230,7 @@
                 </q-btn>
               </div>
               <q-fab
+                id="tour-fab-config"
                 color="primary"
                 icon="tune"
                 type="button"
@@ -239,6 +241,7 @@
               >
                 <!-- FAB Tipo de Factura -->
                 <q-fab-action
+                  id="tour-tipo-factura-mobile"
                   color="accent"
                   icon="receipt"
                   :label="invoiceType?.name || 'Tipo'"
@@ -324,6 +327,7 @@
 
                 <!-- FAB Tipo de Servicio -->
                 <q-fab-action
+                  id="tour-type-service-mobile"
                   color="positive"
                   icon="category"
                   :label="typeOfService?.name || 'Servicio'"
@@ -364,6 +368,7 @@
                 </q-fab-action>
               </q-fab>
               <q-fab
+                id="tour-fab-opciones"
                 square
                 type="button"
                 color="orange"
@@ -374,6 +379,7 @@
                 v-model="rightFabOpen"
               >
                 <q-fab-action
+                  id="tour-btn-cobro-parcial-mobile"
                   color="primary"
                   icon="splitscreen"
                   label="Cobro Parcial"
@@ -384,6 +390,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-mesas-mobile"
                   v-if="companyConfig.is_table"
                   color="orange"
                   icon="table_restaurant"
@@ -394,6 +401,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-cashflow-mobile"
                   color="info"
                   icon="payments"
                   label="Entrada/Salida"
@@ -402,6 +410,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-buscar-mobile"
                   color="teal"
                   icon="search"
                   label="Buscar"
@@ -419,6 +428,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-borrar-mobile"
                   color="negative"
                   icon="delete"
                   label="Borrar"
@@ -430,6 +440,7 @@
             <div class="col-12 articles-section" :class="{ 'articles-section-hidden': productsFullscreen }" id="tour-tabla-articulos">
               <!-- Desktop view -->
               <q-table
+                id="tour-products-table"
                 v-if="$q.screen.gt.xs"
                 row-key="id"
                 title="Artículos"
@@ -629,7 +640,11 @@
               </q-table>
 
               <!-- Mobile view - Cart style -->
-              <div v-else-if="products.length > 0" class="mobile-cart-container">
+              <div
+                v-else-if="products.length > 0"
+                id="tour-products-table-mobile"
+                class="mobile-cart-container"
+              >
                 <div class="mobile-cart-list">
                   <div
                     v-for="(product, rowIndex) in products"
@@ -1666,83 +1681,7 @@ export default {
       activeMobileMenu: null, // 'client', 'center', 'right' or null
       showTour: false,
       currentTourStep: 0,
-      tourSteps: [
-        {
-          target: '#select-client',
-          title: '👤 Seleccionar Cliente',
-          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
-        },
-        {
-          target: '#tour-tipo-factura',
-          title: '🧾 Tipo de Factura',
-          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
-        },
-        {
-          target: '#tour-type-service',
-          title: '🍽️ Tipo de Servicio',
-          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
-        },
-        {
-          target: '#tour-barcode',
-          title: '🔍 Código de Barras',
-          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
-        },
-        {
-          target: '#tour-products-table',
-          title: '📦 Lista de Artículos',
-          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
-        },
-        {
-          target: '#tour-descripcion',
-          title: '📝 Descripción',
-          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.'
-        },
-        {
-          target: '#tour-btn-cobrar',
-          title: '💰 Botón Cobrar (F1)',
-          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
-        },
-        {
-          target: '#tour-btn-cobro-parcial',
-          title: '💳 Cobro Parcial',
-          description: 'Permite dividir la cuenta entre varios clientes o realizar pagos parciales. Útil para grupos que desean pagar por separado.'
-        },
-        {
-          target: '#tour-btn-mesas',
-          title: '🪑 Botón Mesas (F10)',
-          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
-        },
-        {
-          target: '#tour-btn-cashflow',
-          title: '💵 Entrada/Salida de Dinero (F11)',
-          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
-        },
-        {
-          target: '#tour-btn-buscar',
-          title: '🔎 Buscar Factura (F12)',
-          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
-        },
-        {
-          target: '#tour-btn-borrar',
-          title: '🗑️ Borrar Factura',
-          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
-        },
-        {
-          target: '#tour-select-categoria',
-          title: '🏷️ Filtro de Categorías',
-          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
-        },
-        {
-          target: '#tour-input-buscar-producto',
-          title: '🔍 Buscar Producto',
-          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
-        },
-        {
-          target: '#tour-seccion-productos',
-          title: '🛍️ Sección de Productos',
-          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
-        }
-      ],
+      // tourSteps moved to computed for dynamic filtering
       spotlightStyle: {},
       tourCardStyle: {},
 
@@ -2259,6 +2198,218 @@ export default {
     }
   },
   computed: {
+    tourSteps () {
+      const isMobile = this.$q.screen.lt.md
+
+      // En móvil: mismos pasos conceptuales que desktop, pero apuntando a elementos móviles
+      if (isMobile) {
+        const mobileSteps = [
+          {
+            target: '#tour-cliente-mobile',
+            title: '👤 Seleccionar Cliente',
+            description: 'Toca aquí para seleccionar o agregar un cliente para la factura.'
+          },
+          {
+            target: '#tour-tipo-factura-mobile',
+            title: '🧾 Tipo de Factura',
+            description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc.',
+            mobileAction: () => { this.centerFabOpen = true }
+          },
+          {
+            target: '#tour-type-service-mobile',
+            title: '🍽️ Tipo de Servicio',
+            description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc.',
+            mobileAction: () => { this.centerFabOpen = true }
+          },
+          // Código de barras omitido en móvil
+          {
+            target: '#tour-products-table, #tour-products-table-mobile',
+            title: '📦 Lista de Artículos',
+            description: 'Aquí aparecen los productos agregados. Puedes editar cantidades y eliminar productos.',
+            mobileAction: () => {
+              this.centerFabOpen = false
+              this.rightFabOpen = false
+              // Agregar producto falso si la lista está vacía
+              if (this.products.length === 0) {
+                this.products.push({
+                  id: 999999,
+                  name: 'Producto de Ejemplo',
+                  price: 150.00,
+                  quantity: 1,
+                  amount: 1,
+                  subtotal: 150.00,
+                  isTourFakeProduct: true
+                })
+              }
+            }
+          },
+          {
+            target: '#tour-descripcion',
+            title: '📝 Descripción',
+            description: 'Agrega notas o comentarios adicionales sobre la factura.',
+            mobileAction: () => {
+              this.centerFabOpen = false
+              this.rightFabOpen = false
+              // Limpiar producto falso si existe
+              const fakeIndex = this.products.findIndex(p => p.isTourFakeProduct)
+              if (fakeIndex !== -1) {
+                this.products.splice(fakeIndex, 1)
+              }
+            }
+          },
+          {
+            target: '#tour-btn-cobrar-mobile',
+            title: '💰 Botón Cobrar',
+            description: 'Toca este botón para procesar el cobro y finalizar la venta.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-btn-cobro-parcial-mobile',
+            title: '💳 Cobro Parcial',
+            description: 'Divide la cuenta entre varios clientes o realiza pagos parciales.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-mesas-mobile',
+            title: '🪑 Mesas',
+            description: 'Administra las mesas del restaurante y asigna pedidos.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-cashflow-mobile',
+            title: '💵 Entrada/Salida de Dinero',
+            description: 'Registra entradas y salidas de dinero en efectivo.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-buscar-mobile',
+            title: '🔎 Buscar Factura',
+            description: 'Busca facturas anteriores por número, cliente o fecha.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-borrar-mobile',
+            title: '🗑️ Borrar Factura',
+            description: 'Limpia todos los productos y datos de la factura actual.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-select-categoria',
+            title: '🏷️ Filtro de Categorías',
+            description: 'Filtra los productos por categoría para encontrarlos más rápido.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-input-buscar-producto',
+            title: '🔍 Buscar Producto',
+            description: 'Busca productos por nombre o código.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-seccion-productos',
+            title: '🛍️ Sección de Productos',
+            description: 'Toca un producto para agregarlo a la factura.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          }
+        ]
+
+        // Filtrar pasos que no aplican según configuración
+        return mobileSteps.filter(step => {
+          // Filtrar cobro parcial y mesas si is_table está deshabilitado
+          if (step.target === '#tour-btn-cobro-parcial-mobile' || step.target === '#tour-btn-mesas-mobile') {
+            return this.companyConfig?.is_table
+          }
+          // Filtrar descripción si es servicio local
+          if (step.target === '#tour-descripcion') {
+            return this.isNotLocal
+          }
+          return true
+        })
+      }
+
+      // Desktop: pasos originales
+      const allSteps = [
+        {
+          target: '#select-client',
+          title: '👤 Seleccionar Cliente',
+          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
+        },
+        {
+          target: '#tour-tipo-factura',
+          title: '🧾 Tipo de Factura',
+          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
+        },
+        {
+          target: '#tour-type-service',
+          title: '🍽️ Tipo de Servicio',
+          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
+        },
+        {
+          target: '#tour-barcode',
+          title: '🔍 Código de Barras',
+          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
+        },
+        {
+          target: '#tour-products-table',
+          title: '📦 Lista de Artículos',
+          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
+        },
+        {
+          target: '#tour-descripcion',
+          title: '📝 Descripción',
+          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.',
+          condition: () => this.isNotLocal
+        },
+        {
+          target: '#tour-btn-cobrar',
+          title: '💰 Botón Cobrar (F1)',
+          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
+        },
+        {
+          target: '#tour-btn-cobro-parcial',
+          title: '💳 Cobro Parcial',
+          description: 'Permite dividir la cuenta entre varios clientes o realizar pagos parciales. Útil para grupos que desean pagar por separado.'
+        },
+        {
+          target: '#tour-btn-mesas',
+          title: '🪑 Botón Mesas (F10)',
+          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
+        },
+        {
+          target: '#tour-btn-cashflow',
+          title: '💵 Entrada/Salida de Dinero (F11)',
+          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
+        },
+        {
+          target: '#tour-btn-buscar',
+          title: '🔎 Buscar Factura (F12)',
+          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
+        },
+        {
+          target: '#tour-btn-borrar',
+          title: '🗑️ Borrar Factura',
+          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
+        },
+        {
+          target: '#tour-select-categoria',
+          title: '🏷️ Filtro de Categorías',
+          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
+        },
+        {
+          target: '#tour-input-buscar-producto',
+          title: '🔍 Buscar Producto',
+          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
+        },
+        {
+          target: '#tour-seccion-productos',
+          title: '🛍️ Sección de Productos',
+          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
+        }
+      ]
+
+      // Filtrar pasos basado en condiciones
+      return allSteps.filter(step => !step.condition || step.condition())
+    },
     ...mapState(authentication, ['userSession', 'branchOffice']),
     branchOfficeCharged () {
       return this.branchOffice
@@ -2589,7 +2740,11 @@ export default {
       this.currentTourStep = 0
       // Usar tourStore en lugar de localStorage
       this.tourStore.startTour()
-      this.updateTourPosition()
+
+      // Esperar a que Vue actualice el DOM antes de posicionar
+      this.$nextTick(() => {
+        this.updateTourPosition()
+      })
     },
 
     /**
@@ -2741,6 +2896,13 @@ export default {
       this.showTour = false
       // Usar tourStore en lugar de localStorage
       this.tourStore.finishTour()
+
+      // Limpiar producto falso si existe (por si se cierra el tour en ese paso)
+      const fakeIndex = this.products.findIndex(p => p.isTourFakeProduct)
+      if (fakeIndex !== -1) {
+        this.products.splice(fakeIndex, 1)
+      }
+
       this.$q.notify({
         message: '¡Tour completado! Ya puedes comenzar a facturar',
         color: 'positive',
@@ -2754,91 +2916,131 @@ export default {
     updateTourPosition () {
       this.$nextTick(() => {
         const step = this.tourSteps[this.currentTourStep]
-        const element = document.querySelector(step.target)
 
-        if (element) {
-          // Scroll to element first
-          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-
-          // Wait for scroll to finish before calculating positions
-          setTimeout(() => {
-            const rect = element.getBoundingClientRect()
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-
-            // Update spotlight position
-            this.spotlightStyle = {
-              top: `${rect.top + scrollTop - 10}px`,
-              left: `${rect.left + scrollLeft - 10}px`,
-              width: `${rect.width + 20}px`,
-              height: `${rect.height + 20}px`
-            }
-
-            // Position tour card with better logic
-            const cardWidth = 400
-            const cardHeight = 280
-            const padding = 20
-            const viewportHeight = window.innerHeight
-            const viewportWidth = window.innerWidth
-
-            let cardTop = rect.top + scrollTop
-            let cardLeft = rect.left + scrollLeft
-
-            // Detectar si es la sección de productos o categorías/búsqueda
-            const isProductSection = step.target === '#tour-seccion-productos' ||
-                                    step.target === '#tour-select-categoria' ||
-                                    step.target === '#tour-input-buscar-producto'
-
-            if (isProductSection) {
-              // Para sección de productos, posicionar a la IZQUIERDA del elemento
-              // Calcular posición: elemento.left - ancho del card - espacio
-              const spaceFromElement = 30 // Espacio entre el card y el elemento
-              cardLeft = rect.left + scrollLeft - cardWidth - spaceFromElement
-
-              // Si no cabe a la izquierda, posicionar en el borde izquierdo con margen
-              if (cardLeft < padding) {
-                cardLeft = padding
-              }
-
-              // Centrar verticalmente con el elemento
-              cardTop = rect.top + scrollTop + (rect.height / 2) - (cardHeight / 2)
-            } else {
-              // Para otros elementos, posicionar DEBAJO
-              cardTop = rect.bottom + scrollTop + padding
-
-              // If card goes below viewport, position it above the element
-              if (rect.bottom + cardHeight + padding > viewportHeight) {
-                cardTop = rect.top + scrollTop - cardHeight - padding
-              }
-
-              // If still goes above viewport, position it in the middle
-              if (cardTop < scrollTop) {
-                cardTop = scrollTop + (viewportHeight - cardHeight) / 2
-              }
-            }
-
-            // Adjust horizontal position
-            if (cardLeft + cardWidth > viewportWidth) {
-              cardLeft = viewportWidth - cardWidth - padding
-            }
-            if (cardLeft < 0) {
-              cardLeft = padding
-            }
-
-            // Adjust vertical position to keep in viewport
-            if (cardTop + cardHeight > scrollTop + viewportHeight) {
-              cardTop = scrollTop + viewportHeight - cardHeight - padding
-            }
-            if (cardTop < scrollTop) {
-              cardTop = scrollTop + padding
-            }
-
-            this.tourCardStyle = {
-              top: `${cardTop}px`,
-              left: `${cardLeft}px`
-            }
-          }, 300)
+        // Ejecutar acción móvil si existe (para abrir menús, etc)
+        if (this.$q.screen.lt.md && step.mobileAction) {
+          step.mobileAction()
         }
+
+        // Dar un pequeño tiempo para que la acción móvil se complete (ej: abrir menú)
+        setTimeout(() => {
+          const element = document.querySelector(step.target)
+
+          // Si el elemento no existe o no está visible, saltar al siguiente paso
+          if (!element || element.offsetParent === null) {
+            // Elemento no existe o está oculto (display: none)
+            if (this.currentTourStep < this.tourSteps.length - 1) {
+              this.currentTourStep++
+              this.updateTourPosition() // Recursivo para verificar el siguiente
+            } else {
+              this.finishTour() // Ya no hay más pasos
+            }
+            return
+          }
+
+          if (element) {
+            // Scroll to element first
+            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+            // Wait for scroll to finish before calculating positions
+            setTimeout(() => {
+              const rect = element.getBoundingClientRect()
+              const isMobile = this.$q.screen.lt.md
+              const viewportHeight = window.innerHeight
+              const viewportWidth = window.innerWidth
+
+              // Update spotlight position
+              // Calcular posición relativa al overlay para evitar problemas con scroll
+              const overlay = document.querySelector('.tour-overlay')
+              let overlayRect = { top: 0, left: 0 }
+              if (overlay) {
+                overlayRect = overlay.getBoundingClientRect()
+              }
+
+              // Update spotlight position
+              this.spotlightStyle = {
+                top: `${rect.top - overlayRect.top - 6}px`,
+                left: `${rect.left - overlayRect.left - 6}px`,
+                width: `${rect.width + 12}px`,
+                height: `${rect.height + 12}px`
+              }
+
+              // En móvil: posicionar tarjeta fija en la parte inferior
+              if (isMobile) {
+                this.tourCardStyle = {
+                  position: 'fixed',
+                  bottom: '100px',
+                  left: '16px',
+                  right: '16px',
+                  top: 'auto'
+                }
+                return
+              }
+
+              // Posicionar tarjeta (Desktop) relativa al overlay
+              const cardWidth = 400
+              const cardHeight = 280
+              const padding = 20
+
+              // Definir coordenadas base relativas al overlay
+              const relTop = rect.top - overlayRect.top
+              const relBottom = rect.bottom - overlayRect.top
+              const relLeft = rect.left - overlayRect.left
+              const relRight = rect.right - overlayRect.left
+
+              // Identificar tipo de elemento
+              const isProductSection = ['#tour-seccion-productos'].includes(step.target)
+              const isRightElement = ['#tour-btn-cobrar', '#tour-btn-cobro-parcial', '#tour-btn-mesas', '#tour-btn-cashflow', '#tour-btn-buscar', '#tour-btn-borrar', '#tour-select-categoria', '#tour-input-buscar-producto'].includes(step.target)
+
+              let cardTop, cardLeft, cardRight = null
+
+              if (isProductSection) {
+              // Posicionar a la izquierda del elemento
+                cardLeft = Math.max(padding, relLeft - cardWidth - 30)
+                cardTop = relTop + (rect.height - cardHeight) / 2
+              } else if (isRightElement) {
+              // Posicionar debajo alineado a la derecha
+                cardRight = viewportWidth - rect.right - 10 // Right es relativo al viewport width
+                // Convertir right a coordenada left relativa al overlay si es necesario, o mantener right fijo
+                // Mejor usar left calculado relativo al overlay:
+                cardLeft = relRight - cardWidth
+                cardTop = relBottom + padding
+
+                // Si no cabe abajo (usando viewport para chequear), ponerlo arriba
+                if (rect.bottom + cardHeight + padding > viewportHeight) {
+                  cardTop = relTop - cardHeight - padding
+                }
+              } else {
+              // Posicionar debajo del elemento
+                cardLeft = relLeft - 10
+                cardTop = relBottom + padding
+
+                // Si no cabe abajo, ponerlo arriba
+                if (rect.bottom + cardHeight + padding > viewportHeight) {
+                  cardTop = relTop - cardHeight - padding
+                }
+
+                // Solo ajustar si se sale completamente del viewport
+                if (rect.left + cardWidth > viewportWidth) {
+                  cardLeft = viewportWidth - cardWidth - padding
+                }
+                if (cardLeft < 0) {
+                  cardLeft = padding
+                }
+              }
+
+              // Ajustes finales de top para no salir del overlay
+              // (Opcional, pero asegura que no quede negativo)
+              if (cardTop < 0) cardTop = padding
+
+              this.tourCardStyle = {
+                top: `${cardTop}px`,
+                left: isRightElement ? 'auto' : `${cardLeft}px`,
+                right: isRightElement ? `${cardRight}px` : 'auto'
+              }
+            }, 300)
+          }
+        }, 300)
       })
     },
 
@@ -5751,7 +5953,7 @@ export default {
 
 /* Tour Styles */
 .tour-overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -5856,17 +6058,43 @@ export default {
 /* Responsive tour */
 @media (max-width: 768px) {
   .tour-card {
-    min-width: 300px;
-    max-width: 90vw;
-    left: 5vw !important;
+    position: fixed !important;
+    bottom: 100px !important;
+    left: 16px !important;
+    right: 16px !important;
+    top: auto !important;
+    min-width: auto;
+    max-width: none;
+    z-index: 10001;
+  }
+
+  .tour-header {
+    padding: 10px 14px;
   }
 
   .tour-title {
-    font-size: 18px;
+    font-size: 16px;
+    margin-bottom: 8px;
   }
 
   .tour-description {
     font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .tour-card .q-card-actions {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .tour-card .q-card-actions .q-btn {
+    min-height: 44px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .tour-spotlight {
+    border-width: 3px;
   }
 }
 
