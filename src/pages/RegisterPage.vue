@@ -1261,8 +1261,11 @@ const checkOtpStatus = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   checkOtpStatus()
+  // DEBUG: Show company setup modal immediately
+  await loadBusinessTypes()
+  showCompanySetup.value = true
 })
 
 onBeforeUnmount(() => {
