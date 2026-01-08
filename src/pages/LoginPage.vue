@@ -167,6 +167,21 @@
       :session-token="resetData.sessionToken"
       @password-reset="handlePasswordReset"
     />
+
+    <!-- Email Verification Modal -->
+    <EmailVerificationModal
+      v-model="showEmailVerification"
+      :user-email="userEmail"
+      @verified="handleEmailVerified"
+      @email-updated="handleEmailUpdated"
+    />
+
+    <!-- Company Setup Modal -->
+    <CompanySetupModal
+      v-model="showCompanySetup"
+      :user-email="userEmail"
+      @success="handleCompanySetupSuccess"
+    />
   </div>
 </template>
 <script>
@@ -179,13 +194,17 @@ import { darkModeStore } from '../stores/darkModeStore'
 import ForgotPasswordDialog from 'src/components/ForgotPasswordDialog.vue'
 import VerifyResetCodeDialog from 'src/components/VerifyResetCodeDialog.vue'
 import NewPasswordDialog from 'src/components/NewPasswordDialog.vue'
+import EmailVerificationModal from 'src/components/Auth/EmailVerificationModal.vue'
+import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 
 export default {
   name: 'LoginPage',
   components: {
     ForgotPasswordDialog,
     VerifyResetCodeDialog,
-    NewPasswordDialog
+    NewPasswordDialog,
+    EmailVerificationModal,
+    CompanySetupModal
   },
   data () {
     return {
@@ -210,6 +229,10 @@ export default {
         expiresAt: null,
         code: ''
       },
+      // Email verification flow
+      showEmailVerification: false,
+      showCompanySetup: false,
+      userEmail: '',
       /**
        * Email User
        * @type {String}
@@ -760,6 +783,27 @@ export default {
       try {
         this.btnDisable = true
         const data = await this.login({ username: this.username, password: this.password })
+
+        // Guardar email del usuario
+        this.userEmail = data.email
+
+        // Verificar si el email no está verificado
+        if (data.email_verified_at === null || !data.email_verified_at) {
+          notify('Debes verificar tu correo electrónico para continuar', 'warning', 'mail')
+          this.showEmailVerification = true
+          this.btnDisable = false
+          return
+        }
+
+        // Verificar si no tiene empresa asignada
+        if (!data.company_session || data.company_session === null) {
+          notify('Configura tu empresa para continuar', 'info', 'business')
+          this.showCompanySetup = true
+          this.btnDisable = false
+          return
+        }
+
+        // Usuario verificado y con empresa - continuar normalmente
         if (data.is_root) {
           this.$router.push({ name: 'Billing' })
           return
@@ -837,6 +881,77 @@ export default {
         if (this.resetData.identifier && this.resetData.identifier.includes('@')) {
           this.username = this.resetData.identifier
         }
+      }
+    },
+
+    /**
+     * Manejar cuando se verifica el email exitosamente
+     */
+    async handleEmailVerified () {
+      try {
+        // Cerrar modal de verificación
+        this.showEmailVerification = false
+
+        // Recargar sesión del usuario para actualizar email_verified_at
+        const { data } = await this.$api.get('user/session')
+        await this.setSessionData(data)
+
+        notify('Correo verificado exitosamente', 'positive', 'check_circle')
+
+        // Verificar si tiene empresa asignada
+        if (!data.user.company_session || data.user.company_session === null) {
+          // Pequeña pausa antes de mostrar el siguiente modal
+          await new Promise(resolve => setTimeout(resolve, 300))
+          notify('Ahora configura tu empresa', 'info', 'business')
+          this.showCompanySetup = true
+        } else {
+          // Tiene empresa, redirigir al dashboard
+          if (data.user.is_root) {
+            this.$router.push({ name: 'Billing' })
+          } else if (data.user?.roles?.length === 0) {
+            notify('Usuario no tiene permisos', 'negative', 'warning')
+          } else {
+            this.$router.push({ name: this.redirect || 'Tutorial' })
+          }
+        }
+      } catch (error) {
+        console.error('Error al verificar email:', error)
+        notify('Error al verificar el correo', 'negative', 'warning')
+      }
+    },
+
+    /**
+     * Manejar cuando se actualiza el email
+     */
+    handleEmailUpdated (newEmail) {
+      this.userEmail = newEmail
+    },
+
+    /**
+     * Manejar cuando se configura la empresa exitosamente
+     */
+    async handleCompanySetupSuccess () {
+      try {
+        // Cerrar modal de configuración
+        this.showCompanySetup = false
+
+        // Recargar sesión del usuario para obtener datos de empresa
+        const { data } = await this.$api.get('user/session')
+        await this.setSessionData(data)
+
+        notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+
+        // Redirigir al dashboard
+        if (data.user.is_root) {
+          this.$router.push({ name: 'Billing' })
+        } else if (data.user?.roles?.length === 0) {
+          notify('Usuario no tiene permisos', 'negative', 'warning')
+        } else {
+          this.$router.push({ name: this.redirect || 'Tutorial' })
+        }
+      } catch (error) {
+        console.error('Error al configurar empresa:', error)
+        notify('Error al configurar la empresa', 'negative', 'warning')
       }
     },
 

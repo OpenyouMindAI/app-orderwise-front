@@ -244,7 +244,6 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/ActiveTransportPage.vue')
       },
-      // Invoice Delivery Routes - Own Delivery System
       {
         path: 'delivery/tray',
         name: 'InvoiceDeliveryTray',

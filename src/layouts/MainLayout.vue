@@ -289,6 +289,7 @@
                         alt="ARCA"
                         class="integration-logo"
                       >
+                      {{ console.log(subscriptionPlan) }}
                       <premium-badge
                         :show="subscriptionPlan === 'Free'"
                         :size="15"
@@ -426,7 +427,7 @@
                       clickable
                       dense
                       class="profile-action-item-compact"
-                      @click="openSubscriptionDialog"
+                      @click="showSubscriptionDialog = true"
                       v-close-popup
                     >
                       <q-item-section avatar class="min-width-auto">
@@ -504,7 +505,6 @@
               outlined
               placeholder="Buscar"
               class="menu-search-input"
-              bg-color="white"
               autofocus
             >
               <template v-slot:append>
@@ -658,241 +658,28 @@
       @open-subscription-dialog="showSubscriptionDialog = true"
       @banner-dismissed="handleBannerDismissed"
     />
-    <!-- Create Company Dialog -->
-    <q-dialog
+    <!-- Register Dialog -->
+    <register-dialog
       v-model="showCreateCompanyDialog"
-      persistent
-      transition-show="scale"
-      transition-hide="scale"
-    >
-      <q-card v-if="isDemo" class="demo-register-card" style="width: 480px; max-width: 90vh; overflow: hidden;">
-        <!-- Header con gradiente atractivo -->
-        <div class="demo-register-header">
-          <q-btn
-            flat
-            round
-            dense
-            icon="close"
-            color="white"
-            @click="closeCreateCompanyDialog"
-            class="absolute-top-right q-ma-md"
-            style="z-index: 10;"
-          />
+      @success="handleRegisterSuccess"
+      @google-success="handleGoogleRegisterSuccess"
+    />
 
-          <div class="demo-register-icon-container">
-            <q-icon name="rocket_launch" size="44px" color="white" class="demo-register-icon" />
-          </div>
+    <!-- OTP Verification Dialog -->
+    <otp-verification-dialog
+      v-model="showOtpVerification"
+      :identifier="otpIdentifier"
+      :session-token="otpSessionToken"
+      :purpose="'verify_email'"
+      @verified="handleOtpVerified"
+    />
 
-          <div class="text-h6 text-weight-bold text-white q-mt-md">
-            ¡Bienvenido a la era digital!
-          </div>
-          <div class="text-body2 text-white q-mt-sm" style="opacity: 0.95;">
-            Crea tu cuenta gratis y desbloquea todas las funcionalidades
-          </div>
-        </div>
-
-        <!-- Contenido -->
-        <q-card-section class="q-pa-xl">
-          <!-- Beneficios -->
-          <div class="q-mb-lg">
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Gestión completa de tu negocio</span>
-            </div>
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Control de stock</span>
-            </div>
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Reportes y estadísticas en tiempo real</span>
-            </div>
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Soporte técnico dedicado</span>
-            </div>
-          </div>
-
-          <!-- Botón de Google mejorado -->
-          <google-register-button @success="handleGoogleRegisterSuccess" @error="handleGoogleRegisterError" />
-
-          <!-- Texto adicional -->
-          <div class="text-center q-mt-md text-caption text-grey-7">
-            Al registrarte, aceptas nuestros <a href="https://politicas.qbits.com.ar" target="_blank">términos y condiciones</a>
-          </div>
-        </q-card-section>
-      </q-card>
-      <q-card class="create-company-card" style="min-width: 500px; max-width: 600px;" v-else>
-        <!-- Header con gradiente -->
-        <q-card-section class="create-company-header">
-          <div class="row items-center">
-            <q-icon name="add_business" size="32px" class="q-mr-md" />
-            <div>
-              <div class="text-h6 text-weight-bold">Crear Mi Empresa</div>
-              <div class="text-caption">Deja la demo y crea tu cuenta empresarial</div>
-            </div>
-            <q-space />
-            <q-btn
-              flat
-              round
-              dense
-              icon="close"
-              @click="closeCreateCompanyDialog"
-            />
-          </div>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-section class="q-pt-md" style="max-height: 60vh; overflow-y: auto;">
-          <!-- Información de Demo -->
-          <q-banner rounded class="bg-orange-1 q-mb-md">
-            <template v-slot:avatar>
-              <q-icon name="info" color="orange" />
-            </template>
-            <div class="text-body2">
-              Actualmente estás usando una <strong>cuenta demo</strong>.
-              Al crear tu empresa, todos tus datos se guardarán en tu propia cuenta.
-            </div>
-          </q-banner>
-
-          <!-- Formulario -->
-          <q-form ref="companyForm" @submit="createCompany">
-            <div class="row q-col-gutter-md">
-              <!-- Nombre de la empresa -->
-              <div class="col-12">
-                <q-input
-                  v-model="companyData.company_name"
-                  label="Nombre de la Empresa *"
-                  outlined
-                  dense
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="business" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- RUT/Documento -->
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="companyData.company_document"
-                  label="RUT/Documento *"
-                  outlined
-                  dense
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="badge" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Teléfono -->
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="companyData.company_phone"
-                  label="Teléfono *"
-                  outlined
-                  dense
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="phone" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Email -->
-              <div class="col-12">
-                <q-input
-                  v-model="companyData.company_email"
-                  label="Email *"
-                  type="email"
-                  outlined
-                  dense
-                  :rules="[
-                    val => !!val || 'Campo requerido',
-                    val => /.+@.+\..+/.test(val) || 'Email inválido'
-                  ]"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="email" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Dirección -->
-              <div class="col-12">
-                <AddressComponent
-                  :initial-address="companyAddressData"
-                  @address-selected="handleCompanyAddressSelected"
-                />
-              </div>
-
-              <!-- Tipo de Negocio -->
-              <div class="col-12">
-                <q-select
-                  v-model="companyData.business_type"
-                  :options="businessTypes"
-                  option-label="name"
-                  option-value="id"
-                  label="Tipo de Negocio *"
-                  outlined
-                  dense
-                  use-input
-                  input-debounce="300"
-                  @filter="filterBusinessTypes"
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="category" />
-                  </template>
-                  <template v-slot:no-option>
-                    <q-item>
-                      <q-item-section class="text-grey">
-                        No hay resultados
-                      </q-item-section>
-                    </q-item>
-                  </template>
-                </q-select>
-              </div>
-
-              <!-- Copiar productos demo -->
-              <div class="col-12">
-                <q-checkbox
-                  v-model="companyData.copy_test_products"
-                  label="Copiar productos y categorías de la empresa demo"
-                  color="primary"
-                />
-              </div>
-            </div>
-          </q-form>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn
-            flat
-            label="Cancelar"
-            color="grey-7"
-            @click="closeCreateCompanyDialog"
-            :disable="loadingCreateCompany"
-          />
-          <q-btn
-            unelevated
-            label="Crear Empresa"
-            color="primary"
-            icon-right="arrow_forward"
-            @click="createCompany"
-            :loading="loadingCreateCompany"
-            class="create-btn"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <!-- Company Setup Modal -->
+    <company-setup-modal
+      v-model="showCompanySetup"
+      :user-email="companySetupEmail"
+      @success="handleCompanySetupSuccess"
+    />
 
   </q-layout>
 </template>
@@ -903,8 +690,9 @@ import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
-import AddressComponent from 'src/components/Billing/AddressComponent.vue'
-import GoogleRegisterButton from 'src/components/Auth/GoogleRegisterButton.vue'
+import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
+import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
+import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import PremiumBadge from 'src/components/PremiumBadge.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
@@ -929,8 +717,9 @@ export default {
     FloatingThemeSelector,
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
-    AddressComponent,
-    GoogleRegisterButton,
+    RegisterDialog,
+    OtpVerificationDialog,
+    CompanySetupModal,
     PremiumBadge
   },
   data () {
@@ -982,6 +771,31 @@ export default {
        * @type {Boolean}
        */
       showCreateCompanyDialog: false,
+      /**
+       * Show OTP verification dialog
+       * @type {Boolean}
+       */
+      showOtpVerification: false,
+      /**
+       * OTP identifier (email or phone)
+       * @type {String}
+       */
+      otpIdentifier: '',
+      /**
+       * OTP session token
+       * @type {String}
+       */
+      otpSessionToken: '',
+      /**
+       * Show company setup modal
+       * @type {Boolean}
+       */
+      showCompanySetup: false,
+      /**
+       * Company setup email
+       * @type {String}
+       */
+      companySetupEmail: '',
       /**
        * Loading create company
        * @type {Boolean}
@@ -1345,15 +1159,61 @@ export default {
       }
     },
     /**
+     * Handle register success
+     */
+    async handleRegisterSuccess (data) {
+      try {
+        // Cerrar el diálogo de registro primero
+        this.showCreateCompanyDialog = false
+
+        // Iniciar sesión automáticamente con los datos del usuario
+        console.log(data)
+        await this.store.setSessionData(data)
+
+        // Guardar datos para los siguientes pasos
+        this.companySetupEmail = data.user_email || data.user?.email
+        this.otpIdentifier = data.user_email || data.user?.email
+        this.otpSessionToken = data.session_token || ''
+
+        // Pequeña pausa antes de mostrar el siguiente modal
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Mostrar modal de verificación OTP
+        this.showOtpVerification = true
+
+        notify('Código de verificación enviado a tu correo', 'positive', 'mail')
+      } catch (error) {
+        console.error('Error al procesar registro:', error)
+        notify('Error al procesar el registro', 'negative', 'warning')
+      }
+    },
+    /**
      * Handle Google register success
      */
     async handleGoogleRegisterSuccess (data) {
-      if (data.needsCompanySetup) {
+      try {
+        // Cerrar el diálogo de registro primero
+        this.showCreateCompanyDialog = false
+
+        // Esperar a que el diálogo se cierre completamente
+        await this.$nextTick()
+
+        // Iniciar sesión automáticamente con los datos del usuario
         await this.store.setSessionData(data.user)
-        this.companyData.company_email = data.userInfo.email
-        this.showCreateCompanyDialog = true
-      } else {
-        this.closeCreateCompanyDialog()
+
+        // Guardar el email para el setup de la empresa
+        this.companySetupEmail = data.userInfo?.email || data.user.email
+
+        // Pequeña pausa antes de mostrar el siguiente modal
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Mostrar el modal de configuración de empresa
+        this.showCompanySetup = true
+
+        notify('Registro exitoso con Google. Configura tu empresa', 'positive', 'check_circle')
+      } catch (error) {
+        console.error('Error al procesar registro con Google:', error)
+        notify('Error al procesar el registro', 'negative', 'warning')
       }
     },
     /**
@@ -1361,6 +1221,40 @@ export default {
      */
     handleGoogleRegisterError (error) {
       console.error('Error en registro con Google:', error)
+    },
+    /**
+     * Handle OTP verified
+     */
+    async handleOtpVerified () {
+      try {
+        this.showOtpVerification = false
+        this.showCompanySetup = true
+
+        notify('Correo verificado. Ahora crea tu empresa', 'positive', 'check_circle')
+      } catch (error) {
+        console.error('Error al procesar verificación OTP:', error)
+        notify('Error al procesar la verificación', 'negative', 'warning')
+      }
+    },
+    /**
+     * Handle company setup success
+     */
+    async handleCompanySetupSuccess () {
+      try {
+        // Cerrar el modal de configuración de empresa
+        this.showCompanySetup = false
+
+        // Recargar la sesión del usuario para obtener los datos actualizados de la empresa
+        await this.store.getSessionData()
+
+        notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+
+        // Redirigir al home (Welcome page)
+        this.$router.push({ name: 'Home' })
+      } catch (error) {
+        console.error('Error al procesar configuración de empresa:', error)
+        notify('Error al procesar la configuración', 'negative', 'warning')
+      }
     },
     /**
      * Handle company address selected
@@ -1798,7 +1692,6 @@ export default {
       try {
         // Llamar al backend para verificar la suscripción actual
         const { data } = await this.$api.get('subscriptions/current')
-
         // Actualizar el store con datos verificados del backend
         if (data.subscription) {
           this.store.currentSubscription = data.subscription

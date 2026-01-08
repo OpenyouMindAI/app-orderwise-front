@@ -6,32 +6,31 @@
     transition-show="scale"
     transition-hide="scale"
   >
-    <q-card class="company-setup-card">
-      <!-- Header minimalista -->
-      <div class="setup-header">
-        <div class="icon-container">
-          <q-icon :name="currentStep === 1 ? 'business' : 'settings'" size="32px" color="white"/>
+    <q-card class="modern-company-setup-dialog">
+      <!-- Header moderno -->
+      <q-card-section class="company-setup-header">
+        <div class="header-content text-white">
+          <div class="setup-icon-wrapper">
+            <q-icon name="business_center" size="28px" class="setup-icon" />
+          </div>
+          <div class="text-h6 text-weight-bold q-mt-xs">Configura tu Empresa</div>
+          <div class="text-caption">Completa la información para comenzar</div>
         </div>
-        <h4 class="setup-title">{{ currentStep === 1 ? 'Configura tu Empresa' : 'Configuración de Facturación' }}</h4>
-        <p class="setup-subtitle">{{ currentStep === 1 ? 'Completa estos datos para comenzar' : 'Valores por defecto para facturación' }}</p>
-        <!-- Progress indicator -->
-        <div class="step-indicator">
-          <div class="step-dot" :class="{ active: currentStep === 1, completed: currentStep > 1 }">1</div>
-          <div class="step-line" :class="{ active: currentStep > 1 }"></div>
-          <div class="step-dot" :class="{ active: currentStep === 2 }">2</div>
-        </div>
-      </div>
+      </q-card-section>
 
-      <!-- Step 1: Formulario de Empresa -->
-      <div v-if="currentStep === 1" class="setup-body">
-        <q-form @submit="createCompany" class="company-form">
-          <!-- Nombre de empresa -->
-          <div class="input-group">
+      <q-separator />
+
+      <q-card-section class="q-pa-md" style="max-height: 60vh; overflow-y: auto;">
+        <q-form @submit="setupCompany">
+          <!-- Nombre de la empresa -->
+          <div class="input-container">
             <q-input
               v-model="form.company_name"
-              placeholder="Nombre de la empresa"
-              class="minimal-input"
-              :rules="[val => !!val || 'Campo requerido']"
+              placeholder="Nombre de la Empresa *"
+              borderless
+              class="custom-input"
+              hide-bottom-space
+              :rules="[val => !!val || 'El nombre es requerido']"
             >
               <template v-slot:prepend>
                 <q-icon name="business" color="primary" size="20px"/>
@@ -39,13 +38,15 @@
             </q-input>
           </div>
 
-          <!-- RNC / Cédula -->
-          <div class="input-group">
+          <!-- Documento -->
+          <div class="input-container">
             <q-input
               v-model="form.company_document"
-              placeholder="RNC / Cédula"
-              class="minimal-input"
-              :rules="[val => !!val || 'Campo requerido']"
+              placeholder="Documento (Ej: 20-12345678-9) *"
+              borderless
+              class="custom-input"
+              hide-bottom-space
+              :rules="[val => !!val || 'El documento es requerido']"
             >
               <template v-slot:prepend>
                 <q-icon name="badge" color="primary" size="20px"/>
@@ -53,16 +54,75 @@
             </q-input>
           </div>
 
+          <!-- Teléfono con Selector de País -->
+          <div class="input-container phone-input-container">
+            <div class="row">
+              <!-- País -->
+              <div class="col-4">
+                <q-select
+                  v-model="selectedCountry"
+                  :options="countryOptions"
+                  option-label="label"
+                  class="custom-input country-select"
+                  hide-bottom-space
+                  emit-value
+                  map-options
+                  behavior="menu"
+                  popup-content-class="country-dropdown"
+                  dense
+                  borderless
+                >
+                  <template v-slot:selected>
+                    <div class="row items-center no-wrap">
+                      <span class="country-flag q-mr-xs">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
+                      <span class="text-caption ellipsis">{{ selectedCountry ? selectedCountry.code : '' }}</span>
+                    </div>
+                  </template>
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section avatar>
+                        <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption>{{ scope.opt.code }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Input Teléfono -->
+              <div class="col-8 q-pl-sm">
+                <q-input
+                  v-model="form.company_phone"
+                  placeholder="Teléfono (Ej: 11 1234 5678) *"
+                  borderless
+                  class="custom-input"
+                  :rules="phoneRule"
+                  type="tel"
+                  hide-bottom-space
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="phone" color="primary" size="20px"/>
+                  </template>
+                </q-input>
+              </div>
+            </div>
+          </div>
+
           <!-- Email -->
-          <div class="input-group">
+          <div class="input-container">
             <q-input
               v-model="form.company_email"
+              placeholder="Email de la Empresa *"
               type="email"
-              placeholder="Correo electrónico"
-              class="minimal-input"
+              borderless
+              class="custom-input"
+              hide-bottom-space
               :rules="[
-                val => !!val || 'Campo requerido',
-                val => /.+@.+\..+/.test(val) || 'Correo inválido'
+                val => !!val || 'El email es requerido',
+                val => /.+@.+\..+/.test(val) || 'Email inválido'
               ]"
             >
               <template v-slot:prepend>
@@ -71,675 +131,450 @@
             </q-input>
           </div>
 
-          <!-- Teléfono -->
-          <div class="input-group">
-            <q-input
-              v-model="form.company_phone"
-              placeholder="Teléfono"
-              class="minimal-input"
-              :rules="[val => !!val || 'Campo requerido']"
+          <!-- Rubro -->
+          <div class="input-container">
+            <q-select
+              v-model="form.business_type"
+              :options="businessTypes"
+              option-label="name"
+              option-value="id"
+              placeholder="Rubro / Tipo de Negocio *"
+              class="custom-input"
+              use-input
+              input-debounce="500"
+              @filter="loadBusinessTypes"
+              :rules="[val => !!val || 'El rubro es requerido']"
+              hide-bottom-space
+              behavior="menu"
+              borderless
+              lazy-rules
             >
               <template v-slot:prepend>
-                <q-icon name="phone" color="primary" size="20px"/>
+                <q-icon name="category" color="primary" size="20px"/>
               </template>
-            </q-input>
-          </div>
-
-          <!-- Dirección (opcional) -->
-          <div class="input-group">
-            <q-input
-              v-model="form.company_address"
-              placeholder="Dirección (opcional)"
-              class="minimal-input"
-              type="textarea"
-              rows="2"
-            >
-              <template v-slot:prepend>
-                <q-icon name="location_on" color="primary" size="20px"/>
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No hay resultados
+                  </q-item-section>
+                </q-item>
               </template>
-            </q-input>
+            </q-select>
           </div>
 
-          <!-- Botón -->
-          <q-btn
-            type="submit"
-            class="submit-btn"
-            :loading="loading"
-            :disable="loading"
-            unelevated
-            no-caps
-          >
-            <q-icon name="arrow_forward" size="20px" class="q-mr-sm"/>
-            Continuar
-          </q-btn>
-        </q-form>
-      </div>
-
-      <!-- Step 2: Configuración de Facturación -->
-      <div v-if="currentStep === 2" class="setup-body">
-        <q-form @submit.prevent="saveConfiguration" class="company-form">
-          <!-- Grid de 2 columnas -->
-          <div class="config-grid">
-            <!-- Cliente por defecto -->
-            <div class="input-group">
-              <label class="input-label">Cliente</label>
-              <q-select
-                v-model="configForm.client"
-                :options="clients"
-                option-label="name"
-                option-value="id"
-                class="minimal-select"
-                outlined
-                dense
-              >
-                <template v-slot:prepend>
-                  <q-icon name="person" color="primary" size="18px"/>
-                </template>
-              </q-select>
-            </div>
-
-            <!-- Tipo de factura -->
-            <div class="input-group">
-              <label class="input-label">Tipo de factura</label>
-              <q-select
-                v-model="configForm.invoiceType"
-                :options="invoiceTypes"
-                option-label="name"
-                option-value="id"
-                class="minimal-select"
-                outlined
-                dense
-              >
-                <template v-slot:prepend>
-                  <q-icon name="receipt" color="primary" size="18px"/>
-                </template>
-              </q-select>
-            </div>
-
-            <!-- Método de pago -->
-            <div class="input-group">
-              <label class="input-label">Método de pago</label>
-              <q-select
-                v-model="configForm.paymentMethod"
-                :options="paymentMethods"
-                option-label="name"
-                option-value="id"
-                class="minimal-select"
-                outlined
-                dense
-              >
-                <template v-slot:prepend>
-                  <q-icon name="payment" color="primary" size="18px"/>
-                </template>
-              </q-select>
-            </div>
-
-            <!-- Moneda -->
-            <div class="input-group">
-              <label class="input-label">Moneda</label>
-              <q-select
-                v-model="configForm.coin"
-                :options="coins"
-                option-label="name"
-                option-value="id"
-                class="minimal-select"
-                outlined
-                dense
-              >
-                <template v-slot:prepend>
-                  <q-icon name="attach_money" color="primary" size="18px"/>
-                </template>
-              </q-select>
-            </div>
+          <!-- Checkbox de copiar productos -->
+          <div class="input-container">
+            <q-checkbox
+              v-model="form.copy_test_products"
+              label="Copiar productos y categorías de ejemplo"
+              color="primary"
+            >
+              <q-tooltip class="bg-grey-8">
+                Te ayudará a empezar más rápido con datos de prueba del mismo rubro
+              </q-tooltip>
+            </q-checkbox>
           </div>
 
-          <!-- Botones -->
-          <div class="button-group">
-            <q-btn
-              flat
-              class="skip-btn"
-              @click="skipConfiguration"
-              :disable="loading"
-            >
-              Omitir
-            </q-btn>
-            <q-btn
-              type="submit"
-              class="submit-btn"
-              :loading="loading"
-              :disable="loading"
-              unelevated
-              no-caps
-            >
-              <q-icon name="rocket_launch" size="20px" class="q-mr-sm"/>
-              Finalizar y Comenzar
-            </q-btn>
+          <!-- Dirección con AddressComponent -->
+          <div class="input-container">
+            <AddressComponent
+              :initial-address="companyAddressData"
+              @address-selected="handleCompanyAddressSelected"
+              label="Dirección fiscal"
+              is-custom-styled
+            />
           </div>
         </q-form>
-      </div>
+      </q-card-section>
+
+      <q-separator />
+
+      <!-- Footer con botones -->
+      <q-card-actions class="q-pa-md">
+        <q-space />
+        <q-btn
+          label="Crear Empresa"
+          color="primary"
+          icon-right="rocket_launch"
+          @click="setupCompany"
+          :loading="loading"
+          unelevated
+          no-caps
+        />
+      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
-import { notify } from 'src/const/mixins'
+import { notify, notifyValidationErrors } from 'src/const/mixins'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 
-defineProps({
+const props = defineProps({
   modelValue: {
     type: Boolean,
     default: false
+  },
+  userEmail: {
+    type: String,
+    default: ''
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'company-created'])
+const emit = defineEmits(['update:modelValue', 'success'])
 
 // State
 const loading = ref(false)
-const currentStep = ref(1)
-const companyData = ref(null)
 
-// Form data - Step 1
+// Form data
 const form = ref({
   company_name: '',
   company_document: '',
-  company_email: '',
+  company_email: props.userEmail || '',
   company_phone: '',
-  company_address: ''
+  company_address: '',
+  business_type: null,
+  copy_test_products: false
 })
 
-// Form data - Step 2 (Configuración de facturación)
-const configForm = ref({
-  client: null,
-  invoiceType: null,
-  typeOfService: null,
-  paymentMethod: null,
-  coin: null,
-  point_of_sale: '001'
+// Country selector
+const selectedCountry = ref(null)
+const countryOptions = [
+  { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
+  { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
+  { label: 'México', code: '+52', mask: '## #### ####', regex: /^(\+?52)?\s?1?\s?(\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}$/, flag: '🇲🇽' },
+  { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
+  { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
+  { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
+  { label: 'Venezuela', code: '+58', mask: '### ### ####', regex: /^(\+?58)?\s?4[\d]{9}$/, flag: '🇻🇪' },
+  { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
+  { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
+]
+
+// Set default country
+selectedCountry.value = countryOptions[0]
+
+// Phone validation rule
+const phoneRule = computed(() => {
+  return [
+    val => {
+      if (!val) return 'El teléfono es requerido'
+      if (!selectedCountry.value || !selectedCountry.value.regex) return true
+      return selectedCountry.value.regex.test(val) || 'Formato inválido'
+    }
+  ]
 })
 
-// Opciones para los selects
-const clients = ref([])
-const invoiceTypes = ref([])
-const typeOfServices = ref([])
-const paymentMethods = ref([])
-const coins = ref([])
+// Business types
+const businessTypes = ref([])
+
+// Address data
+const companyAddressData = ref({
+  name: '',
+  street: '',
+  city: '',
+  state: '',
+  country: '',
+  zipCode: '',
+  latitude: null,
+  longitude: null,
+  formattedAddress: '',
+  placeId: '',
+  types: []
+})
 
 /**
- * Cargar datos para los selects (solo cuando se necesite)
+ * Load business types
  */
-const loadInitialData = async () => {
-  try {
-    // Cargar clientes
-    const clientsRes = await api.get('/clients')
-    clients.value = clientsRes.data
-
-    // Cargar tipos de factura
-    const invoiceTypesRes = await api.get('/invoice-types')
-    invoiceTypes.value = invoiceTypesRes.data
-
-    // Cargar tipos de servicio
-    const servicesRes = await api.get('/type-of-services')
-    typeOfServices.value = servicesRes.data
-
-    // Cargar métodos de pago
-    const paymentsRes = await api.get('/payment-methods')
-    paymentMethods.value = paymentsRes.data
-
-    // Cargar monedas
-    const coinsRes = await api.get('/coins')
-    coins.value = coinsRes.data
-
-    // Establecer valores por defecto
-    if (clients.value.length > 0) {
-      configForm.value.client = clients.value[0]
-    }
-    if (invoiceTypes.value.length > 0) {
-      configForm.value.invoiceType = invoiceTypes.value[0]
-    }
-    if (typeOfServices.value.length > 0) {
-      configForm.value.typeOfService = typeOfServices.value[0]
-    }
-    if (paymentMethods.value.length > 0) {
-      configForm.value.paymentMethod = paymentMethods.value[0]
-    }
-    if (coins.value.length > 0) {
-      configForm.value.coin = coins.value[0]
-    }
-  } catch (error) {
-    console.error('Error loading initial data:', error)
-    notify('Error al cargar datos de configuración', 'warning', 'warning')
-  }
-}
-
-/**
- * Create company - Step 1
- */
-const createCompany = async () => {
-  try {
-    loading.value = true
-
-    const { data } = await api.post('authentication/setup-company', form.value)
-
-    companyData.value = data
-    notify('¡Empresa creada exitosamente!', 'positive', 'check_circle')
-
-    // Asegurar que el token esté configurado en axios
-    if (data.access_token) {
-      api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
-    }
-
-    // Cargar datos para el paso 2
-    await loadInitialData()
-
-    // Pasar al siguiente paso
-    currentStep.value = 2
-  } catch (error) {
-    const message = error.response?.data?.message || 'Error al crear empresa'
-    notify(message, 'negative', 'warning')
-  } finally {
-    loading.value = false
-  }
-}
-
-/**
- * Save configuration - Step 2
- */
-const saveConfiguration = async () => {
-  try {
-    loading.value = true
-
-    // Enviar con la estructura correcta
-    await api.post('/company-configs', {
-      coin_id: configForm.value.coin?.id,
-      type_of_service_id: configForm.value.typeOfService?.id,
-      invoice_type_id: configForm.value.invoiceType?.id,
-      payment_method_id: configForm.value.paymentMethod?.id,
-      client_id: configForm.value.client?.id,
-      point_of_sale: configForm.value.point_of_sale
+const loadBusinessTypes = async (val, update, abort) => {
+  if (val === '' || val === null) {
+    update(() => {
+      businessTypes.value = []
     })
+    return
+  }
 
-    notify('¡Configuración guardada exitosamente!', 'positive', 'check_circle')
+  try {
+    const { data } = await api.get('business-types', {
+      params: {
+        search: val
+      }
+    })
+    update(() => {
+      businessTypes.value = data
+    })
+  } catch (error) {
+    console.error('Error loading business types:', error)
+    abort()
+  }
+}
+/**
+ * Handle company address selected
+ */
+const handleCompanyAddressSelected = (addressDetails) => {
+  if (addressDetails) {
+    companyAddressData.value = { ...addressDetails }
+    form.value.company_address = addressDetails.formattedAddress || addressDetails.street || ''
+  } else {
+    companyAddressData.value = {
+      name: '',
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+      latitude: null,
+      longitude: null,
+      formattedAddress: '',
+      placeId: '',
+      types: []
+    }
+    form.value.company_address = ''
+  }
+}
 
-    // Emitir evento con todos los datos
-    emit('company-created', companyData.value)
+/**
+ * Setup company
+ */
+const setupCompany = async () => {
+  try {
+    loading.value = true
+
+    // Preparar payload con business_type_id
+    const payload = {
+      ...form.value,
+      business_type_id: form.value.business_type?.id,
+      company_phone: form.value.company_phone
+        ? `${selectedCountry.value?.code || ''}${form.value.company_phone}`.trim()
+        : ''
+    }
+
+    await api.post('authentication/setup-company', payload)
+
+    notify('Empresa configurada exitosamente', 'positive', 'check_circle')
+
+    // Emitir evento de éxito
+    emit('success')
 
     // Cerrar modal
     emit('update:modelValue', false)
   } catch (error) {
-    const message = error.response?.data?.message || 'Error al guardar configuración'
-    notify(message, 'negative', 'warning')
+    notifyValidationErrors(error, 'Error al configurar empresa')
   } finally {
     loading.value = false
   }
 }
 
-/**
- * Saltar configuración
- */
-const skipConfiguration = () => {
-  emit('company-created', companyData.value)
-  emit('update:modelValue', false)
-}
+// Watch para limpiar estado cuando el modal se cierra
+watch(() => props.modelValue, (newVal) => {
+  if (!newVal) {
+    // Limpiar business types cuando se cierra para evitar problemas de rendimiento
+    businessTypes.value = []
+  } else {
+    // Pre-llenar email cuando se abre
+    if (props.userEmail) {
+      form.value.company_email = props.userEmail
+    }
+  }
+})
+
+onMounted(() => {
+  if (props.userEmail) {
+    form.value.company_email = props.userEmail
+  }
+})
 </script>
 
 <style scoped>
-/* Card principal */
-.company-setup-card {
+/* Dialog Card */
+.modern-company-setup-dialog {
   width: 90%;
-  max-width: 520px;
-  max-height: 90vh;
-  border-radius: 20px;
+  max-width: 600px;
+  border-radius: 16px;
   overflow: hidden;
   background: white;
-  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3),
-              0 8px 32px rgba(0, 0, 0, 0.15);
-  animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-}
-
-@keyframes modalEnter {
-  0% {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  transform: translateZ(0);
+  will-change: transform, opacity;
 }
 
 /* Header */
-.setup-header {
+.company-setup-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px 20px;
+  padding: 5px 3px;
   text-align: center;
-  position: relative;
-  flex-shrink: 0;
 }
 
-.icon-container {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
+.header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.setup-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
-  animation: iconFloat 3s ease-in-out infinite;
+  margin-bottom: 12px;
 }
 
-@keyframes iconFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-.setup-title {
-  font-size: 20px;
-  font-weight: 700;
+.setup-icon {
   color: white;
-  margin: 0 0 6px 0;
-  letter-spacing: 0.5px;
 }
 
-.setup-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0;
-  font-weight: 400;
+/* Input Container */
+.input-container {
+  margin-bottom: 12px;
 }
 
-/* Body */
-.setup-body {
-  padding: 20px;
-  background: white;
-  overflow-y: auto;
-  flex: 1;
+/* Custom Input */
+.custom-input :deep(.q-field__control) {
+  background: #f3f4f6 !important;
+  border: none !important;
+  border-radius: 8px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 12px;
+  transition: background 0.2s ease;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
-.company-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.custom-input :deep(.q-field__control):before,
+.custom-input :deep(.q-field__control):after {
+  display: none !important;
 }
 
-/* Config grid - 2 columnas */
-.config-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 4px;
-}
-
-/* Input groups */
-.input-group {
-  animation: slideUp 0.5s ease-out backwards;
-}
-
-.input-group:nth-child(1) { animation-delay: 0.1s; }
-.input-group:nth-child(2) { animation-delay: 0.2s; }
-.input-group:nth-child(3) { animation-delay: 0.3s; }
-.input-group:nth-child(4) { animation-delay: 0.4s; }
-.input-group:nth-child(5) { animation-delay: 0.5s; }
-
-@keyframes slideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Inputs minimalistas */
-.minimal-input :deep(.q-field__control) {
-  height: 44px;
-  border-radius: 10px;
-  background: #f9fafb;
-  border: 1.5px solid #e5e7eb;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 16px;
-}
-
-.minimal-input :deep(.q-field__control):hover {
-  background: #ffffff;
-  border-color: #667eea;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
-}
-
-.minimal-input :deep(.q-field__control):focus-within {
-  background: #ffffff;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-  transform: translateY(-1px);
-}
-
-.minimal-input :deep(.q-field__native) {
+.custom-input :deep(.q-field__native) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
   color: #1f2937;
   font-size: 14px;
-  padding-left: 8px;
+  line-height: 1;
 }
 
-.minimal-input :deep(.q-field__native)::placeholder {
+.custom-input :deep(.q-field__native)::placeholder {
   color: #9ca3af;
+  opacity: 0.7;
 }
 
-/* Textarea */
-.minimal-input :deep(textarea.q-field__native) {
-  padding-top: 12px;
-  resize: none;
+.custom-input :deep(.q-field__control):hover {
+  background: #e5e7eb !important;
 }
 
-/* Botón submit */
-.submit-btn {
-  width: 100%;
-  height: 44px;
-  border-radius: 10px;
-  font-size: 14px;
+.custom-input :deep(.q-field__control):focus-within {
+  background: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15) !important;
+}
+
+.custom-input :deep(.q-field__prepend),
+.custom-input :deep(.q-field__append) {
+  height: 48px !important;
+  min-height: 48px !important;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+/* Phone input container */
+.phone-input-container .country-select :deep(.q-field__control) {
+  padding-left: 12px;
+  padding-right: 4px;
+}
+
+.phone-input-container .row {
+  margin: 0;
+}
+
+/* Country Flag */
+.country-flag {
+  font-size: 20px;
+  color: rgba(0, 0, 0, 1) !important;
+}
+
+/* Submit Button */
+.setup-submit-btn {
+  height: 48px;
+  border-radius: 8px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-top: 4px;
+  letter-spacing: 0.3px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  animation: btnEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s backwards;
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   border: none !important;
-  color: white;
+  text-transform: none !important;
 }
 
-.submit-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+.setup-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
 }
 
-.submit-btn:active {
+.setup-submit-btn:active {
   transform: translateY(0);
 }
 
-@keyframes btnEnter {
-  0% {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* Dark mode support */
+.body--dark .modern-company-setup-dialog {
+  background: #1e1e1e;
 }
 
-/* Step indicator */
-.step-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 20px;
+.body--dark .custom-input :deep(.q-field__control) {
+  background: #374151 !important;
 }
 
-.step-dot {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.3s ease;
+.body--dark .custom-input :deep(.q-field__control):hover {
+  background: #4b5563 !important;
 }
 
-.step-dot.active {
-  background: white;
-  color: #667eea;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+.body--dark .custom-input :deep(.q-field__control):focus-within {
+  background: #1f2937 !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
 }
 
-.step-dot.completed {
-  background: rgba(255, 255, 255, 0.3);
-  color: white;
+.body--dark .custom-input :deep(.q-field__native) {
+  color: #f3f4f6;
 }
 
-.step-line {
-  width: 40px;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-}
-
-.step-line.active {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-/* Input label */
-.input-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 6px;
-}
-
-/* Select minimalista */
-.minimal-select :deep(.q-field__control) {
-  height: 40px;
-  border-radius: 10px;
-  background: #f9fafb;
-  border: 1.5px solid #e5e7eb;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 14px;
-}
-
-.minimal-select :deep(.q-field__control):hover {
-  background: #ffffff;
-  border-color: #667eea;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
-}
-
-.minimal-select :deep(.q-field__control):focus-within {
-  background: #ffffff;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-  transform: translateY(-1px);
-}
-
-.minimal-select :deep(.q-field__native) {
-  color: #1f2937;
-  font-size: 14px;
-  padding-left: 8px;
-}
-
-/* Button group */
-.button-group {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.skip-btn {
-  flex: 1;
-  height: 44px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #6b7280;
-  transition: all 0.3s ease;
-}
-
-.skip-btn:hover {
-  background: #f9fafb;
-  color: #374151;
-}
-
-.button-group .submit-btn {
-  flex: 2;
+.body--dark .custom-input :deep(.q-field__native)::placeholder {
+  color: #9ca3af;
 }
 
 /* Responsive */
 @media (max-width: 600px) {
-  .company-setup-card {
+  .modern-company-setup-dialog {
     max-width: 95%;
-    max-height: 85vh;
   }
 
-  .setup-header {
+  .company-setup-header {
     padding: 20px 16px;
   }
 
-  .setup-title {
-    font-size: 18px;
+  .setup-icon-wrapper {
+    width: 56px;
+    height: 56px;
   }
 
-  .setup-subtitle {
-    font-size: 12px;
+  .input-container {
+    margin-bottom: 8px;
   }
 
-  .icon-container {
-    width: 48px;
-    height: 48px;
-  }
-
-  .setup-body {
-    padding: 16px;
-  }
-
-  .config-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .minimal-input :deep(.q-field__control) {
+  .custom-input :deep(.q-field__control) {
     height: 42px;
   }
 
-  .minimal-select :deep(.q-field__control) {
-    height: 38px;
-  }
-
-  .submit-btn {
+  .setup-submit-btn {
     height: 42px;
-  }
-
-  .skip-btn {
-    height: 42px;
-  }
-
-  .button-group {
-    gap: 8px;
   }
 }
 </style>

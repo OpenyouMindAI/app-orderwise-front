@@ -346,22 +346,30 @@
                   </div>
                 </div>
 
-                <!-- Withdrawals -->
+                <!-- Expected Amount -->
                 <div class="text-right">
-                  <div class="text-caption text-grey-7">Arqueos</div>
+                  <div class="text-caption text-grey-7">Esperado</div>
                   <div class="text-h6 text-weight-bold text-blue">
-                    {{ formatCurrency(day.sum_amount) }}
+                    {{ formatCurrency(day.expected_amount) }}
                   </div>
                 </div>
 
-                <!-- Difference -->
+                <!-- Counted Amount -->
+                <div class="text-right">
+                  <div class="text-caption text-grey-7">Contado</div>
+                  <div class="text-h6 text-weight-bold text-orange">
+                    {{ formatCurrency(day.counted_amount) }}
+                  </div>
+                </div>
+
+                <!-- Difference (Counted - Sales) -->
                 <div class="text-right" style="min-width: 120px;">
                   <div class="text-caption text-grey-7">Diferencia</div>
                   <div
                     class="text-h6 text-weight-bold"
-                    :class="getDifferenceClass(day.difference_report)"
+                    :class="day.difference_counted_sales >= 0 ? 'text-positive' : 'text-negative'"
                   >
-                    {{ formatCurrency(Math.abs(day.difference_report || 0)) }}
+                    {{ day.difference_counted_sales >= 0 ? '+' : '-' }}{{ formatCurrency(Math.abs(day.difference_counted_sales || 0)) }}
                   </div>
                 </div>
 
@@ -408,30 +416,6 @@
                       size="sm"
                       @click="openCashflowModal(cashbox)"
                     />
-                  </div>
-
-                  <!-- Cashbox Totals Summary -->
-                  <div class="cashbox-totals-summary q-mb-md">
-                    <div class="row q-col-gutter-sm">
-                      <div class="col-12 col-sm-4">
-                        <div class="total-card expected-card">
-                          <div class="total-label">Esperado</div>
-                          <div class="total-value">{{ formatCurrency(cashbox.totals?.withdrawals_sum || 0) }}</div>
-                        </div>
-                      </div>
-                      <div class="col-12 col-sm-4">
-                        <div class="total-card actual-card">
-                          <div class="total-label">Contado</div>
-                          <div class="total-value">{{ formatCurrency(cashbox.totals?.report_sum || 0) }}</div>
-                        </div>
-                      </div>
-                      <div class="col-12 col-sm-4">
-                        <div class="total-card sales-card">
-                          <div class="total-label">Ventas</div>
-                          <div class="total-value">{{ formatCurrency(cashbox.totals?.paid_sales_sum || 0) }}</div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   <!-- Withdrawal Items - Compact Design -->
@@ -1255,7 +1239,7 @@ export default {
      * Gets the status icon for a day
      */
     const getDayStatusIcon = (day) => {
-      const diff = Math.abs(day.difference_report || 0)
+      const diff = Math.abs(day.difference_counted_sales || 0)
       if (diff < 0.01) return 'check_circle'
       if (diff < 1000) return 'warning'
       return 'error'
@@ -1265,7 +1249,7 @@ export default {
      * Gets the status color for a day
      */
     const getDayStatusColor = (day) => {
-      const diff = Math.abs(day.difference_report || 0)
+      const diff = Math.abs(day.difference_counted_sales || 0)
       if (diff < 0.01) return 'positive'
       if (diff < 1000) return 'warning'
       return 'negative'
@@ -1275,7 +1259,7 @@ export default {
      * Gets the status text for a day
      */
     const getDayStatusText = (day) => {
-      const diff = Math.abs(day.difference_report || 0)
+      const diff = Math.abs(day.difference_counted_sales || 0)
       if (diff < 0.01) return 'Todo coincide perfectamente'
       if (diff < 1000) return `Diferencia menor: ${formatCurrency(diff)}`
       return `Diferencia importante: ${formatCurrency(diff)}`
@@ -1375,11 +1359,11 @@ export default {
           id: withdrawal.id,
           description: withdrawal.description,
           amount: withdrawal.amount,
-          branch_office_id: branchOffice.value?.id,
+          branch_office_id: withdrawal.branch_office_id,
           type_cashflow: 'withdrawal',
           cashbox_user_id: withdrawal.cashbox_user_id,
           payment_method_id: withdrawal.payment_method_id,
-          created_at: withdrawal.created_at, // Mantener fecha original
+          created_at: withdrawal.created_at,
           actual_amount: newAmount
         }
 

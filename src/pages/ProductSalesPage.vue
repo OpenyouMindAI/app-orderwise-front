@@ -195,6 +195,51 @@
               </q-card-section>
             </q-card>
           </div>
+          <div class="col-12 col-lg-6">
+            <q-card class="data-card" flat>
+              <q-card-section class="q-pa-lg">
+                <div class="card-header q-mb-lg">
+                  <h4 class="card-title">
+                    <q-icon name="inventory" class="q-mr-sm" />
+                    Top 10 Productos Entregados
+                  </h4>
+                </div>
+
+                <!-- Skeleton Loading -->
+                <template v-if="loadingStates.topDeliveries">
+                  <div class="skeleton-table">
+                    <div class="skeleton-table-header">
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                      <q-skeleton type="text" width="50%" height="1rem" />
+                      <q-skeleton type="text" width="20%" height="1rem" />
+                    </div>
+                    <div v-for="i in 5" :key="`product-skeleton-${i}`" class="skeleton-table-row">
+                      <q-skeleton type="text" width="10%" height="1rem" />
+                      <q-skeleton type="text" width="60%" height="1rem" />
+                      <q-skeleton type="text" width="15%" height="1rem" />
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Empty State -->
+                <div v-else-if="!topDeliveries.length" class="empty-state">
+                  <q-icon name="inventory_2" size="3rem" class="empty-icon" />
+                  <p class="empty-text q-mt-sm q-mb-none">No hay datos de productos disponibles</p>
+                </div>
+
+                <!-- Data Table -->
+                <q-table
+                  v-else
+                  :rows="topDeliveries"
+                  :columns="columnsTopProducts"
+                  flat
+                  class="data-table"
+                  hide-bottom
+                  :rows-per-page-options="[0]"
+                />
+              </q-card-section>
+            </q-card>
+          </div>
 
           <!-- Low Stock Products -->
           <div class="col-12 col-lg-6">
@@ -442,7 +487,8 @@ const loadingStates = ref({
   topClients: false,
   lowStock: false,
   sellers: false,
-  export: false
+  export: false,
+  topDeliveries: false
 })
 
 const kpis = ref({})
@@ -451,6 +497,7 @@ const topClients = ref([])
 const lowStockProducts = ref([])
 const paymentMethods = ref([])
 const sellerStats = ref([])
+const topDeliveries = ref([])
 
 const invoiceTable = ref({
   data: [],
@@ -528,12 +575,12 @@ function getFilters () {
 }
 
 async function fetchStats () {
-  // Set individual loading states
   loadingStates.value.kpis = true
   loadingStates.value.topProducts = true
   loadingStates.value.topClients = true
   loadingStates.value.lowStock = true
   loadingStates.value.sellers = true
+  loadingStates.value.topDeliveries = true
 
   try {
     const params = getFilters()
@@ -543,14 +590,16 @@ async function fetchStats () {
       topClientsRes,
       lowStockRes,
       paymentRes,
-      sellerRes
+      sellerRes,
+      topDeliveriesRes
     ] = await Promise.all([
       api.get('dashboard/global-kpis', { params }),
       api.get('dashboard/top-products', { params }),
       api.get('dashboard/top-clients', { params }),
       api.get('dashboard/low-stock-products', { params }),
       api.get('dashboard/payment-method-stats', { params }),
-      api.get('dashboard/seller-stats', { params })
+      api.get('dashboard/seller-stats', { params }),
+      api.get('dashboard/top-deliveries-products', { params })
     ])
 
     kpis.value = kpisRes.data || {}
@@ -559,6 +608,7 @@ async function fetchStats () {
     lowStockProducts.value = lowStockRes.data || []
     paymentMethods.value = paymentRes.data || []
     sellerStats.value = sellerRes.data || []
+    topDeliveries.value = topDeliveriesRes.data || []
   } catch (error) {
     notify('Error al cargar los datos del dashboard', 'negative', 'warning')
     console.error('Error fetching stats:', error)
@@ -569,6 +619,7 @@ async function fetchStats () {
     loadingStates.value.topClients = false
     loadingStates.value.lowStock = false
     loadingStates.value.sellers = false
+    loadingStates.value.topDeliveries = false
   }
 }
 
