@@ -427,7 +427,7 @@
                       clickable
                       dense
                       class="profile-action-item-compact"
-                      @click="openSubscriptionDialog"
+                      @click="showSubscriptionDialog = true"
                       v-close-popup
                     >
                       <q-item-section avatar class="min-width-auto">
@@ -505,7 +505,6 @@
               outlined
               placeholder="Buscar"
               class="menu-search-input"
-              bg-color="white"
               autofocus
             >
               <template v-slot:append>
@@ -666,6 +665,22 @@
       @google-success="handleGoogleRegisterSuccess"
     />
 
+    <!-- OTP Verification Dialog -->
+    <otp-verification-dialog
+      v-model="showOtpVerification"
+      :identifier="otpIdentifier"
+      :session-token="otpSessionToken"
+      :purpose="'verify_email'"
+      @verified="handleOtpVerified"
+    />
+
+    <!-- Company Setup Modal -->
+    <company-setup-modal
+      v-model="showCompanySetup"
+      :user-email="companySetupEmail"
+      @success="handleCompanySetupSuccess"
+    />
+
   </q-layout>
 </template>
 
@@ -676,6 +691,8 @@ import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSel
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
 import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
+import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
+import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import PremiumBadge from 'src/components/PremiumBadge.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
@@ -701,6 +718,8 @@ export default {
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
     RegisterDialog,
+    OtpVerificationDialog,
+    CompanySetupModal,
     PremiumBadge
   },
   data () {
@@ -752,6 +771,31 @@ export default {
        * @type {Boolean}
        */
       showCreateCompanyDialog: false,
+      /**
+       * Show OTP verification dialog
+       * @type {Boolean}
+       */
+      showOtpVerification: false,
+      /**
+       * OTP identifier (email or phone)
+       * @type {String}
+       */
+      otpIdentifier: '',
+      /**
+       * OTP session token
+       * @type {String}
+       */
+      otpSessionToken: '',
+      /**
+       * Show company setup modal
+       * @type {Boolean}
+       */
+      showCompanySetup: false,
+      /**
+       * Company setup email
+       * @type {String}
+       */
+      companySetupEmail: '',
       /**
        * Loading create company
        * @type {Boolean}
@@ -1115,29 +1159,61 @@ export default {
       }
     },
     /**
-     * Handle register success (email/password)
+     * Handle register success
      */
     async handleRegisterSuccess (data) {
-      notify('Registro exitoso. Redirigiendo...', 'positive', 'check_circle')
-      // Redirect to home or company config
-      setTimeout(() => {
-        this.$router.push({ name: 'CompanyConfig' })
-      }, 1000)
+      try {
+        // Cerrar el diálogo de registro primero
+        this.showCreateCompanyDialog = false
+
+        // Iniciar sesión automáticamente con los datos del usuario
+        console.log(data)
+        await this.store.setSessionData(data)
+
+        // Guardar datos para los siguientes pasos
+        this.companySetupEmail = data.user_email || data.user?.email
+        this.otpIdentifier = data.user_email || data.user?.email
+        this.otpSessionToken = data.session_token || ''
+
+        // Pequeña pausa antes de mostrar el siguiente modal
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Mostrar modal de verificación OTP
+        this.showOtpVerification = true
+
+        notify('Código de verificación enviado a tu correo', 'positive', 'mail')
+      } catch (error) {
+        console.error('Error al procesar registro:', error)
+        notify('Error al procesar el registro', 'negative', 'warning')
+      }
     },
     /**
      * Handle Google register success
      */
     async handleGoogleRegisterSuccess (data) {
-      if (data.needsCompanySetup) {
+      try {
+        // Cerrar el diálogo de registro primero
+        this.showCreateCompanyDialog = false
+
+        // Esperar a que el diálogo se cierre completamente
+        await this.$nextTick()
+
+        // Iniciar sesión automáticamente con los datos del usuario
         await this.store.setSessionData(data.user)
-        this.companyData.company_email = data.userInfo.email
-        notify('Registro exitoso con Google. Redirigiendo...', 'positive', 'check_circle')
-        setTimeout(() => {
-          this.$router.push({ name: 'CompanyConfig' })
-        }, 1000)
-      } else {
-        this.closeCreateCompanyDialog()
-        this.$router.push({ name: 'Home' })
+
+        // Guardar el email para el setup de la empresa
+        this.companySetupEmail = data.userInfo?.email || data.user.email
+
+        // Pequeña pausa antes de mostrar el siguiente modal
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Mostrar el modal de configuración de empresa
+        this.showCompanySetup = true
+
+        notify('Registro exitoso con Google. Configura tu empresa', 'positive', 'check_circle')
+      } catch (error) {
+        console.error('Error al procesar registro con Google:', error)
+        notify('Error al procesar el registro', 'negative', 'warning')
       }
     },
     /**
@@ -1145,6 +1221,40 @@ export default {
      */
     handleGoogleRegisterError (error) {
       console.error('Error en registro con Google:', error)
+    },
+    /**
+     * Handle OTP verified
+     */
+    async handleOtpVerified () {
+      try {
+        this.showOtpVerification = false
+        this.showCompanySetup = true
+
+        notify('Correo verificado. Ahora crea tu empresa', 'positive', 'check_circle')
+      } catch (error) {
+        console.error('Error al procesar verificación OTP:', error)
+        notify('Error al procesar la verificación', 'negative', 'warning')
+      }
+    },
+    /**
+     * Handle company setup success
+     */
+    async handleCompanySetupSuccess () {
+      try {
+        // Cerrar el modal de configuración de empresa
+        this.showCompanySetup = false
+
+        // Recargar la sesión del usuario para obtener los datos actualizados de la empresa
+        await this.store.getSessionData()
+
+        notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+
+        // Redirigir al home (Welcome page)
+        this.$router.push({ name: 'Home' })
+      } catch (error) {
+        console.error('Error al procesar configuración de empresa:', error)
+        notify('Error al procesar la configuración', 'negative', 'warning')
+      }
     },
     /**
      * Handle company address selected

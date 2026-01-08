@@ -683,6 +683,8 @@ import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
+import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 
 const router = useRouter()
 const store = authentication()

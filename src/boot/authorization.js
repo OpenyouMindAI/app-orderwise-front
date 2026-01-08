@@ -1,6 +1,6 @@
 import { boot } from 'quasar/wrappers'
 import { authentication } from 'src/stores/module-authentication'
-import { api, apiArca, apiQPay } from './axios'
+import { api } from './axios'
 import { notify } from 'src/const/mixins'
 
 /**
@@ -39,15 +39,12 @@ const isTokenExpired = ($store) => {
 const validModule = ($store, to, next) => {
   const user = $store.userSession
 
-  // Si es root, permitir acceso
   if (user?.is_root || user?.is_super_admin) return next()
 
-  // Si no tiene roles o módulos, permitir acceso (usuario recién registrado)
   if (!user?.roles || user.roles.length === 0) return next()
 
   const modules = user.roles[0]?.modules
 
-  // Si no tiene módulos definidos, permitir acceso
   if (!modules || modules.length === 0) return next()
 
   if (user?.company_session_id) {
@@ -62,7 +59,6 @@ const validModule = ($store, to, next) => {
 
 const modeleExcept = ['Profile', 'ChangeCompany', 'VerifySession']
 
-// Flag to prevent multiple 401 handling
 let isHandling401 = false
 
 export default boot(async ({ router, store }) => {
@@ -70,9 +66,11 @@ export default boot(async ({ router, store }) => {
     const $store = authentication()
     if (error.response?.status === 401 && !isHandling401) {
       const isCompanyChange = error.config?.url?.includes('session/company')
+      const isRegister = error.config?.url?.includes('register')
+      const isLogin = error.config?.url?.includes('login')
 
-      if (isCompanyChange) {
-        return Promise.reject(error)
+      if (isCompanyChange || isRegister || isLogin) {
+        return Promise.reject(error?.response?.data)
       }
 
       isHandling401 = true
@@ -88,17 +86,36 @@ export default boot(async ({ router, store }) => {
     } else if (error.response?.status === 403) {
       notify('No tienes permisos para acceder a este recurso', 'negative', 'warning')
     }
-    return Promise.reject(error)
+    return Promise.reject(error?.response?.message)
   })
 
   router.beforeEach(async (to, from, next) => {
     const $store = authentication()
+    console.log($store.userSession)
     try {
       const requiresAuth = to.matched.some(
         (record) => record.meta.requiresAuth
       )
 
       const validation = await $store.initStore()
+      const isAuthenticated = !validation && !isTokenExpired($store)
+
+      if (isAuthenticated && to.name === 'Login') {
+        const user = $store.userSession
+
+        if (user?.is_root) {
+          return next({ name: 'Billing' })
+        }
+
+        if (user?.roles && user.roles.length > 0 && user.roles[0]?.modules?.length > 0) {
+          const firstModule = user.roles[0].modules[0]
+          if (firstModule?.link) {
+            return next({ name: firstModule.link })
+          }
+        }
+
+        return next({ name: 'Tutorial' })
+      }
 
       if (requiresAuth && !validation) {
         const tokenExpired = isTokenExpired($store)
@@ -108,13 +125,15 @@ export default boot(async ({ router, store }) => {
           return next('/login')
         }
       }
+
+      // Validar permisos de módulos para rutas que requieren autenticación
       if (requiresAuth) {
         if (validation) return next('/login')
         if ($store?.userSession?.is_root) return next()
         if (modeleExcept.includes(to.name)) return next()
         validModule($store, to, next)
       }
-      if (!validation && to.name === 'Login') validModule($store, to, next)
+
       next()
     } catch (error) {
       console.error(error)

@@ -176,7 +176,6 @@ export const authentication = defineStore('authentication', {
      * @param  {Object} data
      */
     setSessionData (data) {
-      console.log(data)
       this.userSession = data.user
       this.access_token = data.access_token
       this.token_type = data.token_type
