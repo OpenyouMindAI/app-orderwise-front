@@ -1,7 +1,7 @@
 import { boot } from 'quasar/wrappers'
 import { authentication } from 'src/stores/module-authentication'
 import { api } from './axios'
-import { notify } from 'src/const/mixins'
+import { notify, notifyValidationErrors } from 'src/const/mixins'
 
 /**
  * Validate if session token is expired or inactive
@@ -62,19 +62,35 @@ const modeleExcept = ['Profile', 'ChangeCompany', 'VerifySession']
 let isHandling401 = false
 
 export default boot(async ({ router, store }) => {
+
+  const excludedUrls = [
+    'session/company',
+    'register',
+    'login',
+    'change-password',
+    'otp/verify',
+    'otp/send',
+    'otp/resend'
+  ]
+
   api.interceptors.response.use(null, async (error) => {
     const $store = authentication()
     if (error.response?.status === 401 && !isHandling401) {
-      const isCompanyChange = error.config?.url?.includes('session/company')
-      const isRegister = error.config?.url?.includes('register')
-      const isLogin = error.config?.url?.includes('login')
+      const isExcludedUrl = excludedUrls.some(url =>
+        error.config?.url?.includes(url)
+      )
 
-      if (isCompanyChange || isRegister || isLogin) {
+      if (isExcludedUrl) {
         return Promise.reject(error?.response?.data)
       }
 
       isHandling401 = true
-      notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
+
+      notify(
+        'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+        'warning',
+        'warning'
+      )
 
       await $store.forceLogout()
 
@@ -85,13 +101,14 @@ export default boot(async ({ router, store }) => {
       }, 2000)
     } else if (error.response?.status === 403) {
       notify('No tienes permisos para acceder a este recurso', 'negative', 'warning')
+    } else if (error.response?.status === 422) {
+      notifyValidationErrors(error, 'Error de validación')
     }
     return Promise.reject(error?.response?.message)
   })
 
   router.beforeEach(async (to, from, next) => {
     const $store = authentication()
-    console.log($store.userSession)
     try {
       const requiresAuth = to.matched.some(
         (record) => record.meta.requiresAuth

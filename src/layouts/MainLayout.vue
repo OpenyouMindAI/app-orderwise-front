@@ -1163,22 +1163,16 @@ export default {
      */
     async handleRegisterSuccess (data) {
       try {
-        // Cerrar el diálogo de registro primero
         this.showCreateCompanyDialog = false
 
-        // Iniciar sesión automáticamente con los datos del usuario
-        console.log(data)
         await this.store.setSessionData(data)
 
-        // Guardar datos para los siguientes pasos
         this.companySetupEmail = data.user_email || data.user?.email
         this.otpIdentifier = data.user_email || data.user?.email
         this.otpSessionToken = data.session_token || ''
 
-        // Pequeña pausa antes de mostrar el siguiente modal
         await new Promise(resolve => setTimeout(resolve, 300))
 
-        // Mostrar modal de verificación OTP
         this.showOtpVerification = true
 
         notify('Código de verificación enviado a tu correo', 'positive', 'mail')
@@ -1228,6 +1222,7 @@ export default {
     async handleOtpVerified () {
       try {
         this.showOtpVerification = false
+
         this.showCompanySetup = true
 
         notify('Correo verificado. Ahora crea tu empresa', 'positive', 'check_circle')

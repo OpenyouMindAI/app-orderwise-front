@@ -67,15 +67,14 @@
                 label="Correo"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-1">
               <q-input
                 filled
                 v-model="deliveryPerson.phone_number"
                 label="Número de teléfono"
-                :rules="[val => !!val || 'El campo es requerido.']"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12  q-mt-md">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
@@ -86,19 +85,10 @@
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="deliveryPerson.password"
                 type="password"
                 label="Contraseña"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="deliveryPerson.address"
-                label="Dirección"
-                type="textarea"
               />
             </div>
           </q-card-section>
@@ -149,10 +139,9 @@
                 filled
                 v-model="deliveryPerson.phone_number"
                 label="Número de teléfono"
-                :rules="[val => !!val || 'El campo es requerido.']"
               />
             </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 q-mt-sm">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
@@ -163,19 +152,10 @@
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="deliveryPerson.password"
                 type="password"
                 label="Contraseña"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="deliveryPerson.address"
-                label="Dirección"
-                type="textarea"
               />
             </div>
           </q-card-section>

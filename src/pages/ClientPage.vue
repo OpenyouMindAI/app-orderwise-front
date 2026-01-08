@@ -611,7 +611,7 @@ export default {
         address: '',
         condition_iva_receptor: null,
         document_type: null,
-        is_credit: false
+        is_credit: true
       }
       this.role = null
 
@@ -633,7 +633,7 @@ export default {
         address: '',
         condition_iva_receptor: null,
         document_type: null,
-        is_credit: false
+        is_credit: true
       }
       this.role = null
       this.address = null
@@ -735,27 +735,6 @@ export default {
      */
     saveClient () {
       this.visible = true
-
-      // Validaciones básicas
-      if (!this.client.name || this.client.name.trim() === '') {
-        Notify.create({
-          message: 'El nombre es requerido',
-          icon: 'warning',
-          color: 'negative'
-        })
-        this.visible = false
-        return
-      }
-
-      if (!this.client.email || this.client.email.trim() === '') {
-        Notify.create({
-          message: 'El email es requerido',
-          icon: 'warning',
-          color: 'negative'
-        })
-        this.visible = false
-        return
-      }
 
       // Preparar datos del cliente con dirección formateada
       const clientData = { ...this.client }

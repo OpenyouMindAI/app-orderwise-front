@@ -2442,10 +2442,10 @@ export default {
             errorMessage = 'El pago no existe o ya fue eliminado'
           } else if (error.response.status === 403) {
             errorMessage = 'No tienes permisos para eliminar este pago'
-          } else if (error.response.data?.message) {
-            errorMessage = error.response.data.message
-          } else if (error.response.data?.error) {
-            errorMessage = error.response.data.error
+          } else if (error?.message) {
+            errorMessage = error.message
+          } else if (error?.error) {
+            errorMessage = error.error
           }
         } else if (error.request) {
           // La petición se hizo pero no hubo respuesta

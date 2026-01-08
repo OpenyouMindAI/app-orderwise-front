@@ -2378,9 +2378,9 @@ export default {
           }
         }, 2000)
       } catch (error) {
-        notify(error.response?.data?.message || 'Error al importar productos', 'negative', 'error')
-        if (error.response?.data?.errors) {
-          this.importErrors = error.response.data.errors
+        notify(error?.message || 'Error al importar productos', 'negative', 'error')
+        if (error?.errors) {
+          this.importErrors = error.errors
         }
       } finally {
         this.importLoading = false

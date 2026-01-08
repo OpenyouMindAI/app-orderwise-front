@@ -1082,8 +1082,8 @@ const verifyOtp = async () => {
   } catch (error) {
     // Manejar errores específicos
     if (error.response?.status === 400) {
-      const message = error.response.data.message || 'Código incorrecto'
-      const remaining = error.response.data.remaining_attempts
+      const message = error.message || 'Código incorrecto'
+      const remaining = error.remaining_attempts
 
       if (remaining !== undefined) {
         notify(`${message}. Le quedan ${remaining} intentos.`, 'negative', 'warning')
@@ -1091,13 +1091,13 @@ const verifyOtp = async () => {
         notify(message, 'negative', 'warning')
       }
     } else if (error.response?.status === 422) {
-      const errors = error.response.data.errors
-      const message = errors?.code?.[0] || error.response.data.message || 'Datos inválidos'
+      const errors = error.errors
+      const message = errors?.code?.[0] || error.message || 'Datos inválidos'
       notify(message, 'negative', 'warning')
     } else if (error.response?.status === 429) {
-      const retryAfter = error.response.data.retry_after || 60
+      const retryAfter = error.retry_after || 60
       notify(
-        error.response.data.message || `Demasiados intentos. Intente nuevamente en ${retryAfter} segundos.`,
+        error.message || `Demasiados intentos. Intente nuevamente en ${retryAfter} segundos.`,
         'negative',
         'warning'
       )
@@ -1199,16 +1199,16 @@ const resendOtp = async () => {
   } catch (error) {
     // Manejar errores específicos
     if (error.response?.status === 400 || error.response?.status === 429) {
-      const retryAfter = error.response.data.retry_after || 60
+      const retryAfter = error.retry_after || 60
       notify(
-        error.response.data.message || `Debe esperar ${retryAfter} segundos antes de reenviar.`,
+        error.message || `Debe esperar ${retryAfter} segundos antes de reenviar.`,
         'negative',
         'warning'
       )
       // Establecer temporizador con retry_after
       resendTimer.value = retryAfter
     } else if (error.response?.status === 422) {
-      const message = error.response.data.message || 'Datos inválidos'
+      const message = error.message || 'Datos inválidos'
       notify(message, 'negative', 'warning')
     } else {
       notify(
