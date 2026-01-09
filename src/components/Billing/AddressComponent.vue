@@ -157,6 +157,9 @@ const props = defineProps({
 // ESTADO REACTIVO
 // ============================================================================
 
+// Generar ID único para esta instancia del componente
+const componentId = `address-component-${Math.random().toString(36).substr(2, 9)}`
+
 const placesContainer = ref(null)
 const inputRef = ref(null)
 const address = ref('')
@@ -167,6 +170,7 @@ const mapModal = ref(false)
 const map = ref(null)
 const marker = ref(null)
 const geocodingAddress = ref(false)
+const myPacContainer = ref(null) // Referencia al pac-container de esta instancia
 
 const addressDetails = ref({
   name: '',
@@ -328,12 +332,14 @@ const loadInitialAddress = () => {
  * Actualiza el ancho y posición del pac-container para que coincida con el contenedor.
  * Usa cssText para forzar estilos inline más fuertes.
  * Usa places-input-container como referencia de ancho y posición (no el input).
+ * Solo trabaja con el pac-container de ESTA instancia.
  */
 const updatePacWidth = () => {
-  const pacContainer = document.querySelector('.pac-container.custom-pac-container')
+  // Solo trabajar con el pac-container de esta instancia
+  const pacContainer = myPacContainer.value
   const inputContainer = placesContainer.value
 
-  if (pacContainer && inputContainer) {
+  if (pacContainer && inputContainer && document.body.contains(pacContainer)) {
     const rect = inputContainer.getBoundingClientRect()
     const width = rect.width
     const left = rect.left + window.scrollX
@@ -381,9 +387,13 @@ const startAggressiveWidthUpdate = () => {
  * Configura el pac-container cuando se detecta en el DOM.
  * Aplica estilos y observa cambios de estilo para revertir overrides de Google.
  * Usa places-input-container como referencia de ancho y posición.
+ * Marca el pac-container con el componentId único.
  */
 const setupPacContainer = (node) => {
+  // Marcar este pac-container como perteneciente a esta instancia
   node.classList.add('custom-pac-container')
+  node.setAttribute('data-component-id', componentId)
+  myPacContainer.value = node
 
   const inputContainer = placesContainer.value
   if (!inputContainer) return
@@ -409,6 +419,9 @@ const setupPacContainer = (node) => {
   styleObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+        // Verificar que seguimos observando el pac-container correcto
+        if (mutation.target !== myPacContainer.value) return
+        
         const containerRect = placesContainer.value?.getBoundingClientRect()
         if (!containerRect) return
 
@@ -449,12 +462,23 @@ const initAutocomplete = async () => {
   }
 
   // Observer para capturar el pac-container cuando se añade al DOM
+  // Solo capturamos el que aparece DESPUÉS de nuestro input
   mutationObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (node.classList?.contains('pac-container')) {
-          setupPacContainer(node)
-          return
+          // Verificar si este pac-container ya tiene un componentId asignado
+          const existingId = node.getAttribute('data-component-id')
+          if (existingId && existingId !== componentId) {
+            // Este pac-container pertenece a otra instancia, ignorarlo
+            continue
+          }
+          
+          // Si no tiene ID o es nuestro ID, configurarlo
+          if (!existingId) {
+            setupPacContainer(node)
+            return
+          }
         }
       }
     }
@@ -469,11 +493,21 @@ const initAutocomplete = async () => {
   })
 
   // Fallback: buscar pac-container si ya existe
+  // Solo configurar si no tiene componentId o si es el nuestro
   setTimeout(() => {
     const containers = document.querySelectorAll('.pac-container')
-    if (containers.length > 0) {
-      const lastContainer = containers[containers.length - 1]
-      setupPacContainer(lastContainer)
+    for (const container of containers) {
+      const existingId = container.getAttribute('data-component-id')
+      // Si no tiene ID, asignarlo a esta instancia
+      if (!existingId && !myPacContainer.value) {
+        setupPacContainer(container)
+        break
+      }
+      // Si ya es nuestro, asegurarnos de tener la referencia
+      if (existingId === componentId) {
+        myPacContainer.value = container
+        break
+      }
     }
   }, 1000)
 
@@ -751,6 +785,12 @@ const cleanup = () => {
     window.google.maps.event.clearInstanceListeners(autocomplete.value)
     autocomplete.value = null
   }
+
+  // Limpiar y remover el pac-container de esta instancia del DOM
+  if (myPacContainer.value && document.body.contains(myPacContainer.value)) {
+    myPacContainer.value.remove()
+  }
+  myPacContainer.value = null
 
   // Limpiar referencia cacheada
   cachedInputElement = null
