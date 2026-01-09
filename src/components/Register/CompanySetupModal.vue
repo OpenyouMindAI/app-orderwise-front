@@ -351,12 +351,12 @@ const setupCompany = async () => {
         : ''
     }
 
-    await api.post('authentication/setup-company', payload)
+    const { data } = await api.post('authentication/setup-company', payload)
 
     notify('Empresa configurada exitosamente', 'positive', 'check_circle')
 
-    // Emitir evento de éxito
-    emit('success')
+    // Emitir evento de éxito con los datos de la respuesta
+    emit('success', data)
 
     // Cerrar modal
     emit('update:modelValue', false)

@@ -2583,15 +2583,16 @@ export default {
     }
   },
   async mounted () {
+    /**
+     * Get products with pagination
+     */
+    this.reloadProducts()
+
     const isValid = await this.checkOnboardingStatus()
     if (isValid) {
       await this.checkCashBoxStatus()
       this.checkAndStartTour()
     }
-    /**
-     * Get products with pagination
-     */
-    this.reloadProducts()
 
     /**
      * Check if should show tour (only once after company creation)
