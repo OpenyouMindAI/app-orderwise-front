@@ -1738,12 +1738,11 @@ export default {
         const { data } = await this.$api.get('purchases', {
           params: {
             dataEqualFilter: {
-              purchase_number: id,
               purchase_code: id
             }
           }
         })
-        return data.data[0]
+        return data[0]
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       }
