@@ -227,16 +227,20 @@ const props = defineProps({
 // ESTADO REACTIVO
 // ============================================================================
 
-const selectRef = ref(null)
-const placesServiceContainer = ref(null)
-const model = ref('') // Texto a mostrar en el input
-const options = ref([]) // Opciones del autocompletado
+// Generar ID único para esta instancia del componente
+const componentId = `address-component-${Math.random().toString(36).substr(2, 9)}`
 
+const placesContainer = ref(null)
+const inputRef = ref(null)
+const address = ref('')
+const displayAddress = ref('')
+const autocomplete = ref(null)
 const loading = ref(false)
 const mapModal = ref(false)
 const map = ref(null)
 const marker = ref(null)
 const geocodingAddress = ref(false)
+const myPacContainer = ref(null) // Referencia al pac-container de esta instancia
 
 // Servicios de Google Maps
 let autocompleteService = null
@@ -286,38 +290,107 @@ const getSessionToken = () => {
 // LOGICA DE AUTOCOMPLETADO
 // ============================================================================
 
-const filterFn = (val, update) => {
-  if (val === '') {
-    update(() => {
-      options.value = []
-    })
-    return
+/**
+ * Actualiza el ancho y posición del pac-container para que coincida con el contenedor.
+ * Usa cssText para forzar estilos inline más fuertes.
+ * Usa places-input-container como referencia de ancho y posición (no el input).
+ * Solo trabaja con el pac-container de ESTA instancia.
+ */
+const updatePacWidth = () => {
+  // Solo trabajar con el pac-container de esta instancia
+  const pacContainer = myPacContainer.value
+  const inputContainer = placesContainer.value
+
+  if (pacContainer && inputContainer && document.body.contains(pacContainer)) {
+    const rect = inputContainer.getBoundingClientRect()
+    const width = rect.width
+    const left = rect.left + window.scrollX
+
+    const currentWidth = parseFloat(pacContainer.style.width) || 0
+    const currentLeft = parseFloat(pacContainer.style.left) || 0
+
+    // Solo actualizar si difiere para evitar loops
+    if (Math.abs(currentWidth - width) > 1 || Math.abs(currentLeft - left) > 1) {
+      // Preservar otros estilos y forzar width y left
+      const existingStyles = pacContainer.style.cssText
+        .replace(/width:[^;]+;?/g, '')
+        .replace(/left:[^;]+;?/g, '')
+      pacContainer.style.cssText = `width: ${width}px !important; left: ${left}px !important; ${existingStyles}`
+    }
   }
 
   if (!autocompleteService && window.google?.maps?.places) {
     autocompleteService = new window.google.maps.places.AutocompleteService()
   }
 
-  if (!autocompleteService) {
-    update(() => { options.value = [] })
-    return
-  }
+  let elapsed = 0
+  const intervalMs = 50
+  const duration = 2000
+
+  widthUpdateInterval = setInterval(() => {
+    updatePacWidth()
+    elapsed += intervalMs
+
+    if (elapsed >= duration) {
+      clearInterval(widthUpdateInterval)
+      widthUpdateInterval = null
+    }
+  }, intervalMs)
+}
+
+/**
+ * Configura el pac-container cuando se detecta en el DOM.
+ * Aplica estilos y observa cambios de estilo para revertir overrides de Google.
+ * Usa places-input-container como referencia de ancho y posición.
+ * Marca el pac-container con el componentId único.
+ */
+const setupPacContainer = (node) => {
+  // Marcar este pac-container como perteneciente a esta instancia
+  node.classList.add('custom-pac-container')
+  node.setAttribute('data-component-id', componentId)
+  myPacContainer.value = node
+
+  const inputContainer = placesContainer.value
+  if (!inputContainer) return
+
+  // Forzar ancho y posición inicial con cssText usando el contenedor
+  const rect = inputContainer.getBoundingClientRect()
+  const width = rect.width
+  const left = rect.left + window.scrollX
+
+  // Preservar estilos existentes (especialmente display: none)
+  const existingStyles = node.style.cssText
+    .replace(/width:[^;]+;?/g, '')
+    .replace(/left:[^;]+;?/g, '')
+
+  node.style.cssText = `width: ${width}px !important; left: ${left}px !important; ${existingStyles}`
 
   // Generar nuevo token de sesión si no existe
   if (!sessionToken) {
     sessionToken = getSessionToken()
   }
 
-  autocompleteService.getPlacePredictions({
-    input: val,
-    sessionToken,
-    componentRestrictions: { country: 'ar' },
-    types: ['geocode', 'establishment']
-  }, (predictions, status) => {
-    update(() => {
-      if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
-        options.value = []
-        return
+  // Observar cambios de estilo para revertir overrides de Google
+  styleObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+        // Verificar que seguimos observando el pac-container correcto
+        if (mutation.target !== myPacContainer.value) return
+        
+        const containerRect = placesContainer.value?.getBoundingClientRect()
+        if (!containerRect) return
+
+        const requiredWidth = containerRect.width
+        const requiredLeft = containerRect.left + window.scrollX
+        const currentWidth = parseFloat(node.style.width) || 0
+        const currentLeft = parseFloat(node.style.left) || 0
+
+        if (Math.abs(currentWidth - requiredWidth) > 1 || Math.abs(currentLeft - requiredLeft) > 1) {
+          const existingStyles = node.style.cssText
+            .replace(/width:[^;]+;?/g, '')
+            .replace(/left:[^;]+;?/g, '')
+          node.style.cssText = `width: ${requiredWidth}px !important; left: ${requiredLeft}px !important; ${existingStyles}`
+        }
       }
 
       options.value = predictions.map(prediction => ({
@@ -344,7 +417,29 @@ const onSelection = (option) => {
     placesService = new window.google.maps.places.PlacesService(placesServiceContainer.value)
   }
 
-  if (!placesService) return
+  // Observer para capturar el pac-container cuando se añade al DOM
+  // Solo capturamos el que aparece DESPUÉS de nuestro input
+  mutationObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.classList?.contains('pac-container')) {
+          // Verificar si este pac-container ya tiene un componentId asignado
+          const existingId = node.getAttribute('data-component-id')
+          if (existingId && existingId !== componentId) {
+            // Este pac-container pertenece a otra instancia, ignorarlo
+            continue
+          }
+          
+          // Si no tiene ID o es nuestro ID, configurarlo
+          if (!existingId) {
+            setupPacContainer(node)
+            return
+          }
+        }
+      }
+    }
+  })
+  mutationObserver.observe(document.body, { childList: true, subtree: false })
 
   loading.value = true
 
@@ -357,10 +452,22 @@ const onSelection = (option) => {
     // Reiniciar token después de una selección exitosa
     sessionToken = null
 
-    if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-      handlePlaceSelection(place)
-    } else {
-      console.warn('[AddressComponent] Error obteniendo detalles:', status)
+  // Fallback: buscar pac-container si ya existe
+  // Solo configurar si no tiene componentId o si es el nuestro
+  setTimeout(() => {
+    const containers = document.querySelectorAll('.pac-container')
+    for (const container of containers) {
+      const existingId = container.getAttribute('data-component-id')
+      // Si no tiene ID, asignarlo a esta instancia
+      if (!existingId && !myPacContainer.value) {
+        setupPacContainer(container)
+        break
+      }
+      // Si ya es nuestro, asegurarnos de tener la referencia
+      if (existingId === componentId) {
+        myPacContainer.value = container
+        break
+      }
     }
   })
 }
@@ -618,9 +725,51 @@ const cleanupMap = () => {
 }
 
 const cleanup = () => {
-  autocompleteService = null
-  placesService = null
-  sessionToken = null
+  // Limpiar interval de actualización de ancho
+  if (widthUpdateInterval) {
+    clearInterval(widthUpdateInterval)
+    widthUpdateInterval = null
+  }
+
+  // Desconectar MutationObserver
+  if (mutationObserver) {
+    mutationObserver.disconnect()
+    mutationObserver = null
+  }
+
+  // Desconectar ResizeObserver
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+
+  // Desconectar StyleObserver
+  if (styleObserver) {
+    styleObserver.disconnect()
+    styleObserver = null
+  }
+
+  // Remover todos los event listeners trackeados
+  for (const { target, event, handler, options } of eventListeners) {
+    target.removeEventListener(event, handler, options)
+  }
+  eventListeners.length = 0
+
+  // Limpiar autocomplete de Google
+  if (autocomplete.value && window.google?.maps?.event) {
+    window.google.maps.event.clearInstanceListeners(autocomplete.value)
+    autocomplete.value = null
+  }
+
+  // Limpiar y remover el pac-container de esta instancia del DOM
+  if (myPacContainer.value && document.body.contains(myPacContainer.value)) {
+    myPacContainer.value.remove()
+  }
+  myPacContainer.value = null
+
+  // Limpiar referencia cacheada
+  cachedInputElement = null
+
   cleanupMap()
 }
 
