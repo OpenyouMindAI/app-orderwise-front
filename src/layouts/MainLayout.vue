@@ -1223,18 +1223,26 @@ export default {
     /**
      * Handle company setup success
      */
-    async handleCompanySetupSuccess () {
+    async handleCompanySetupSuccess (data) {
       try {
-        // Cerrar el modal de configuración de empresa
         this.showCompanySetup = false
 
-        // Recargar la sesión del usuario para obtener los datos actualizados de la empresa
-        await this.store.getSessionData()
+        // El backend devuelve { user, company, branch_office, ... }
+        if (data?.user) {
+          Object.assign(this.store.userSession, data.user)
+          this.store.isDemo = false
+
+          // Actualizar branch office si viene
+          if (data.branch_office) {
+            this.store.branchOffice = data.branch_office
+          }
+
+          // Esperar a que Pinia persista los cambios
+          await this.$nextTick()
+        }
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
-
-        // Redirigir al home (Welcome page)
-        this.$router.push({ name: 'Home' })
+        this.$router.push({ name: 'Welcome' })
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
         notify('Error al procesar la configuración', 'negative', 'warning')
