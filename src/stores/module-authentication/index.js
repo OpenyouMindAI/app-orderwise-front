@@ -100,23 +100,18 @@ export const authentication = defineStore('authentication', {
      * @returns {Boolean} true or false
      */
     async logout (callBackend = true) {
-      // Prevent multiple logout calls
       if (this._isLoggingOut) return true
       this._isLoggingOut = true
 
       try {
-        console.log(callBackend)
-        // Cerrar sesión en el backend (revocar token) - solo si se indica
         if (callBackend && this.access_token) {
           try {
             await api.post('authentication/logout')
           } catch (e) {
-            // Ignore errors - token might already be revoked
             console.warn('Error al cerrar sesión en backend:', e)
           }
         }
 
-        // Limpiar datos locales
         this.access_token = null
         this.token_type = null
         this.expires_In = null
@@ -124,18 +119,13 @@ export const authentication = defineStore('authentication', {
         this.userSession = null
         this.branchOffice = null
 
-        // Clear subscription data
         this.clearSubscriptionData()
 
-        // Guardar tema antes de limpiar localStorage
         const savedTheme = localStorage.getItem('app-theme')
         const showThemeSelector = localStorage.getItem('show-theme-selector')
 
-        console.log('🔒 Cerrando sesión...')
-
         localStorage.clear()
 
-        // Restaurar tema después de limpiar
         if (savedTheme) {
           localStorage.setItem('app-theme', savedTheme)
         }

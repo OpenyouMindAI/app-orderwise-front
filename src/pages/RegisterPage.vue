@@ -229,15 +229,12 @@
 
           <q-form @submit.prevent="verifyOtp" class="register-form">
              <div class="text-center q-mb-lg">
-               <svg fill="#25D366" width="64px" height="64px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" class="q-mb-md">
-                 <title>whatsapp</title>
-                 <path d="M26.576 5.363c-2.69-2.69-6.406-4.354-10.511-4.354-8.209 0-14.865 6.655-14.865 14.865 0 2.732 0.737 5.291 2.022 7.491l-0.038-0.070-2.109 7.702 7.879-2.067c2.051 1.139 4.498 1.809 7.102 1.809h0.006c8.209-0.003 14.862-6.659 14.862-14.868 0-4.103-1.662-7.817-4.349-10.507l0 0zM16.062 28.228h-0.005c-0 0-0.001 0-0.001 0-2.319 0-4.489-0.64-6.342-1.753l0.056 0.031-0.451-0.267-4.675 1.227 1.247-4.559-0.294-0.467c-1.185-1.862-1.889-4.131-1.889-6.565 0-6.822 5.531-12.353 12.353-12.353s12.353 5.531 12.353 12.353c0 6.822-5.53 12.353-12.353 12.353h-0zM22.838 18.977c-0.371-0.186-2.197-1.083-2.537-1.208-0.341-0.124-0.589-0.185-0.837 0.187-0.246 0.371-0.958 1.207-1.175 1.455-0.216 0.249-0.434 0.279-0.805 0.094-1.15-0.466-2.138-1.087-2.997-1.852l0.010 0.009c-0.799-0.74-1.484-1.587-2.037-2.521l-0.028-0.052c-0.216-0.371-0.023-0.572 0.162-0.757 0.167-0.166 0.372-0.434 0.557-0.65 0.146-0.179 0.271-0.384 0.366-0.604l0.006-0.017c0.043-0.087 0.068-0.188 0.068-0.296 0-0.131-0.037-0.253-0.101-0.357l0.002 0.003c-0.094-0.186-0.836-2.014-1.145-2.758-0.302-0.724-0.609-0.625-0.836-0.637-0.216-0.010-0.464-0.012-0.712-0.012-0.395 0.010-0.746 0.188-0.988 0.463l-0.001 0.002c-0.802 0.761-1.3 1.834-1.3 3.023 0 0.026 0 0.053 0.001 0.079l-0-0.004c0.131 1.467 0.681 2.784 1.527 3.857l-0.012-0.015c1.604 2.379 3.742 4.282 6.251 5.564l0.094 0.043c0.548 0.248 1.25 0.513 1.968 0.74l0.149 0.041c0.442 0.14 0.951 0.221 1.479 0.221 0.303 0 0.601-0.027 0.889-0.078l-0.031 0.004c1.069-0.223 1.956-0.868 2.497-1.749l0.009-0.017c0.165-0.366 0.261-0.793 0.261-1.242 0-0.185-0.016-0.366-0.047-0.542l0.003 0.019c-0.092-0.155-0.34-0.247-0.712-0.434z"></path>
-               </svg>
+               <q-icon name="email" size="64px" color="primary"/>
                <p class="text-grey-7" style="font-size: 15px; margin: 0;">
-                 Hemos enviado un código de verificación a tu número
+                 Hemos enviado un código de verificación a tu correo
                </p>
                <p class="text-primary text-weight-bold" style="font-size: 16px; margin-top: 4px;">
-                 {{ selectedCountry?.code }} {{ form.phone_number }}
+                 {{ form.email }}
                </p>
              </div>
 
@@ -256,7 +253,7 @@
                  @keydown.delete="e => handleDigitDelete(index, e)"
                  @paste="handlePaste"
                  maxlength="1"
-                 autofocus="index === 0"
+                 :autofocus="index === 0"
                />
              </div>
 
@@ -295,19 +292,8 @@
           </q-form>
         </q-tab-panel>
       </q-tab-panels>
-
-      <!-- Footer -->
-      <div class="footer-container">
-        <q-icon name="laptop_mac" size="18px" color="grey-6"/>
-        <span class="footer-text">Powered by</span>
-        <a href="https://site.qbitsinc.com" target="_blank">
-          <q-img :src="qBitsLogo.black" class="qbits-logo"/>
-        </a>
-      </div>
     </div>
 
-    <!-- Modal de Setup de Empresa -->
-    <!-- Modal de selección: Demo o Registrar Empresa -->
     <q-dialog v-model="showCompanyOptions" persistent transition-show="scale" transition-hide="scale">
       <q-card class="modern-options-dialog">
         <!-- Header minimalista -->
@@ -324,7 +310,7 @@
         <q-card-section class="q-pa-xl">
           <div class="row q-col-gutter-lg">
             <!-- Opción: Ver Demo -->
-            <div class="col-12 col-md-6">
+            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <div class="modern-option-card demo-card" @click="selectDemoOption">
                 <div class="option-icon-wrapper demo-icon">
                   <q-icon name="visibility" size="40px" />
@@ -346,7 +332,7 @@
             </div>
 
             <!-- Opción: Registrar Mi Empresa -->
-            <div class="col-12 col-md-6">
+            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <div class="modern-option-card business-card" @click="selectRegisterOption">
                 <div class="option-icon-wrapper business-icon">
                   <q-icon name="business" size="40px" />
@@ -371,7 +357,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- Modal de selección de rubro para demo -->
     <q-dialog v-model="showDemoBusinessTypeSelection" persistent transition-show="scale" transition-hide="scale">
       <q-card class="business-type-dialog">
         <!-- Header -->
@@ -463,7 +448,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- Modal de configuración de empresa -->
     <q-dialog v-model="showCompanySetup" persistent transition-show="scale" transition-hide="scale">
       <q-card class="modern-company-setup-dialog">
         <!-- Header moderno -->
@@ -683,8 +667,6 @@ import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
-import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
-import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 
 const router = useRouter()
 const store = authentication()
@@ -715,6 +697,14 @@ const loadingOtp = ref(false)
 
 // OTP Session
 const otpSessionToken = ref('')
+
+// Constantes para persistencia OTP
+const OTP_STORAGE_KEY = 'otp_pending_verification'
+const OTP_EXPIRATION_TIME = 30 * 60 * 1000 // 30 minutos en milisegundos
+
+// Constantes para persistencia de sesión de registro
+const REGISTER_SESSION_KEY = 'register_session_data'
+const REGISTER_CREDENTIALS_KEY = 'register_credentials'
 const otpExpiresIn = ref(0)
 
 // Resend OTP
@@ -745,8 +735,8 @@ const registeredCredentials = ref({
   password: ''
 })
 
-// Validation & Country Data
 const selectedCountry = ref(null)
+
 const countryOptions = [
   { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
   { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
@@ -759,10 +749,8 @@ const countryOptions = [
   { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
 ]
 
-// Set default country (e.g., Argentina as base)
 selectedCountry.value = countryOptions[0]
 
-// Phone validation rule
 const phoneRule = computed(() => {
   return [
     val => !!val || 'El teléfono es requerido',
@@ -774,7 +762,6 @@ const phoneRule = computed(() => {
   ]
 })
 
-// Company address data
 const companyAddressData = ref({
   name: '',
   street: '',
@@ -789,8 +776,8 @@ const companyAddressData = ref({
   types: []
 })
 
-// Business type search
 const businessTypeSearch = ref('')
+
 const filteredBusinessTypes = computed(() => {
   if (!businessTypeSearch.value) {
     return businessTypes.value
@@ -803,6 +790,8 @@ const filteredBusinessTypes = computed(() => {
 
 /**
  * Filter business types
+ * @param {string} value - The search value
+ * @param {function} update - The update function
  */
 const filterBusinessTypes = async (value, update) => {
   try {
@@ -821,19 +810,8 @@ const filterBusinessTypes = async (value, update) => {
 }
 
 /**
- * Load business types when opening modal
- */
-const loadBusinessTypes = async () => {
-  try {
-    const { data } = await api.get('business-types')
-    businessTypes.value = data.data || data
-  } catch (error) {
-    console.error('Error loading business types:', error)
-  }
-}
-
-/**
  * Search business types
+ * @param {string} value - The search value
  */
 const searchBusinessTypes = (value) => {
   // El filtrado se hace automáticamente con el computed
@@ -841,6 +819,7 @@ const searchBusinessTypes = (value) => {
 
 /**
  * Select business type
+ * @param {object} type - The business type
  */
 const selectBusinessType = (type) => {
   demoBusinessType.value = type
@@ -848,6 +827,7 @@ const selectBusinessType = (type) => {
 
 /**
  * Get icon for business type
+ * @param {string} name - The business type name
  */
 const getBusinessIcon = (name) => {
   const iconMap = {
@@ -896,15 +876,13 @@ const getBusinessIcon = (name) => {
 
 /**
  * Handle company address selected
+ * @param {object} addressDetails - The address details
  */
 const handleCompanyAddressSelected = (addressDetails) => {
   if (addressDetails) {
-    // Guardar los detalles completos de la dirección
     companyAddressData.value = { ...addressDetails }
-    // Actualizar el campo company_address con la dirección formateada
-    companyForm.value.company_address = addressDetails.formattedAddress || addressDetails.street || ''
+    companyForm.value.company_address = addressDetails
   } else {
-    // Limpiar si se resetea la dirección
     companyAddressData.value = {
       name: '',
       street: '',
@@ -929,7 +907,6 @@ const setupCompany = async () => {
   try {
     loadingCompanySetup.value = true
 
-    // Preparar payload con business_type_id
     const payload = {
       ...companyForm.value,
       business_type_id: companyForm.value.business_type?.id,
@@ -938,59 +915,30 @@ const setupCompany = async () => {
         : ''
     }
 
-    await api.post('authentication/setup-company', payload)
+    const { data } = await api.post('authentication/setup-company', payload)
 
     notify('Empresa configurada exitosamente', 'positive', 'check_circle')
 
-    // Cerrar modal
+    if (data.user) {
+      store.setSessionData({
+        user: data.user,
+        access_token: data.access_token || localStorage.getItem('access_token'),
+        token_type: data.token_type || 'Bearer',
+        expires_in: data.expires_in
+      })
+    }
+
+    localStorage.removeItem(REGISTER_SESSION_KEY)
+    localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+
     showCompanySetup.value = false
 
-    // Si fue registro con Google, ya tiene sesión activa, solo redirigir
-    if (isGoogleRegister.value) {
-      router.push({ name: 'CompanyConfig' })
-    } else {
-      // Hacer login automático con las credenciales guardadas
-      await loginAfterCompanySetup()
-    }
+    router.push({ name: 'CompanyConfig' })
   } catch (error) {
     const message = error.response?.data?.message || 'Error al configurar empresa'
     notify(message, 'negative', 'warning')
   } finally {
     loadingCompanySetup.value = false
-  }
-}
-
-/**
- * Login after company setup
- */
-const loginAfterCompanySetup = async () => {
-  try {
-    const { data } = await api.post('authentication/login', {
-      username: registeredCredentials.value.email,
-      password: registeredCredentials.value.password
-    })
-
-    // Guardar token en localStorage
-    localStorage.setItem('access_token', data.access_token)
-    api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
-
-    // Guardar sesión completa en el store
-    store.setSessionData({
-      user: data.user,
-      access_token: data.access_token,
-      token_type: data.token_type,
-      expires_in: data.expires_in
-    })
-
-    notify('¡Bienvenido! Configura tu empresa', 'positive', 'check_circle')
-
-    // Redirigir a configuración de empresa
-    router.push({
-      name: 'CompanyConfig'
-    })
-  } catch (error) {
-    const message = error.response?.data?.message || 'Error al iniciar sesión'
-    notify(message, 'negative', 'warning')
   }
 }
 
@@ -1015,38 +963,47 @@ const register = async () => {
     localStorage.setItem('access_token', data.access_token)
     api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
 
-    notify('Registro exitoso', 'positive', 'check_circle')
-
-    // Marcar que NO fue registro con Google
-    isGoogleRegister.value = false
+    // Guardar datos de sesión de registro en localStorage
+    localStorage.setItem(REGISTER_SESSION_KEY, JSON.stringify({
+      user: data.user,
+      access_token: data.access_token,
+      token_type: data.token_type,
+      expires_in: data.expires_in,
+      timestamp: Date.now()
+    }))
 
     // Guardar credenciales para login posterior
     registeredCredentials.value = {
       email: form.value.email,
       password: form.value.password
     }
+    localStorage.setItem(REGISTER_CREDENTIALS_KEY, JSON.stringify(registeredCredentials.value))
 
-    // Pre-llenar formulario de empresa
+    // Actualizar store de Pinia con los datos de sesión
+    store.setSessionData(data)
+
+    notify('Registro exitoso', 'positive', 'check_circle')
+
+    isGoogleRegister.value = false
+
     companyForm.value.company_email = form.value.email
     companyForm.value.company_phone = form.value.phone_number || ''
 
-    // Cargar business types
-    await loadBusinessTypes()
-
-    // El backend ya envía el código OTP automáticamente al registrarse
-    // Limpiar inputs OTP
     otpDigits.value = ['', '', '', '', '', '']
 
-    // Cambiar a la pestaña de OTP
     currentTab.value = 'otp'
 
-    // Iniciar temporizador de reenvío
+    // Guardar estado OTP en localStorage para persistencia entre recargas
+    localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({
+      email: form.value.email,
+      timestamp: Date.now()
+    }))
+
     startResendTimer()
 
-    notify('Código de verificación enviado a tu WhatsApp', 'positive', 'chat')
+    notify('Código de verificación enviado a tu correo', 'positive', 'chat')
   } catch (error) {
-    const message = error.response?.data?.message || error.message || 'Error al registrar usuario'
-    notify(message, 'negative', 'warning')
+    console.log(error)
   } finally {
     loading.value = false
   }
@@ -1064,18 +1021,25 @@ const verifyOtp = async () => {
   try {
     loadingOtp.value = true
 
-    const phone = form.value.phone_number
-      ? `${selectedCountry.value?.code || ''}${form.value.phone_number}`.trim()
-      : ''
-
     await api.post('otp/verify', {
-      identifier: phone,
+      identifier: form.value.email,
       code: otpCode.value,
-      purpose: 'register',
+      purpose: 'verify_email',
       session_token: otpSessionToken.value
     })
 
     notify('Teléfono verificado exitosamente', 'positive', 'check_circle')
+
+    // Limpiar estado OTP de localStorage tras verificación exitosa
+    clearOtpPendingState()
+
+    // Marcar OTP como verificado en la sesión de registro
+    const registerSession = localStorage.getItem(REGISTER_SESSION_KEY)
+    if (registerSession) {
+      const sessionData = JSON.parse(registerSession)
+      sessionData.otp_verified = true
+      localStorage.setItem(REGISTER_SESSION_KEY, JSON.stringify(sessionData))
+    }
 
     // Continuar al flujo de setup de empresa
     showCompanyOptions.value = true
@@ -1115,6 +1079,8 @@ const verifyOtp = async () => {
 
 /**
  * Handle digit input
+ * @param {number} index - The index of the input
+ * @param {string} value - The value of the input
  */
 const handleDigitInput = (index, value) => {
   if (!value) return
@@ -1133,6 +1099,8 @@ const handleDigitInput = (index, value) => {
 
 /**
  * Handle digit delete / backspace
+ * @param {number} index - The index of the input
+ * @param {Event} event - The event object
  */
 const handleDigitDelete = (index, event) => {
   if (!otpDigits.value[index] && index > 0) {
@@ -1142,6 +1110,7 @@ const handleDigitDelete = (index, event) => {
 
 /**
  * Handle paste event
+ * @param {Event} event - The event object
  */
 const handlePaste = (event) => {
   event.preventDefault()
@@ -1179,13 +1148,9 @@ const startResendTimer = () => {
  */
 const resendOtp = async () => {
   try {
-    const phone = form.value.phone_number
-      ? `${selectedCountry.value?.code || ''}${form.value.phone_number}`.trim()
-      : ''
-
     const { data } = await api.post('otp/resend', {
-      identifier: phone,
-      channel: 'whatsapp',
+      identifier: form.value.email,
+      channel: 'email',
       purpose: 'register',
       session_token: otpSessionToken.value
     })
@@ -1221,53 +1186,227 @@ const resendOtp = async () => {
 }
 
 /**
- * Check OTP status for session recovery
+ * Verifica el estado de la sesión OTP en el servidor
+ *
+ * Esta función consulta el backend para determinar si existe una sesión OTP activa
+ * para el email actual. Si la sesión existe y es válida, restaura el estado de
+ * verificación y cambia automáticamente al panel OTP.
+ *
+ * @async
+ * @returns {Promise<void>}
+ *
+ * Casos de uso:
+ * - Recuperación de sesión después de recarga de página
+ * - Validación de sesión OTP existente
+ * - Restauración automática del flujo de verificación
  */
 const checkOtpStatus = async () => {
-  // Solo verificar si el usuario tiene un número de teléfono ingresado
-  if (!form.value.phone_number) return
+  if (!form.value.email) {
+    console.log('No se puede verificar estado OTP: email no disponible')
+    return
+  }
 
-  const phone = form.value.phone_number
-    ? `${selectedCountry.value?.code || ''}${form.value.phone_number}`.trim()
-    : ''
+  const email = form.value.email
+  const data = localStorage.getItem('access_token')
 
-  if (!phone) return
+  api.defaults.headers.common.Authorization = `Bearer ${data}`
 
   try {
     const { data } = await api.get('otp/status', {
       params: {
-        identifier: phone,
+        identifier: email,
         purpose: 'register'
       }
     })
 
-    // Si existe una sesión OTP activa y no ha expirado
-    if (data.exists && !data.is_expired && data.is_available) {
-      // Restaurar estado OTP
-      otpExpiresIn.value = data.remaining_time_seconds || 0
-      resendTimer.value = Math.max(0, otpExpiresIn.value - 60) // Tiempo restante para reenvío
+    const isValidOtpSession = data.exists && !data.is_expired && data.is_available
 
-      // Cambiar a panel OTP automáticamente
+    if (isValidOtpSession) {
+      otpExpiresIn.value = data.remaining_time_seconds || 0
+      resendTimer.value = Math.max(0, otpExpiresIn.value - 60)
+
       currentTab.value = 'otp'
 
+      const timeRemaining = data.remaining_time_formatted || 'desconocido'
       notify(
-        `Sesión de verificación restaurada. Tiempo restante: ${data.remaining_time_formatted || ''}`,
+        `Sesión de verificación restaurada. Tiempo restante: ${timeRemaining}`,
         'info',
         'info'
       )
     }
   } catch (error) {
-    // Si hay error o no existe sesión, simplemente no hacer nada
-    // El usuario continuará en el formulario de registro normalmente
-    console.log('No hay sesión OTP activa para recuperar')
+    // Error silencioso: el usuario continuará en el formulario de registro normalmente
+    console.log('No hay sesión OTP activa para recuperar:', error.message || error)
   }
 }
 
+/**
+ * Limpia el estado OTP del localStorage
+ *
+ * Función auxiliar para mantener el localStorage limpio y evitar
+ * estados obsoletos o corruptos.
+ */
+const clearOtpPendingState = () => {
+  localStorage.removeItem(OTP_STORAGE_KEY)
+}
+
+/**
+ * Restaura la sesión de registro desde localStorage
+ *
+ * Esta función recupera los datos de sesión guardados durante el registro
+ * y restaura el estado completo de la aplicación, incluyendo el token,
+ * datos del usuario y credenciales.
+ *
+ * @returns {boolean} true si se restauró exitosamente, false en caso contrario
+ */
+const restoreRegisterSession = () => {
+  try {
+    const registerSessionData = localStorage.getItem(REGISTER_SESSION_KEY)
+    const credentialsData = localStorage.getItem(REGISTER_CREDENTIALS_KEY)
+
+    if (!registerSessionData) {
+      return false
+    }
+
+    const sessionData = JSON.parse(registerSessionData)
+
+    // Validar que la sesión no haya expirado (30 minutos)
+    if (!isOtpSessionValid(sessionData.timestamp)) {
+      console.log('Sesión de registro expirada')
+      localStorage.removeItem(REGISTER_SESSION_KEY)
+      localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+      return false
+    }
+
+    // Restaurar token en axios
+    if (sessionData.access_token) {
+      localStorage.setItem('access_token', sessionData.access_token)
+      api.defaults.headers.common.Authorization = `Bearer ${sessionData.access_token}`
+    }
+
+    // Restaurar datos en el store de Pinia
+    store.setSessionData({
+      user: sessionData.user,
+      access_token: sessionData.access_token,
+      token_type: sessionData.token_type,
+      expires_in: sessionData.expires_in
+    })
+
+    // Restaurar credenciales si existen
+    if (credentialsData) {
+      registeredCredentials.value = JSON.parse(credentialsData)
+    }
+
+    // Si OTP ya fue verificado, mostrar opciones de empresa
+    if (sessionData.otp_verified) {
+      showCompanyOptions.value = true
+    }
+
+    console.log('Sesión de registro restaurada exitosamente')
+    return true
+  } catch (error) {
+    console.error('Error al restaurar sesión de registro:', error)
+    localStorage.removeItem(REGISTER_SESSION_KEY)
+    localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+    return false
+  }
+}
+
+/**
+ * Valida si el timestamp de la sesión OTP no ha expirado
+ *
+ * @param {number} timestamp - Timestamp en milisegundos cuando se guardó el estado
+ * @returns {boolean} true si la sesión es válida, false si expiró
+ */
+const isOtpSessionValid = (timestamp) => {
+  if (!timestamp || typeof timestamp !== 'number') {
+    return false
+  }
+
+  const elapsedTime = Date.now() - timestamp
+  return elapsedTime < OTP_EXPIRATION_TIME
+}
+
+/**
+ * Restaura el estado de verificación OTP desde localStorage
+ *
+ * Esta función intenta recuperar y validar una sesión OTP pendiente.
+ * Si la sesión es válida, restaura el email y cambia al panel OTP.
+ *
+ * @async
+ * @param {string} otpDataJson - Datos OTP en formato JSON string
+ * @returns {Promise<boolean>} true si se restauró exitosamente, false en caso contrario
+ */
+const restoreOtpSession = async (otpDataJson) => {
+  try {
+    // Parsear datos del localStorage
+    const otpData = JSON.parse(otpDataJson)
+    const { email, timestamp } = otpData
+
+    // Validar estructura de datos
+    if (!email || !timestamp) {
+      console.warn('Datos OTP incompletos en localStorage')
+      clearOtpPendingState()
+      return false
+    }
+
+    // Validar que la sesión no haya expirado
+    if (!isOtpSessionValid(timestamp)) {
+      console.log('Sesión OTP expirada, limpiando localStorage')
+      clearOtpPendingState()
+      return false
+    }
+
+    // Restaurar el email en el formulario
+    form.value.email = email
+
+    // Cambiar al panel de verificación OTP
+    currentTab.value = 'otp'
+
+    // Verificar el estado de la sesión en el servidor
+    await checkOtpStatus()
+
+    console.log('Sesión OTP restaurada exitosamente')
+    return true
+  } catch (error) {
+    console.error('Error al parsear o restaurar estado OTP:', error)
+    clearOtpPendingState()
+    return false
+  }
+}
+
+/**
+ * Hook de ciclo de vida: Montaje del componente
+ *
+ * Al montar el componente, verifica si existe una verificación OTP pendiente
+ * en localStorage. Si existe y es válida, restaura automáticamente el estado
+ * de verificación. Esto permite que el usuario pueda recargar la página sin
+ * perder su progreso en el proceso de verificación.
+ *
+ * Flujo:
+ * 1. Buscar estado OTP en localStorage
+ * 2. Si existe: validar y restaurar sesión
+ * 3. Si no existe: verificar estado normal en servidor
+ *
+ * @async
+ */
 onMounted(async () => {
-  checkOtpStatus()
-  // DEBUG: Show company setup modal immediately
-  await loadBusinessTypes()
-  showCompanySetup.value = true
+  // Primero intentar restaurar la sesión de registro completa
+  const sessionRestored = restoreRegisterSession()
+
+  if (sessionRestored) {
+    console.log('Sesión de registro restaurada, verificando estado OTP...')
+  }
+
+  // Luego verificar si hay OTP pendiente
+  const otpPendingData = localStorage.getItem(OTP_STORAGE_KEY)
+
+  if (otpPendingData) {
+    await restoreOtpSession(otpPendingData)
+  } else if (!sessionRestored) {
+    // Solo verificar estado OTP si no se restauró una sesión completa
+    await checkOtpStatus()
+  }
 })
 
 onBeforeUnmount(() => {
@@ -1325,25 +1464,21 @@ const assignDemo = async () => {
       business_type_id: demoBusinessType.value.id
     })
 
-    // Actualizar sesión completa en el store (igual que LoginPage)
     store.setSessionData(data)
 
     notify('¡Bienvenido a la demo!', 'positive', 'check_circle')
 
-    // Cerrar modal
     showDemoBusinessTypeSelection.value = false
 
-    // Redirigir según roles (igual que LoginPage)
     if (data.user?.is_root) {
       router.push({ name: 'Billing' })
     } else if (data.user?.roles?.length === 0) {
       notify('Usuario no tiene permisos', 'negative', 'warning')
     } else {
-      router.push({ name: 'Tutorial' })
+      router.push({ name: 'Billing' })
     }
   } catch (error) {
-    const message = error.response?.data?.message || 'Error al asignar empresa demo'
-    notify(message, 'negative', 'warning')
+    console.log(error)
   } finally {
     loadingDemo.value = false
   }
@@ -1354,13 +1489,6 @@ const assignDemo = async () => {
  */
 const initializeGoogleAuthMobile = async () => {
   try {
-    console.log('Initializing Google Auth for mobile...')
-    console.log('Platform info:', {
-      isNativeMobile: $q.platform.is.nativeMobile,
-      isCapacitor: $q.platform.is.capacitor,
-      hasCapacitor: !!window.Capacitor,
-      platform: $q.platform
-    })
 
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
 
@@ -1427,7 +1555,6 @@ const registerWithGoogleMobile = async () => {
       if (data.needs_company_setup) {
         isGoogleRegister.value = true
         companyForm.value.company_email = userInfo.email
-        await loadBusinessTypes()
         showCompanyOptions.value = true
       } else {
         router.push('/')
@@ -1516,9 +1643,6 @@ const registerWithGoogle = async () => {
               // Pre-llenar email de empresa con el email de Google
               companyForm.value.company_email = userInfo.email
 
-              // Cargar business types
-              await loadBusinessTypes()
-
               // Mostrar modal de opciones (Demo o Registrar)
               showCompanyOptions.value = true
             } else {
@@ -1545,7 +1669,6 @@ const registerWithGoogle = async () => {
  * On mounted - Inicializar Google Auth
  */
 onMounted(async () => {
-  // Inicializar Google Auth para móvil si es Capacitor
   if ($q.platform.is.nativeMobile && window.Capacitor) {
     await initializeGoogleAuthMobile()
   }

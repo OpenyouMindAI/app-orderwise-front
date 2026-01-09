@@ -993,24 +993,9 @@ onMounted(async () => {
  */
 const initializeAddress = () => {
   if (company.value?.address) {
-    formattedAddress.value = company.value.address
-
-    // Crear objeto de dirección para AddressComponent
-    address.value = {
-      name: '',
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      latitude: company.value.latitude || null,
-      longitude: company.value.longitude || null,
-      formattedAddress: company.value.address,
-      placeId: company.value.place_id || '',
-      types: []
-    }
+    formattedAddress.value = company.value?.address?.formattedAddress
+address.value = company.value.address
   } else {
-    // Si no hay dirección, limpiar campos
     formattedAddress.value = ''
     address.value = null
   }
@@ -1021,11 +1006,9 @@ const initializeAddress = () => {
 
 // Computed
 const isFreePlan = computed(() => {
-  // Use subscription data from Pinia store
   const subscriptionPlan = store.subscriptionPlan
   const currentSubscription = store.currentSubscription
 
-  // Check if no subscription or if it's the free plan
   return !currentSubscription || !subscriptionPlan || subscriptionPlan.toLowerCase() === 'free'
 })
 

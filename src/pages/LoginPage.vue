@@ -133,15 +133,6 @@
           <span class="register-text">¿No tienes cuenta? <router-link to="/register" class="register-link">Crear cuenta</router-link></span>
         </div>
       </q-form>
-
-      <!-- Footer -->
-      <div class="footer-container">
-        <q-icon name="laptop_mac" size="18px" color="grey-6"/>
-        <span class="footer-text">Powered by</span>
-        <a href="https://site.qbitsinc.com" target="_blank">
-          <q-img :src="qBitsLogo.black" class="qbits-logo"/>
-        </a>
-      </div>
     </div>
 
     <!-- Password Reset Dialogs -->
@@ -224,7 +215,7 @@ export default {
       showNewPasswordDialog: false,
       resetData: {
         identifier: '',
-        channel: '',
+        channel: 'email',
         sessionToken: null,
         expiresAt: null,
         code: ''

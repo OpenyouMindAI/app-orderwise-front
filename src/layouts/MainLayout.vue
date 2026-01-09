@@ -1905,9 +1905,16 @@ export default {
     /**
      * Logout application
      */
-    logoutAt () {
-      this.$router.push({ name: 'Login' })
-      this.logout()
+    async logoutAt () {
+      try {
+        loading(true)
+        await this.logout()
+        this.$router.push({ name: 'Login' })
+      } catch (error) {
+        console.log(error)
+      } finally {
+        loading(false)
+      }
     },
     /**
      * Dark mode application
