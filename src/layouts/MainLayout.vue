@@ -1054,6 +1054,10 @@ export default {
     // Listen for global keyboard shortcuts
     window.addEventListener('keydown', this.handleGlobalKeyDown)
 
+    eventBus.on('open-create-company', () => {
+      this.showCreateCompanyDialog = true
+    })
+
     this.startDemoReminder()
   },
   beforeUnmount () {
@@ -1061,6 +1065,7 @@ export default {
   },
   unmounted () {
     window.removeEventListener('keydown', this.handleGlobalKeyDown)
+    eventBus.off('open-create-company')
   },
   created () {
     this.loadingPage()
