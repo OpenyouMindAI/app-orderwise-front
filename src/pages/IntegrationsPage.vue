@@ -502,6 +502,17 @@
               />
             </div>
 
+            <!-- Webhook Support -->
+            <q-toggle
+              v-model="adminForm.has_webhook"
+              label="Soporta Webhooks"
+              color="primary"
+            >
+              <q-tooltip>
+                Activa esta opción si la integración puede recibir notificaciones automáticas mediante webhooks
+              </q-tooltip>
+            </q-toggle>
+
             <!-- Active Status -->
             <q-toggle
               v-model="adminForm.is_active"
@@ -567,6 +578,7 @@ const adminForm = ref({
   color: '#000000',
   api_url: '',
   fields: [],
+  has_webhook: false,
   is_active: true,
   sort_order: 0
 })
@@ -786,7 +798,8 @@ const openAdminDialog = (integration = null) => {
       color: integration.color || '#000000',
       api_url: integration.api_url || '',
       fields: integration.fields ? JSON.parse(JSON.stringify(integration.fields)) : [],
-      is_active: integration.is_active ?? true,
+      has_webhook: integration.has_webhook || false,
+      is_active: integration.is_active,
       sort_order: integration.sort_order || 0
     }
     // Set previews for existing images
@@ -808,6 +821,7 @@ const openAdminDialog = (integration = null) => {
       color: '#000000',
       api_url: '',
       fields: [],
+      has_webhook: false,
       is_active: true,
       sort_order: 0
     }
@@ -828,6 +842,7 @@ const closeAdminDialog = () => {
     color: '#000000',
     api_url: '',
     fields: [],
+    has_webhook: false,
     is_active: true,
     sort_order: 0
   }
@@ -864,6 +879,7 @@ const saveAdminIntegration = async () => {
     formData.append('color', adminForm.value.color)
     formData.append('api_url', adminForm.value.api_url || '')
     formData.append('fields', JSON.stringify(adminForm.value.fields))
+    formData.append('has_webhook', adminForm.value.has_webhook ? '1' : '0')
     formData.append('is_active', adminForm.value.is_active ? '1' : '0')
     formData.append('sort_order', adminForm.value.sort_order || '0')
 

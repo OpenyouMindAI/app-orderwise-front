@@ -126,8 +126,87 @@
         </div>
       </q-card-section>
 
+      <!-- Already Connected Section -->
+      <q-card-section v-else-if="isAlreadyConnected && !downloadData && !connectionError" class="connected-section">
+        <div class="connected-content">
+          <div class="connected-icon-wrapper">
+            <q-icon
+              name="check_circle"
+              class="connected-icon"
+              color="positive"
+            />
+          </div>
+
+          <div class="text-h6 text-grey-8 q-mb-sm">
+            ¡Integración Activa!
+          </div>
+
+          <p class="text-body2 text-grey-6 q-mb-lg">
+            Esta integración ya está conectada y funcionando correctamente.
+          </p>
+
+          <!-- Webhook Section -->
+          <div v-if="webhookUrl" class="webhook-section">
+            <div class="webhook-header">
+              <q-icon name="webhook" size="20px" color="primary" class="q-mr-sm" />
+              <span class="text-subtitle2 text-grey-8">URL de Webhook</span>
+            </div>
+
+            <q-banner class="webhook-banner q-mt-md" rounded>
+              <template v-slot:avatar>
+                <q-icon name="info" color="primary" />
+              </template>
+              <div class="text-body2 text-grey-8">
+                Copia esta URL y pégala en la configuración de tu aplicación en <strong>{{ integration?.name }}</strong>.
+                Esto permitirá que recibamos notificaciones automáticas de eventos importantes.
+              </div>
+            </q-banner>
+
+            <div class="webhook-url-container q-mt-md">
+              <q-input
+                :model-value="webhookUrl"
+                readonly
+                filled
+                dense
+                class="webhook-input"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="link" color="grey-6" />
+                </template>
+                <template v-slot:append>
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="content_copy"
+                    color="primary"
+                    @click="copyWebhookUrl"
+                  >
+                    <q-tooltip>Copiar URL</q-tooltip>
+                  </q-btn>
+                </template>
+              </q-input>
+            </div>
+
+            <div class="text-caption text-grey-6 q-mt-sm text-center">
+              <q-icon name="lock" size="14px" class="q-mr-xs" />
+              Esta URL es única para tu empresa y está protegida
+            </div>
+          </div>
+
+          <!-- Connection Info -->
+          <div class="connection-info q-mt-lg">
+            <q-separator class="q-mb-md" />
+            <div class="text-caption text-grey-6 text-center">
+              <q-icon name="schedule" size="14px" class="q-mr-xs" />
+              Conectado desde {{ formatDate(companyIntegration?.created_at) }}
+            </div>
+          </div>
+        </div>
+      </q-card-section>
+
       <!-- Formulario de credenciales -->
-      <q-card-section v-else-if="!downloadData && !connectionError" class="form-section">
+      <q-card-section v-else-if="!downloadData && !connectionError && !isAlreadyConnected" class="form-section">
         <div class="text-h6 text-center q-mb-md text-grey-8">
           Configurar {{ integration?.name || 'Integración' }}
         </div>
@@ -216,7 +295,7 @@
       </q-card-section>
 
       <!-- Acciones -->
-      <q-card-actions v-if="!downloadData && !loadingIntegration" align="right" class="q-pa-md">
+      <q-card-actions v-if="!downloadData && !loadingIntegration && !isAlreadyConnected" align="right" class="q-pa-md">
         <q-btn
           flat
           label="Cancelar"
@@ -233,7 +312,7 @@
         />
       </q-card-actions>
 
-      <q-card-actions v-else align="center" class="q-pa-md">
+      <q-card-actions v-else-if="downloadData || isAlreadyConnected" align="center" class="q-pa-md">
         <q-btn
           unelevated
           label="Cerrar"
@@ -249,6 +328,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { api } from 'boot/axios'
+import { Notify } from 'quasar'
 
 const props = defineProps({
   modelValue: {
@@ -277,6 +357,9 @@ const downloadData = ref(props.download)
 const connectionError = ref(null)
 const errorType = ref(null)
 const connectionHistory = ref([])
+const isAlreadyConnected = ref(false)
+const companyIntegration = ref(null)
+const webhookUrl = ref(null)
 
 const isFormValid = computed(() => {
   if (!integration.value?.fields) return false
@@ -308,20 +391,43 @@ const loadIntegration = async () => {
     integration.value = data.find(i => i.slug === props.integrationSlug)
 
     if (integration.value) {
-      // Initialize form with empty values
-      integration.value.fields?.forEach(field => {
-        configForm.value[field.name] = ''
-      })
-
-      // Load connection history if integration is configured
+      // Check if already connected
       if (integration.value.is_configured) {
+        await loadCompanyIntegration()
         await loadConnectionHistory()
+      } else {
+        // Initialize form with empty values
+        integration.value.fields?.forEach(field => {
+          configForm.value[field.name] = ''
+        })
       }
     }
   } catch (error) {
     console.error('Error loading integration:', error)
   } finally {
     loadingIntegration.value = false
+  }
+}
+
+const loadCompanyIntegration = async () => {
+  try {
+    const { data: companyIntegrations } = await api.get('company-integrations')
+    const found = companyIntegrations.find(
+      ci => ci.integration.slug === props.integrationSlug
+    )
+
+    if (found) {
+      companyIntegration.value = found
+      console.log(integration.value)
+      isAlreadyConnected.value = true
+      // Generate webhook URL if integration supports it
+      if (integration.value.has_webhook) {
+        const apiBaseUrl = process.env.VUE_APP_API_URL || 'http://localhost:8000'
+        webhookUrl.value = `${apiBaseUrl}/api/webhook/${props.integrationSlug}`
+      }
+    }
+  } catch (error) {
+    console.error('Error loading company integration:', error)
   }
 }
 
@@ -369,6 +475,19 @@ const resetError = () => {
   errorType.value = null
 }
 
+const copyWebhookUrl = () => {
+  if (webhookUrl.value) {
+    navigator.clipboard.writeText(webhookUrl.value)
+    Notify.create({
+      message: 'URL copiada al portapapeles',
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 2000
+    })
+  }
+}
+
 watch(() => props.modelValue, (newVal) => {
   showDialog.value = newVal
   // Always reload integration when dialog opens
@@ -407,18 +526,27 @@ const handleConnect = async () => {
       }
     }
   } catch (error) {
-    console.error('Connection error:', error)
+    console.log('Connection error:', error)
 
-    if (error.response?.status === 400 && error.response?.data) {
-      connectionError.value = error.response.data.error || 'Error al conectar con la integración'
-      errorType.value = error.response.data.error_type || 'connection_error'
+    if (error) {
+      if (error.status === 400 && error.data) {
+        connectionError.value = error.data.error || 'Error al conectar con la integración'
+        errorType.value = error.data.error_type || 'connection_error'
+      } else {
+        connectionError.value = error.data?.message || 'Error inesperado al conectar'
+        errorType.value = 'connection_error'
+      }
     } else {
-      connectionError.value = error.response?.data?.message || 'Error inesperado al conectar'
+      connectionError.value = error?.message || 'Error de conexión desconocido'
       errorType.value = 'connection_error'
     }
 
     // Reload connection history after failed attempt
-    await loadConnectionHistory()
+    try {
+      await loadConnectionHistory()
+    } catch (historyError) {
+      console.error('Error loading connection history:', historyError)
+    }
   } finally {
     loading.value = false
   }
@@ -432,6 +560,9 @@ const onHide = () => {
   errorType.value = null
   connectionHistory.value = []
   integration.value = null
+  isAlreadyConnected.value = false
+  companyIntegration.value = null
+  webhookUrl.value = null
 }
 </script>
 
@@ -519,6 +650,80 @@ const onHide = () => {
 .error-icon {
   font-size: 120px;
   filter: drop-shadow(0 4px 12px rgba(244, 67, 54, 0.3));
+}
+
+.connected-section {
+  padding: 48px 24px;
+}
+
+.connected-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.connected-icon-wrapper {
+  margin-bottom: 24px;
+  animation: scaleIn 0.5s ease-out;
+}
+
+.connected-icon {
+  font-size: 120px;
+  filter: drop-shadow(0 4px 12px rgba(33, 186, 69, 0.3));
+}
+
+.webhook-section {
+  width: 100%;
+  max-width: 500px;
+  margin-top: 24px;
+}
+
+.webhook-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.webhook-banner {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f5f5f5 100%);
+  border: 1px solid #90caf9;
+}
+
+body.body--dark .webhook-banner {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
+.webhook-url-container {
+  width: 100%;
+}
+
+.webhook-input :deep(.q-field__control) {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+body.body--dark .webhook-input :deep(.q-field__control) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.webhook-input :deep(.q-field__native) {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #1976d2;
+}
+
+body.body--dark .webhook-input :deep(.q-field__native) {
+  color: #64b5f6;
+}
+
+.connection-info {
+  width: 100%;
+  max-width: 500px;
 }
 
 .history-section {

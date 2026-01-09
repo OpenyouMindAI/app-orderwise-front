@@ -103,7 +103,7 @@ export default boot(async ({ router, store }) => {
     } else if (error.response?.status === 422) {
       notifyValidationErrors(error, 'Error de validación')
     }
-    return Promise.reject(error?.response?.message)
+    return Promise.reject(error?.response)
   })
 
   router.beforeEach(async (to, from, next) => {
