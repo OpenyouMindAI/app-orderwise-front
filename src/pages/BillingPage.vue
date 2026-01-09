@@ -96,7 +96,24 @@
                   hide-bottom-space
                   @filter="filterInvoiceTypes"
                   label="Tipo de factura"
-                />
+                  @update:model-value="validateInvoiceType"
+                >
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps" :disable="false" :class="{ 'bg-grey-3': (subscriptionPlan || 'Free') === 'Free' && scope.opt.acronym_serie === 'B' }">
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.name }}</q-item-label>
+                      </q-item-section>
+                      <q-item-section side v-if="(subscriptionPlan || 'Free') === 'Free' && scope.opt.acronym_serie === 'B'">
+                        <premium-badge
+                          :show="true"
+                          :size="15"
+                          padding="4px"
+                          tooltip-text="Disponible en plan Premium"
+                        />
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
               </div>
 
               <div v-if="invoiceType.bill" class="billing-select-item">
@@ -1462,7 +1479,21 @@
             </div>
 
             <!-- Fila 1: Tipo de documento y Número -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12" style="position: relative;">
+              <div
+                v-if="(subscriptionPlan || 'Free') === 'Free'"
+                class="absolute-full"
+                style="z-index: 10; cursor: pointer;"
+                @click.stop="handleRestrictedClick"
+              ></div>
+              <premium-badge
+                :show="(subscriptionPlan || 'Free') === 'Free'"
+                :size="15"
+                top="0px"
+                right="4px"
+                padding="4px"
+                tooltip-text="PREMIUM"
+              />
               <q-select
                 filled
                 use-input
@@ -1473,6 +1504,7 @@
                 v-model="clientAdded.document_type"
                 :options="documentTypes"
                 @filter="getDocumentTypes"
+                :disable="(subscriptionPlan || 'Free') === 'Free'"
               />
             </div>
             <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
@@ -1501,7 +1533,21 @@
             </div>
 
             <!-- Condición de IVA -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12" style="position: relative;">
+              <div
+                v-if="(subscriptionPlan || 'Free') === 'Free'"
+                class="absolute-full"
+                style="z-index: 10; cursor: pointer;"
+                @click.stop="handleRestrictedClick"
+              ></div>
+              <premium-badge
+                :show="(subscriptionPlan || 'Free') === 'Free'"
+                :size="15"
+                top="0px"
+                right="4px"
+                padding="4px"
+                tooltip-text="PREMIUM"
+              />
               <q-select
                 filled
                 use-input
@@ -1512,6 +1558,7 @@
                 v-model="clientAdded.condition_iva_receptor"
                 :options="conditionIvaReceptors"
                 @filter="getConditionIvaReceptor"
+                :disable="(subscriptionPlan || 'Free') === 'Free'"
               />
             </div>
 
@@ -1618,11 +1665,18 @@
     <q-inner-loading :showing="loadingSearch">
       <q-spinner-gears size="90px" color="primary" />
     </q-inner-loading>
+
+    <subscription-plans-dialog
+      v-model="showSubscriptionDialog"
+      @subscription-updated="loadSubscriptionInfo"
+    />
   </q-page>
 </template>
 
 <script>
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import PremiumBadge from 'src/components/PremiumBadge.vue'
+import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -1657,6 +1711,8 @@ export default {
   name: 'BillingPage',
   components: {
     AddressComponent,
+    PremiumBadge,
+    SubscriptionPlansDialog,
     DrawerTable,
     PaymentModal,
     PartialPaymentModal,
@@ -1764,6 +1820,11 @@ export default {
        * @type {Boolean}
        */
       quantityDialog: false,
+      /**
+       * Subscription dialog
+       * @type {Boolean}
+       */
+      showSubscriptionDialog: false,
       /**
        * Product quantity
        * @type {Object}
@@ -2409,7 +2470,7 @@ export default {
       // Filtrar pasos basado en condiciones
       return allSteps.filter(step => !step.condition || step.condition())
     },
-    ...mapState(authentication, ['userSession', 'branchOffice']),
+    ...mapState(authentication, ['userSession', 'branchOffice', 'subscriptionPlan', 'isDemo']),
     branchOfficeCharged () {
       return this.branchOffice
     },
@@ -5240,6 +5301,38 @@ export default {
       })
       this.invoiceFiles = []
       this.deletedInvoiceFiles = []
+    },
+
+    /**
+     * Load subscription info
+     */
+    async loadSubscriptionInfo () {
+      await authentication().loadSubscriptionInfo()
+    },
+
+    /**
+     * Handle restricted feature click
+     */
+    handleRestrictedClick () {
+      if (this.isDemo) {
+        eventBus.emit('open-create-company')
+      } else {
+        this.showSubscriptionDialog = true
+      }
+    },
+
+    /**
+     * Validate selected invoice type against subscription plan
+     * @param {Object} val Selected invoice type
+     */
+    validateInvoiceType (val) {
+      if ((this.subscriptionPlan || 'Free') === 'Free' && val?.acronym_serie === 'B') {
+        this.handleRestrictedClick()
+        this.$nextTick(() => {
+          const typeT = this.invoiceTypes.find(t => t.acronym_serie === 'T')
+          this.invoiceType = typeT || null
+        })
+      }
     }
   }
 }
