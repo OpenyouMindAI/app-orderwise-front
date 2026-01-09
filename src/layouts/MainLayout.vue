@@ -192,7 +192,7 @@
           </q-btn>
 
           <!-- Herramientas -->
-          <q-btn flat dense icon="apps" round>
+          <q-btn flat dense icon="apps" round @click="loadIntegrations">
             <q-tooltip class="text-body2">
               Herramientas
             </q-tooltip>
@@ -283,40 +283,43 @@
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
-                    <div class="integration-item" @click="openDialogArca" style="position: relative;">
-                      <img
-                        src="images/circle-arca.png"
-                        alt="ARCA"
-                        class="integration-logo"
+                    <!-- Skeleton loaders while loading -->
+                    <template v-if="loadingIntegrations">
+                      <div v-for="i in 4" :key="'skeleton-' + i" class="integration-item">
+                        <q-skeleton type="circle" size="60px" />
+                      </div>
+                    </template>
+
+                    <template v-else>
+                      <div
+                        v-for="integration in availableIntegrations"
+                        :key="integration.id"
+                        class="integration-item"
+                        @click="openIntegrationDialog(integration)"
+                        style="position: relative;"
                       >
-                      {{ console.log(subscriptionPlan) }}
-                      <premium-badge
-                        :show="subscriptionPlan === 'Free'"
-                        :size="15"
-                        top="0px"
-                        right="4px"
-                        padding="4px"
-                        tooltip-text="PREMIUM"
-                      />
-                    </div>
-                    <div class="integration-item" @click="openDialogPedidosYa = true" style="position: relative;">
-                      <img
-                        src="images/circle-pedidosya.png"
-                        alt="PedidosYa"
-                        class="integration-logo"
-                      >
-                      <premium-badge
-                        :show="subscriptionPlan === 'Free'"
-                        :size="15"
-                        top="0px"
-                        right="4px"
-                        padding="4px"
-                        tooltip-text="PREMIUM"
-                      />
-                      <q-tooltip>
-                        Pedidos Ya
-                      </q-tooltip>
-                    </div>
+                        <img
+                          v-if="integration.icon_url"
+                          :src="integration.icon_url"
+                          :alt="integration.name"
+                          class="integration-logo"
+                        >
+                        <div v-else class="integration-logo-placeholder">
+                          <q-icon name="extension" size="32px" color="primary" />
+                        </div>
+                        <premium-badge
+                          :show="subscriptionPlan === 'Free'"
+                          :size="15"
+                          top="0px"
+                          right="4px"
+                          padding="4px"
+                          tooltip-text="PREMIUM"
+                        />
+                        <q-tooltip>
+                          {{ integration.name }}
+                        </q-tooltip>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </q-card>
@@ -583,18 +586,21 @@
         </div>
       </div>
     </q-drawer>
-    <!-- Arca Integration Dialog -->
+
+    <!-- Dynamic Integration Dialog -->
+    <integration-dynamic
+      v-model="showIntegrationDialog"
+      :integration-slug="selectedIntegrationSlug"
+      :download="download"
+      @connect="handleIntegrationConnect"
+      @generate="handleIntegrationGenerate"
+    />
+
+    <!-- Arca Dialog (special case) -->
     <arca-dialog
       v-model="arcaDialog"
       :download="download"
       @generate="generateCertificate"
-    />
-
-    <!-- PedidosYa Integration Dialog -->
-    <pedidos-ya-dialog
-      v-model="openDialogPedidosYa"
-      :download="download"
-      @connect="handlePedidosYaConnect"
     />
 
     <q-page-container>
@@ -678,7 +684,7 @@ import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
 import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import PremiumBadge from 'src/components/PremiumBadge.vue'
-import PedidosYaDialog from 'src/components/Integrations/PedidosYaDialog.vue'
+import IntegrationDynamic from 'src/components/Integrations/IntegrationDynamic.vue'
 import ArcaDialog from 'src/components/Integrations/ArcaDialog.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
@@ -707,7 +713,7 @@ export default {
     OtpVerificationDialog,
     CompanySetupModal,
     PremiumBadge,
-    PedidosYaDialog,
+    IntegrationDynamic,
     ArcaDialog
   },
   data () {
@@ -718,9 +724,12 @@ export default {
       role: null,
       notify,
       cuit: '',
-      openDialogPedidosYa: false,
       password: '',
       download: null,
+      loadingIntegrations: false,
+      availableIntegrations: [],
+      showIntegrationDialog: false,
+      selectedIntegrationSlug: null,
       numberOfNotifications: [],
       notifications: [],
       labelDrown: null,
@@ -1758,28 +1767,80 @@ export default {
       }
     },
     /**
-     * Handle PedidosYa connection
+     * Load available integrations
      */
-    async handlePedidosYaConnect (credentials) {
+    async loadIntegrations () {
+      // Only load if not already loaded
+      if (this.availableIntegrations.length > 0) {
+        return
+      }
+
+      this.loadingIntegrations = true
+      try {
+        const { data } = await api.get('company-integrations/available')
+        this.availableIntegrations = data
+      } catch (error) {
+        console.error('Error loading integrations:', error)
+        notify('Error al cargar integraciones', 'negative', 'warning')
+      } finally {
+        this.loadingIntegrations = false
+      }
+    },
+    /**
+     * Open integration dialog
+     */
+    openIntegrationDialog (integration) {
+      this.selectedIntegrationSlug = integration.slug
+      this.showIntegrationDialog = true
+    },
+    /**
+     * Handle integration connection (generic)
+     */
+    async handleIntegrationConnect (credentials) {
       try {
         loading(true, {
-          message: 'Conectando con PedidosYa...',
+          message: 'Guardando configuración...',
           backgroundColor: 'primary',
           customClass: 'text-subtitle1 text-center'
         })
 
-        const { data } = await api.post('integrations/pedidosya/connect', {
-          email: credentials.email,
-          password: credentials.password,
-          company_id: this.userSession?.company_session_id
+        // Find the integration to get its ID
+        const integration = this.availableIntegrations.find(
+          i => i.slug === this.selectedIntegrationSlug
+        )
+
+        if (!integration) {
+          throw new Error('Integración no encontrada')
+        }
+
+        // Save or update company integration
+        await api.post('company-integrations', {
+          integration_id: integration.id,
+          credentials: credentials
         })
 
-        this.download = data
-        notify('Conexión exitosa con PedidosYa', 'positive', 'check_circle')
+        notify('Configuración guardada exitosamente', 'positive', 'check_circle')
+        this.showIntegrationDialog = false
       } catch (error) {
-        notify(error?.response?.data?.message || 'Error al conectar con PedidosYa', 'negative', 'warning')
+        notify(
+          error?.response?.data?.message || 'Error al guardar configuración',
+          'negative',
+          'warning'
+        )
       } finally {
         loading(false)
+      }
+    },
+    /**
+     * Handle integration generate (for special cases like ARCA)
+     */
+    async handleIntegrationGenerate (credentials) {
+      // Redirect to specific handler based on integration
+      if (this.selectedIntegrationSlug === 'arca') {
+        await this.generateCertificate(credentials)
+      } else {
+        // Default behavior: save credentials
+        await this.handleIntegrationConnect(credentials)
       }
     },
     /**
@@ -3293,6 +3354,16 @@ body.body--dark .integration-item {
   width: 52px;
   height: 52px;
   object-fit: contain;
+}
+
+.integration-logo-placeholder {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--q-primary-rgb), 0.1);
+  border-radius: 50%;
 }
 
 .integration-label {

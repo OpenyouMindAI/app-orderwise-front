@@ -384,6 +384,12 @@ const routes = [
         component: () => import('src/pages/AiChatPage.vue')
       },
       {
+        path: 'integrations',
+        name: 'Integrations',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/IntegrationsPage.vue')
+      },
+      {
         path: 'welcome',
         name: 'Welcome',
         meta: { requiresAuth: true },

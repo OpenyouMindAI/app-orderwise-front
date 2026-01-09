@@ -2,72 +2,65 @@
   <q-dialog v-model="showDialog" @hide="onHide">
     <q-card class="arca-dialog">
       <!-- Header con logo -->
-      <q-card-section class="arca-header">
+      <q-card-section class="arca-header" :style="{ background: integration?.color || 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%)' }">
         <div class="header-content">
           <q-img
-            src="images/arca.svg"
+            v-if="integration?.logo_url"
+            :src="integration.logo_url"
             class="arca-logo"
-            alt="Arca"
+            :alt="integration.name"
           />
+          <div v-else class="logo-placeholder">
+            <q-icon name="extension" size="48px" color="white" />
+          </div>
         </div>
       </q-card-section>
 
       <!-- Formulario de credenciales -->
       <q-card-section v-if="!downloadData" class="form-section">
         <div class="text-h6 text-center q-mb-md text-grey-8">
-          Conecta tu cuenta de Arca
+          Configurar {{ integration?.name || 'Integración' }}
         </div>
         <p class="text-body2 text-center text-grey-6 q-mb-lg">
-          Ingresa tus credenciales de AFIP para generar tu certificado de facturación electrónica
+          {{ integration?.description || 'Ingresa tus credenciales para conectar esta integración' }}
         </p>
 
-        <div class="q-gutter-sm">
-          <q-input
-            v-model="credentials.cuit"
-            filled
-            label="CUIT"
-            autofocus
-            mask="##-########-#"
-            :rules="[
-              val => !!val || 'El CUIT es requerido',
-              val => val.replace(/-/g, '').length === 11 || 'CUIT inválido'
-            ]"
-            lazy-rules
+        <q-form @submit="handleGenerate" class="q-gutter-md">
+          <div
+            v-for="field in integration?.fields"
+            :key="field.name"
           >
-            <template v-slot:prepend>
-              <q-icon name="badge" color="grey-6" />
-            </template>
-          </q-input>
-
-          <q-input
-            v-model="credentials.password"
-            filled
-            label="Contraseña de ARCA"
-            :type="showPassword ? 'text' : 'password'"
-            :rules="[val => !!val || 'La contraseña es requerida']"
-            lazy-rules
-          >
-            <template v-slot:prepend>
-              <q-icon name="lock" color="grey-6" />
-            </template>
-            <template v-slot:append>
-              <q-icon
-                :name="showPassword ? 'visibility_off' : 'visibility'"
-                class="cursor-pointer"
-                color="grey-6"
-                @click="showPassword = !showPassword"
-              />
-            </template>
-          </q-input>
-        </div>
-
-        <div class="info-banner q-mt-lg">
-          <q-icon name="info" size="20px" color="primary" class="q-mr-sm" />
-          <div class="text-caption text-grey-7">
-            <strong>Importante:</strong> Este proceso puede tardar unos minutos.
-            Se generará un certificado digital válido para facturación electrónica.
+            <q-input
+              v-model="configForm[field.name]"
+              :label="field.label"
+              :type="field.type === 'password' ? (showPasswords[field.name] ? 'text' : 'password') : field.type"
+              :placeholder="field.placeholder"
+              :rules="field.required ? [val => !!val || `${field.label} es requerido`] : []"
+              filled
+              lazy-rules
+            >
+              <template v-slot:prepend>
+                <q-icon
+                  :name="getFieldIcon(field.type)"
+                  color="grey-6"
+                />
+              </template>
+              <template v-if="field.type === 'password'" v-slot:append>
+                <q-icon
+                  :name="showPasswords[field.name] ? 'visibility_off' : 'visibility'"
+                  class="cursor-pointer"
+                  color="grey-6"
+                  @click="togglePasswordVisibility(field.name)"
+                />
+              </template>
+            </q-input>
           </div>
-        </div>
+
+          <div class="text-caption text-grey-6 q-mt-md text-center">
+            <q-icon name="lock" size="16px" class="q-mr-xs" />
+            Tus credenciales se almacenan de forma segura y encriptada
+          </div>
+        </q-form>
       </q-card-section>
 
       <!-- Pantalla de éxito -->
@@ -128,7 +121,7 @@
         />
         <q-btn
           unelevated
-          label="Generar certificado"
+          :label="integration?.slug === 'arca' ? 'Generar certificado' : 'Guardar'"
           color="primary"
           @click="handleGenerate"
           :loading="loading"
@@ -152,6 +145,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { api } from 'boot/axios'
 
 const props = defineProps({
   modelValue: {
@@ -161,27 +155,67 @@ const props = defineProps({
   download: {
     type: Object,
     default: null
+  },
+  integrationSlug: {
+    type: String,
+    default: 'arca'
   }
 })
 
 const emit = defineEmits(['update:modelValue', 'generate'])
 
 const showDialog = ref(props.modelValue)
-const credentials = ref({
-  cuit: '',
-  password: ''
-})
-const showPassword = ref(false)
+const integration = ref(null)
+const configForm = ref({})
+const showPasswords = ref({})
 const loading = ref(false)
 const downloadData = ref(props.download)
 
 const isFormValid = computed(() => {
-  const cuitClean = credentials.value.cuit.replace(/-/g, '')
-  return cuitClean.length === 11 && credentials.value.password.length > 0
+  if (!integration.value?.fields) return false
+
+  return integration.value.fields
+    .filter(f => f.required)
+    .every(f => configForm.value[f.name])
 })
+
+const getFieldIcon = (type) => {
+  const icons = {
+    text: 'text_fields',
+    password: 'lock',
+    email: 'email',
+    url: 'link',
+    number: 'numbers'
+  }
+  return icons[type] || 'text_fields'
+}
+
+const togglePasswordVisibility = (fieldName) => {
+  showPasswords.value[fieldName] = !showPasswords.value[fieldName]
+}
+
+const loadIntegration = async () => {
+  try {
+    const { data } = await api.get('company-integrations/available')
+    integration.value = data.find(i => i.slug === props.integrationSlug)
+
+    if (integration.value) {
+      // Initialize form with empty values
+      integration.value.fields?.forEach(field => {
+        configForm.value[field.name] = ''
+      })
+    }
+  } catch (error) {
+    console.error('Error loading integration:', error)
+  }
+}
 
 watch(() => props.modelValue, (newVal) => {
   showDialog.value = newVal
+  // Load integration when dialog opens
+  if (newVal && !integration.value) {
+    loadIntegration()
+  }
 })
 
 watch(() => props.download, (newVal) => {
@@ -193,18 +227,12 @@ watch(showDialog, (newVal) => {
 })
 
 const handleGenerate = () => {
-  emit('generate', {
-    cuit: credentials.value.cuit,
-    password: credentials.value.password
-  })
+  emit('generate', configForm.value)
 }
 
 const onHide = () => {
-  credentials.value = {
-    cuit: '',
-    password: ''
-  }
-  showPassword.value = false
+  configForm.value = {}
+  showPasswords.value = {}
   downloadData.value = null
 }
 </script>
@@ -258,6 +286,12 @@ const onHide = () => {
   width: 400px;
   max-width: 70vw;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.logo-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .form-section {
