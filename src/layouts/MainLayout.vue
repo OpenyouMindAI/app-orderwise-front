@@ -299,6 +299,24 @@
                         tooltip-text="PREMIUM"
                       />
                     </div>
+                    <div class="integration-item" @click="openDialogPedidosYa = true" style="position: relative;">
+                      <img
+                        src="images/circle-pedidosya.png"
+                        alt="PedidosYa"
+                        class="integration-logo"
+                      >
+                      <premium-badge
+                        :show="subscriptionPlan === 'Free'"
+                        :size="15"
+                        top="0px"
+                        right="4px"
+                        padding="4px"
+                        tooltip-text="PREMIUM"
+                      />
+                      <q-tooltip>
+                        Pedidos Ya
+                      </q-tooltip>
+                    </div>
                   </div>
                 </div>
               </q-card>
@@ -565,53 +583,19 @@
         </div>
       </div>
     </q-drawer>
-    <q-dialog v-model="arcaDialog">
-      <q-card style="width: 500px; max-width: 80vw;">
-        <q-card-section class="modern-dialog-header flex justify-center items-center">
-          <q-img src="images/arca.svg" style="width: 400px; max-width: 60vw;" alt="Arca" />
-        </q-card-section>
-        <q-card-section class="text-center q-gutter-y-md" v-if="!download">
-          <div class="text-h6">Iniciar sesión con Arca</div>
-          <q-input autofocus filled v-model="cuit" label="Usuario (Cuit)"  />
-          <q-input filled v-model="password" label="Contraseña" type="password" />
-        </q-card-section>
+    <!-- Arca Integration Dialog -->
+    <arca-dialog
+      v-model="arcaDialog"
+      :download="download"
+      @generate="generateCertificate"
+    />
 
-        <q-card-section v-else>
-          <div class="column full-width q-gutter-y-lg justify-center items-center text-center">
-            <q-icon
-              name="check_circle"
-              size="100px"
-              color="positive"
-            />
-            <span class="text-h6">
-              El certificado fue creado y
-              autorizado exitosamente
-            </span>
-            <div class="text-subtitle1 text-center q-gutter-sm">
-              <q-btn
-                :href="download?.certificate_url"
-                target="_blank"
-                label="Descargar certificado"
-                outline
-                color="blue-10"
-                />
-                <q-btn
-                  :href="download?.key_url"
-                  target="_blank"
-                  label="Descargar key"
-                  outline
-                  color="cyan-10"
-                />
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right" class="text-primary" v-if="!download">
-          <q-btn flat label="Cerrar" v-close-popup />
-          <q-btn flat label="Aceptar" @click="generateCertificate" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <!-- PedidosYa Integration Dialog -->
+    <pedidos-ya-dialog
+      v-model="openDialogPedidosYa"
+      :download="download"
+      @connect="handlePedidosYaConnect"
+    />
 
     <q-page-container>
       <router-view />
@@ -694,6 +678,8 @@ import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
 import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import PremiumBadge from 'src/components/PremiumBadge.vue'
+import PedidosYaDialog from 'src/components/Integrations/PedidosYaDialog.vue'
+import ArcaDialog from 'src/components/Integrations/ArcaDialog.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -720,7 +706,9 @@ export default {
     RegisterDialog,
     OtpVerificationDialog,
     CompanySetupModal,
-    PremiumBadge
+    PremiumBadge,
+    PedidosYaDialog,
+    ArcaDialog
   },
   data () {
     return {
@@ -730,6 +718,7 @@ export default {
       role: null,
       notify,
       cuit: '',
+      openDialogPedidosYa: false,
       password: '',
       download: null,
       numberOfNotifications: [],
@@ -1726,7 +1715,7 @@ export default {
     /**
      * Generate certificate
      */
-    async generateCertificate () {
+    async generateCertificate (credentials) {
       try {
         loading(true,
           {
@@ -1736,8 +1725,8 @@ export default {
           }
         )
         const { data } = await apiArca.post('metadata/generate-cert', {
-          cuit: this.cuit,
-          password: this.password,
+          cuit: credentials.cuit,
+          password: credentials.password,
           company: this.userSession?.company_session,
           user: {
             email: this.userSession?.email,
@@ -1753,8 +1742,34 @@ export default {
           ...res.data
         })
         this.download = data
+        notify('Certificado generado exitosamente', 'positive', 'check_circle')
       } catch (error) {
         notify(error?.response.data?.message || error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
+      }
+    },
+    /**
+     * Handle PedidosYa connection
+     */
+    async handlePedidosYaConnect (credentials) {
+      try {
+        loading(true, {
+          message: 'Conectando con PedidosYa...',
+          backgroundColor: 'primary',
+          customClass: 'text-subtitle1 text-center'
+        })
+
+        const { data } = await api.post('integrations/pedidosya/connect', {
+          email: credentials.email,
+          password: credentials.password,
+          company_id: this.userSession?.company_session_id
+        })
+
+        this.download = data
+        notify('Conexión exitosa con PedidosYa', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error?.response?.data?.message || 'Error al conectar con PedidosYa', 'negative', 'warning')
       } finally {
         loading(false)
       }
