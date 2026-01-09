@@ -371,8 +371,8 @@ const resetError = () => {
 
 watch(() => props.modelValue, (newVal) => {
   showDialog.value = newVal
-  // Load integration when dialog opens
-  if (newVal && !integration.value) {
+  // Always reload integration when dialog opens
+  if (newVal) {
     loadIntegration()
   }
 })
@@ -430,6 +430,8 @@ const onHide = () => {
   downloadData.value = null
   connectionError.value = null
   errorType.value = null
+  connectionHistory.value = []
+  integration.value = null
 }
 </script>
 

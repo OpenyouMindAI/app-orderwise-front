@@ -590,6 +590,7 @@
     <!-- Dynamic Integration Dialog -->
     <integration-dynamic
       v-model="showIntegrationDialog"
+      :key="selectedIntegrationSlug"
       :integration-slug="selectedIntegrationSlug"
       :download="download"
       @connect="handleIntegrationConnect"
@@ -1790,8 +1791,11 @@ export default {
      * Open integration dialog
      */
     openIntegrationDialog (integration) {
+      console.log(integration)
       this.selectedIntegrationSlug = integration.slug
-      this.showIntegrationDialog = true
+      setTimeout(() => {
+        this.showIntegrationDialog = true
+      }, 100)
     },
     /**
      * Handle integration connection (generic)
