@@ -62,7 +62,6 @@ const modeleExcept = ['Profile', 'ChangeCompany', 'VerifySession']
 let isHandling401 = false
 
 export default boot(async ({ router, store }) => {
-
   const excludedUrls = [
     'session/company',
     'register',
