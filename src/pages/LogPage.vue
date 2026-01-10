@@ -56,6 +56,8 @@
       v-model:pagination="pagination"
       @request="onRequest"
       :dense="compact"
+      :grid="$q.screen.lt.md"
+      :grid-header="$q.screen.lt.md"
     >
       <template #top-right>
         <div class="row items-center q-gutter-sm">
@@ -116,6 +118,17 @@
         </q-td>
       </template>
 
+      <!-- Columna de empresa -->
+      <template #body-cell-company_name="props">
+        <q-td :props="props">
+          <q-chip v-if="props.row.user?.company_session" dense color="primary" text-color="white">
+            <q-icon name="business" size="xs" class="q-mr-xs" />
+            {{ props.row.user.company_session.name }}
+          </q-chip>
+          <span v-else class="text-grey-6">-</span>
+        </q-td>
+      </template>
+
       <!-- Columna de mensaje de error -->
       <template #body-cell-error_message="props">
         <q-td :props="props">
@@ -141,6 +154,52 @@
         <div class="full-width row flex-center q-pa-lg text-grey">
           <q-icon name="inbox" size="lg" class="q-mr-sm" />
           Sin resultados para los filtros aplicados
+        </div>
+      </template>
+
+      <!-- Grid mode para móvil -->
+      <template #item="props">
+        <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+          <q-card flat bordered>
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center q-mb-xs">
+                <q-badge :color="statusColor(props.row.status_code)" class="q-mr-xs">
+                  {{ props.row.status_code }}
+                </q-badge>
+                <q-chip dense :color="methodColor(props.row.method)" text-color="white" class="q-mr-xs">
+                  {{ props.row.method }}
+                </q-chip>
+                <q-space />
+                <span class="text-caption text-grey-7">#{{ props.row.id }}</span>
+              </div>
+              
+              <div class="text-body2 q-mb-xs">
+                <strong>Endpoint:</strong> {{ props.row.endpoint }}
+              </div>
+              
+              <div v-if="props.row.user" class="text-caption q-mb-xs">
+                <q-icon name="person" size="xs" />
+                {{ props.row.user.name }}
+                <span v-if="props.row.user.company_session" class="q-ml-xs">
+                  <q-icon name="business" size="xs" />
+                  {{ props.row.user.company_session.name }}
+                </span>
+              </div>
+              
+              <div v-if="props.row.error_message" class="text-caption text-negative q-mb-xs">
+                <q-icon name="error" size="xs" />
+                {{ props.row.error_message.substring(0, 50) }}...
+              </div>
+              
+              <div class="row items-center justify-between q-mt-sm">
+                <span class="text-caption text-grey-6">{{ formatDate(props.row.created_at) }}</span>
+                <div>
+                  <q-btn flat dense round size="sm" icon="visibility" @click="openDetails(props.row)" />
+                  <q-btn flat dense round size="sm" icon="content_copy" @click="copyCurl(props.row)" />
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
         </div>
       </template>
     </q-table>
@@ -197,7 +256,13 @@
                   </a>
                 </div>
                 <div class="info-row"><b>Endpoint:</b> <code>{{ selected?.endpoint }}</code></div>
-                <div class="info-row"><b>IP:</b> {{ selected?.ip_address }} | <b>Usuario:</b> {{ selected?.user_id ?? 'guest' }}</div>
+                <div class="info-row"><b>IP:</b> {{ selected?.ip_address }} | <b>Usuario:</b> {{ selected?.user?.name ?? 'guest' }}</div>
+                <div class="info-row" v-if="selected?.user?.company_session"><b>Empresa:</b> 
+                  <q-chip dense color="primary" text-color="white">
+                    <q-icon name="business" size="xs" class="q-mr-xs" />
+                    {{ selected.user.company_session.name }}
+                  </q-chip>
+                </div>
                 <div class="info-row"><b>User Agent:</b> <span class="text-grey-7">{{ selected?.user_agent }}</span></div>
                 <div class="info-row"><b>Origen:</b> {{ selected?.origin }}</div>
                 <div class="info-row"><b>Tiempo de respuesta:</b> <q-badge color="info">{{ selected?.response_time }}s</q-badge></div>
@@ -297,7 +362,7 @@ const dateRangeDialog = ref(false)
 const dateRange = ref({ from: null, to: null })
 
 // <CHANGE> Agregado control de columnas visibles
-const visibleColumnNames = ref(['id', 'created_at', 'method', 'status_code', 'endpoint', 'error_message', 'user_id', 'ip_address', 'response_time'])
+const visibleColumnNames = ref(['id', 'created_at', 'method', 'status_code', 'endpoint', 'error_message', 'user_id', 'company_name', 'ip_address', 'response_time'])
 
 const filters = reactive({
   search: '',
@@ -325,6 +390,7 @@ const columns = [
   { name: 'endpoint', label: 'Endpoint', field: 'endpoint', sortable: true, align: 'left' },
   { name: 'error_message', label: 'Error', field: 'error_message', sortable: true, align: 'left' },
   { name: 'user_id', label: 'Usuario', field: 'user_id', sortable: true, align: 'left' },
+  { name: 'company_name', label: 'Empresa', field: row => row.user?.company_session?.name || '-', sortable: false, align: 'left' },
   { name: 'ip_address', label: 'IP', field: 'ip_address', sortable: true, align: 'left' },
   { name: 'response_time', label: 'Tiempo (s)', field: 'response_time', sortable: true, align: 'right' },
   { name: 'full_url', label: 'URL', field: 'full_url', align: 'left' },
@@ -446,7 +512,7 @@ async function onRequest (ctx) {
   pagination.value.rowsPerPage = ctx.pagination.rowsPerPage
   pagination.value.sortBy = ctx.pagination.sortBy
   pagination.value.descending = ctx.pagination.descending
-  pagination.value.rowsNumber = 20
+  // No hardcodear rowsNumber - se actualiza desde el backend
   await fetchLogs()
 }
 
