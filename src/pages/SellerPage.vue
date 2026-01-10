@@ -344,13 +344,8 @@ export default {
             color: 'positive'
           })
         })
-        .catch(err => {
+        .catch(() => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
         })
     },
     /**
@@ -382,13 +377,8 @@ export default {
             color: 'positive'
           })
         })
-        .catch(err => {
+        .catch(() => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
         })
     },
     /**
@@ -408,13 +398,8 @@ export default {
             color: 'positive'
           })
         })
-        .catch(err => {
+        .catch(() => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
         })
     }
   }

@@ -99,12 +99,9 @@ export default {
       try {
         subscriptionInfo.value = store.currentSubscription
 
-        console.log(subscriptionInfo.value)
-
         const storedSubId = localStorage.getItem('dismissed_banner_sub_id')
         const currentSubId = subscriptionInfo.value?.id
-        console.log(currentSubId)
-        console.log(storedSubId)
+
         if (storedSubId !== String(currentSubId)) {
           dismissed.value = false
           localStorage.removeItem('dismissed_banner_sub_id')

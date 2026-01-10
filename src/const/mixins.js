@@ -35,6 +35,7 @@ export const notify = (message, color, icon, position = 'bottom') => {
 /**
  * Notify validation errors from backend
  * Handles Laravel validation error structure: { field: ["error message"] }
+ * Also handles new error format: { success, error, message, status_code, debug }
  * @param {Object|String} error - Error object from axios or error message
  * @param {String} defaultMessage - Default message if no validation errors found
  */
@@ -45,8 +46,17 @@ export const notifyValidationErrors = (error, defaultMessage = 'Error en la vali
     return
   }
 
-  // Extraer errores de validación del backend
-  const validationErrors = error?.response?.data?.errors || error?.errors
+  // Nuevo formato de error del backend
+  const errorData = error?.response?.data || error?.data || error
+
+  // Si viene el nuevo formato con message directamente
+  if (errorData?.message && typeof errorData.message === 'string') {
+    notify(errorData.message, 'negative', 'warning')
+    return
+  }
+
+  // Extraer errores de validación del backend (formato antiguo)
+  const validationErrors = errorData?.errors
 
   if (validationErrors && typeof validationErrors === 'object') {
     // Convertir objeto de errores en array de mensajes
@@ -88,9 +98,8 @@ export const notifyValidationErrors = (error, defaultMessage = 'Error en la vali
       }
     })
   } else {
-    // Si no hay errores de validación, usar el mensaje por defecto o el del backend
-    const message = error?.response?.data?.message || defaultMessage
-    notify(message, 'negative', 'warning')
+    // Si no hay errores de validación, usar el mensaje por defecto
+    notify(defaultMessage, 'negative', 'warning')
   }
 }
 /**
