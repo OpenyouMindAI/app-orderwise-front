@@ -227,7 +227,6 @@ const props = defineProps({
 // ESTADO REACTIVO
 // ============================================================================
 
-const selectRef = ref(null)
 const placesServiceContainer = ref(null)
 const model = ref('') // Texto a mostrar en el input
 const options = ref([]) // Opciones del autocompletado
@@ -235,14 +234,11 @@ const options = ref([]) // Opciones del autocompletado
 // Generar ID único para esta instancia del componente
 const componentId = `address-component-${Math.random().toString(36).substr(2, 9)}`
 
-const placesContainer = ref(null)
-const inputRef = ref(null)
-const address = ref('')
-const displayAddress = ref('')
 const autocomplete = ref(null)
 const loading = ref(false)
 const mapModal = ref(false)
 const map = ref(null)
+const myPacContainer = ref(null)
 const marker = ref(null)
 const geocodingAddress = ref(false)
 
@@ -256,8 +252,7 @@ let resizeObserver = null
 let mutationObserver = null
 let styleObserver = null
 let widthUpdateInterval = null
-let eventListeners = []
-let cachedInputElement = null
+const eventListeners = []
 
 const addressDetails = ref({
   name: '',
@@ -334,12 +329,6 @@ const filterFn = (val, update) => {
           if (existingId && existingId !== componentId) {
             // Este pac-container pertenece a otra instancia, ignorarlo
             continue
-          }
-          
-          // Si no tiene ID o es nuestro ID, configurarlo
-          if (!existingId) {
-            setupPacContainer(node)
-            return
           }
         }
       }
@@ -701,9 +690,6 @@ const cleanup = () => {
     myPacContainer.value.remove()
   }
   myPacContainer.value = null
-
-  // Limpiar referencia cacheada
-  cachedInputElement = null
 
   cleanupMap()
 }

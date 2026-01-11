@@ -289,17 +289,12 @@ const companyAddressData = ref({
  * Load business types
  */
 const loadBusinessTypes = async (val, update, abort) => {
-  if (val === '' || val === null) {
-    update(() => {
-      businessTypes.value = []
-    })
-    return
-  }
-
   try {
     const { data } = await api.get('business-types', {
       params: {
-        search: val
+        dataSearch: {
+          name: val
+        }
       }
     })
     update(() => {
