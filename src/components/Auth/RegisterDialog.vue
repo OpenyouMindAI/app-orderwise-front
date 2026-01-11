@@ -235,9 +235,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
 import { notify, notifyValidationErrors } from 'src/const/mixins'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
 
 defineProps({
   modelValue: {
@@ -322,15 +325,91 @@ const register = async () => {
 }
 
 /**
+ * Inicializar Google Auth para móvil
+ */
+const initializeGoogleAuthMobile = async () => {
+  try {
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
+
+    await GoogleAuth.initialize({
+      clientId,
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true
+    })
+
+    console.log('Google Auth initialized successfully')
+  } catch (error) {
+    console.error('Error initializing Google Auth:', error)
+  }
+}
+
+/**
+ * Register with Google - Mobile (Capacitor)
+ */
+const registerWithGoogleMobile = async () => {
+  try {
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
+
+    const result = await GoogleAuth.signIn()
+
+    if (result && result.email) {
+      const userInfo = {
+        email: result.email,
+        name: result.name || result.displayName,
+        sub: result.id,
+        picture: result.imageUrl
+      }
+
+      const credential = btoa(JSON.stringify({
+        email: userInfo.email,
+        name: userInfo.name,
+        google_id: userInfo.sub,
+        picture: userInfo.picture
+      }))
+
+      // Register with backend
+      const { data } = await api.post('authentication/register/google', {
+        credential,
+        name: userInfo.name,
+        email: userInfo.email
+      })
+
+      // Emit success event
+      emit('google-success', {
+        user: data,
+        userInfo,
+        needsCompanySetup: data.needs_company_setup
+      })
+      closeDialog()
+    } else {
+      loadingGoogle.value = false
+      notify('No se pudo obtener información de Google', 'negative', 'warning')
+    }
+  } catch (error) {
+    const message = error.response?.data?.message || 'Error al registrar con Google'
+    notify(message, 'negative', 'warning')
+    loadingGoogle.value = false
+  }
+}
+
+/**
  * Register with Google
  */
 const registerWithGoogle = async () => {
   try {
     loadingGoogle.value = true
 
-    // Wait for Google Sign-In to load
+    // Detectar si es móvil nativo (Capacitor)
+    if ($q.platform.is.nativeMobile && window.Capacitor) {
+      await registerWithGoogleMobile()
+      return
+    }
+
+    // Web: Inicializar Google Sign-In
     if (!window.google) {
-      notify('Google Sign-In no disponible. Por favor, recarga la página.', 'negative', 'warning')
+      notify('Error al cargar Google Sign-In', 'negative', 'warning')
       loadingGoogle.value = false
       return
     }
@@ -341,11 +420,13 @@ const registerWithGoogle = async () => {
       callback: async (response) => {
         try {
           if (response.access_token) {
+            // Obtener información del usuario
             const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
               headers: { Authorization: `Bearer ${response.access_token}` }
             })
             const userInfo = await userInfoResponse.json()
 
+            // Codificar datos en base64
             const credential = btoa(JSON.stringify({
               email: userInfo.email,
               name: userInfo.name,
@@ -353,7 +434,7 @@ const registerWithGoogle = async () => {
               picture: userInfo.picture
             }))
 
-            // Register with backend
+            // Registrar con backend
             const { data } = await api.post('authentication/register/google', {
               credential,
               name: userInfo.name,
@@ -400,6 +481,15 @@ const closeDialog = () => {
   showPassword.value = false
   showPasswordConfirm.value = false
 }
+
+/**
+ * On mounted - Inicializar Google Auth
+ */
+onMounted(async () => {
+  if ($q.platform.is.nativeMobile && window.Capacitor) {
+    await initializeGoogleAuthMobile()
+  }
+})
 </script>
 
 <style scoped>

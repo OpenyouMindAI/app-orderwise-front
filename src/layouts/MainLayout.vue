@@ -587,6 +587,10 @@
       </div>
     </q-drawer>
 
+    <q-page-container>
+      <router-view />
+    </q-page-container>
+
     <!-- Dynamic Integration Dialog -->
     <integration-dynamic
       v-model="showIntegrationDialog"
@@ -603,10 +607,6 @@
       :download="download"
       @generate="generateCertificate"
     />
-
-    <q-page-container>
-      <router-view />
-    </q-page-container>
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
