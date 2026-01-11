@@ -993,39 +993,6 @@ export default {
             }).length > 0
           )
         })
-
-        // Agregar entrada de Chat con IA si no existe
-        const hasAiChat = this.dataMenu.some(section =>
-          section.modules.some(module => module.link === 'AiChat')
-        )
-
-        if (!hasAiChat) {
-          // Buscar sección de Herramientas o crear una nueva
-          let toolsSection = this.dataMenu.find(section =>
-            section.name === 'Herramientas' || section.name === 'Tools'
-          )
-
-          if (!toolsSection) {
-            toolsSection = {
-              id: 'tools-section',
-              name: 'Herramientas',
-              icon: 'build',
-              modules: []
-            }
-            this.dataMenu.push(toolsSection)
-          }
-
-          // Agregar módulo de Chat con IA
-          toolsSection.modules.push({
-            id: 'ai-chat-module',
-            name: 'ai-chat',
-            title: 'Chat con IA',
-            link: 'AiChat',
-            icon: 'smart_toy',
-            roles: ['super_admin', 'admin', 'user'],
-            visible: true
-          })
-        }
       }
     },
     $route (to, from) {

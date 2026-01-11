@@ -52,6 +52,16 @@
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 filled
+                label="Acrónimo"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                v-model="paymentMethod.acronym"
+                hint="Código corto del método de pago (ej: EFE, TAR, TRA)"
+                maxlength="10"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
                 autofocus
                 label="Porcentaje de descuento"
                 type="number"
@@ -128,6 +138,16 @@
                 v-model="paymentMethod.name"
                 autofocus
                 label="Nombre"
+              />
+            </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                label="Acrónimo"
+                :rules="[val => !!val || 'El campo es requerido.']"
+                v-model="paymentMethod.acronym"
+                hint="Código corto del método de pago (ej: EFE, TAR, TRA)"
+                maxlength="10"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -221,6 +241,13 @@ export default {
           align: 'left',
           label: 'Código',
           field: 'id',
+          sortable: true
+        },
+        {
+          name: 'acronym',
+          align: 'left',
+          label: 'Acrónimo',
+          field: 'acronym',
           sortable: true
         },
         {
@@ -386,6 +413,7 @@ export default {
       this.visible = true
       const payload = {
         name: this.paymentMethod.name,
+        acronym: this.paymentMethod.acronym,
         attributes: this.paymentMethod.attributes,
         percentage: this.paymentMethod.percentage,
         bill: this.paymentMethod.bill
