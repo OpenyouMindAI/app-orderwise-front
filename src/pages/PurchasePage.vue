@@ -210,6 +210,75 @@
             </div>
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
               <div class="col-12">
+                <q-card class="q-mb-sm">
+                  <q-card-section class="q-pa-xs">
+                    <div class="text-subtitle2 text-weight-bold q-mb-xs">Imagen de la Factura</div>
+                    <q-card
+                      flat
+                      bordered
+                      class="dropzone-card"
+                      :class="{ 'dropzone-active': isDragOver }"
+                      @dragover.prevent="isDragOver = true"
+                      @dragleave.prevent="isDragOver = false"
+                      @drop.prevent="handleDrop"
+                    >
+                      <q-card-section class="text-center q-pa-md q-gutter-y-sm">
+                        <!-- Image Preview Grid -->
+                        <div class="col-12" v-if="purchase.images && purchase.images.length">
+                          <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 200px;">
+                            <div
+                              v-for="(image, index) in purchase.images"
+                              :key="index"
+                              class="col-6 col-sm-4 col-md-4"
+                            >
+                              <q-card flat class="image-preview-card">
+                                <q-img
+                                  :src="image.url"
+                                  :ratio="1"
+                                  class="rounded-borders"
+                                >
+                                  <div class="absolute-top-right bg-transparent">
+                                    <q-btn
+                                      size="sm"
+                                      icon="close"
+                                      color="negative"
+                                      round
+                                      dense
+                                      @click="deleteImage(image, index)"
+                                    />
+                                  </div>
+                                </q-img>
+                              </q-card>
+                            </div>
+                          </div>
+                        </div>
+                        <div v-else>
+                          <q-icon name="cloud_upload" size="3rem" color="grey-5" class="q-mb-xs" />
+                          <div class="text-caption text-grey-7">
+                            Arrastra o selecciona
+                          </div>
+                        </div>
+                        <q-btn
+                          color="primary"
+                          label="Cargar"
+                          size="sm"
+                          @click="$refs.fileInput.click()"
+                          unelevated
+                        />
+                        <input
+                          ref="fileInput"
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          style="display: none"
+                          @change="handleFileSelect"
+                        />
+                      </q-card-section>
+                    </q-card>
+                  </q-card-section>
+                </q-card>
+              </div>
+              <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
                   :caption="`Total: ${formatNumber(purchase.total_payments)}`"
@@ -248,6 +317,14 @@
               <div class="q-gutter-y-xs">
                 <q-btn
                   class="full-width"
+                  icon="block"
+                  color="negative"
+                  label="Anular"
+                  :loading="cancelLoading"
+                  @click="cancelPurchase"
+                />
+                <q-btn
+                  class="full-width"
                   icon="check_circle"
                   color="primary"
                   label="Pagar"
@@ -279,7 +356,7 @@
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, formatDate } from 'src/const/mixins'
+import { formatNumber, formatDate, notify } from 'src/const/mixins'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
@@ -348,6 +425,7 @@ export default {
        * @type {Boolean}
        */
       cancelLoading: false,
+      isDragOver: false,
       /**
        * Filter
        * @type {String}
@@ -661,7 +739,10 @@ export default {
      */
     editPurchase (event, row, index) {
       this.openEditPurchase = true
-      this.purchase = row
+      this.purchase = {
+        ...row,
+        images: row.files || []
+      }
     },
     /**
      * Model product
@@ -729,7 +810,114 @@ export default {
             color: 'negative'
           })
         })
+    },
+    // Image Handling Methods
+    handleFileSelect (event) {
+      const files = Array.from(event.target.files || [])
+      this.processFiles(files)
+    },
+    handleDrop (event) {
+      this.isDragOver = false
+      const files = Array.from(event.dataTransfer.files || [])
+      this.processFiles(files)
+    },
+    processFiles (files) {
+      const imageFiles = files.filter(file => file.type.startsWith('image/'))
+
+      if (imageFiles.length === 0) {
+        notify('Por favor selecciona archivos de imagen válidos.', 'negative', 'warning')
+        return
+      }
+
+      imageFiles.forEach(file => {
+        // Validate file size (5MB max)
+        if (file.size > 5242880) {
+          notify(`La imagen ${file.name} es demasiado grande. Máximo 5MB.`, 'negative', 'warning')
+          return
+        }
+
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const imageData = {
+            url: e.target.result, // For preview
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            image: file // Keep original file for FormData if needed later
+          }
+
+          if (!this.purchase.images) {
+            this.purchase.images = []
+          }
+
+          this.purchase.images.push(imageData)
+
+          notify(`Imagen ${file.name} cargada correctamente`, 'positive', 'check_circle')
+        }
+
+        reader.onerror = () => {
+          notify(`Error al cargar la imagen ${file.name}`, 'negative', 'warning')
+        }
+
+        reader.readAsDataURL(file)
+      })
+    },
+    deleteImage (image, index) {
+      if (this.purchase.images && this.purchase.images.length > index) {
+        this.purchase.images.splice(index, 1)
+        notify('Imagen eliminada', 'positive', 'check_circle')
+      }
+    },
+    /**
+     * Change status
+     * @param {Object} data purchase
+     * @param {Number} index index status
+     */
+    async cancelPurchase () {
+      try {
+        this.cancelLoading = true
+        await this.$api.put(`purchase-status-command/${this.purchase.id}`, { status: 'cancelled' })
+        this.getPurchases()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+        this.openEditPurchase = false
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.cancelLoading = false
+      }
     }
   }
 }
 </script>
+
+<style scoped>
+/* Dropzone styles */
+.dropzone-card {
+  border: 2px dashed #e0e0e0 !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.dropzone-card:hover {
+  border-color: #1976d2;
+  background-color: #f5f5f5;
+}
+
+.dropzone-active {
+  border-color: #1976d2 !important;
+  background-color: #e3f2fd !important;
+  transform: scale(1.02);
+}
+
+.image-preview-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.05);
+}
+</style>
