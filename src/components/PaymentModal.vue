@@ -35,7 +35,22 @@
                       <div class="text-weight-bold">{{ props.row.name }}</div>
                       <div class="text-caption text-grey-6">
                         Ref:
-                        <span class="text-primary cursor-pointer" @click="editReference(props.row, props.rowIndex)">
+                        <q-popup-edit
+                          v-model="props.row.reference"
+                          auto-save
+                          v-slot="scope"
+                          @update:model-value="(val) => val !== undefined && updatePaymentReference(props.row, props.rowIndex, val)"
+                        >
+                          <q-input
+                            label="Referencia"
+                            type="text"
+                            v-model="scope.value"
+                            dense
+                            autofocus
+                            @keyup.enter="scope.set"
+                          />
+                        </q-popup-edit>
+                        <span class="text-primary cursor-pointer">
                           {{ props.row.reference || 'Sin ref' }}
                           <q-icon name="edit" size="10px"/>
                         </span>
@@ -53,13 +68,31 @@
               </template>
               <template v-slot:body-cell-amount="props">
                 <q-td :props="props" class="text-right">
-                  <div class="cursor-pointer" @click="editAmount(props.row, props.rowIndex)">
-                    <div class="text-h6 text-weight-bold text-primary">
-                      {{ formatNumber(props.row.amount) }}
-                      <q-icon name="edit" size="sm" class="q-ml-xs"/>
-                    </div>
-                    <div v-if="exchangeRate" class="text-caption text-grey-6">
-                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(props.row.amount * exchangeRate.amount) }}
+                  <div>
+                    <q-popup-edit
+                      v-model.number="props.row.amount"
+                      auto-save
+                      v-slot="scope"
+                      @update:model-value="(val) => val !== undefined && updatePaymentAmount(props.row, props.rowIndex, parseFloat(val))"
+                    >
+                      <q-input
+                        label="Monto"
+                        type="number"
+                        @focus="e => e.target.select()"
+                        v-model.number="scope.value"
+                        dense
+                        autofocus
+                        @keyup.enter="scope.set"
+                      />
+                    </q-popup-edit>
+                    <div class="cursor-pointer">
+                      <div class="text-h6 text-weight-bold text-primary">
+                        {{ formatNumber(props.row.amount) }}
+                        <q-icon name="edit" size="sm" class="q-ml-xs"/>
+                      </div>
+                      <div v-if="exchangeRate" class="text-caption text-grey-6">
+                        {{ exchangeRate.coin?.symbol }} {{ formatNumber(props.row.amount * exchangeRate.amount) }}
+                      </div>
                     </div>
                   </div>
                 </q-td>
@@ -127,7 +160,22 @@
                       </div>
                       <div class="text-caption text-grey-6" style="font-size: 10px;">
                         Ref:
-                        <span class="text-primary cursor-pointer" @click="editReference(payment, index)">
+                        <q-popup-edit
+                          v-model="payment.reference"
+                          auto-save
+                          v-slot="scope"
+                          @update:model-value="(val) => val !== undefined && updatePaymentReference(payment, index, val)"
+                        >
+                          <q-input
+                            label="Referencia"
+                            type="text"
+                            v-model="scope.value"
+                            dense
+                            autofocus
+                            @keyup.enter="scope.set"
+                          />
+                        </q-popup-edit>
+                        <span class="text-primary cursor-pointer">
                           {{ payment.reference || 'Sin ref' }}
                           <q-icon name="edit" size="8px"/>
                         </span>
@@ -138,19 +186,32 @@
                   <div class="row items-center q-gutter-xs column">
                     <div class="row items-end justify-between">
                       <div>
-                        <div class="text-body1 text-weight-bold text-primary cursor-pointer" @click="editAmount(payment, index)">
+                        <q-popup-edit
+                          v-model.number="payment.amount"
+                          auto-save
+                          v-slot="scope"
+                          @update:model-value="(val) => val !== undefined && updatePaymentAmount(payment, index, parseFloat(val))"
+                        >
+                          <q-input
+                            label="Monto"
+                            type="number"
+                            @focus="e => e.target.select()"
+                            v-model.number="scope.value"
+                            dense
+                            autofocus
+                            @keyup.enter="scope.set"
+                          />
+                        </q-popup-edit>
+                        <div class="text-body1 text-weight-bold text-primary cursor-pointer">
                           {{ formatNumber(payment.amount) }}
                           <q-icon name="edit" size="8px" class="q-ml-xs"/>
                         </div>
-                      </div>
-                      <div v-if="exchangeRate" class="text-right">
-                        <div class="text-caption text-grey-5" style="font-size: 9px;">Equivalente</div>
-                        <div class="text-caption text-weight-medium text-grey-4" style="font-size: 10px;">
-                          {{ exchangeRate.coin?.symbol }} {{ formatNumber(payment.amount * exchangeRate.amount) }}
+                        <div v-if="exchangeRate" class="text-caption text-grey-5" style="font-size: 9px; margin-top: 2px;">
+                          Equivalente: {{ exchangeRate.coin?.symbol }} {{ formatNumber(payment.amount * exchangeRate.amount) }}
                         </div>
                       </div>
                     </div>
-                    <div class="row q-gutter-xs">
+                    <div class="row q-gutter-xs justify-end">
                       <q-btn
                         v-if="payment.acronym === 'MPQA'"
                         icon="qr_code"
@@ -171,9 +232,9 @@
                       <q-btn
                         icon="delete"
                         color="negative"
+                        size="sm"
                         flat
-                        round
-                        size="xs"
+                        rounded
                         @click="deletePayment(index)"
                       >
                         <q-tooltip>Eliminar</q-tooltip>
@@ -657,41 +718,6 @@ export default {
       emit('update:show', false)
     }
 
-    const editAmount = (payment, index) => {
-      $q.dialog({
-        title: 'Editar monto',
-        message: `Ingrese el nuevo monto para ${payment.name}`,
-        prompt: {
-          model: payment.amount.toString(),
-          type: 'number',
-
-          filled: true
-        },
-        cancel: true,
-        color: 'primary'
-      }).onOk(data => {
-        const newAmount = parseFloat(data)
-        if (!isNaN(newAmount) && newAmount > 0) {
-          updatePaymentAmount(payment, index, newAmount)
-        }
-      })
-    }
-
-    const editReference = (payment, index) => {
-      $q.dialog({
-        title: 'Editar referencia',
-        message: `Ingrese la referencia para ${payment.name}`,
-        prompt: {
-          model: payment.reference || '',
-          type: 'text',
-          filled: true
-        },
-        cancel: true,
-        color: 'primary'
-      }).onOk(data => {
-        updatePaymentReference(payment, index, data)
-      })
-    }
 
     const getPaymentIcon = (acronym) => {
       const icons = {
@@ -767,8 +793,6 @@ export default {
       setParamsBill,
       paymentModel,
       handleKeyboardShortcut,
-      editAmount,
-      editReference,
       getPaymentIcon
     }
   }

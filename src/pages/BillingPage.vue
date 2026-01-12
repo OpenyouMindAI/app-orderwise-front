@@ -651,6 +651,15 @@
                     </q-td>
                   </q-tr>
                 </template>
+                <!-- Template para cuando no hay artículos -->
+                <template v-slot:no-data>
+                  <div class="full-width column flex-center" style="padding: 60px 20px;">
+                    <q-icon size="4rem" name="inventory_2" color="grey-4" class="q-mb-md" />
+                    <div class="text-center">
+                      <div class="text-h5 text-grey-6 q-mb-sm">Sin artículos</div>
+                    </div>
+                  </div>
+                </template>
               </q-table>
 
               <!-- Mobile view - Cart style -->
