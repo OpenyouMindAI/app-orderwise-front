@@ -99,7 +99,7 @@
                 </q-input>
               </div>
 
-              <div v-if="$route.query.id" class="q-mb-sm">
+              <div v-if="$route.query.id">
                 <q-chip
                   square
                   color="primary"
@@ -107,21 +107,203 @@
                   icon="receipt_long"
                   class="invoice-chip"
                 >
-                  <span class="text-weight-medium">{{ purchase?.purchase_number }}</span>
+                  <span>{{ purchase?.purchase_number }}</span>
                 </q-chip>
               </div>
             </div>
 
-             <div v-else class="col-12 q-gutter-y-sm">
-                 <q-select
-                  use-input
-                  filled
-                  dense
-                  label="Proveedor"
-                  v-model="provider"
-                  :options="providers"
-                  @filter="filterProviders"
-                />
+             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
+               <div v-if="$route.query.id">
+                 <q-chip
+                   square
+                   color="primary"
+                   text-color="white"
+                   icon="receipt_long"
+                   dense
+                   class="invoice-chip"
+                 >
+                   <span>{{ purchase?.purchase_number }}</span>
+                 </q-chip>
+               </div>
+               <div>
+                 <q-btn
+                   color="secondary"
+                   icon="store"
+                   :label="provider?.name || 'Proveedor'"
+                   label-position="left"
+                   style="height: 100% !important;"
+                 >
+                   <q-popup-proxy @before-show="loadProvidersData()" v-model="providerMenuOpen">
+                     <q-card class="fab-popup-card">
+                       <q-card-section class="fab-popup-header">
+                         <div class="text-h6">Seleccionar Proveedor</div>
+                         <q-btn flat round dense icon="close" v-close-popup />
+                       </q-card-section>
+                       <q-separator />
+                       <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
+                         <q-inner-loading :showing="loadingProviders">
+                           <q-spinner-dots size="50px" color="primary" />
+                         </q-inner-loading>
+                         <q-input
+                           v-model="providerSearch"
+                           placeholder="Buscar proveedor..."
+                           dense
+                           outlined
+                           class="q-ma-sm"
+                         >
+                           <template v-slot:prepend>
+                             <q-icon name="search" />
+                           </template>
+                         </q-input>
+                         <q-list class="fab-popup-list">
+                           <q-item
+                             v-for="p in filteredProvidersForFab"
+                             :key="p.id"
+                             clickable
+                             v-ripple
+                             :active="provider?.id === p.id"
+                             @click="provider = p; providerSearch = ''"
+                             v-close-popup
+                           >
+                             <q-item-section>
+                               <q-item-label>{{ p.name }}</q-item-label>
+                               <q-item-label caption>{{ p.document_number }}</q-item-label>
+                             </q-item-section>
+                             <q-item-section side v-if="provider?.id === p.id">
+                               <q-icon name="check_circle" color="primary" />
+                             </q-item-section>
+                           </q-item>
+                         </q-list>
+                       </q-card-section>
+                       <q-separator />
+                       <q-card-actions align="right">
+                         <q-btn flat color="primary" icon="add" label="Nuevo" @click="openAddProvider = true" v-close-popup />
+                       </q-card-actions>
+                     </q-card>
+                   </q-popup-proxy>
+                 </q-btn>
+               </div>
+
+               <!-- FAB para configuraciones adicionales -->
+               <q-fab
+                 color="primary"
+                 icon="tune"
+                 type="button"
+                 direction="down"
+                 padding="sm"
+                 vertical-actions-align="right"
+                 v-model="centerFabOpen"
+               >
+                 <!-- FAB Tipo de Factura -->
+                 <q-fab-action
+                   color="accent"
+                   icon="receipt"
+                   :label="invoiceType?.name || 'Tipo'"
+                   label-position="left"
+                 >
+                   <q-popup-proxy @before-show="loadInvoiceTypesData()">
+                     <q-card class="fab-popup-card">
+                       <q-card-section class="fab-popup-header">
+                         <div class="text-h6">Tipo de Factura</div>
+                         <q-btn flat round dense icon="close" v-close-popup />
+                       </q-card-section>
+                       <q-separator />
+                       <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
+                         <q-inner-loading :showing="loadingInvoiceTypes">
+                           <q-spinner-dots size="50px" color="primary" />
+                         </q-inner-loading>
+                         <q-list class="fab-popup-list">
+                           <q-item
+                             v-for="type in invoiceTypes"
+                             :key="type.id"
+                             clickable
+                             v-ripple
+                             :active="invoiceType?.id === type.id"
+                             @click="invoiceType = type"
+                             v-close-popup
+                           >
+                             <q-item-section>
+                               <q-item-label>{{ type.name }}</q-item-label>
+                             </q-item-section>
+                             <q-item-section side v-if="invoiceType?.id === type.id">
+                               <q-icon name="check_circle" color="primary" />
+                             </q-item-section>
+                           </q-item>
+                         </q-list>
+                       </q-card-section>
+                     </q-card>
+                   </q-popup-proxy>
+                 </q-fab-action>
+
+                 <!-- FAB Tipo de Servicio -->
+                 <q-fab-action
+                   color="positive"
+                   icon="category"
+                   :label="typeOfService?.name || 'Servicio'"
+                   label-position="left"
+                 >
+                   <q-popup-proxy @before-show="loadTypeOfServicesData()">
+                     <q-card class="fab-popup-card">
+                       <q-card-section class="fab-popup-header">
+                         <div class="text-h6">Tipo de Servicio</div>
+                         <q-btn flat round dense icon="close" v-close-popup />
+                       </q-card-section>
+                       <q-separator />
+                       <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
+                         <q-inner-loading :showing="loadingTypeOfServices">
+                           <q-spinner-dots size="50px" color="primary" />
+                         </q-inner-loading>
+                         <q-list class="fab-popup-list">
+                           <q-item
+                             v-for="service in typeOfServices"
+                             :key="service.id"
+                             clickable
+                             v-ripple
+                             :active="typeOfService?.id === service.id"
+                             @click="typeOfService = service"
+                             v-close-popup
+                           >
+                             <q-item-section>
+                               <q-item-label>{{ service.name }}</q-item-label>
+                             </q-item-section>
+                             <q-item-section side v-if="typeOfService?.id === service.id">
+                               <q-icon name="check_circle" color="primary" />
+                             </q-item-section>
+                           </q-item>
+                         </q-list>
+                       </q-card-section>
+                     </q-card>
+                   </q-popup-proxy>
+                 </q-fab-action>
+               </q-fab>
+
+               <!-- FAB para opciones adicionales -->
+               <q-fab
+                 square
+                 type="button"
+                 color="orange"
+                 icon="more_vert"
+                 direction="down"
+                 padding="sm"
+                 vertical-actions-align="right"
+                 v-model="rightFabOpen"
+               >
+                 <q-fab-action
+                   color="teal"
+                   icon="search"
+                   label="Buscar"
+                   label-position="right"
+                   @click="searchInvoice = true"
+                 />
+
+                 <q-fab-action
+                   color="negative"
+                   icon="delete"
+                   label="Borrar"
+                   label-position="right"
+                   @click="clear"
+                 />
+               </q-fab>
              </div>
 
             <div class="col-12 articles-section" :class="{ 'articles-section-hidden': productsFullscreen }">
@@ -202,21 +384,91 @@
                         class="cart-item"
                       >
                             <div class="cart-item-row">
-                                <q-btn icon="close" flat dense round size="xs" color="grey-6" class="cart-delete-btn" @click="deleteProduct({ rowIndex })" />
+                                <!-- Botón eliminar -->
+                                <q-btn
+                                  icon="close"
+                                  flat
+                                  dense
+                                  round
+                                  size="xs"
+                                  color="grey-6"
+                                  class="cart-delete-btn"
+                                  @click="deleteProduct({ rowIndex })"
+                                />
+
+                                <!-- Información del producto -->
                                 <div class="cart-item-info">
                                     <span class="cart-item-name">{{ product.name }}</span>
-                                    <div class="cart-item-price">
-                                         Costo: {{ coin?.symbol }} {{ formatNumber(product.cost) }}
+                                    <div class="cart-item-prices">
+                                      <span class="cart-item-price-label">
+                                        Costo: {{ coin?.symbol }} {{ formatNumber(product.cost) }}
+                                        <q-popup-edit
+                                          v-if="userSession?.is_root || userSession?.is_super_admin"
+                                          v-model.number="product.cost"
+                                          auto-save
+                                          v-slot="scope"
+                                          @update:model-value="calculate(product)"
+                                        >
+                                          <q-input
+                                            label="Costo"
+                                            type="number"
+                                            @focus="e => e.target.select()"
+                                            v-model.number="scope.value"
+                                            dense
+                                            autofocus
+                                            @keyup.enter="scope.set"
+                                          />
+                                        </q-popup-edit>
+                                      </span>
                                     </div>
                                 </div>
-                                 <div class="quantity-controls">
-                                     <span class="quantity-value">
-                                         {{ product.quantity }} x
-                                     </span>
-                                 </div>
-                                 <div class="cart-item-subtotal">
-                                      {{ formatNumber(product.subtotal) }}
-                                 </div>
+
+                                <!-- Controles de cantidad -->
+                                <div class="quantity-controls">
+                                  <q-btn
+                                    icon="remove"
+                                    unelevated
+                                    dense
+                                    round
+                                    size="xs"
+                                    color="grey-3"
+                                    text-color="dark"
+                                    @click="product.quantity > 1 ? (product.quantity--, calculate(product)) : deleteProduct({ rowIndex })"
+                                  />
+                                  <span class="quantity-value" @click.stop>
+                                    {{ formatNumber(product.quantity) }}
+                                    <q-popup-edit
+                                      v-model.number="product.quantity"
+                                      auto-save
+                                      v-slot="scope"
+                                      @update:model-value="calculate(product)"
+                                    >
+                                      <q-input
+                                        label="Cantidad"
+                                        type="number"
+                                        @focus="e => e.target.select()"
+                                        v-model.number="scope.value"
+                                        dense
+                                        autofocus
+                                        @keyup.enter="scope.set"
+                                      />
+                                    </q-popup-edit>
+                                  </span>
+                                  <q-btn
+                                    icon="add"
+                                    unelevated
+                                    dense
+                                    round
+                                    size="xs"
+                                    color="primary"
+                                    @click="product.quantity++; calculate(product)"
+                                  />
+                                </div>
+
+                                <!-- Subtotal -->
+                                <div class="cart-item-subtotal">
+                                     {{ formatNumber(product.subtotal) }}
+                                </div>
                             </div>
                       </div>
                  </div>
@@ -838,8 +1090,8 @@
           <q-btn flat icon="close" round size="md" v-close-popup/>
         </q-card-section>
         <q-card-section>
-          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center justify-between">
-            <div class="col-10">
+          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center no-wrap">
+            <div :class="`col ${$q.screen.lt.sm ? 'q-pr-sm' : 'q-pr-md'}`">
               <q-input
                 name="search"
                 autocomplete="search"
@@ -851,10 +1103,18 @@
                 type="search"
                 required
                 autofocus
+                :dense="$q.screen.lt.sm"
+                hide-bottom-space
               />
             </div>
-            <div class="col-auto text-right">
-              <q-btn type="submit" color="primary" icon="search" size="lg" :loading="loadingSearch"/>
+            <div class="col-auto">
+              <q-btn
+                type="submit"
+                color="primary"
+                icon="search"
+                :size="$q.screen.lt.sm ? 'md' : 'lg'"
+                :loading="loadingSearch"
+              />
             </div>
           </q-form>
         </q-card-section>
@@ -1031,7 +1291,7 @@ export default {
        * Delivery date
        * @type {String}
        */
-      deliveryDate: formatDate(Date(), 'YYYY-MM-DD HH:mm:ss'),
+      deliveryDate: formatDate(Date(), 'YYYY-MM-DDTHH:mm'),
       /**
        * Format number
        * @type {Function}
@@ -1191,6 +1451,41 @@ export default {
        */
       withoutPrint: false,
       /**
+       * Provider search for FAB modal
+       * @type {String}
+       */
+      providerSearch: '',
+      /**
+       * Provider menu open state
+       * @type {Boolean}
+       */
+      providerMenuOpen: false,
+      /**
+       * Loading providers state
+       * @type {Boolean}
+       */
+      loadingProviders: false,
+      /**
+       * Loading invoice types state
+       * @type {Boolean}
+       */
+      loadingInvoiceTypes: false,
+      /**
+       * Loading type of services state
+       * @type {Boolean}
+       */
+      loadingTypeOfServices: false,
+      /**
+       * Center FAB open state
+       * @type {Boolean}
+       */
+      centerFabOpen: false,
+      /**
+       * Right FAB open state
+       * @type {Boolean}
+       */
+      rightFabOpen: false,
+      /**
        * @type {Array}
        */
       aliquotTypes: [],
@@ -1327,6 +1622,20 @@ export default {
         totalPayment = totalPayment + payment.amount
       })
       return totalPayment
+    },
+    /**
+     * Filtered providers for FAB modal
+     * @returns {Array}
+     */
+    filteredProvidersForFab () {
+      if (!this.providerSearch) {
+        return this.providers
+      }
+      const search = this.providerSearch.toLowerCase()
+      return this.providers.filter(p =>
+        p.name?.toLowerCase().includes(search) ||
+        p.document_number?.toLowerCase().includes(search)
+      )
     },
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
@@ -1692,6 +2001,71 @@ export default {
         })
     },
     /**
+     * Load providers data when modal opens
+     */
+    async loadProvidersData () {
+      if (this.providers.length > 0) return // Ya hay datos cargados
+
+      this.loadingProviders = true
+      try {
+        const { data } = await this.$api.get('providers', {
+          params: {
+            sortBy: 'id',
+            sortOrder: 'desc'
+          }
+        })
+        this.providers = data
+      } catch (err) {
+        Notify.create({
+          message: err.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        this.loadingProviders = false
+      }
+    },
+    /**
+     * Load invoice types data when modal opens
+     */
+    async loadInvoiceTypesData () {
+      if (this.invoiceTypes.length > 0) return // Ya hay datos cargados
+
+      this.loadingInvoiceTypes = true
+      try {
+        const { data } = await this.$api.get('invoice-types')
+        this.invoiceTypes = data
+      } catch (err) {
+        Notify.create({
+          message: err.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        this.loadingInvoiceTypes = false
+      }
+    },
+    /**
+     * Load type of services data when modal opens
+     */
+    async loadTypeOfServicesData () {
+      if (this.typeOfServices.length > 0) return // Ya hay datos cargados
+
+      this.loadingTypeOfServices = true
+      try {
+        const { data } = await this.$api.get('type-of-services')
+        this.typeOfServices = data
+      } catch (err) {
+        Notify.create({
+          message: err.message,
+          icon: 'warning',
+          color: 'negative'
+        })
+      } finally {
+        this.loadingTypeOfServices = false
+      }
+    },
+    /**
      * Get all products
      * @param {Object} params params to search
      * @param {Boolean} append if true appends products to list
@@ -1840,7 +2214,17 @@ export default {
           }
         })
         this.invoiceDescription = purchase.description
-        this.deliveryDate = purchase.delivery_date
+        if (purchase.delivery_date) {
+          this.deliveryDate = purchase.delivery_date.includes('T') ? purchase.delivery_date : purchase.delivery_date.replace(' ', 'T')
+          // Asegurar formato YYYY-MM-DDTHH:mm para compatibilidad con input datetime-local
+          if (this.deliveryDate.length === 10) {
+            this.deliveryDate += 'T00:00'
+          } else if (this.deliveryDate.length > 16) {
+            this.deliveryDate = this.deliveryDate.slice(0, 16)
+          }
+        } else {
+          this.deliveryDate = formatDate(Date(), 'YYYY-MM-DDTHH:mm')
+        }
         // Load existing attachments
         this.loadExistingAttachments(purchase.files || [])
         this.calculateTotal()
@@ -1856,7 +2240,7 @@ export default {
       this.payments = []
       this.products = []
       this.invoiceDescription = ''
-      this.deliveryDate = formatDate(Date(), 'YYYY-MM-DD HH:mm:ss')
+      this.deliveryDate = formatDate(Date(), 'YYYY-MM-DDTHH:mm')
       this.dialogPayment = false
       this.withoutPrint = false
       this.invoicePrinter = false
@@ -2830,9 +3214,238 @@ export default {
   background: transparent;
 }
 
-/* Thumb translúcido */
 .product-container-scroll::-webkit-scrollbar-thumb {
   border-radius: 4px;
+}
+
+/* ===== Billing Selects Optimization ===== */
+/* Desktop - mantiene el diseño actual */
+.billing-selects-desktop {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.billing-select-item {
+  width: 100%;
+}
+
+/* ===== FAB Floating Action Buttons (Mobile) ===== */
+:deep(.q-fab) {
+  z-index: 2000;
+}
+
+:deep(.q-fab__actions) {
+  padding-bottom: 8px;
+}
+
+:deep(.q-fab-action) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+:deep(.q-fab-action .q-btn__content) {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* FAB Popup Card */
+.fab-popup-card {
+  min-width: 320px;
+  max-width: 90vw;
+  max-height: 70vh;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.fab-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--q-primary);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.fab-popup-header .text-h6 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.fab-popup-header .q-btn {
+  color: white;
+}
+
+/* FAB Popup List */
+.fab-popup-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.fab-popup-list .q-item {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.fab-popup-list .q-item:last-child {
+  border-bottom: none;
+}
+
+.fab-popup-list .q-item__label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.fab-popup-card .q-input {
+  margin: 12px 16px;
+}
+
+.fab-popup-card .q-field__control {
+  border-radius: 10px;
+}
+
+/* Mobile header section with transition */
+.mobile-header-section {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  text-align: right;
+  gap: 8px;
+  padding-bottom: 2px;
+  position: relative;
+  z-index: 100;
+}
+
+.mobile-header-hidden {
+  display: none;
+}
+
+/* Articles section */
+.articles-section-hidden {
+  max-height: 0;
+  opacity: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Mobile Cart Styles */
+.mobile-cart-container {
+  max-height: calc(50vh - 60px);
+  overflow-y: auto;
+  border-radius: 8px;
+}
+
+.mobile-cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cart-item {
+  background: white;
+  color: black;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.body--dark .cart-item {
+  background: #1e1e1e;
+  color: white;
+}
+
+.cart-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-delete-btn {
+  flex-shrink: 0;
+}
+
+.cart-item-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+
+.cart-item-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.body--dark .cart-item-name {
+  color: #e0e0e0;
+}
+
+.cart-item-prices {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cart-item-price-label {
+  font-size: 10px;
+  color: #666;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.body--dark .cart-item-price-label {
+  color: #999;
+}
+
+.cart-item-price {
+  font-size: 10px;
+  color: #888;
+  cursor: pointer;
+}
+
+.body--dark .cart-item-price {
+  color: #b0b0b0;
+}
+
+.quantity-controls {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  padding: 2px 4px;
+}
+
+.quantity-controls .q-btn {
+  min-width: 24px !important;
+  min-height: 24px !important;
+}
+
+.quantity-value {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cart-item-subtotal {
+  font-size: 13px;
+  font-weight: 700;
+  color: #21BA45;
+  white-space: nowrap;
+  min-width: 55px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .add-more-files {
@@ -2876,5 +3489,19 @@ export default {
 /* Thumb translúcido */
 .product-container-scroll::-webkit-scrollbar-thumb {
   border-radius: 4px;
+}
+
+.invoice-chip {
+  justify-content: center;
+  margin: 0;
+  width: 100%;
+  min-width: 3rem;
+  height: 100%;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2), 0 2px 2px rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12);
+  @media (max-width: 1023px) {
+    :deep(.col) {
+      flex: none !important;
+    }
+  }
 }
 </style>
