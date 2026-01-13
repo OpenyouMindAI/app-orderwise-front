@@ -1,139 +1,122 @@
 <template>
-  <q-page padding>
-    <div v-if="$route.query.id">
-      <span class="text-subtitle1">Factura número: </span>
-      <span class="text-subtitle2">{{ purchase?.purchase_number }}</span>
+  <q-page class="q-pa-none">
+    <div v-if="$route.query.id" class="invoice-header-compact q-mb-sm q-px-sm q-pt-sm">
+      <q-chip
+        square
+        color="primary"
+        text-color="white"
+        icon="receipt_long"
+        class="invoice-chip"
+      >
+        <span class="text-weight-medium">{{ purchase?.purchase_number }}</span>
+      </q-chip>
     </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 120px);">
-      <div class="row q-col-gutter-x-md">
-        <div class="col-12 row q-col-gutter-x-xs">
-          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
-            <q-input
-              filled
-              dense
-              v-model="purchaseCode"
-              autofocus
-              label="Numero de factura"
-            />
-          </div>
-          <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
-            <q-select
-              use-input
-              filled
-              dense
-              label="Proveedor"
-              input-debounce="0"
-              option-value="id"
-              v-model="provider"
-              :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
-              :options="providers"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterProviders"
-            >
-              <template v-slot:append>
-                <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddProvider = true)" size="sm"/>
-              </template>
-            </q-select>
-          </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
-            <q-select
-              use-input
-              filled
-              dense
-              label="Tipo de factura"
-              input-debounce="0"
-              option-label="name"
-              option-value="id"
-              v-model="invoiceType"
-              :options="invoiceTypes"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterInvoiceTypes"
-            />
-          </div>
-          <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-6">
-            <q-select
-              use-input
-              filled
-              dense
-              label="Tipo de servicio"
-              input-debounce="0"
-              option-label="name"
-              option-value="id"
-              v-model="typeOfService"
-              :options="typeOfServices"
-              :rules="[val => !!val || 'El campo es requerido.']"
-              @filter="filterTypeOfServices"
-            />
-          </div>
-        </div>
-        <div class="col-xs-12 col-sm-7 col-md-6 col-lg-5 col-xl-5 q-col-gutter-sm">
+
+    <q-form ref="saveBill" @submit.prevent="saveBill" style="height: calc(100vh - 50px);">
+      <div class="billing-panel-container">
+        <!-- LEFT PANEL -->
+        <div style="min-width: 0;">
           <div class="row q-col-gutter-sm">
-            <div class="col-xl-6 col-lg-6 col-md-5 col-sm-5 col-xs-12">
-              <q-input
-                filled
-                dense
-                v-model="barcode"
-                autofocus
-                type="number"
-                label="Código"
-                @keypress.enter="getOneProduct"
-              >
-                <template v-slot:append>
-                  <q-btn round color="teal" icon="add_circle" size="sm" @click="openAddProduct = true"/>
-                </template>
-              </q-input>
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-7 col-sm-7 col-xs-12 flex q-gutter-xs">
-              <q-btn
-                size="sm"
-                icon="save"
-                color="positive"
-                :disable="products.length <= 0"
-                @click="dialogPayment = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+            <!-- Selectores principales - Solo desktop -->
+            <div v-if="$q.screen.gt.sm" class="billing-selects-desktop col-12">
+              <div class="billing-select-item">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Proveedor"
+                  input-debounce="0"
+                  option-value="id"
+                  v-model="provider"
+                  :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                  :options="providers"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterProviders"
+                  hide-bottom-space
                 >
-                  F8
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Guardar
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                size="sm"
-                icon="search"
-                color="primary"
-                @click="searchInvoice = true"
-              >
-                <q-badge
-                  color="negative"
-                  align="bottom"
-                  floating
-                  v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
+                  <template v-slot:append>
+                    <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddProvider = true)" size="sm"/>
+                  </template>
+                </q-select>
+              </div>
+
+              <div class="billing-select-item">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de factura"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="invoiceType"
+                  :options="invoiceTypes"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterInvoiceTypes"
+                  hide-bottom-space
+                />
+              </div>
+
+              <div class="billing-select-item">
+                <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Tipo de servicio"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="typeOfService"
+                  :options="typeOfServices"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  @filter="filterTypeOfServices"
+                  hide-bottom-space
+                />
+              </div>
+
+               <div class="billing-select-item">
+                <q-input
+                   filled
+                   dense
+                   v-model="purchaseCode"
+                   label="N° Factura"
+                   hide-bottom-space
+                />
+               </div>
+
+              <div class="col-12" style="width: 100% !important;">
+                <q-input
+                  filled
+                  dense
+                  v-model="barcode"
+                  autofocus
+                  label="Código"
+                  style="width: 100% !important; max-width: none !important;"
+                  @keypress.enter="getOneProduct"
                 >
-                  F10
-                </q-badge>
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Buscar factura
-                </q-tooltip>
-              </q-btn>
-              <q-btn
-                size="sm"
-                icon="clear"
-                color="negative"
-                @click="clear"
-              >
-                <q-tooltip class="text-body2" anchor="bottom middle">
-                  Limpiar factura en curso
-                </q-tooltip>
-              </q-btn>
+                    <template v-slot:append>
+                        <q-btn round color="teal" icon="add_circle" size="sm" @click="openAddProduct = true"/>
+                    </template>
+                </q-input>
+              </div>
             </div>
-            <div class="col-12">
-              <q-table
+
+             <div v-else class="col-12 q-gutter-y-sm">
+                 <q-select
+                  use-input
+                  filled
+                  dense
+                  label="Proveedor"
+                  v-model="provider"
+                  :options="providers"
+                  @filter="filterProviders"
+                />
+             </div>
+
+            <div class="col-12 articles-section" :class="{ 'articles-section-hidden': productsFullscreen }">
+                <!-- Desktop View -->
+               <q-table
+                v-if="$q.screen.gt.xs"
                 row-key="name"
                 title="Artículos"
                 dense
@@ -141,6 +124,7 @@
                 :rows="products"
                 :columns="columns"
                 :pagination="{ rowsPerPage: 0 }"
+                style="max-height: 400px; overflow: auto;"
               >
                 <template v-slot:body="props">
                   <q-tr :props="props">
@@ -194,180 +178,135 @@
                   </q-tr>
                 </template>
               </q-table>
-            </div>
-            <div class="col-12">
-              <q-list dense separator>
-                <q-item>
-                  <q-item-section>
-                    Op Gravada
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{ coin.symbol }} {{ formatNumber(totalBill) }}
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section>
-                    Monto pagado
-                  </q-item-section>
-                  <q-item-section class="text-positive" side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(totalPayment) }}
-                  </q-item-section>
-                </q-item>
-                <q-item>
-                  <q-item-section>
-                    Por pagar
-                  </q-item-section>
-                  <q-item-section side v-if="coin">
-                    {{  coin.symbol }} {{ formatNumber(pendingPayment) }}
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-            <div class="col-12 q-gutter-xs q-mt-md">
-              <q-select
-                filled
-                dense
-                label="Moneda"
-                option-label="name"
-                option-value="id"
-                v-model="coin"
-                :options="coins"
-                @filter="getCoins"
-              />
-              <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
-              <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
 
-              <!-- Sección de archivos adjuntos -->
-              <q-card flat bordered class="q-mt-md">
-                <q-card-section class="q-pb-sm">
-                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="attachment" class="q-mr-sm" />
-                    Archivos Adjuntos
-                  </div>
-
-                  <!-- Dropzone simple - solo cuando no hay archivos -->
-                  <div
-                    v-if="purchaseFiles.length === 0"
-                    class="upload-zone"
-                    :class="{
-                      'upload-zone-active': isDragOverPurchase,
-                      'q-dark': $q.dark.isActive
-                    }"
-                    @dragover.prevent="isDragOverPurchase = true"
-                    @dragleave.prevent="isDragOverPurchase = false"
-                    @drop.prevent="handlePurchaseFileDrop"
-                    @click="openFileDialog"
-                  >
-                    <div class="upload-content">
-                      <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
-                      <div class="upload-text">
-                        Arrastra archivos aquí
+              <!-- Mobile Cart View -->
+              <div
+                v-else-if="products.length > 0"
+                class="mobile-cart-container"
+              >
+                 <div class="mobile-cart-list">
+                      <div
+                        v-for="(product, rowIndex) in products"
+                        :key="rowIndex"
+                        class="cart-item"
+                      >
+                            <div class="cart-item-row">
+                                <q-btn icon="close" flat dense round size="xs" color="grey-6" class="cart-delete-btn" @click="deleteProduct({ rowIndex })" />
+                                <div class="cart-item-info">
+                                    <span class="cart-item-name">{{ product.name }}</span>
+                                    <div class="cart-item-price">
+                                         Costo: {{ coin?.symbol }} {{ formatNumber(product.cost) }}
+                                    </div>
+                                </div>
+                                 <div class="quantity-controls">
+                                     <span class="quantity-value">
+                                         {{ product.quantity }} x
+                                     </span>
+                                 </div>
+                                 <div class="cart-item-subtotal">
+                                      {{ formatNumber(product.subtotal) }}
+                                 </div>
+                            </div>
                       </div>
-                      <q-btn
-                        color="primary"
-                        label="SELECCIONAR"
-                        unelevated
-                        size="xs"
-                        class="q-mt-xs upload-btn"
-                        @click.stop="openFileDialog"
-                      />
-                    </div>
-                  </div>
+                 </div>
+              </div>
+            </div>
 
-                  <!-- Input oculto para seleccionar archivos - SIEMPRE disponible -->
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf,application/pdf"
-                    style="display: none"
-                    @change="handleFileSelect"
+            <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
+                <div class="col-12">
+                   <q-select
+                    filled
+                    dense
+                    label="Moneda"
+                    option-label="name"
+                    option-value="id"
+                    v-model="coin"
+                    :options="coins"
+                    @filter="getCoins"
                   />
+                </div>
+              <div class="col-12">
+                <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              </div>
+              <div class="col-12">
+                <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+              </div>
+              <div class="col-12">
+                <q-card flat bordered class="q-mt-md">
+                  <q-card-section class="q-pb-sm">
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                      <q-icon name="attachment" class="q-mr-sm" />
+                      Archivos Adjuntos
+                    </div>
 
-                  <!-- Botón pequeño para agregar más - solo cuando ya hay archivos -->
-                  <div v-if="purchaseFiles.length > 0" class="add-more-files">
-                    <q-btn
-                      round
-                      color="primary"
-                      icon="add"
-                      size="sm"
-                      class="add-files-btn"
+                    <div
+                      v-if="purchaseFiles.length === 0"
+                      class="upload-zone"
+                      :class="{ 'upload-zone-active': isDragOverPurchase, 'q-dark': $q.dark.isActive }"
+                      @dragover.prevent="isDragOverPurchase = true"
+                      @dragleave.prevent="isDragOverPurchase = false"
+                      @drop.prevent="handlePurchaseFileDrop"
                       @click="openFileDialog"
                     >
-                      <q-tooltip>Agregar más archivos</q-tooltip>
-                    </q-btn>
-                  </div>
-
-                  <!-- Vista de archivos adjuntos -->
-                  <div v-if="purchaseFiles.length > 0" class="q-mt-md">
-                    <div class="text-body2 text-primary q-mb-sm">
-                      Archivos adjuntos ({{ purchaseFiles.length }})
+                      <div class="upload-content">
+                        <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
+                        <div class="upload-text">Arrastra archivos aquí</div>
+                        <q-btn color="primary" label="SELECCIONAR" unelevated size="xs" class="q-mt-xs upload-btn" @click.stop="openFileDialog"/>
+                      </div>
                     </div>
-                    <file-component
-                      :files="purchaseFiles"
-                      @delete:files="handleDeletePurchaseFiles"
-                    />
-                  </div>
-                </q-card-section>
-              </q-card>
-              <!-- <div class="flex q-mt-sm" v-if="purchase" style="gap: 15px;">
-                <q-btn
-                  color="primary"
-                  icon="print"
-                  label="Imprimir factura"
-                  @click="() => { invoicePrinter = true; printBill(purchase) }"
-                >
-                  <q-badge
-                    color="negative"
-                    align="bottom"
-                    floating
-                    v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                  >
-                    F9
-                  </q-badge>
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    Imprimir factura
-                  </q-tooltip>
-                </q-btn>
-                <q-btn
-                  color="teal"
-                  icon="receipt"
-                  label="Imprimir ticket"
-                  @click="() => { invoicePrinter = false; printBill(purchase) }"
-                >
-                  <q-badge
-                    color="negative"
-                    align="bottom"
-                    floating
-                    v-if="$q.screen.gt.sm && !$q.platform.is.nativeMobile"
-                  >
-                    F4
-                  </q-badge>
-                  <q-tooltip class="text-body2" anchor="bottom middle">
-                    Imprimir ticket
-                  </q-tooltip>
-                </q-btn>
-              </div> -->
+
+                    <input ref="fileInput" type="file" multiple accept="image/*,.pdf,application/pdf" style="display: none" @change="handleFileSelect" />
+
+                    <div v-if="purchaseFiles.length > 0" class="add-more-files">
+                      <q-btn round color="primary" icon="add" size="sm" class="add-files-btn" @click="openFileDialog">
+                        <q-tooltip>Agregar más archivos</q-tooltip>
+                      </q-btn>
+                    </div>
+
+                    <div v-if="purchaseFiles.length > 0" class="q-mt-md">
+                      <div class="text-body2 text-primary q-mb-sm">Archivos adjuntos ({{ purchaseFiles.length }})</div>
+                      <file-component :files="purchaseFiles" @delete:files="handleDeletePurchaseFiles"/>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
             </div>
           </div>
         </div>
-        <div class="col-xs-12 col-sm-5 col-md-6 col-lg-7 col-xl-7">
-          <q-table
-            v-model:pagination="pagination"
-            row-key="name"
-            dense
-            grid
-            style="max-height: calc(100vh - 190px); overflow: auto;"
-            binary-state-sort
-            :loading="loadingProducts"
-            :rows="allProducts"
-            :columns="productColumns"
-            :filter="filter"
-            no-data-label="Registro no encontrado"
-            @request="setPagination"
-          >
-            <template v-slot:top>
-              <div class="row full-width q-col-gutter-xs">
+
+        <!-- RIGHT PANEL (Product Catalog) -->
+        <div ref="productsSection" class="products-section" :class="{ 'products-section-fullscreen': productsFullscreen }">
+             <div style="flex-shrink: 0; padding-bottom: 0.5rem;" v-if="$q.screen.gt.sm">
+                <div class="flex q-gutter-sm justify-start">
+                    <q-btn
+                        label="Guardar"
+                        icon="save"
+                        color="positive"
+                        dense
+                        :disable="products.length <= 0"
+                        @click="dialogPayment = true"
+                        style="border-radius: 10px; padding: 5px 15px"
+                    />
+                    <q-btn
+                        label="Buscar"
+                        icon="search"
+                        color="primary"
+                        dense
+                        @click="searchInvoice = true"
+                         style="border-radius: 10px; padding: 5px 15px"
+                    />
+                    <q-btn
+                        label="Borrar"
+                        icon="delete"
+                        color="negative"
+                        dense
+                        @click="clear"
+                         style="border-radius: 10px; padding: 5px 15px"
+                    />
+                </div>
+             </div>
+
+             <div class="row q-col-gutter-xs">
                 <div class="col-6">
                   <q-select
                     use-input
@@ -386,33 +325,87 @@
                 <div class="col-6">
                   <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
                     <template v-slot:append>
-                      <q-icon name="search" />
+                       <q-btn
+                        v-if="$q.screen.lt.md"
+                        :icon="productsFullscreen ? 'fullscreen_exit' : 'fullscreen'"
+                        flat dense round size="sm"
+                        @click="productsFullscreen = !productsFullscreen"
+                      />
+                      <q-icon v-else name="search" />
                     </template>
                   </q-input>
                 </div>
               </div>
-            </template>
-            <template v-slot:item="props">
-              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-2 col-xl-2">
-                <q-card class="my-card">
-                  <q-img
-                    style="height: 150px; width: 100%"
-                    :src="props.row.images[0] ? props.row.images[0].url : 'images/404-image.jpg'"
-                    @click="validateProduct(props.row, true)"
-                  >
-                    <div class="absolute-full text-subtitle1 flex flex-center text-bold text-center">
-                      {{ props.row.name }}
+
+             <div
+                class="product-container-scroll"
+                style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+                :style="$q.screen.lt.md ? 'padding-bottom: 80px !important;' : ''"
+                @scroll="handleProductsScroll"
+             >
+                <div class="row q-col-gutter-xs">
+                    <div
+                        v-for="product in allProducts"
+                        :key="product.id"
+                        class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                        style="padding: 1px;"
+                    >
+                         <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
+                            <q-img
+                                style="height: 150px; width: 100%; border-radius: 10px;"
+                                :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                                @click="validateProduct(product, true)"
+                            >
+                                <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center product-name-overlay">
+                                  {{ product.name }}
+                                </div>
+                            </q-img>
+                         </q-card>
                     </div>
-                  </q-img>
-                </q-card>
-              </div>
-            </template>
-            <template v-slot:loading>
-              <q-inner-loading showing color="primary" />
-            </template>
-          </q-table>
+                     <template v-if="loadingProducts">
+                        <div v-for="n in 10" :key="n" class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
+                            <q-card class="my-card" style="border-radius: 10px;"><q-skeleton height="150px" width="100%" /></q-card>
+                        </div>
+                     </template>
+                </div>
+             </div>
+
+             <div v-if="$q.screen.gt.sm" style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
+                <q-list separator bordered style="border-radius: 10px;">
+                    <q-item>
+                      <q-item-section>Op Gravada</q-item-section>
+                      <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalBill) }}</q-item-section>
+                    </q-item>
+                    <q-item>
+                      <q-item-section>Monto pagado</q-item-section>
+                      <q-item-section class="text-positive" side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalPayment) }}</q-item-section>
+                    </q-item>
+                     <q-item>
+                      <q-item-section>Por pagar</q-item-section>
+                      <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(pendingPayment) }}</q-item-section>
+                    </q-item>
+                </q-list>
+             </div>
         </div>
       </div>
+
+      <q-page-sticky v-if="$q.screen.lt.md" position="bottom" :offset="[0, 12]">
+         <q-btn
+          class="cobrar-floating-btn"
+          color="positive"
+          :disable="products.length <= 0"
+          @click="dialogPayment = true"
+          no-caps
+          unelevated
+          style="width: 90vw; border-radius: 50px;"
+         >
+            <div class="row full-width justify-between items-center q-px-md">
+                 <span>Guardar</span>
+                 <span>{{ coin?.symbol }} {{ formatNumber(totalBill) }}</span>
+            </div>
+         </q-btn>
+      </q-page-sticky>
+
     </q-form>
 
     <q-dialog v-model="openAddProduct" persistent :maximized="$q.screen.lt.sm">
@@ -984,6 +977,7 @@ export default {
   },
   data () {
     return {
+      productsFullscreen: false,
       waitingPayment: false,
       purchaseCode: null,
       loadingBilling: false,
@@ -1684,8 +1678,9 @@ export default {
     /**
      * Get all products
      * @param {Object} params params to search
+     * @param {Boolean} append if true appends products to list
      */
-    async getAllProducts (params) {
+    async getAllProducts (params, append = false) {
       this.loadingProducts = true
       try {
         const { data } = await this.$api.get('products', {
@@ -1700,7 +1695,13 @@ export default {
             }
           }
         })
-        this.allProducts = data.data
+
+        if (append) {
+          this.allProducts = [...this.allProducts, ...data.data]
+        } else {
+          this.allProducts = data.data
+        }
+
         this.pagination.rowsNumber = data.total
       } catch (err) {
         Notify.create({
@@ -1711,6 +1712,47 @@ export default {
       } finally {
         this.loadingProducts = false
       }
+    },
+
+    /**
+     * Handle products infinite scroll
+     */
+    handleProductsScroll (event) {
+      const container = event.target
+      const scrollTop = container.scrollTop
+      const scrollHeight = container.scrollHeight
+      const clientHeight = container.clientHeight
+
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100
+
+      if (!isNearBottom || this.loadingProducts) {
+        return
+      }
+
+      const currentProductsCount = this.allProducts.length
+      const totalProducts = this.pagination.rowsNumber
+
+      if (currentProductsCount >= totalProducts) {
+        return
+      }
+
+      const currentPage = Math.floor(currentProductsCount / this.pagination.rowsPerPage)
+      const nextPage = currentPage + 1
+
+      const params = {
+        sortOrder: this.pagination.descending ? 'asc' : 'desc', // Fix: keep current sorting
+        page: nextPage,
+        sortBy: this.pagination.sortBy,
+        perPage: this.pagination.rowsPerPage,
+        paginate: true,
+        dataSearch: {
+          name: this.filter,
+          'category.name': this.filter,
+          barcode: this.filter
+        }
+      }
+
+      this.getAllProducts(params, true)
     },
     /**
      * Set payments
@@ -2386,6 +2428,299 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* ===== Billing Selects Optimization ===== */
+/* Desktop - mantiene el diseño actual */
+.billing-selects-desktop {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.billing-select-item {
+  width: 100%;
+}
+
+.product-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.selected-product {
+  border: 2px solid #21BA45 !important;
+  box-shadow: 0 0 15px rgba(33, 186, 69, 0.3);
+}
+
+.product-name-overlay {
+  background: linear-gradient(45deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
+  backdrop-filter: blur(2px);
+  padding: 8px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.selected-product .product-name-overlay {
+  background: linear-gradient(45deg, rgba(33, 186, 69, 0.8) 0%, rgba(33, 186, 69, 0.6) 100%);
+}
+
+/* Smooth animations for quantity controls */
+.absolute-bottom-right {
+  animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced modal styling */
+.q-dialog .q-card {
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+/* Progress bar styling */
+.q-linear-progress {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Button enhancements */
+.q-btn {
+  transition: all 0.2s ease;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Badge styling */
+.q-badge {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .col-xs-6 {
+    padding: 2px;
+  }
+
+  .product-card {
+    margin: 2px;
+  }
+
+  .text-subtitle2 {
+    font-size: 11px !important;
+  }
+}
+
+.dropzone-card {
+  border: 2px dashed #e0e0e0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.profit-percentage-input input {
+  text-align: right !important;
+}
+
+.dropzone-card:hover,
+.dropzone-active {
+  border-color: #1976d2;
+}
+
+/* Modern Product Card Styles */
+.product-container {
+  position: relative;
+}
+
+.modern-product-card {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.modern-product-card--selected {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 3px #10b981;
+}
+
+.selection-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #10b981;
+  border-radius: 50%;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+  z-index: 3;
+  backdrop-filter: blur(4px);
+}
+
+.product-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  z-index: 2;
+  text-align: center;
+}
+
+.product-name {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quantity-controls {
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quantity-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quantity-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quantity-btn--minus {
+  background: #ef4444;
+  color: white;
+}
+
+.quantity-btn--minus:hover:not(:disabled) {
+  background: #dc2626;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.quantity-btn--plus {
+  background: #10b981;
+  color: white;
+}
+
+.quantity-btn--plus:hover:not(:disabled) {
+  background: #059669;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.quantity-display {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1f2937;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.image-preview-card {
+  transition: transform 0.2s ease;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.02);
+}
+
+.product-name-overlay {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(2px);
+}
+
+/* Modern Navigation Buttons */
+.modern-nav-btn {
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modern-nav-btn--secondary {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #e5e7eb;
+}
+
+.modern-nav-btn--secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-nav-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+}
+
+.modern-nav-btn--success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  font-size: 15px;
+}
+
+.modern-nav-btn--success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Upload Zone Styles */
 .upload-zone {
   background: rgba(25, 118, 210, 0.08);
   border: 2px dashed var(--q-primary);
@@ -2399,121 +2734,133 @@ export default {
   align-items: center;
   justify-content: center;
   opacity: 0.8;
+}
 
-  /* Tema claro */
-  .body--light & {
-    background: rgba(25, 118, 210, 0.08);
-    border-color: var(--q-primary);
+.upload-zone:hover {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.12);
+  border-color: var(--q-primary);
+}
 
-    .upload-text {
-      color: var(--q-dark);
-    }
+.upload-zone-active {
+  opacity: 1;
+  background: rgba(25, 118, 210, 0.15);
+  border-color: var(--q-primary);
+  transform: scale(1.02);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  color: var(--q-primary);
+  font-weight: 500;
+}
+
+.upload-btn {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* Dark mode support */
+.body--dark .upload-zone {
+  background: rgba(144, 202, 249, 0.1);
+  border-color: #90caf9;
+}
+
+.body--dark .upload-zone:hover {
+  background: rgba(144, 202, 249, 0.15);
+}
+
+.body--dark .upload-text {
+  color: #90caf9;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .upload-zone {
+    min-height: 80px;
+    padding: 12px;
   }
 
-  /* Tema oscuro */
-  .body--dark & {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--q-primary);
-
-    .upload-text {
-      color: var(--q-text-color, white);
-    }
+  .upload-text {
+    font-size: 12px;
   }
+}
 
-  &:hover {
-    opacity: 1;
-    background: rgba(25, 118, 210, 0.12);
-    border-color: var(--q-primary);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.billing-panel-container {
+  display: grid;
+  grid-template-columns: calc(58.333% - 0.5rem) calc(41.666% - 0.5rem);
+  gap: 1rem;
+}
+
+/* Responsive: Móvil no aplica altura fija */
+@media (max-width: 599px) {
+  .billing-panel-container {
+    grid-template-columns: 1fr;
   }
+}
 
-  .body--dark &:hover {
-    background: rgba(255, 255, 255, 0.12);
+@media (min-width: 1440px) {
+  .billing-panel-container {
+    grid-template-columns: calc(50% - 0.5rem) calc(50% - 0.5rem);
   }
+}
 
-  &.upload-zone-active {
-    opacity: 1;
-    background: var(--q-primary-light, #4fc3f7);
-    border-color: var(--q-primary);
-    transform: scale(1.02);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-  }
+.product-container-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-  .upload-content {
-    .upload-text {
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 8px;
-      color: var(--q-text-color);
-      transition: color 0.3s ease;
-    }
-
-    .upload-btn {
-      background: var(--q-primary);
-      color: white;
-      font-weight: 600;
-      padding: 6px 16px;
-      border-radius: 6px;
-      text-transform: uppercase;
-      font-size: 11px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-
-      &:hover {
-        background: var(--q-primary-dark, #1565c0);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      }
-
-      &:active {
-        transform: translateY(0);
-      }
-    }
-  }
+/* Thumb translúcido */
+.product-container-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
 }
 
 .add-more-files {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 16px;
+}
 
-  .add-files-btn {
+.add-files-btn {
     background: var(--q-primary);
     color: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
+}
 
-    &:hover {
+.add-files-btn:hover {
       background: var(--q-primary-dark, #1565c0);
       transform: scale(1.05) translateY(-1px);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-    }
-
-    &:active {
-      transform: scale(1.02) translateY(0);
-    }
-  }
 }
 
-/* Responsive para dispositivos móviles */
-@media (max-width: 768px) {
-  .upload-zone {
-    min-height: 80px;
-    padding: 12px;
+.add-files-btn:active {
+      transform: scale(1.02) translateY(0);
+}
 
-    .upload-content {
-      .upload-text {
-        font-size: 12px;
-      }
+/* Products section */
+.products-section {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 104px);
+}
 
-      .upload-btn {
-        padding: 4px 12px;
-        font-size: 10px;
-      }
-    }
-  }
+.products-section-fullscreen {
+  height: calc(100vh - 56px);
+}
+
+.product-container-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Thumb translúcido */
+.product-container-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
 }
 </style>
