@@ -1943,7 +1943,7 @@ export default {
         }
 
         if (this.$route.query.id) {
-          await this.$api.put(`purchases/${this.$route.query.id}`, params, config)
+          await this.$api.post(`purchases/${this.$route.query.id}`, params, config)
         } else {
           await this.$api.post('purchases', params, config)
         }
