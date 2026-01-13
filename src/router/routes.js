@@ -390,6 +390,12 @@ const routes = [
         component: () => import('src/pages/IntegrationsPage.vue')
       },
       {
+        path: 'production-orders',
+        name: 'ProductionOrder',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ProductionOrderPage.vue')
+      },
+      {
         path: 'welcome',
         name: 'Welcome',
         meta: { requiresAuth: true },

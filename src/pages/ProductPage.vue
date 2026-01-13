@@ -422,8 +422,9 @@
             narrow-indicator
           >
             <q-tab name="basicData" label="Datos básicos" />
-            <q-tab name="stock" label="stock" v-if="!product.is_bundle"/>
-            <q-tab name="product" label="Productos" v-if="product.is_bundle" />
+            <q-tab name="stock" label="stock" v-if="!product.is_bundle && !isRecipeType"/>
+            <q-tab name="product" label="Productos (Pack)" v-if="product.is_bundle" />
+            <q-tab name="recipe" label="Receta (Ingredientes)" v-if="!product.is_bundle"/>
           </q-tabs>
           <q-separator />
 
@@ -743,6 +744,29 @@
                         <q-icon name="settings" class="q-mr-sm" />
                         Configuración
                       </div>
+                      <div class="row q-col-gutter-md q-mb-md">
+                        <div class="col-12">
+                          <q-select
+                            filled
+                            v-model="product.product_type"
+                            :options="productTypeOptions"
+                            label="Tipo de Producto"
+                            emit-value
+                            map-options
+                            dense
+                            :rules="[val => !!val || 'Requerido']"
+                          >
+                             <template v-slot:option="scope">
+                              <q-item v-bind="scope.itemProps">
+                                <q-item-section>
+                                  <q-item-label>{{ scope.opt.label }}</q-item-label>
+                                  <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                                </q-item-section>
+                              </q-item>
+                            </template>
+                          </q-select>
+                        </div>
+                      </div>
                       <div class="row q-col-gutter-md">
                         <div class="col-6">
                           <q-toggle
@@ -810,6 +834,9 @@
             </q-tab-panel>
             <q-tab-panel name="product">
               <pack-product :product="product"/>
+            </q-tab-panel>
+            <q-tab-panel name="recipe">
+              <recipe-product :product="product"/>
             </q-tab-panel>
           </q-tab-panels>
           <q-card-actions align="right" class="text-primary">
@@ -1999,6 +2026,7 @@ import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
 import PackProduct from 'src/components/Product/PackProduct.vue'
+import RecipeProduct from 'src/components/Product/RecipeProduct.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
@@ -2013,7 +2041,7 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 export default {
-  components: { StockProduct, PackProduct, BulkPriceDialog, OnboardingValidationModal },
+  components: { StockProduct, PackProduct, BulkPriceDialog, OnboardingValidationModal, RecipeProduct },
   data () {
     return {
       qrDialog: false,
@@ -2077,8 +2105,14 @@ export default {
         is_addons: 0,
         skip_stock: 0,
         profit_percentage: 0,
-        images: []
+        images: [],
+        product_type: 'RAW_MATERIAL'
       },
+      productTypeOptions: [
+        { label: 'Materia Prima', value: 'RAW_MATERIAL', description: 'Insumo básico para recetas' },
+        { label: 'Sub-receta', value: 'SUB_RECIPE', description: 'Producto intermedio fabricado' },
+        { label: 'Producto Final', value: 'FINISHED_GOOD', description: 'Producto para venta con receta' }
+      ],
       // Decimal input formatting for profit percentage
       profitPercentageValue: 0, // Internal value in centésimas (0.01 = 1)
       profitPercentageDisplay: '0',
@@ -2233,6 +2267,9 @@ export default {
      */
     visibleColumns () {
       return this.columns.filter(col => this.visibleColumnNames.includes(col.name))
+    },
+    isRecipeType () {
+      return ['SUB_RECIPE', 'FINISHED_GOOD'].includes(this.product.product_type)
     }
   },
   watch: {
