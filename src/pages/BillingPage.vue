@@ -279,7 +279,7 @@
                         <q-list class="fab-popup-list">
                           <q-item
                             v-for="type in invoiceTypes"
-                            :key="type.id"
+                            :key="type?.id"
                             clickable
                             v-ripple
                             :active="invoiceType?.id === type.id"
@@ -313,11 +313,29 @@
                         </q-input>
                         <q-list class="fab-popup-list">
                           <q-item
+                            clickable
+                            v-ripple
+                            active
+                            class="bg-primary text-white"
+                            @click="voucherSearch = ''"
+                            v-close-popup
+                          >
+                            <q-item-section>
+                              <q-item-label>
+                                {{ voucherType?.Desc }}
+                              </q-item-label>
+                            </q-item-section>
+                            <q-item-section side>
+                              <q-icon name="check_circle" color="white" />
+                            </q-item-section>
+                          </q-item>
+                          <q-item
                             v-for="voucher in filteredVoucherTypesForFab"
                             :key="voucher.id"
                             clickable
                             v-ripple
-                            :active="voucherType?.id === voucher.id"
+                            :active="Number(voucherType?.Id) === Number(voucher.Id)"
+                            v-show="Number(voucherType?.Id) !== Number(voucher.Id)"
                             @click="voucherType = voucher; voucherSearch = ''"
                             v-close-popup
                           >
