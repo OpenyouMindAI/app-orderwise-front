@@ -47,7 +47,7 @@
         <span class="text-weight-medium">{{ invoice?.code }}</span>
       </q-chip>
     </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
+    <q-form ref="saveBill" @submit="saveBill">
       <div class="billing-panel-container">
         <div style="min-width: 0;">
           <!-- Panel de facturación -->
@@ -6369,7 +6369,7 @@ export default {
 .products-section {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 104px);
+  height: calc(100dvh - 76px);
 }
 
 .products-section-fullscreen {

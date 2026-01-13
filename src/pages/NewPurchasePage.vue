@@ -1,38 +1,31 @@
 <template>
   <q-page class="q-pa-none">
-    <div v-if="$route.query.id" class="invoice-header-compact q-mb-sm q-px-sm q-pt-sm">
-      <q-chip
-        square
-        color="primary"
-        text-color="white"
-        icon="receipt_long"
-        class="invoice-chip"
-      >
-        <span class="text-weight-medium">{{ purchase?.purchase_number }}</span>
-      </q-chip>
-    </div>
-
-    <q-form ref="saveBill" @submit.prevent="saveBill" style="height: calc(100vh - 50px);">
-      <div class="billing-panel-container">
+    <q-form ref="saveBill" @submit.prevent="saveBill">
+      <div class="billing-panel-container q-pa-sm">
         <!-- LEFT PANEL -->
         <div style="min-width: 0;">
+          <!-- Purchase Number Indicator -->
+
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales - Solo desktop -->
             <div v-if="$q.screen.gt.sm" class="billing-selects-desktop col-12">
               <div class="billing-select-item">
                 <q-select
-                  use-input
                   filled
                   dense
-                  label="Proveedor"
-                  input-debounce="0"
-                  option-value="id"
                   v-model="provider"
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
+                  option-value="id"
                   :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
                   :options="providers"
                   :rules="[val => !!val || 'El campo es requerido.']"
                   @filter="filterProviders"
                   hide-bottom-space
+                  label="Proveedor"
                 >
                   <template v-slot:append>
                     <q-btn color="primary" round icon="add_circle" @click.stop.prevent="(openAddProvider = true)" size="sm"/>
@@ -42,35 +35,41 @@
 
               <div class="billing-select-item">
                 <q-select
-                  use-input
                   filled
                   dense
-                  label="Tipo de factura"
+                  v-model="invoiceType"
+                  use-input
+                  hide-selected
+                  fill-input
                   input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
                   option-label="name"
                   option-value="id"
-                  v-model="invoiceType"
                   :options="invoiceTypes"
                   :rules="[val => !!val || 'El campo es requerido.']"
                   @filter="filterInvoiceTypes"
                   hide-bottom-space
+                  label="Tipo de factura"
                 />
               </div>
 
               <div class="billing-select-item">
                 <q-select
-                  use-input
                   filled
                   dense
-                  label="Tipo de servicio"
+                  v-model="typeOfService"
+                  use-input
+                  hide-selected
+                  fill-input
                   input-debounce="0"
+                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
                   option-label="name"
                   option-value="id"
-                  v-model="typeOfService"
                   :options="typeOfServices"
                   :rules="[val => !!val || 'El campo es requerido.']"
                   @filter="filterTypeOfServices"
                   hide-bottom-space
+                  label="Tipo de servicio"
                 />
               </div>
 
@@ -98,6 +97,18 @@
                         <q-btn round color="teal" icon="add_circle" size="sm" @click="openAddProduct = true"/>
                     </template>
                 </q-input>
+              </div>
+
+              <div v-if="$route.query.id" class="q-mb-sm">
+                <q-chip
+                  square
+                  color="primary"
+                  text-color="white"
+                  icon="receipt_long"
+                  class="invoice-chip"
+                >
+                  <span class="text-weight-medium">{{ purchase?.purchase_number }}</span>
+                </q-chip>
               </div>
             </div>
 
@@ -213,18 +224,6 @@
             </div>
 
             <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
-                <div class="col-12">
-                   <q-select
-                    filled
-                    dense
-                    label="Moneda"
-                    option-label="name"
-                    option-value="id"
-                    v-model="coin"
-                    :options="coins"
-                    @filter="getCoins"
-                  />
-                </div>
               <div class="col-12">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
@@ -234,15 +233,32 @@
               <div class="col-12">
                 <q-card flat bordered class="q-mt-md">
                   <q-card-section class="q-pb-sm">
-                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                      <q-icon name="attachment" class="q-mr-sm" />
-                      Archivos Adjuntos
+                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center justify-between">
+                      <div class="flex items-center">
+                        <q-icon name="attachment" class="q-mr-sm" />
+                        Archivos Adjuntos
+                      </div>
+
+                      <!-- Botón para agregar archivos - visible cuando ya hay archivos -->
+                      <q-btn
+                        v-if="purchaseFiles.length > 0"
+                        round
+                        color="primary"
+                        text-color="white"
+                        icon="add"
+                        size="sm"
+                        unelevated
+                        @click="openFileDialog"
+                      >
+                        <q-tooltip>Agregar más archivos</q-tooltip>
+                      </q-btn>
                     </div>
 
                     <div
                       v-if="purchaseFiles.length === 0"
                       class="upload-zone"
                       :class="{ 'upload-zone-active': isDragOverPurchase, 'q-dark': $q.dark.isActive }"
+                      @dragenter.prevent="isDragOverPurchase = true"
                       @dragover.prevent="isDragOverPurchase = true"
                       @dragleave.prevent="isDragOverPurchase = false"
                       @drop.prevent="handlePurchaseFileDrop"
@@ -256,12 +272,6 @@
                     </div>
 
                     <input ref="fileInput" type="file" multiple accept="image/*,.pdf,application/pdf" style="display: none" @change="handleFileSelect" />
-
-                    <div v-if="purchaseFiles.length > 0" class="add-more-files">
-                      <q-btn round color="primary" icon="add" size="sm" class="add-files-btn" @click="openFileDialog">
-                        <q-tooltip>Agregar más archivos</q-tooltip>
-                      </q-btn>
-                    </div>
 
                     <div v-if="purchaseFiles.length > 0" class="q-mt-md">
                       <div class="text-body2 text-primary q-mb-sm">Archivos adjuntos ({{ purchaseFiles.length }})</div>
@@ -1411,7 +1421,13 @@ export default {
   created () {
     this.getLocalStorage()
     this.getPaymentMethods()
-    if (this.$route?.query?.id) this.getInvoiceOne(this.$route.query.id)
+    // Verificar si hay un ID en la query al cargar la página
+    // Si hay un ID pero la página se está refrescando (no hay estado previo),
+    // limpiar la URL para resetear el estado
+    if (this.$route?.query?.id) {
+      // Remover el parámetro 'id' de la URL para restablecer el estado
+      this.$router.replace({ name: 'NewPurchase' })
+    }
   },
   methods: {
     /**
@@ -1485,7 +1501,7 @@ export default {
      */
     saveWithoutPrint () {
       this.withoutPrint = true
-      this.$refs.saveBill.submit()
+      this.saveBill()
     },
     /**
      * Payment success
@@ -1826,7 +1842,7 @@ export default {
         this.invoiceDescription = purchase.description
         this.deliveryDate = purchase.delivery_date
         // Load existing attachments
-        this.loadExistingAttachments(purchase.attachments || [])
+        this.loadExistingAttachments(purchase.files || [])
         this.calculateTotal()
         this.search = ''
       } else {
@@ -2458,7 +2474,6 @@ export default {
 
 .product-name-overlay {
   background: linear-gradient(45deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
-  backdrop-filter: blur(2px);
   padding: 8px;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
@@ -2680,7 +2695,6 @@ export default {
 
 .product-name-overlay {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
-  backdrop-filter: blur(2px);
 }
 
 /* Modern Navigation Buttons */
@@ -2848,7 +2862,7 @@ export default {
 .products-section {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 104px);
+  height: calc(100vh - 76px);
 }
 
 .products-section-fullscreen {
