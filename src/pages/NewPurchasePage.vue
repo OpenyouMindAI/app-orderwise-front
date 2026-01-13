@@ -866,19 +866,26 @@
             <q-btn icon="close" flat round dense @click="(openAddProvider = false)" />
           </q-card-section>
           <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="providerAdded.document_number"
-                label="Número de documento"
-              />
-            </div>
+            <!-- Nombre - Campo principal con asterisco -->
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
                 filled
                 v-model="providerAdded.name"
-                label="Nombre"
+                label="Nombre *"
+              />
+            </div>
+
+            <!-- Información adicional -->
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-grey-7 q-mt-sm">
+              Información adicional (opcional)
+            </div>
+
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="providerAdded.document_number"
+                label="Número de documento"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
