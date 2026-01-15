@@ -61,7 +61,6 @@
               </div>
               <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
                 <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
                   filled
                   v-model="seller.phone_number"
                   label="Número de teléfono"
@@ -88,7 +87,6 @@
               </div>
               <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
                 <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
                   filled
                   v-model="seller.password"
                   autofocus
@@ -136,7 +134,6 @@
               </div>
               <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
                 <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
                   filled
                   v-model="seller.phone_number"
                   label="Número de teléfono"
@@ -347,13 +344,8 @@ export default {
             color: 'positive'
           })
         })
-        .catch(err => {
+        .catch(() => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
         })
     },
     /**
@@ -385,13 +377,8 @@ export default {
             color: 'positive'
           })
         })
-        .catch(err => {
+        .catch(() => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
         })
     },
     /**
@@ -411,13 +398,8 @@ export default {
             color: 'positive'
           })
         })
-        .catch(err => {
+        .catch(() => {
           this.visible = false
-          Notify.create({
-            message: err.message,
-            icon: 'warning',
-            color: 'negative'
-          })
         })
     }
   }

@@ -125,7 +125,7 @@ export default configure(function (/* ctx */) {
         // Opciones específicas para electron-packager
       },
       builder: {
-        appId: 'orderwise'
+        appId: 'qbitsapp'
       }
     },
 

@@ -370,7 +370,7 @@ const columns = [
     label: 'Dirección',
     field: 'address',
     sortable: true,
-    format: (val) => val || 'Sin dirección',
+    format: (val) => val?.formattedAddress || val?.address || 'Sin dirección',
     style: 'width: 250px; max-width: 250px;',
     headerStyle: 'width: 250px; max-width: 250px;'
   }
@@ -444,11 +444,11 @@ const formDate = (data, put = false) => {
 
   // Agregar la dirección formateada
   let addressToSend = ''
-  if (formattedAddress.value) {
+  console.log(address.value)
+  if (address.value && typeof address.value === 'string') {
     addressToSend = formattedAddress.value
   } else if (address.value && typeof address.value === 'object') {
-    // Si es un objeto, usar formattedAddress o convertir a string simple
-    addressToSend = address.value.formattedAddress || address.value.name || JSON.stringify(address.value)
+    addressToSend = JSON.stringify(address.value)
   } else if (data.address) {
     addressToSend = data.address
   }
@@ -458,21 +458,18 @@ const formDate = (data, put = false) => {
   formData.append('email', data.email)
   formData.append('phone_number', data.phone_number)
 
-  // Agregar business_type_id si está disponible
   if (data.business_type && data.business_type.id) {
     formData.append('business_type_id', data.business_type.id)
   } else if (data.business_type_id) {
     formData.append('business_type_id', data.business_type_id)
   }
 
-  // Agregar country_id si está disponible
   if (data.country && data.country.id) {
     formData.append('country_id', data.country.id)
   } else if (data.country_id) {
     formData.append('country_id', data.country_id)
   }
 
-  // Agregar is_test (convertir a 1 o 0 para el backend)
   formData.append('is_test', data.is_test ? 1 : 0)
 
   if (put) formData.append('_method', 'put')
@@ -487,7 +484,6 @@ function closeModal () {
   openEditCompany.value = false
   company.value = {}
   file.value = {}
-  // Limpiar las variables de dirección
   address.value = null
   formattedAddress.value = ''
   addressComponentKey.value += 1
@@ -598,7 +594,6 @@ async function saveCompany () {
     openAddCompany.value = false
     company.value = {}
     file.value = {}
-    // Limpiar las variables de dirección
     address.value = null
     formattedAddress.value = ''
     addressComponentKey.value += 1
@@ -621,23 +616,11 @@ function editCompany (event, row, index) {
   company.value = row
   file.value = { url: row.url }
 
-  // Actualizar la dirección cuando se selecciona una empresa
+  console.log(row)
+
   if (row.address) {
-    formattedAddress.value = row.address
-    // Crear objeto de dirección para AddressComponent
-    address.value = {
-      name: '',
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      latitude: row.latitude || null,
-      longitude: row.longitude || null,
-      formattedAddress: row.address,
-      placeId: row.place_id || '',
-      types: []
-    }
+    formattedAddress.value = row.address?.formattedAddress || row.address
+    address.value = row.address
     company.value.address = row.address
   } else {
     formattedAddress.value = ''
@@ -657,7 +640,6 @@ async function saveEdit () {
     openEditCompany.value = false
     company.value = {}
     file.value = {}
-    // Limpiar las variables de dirección
     address.value = null
     formattedAddress.value = ''
     addressComponentKey.value += 1

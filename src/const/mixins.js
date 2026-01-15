@@ -8,15 +8,99 @@ export const notify = (message, color, icon, position = 'bottom') => {
     color,
     icon,
     position,
-    timeout: 3000,
+    timeout: 3500,
+    textColor: 'white',
+    iconColor: 'white',
+    iconSize: '24px',
+    progress: true,
+    progressClass: 'bg-white',
+    classes: 'notify-modern',
+    html: true,
     actions: [
       {
         icon: 'close',
         color: 'white',
+        size: 'sm',
+        flat: true,
+        round: true,
         handler: () => { /* Cerrar notificación */ }
       }
-    ]
+    ],
+    attrs: {
+      style: 'border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); backdrop-filter: blur(10px); min-width: 300px; padding: 12px 16px; align-items: flex-start;'
+    }
   })
+}
+
+/**
+ * Notify validation errors from backend
+ * Handles Laravel validation error structure: { field: ["error message"] }
+ * Also handles new error format: { success, error, message, status_code, debug }
+ * @param {Object|String} error - Error object from axios or error message
+ * @param {String} defaultMessage - Default message if no validation errors found
+ */
+export const notifyValidationErrors = (error, defaultMessage = 'Error en la validación') => {
+  // Si es un string, mostrar directamente
+  if (typeof error === 'string') {
+    notify(error, 'negative', 'warning')
+    return
+  }
+
+  // Nuevo formato de error del backend
+  const errorData = error?.response?.data || error?.data || error
+
+  // Si viene el nuevo formato con message directamente
+  if (errorData?.message && typeof errorData.message === 'string') {
+    notify(errorData.message, 'negative', 'warning')
+    return
+  }
+
+  // Extraer errores de validación del backend (formato antiguo)
+  const validationErrors = errorData?.errors
+
+  if (validationErrors && typeof validationErrors === 'object') {
+    // Convertir objeto de errores en array de mensajes
+    const errorMessages = Object.entries(validationErrors)
+      .map(([field, messages]) => {
+        // Cada campo puede tener múltiples mensajes de error
+        const fieldErrors = Array.isArray(messages) ? messages : [messages]
+        return fieldErrors.join(', ')
+      })
+      .join('\n')
+
+    // Mostrar todos los errores en una sola notificación
+    Notify.create({
+      message: errorMessages,
+      color: 'negative',
+      icon: 'warning',
+      position: 'top',
+      timeout: 5000,
+      textColor: 'white',
+      iconColor: 'white',
+      iconSize: '24px',
+      progress: true,
+      progressClass: 'bg-white',
+      classes: 'notify-modern notify-validation-error',
+      html: true,
+      multiLine: true,
+      actions: [
+        {
+          icon: 'close',
+          color: 'white',
+          size: 'sm',
+          flat: true,
+          round: true,
+          handler: () => { /* Cerrar notificación */ }
+        }
+      ],
+      attrs: {
+        style: 'border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); backdrop-filter: blur(10px); min-width: 320px; max-width: 500px; padding: 12px 16px; align-items: flex-start;'
+      }
+    })
+  } else {
+    // Si no hay errores de validación, usar el mensaje por defecto
+    notify(defaultMessage, 'negative', 'warning')
+  }
 }
 /**
  * Set date format

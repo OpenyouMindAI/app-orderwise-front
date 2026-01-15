@@ -244,7 +244,6 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/ActiveTransportPage.vue')
       },
-      // Invoice Delivery Routes - Own Delivery System
       {
         path: 'delivery/tray',
         name: 'InvoiceDeliveryTray',
@@ -383,6 +382,12 @@ const routes = [
         name: 'AiChat',
         meta: { requiresAuth: true },
         component: () => import('src/pages/AiChatPage.vue')
+      },
+      {
+        path: 'integrations',
+        name: 'Integrations',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/IntegrationsPage.vue')
       },
       {
         path: 'welcome',

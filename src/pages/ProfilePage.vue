@@ -515,7 +515,7 @@ export default {
         })
       } catch (error) {
         if (error.response?.status === 422) {
-          this.errors = error.response.data.errors || {}
+          this.errors = error.errors || {}
         }
         this.$q.notify({
           message: error.response?.data?.message || 'Error al actualizar perfil',
@@ -664,10 +664,10 @@ export default {
         }
       } catch (error) {
         if (error.response?.status === 422) {
-          this.errors = error.response.data.errors || {}
+          this.errors = error.errors || {}
         }
         this.$q.notify({
-          message: error.response?.data?.message || 'Error al cambiar contraseña',
+          message: error.message || 'Error al cambiar contraseña',
           icon: 'warning',
           color: 'negative'
         })

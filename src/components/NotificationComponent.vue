@@ -84,7 +84,7 @@
                   lines="1"
                   :class="notify.read_at ? 'text-grey' : ''"
                 >
-                  {{ $t(`command.${notify.data?.title || notify.data?.error_type?.toLowerCase()}`) }}
+                  {{ notify.data?.title || notify.data?.error_type?.toLowerCase() }}
                 </q-item-label>
                 <q-item-label caption lines="2">
                   <span>{{ notify.data?.content || notify.data?.message }}</span>
@@ -289,12 +289,17 @@ export default {
       }
     }
     const getErrorIcon = (notification) => {
+      // Notificaciones del sistema
+      if (notification?.data?.type === 'system_event') {
+        return notification?.data?.icon || 'notifications'
+      }
+      // Notificaciones de error
       const errorType = notification?.data?.error_type
       switch (errorType) {
         case 'DATABASE_ERROR': return 'storage'
         case 'APPLICATION_ERROR': return 'code'
         case 'GENERAL_ERROR': return 'error'
-        default: return notification.data.icon
+        default: return notification?.data?.icon || 'warning'
       }
     }
     /**

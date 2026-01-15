@@ -1,348 +1,293 @@
 <template>
-  <q-dialog :model-value="show" @update:model-value="$emit('update:show', $event)">
-    <q-card style="width: 900px; max-width: 95vw;">
-      <q-card-section class="flex justify-between items-center q-py-sm bg-primary text-white">
-        <span class="text-h6">Desglose de pago</span>
-        <q-btn flat icon="close" round size="md" @click="closeModal"/>
+  <q-dialog  :model-value="show" @update:model-value="$emit('update:show', $event)">
+    <q-card class="payment-modal" full-height>
+      <!-- Header -->
+      <q-card-section class="bg-primary text-white q-pa-xs flex items-center">
+        <q-icon name="account_balance_wallet" size="22px" />
+        <div class="text-h6 q-ml-sm">Procesar Pago</div>
+        <q-space />
+        <q-btn flat dense round icon="close" @click="closeModal" />
       </q-card-section>
 
-      <q-card-section class="row q-col-gutter-md">
-        <!-- Payment Methods Buttons -->
-        <div class="col-xs-12 col-sm-4 col-md-4 col-lg-3 q-gutter-xs">
-          <q-btn
-            color="secondary"
-            size="17px"
-            style="width: 100%"
-            :label="paymentMethod.name"
-            v-for="(paymentMethod, index) in paymentMethods.slice(0, 5)"
-            :key="paymentMethod.id"
-            @click="addPayment(paymentMethod)"
-            class="payment-method-btn"
-          >
-            <q-badge
-              v-if="index < 5 && $q.screen.gt.sm && !$q.platform.is.nativeMobile"
-              color="negative"
-              align="bottom"
-              floating
+      <!-- Content -->
+      <q-card-section class="payment-content q-pa-xs">
+
+        <!-- Payments Added -->
+        <div v-if="localPayments.length > 0" class="q-mb-sm">
+          <div v-if="$q.screen.gt.xs" class="payments-table-container">
+            <q-table
+              :rows="localPayments"
+              :columns="paymentsColumns"
+              row-key="id"
+              flat
+              dense
+              hide-pagination
+              :rows-per-page-options="[0]"
+              class="payments-table"
             >
-              F{{ index + 2 }}
-            </q-badge>
-          </q-btn>
-        </div>
-
-        <!-- Payment Details -->
-        <div class="col-xs-12 col-sm-8 col-md-8 col-lg-9">
-          <!-- Table Close Toggle -->
-          <q-toggle
-            v-if="showTableClose && !visibleCloseTable"
-            :model-value="tableClose"
-            @update:model-value="$emit('update:table-close', $event)"
-            label="Cerrar mesa"
-            class="q-mb-md"
-          />
-
-          <!-- Payments Table - Desktop -->
-          <q-markup-table class="q-mb-md" style="max-width: 100%; overflow: auto;" v-if="$q.screen.gt.xs">
-            <thead>
-              <tr>
-                <th class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">✅</th>
-                <th class="text-left">Método de pago</th>
-                <th class="text-left">Referencia</th>
-                <th class="text-right">Monto</th>
-                <th class="text-right" v-if="exchangeRate">Cambio</th>
-                <th class="text-right">% Descuento</th>
-                <th class="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(payment, index) in localPayments" :key="payment.id || index">
-                <td class="text-left" v-if="userSession?.company_session?.company_config?.other?.partial_billing">
-                  <q-checkbox v-model="payment.checked" />
-                </td>
-                <td class="text-left">{{ payment.name }}</td>
-                <td class="text-left">
-                  <span v-if="payment.reference">{{ payment.reference }}</span>
-                  <span v-else>-</span>
-                  <q-popup-edit
-                    :model-value="payment.reference"
-                    @update:model-value="updatePaymentReference(payment, index, $event)"
-                    auto-save
-                    v-slot="scope"
-                  >
-                    <q-input
-                      v-model="scope.value"
-                      autofocus
-                      @keyup.enter="scope.set"
-                    />
-                  </q-popup-edit>
-                </td>
-                <td class="text-right">
-                  {{ formatNumber(payment.amount) }}
-                  <q-popup-edit
-                    :model-value="payment.amount"
-                    @update:model-value="updatePaymentAmount(payment, index, $event)"
-                    auto-save
-                    v-slot="scope"
-                  >
-                    <q-input
-                      v-model.number="scope.value"
-                      autofocus
-                      @keyup.enter="scope.set"
-                    />
-                  </q-popup-edit>
-                </td>
-                <td class="text-right" v-if="exchangeRate">
-                  {{ exchangeRate.coin?.symbol }} {{ formatNumber(payment.amount * exchangeRate.amount) }}
-                </td>
-                <td class="text-right">{{ payment.discount_percentage || 0 }}%</td>
-                <td class="text-center q-gutter-x-xs">
+              <template v-slot:body-cell-name="props">
+                <q-td :props="props">
+                  <div class="row items-center q-gutter-sm">
+                    <q-avatar :color="props.rowIndex === 0 ? 'primary' : 'grey-7'" text-color="white" size="32px">
+                      <q-icon :name="getPaymentIcon(props.row.acronym)" size="18px" />
+                    </q-avatar>
+                    <div>
+                      <div class="text-weight-bold">{{ props.row.name }}</div>
+                      <div class="text-caption text-grey-6">
+                        Ref:
+                        <span class="text-primary cursor-pointer" @click="editReference(props.row, props.rowIndex)">
+                          {{ props.row.reference || 'Sin ref' }}
+                          <q-icon name="edit" size="10px"/>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-acronym="props">
+                <q-td :props="props" class="text-center">
+                  <q-badge color="grey-7" class="text-weight-bold">
+                    {{ props.row.acronym }}
+                  </q-badge>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-amount="props">
+                <q-td :props="props" class="text-right">
+                  <div class="cursor-pointer" @click="editAmount(props.row, props.rowIndex)">
+                    <div class="text-h6 text-weight-bold text-primary">
+                      {{ formatNumber(props.row.amount) }}
+                      <q-icon name="edit" size="sm" class="q-ml-xs"/>
+                    </div>
+                    <div v-if="exchangeRate" class="text-caption text-grey-6">
+                      {{ exchangeRate.coin?.symbol }} {{ formatNumber(props.row.amount * exchangeRate.amount) }}
+                    </div>
+                  </div>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-discount="props">
+                <q-td :props="props" class="text-center">
+                  <q-badge v-if="props.row.discount_percentage" color="positive" class="text-weight-bold">
+                    {{ props.row.discount_percentage }}%
+                  </q-badge>
+                  <span v-else class="text-grey-6">-</span>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-actions="props">
+                <q-td :props="props" class="text-right">
                   <q-btn
-                    icon="delete"
-                    color="negative"
-                    rounded
-                    dense
-                    @click="deletePayment(index)"
-                  />
-                  <q-btn
-                    v-if="payment.acronym === 'MPQA'"
-                    rounded
-                    dense
+                    v-if="props.row.acronym === 'MPQA'"
                     icon="qr_code"
                     color="secondary"
-                    @click="$emit('qr-payment', payment)"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </q-markup-table>
-
-          <!-- Payments Cards - Mobile -->
-          <div v-else class="payment-cards-mobile q-mb-md">
-            <div
-              v-for="(payment, index) in localPayments"
-              :key="payment.id || index"
-              class="payment-card-item"
-            >
-              <div class="payment-card-header">
-                <div class="payment-card-title">
+                    flat
+                    round
+                    size="sm"
+                    @click="$emit('qr-payment', props.row)"
+                  >
+                    <q-tooltip>Generar QR</q-tooltip>
+                  </q-btn>
                   <q-checkbox
                     v-if="userSession?.company_session?.company_config?.other?.partial_billing"
-                    v-model="payment.checked"
-                    dense
-                    class="q-mr-xs"
-                  />
-                  <span class="payment-method-name">{{ payment.name }}</span>
-                </div>
-                <div class="payment-card-actions">
-                  <q-btn
-                    v-if="payment.acronym === 'MPQA'"
-                    icon="qr_code"
-                    color="secondary"
-                    flat
-                    dense
-                    round
+                    v-model="props.row.checked"
+                    color="primary"
                     size="sm"
-                    @click="$emit('qr-payment', payment)"
+                    class="q-mx-xs"
                   />
                   <q-btn
                     icon="delete"
                     color="negative"
                     flat
-                    dense
                     round
                     size="sm"
-                    @click="deletePayment(index)"
-                  />
+                    @click="deletePayment(props.rowIndex)"
+                  >
+                    <q-tooltip>Eliminar</q-tooltip>
+                  </q-btn>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+
+          <div v-else class="payments-grid">
+            <q-card
+              v-for="(payment, index) in localPayments"
+              :key="payment.id || index"
+              dense
+              flat
+              class="payment-card"
+            >
+              <q-card-section>
+                <div class="row items-center justify-between q-pa-xs">
+                  <div class="row items-center q-gutter-xs">
+                    <q-avatar :color="index === 0 ? 'primary' : 'grey-7'" text-color="white" size="32px">
+                      <q-icon :name="getPaymentIcon(payment.acronym)" size="18px" />
+                    </q-avatar>
+                    <div>
+                      <div class="row items-center q-gutter-xs">
+                        <span class="text-body2 text-weight-bold">{{ payment.name }}</span>
+                      </div>
+                      <div class="text-caption text-grey-6" style="font-size: 10px;">
+                        Ref:
+                        <span class="text-primary cursor-pointer" @click="editReference(payment, index)">
+                          {{ payment.reference || 'Sin ref' }}
+                          <q-icon name="edit" size="8px"/>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row items-center q-gutter-xs column">
+                    <div class="row items-end justify-between">
+                      <div>
+                        <div class="text-body1 text-weight-bold text-primary cursor-pointer" @click="editAmount(payment, index)">
+                          {{ formatNumber(payment.amount) }}
+                          <q-icon name="edit" size="8px" class="q-ml-xs"/>
+                        </div>
+                      </div>
+                      <div v-if="exchangeRate" class="text-right">
+                        <div class="text-caption text-grey-5" style="font-size: 9px;">Equivalente</div>
+                        <div class="text-caption text-weight-medium text-grey-4" style="font-size: 10px;">
+                          {{ exchangeRate.coin?.symbol }} {{ formatNumber(payment.amount * exchangeRate.amount) }}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row q-gutter-xs">
+                      <q-btn
+                        v-if="payment.acronym === 'MPQA'"
+                        icon="qr_code"
+                        color="secondary"
+                        flat
+                        round
+                        size="xs"
+                        @click="$emit('qr-payment', payment)"
+                      >
+                        <q-tooltip>Generar QR</q-tooltip>
+                      </q-btn>
+                      <q-checkbox
+                        v-if="userSession?.company_session?.company_config?.other?.partial_billing"
+                        v-model="payment.checked"
+                        color="primary"
+                        size="xs"
+                      />
+                      <q-btn
+                        icon="delete"
+                        color="negative"
+                        flat
+                        round
+                        size="xs"
+                        @click="deletePayment(index)"
+                      >
+                        <q-tooltip>Eliminar</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
                 </div>
+                <q-badge
+                  v-if="payment.discount_percentage"
+                  color="positive"
+                  class="discount-badge"
+                >
+                  {{ payment.discount_percentage }}% descuento
+                </q-badge>
+              </q-card-section>
+            </q-card>
+          </div>
+        </div>
+
+        <div class="column q-gutter-sm">
+          <!-- Falta/Cambio -->
+          <div v-if="pendingPayment !== 0" class="row items-center justify-between q-pa-sm" :class="pendingPayment > 0 ? 'bg-orange-1' : 'bg-green-1'" style="border-radius: 8px;">
+            <div class="row items-center q-gutter-xs">
+              <q-icon :name="pendingPayment > 0 ? 'info' : 'check_circle'" :color="pendingPayment > 0 ? 'orange' : 'green'" size="16px"/>
+              <span class="text-caption text-weight-bold" :class="pendingPayment > 0 ? 'text-orange-9' : 'text-green-9'">
+                {{ pendingPayment > 0 ? 'Falta:' : 'Cambio:' }}
+              </span>
+            </div>
+            <span class="text-body2 text-weight-bold" :class="pendingPayment > 0 ? 'text-orange-9' : 'text-green-9'">
+              {{ formatNumber(Math.abs(pendingPayment)) }}
+            </span>
+          </div>
+
+          <!-- Total a Pagar -->
+          <div class="total-compact row items-center justify-between">
+            <span class="text-body1 text-grey-7">Total a Pagar</span>
+            <div class="text-right">
+              <div class="text-h6 text-weight-bold text-primary">
+                {{ formatNumber(discountAmount > 0 ? totalWithDiscount : totalAmount) }}
               </div>
-              <div class="payment-card-body">
-                <div class="payment-card-row">
-                  <span class="payment-label">Monto:</span>
-                  <span class="payment-value payment-amount">
-                    {{ formatNumber(payment.amount) }}
-                    <q-popup-edit
-                      :model-value="payment.amount"
-                      @update:model-value="updatePaymentAmount(payment, index, $event)"
-                      auto-save
-                      v-slot="scope"
-                    >
-                      <q-input
-                        v-model.number="scope.value"
-                        autofocus
-                        dense
-                        @keyup.enter="scope.set"
-                      />
-                    </q-popup-edit>
-                  </span>
-                </div>
-                <div class="payment-card-row" v-if="exchangeRate">
-                  <span class="payment-label">T. Cambio:</span>
-                  <span class="payment-value">{{ exchangeRate.coin?.symbol }} {{ formatNumber(payment.amount * exchangeRate.amount) }}</span>
-                </div>
-                <div class="payment-card-row">
-                  <span class="payment-label">Ref:</span>
-                  <span class="payment-value">
-                    {{ payment.reference || '-' }}
-                    <q-popup-edit
-                      :model-value="payment.reference"
-                      @update:model-value="updatePaymentReference(payment, index, $event)"
-                      auto-save
-                      v-slot="scope"
-                    >
-                      <q-input
-                        v-model="scope.value"
-                        autofocus
-                        dense
-                        @keyup.enter="scope.set"
-                      />
-                    </q-popup-edit>
-                  </span>
-                </div>
-                <div class="payment-card-row" v-if="payment.discount_percentage">
-                  <span class="payment-label">Desc:</span>
-                  <span class="payment-value">{{ payment.discount_percentage }}%</span>
-                </div>
+              <div v-if="exchangeRate" class="text-caption text-grey-5">
+                {{ exchangeRate.coin?.symbol }} {{ formatNumber((discountAmount > 0 ? totalWithDiscount : totalAmount) * exchangeRate.amount) }}
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Payment Summary -->
-          <q-item style="border: none !important">
-            <q-item-section v-if="pendingPayment >= 0">
-              RESTANTE POR COBRAR
-            </q-item-section>
-            <q-item-section v-else>
-              VUELTO
-            </q-item-section>
-            <q-item-section side v-if="coin" class="text-bold">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <span>
-                  {{ coin.symbol }}
-                </span>
-                <span>
-                  {{ formatNumber(Math.abs(pendingPayment)) }}
-                </span>
-                <span v-if="exchangeRate">
-                  |
-                </span>
-                <span v-if="exchangeRate">
-                  {{ exchangeRate.coin?.symbol }} {{ formatNumber(Math.abs(pendingPayment * exchangeRate.amount)) }}
-                </span>
+        <!-- Payment Methods -->
+        <div class="q-mb-sm q-mt-md">
+          <div class="payment-methods-grid">
+            <q-btn
+              v-for="(paymentMethod, index) in paymentMethods.slice(0, 5)"
+              :key="paymentMethod.id"
+              unelevated
+              :color="index === 0 ? 'primary' : 'grey-7'"
+              :text-color="'white'"
+              @click="addPayment(paymentMethod)"
+            >
+              <div class="column items-center q-gutter-y-xs">
+                <q-icon :name="getPaymentIcon(paymentMethod.acronym)" size="24px" />
+                <span class="text-caption text-weight-medium" style="font-size: 10px;">{{ paymentMethod.name.length > 12 ? paymentMethod.name.substring(0, 12) + '...' : paymentMethod.name }}</span>
               </div>
-            </q-item-section>
-          </q-item>
+              <q-badge
+                v-if="index < 5 && $q.screen.gt.xs"
+                color="negative"
+                floating
+                class="shortcut-badge"
+              >
+                F{{ index + 2 }}
+              </q-badge>
+            </q-btn>
+          </div>
+        </div>
 
-          <q-list separator bordered style="border-radius: 10px;" dense>
-            <!-- Subtotal -->
-            <q-item class="bg-positive text-white text-h6" style="border-radius: 10px 10px 0px 0px; border-top: none !important">
-              <q-item-section>
-                TOTAL
-              </q-item-section>
-              <q-item-section side v-if="coin" class="text-white text-bold">
-                <div style="display: flex; align-items: center; gap: 7px">
-                  <span>
-                    {{ coin.symbol }}
-                  </span>
-                  <span>
-                    {{ formatNumber(totalAmount) }}
-                  </span>
-                  <span v-if="exchangeRate">
-                    |
-                  </span>
-                  <span v-if="exchangeRate">
-                    {{ exchangeRate?.coin?.symbol }} {{ formatNumber(totalAmount * exchangeRate.amount) }}
-                  </span>
-                </div>
-              </q-item-section>
-            </q-item>
-
-            <!-- Selected Payment Methods -->
-            <q-item
-              v-for="paymentMethod in selectedPaymentMethods"
-              :key="paymentMethod.name"
-              v-show="selectedPaymentMethods.length > 0"
-            >
-              <q-item-section>
-                {{ paymentMethod.name }}
-                <span v-if="paymentMethod.discount_percentage > 0" class="text-caption text-positive">
-                  ({{ paymentMethod.discount_percentage }}% descuento)
-                </span>
-              </q-item-section>
-              <q-item-section side v-if="coin">
-                <div style="display: flex; align-items: center; gap: 7px" class="text-bold">
-                  <span>
-                    {{ coin.symbol }}
-                  </span>
-                  <span>
-                    {{ formatNumber(paymentMethod.amount) }}
-                  </span>
-                  <span v-if="exchangeRate">
-                    |
-                  </span>
-                  <span v-if="exchangeRate">
-                    {{ exchangeRate?.coin?.symbol }} {{ formatNumber(paymentMethod.amount * exchangeRate.amount) }}
-                  </span>
-                </div>
-                <span v-if="paymentMethod.discountAmount > 0" class="text-positive">
-                  (-{{ coin.symbol }} {{ formatNumber(paymentMethod.discountAmount) }})
-                </span>
-              </q-item-section>
-            </q-item>
-
-            <!-- Total Discount -->
-            <q-item v-if="discountAmount > 0" class="text-subtitle1">
-              <q-item-section>
-                DESCUENTO TOTAL
-              </q-item-section>
-              <q-item-section side v-if="coin">
-                <div style="display: flex; align-items: center; gap: 7px" class="text-bold">
-                  <span>
-                    {{ coin.symbol }}
-                  </span>
-                  <span>
-                    {{ formatNumber(discountAmount) }}
-                  </span>
-                </div>
-              </q-item-section>
-            </q-item>
-
-            <!-- Final Total with Discount -->
-            <q-item
-              v-if="discountAmount > 0"
-              class="bg-positive text-white text-h6 text-bold"
-              style="border-radius: 0px 0px 10px 10px; border-top: none !important"
-            >
-              <q-item-section>
-                <q-item-label>TOTAL</q-item-label>
-              </q-item-section>
-              <q-item-section side v-if="coin" class="text-white">
-                {{ coin.symbol }} {{ formatNumber(totalWithDiscount) }}
-              </q-item-section>
-            </q-item>
-          </q-list>
+        <!-- Table Close Toggle -->
+        <div v-if="showTableClose && !visibleCloseTable" class="q-mb-sm">
+          <q-checkbox
+            :model-value="tableClose"
+            @update:model-value="$emit('update:table-close', $event)"
+            label="Cerrar mesa al finalizar"
+            color="primary"
+            size="md"
+          />
         </div>
       </q-card-section>
-      <q-card-actions align="right" class="q-gutter-y-sm">
+
+      <!-- Footer Actions -->
+      <q-separator />
+      <div class="footer-actions q-pa-sm">
         <q-btn
           v-for="action in actions"
           :key="action.key"
-          :label="action.label"
-          :icon="action.icon"
           :color="action.color"
-          :class="$q.screen.lt.sm ? 'full-width' : ''"
+          unelevated
+          no-caps
           :loading="loading"
+          class="action-btn"
           @click="handleActionClick(action)"
         >
+          <div class="column items-center">
+            <q-icon :name="action.icon" size="20px" />
+            <span class="text-caption text-weight-medium">{{ action.label }}</span>
+          </div>
           <q-badge
-            v-if="action.showBadge && $q.screen.gt.sm && !$q.platform.is.nativeMobile"
-            color="negative"
-            align="bottom"
+            v-if="action.showBadge && $q.screen.gt.sm"
+            color="white"
+            text-color="negative"
             floating
+            class="text-weight-bold shortcut-badge-footer"
           >
             {{ action.shortcut }}
           </q-badge>
         </q-btn>
-      </q-card-actions>
+      </div>
     </q-card>
   </q-dialog>
 </template>
@@ -403,7 +348,7 @@ export default {
       default: () => [
         { key: 'invoice', label: 'Factura', icon: 'print', color: 'secondary', showBadge: true, shortcut: 'F7' },
         { key: 'command', label: 'Comanda', icon: 'print', color: 'warning', showBadge: true, shortcut: 'F8' },
-        { key: 'save', label: 'Guardar sin imprimir', icon: 'save', color: 'primary', showBadge: true, shortcut: 'F9' }
+        { key: 'save', label: 'Sin imprimir', icon: 'save', color: 'primary', showBadge: true, shortcut: 'F9' }
       ]
     },
     loading: {
@@ -483,6 +428,38 @@ export default {
         discountAmount: payment.discount_percentage ? (payment.amount * payment.discount_percentage) / 100 : 0
       }))
     })
+
+    // Table columns for payments
+    const paymentsColumns = [
+      {
+        name: 'name',
+        label: 'Método de Pago',
+        field: 'name',
+        align: 'left',
+        headerStyle: 'font-weight: 600;'
+      },
+      {
+        name: 'discount',
+        label: 'Descuento',
+        field: 'discount_percentage',
+        align: 'center',
+        headerStyle: 'font-weight: 600;'
+      },
+      {
+        name: 'amount',
+        label: 'Monto',
+        field: 'amount',
+        align: 'right',
+        headerStyle: 'font-weight: 600;'
+      },
+      {
+        name: 'actions',
+        label: 'Acciones',
+        field: 'actions',
+        align: 'right',
+        headerStyle: 'font-weight: 600;'
+      }
+    ]
 
     // Methods
     const formatNumber = (value) => {
@@ -680,6 +657,54 @@ export default {
       emit('update:show', false)
     }
 
+    const editAmount = (payment, index) => {
+      $q.dialog({
+        title: 'Editar monto',
+        message: `Ingrese el nuevo monto para ${payment.name}`,
+        prompt: {
+          model: payment.amount.toString(),
+          type: 'number',
+
+          filled: true
+        },
+        cancel: true,
+        color: 'primary'
+      }).onOk(data => {
+        const newAmount = parseFloat(data)
+        if (!isNaN(newAmount) && newAmount > 0) {
+          updatePaymentAmount(payment, index, newAmount)
+        }
+      })
+    }
+
+    const editReference = (payment, index) => {
+      $q.dialog({
+        title: 'Editar referencia',
+        message: `Ingrese la referencia para ${payment.name}`,
+        prompt: {
+          model: payment.reference || '',
+          type: 'text',
+          filled: true
+        },
+        cancel: true,
+        color: 'primary'
+      }).onOk(data => {
+        updatePaymentReference(payment, index, data)
+      })
+    }
+
+    const getPaymentIcon = (acronym) => {
+      const icons = {
+        EFE: 'payments',
+        TAR: 'credit_card',
+        TRA: 'account_balance',
+        MPQA: 'qr_code_2',
+        CHE: 'receipt',
+        CRE: 'schedule'
+      }
+      return icons[acronym] || 'payment'
+    }
+
     // Keyboard shortcuts handler
     const handleKeyboardShortcut = (event) => {
       // Only handle when modal is open
@@ -728,6 +753,7 @@ export default {
       totalWithDiscount,
       pendingPayment,
       selectedPaymentMethods,
+      paymentsColumns,
       formatNumber,
       hasPendingPayment,
       addPayment,
@@ -740,117 +766,283 @@ export default {
       setModelInvoice,
       setParamsBill,
       paymentModel,
-      handleKeyboardShortcut
+      handleKeyboardShortcut,
+      editAmount,
+      editReference,
+      getPaymentIcon
     }
   }
 }
 </script>
 
 <style scoped>
-.q-markup-table {
-  border-radius: 8px;
+/* Modal Principal con diseño futurista adaptado a theme */
+.payment-modal {
+  display: flex;
+  flex-direction: column;
+  font-family: inherit;
+  width: 750px;
+  max-width: 90vw;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.payment-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 56px - 80px);
+  padding: 6px;
+  background: var(--q-color-page);
+}
+
+/* Grid de métodos de pago con diseño moderno */
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 3fr));
+  gap: 6px;
+}
+
+@media (max-width: 599px) {
+  .payment-methods-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+}
+
+@media (max-width: 400px) {
+  .payment-methods-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+}
+
+.shortcut-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--q-color-negative);
+  color: var(--q-color-on-negative);
+  border-radius: 4px;
+  padding: 1px 4px;
+  min-width: 18px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(var(--q-negative-rgb), 0.3);
+}
+
+/* Payments Table (Desktop) con diseño moderno */
+.payments-table-container {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--q-color-surface);
+  border: 1px solid var(--q-color-outline);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.payments-table {
+  background: transparent;
+}
+
+.payments-table :deep(.q-table__top),
+.payments-table :deep(.q-table__bottom) {
+  display: none;
+}
+
+.payments-table :deep(thead tr) {
+  background: var(--q-color-surface-variant);
+}
+
+.payments-table :deep(thead th) {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 16px 12px;
+  font-weight: 700;
+  color: var(--q-color-on-surface);
+  border-bottom: 2px solid var(--q-color-primary);
+}
+
+.payments-table :deep(tbody td) {
+  padding: 12px;
+  border-bottom: 1px solid var(--q-color-outline);
+  background: var(--q-color-surface);
+}
+
+.payments-table :deep(tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+.payments-table :deep(tbody tr:hover) {
+  background: var(--q-color-surface-variant);
+  transform: scale(1.01);
+  transition: all 0.2s ease;
+}
+
+/* Payments Grid (Mobile) con cards futuristas */
+.payments-grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+@media (max-width: 599px) {
+  .payments-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.payment-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
   overflow: hidden;
 }
 
-.q-markup-table thead th {
-  background-color: #f5f5f5;
-  font-weight: 600;
+.payment-card :deep(.q-card__section) {
+  padding: 0 !important;
 }
 
-.q-list {
-  border: 1px solid #e0e0e0;
+.payment-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  border-color: var(--q-color-primary);
 }
 
-.q-item {
-  min-height: 40px;
+.payment-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
 }
 
-.text-bold {
-  font-weight: 600;
-}
-
-.full-width {
-  width: 100%;
-}
-
-.payment-method-btn {
-  position: relative;
-}
-
-.payment-method-btn .q-badge {
-  font-size: 10px;
-  font-weight: 600;
-  min-width: 20px;
-  height: 16px;
-  line-height: 16px;
-}
-
-/* Mobile Payment Cards */
-.payment-cards-mobile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.payment-card-item {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 10px;
-}
-
-.payment-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.payment-card-title {
-  display: flex;
-  align-items: center;
-}
-
-.payment-method-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333;
-}
-
-.payment-card-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.payment-card-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-}
-
-.payment-card-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.payment-label {
-  font-size: 11px;
-  color: #888;
-}
-
-.payment-value {
-  font-size: 13px;
-  font-weight: 500;
-  color: #333;
-  cursor: pointer;
-}
-
-.payment-amount {
+.discount-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 9px;
   font-weight: 700;
-  color: #21BA45;
-  font-size: 14px;
+  background: var(--q-color-positive);
+  color: var(--q-color-on-positive);
+  border-radius: 6px;
+  padding: 2px 6px;
+  box-shadow: 0 2px 4px rgba(var(--q-positive-rgb), 0.3);
+}
+
+/* Total Compact con diseño destacado */
+.total-compact {
+  background: var(--q-color-surface-variant);
+  border: 2px solid var(--q-color-primary);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Footer Actions con diseño futurista */
+.footer-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 16px;
+  background: var(--q-color-surface);
+  border-top: 1px solid var(--q-color-outline);
+}
+
+@media (max-width: 599px) {
+  .footer-actions {
+    gap: 8px;
+    padding: 12px;
+  }
+}
+
+.action-btn {
+  border-radius: 16px;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--q-color-surface);
+  border: 2px solid var(--q-color-outline);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--q-color-primary);
+  background: var(--q-color-surface-variant);
+}
+
+.action-btn:active {
+  transform: translateY(-1px) scale(1.01);
+  transition: all 0.1s ease;
+}
+
+.action-btn.text-negative {
+  background: var(--q-color-surface-variant);
+  border-color: var(--q-color-negative);
+  color: var(--q-color-on-surface);
+}
+
+.action-btn.text-negative:hover {
+  background: var(--q-color-error-container);
+  border-color: var(--q-color-error);
+  color: var(--q-color-on-error-container);
+}
+
+.shortcut-badge-footer {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--q-color-primary);
+  color: var(--q-color-on-primary);
+  border-radius: 6px;
+  padding: 2px 6px;
+  min-width: 24px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(var(--q-primary-rgb), 0.3);
+}
+
+@media (max-width: 599px) {
+  .action-btn {
+    min-height: 52px;
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+}
+
+/* Utilities con micro-interacciones */
+.cursor-pointer {
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cursor-pointer:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+.cursor-pointer:active {
+  transform: scale(0.98);
+  transition: all 0.1s ease;
+}
+
+/* Responsive */
+@media (max-width: 599px) {
+  .scroll-area {
+    max-height: calc(100vh - 56px - 80px);
+  }
+
+  .total-card .text-h3 {
+    font-size: 2rem;
+  }
+
+  .alert-banner .text-h4 {
+    font-size: 1.5rem;
+  }
 }
 </style>

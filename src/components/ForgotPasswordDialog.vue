@@ -60,7 +60,7 @@
               <q-icon v-if="channel === 'email'" name="check_circle" class="check-icon" color="primary" size="24px" />
             </div>
 
-            <div
+            <!-- <div
               class="method-card"
               :class="{ 'selected': channel === 'whatsapp' }"
               @click="channel = 'whatsapp'"
@@ -73,7 +73,7 @@
               <div class="method-title">WhatsApp</div>
               <div class="method-description">Recibe el código por WhatsApp</div>
               <q-icon v-if="channel === 'whatsapp'" name="check_circle" class="check-icon" color="positive" size="24px" />
-            </div>
+            </div> -->
           </div>
         </div>
 

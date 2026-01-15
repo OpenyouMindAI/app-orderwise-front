@@ -30,7 +30,6 @@ export default boot(async ({ app }) => {
   const $store = authentication()
   app.config.globalProperties.$Pusher = Pusher
 
-  // Only initialize main Echo connection
   echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_APP_PUSHER_APP_KEY,
@@ -47,7 +46,6 @@ export default boot(async ({ app }) => {
     }
   })
 
-  // Lazy getter for echoPay - only connects when accessed
   Object.defineProperty(app.config.globalProperties, '$echoPay', {
     get: () => getEchoPay()
   })

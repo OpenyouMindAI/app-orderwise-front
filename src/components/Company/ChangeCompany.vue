@@ -293,8 +293,7 @@ const updateSession = async () => {
       progress: true,
       timeout: 1000
     })
-    console.log(data)
-    // setTimeout(() => window.location.reload(), 2000)
+    setTimeout(() => window.location.reload(), 2000)
   } catch (error) {
     $q.notify({
       type: 'negative',

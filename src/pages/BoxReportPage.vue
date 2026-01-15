@@ -52,8 +52,8 @@
 
         <!-- Filtros de turno -->
         <q-btn
-          :color="cashBoxUser ? 'green' : 'grey-5'"
-          :text-color="cashBoxUser ? 'white' : 'grey-8'"
+          :color="cashBoxUser && isToday ? 'green' : 'grey-5'"
+          :text-color="cashBoxUser && isToday ? 'white' : 'grey-8'"
           icon="schedule"
           label="Turno en curso"
           rounded
@@ -98,7 +98,7 @@
                <q-icon name="assessment" size="md" class="q-mr-sm"/>
                <div class="col text-center">
                  <div class="text-h5 text-weight-bold" :class="getProfitColor(categoryTotalsTotals.category_total)">
-                   {{ formatNumber(categoryTotalsTotals.category_total) }}
+                   {{ formatNumber(categoryTotalsTotals.category_total || 0) }}
                  </div>
                  <!-- <div class="text-h5 text-weight-bold" :class="getProfitColor(getTotalProfit())">
                    {{ formatNumber(getTotalProfit()) }}
@@ -1724,14 +1724,14 @@ export default {
       this.appliedBranchOfficeSelect = [...this.branchOfficeSelect]
 
       // Verificar si la fecha seleccionada es hoy
-      const today = date.formatDate(new Date(), 'YYYY-MM-DD')
-      const isToday = this.panel === 'day' && this.day === today
+      // const today = date.formatDate(new Date(), 'YYYY-MM-DD')
+      // const isToday = this.panel === 'day' && this.day === today
 
       // Si NO es hoy, limpiar el turno para mostrar totalizado
-      if (!isToday && this.cashBoxUser) {
-        this.cashBoxUser = null
-        this.cashBoxUsers = []
-      }
+      // if (!isToday && this.cashBoxUser) {
+      //   this.cashBoxUser = null
+      //   this.cashBoxUsers = []
+      // }
 
       this.params = this.formatFilter()
       this.params.cashbox_user_id = this.cashBoxUser?.id || null
