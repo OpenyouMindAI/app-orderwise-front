@@ -211,6 +211,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import { notify, notifyValidationErrors } from 'src/const/mixins'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import { useFbq } from 'vue3-facebook-pixel'
 
 const props = defineProps({
   modelValue: {
@@ -224,6 +225,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'success'])
+const fbq = useFbq()
 
 // State
 const loading = ref(false)
@@ -352,6 +354,11 @@ const setupCompany = async () => {
 
     // Emitir evento de éxito con los datos de la respuesta
     emit('success', data)
+
+    // Pixel Event: Company Setup
+    if (fbq?.event) {
+      fbq.event('CompanySetup')
+    }
 
     // Cerrar modal
     emit('update:modelValue', false)

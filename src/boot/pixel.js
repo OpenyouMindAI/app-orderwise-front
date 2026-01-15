@@ -5,10 +5,9 @@ export default boot(({ app, router }) => {
   const pixelId = import.meta.env.VITE_FACEBOOK_PIXEL_ID
 
   if (pixelId) {
-    // 1. Inject Facebook Pixel Loader Script
-    if (typeof window !== 'undefined') {
+    // 1. Load Facebook Pixel Script (required by vue3-facebook-pixel)
+    if (typeof window !== 'undefined' && !window.fbq) {
       (function (f, b, e, v, n, t, s) {
-        if (f.fbq) return
         n = f.fbq = function () {
           n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
         }
@@ -25,22 +24,13 @@ export default boot(({ app, router }) => {
       })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
     }
 
-    // 2. Initialize Vue Wrapper
+    // 2. Initialize Vue Facebook Pixel (handles init and tracking)
     const options = {
       pixelId,
       debug: import.meta.env.DEV,
-      autoPageView: false, // Disable auto to debug duplicates
       router
     }
 
     app.use(VueFbq, options)
-
-    // 3. Manual Tracking
-    router.afterEach((to, from) => {
-      // Only track if fbq is ready
-      if (window.fbq) {
-        window.fbq('track', 'PageView')
-      }
-    })
   }
 })

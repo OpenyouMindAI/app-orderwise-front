@@ -667,10 +667,12 @@ import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import { useFbq } from 'vue3-facebook-pixel'
 
 const router = useRouter()
 const store = authentication()
 const $q = useQuasar()
+const fbq = useFbq()
 
 // Form data
 const form = ref({
@@ -931,6 +933,11 @@ const setupCompany = async () => {
     localStorage.removeItem(REGISTER_SESSION_KEY)
     localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
 
+    // Pixel Event: Company Setup
+    if (fbq?.event) {
+      fbq.event('CompanySetup')
+    }
+
     showCompanySetup.value = false
 
     router.push({ name: 'CompanyConfig' })
@@ -1032,6 +1039,11 @@ const verifyOtp = async () => {
 
     // Limpiar estado OTP de localStorage tras verificación exitosa
     clearOtpPendingState()
+
+    // Pixel Event: Complete Registration (Email)
+    if (fbq?.event) {
+      fbq.event('CompleteRegistration', { status: 'success', method: 'email' })
+    }
 
     // Marcar OTP como verificado en la sesión de registro
     const registerSession = localStorage.getItem(REGISTER_SESSION_KEY)
@@ -1489,7 +1501,6 @@ const assignDemo = async () => {
  */
 const initializeGoogleAuthMobile = async () => {
   try {
-
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
@@ -1550,6 +1561,11 @@ const registerWithGoogleMobile = async () => {
       store.setSessionData(data)
 
       notify('Registro exitoso con Google', 'positive', 'check_circle')
+
+      // Pixel Event: Complete Registration (Google Mobile)
+      if (fbq?.event) {
+        fbq.event('CompleteRegistration', { status: 'success', method: 'google_mobile' })
+      }
 
       // Mostrar modal de setup de empresa
       if (data.needs_company_setup) {
@@ -1634,6 +1650,11 @@ const registerWithGoogle = async () => {
             store.setSessionData(data)
 
             notify('Registro exitoso con Google', 'positive', 'check_circle')
+
+            // Pixel Event: Complete Registration (Google Web)
+            if (fbq?.event) {
+              fbq.event('CompleteRegistration', { status: 'success', method: 'google_web' })
+            }
 
             // Mostrar modal de setup de empresa
             if (data.needs_company_setup) {

@@ -210,6 +210,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
+import { useFbq } from 'vue3-facebook-pixel'
 
 export default {
   name: 'SubscriptionPlansDialog',
@@ -222,6 +223,7 @@ export default {
   emits: ['update:modelValue', 'subscription-updated'],
   setup (props, { emit }) {
     const $q = useQuasar()
+    const fbq = useFbq()
     const plans = ref([])
     const currentSubscription = ref(null)
     const loading = ref(false)
@@ -428,6 +430,19 @@ export default {
           branch_offices_count: plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1,
           months: 1
         })
+
+        // Pixel Event: Initiate Checkout
+        const pricing = getPlanPricing(plan)
+        const value = pricing && pricing.total_price_local ? pricing.total_price_local : plan.price
+        const currency = pricing && pricing.local_currency_code ? pricing.local_currency_code : 'ARS'
+
+        if (fbq?.event) {
+          fbq.event('InitiateCheckout', {
+            content_name: plan.name,
+            currency,
+            value
+          })
+        }
 
         // Validar respuesta
         if (!response.data.init_point) {

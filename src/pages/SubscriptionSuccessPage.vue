@@ -98,12 +98,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { notify } from 'src/const/mixins'
 import { api } from 'boot/axios'
+import { useFbq } from 'vue3-facebook-pixel'
 
 export default {
   name: 'SubscriptionSuccessPage',
   setup () {
     const router = useRouter()
     const route = useRoute()
+    const fbq = useFbq()
 
     const loading = ref(true)
     const paymentVerified = ref(false)
@@ -148,6 +150,16 @@ export default {
             amount: response.data.transaction_amount,
             payment_id: paymentId,
             date: new Date(response.data.date_approved).toLocaleDateString('es-AR')
+          }
+
+          // Pixel Event: Purchase
+          // Pixel Event: Purchase
+          if (fbq?.event) {
+            fbq.event('Purchase', {
+              value: response.data.transaction_amount,
+              currency: response.data.currency_id || 'ARS',
+              content_name: paymentDetails.value.plan_name
+            })
           }
 
           // Limpiar localStorage
