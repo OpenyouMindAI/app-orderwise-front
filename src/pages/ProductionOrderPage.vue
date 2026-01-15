@@ -51,20 +51,7 @@
 
           <q-card-section>
             <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-6">
-                <q-select
-                  filled
-                  v-model="orderForm.deposit_id"
-                  :options="deposits"
-                  option-value="id"
-                  option-label="name"
-                  emit-value
-                  map-options
-                  label="Depósito"
-                  :rules="[val => !!val || 'El depósito es requerido']"
-                />
-              </div>
-              <div class="col-12 col-md-6">
+              <div class="col-12 col-md-12">
                 <q-select
                   filled
                   v-model="orderForm.branch_office_id"
@@ -85,40 +72,107 @@
                 />
               </div>
               <div class="col-12">
-                <div class="text-h6 q-mb-md">Productos a Fabricar</div>
-                <q-btn color="primary" label="Agregar Producto" @click="openProductPicker = true" size="sm" class="q-mb-md"/>
-                
-                <q-list bordered separator v-if="orderForm.items.length > 0">
-                  <q-item v-for="(item, index) in orderForm.items" :key="index">
-                    <q-item-section>
-                      <q-item-label>{{ getProductName(item.product_id) }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side style="min-width: 150px;">
+                <div class="row items-center q-mb-md q-col-gutter-sm">
+                  <div class="col-12 col-md-6 flex items-center q-gutter-sm">
+                     <span class="text-h6">Productos a Fabricar</span>
+                     <q-btn
+                        label="Fabricar Falta (Stock Mín.)"
+                        color="secondary"
+                        size="sm"
+                        icon="auto_fix_high"
+                        @click="setQuantitiesToMinimum"
+                        :disable="!orderForm.branch_office_id"
+                      >
+                        <q-tooltip>Establecer cantidad para cubrir el stock mínimo de todos los productos</q-tooltip>
+                     </q-btn>
+                     <q-btn
+                        label="Reset"
+                        color="warning"
+                        size="sm"
+                        icon="restart_alt"
+                        @click="resetQuantitiesToZero"
+                      >
+                        <q-tooltip>Poner todas las cantidades en 0</q-tooltip>
+                     </q-btn>
+                  </div>
+                  <div class="col-12 col-md-6 flex justify-end items-center q-gutter-sm">
                       <q-input
-                        filled
                         dense
-                        v-model.number="item.planned_quantity"
-                        label="Cantidad"
+                        filled
+                        v-model.number="percentageIncrease"
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        label="% Extra"
+                        style="width: 100px"
+                        min="0"
                       />
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-btn size="sm" color="negative" round dense flat icon="delete" @click="removeItem(index)"/>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-                <div v-else class="text-center text-grey q-pa-md">
-                  No hay productos agregados
+                      <q-btn
+                        label="Aplicar %"
+                        color="primary"
+                        size="sm"
+                        icon="trending_up"
+                        @click="applyPercentageIncrease"
+                        :disable="!hasSelectedItems"
+                      />
+                  </div>
                 </div>
+
+                <q-table
+                  :rows="productsWithRecipe"
+                  :columns="productSelectionColumns"
+                  row-key="id"
+                  flat
+                  bordered
+                  :filter="filterProducts"
+                  :loading="loadingProducts"
+                  :pagination="{ rowsPerPage: 10 }"
+                >
+                  <template v-slot:top-right>
+                    <q-input
+                      v-model="filterProducts"
+                      debounce="300"
+                      placeholder="Buscar"
+                      style="max-width: 200px"
+                    />
+                  </template>
+                  <template v-slot:body="props">
+                    <q-tr :props="props">
+                       <q-td key="name" :props="props">
+                          <div class="text-weight-bold">{{ props.row.name }}</div>
+                          <div class="text-caption text-grey">{{ props.row.category?.name }}</div>
+                       </q-td>
+                       <q-td key="stock" :props="props" class="text-right">
+                          {{ props.row.stock }}
+                       </q-td>
+                        <q-td key="min_stock" :props="props" class="text-right">
+                          {{ props.row.minimum_stock || 0 }}
+                       </q-td>
+                       <q-td key="difference" :props="props" class="text-right">
+                          <q-badge :color="getStockStatusColor(props.row)" text-color="white">
+                            {{ getStockDifference(props.row) }}
+                          </q-badge>
+                       </q-td>
+                       <q-td key="quantity" :props="props" style="width: 150px">
+                          <q-input
+                            dense
+                            filled
+                            v-model.number="props.row.planned_quantity"
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="0"
+                            bg-color="white"
+                          />
+                       </q-td>
+                    </q-tr>
+                  </template>
+                </q-table>
               </div>
             </div>
           </q-card-section>
 
           <q-card-actions align="right">
             <q-btn color="secondary" label="Cancelar" @click="closeNewOrderModal" />
-            <q-btn color="primary" label="Crear Orden" type="submit" :loading="visible" :disable="orderForm.items.length === 0"/>
+            <q-btn color="primary" label="Crear Orden" type="submit" :loading="visible" :disable="!hasSelectedItems"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -142,7 +196,7 @@
                   <div class="text-h6">Información</div>
                   <q-separator class="q-my-sm"/>
                   <div class="q-gutter-sm">
-                    <div><strong>Estado:</strong> 
+                    <div><strong>Estado:</strong>
                       <q-badge :color="getStatusColor(selectedOrder.status)">
                         {{ getStatusLabel(selectedOrder.status) }}
                       </q-badge>
@@ -169,6 +223,11 @@
                           Planeado: {{ item.planned_quantity }} | Producido: {{ item.produced_quantity }}
                         </q-item-label>
                       </q-item-section>
+                       <q-item-section side>
+                           <q-btn flat round color="primary" icon="receipt_long" size="sm" @click="viewRecipeForProduct(item)">
+                              <q-tooltip>Ver detalle de receta</q-tooltip>
+                           </q-btn>
+                       </q-item-section>
                     </q-item>
                   </q-list>
                 </q-card-section>
@@ -208,10 +267,11 @@
 
         <q-card-actions align="right">
           <q-btn color="secondary" label="Cerrar" @click="closeViewOrderModal" />
-          <q-btn 
-            v-if="selectedOrder?.status === 'PLANNED' || selectedOrder?.status === 'IN_PROGRESS'" 
-            color="positive" 
-            label="Completar Producción" 
+          <q-btn color="info" icon="print" label="Imprimir" @click="downloadPdf" :loading="downloadingPdf"/>
+          <q-btn
+            v-if="selectedOrder?.status === 'PLANNED' || selectedOrder?.status === 'IN_PROGRESS'"
+            color="positive"
+            label="Completar Producción"
             @click="openCompleteModal = true"
           />
         </q-card-actions>
@@ -298,15 +358,25 @@ const productsWithRecipe = ref([])
 const allProductsWithRecipe = ref([])
 const filter = ref('')
 const visible = ref(false)
+const downloadingPdf = ref(false)
+const loadingProducts = ref(false)
 const completing = ref(false)
 const openNewOrder = ref(false)
 const openViewOrder = ref(false)
 const openCompleteModal = ref(false)
+const openRecipeDetail = ref(false)
+const selectedRecipeProduct = ref(null)
+const selectedRecipeQuantity = ref(0)
+const selectedRecipeItems = ref([])
 const openProductPicker = ref(false)
 const selectedProductForOrder = ref(null)
+const filterProducts = ref('')
+const percentageIncrease = ref(0)
+const hasSelectedItems = computed(() => {
+  return productsWithRecipe.value.some(p => p.planned_quantity > 0)
+})
 
 const orderForm = ref({
-  deposit_id: null,
   branch_office_id: null,
   planned_date: null,
   items: []
@@ -343,24 +413,32 @@ const materialColumns = [
   { name: 'status', align: 'center', label: 'Estado', field: 'status' }
 ]
 
+const productSelectionColumns = [
+  { name: 'name', align: 'left', label: 'Producto', field: 'name', sortable: true },
+  { name: 'stock', align: 'right', label: 'Stock Actual', field: 'stock', sortable: true },
+  { name: 'min_stock', align: 'right', label: 'Stock Mín.', field: 'minimum_stock', sortable: true },
+  { name: 'difference', align: 'right', label: 'Diferencia', field: row => row.stock - row.minimum_stock, sortable: true },
+  { name: 'quantity', align: 'center', label: 'A Fabricar', field: 'planned_quantity' }
+]
+
 const getStatusColor = (status) => {
   const colors = {
-    'DRAFT': 'grey',
-    'PLANNED': 'blue',
-    'IN_PROGRESS': 'orange',
-    'COMPLETED': 'green',
-    'CANCELLED': 'red'
+    DRAFT: 'grey',
+    PLANNED: 'blue',
+    IN_PROGRESS: 'orange',
+    COMPLETED: 'green',
+    CANCELLED: 'red'
   }
   return colors[status] || 'grey'
 }
 
 const getStatusLabel = (status) => {
   const labels = {
-    'DRAFT': 'Borrador',
-    'PLANNED': 'Planeado',
-    'IN_PROGRESS': 'En Progreso',
-    'COMPLETED': 'Completado',
-    'CANCELLED': 'Cancelado'
+    DRAFT: 'Borrador',
+    PLANNED: 'Planeado',
+    IN_PROGRESS: 'En Progreso',
+    COMPLETED: 'Completado',
+    CANCELLED: 'Cancelado'
   }
   return labels[status] || status
 }
@@ -368,11 +446,6 @@ const getStatusLabel = (status) => {
 const formatDate = (date) => {
   if (!date) return 'N/A'
   return new Date(date).toLocaleString('es-ES')
-}
-
-const getProductName = (productId) => {
-  const product = allProductsWithRecipe.value.find(p => p.id === productId)
-  return product?.name || 'Producto desconocido'
 }
 
 const getOrders = async () => {
@@ -396,11 +469,9 @@ const viewOrder = async (event, row) => {
   try {
     const { data } = await api.get(`production-orders/${row.id}`)
     selectedOrder.value = data
-    
-    // Load material requirements
     const materialsResponse = await api.get(`production-orders/${row.id}/materials`)
     materialRequirements.value = materialsResponse.data.requirements
-    
+
     openViewOrder.value = true
   } catch (err) {
     Notify.create({
@@ -414,6 +485,14 @@ const viewOrder = async (event, row) => {
 const createOrder = async () => {
   visible.value = true
   try {
+    // Filter items with quantity > 0
+    orderForm.value.items = productsWithRecipe.value
+      .filter(p => p.planned_quantity > 0)
+      .map(p => ({
+        product_id: p.id,
+        planned_quantity: p.planned_quantity
+      }))
+
     await api.post('production-orders', orderForm.value)
     Notify.create({
       message: 'Orden creada exitosamente',
@@ -436,19 +515,19 @@ const createOrder = async () => {
 const completeProduction = async () => {
   completing.value = true
   try {
-    const items = Object.entries(completionForm.value).map(([id, produced_quantity]) => ({
+    const items = Object.entries(completionForm.value).map(([id, producedQuantity]) => ({
       id: parseInt(id),
-      produced_quantity
+      produced_quantity: producedQuantity
     }))
 
     await api.post(`production-orders/${selectedOrder.value.id}/complete`, { items })
-    
+
     Notify.create({
       message: 'Producción completada exitosamente',
       icon: 'check_circle',
       color: 'positive'
     })
-    
+
     openCompleteModal.value = false
     closeViewOrderModal()
     getOrders()
@@ -482,6 +561,56 @@ const viewPickingList = async () => {
   }
 }
 
+const downloadPdf = async () => {
+  if (!selectedOrder.value) return
+  downloadingPdf.value = true
+  try {
+    const response = await api.get(`production-orders/${selectedOrder.value.id}/pdf`, {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `orden-produccion-${selectedOrder.value.order_number}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (err) {
+    Notify.create({
+      message: 'Error al descargar PDF',
+      icon: 'warning',
+      color: 'negative'
+    })
+  } finally {
+    downloadingPdf.value = false
+  }
+}
+
+const viewRecipeForProduct = async (item) => {
+  selectedRecipeProduct.value = item.product
+  selectedRecipeQuantity.value = item.planned_quantity
+  try {
+    // Fetch recipe structure
+    const { data } = await api.get(`products/${item.product_id}/recipe`)
+
+    // Calculate based on quantity
+    // Note: Recipe items usually define quantity for 1 unit (or recipe yield).
+    // Assuming recipe is for 1 unit for simplicity, or we should check recipe yield.
+    // The RecipeService logic does this complex calculation. For frontend "preview",
+    // strictly speaking we should replicate that logic or ask backend.
+    // For now, simpler aproach: just show the base recipe multiplied.
+
+    selectedRecipeItems.value = data.map(r => ({
+      ...r,
+      quantity: r.quantity * item.planned_quantity
+    }))
+
+    openRecipeDetail.value = true
+  } catch (error) {
+    Notify.create({ message: 'Error al cargar receta', color: 'negative' })
+  }
+}
+
 const addProductToOrder = () => {
   if (selectedProductForOrder.value) {
     orderForm.value.items.push({
@@ -493,18 +622,15 @@ const addProductToOrder = () => {
   }
 }
 
-const removeItem = (index) => {
-  orderForm.value.items.splice(index, 1)
-}
-
 const closeNewOrderModal = () => {
   openNewOrder.value = false
   orderForm.value = {
-    deposit_id: null,
     branch_office_id: null,
     planned_date: null,
     items: []
   }
+  // Reset quantities
+  productsWithRecipe.value.forEach(p => { p.planned_quantity = 0 })
 }
 
 const closeViewOrderModal = () => {
@@ -545,15 +671,94 @@ const loadBranchOffices = async () => {
 }
 
 const loadProductsWithRecipe = async () => {
+  loadingProducts.value = true
   try {
-    const { data } = await api.get('products', { params: { perPage: 1000 } })
-    allProductsWithRecipe.value = (data.data || data).filter(p => 
-      p.product_type === 'SUB_RECIPE' || p.product_type === 'FINISHED_GOOD'
-    )
+    const params = {
+      perPage: 1000,
+      page: 1,
+      paginate: true,
+      stock: true,
+      withStock: true,
+      whereIn: {
+        product_type: ['SUB_RECIPE', 'FINISHED_GOOD']
+      }
+    }
+
+    // Pass sorting filters
+    if (orderForm.value.branch_office_id) {
+      params.branch_office_id = orderForm.value.branch_office_id
+    }
+
+    const { data } = await api.get('products', { params })
+
+    // Map to include local state for the form
+    allProductsWithRecipe.value = data.data.map(p => ({
+      ...p,
+      planned_quantity: 0,
+      // If backend doesn't filter stock by deposit, we might need to assume 'stock' field is correct for the request context
+      // The ProductsController seems to respect branch_office_id or standard filters.
+      // Ensuring numbers
+      stock: parseFloat(p.stock || p.stock_quantity || 0), // Adjust field name if necessary based on API response
+      minimum_stock: parseFloat(p.minimum_stock || 0)
+    }))
+
     productsWithRecipe.value = allProductsWithRecipe.value
   } catch (err) {
     console.error(err)
+  } finally {
+    loadingProducts.value = false
   }
+}
+
+// Watchers for reloading products when context changes
+import { watch, computed } from 'vue'
+
+watch(() => orderForm.value.branch_office_id, () => {
+  if (openNewOrder.value) loadProductsWithRecipe()
+})
+
+watch(openNewOrder, (val) => {
+  if (val) loadProductsWithRecipe()
+})
+
+// Logic functions
+const getStockDifference = (row) => {
+  return (row.stock - row.minimum_stock).toFixed(2)
+}
+
+const getStockStatusColor = (row) => {
+  const diff = row.stock - row.minimum_stock
+  if (diff < 0) return 'negative'
+  if (diff === 0) return 'warning'
+  return 'positive'
+}
+
+const setQuantitiesToMinimum = () => {
+  productsWithRecipe.value.forEach(p => {
+    const diff = p.minimum_stock - p.stock
+    if (diff > 0) {
+      p.planned_quantity = diff
+    }
+  })
+  Notify.create({ message: 'Cantidades actualizadas para cubrir stock mínimo', color: 'positive', icon: 'check' })
+}
+
+const applyPercentageIncrease = () => {
+  if (percentageIncrease.value <= 0) return
+
+  productsWithRecipe.value.forEach(p => {
+    if (p.planned_quantity > 0) {
+      const increase = p.planned_quantity * (percentageIncrease.value / 100)
+      p.planned_quantity = parseFloat((p.planned_quantity + increase).toFixed(2))
+    }
+  })
+  Notify.create({ message: `Cantidades aumentadas en un ${percentageIncrease.value}%`, color: 'positive', icon: 'trending_up' })
+}
+
+const resetQuantitiesToZero = () => {
+  productsWithRecipe.value.forEach(p => {
+    p.planned_quantity = 0
+  })
 }
 
 const setPagination = (data) => {

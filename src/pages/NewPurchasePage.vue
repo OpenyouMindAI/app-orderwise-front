@@ -656,24 +656,6 @@
                       </div>
                       <div class="col-6">
                         <q-toggle
-                          v-model="product.is_bundle"
-                          label="Pack"
-                          :true-value="1"
-                          :false-value="0"
-                          color="positive"
-                        />
-                      </div>
-                      <div class="col-6">
-                        <q-toggle
-                          v-model="product.is_addons"
-                          label="Es un adicional"
-                          :true-value="1"
-                          :false-value="0"
-                          color="positive"
-                        />
-                      </div>
-                      <div class="col-6">
-                        <q-toggle
                           v-model="product.show_catalog"
                           label="Mostrar en catálogo"
                           :true-value="1"
@@ -681,25 +663,6 @@
                           color="positive"
                         />
                       </div>
-                    </div>
-                    <div
-                      class="q-mt-md"
-                      v-if="product.is_addons"
-                    >
-                      <q-select
-                        use-input
-                        filled
-                        label="Productos a asociar"
-                        input-debounce="0"
-                        option-label="name"
-                        option-value="id"
-                        multiple
-                        v-model="addonsProducts"
-                        :options="addonsProductsOptions"
-                        :rules="[val => !!val || 'El campo es requerido.']"
-                        @filter="filterProductsAddons"
-                        dense
-                      />
                     </div>
                   </q-card>
                 </q-card>
@@ -1224,9 +1187,7 @@ export default {
        * @type {Object}
        */
       product: {
-        is_bundle: 0,
         show_catalog: 0,
-        is_addons: 0,
         skip_stock: 0,
         profit_percentage: 0,
         images: []

@@ -1,10 +1,78 @@
 <template>
   <div class="grid q-gutter-sm">
+    <!-- Recipe Configuration Info -->
+    <div class="row q-col-gutter-sm q-mb-md">
+      <div class="col-12 text-subtitle1 text-primary text-bold">Configuración de Receta</div>
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-input
+          filled
+          v-model="productSelected.servings"
+          label="Rindex (Rendimiento/Porciones)"
+          type="number"
+          dense
+          hint="Para cuántas porciones rinde esta receta"
+        />
+      </div>
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-select
+          filled
+          v-model="productSelected.yield_unit_id"
+          :options="unitOfMeasures"
+          label="Unidad de medida del Rindex"
+          emit-value
+          map-options
+          dense
+          option-label="name"
+          option-value="id"
+          hint="Unidad en la que se expresa el rendimiento"
+        />
+      </div>
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-input
+          filled
+          v-model="productSelected.preparation_time"
+          label="Tiempo Preparación (min)"
+          type="number"
+          dense
+        />
+      </div>
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-input
+          filled
+          v-model="productSelected.cooking_time"
+          label="Tiempo Cocción (min)"
+          type="number"
+          dense
+        />
+      </div>
+      <div class="col-12">
+        <q-input
+          filled
+          v-model="productSelected.procedure"
+          label="Preparación / Procedimiento"
+          type="textarea"
+          dense
+          hint="Pasos para elaborar la receta"
+        />
+      </div>
+      <div class="col-12">
+        <q-separator class="q-my-sm"/>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between">
       <div class="flex q-gutter-sm">
         <span class="text-h6">{{ branchOffice.name }}</span>
         <q-separator vertical/>
-        <span class="text-h6">Costo Total: ${{ product.cost }}</span>
+        <q-input
+          v-model="productSelected.cost"
+          label="Costo Total"
+          prefix="$"
+          type="number"
+          dense
+          filled
+          style="width: 200px"
+        />
         <q-separator vertical/>
          <q-btn
             flat
@@ -140,7 +208,7 @@
 
 <script setup>
 import { api } from 'src/boot/axios'
-import { notify } from 'src/const/mixins'
+import { formatNumber, notify } from 'src/const/mixins'
 import { onMounted, ref, computed } from 'vue'
 import { authentication } from 'src/stores/module-authentication'
 
@@ -155,7 +223,7 @@ const props = defineProps({
 
 const columns = [
   { name: 'ingredient', align: 'left', label: 'Ingrediente', field: row => row.ingredient?.name, sortable: true },
-  { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
+  { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true, format: val => formatNumber(val) },
   { name: 'unit', align: 'left', label: 'Unidad', field: row => row.unit_of_measure?.name || '-' },
   { name: 'waste', align: 'right', label: '% Merma', field: 'waste_percentage', format: val => `${val}%` },
   { name: 'cost_impact', align: 'right', label: 'Costo Impacto', field: row => `$${calculateItemCost(row)}` },
@@ -168,6 +236,8 @@ const loadingForm = ref(false)
 const calculating = ref(false)
 const openAddIngredient = ref(false)
 const editingIngredient = ref(null)
+
+const productSelected = ref(props.product)
 
 const productOptions = ref([])
 const unitOfMeasures = ref([])
@@ -194,10 +264,10 @@ const estimatedCost = computed(() => {
 
 // Methods
 const loadRecipeItems = async () => {
-  if (!props.product?.id) return
+  if (!productSelected.value?.id) return
   loadingTable.value = true
   try {
-    const { data } = await api.get(`products/${props.product.id}/recipe`)
+    const { data } = await api.get(`products/${productSelected.value.id}/recipe`)
     recipeItems.value = data
   } catch (error) {
     notify('Error al cargar ingredientes', 'negative')
@@ -208,7 +278,7 @@ const loadRecipeItems = async () => {
 
 const loadUnitOfMeasures = async () => {
   try {
-    const { data } = await api.get('unit-of-measures', { params: { perPage: 100 } })
+    const { data } = await api.get('unit-of-measures')
     unitOfMeasures.value = data.data || data
   } catch (error) {
     console.error(error)
@@ -216,22 +286,17 @@ const loadUnitOfMeasures = async () => {
 }
 
 const filterProducts = async (val, update) => {
-  if (val === '') {
-    update(() => {
-      productOptions.value = []
-    })
-    return
-  }
-
   try {
     const { data } = await api.get('products', {
       params: {
         dataSearch: { name: val },
-        perPage: 20
+        perPage: 40,
+        paginate: true,
+        sortBy: 'name',
+        sortOrder: 'asc'
       }
     })
-    // Filter out the current product itself to prevent recursion selection in UI
-    productOptions.value = data.data.filter(p => p.id !== props.product.id)
+    productOptions.value = data.data.filter(p => p.id !== productSelected.value.id)
     update()
   } catch (error) {
     console.error(error)
@@ -243,7 +308,7 @@ const saveIngredient = async () => {
   loadingForm.value = true
   try {
     const payload = {
-      product_id: props.product.id,
+      product_id: productSelected.value.id,
       ingredient_id: ingredientForm.value.ingredient.id,
       quantity: ingredientForm.value.quantity,
       unit_of_measure_id: ingredientForm.value.unit_of_measure_id,
@@ -251,10 +316,10 @@ const saveIngredient = async () => {
     }
 
     if (editingIngredient.value) {
-      await api.put(`products/${props.product.id}/recipe/${editingIngredient.value.id}`, payload)
+      await api.put(`products/${productSelected.value.id}/recipe/${editingIngredient.value.id}`, payload)
       notify('Ingrediente actualizado', 'positive')
     } else {
-      await api.post(`products/${props.product.id}/recipe`, payload)
+      await api.post(`products/${productSelected.value.id}/recipe`, payload)
       notify('Ingrediente agregado', 'positive')
     }
     await loadRecipeItems()
@@ -281,7 +346,7 @@ const editIngredient = (row) => {
 
 const deleteIngredient = async (row) => {
   try {
-    await api.delete(`products/${props.product.id}/recipe/${row.id}`)
+    await api.delete(`products/${productSelected.value.id}/recipe/${row.id}`)
     notify('Ingrediente eliminado', 'positive')
     await loadRecipeItems()
     await calculateCost()
@@ -293,8 +358,8 @@ const deleteIngredient = async (row) => {
 const calculateCost = async () => {
   calculating.value = true
   try {
-    const { data } = await api.get(`products/${props.product.id}/recipe/cost`)
-    props.product.cost = data.cost
+    const { data } = await api.get(`products/${productSelected.value.id}/recipe/cost`)
+    productSelected.value.cost = data.cost
     notify(`Costo actualizado: $${data.cost}`, 'positive')
   } catch (error) {
     notify('Error al calcular costo', 'negative')

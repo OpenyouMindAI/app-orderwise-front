@@ -640,9 +640,7 @@
                           </div>
                         </div>
 
-                        <div v-else-if="props.row.is_bundle">
-                          <div class="text-grey-6">Producto promocional sin detalles específicos</div>
-                        </div>
+
 
                         <div v-else>
                           <div class="text-grey-6">No hay detalles adicionales para este producto</div>

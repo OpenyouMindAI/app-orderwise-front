@@ -422,15 +422,16 @@
             narrow-indicator
           >
             <q-tab name="basicData" label="Datos básicos" />
-            <q-tab name="stock" label="stock" v-if="!product.is_bundle && !isRecipeType"/>
-            <q-tab name="product" label="Productos (Pack)" v-if="product.is_bundle" />
-            <q-tab name="recipe" label="Receta (Ingredientes)" v-if="!product.is_bundle"/>
+            <q-tab name="stock" label="Stock" v-if="!isRecipeType && !product.is_bundle"/>
+            <q-tab name="product" label="Combo / Pack" v-if="product.is_bundle" />
+            <q-tab name="recipe" label="Receta (Ingredientes)" v-if="isRecipeType"/>
           </q-tabs>
+
           <q-separator />
 
-          <q-tab-panels v-model="tab" animated>
+          <q-tab-panels v-model="tab" animated class="scroll" style="max-height: calc(100vh - 240px);">
             <q-tab-panel name="basicData">
-              <div class="row q-col-gutter-sm scroll" style="height: calc(100vh - 240px);">
+              <div class="row q-col-gutter-sm">
                 <div class="row col-md-7 col-xs-12 col-sm-12">
                   <!-- Datos básicos -->
                   <div class="col-12">
@@ -907,6 +908,27 @@
                           @update:model-value="setCategory"
                           dense
                         />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-select
+                            filled
+                            v-model="product.product_type"
+                            :options="productTypeOptions"
+                            label="Tipo de Producto"
+                            emit-value
+                            map-options
+                            dense
+                            :rules="[val => !!val || 'Requerido']"
+                          >
+                             <template v-slot:option="scope">
+                              <q-item v-bind="scope.itemProps">
+                                <q-item-section>
+                                  <q-item-label>{{ scope.opt.label }}</q-item-label>
+                                  <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                                </q-item-section>
+                              </q-item>
+                            </template>
+                          </q-select>
                       </div>
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-start items-center">
                         <q-option-group
@@ -2025,8 +2047,8 @@ import { mapActions, mapState } from 'pinia'
 import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
-import PackProduct from 'src/components/Product/PackProduct.vue'
 import RecipeProduct from 'src/components/Product/RecipeProduct.vue'
+import PackProduct from 'src/components/Product/PackProduct.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import { getDownload } from 'src/const/services'
 import { loading, notify } from 'src/const/mixins'
@@ -2041,7 +2063,7 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 export default {
-  components: { StockProduct, PackProduct, BulkPriceDialog, OnboardingValidationModal, RecipeProduct },
+  components: { StockProduct, BulkPriceDialog, OnboardingValidationModal, RecipeProduct, PackProduct },
   data () {
     return {
       qrDialog: false,
