@@ -210,7 +210,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
-import { useFbq } from 'vue3-facebook-pixel'
+import { usePixel } from 'src/composables/usePixel'
 
 export default {
   name: 'SubscriptionPlansDialog',
@@ -223,7 +223,7 @@ export default {
   emits: ['update:modelValue', 'subscription-updated'],
   setup (props, { emit }) {
     const $q = useQuasar()
-    const fbq = useFbq()
+    const fbq = usePixel()
     const plans = ref([])
     const currentSubscription = ref(null)
     const loading = ref(false)

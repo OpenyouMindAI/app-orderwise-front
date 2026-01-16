@@ -667,12 +667,12 @@ import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
-import { useFbq } from 'vue3-facebook-pixel'
+import { usePixel } from 'src/composables/usePixel'
 
 const router = useRouter()
 const store = authentication()
 const $q = useQuasar()
-const fbq = useFbq()
+const fbq = usePixel()
 
 // Form data
 const form = ref({

@@ -1,13 +1,36 @@
 import { boot } from 'quasar/wrappers'
-import { VueFbq } from 'vue3-facebook-pixel'
+import { authentication } from 'src/stores/module-authentication'
+import { watch } from 'vue'
 
-export default boot(({ app, router }) => {
+export default boot(({ app, router, store }) => {
   const pixelId = import.meta.env.VITE_FACEBOOK_PIXEL_ID
 
   if (pixelId) {
-    // 1. Load Facebook Pixel Script (required by vue3-facebook-pixel)
+    const authStore = authentication(store)
+
+    // 1. Define Helper Functions
+    // Map standard/custom events to fbq architecture
+    const trackEvent = (event, data = {}) => {
+      if (typeof window === 'undefined' || !window.fbq) return
+
+      const standardEvents = [
+        'AddPaymentInfo', 'AddToCart', 'AddToWishlist', 'CompleteRegistration',
+        'Contact', 'CustomizeProduct', 'Donate', 'FindLocation',
+        'InitiateCheckout', 'Lead', 'PageView', 'Purchase', 'Schedule',
+        'Search', 'StartTrial', 'SubmitApplication', 'Subscribe', 'ViewContent'
+      ]
+
+      if (standardEvents.includes(event)) {
+        window.fbq('track', event, data)
+      } else {
+        window.fbq('trackCustom', event, data)
+      }
+    }
+
+    // 2. Inject Script (Only if not present)
     if (typeof window !== 'undefined' && !window.fbq) {
       (function (f, b, e, v, n, t, s) {
+        if (f.fbq) return
         n = f.fbq = function () {
           n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments)
         }
@@ -24,13 +47,80 @@ export default boot(({ app, router }) => {
       })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
     }
 
-    // 2. Initialize Vue Facebook Pixel (handles init and tracking)
-    const options = {
-      pixelId,
-      debug: import.meta.env.DEV,
-      router
+    // 3. Initialize (Only Once)
+    const user = authStore.userSession
+    const userData = {}
+    if (user) {
+      if (user.email) userData.em = user.email
+      if (user.id) userData.external_id = user.id
+
+      const rawPhone = user.phone_number || user.phone
+      if (rawPhone) {
+        // Remove leading '+' if present
+        userData.ph = rawPhone.toString().replace(/^\+/, '')
+      }
     }
 
-    app.use(VueFbq, options)
+    console.log('🚀 Pixel User Data:', {
+      email: userData.em,
+      phone: userData.ph,
+      id: userData.external_id
+    })
+
+    // We used to call init here, but we'll do it strictly once via a check or just call it.
+    // Facebook warns if init is called multiple times with same ID, but Advanced Matching UPDATES require init.
+    // To solve "4 times" issue, we ensure this boot file runs once using a global flag.
+    if (window.fbq && !window.__pixel_initialized) {
+      window.fbq('init', pixelId, userData)
+      // Track initial PageView
+      window.fbq('track', 'PageView')
+
+      // Mark as initialized to prevent re-execution on hot reloads or re-mounts
+      window.__pixel_initialized = true
+    }
+
+    // 4. Provide Compatibility Wrapper for Components
+    // Components utilize `fbq.event(...)` and `fbq.track(...)` (from our previous refactor to .event)
+    // We create an object that mimics the library interface
+    const pixelInterface = {
+      event: (eventName, params) => trackEvent(eventName, params),
+      track: (eventName, params) => trackEvent(eventName, params) // Backward compatibility
+    }
+
+    // Provide globally
+    app.config.globalProperties.$fbq = pixelInterface
+    app.provide('VueFbq', pixelInterface) // Might not be needed if we don't use inject('VueFbq') KEY
+
+    // 5. Watch for login changes to update pixel data (Strict comparison)
+    watch(
+      () => [
+        authStore.userSession?.email,
+        authStore.userSession?.id,
+        authStore.userSession?.phone_number,
+        authStore.userSession?.phone
+      ],
+      ([newEmail, newId, newPhone, newPhoneAlt], [oldEmail, oldId, oldPhone, oldPhoneAlt]) => {
+        if (window.fbq && (newEmail !== oldEmail || newId !== oldId || newPhone !== oldPhone || newPhoneAlt !== oldPhoneAlt)) {
+          const newUserData = {}
+          if (newEmail) newUserData.em = newEmail
+          if (newId) newUserData.external_id = newId
+
+          const rawPhone = newPhone || newPhoneAlt
+          if (rawPhone) {
+            newUserData.ph = rawPhone.toString().replace(/^\+/, '')
+          }
+
+          // Update user data for Advanced Matching
+          window.fbq('init', pixelId, newUserData)
+        }
+      }
+    )
+
+    // 6. Manual Route Tracking for SPA
+    router.afterEach(() => {
+      if (window.fbq) {
+        window.fbq('track', 'PageView')
+      }
+    })
   }
 })

@@ -98,14 +98,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { notify } from 'src/const/mixins'
 import { api } from 'boot/axios'
-import { useFbq } from 'vue3-facebook-pixel'
+import { usePixel } from 'src/composables/usePixel'
 
 export default {
   name: 'SubscriptionSuccessPage',
   setup () {
     const router = useRouter()
     const route = useRoute()
-    const fbq = useFbq()
+    const fbq = usePixel()
 
     const loading = ref(true)
     const paymentVerified = ref(false)
