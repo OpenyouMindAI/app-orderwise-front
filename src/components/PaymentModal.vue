@@ -533,6 +533,7 @@ export default {
     }
 
     const createPayment = (data, amount) => {
+      const isBilling = !!(data.is_billing || data.bill)
       return {
         name: data.name,
         acronym: data.acronym,
@@ -545,7 +546,9 @@ export default {
         discount_percentage: data.percentage || 0,
         discount_amount: data.percentage
           ? ((parseFloat(amount) || pendingPayment.value) * data.percentage) / 100
-          : 0
+          : 0,
+        is_billing: isBilling,
+        checked: isBilling
       }
     }
 

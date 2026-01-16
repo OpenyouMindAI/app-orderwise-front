@@ -209,6 +209,48 @@
               </div>
             </div>
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+            <div class="col-12" v-if="purchase.images && purchase.images.length > 0">
+                <q-card class="q-mb-sm">
+                  <q-card-section class="q-pa-xs">
+                    <div class="text-subtitle2 text-weight-bold q-mb-xs">Archivos Adjuntos</div>
+                    <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 200px;">
+                      <div
+                        v-for="(file, index) in purchase.images"
+                        :key="index"
+                        class="col-6 col-sm-4 col-md-4"
+                      >
+                        <!-- PDF View -->
+                        <q-card
+                          v-if="file.url && file.url.toLowerCase().endsWith('.pdf')"
+                          flat
+                          bordered
+                          class="cursor-pointer text-center q-pa-sm fit flex flex-center column"
+                          style="aspect-ratio: 1;"
+                          @click="openFile(file.url)"
+                        >
+                          <q-icon name="picture_as_pdf" size="3rem" color="red" />
+                          <div class="text-caption ellipsis full-width q-mt-xs">{{ file.path ? file.path.split('/').pop() : 'Documento PDF' }}</div>
+                          <q-tooltip>Ver PDF</q-tooltip>
+                        </q-card>
+                        <!-- Image View -->
+                        <q-card
+                          v-else
+                          flat
+                          class="image-preview-card cursor-pointer"
+                          @click="openFile(file.url)"
+                        >
+                          <q-img
+                            :src="file.url"
+                            :ratio="1"
+                            class="rounded-borders"
+                          />
+                          <q-tooltip>Ver Imagen</q-tooltip>
+                        </q-card>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
@@ -248,6 +290,14 @@
               <div class="q-gutter-y-xs">
                 <q-btn
                   class="full-width"
+                  icon="block"
+                  color="negative"
+                  label="Anular"
+                  :loading="cancelLoading"
+                  @click="cancelPurchase"
+                />
+                <q-btn
+                  class="full-width"
                   icon="check_circle"
                   color="primary"
                   label="Pagar"
@@ -279,7 +329,7 @@
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, formatDate } from 'src/const/mixins'
+import { formatNumber, formatDate, notify } from 'src/const/mixins'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
@@ -661,7 +711,10 @@ export default {
      */
     editPurchase (event, row, index) {
       this.openEditPurchase = true
-      this.purchase = row
+      this.purchase = {
+        ...row,
+        images: row.files || []
+      }
     },
     /**
      * Model product
@@ -729,7 +782,44 @@ export default {
             color: 'negative'
           })
         })
+    },
+    // File Handling Methods
+    openFile (url) {
+      if (url) {
+        window.open(url, '_blank')
+      }
+    },
+    /**
+     * Change status
+     * @param {Object} data purchase
+     * @param {Number} index index status
+     */
+    async cancelPurchase () {
+      try {
+        this.cancelLoading = true
+        await this.$api.put(`purchase-status-command/${this.purchase.id}`, { status: 'cancelled' })
+        this.getPurchases()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+        this.openEditPurchase = false
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.cancelLoading = false
+      }
     }
   }
 }
 </script>
+
+<style scoped>
+.image-preview-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.05);
+}
+</style>

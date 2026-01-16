@@ -47,7 +47,7 @@
         <span class="text-weight-medium">{{ invoice?.code }}</span>
       </q-chip>
     </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
+    <q-form ref="saveBill" @submit="saveBill">
       <div class="billing-panel-container">
         <div style="min-width: 0;">
           <!-- Panel de facturación -->
@@ -283,6 +283,7 @@
                             clickable
                             v-ripple
                             :active="invoiceType?.id === type.id"
+                            :class="{ 'bg-grey-3': (subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B' }"
                             @click="selectInvoiceType(type)"
                           >
                             <q-item-section>
@@ -290,6 +291,14 @@
                             </q-item-section>
                             <q-item-section side v-if="invoiceType?.id === type.id">
                               <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                            <q-item-section side v-if="(subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B'">
+                              <premium-badge
+                                :show="true"
+                                :size="15"
+                                padding="4px"
+                                tooltip-text="Disponible en plan Premium"
+                              />
                             </q-item-section>
                           </q-item>
                         </q-list>
@@ -2914,6 +2923,17 @@ export default {
      * @param {Object} type - Invoice type selected
      */
     async selectInvoiceType (type) {
+      // Validar si es una opción premium y el plan es Free
+      if ((this.subscriptionPlan || 'Free') === 'Free' && type?.acronym_serie === 'B') {
+        this.handleRestrictedClick()
+        // Revertir a tipo T si existe
+        this.$nextTick(() => {
+          const typeT = this.invoiceTypes.find(t => t.acronym_serie === 'T')
+          this.invoiceType = typeT || null
+        })
+        return
+      }
+
       this.invoiceType = type
       // Si el tipo de factura requiere Arca (bill: true)
       if (type.bill) {
@@ -6376,7 +6396,7 @@ export default {
 .products-section {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 104px);
+  height: calc(100dvh - 76px);
 }
 
 .products-section-fullscreen {

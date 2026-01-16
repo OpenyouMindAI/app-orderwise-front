@@ -159,6 +159,12 @@
                 v-model.number="paymentMethod.percentage"
               />
             </div>
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+              <q-checkbox
+                v-model="paymentMethod.bill"
+                label="¿Facturar?"
+              />
+            </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-h6">
               Datos de validación de pago
             </div>
@@ -372,8 +378,12 @@ export default {
      */
     savePaymentMethod () {
       this.visible = true
-      console.log('Data send:', this.paymentMethod)
-      this.$api.post('payment-methods', this.paymentMethod)
+      const payload = {
+        ...this.paymentMethod,
+        is_billing: this.paymentMethod.bill
+      }
+      console.log('Data send:', payload)
+      this.$api.post('payment-methods', payload)
         .then(({ data }) => {
           console.log('Server response on create:', data)
           this.getPaymentMethods()
@@ -405,6 +415,7 @@ export default {
       this.openEditPaymentMethod = true
       this.paymentMethod = row
       this.paymentMethod.attributes = row?.attributes?.length > 0 ? row?.attributes : [{}]
+      this.paymentMethod.bill = !!row.bill
     },
     /**
      * Save edit
@@ -416,7 +427,8 @@ export default {
         acronym: this.paymentMethod.acronym,
         attributes: this.paymentMethod.attributes,
         percentage: this.paymentMethod.percentage,
-        bill: this.paymentMethod.bill
+        bill: this.paymentMethod.bill,
+        is_billing: this.paymentMethod.bill
       }
       console.log('Data send:', payload)
       this.$api.put(`payment-methods/${this.paymentMethod.id}`, payload)
