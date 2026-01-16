@@ -29,7 +29,7 @@
             <div class="input-container">
               <q-input
                 v-model="form.name"
-                placeholder="Nombre completo"
+                placeholder="Nombre"
                 dark
                 class="custom-input"
                 hide-bottom-space
@@ -37,6 +37,22 @@
               >
                 <template v-slot:prepend>
                   <q-icon name="person" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Input Apellido -->
+            <div class="input-container">
+              <q-input
+                v-model="form.last_name"
+                placeholder="Apellido"
+                dark
+                class="custom-input"
+                hide-bottom-space
+                :rules="[val => !!val || 'El apellido es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="person_outline" color="primary" size="20px"/>
                 </template>
               </q-input>
             </div>
@@ -677,6 +693,7 @@ const fbq = usePixel()
 // Form data
 const form = ref({
   name: '',
+  last_name: '',
   email: '',
   phone_number: '',
   password: '',
@@ -933,14 +950,14 @@ const setupCompany = async () => {
     localStorage.removeItem(REGISTER_SESSION_KEY)
     localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
 
-    // Pixel Event: Company Setup
+    // Pixel Event: CrearEmpresa
     if (fbq?.event) {
       const companyData = {
         business_type: payload.business_type?.label,
         country: selectedCountry.value?.label,
         company_name: payload.name
       }
-      fbq.event('CompanySetup', companyData)
+      fbq.event('CrearEmpresa', companyData)
     }
 
     showCompanySetup.value = false
@@ -993,6 +1010,22 @@ const register = async () => {
 
     // Actualizar store de Pinia con los datos de sesión
     store.setSessionData(data)
+
+    // Actualizar Facebook Pixel con los datos del usuario
+    if (window.fbq && data.user) {
+      const pixelUserData = {}
+      if (data.user.email) pixelUserData.em = data.user.email
+      if (data.user.id) pixelUserData.external_id = data.user.id
+      if (data.user.name) pixelUserData.fn = data.user.name
+      if (data.user.last_name) pixelUserData.ln = data.user.last_name
+
+      const rawPhone = data.user.phone_number || data.user.phone
+      if (rawPhone) {
+        pixelUserData.ph = rawPhone.toString().replace(/^\+/, '')
+      }
+
+      window.fbq('init', import.meta.env.VITE_FACEBOOK_PIXEL_ID, pixelUserData)
+    }
 
     notify('Registro exitoso', 'positive', 'check_circle')
 
@@ -1047,7 +1080,7 @@ const verifyOtp = async () => {
 
     // Pixel Event: Complete Registration (Email)
     if (fbq?.event) {
-      fbq.event('CompleteRegistration', { status: 'success', method: 'email' })
+      fbq.event('CompleteRegistration')
     }
 
     // Marcar OTP como verificado en la sesión de registro
@@ -1569,7 +1602,7 @@ const registerWithGoogleMobile = async () => {
 
       // Pixel Event: Complete Registration (Google Mobile)
       if (fbq?.event) {
-        fbq.event('CompleteRegistration', { status: 'success', method: 'google_mobile' })
+        fbq.event('CompleteRegistration')
       }
 
       // Mostrar modal de setup de empresa
@@ -1658,7 +1691,7 @@ const registerWithGoogle = async () => {
 
             // Pixel Event: Complete Registration (Google Web)
             if (fbq?.event) {
-              fbq.event('CompleteRegistration', { status: 'success', method: 'google_web' })
+              fbq.event('CompleteRegistration')
             }
 
             // Mostrar modal de setup de empresa

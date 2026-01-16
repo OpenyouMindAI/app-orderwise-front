@@ -355,15 +355,14 @@ const setupCompany = async () => {
     // Emitir evento de éxito con los datos de la respuesta
     emit('success', data)
 
-    // Pixel Event: Company Setup
+    // Pixel Event: CrearEmpresa
     if (fbq?.event) {
       const companyData = {
-        business_type: form.value.business_type?.label,
+        business_type: form.value.business_type?.name,
         country: selectedCountry.value?.label,
-        company_name: form.value.name
+        company_name: form.value.company_name
       }
-      console.log('🚀 Pixel Event: CompanySetup', companyData)
-      fbq.event('CompanySetup', companyData)
+      fbq.event('CrearEmpresa', companyData)
     }
 
     // Cerrar modal

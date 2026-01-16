@@ -50,9 +50,12 @@ export default boot(({ app, router, store }) => {
     // 3. Initialize (Only Once)
     const user = authStore.userSession
     const userData = {}
+
     if (user) {
       if (user.email) userData.em = user.email
       if (user.id) userData.external_id = user.id
+      if (user.name) userData.fn = user.name
+      if (user.last_name) userData.ln = user.last_name
 
       const rawPhone = user.phone_number || user.phone
       if (rawPhone) {
@@ -91,13 +94,17 @@ export default boot(({ app, router, store }) => {
         authStore.userSession?.email,
         authStore.userSession?.id,
         authStore.userSession?.phone_number,
-        authStore.userSession?.phone
+        authStore.userSession?.phone,
+        authStore.userSession?.name,
+        authStore.userSession?.last_name
       ],
-      ([newEmail, newId, newPhone, newPhoneAlt], [oldEmail, oldId, oldPhone, oldPhoneAlt]) => {
-        if (window.fbq && (newEmail !== oldEmail || newId !== oldId || newPhone !== oldPhone || newPhoneAlt !== oldPhoneAlt)) {
+      ([newEmail, newId, newPhone, newPhoneAlt, newName, newLastName], [oldEmail, oldId, oldPhone, oldPhoneAlt, oldName, oldLastName]) => {
+        if (window.fbq && (newEmail !== oldEmail || newId !== oldId || newPhone !== oldPhone || newPhoneAlt !== oldPhoneAlt || newName !== oldName || newLastName !== oldLastName)) {
           const newUserData = {}
           if (newEmail) newUserData.em = newEmail
           if (newId) newUserData.external_id = newId
+          if (newName) newUserData.fn = newName
+          if (newLastName) newUserData.ln = newLastName
 
           const rawPhone = newPhone || newPhoneAlt
           if (rawPhone) {
