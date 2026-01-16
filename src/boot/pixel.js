@@ -61,12 +61,6 @@ export default boot(({ app, router, store }) => {
       }
     }
 
-    console.log('🚀 Pixel User Data:', {
-      email: userData.em,
-      phone: userData.ph,
-      id: userData.external_id
-    })
-
     // We used to call init here, but we'll do it strictly once via a check or just call it.
     // Facebook warns if init is called multiple times with same ID, but Advanced Matching UPDATES require init.
     // To solve "4 times" issue, we ensure this boot file runs once using a global flag.

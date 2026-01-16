@@ -935,7 +935,12 @@ const setupCompany = async () => {
 
     // Pixel Event: Company Setup
     if (fbq?.event) {
-      fbq.event('CompanySetup')
+      const companyData = {
+        business_type: payload.business_type?.label,
+        country: selectedCountry.value?.label,
+        company_name: payload.name
+      }
+      fbq.event('CompanySetup', companyData)
     }
 
     showCompanySetup.value = false

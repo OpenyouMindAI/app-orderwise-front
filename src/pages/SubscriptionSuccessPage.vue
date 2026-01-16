@@ -153,13 +153,15 @@ export default {
           }
 
           // Pixel Event: Purchase
-          // Pixel Event: Purchase
           if (fbq?.event) {
-            fbq.event('Purchase', {
+            const purchaseData = {
               value: response.data.transaction_amount,
               currency: response.data.currency_id || 'ARS',
-              content_name: paymentDetails.value.plan_name
-            })
+              content_name: paymentDetails.value.plan_name,
+              content_type: 'product',
+              transaction_id: paymentId
+            }
+            fbq.event('Purchase', purchaseData)
           }
 
           // Limpiar localStorage

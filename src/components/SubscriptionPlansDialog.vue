@@ -437,11 +437,12 @@ export default {
         const currency = pricing && pricing.local_currency_code ? pricing.local_currency_code : 'ARS'
 
         if (fbq?.event) {
-          fbq.event('InitiateCheckout', {
+          const checkoutData = {
             content_name: plan.name,
             currency,
             value
-          })
+          }
+          fbq.event('InitiateCheckout', checkoutData)
         }
 
         // Validar respuesta
