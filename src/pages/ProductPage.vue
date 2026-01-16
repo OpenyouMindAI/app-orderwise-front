@@ -422,9 +422,9 @@
             narrow-indicator
           >
             <q-tab name="basicData" label="Datos básicos" />
-            <q-tab name="stock" label="Stock" v-if="!isRecipeType && !product.is_bundle"/>
+            <q-tab name="stock" label="Stock" v-if="!product.is_bundle"/>
             <q-tab name="product" label="Combo / Pack" v-if="product.is_bundle" />
-            <q-tab name="recipe" label="Receta (Ingredientes)" v-if="isRecipeType"/>
+            <q-tab name="recipe" label="Receta (Ingredientes)" v-if="isRecipeType && !isProduct"/>
           </q-tabs>
 
           <q-separator />
@@ -898,7 +898,7 @@
                           use-input
                           filled
                           label="Categoría"
-                          input-debounce="0"
+                          input-debounce="500"
                           option-label="name"
                           option-value="id"
                           v-model="category"
@@ -1371,7 +1371,7 @@
                 use-input
                 filled
                 label="Categoría"
-                input-debounce="0"
+                input-debounce="500"
                 option-value="id"
                 option-label="name"
                 clearable
@@ -2051,7 +2051,7 @@ import RecipeProduct from 'src/components/Product/RecipeProduct.vue'
 import PackProduct from 'src/components/Product/PackProduct.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import { getDownload } from 'src/const/services'
-import { loading, notify } from 'src/const/mixins'
+import { formatNumber, loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
 import eventBus from 'src/utils/eventBus'
 import { api } from 'boot/axios'
@@ -2128,12 +2128,13 @@ export default {
         skip_stock: 0,
         profit_percentage: 0,
         images: [],
-        product_type: 'RAW_MATERIAL'
+        product_type: 'PRODUCT'
       },
       productTypeOptions: [
+        { label: 'Producto', value: 'PRODUCT', description: 'Producto para venta' },
         { label: 'Materia Prima', value: 'RAW_MATERIAL', description: 'Insumo básico para recetas' },
         { label: 'Sub-receta', value: 'SUB_RECIPE', description: 'Producto intermedio fabricado' },
-        { label: 'Producto Final', value: 'FINISHED_GOOD', description: 'Producto para venta con receta' }
+        { label: 'Receta', value: 'FINISHED_GOOD', description: 'Receta para fabricar un producto' }
       ],
       // Decimal input formatting for profit percentage
       profitPercentageValue: 0, // Internal value in centésimas (0.01 = 1)
@@ -2213,7 +2214,7 @@ export default {
           name: 'stock',
           align: 'right',
           label: 'Stock',
-          field: row => row?.is_bundle ? row.bundle_stock : row?.normal_stock
+          field: row => row?.is_bundle ? formatNumber(row.bundle_stock) : formatNumber(row?.normal_stock)
         }
       ],
       paginationConfig: {
@@ -2292,6 +2293,9 @@ export default {
     },
     isRecipeType () {
       return ['SUB_RECIPE', 'FINISHED_GOOD'].includes(this.product.product_type)
+    },
+    isProduct () {
+      return ['PRODUCT'].includes(this.product.product_type)
     }
   },
   watch: {
@@ -2717,7 +2721,8 @@ export default {
         measurement_unit_id: null,
         is_pack: null,
         is_addon: null,
-        show_in_catalog: null
+        show_in_catalog: null,
+        product_type: 'PRODUCT'
       }
 
       // Limpiar completamente los parámetros de filtro antes de recargar

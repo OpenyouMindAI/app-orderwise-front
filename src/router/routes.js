@@ -118,6 +118,12 @@ const routes = [
         component: () => import('pages/TaxePage.vue')
       },
       {
+        path: 'uom',
+        meta: { requiresAuth: true },
+        name: 'Uom',
+        component: () => import('pages/UomPage.vue')
+      },
+      {
         path: 'profile',
         name: 'Profile',
         meta: { requiresAuth: true },

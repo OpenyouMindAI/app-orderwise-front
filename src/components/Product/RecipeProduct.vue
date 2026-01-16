@@ -1,13 +1,39 @@
 <template>
   <div class="grid q-gutter-sm">
     <!-- Recipe Configuration Info -->
-    <div class="row q-col-gutter-sm q-mb-md">
+    <q-btn icon="add" color="primary" label="Agregar Ingrediente" @click="openAddIngredient = true"/>
+    <q-table
+      title="Ingredientes"
+      row-key="id"
+      :columns="columns"
+      :rows="recipeItems"
+      :loading="loadingTable"
+      binary-state-sort
+      :pagination="paginationConfig"
+      no-data-label="No hay ingredientes agregados"
+    >
+      <template v-slot:loading>
+        <q-inner-loading showing color="primary" />
+      </template>
+
+      <template v-slot:body-cell-actions="props">
+        <q-td :props="props">
+          <q-btn size="sm" color="primary" round dense flat icon="edit" @click="editIngredient(props.row)">
+            <q-tooltip>Editar</q-tooltip>
+          </q-btn>
+          <q-btn size="sm" color="negative" round dense flat icon="delete" @click="deleteIngredient(props.row)">
+            <q-tooltip>Eliminar</q-tooltip>
+          </q-btn>
+        </q-td>
+      </template>
+    </q-table>
+    <div class="row q-col-gutter-sm q-mb-md q-pa-sm">
       <div class="col-12 text-subtitle1 text-primary text-bold">Configuración de Receta</div>
       <div class="col-md-3 col-sm-6 col-xs-12">
         <q-input
           filled
           v-model="productSelected.servings"
-          label="Rindex (Rendimiento/Porciones)"
+          label="Rinde (Rendimiento/Porciones)"
           type="number"
           dense
           hint="Para cuántas porciones rinde esta receta"
@@ -18,7 +44,7 @@
           filled
           v-model="productSelected.yield_unit_id"
           :options="unitOfMeasures"
-          label="Unidad de medida del Rindex"
+          label="Unidad de medida del Rinde"
           emit-value
           map-options
           dense
@@ -62,8 +88,6 @@
 
     <div class="flex items-center justify-between">
       <div class="flex q-gutter-sm">
-        <span class="text-h6">{{ branchOffice.name }}</span>
-        <q-separator vertical/>
         <q-input
           v-model="productSelected.cost"
           label="Costo Total"
@@ -86,34 +110,7 @@
             <q-tooltip>Actualizar costo basado en ingredientes</q-tooltip>
          </q-btn>
       </div>
-      <q-btn icon="add" color="primary" label="Agregar Ingrediente" @click="openAddIngredient = true"/>
     </div>
-
-    <q-table
-      title="Ingredientes"
-      row-key="id"
-      :columns="columns"
-      :rows="recipeItems"
-      :loading="loadingTable"
-      binary-state-sort
-      :pagination="paginationConfig"
-      no-data-label="No hay ingredientes agregados"
-    >
-      <template v-slot:loading>
-        <q-inner-loading showing color="primary" />
-      </template>
-
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props">
-          <q-btn size="sm" color="primary" round dense flat icon="edit" @click="editIngredient(props.row)">
-            <q-tooltip>Editar</q-tooltip>
-          </q-btn>
-          <q-btn size="sm" color="negative" round dense flat icon="delete" @click="deleteIngredient(props.row)">
-            <q-tooltip>Eliminar</q-tooltip>
-          </q-btn>
-        </q-td>
-      </template>
-    </q-table>
 
     <!-- Modal Agregar/Editar Ingrediente -->
     <q-dialog v-model="openAddIngredient" persistent>
@@ -136,6 +133,7 @@
                 label="Ingrediente (Materia Prima o Sub-receta)"
                 use-input
                 @filter="filterProducts"
+                @update:model-value="setProduct"
                 :rules="[val => !!val || 'El ingrediente es requerido']"
                 :option-label="opt => opt.name ? `${opt.name} ($${opt.cost})` : ''"
               >
@@ -164,6 +162,7 @@
             <div class="col-6">
                <q-select
                   filled
+                  disable
                   v-model="ingredientForm.unit_of_measure_id"
                   :options="unitOfMeasures"
                   option-value="id"
@@ -210,9 +209,6 @@
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
 import { onMounted, ref, computed } from 'vue'
-import { authentication } from 'src/stores/module-authentication'
-
-const { branchOffice } = authentication()
 
 const props = defineProps({
   product: {
@@ -274,6 +270,10 @@ const loadRecipeItems = async () => {
   } finally {
     loadingTable.value = false
   }
+}
+
+const setProduct = (product) => {
+  ingredientForm.value.unit_of_measure_id = product.unit_of_measure_id
 }
 
 const loadUnitOfMeasures = async () => {

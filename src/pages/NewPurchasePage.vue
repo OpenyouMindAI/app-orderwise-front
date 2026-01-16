@@ -185,6 +185,9 @@
                         />
                       </q-popup-edit>
                     </q-td>
+                    <q-td key="uom" :props="props">
+                      {{ props.row.uom_acronym }}
+                    </q-td>
                     <q-td key="subtotal" :props="props">
                       {{ formatNumber(props.row.subtotal) }}
                     </q-td>
@@ -882,8 +885,19 @@
             <q-btn icon="close" flat round dense @click="quantityDialog = false" />
           </q-card-section>
           <q-card-section class="q-pb-xs">
-            <div class="text-subtitle1 text-center">
-              {{  productQuantity.name }} x {{ productQuantity.unit_of_measure.acronym }}
+            <div class="row items-center justify-center q-gutter-x-sm">
+              <div class="text-subtitle1">{{ productQuantity?.name }}</div>
+              <div class="text-subtitle1 text-grey-7">en</div>
+              <q-select
+                v-model="selectedUom"
+                :options="availableUoms"
+                option-label="acronym"
+                filled
+                dense
+                style="min-width: 80px"
+              >
+                <q-tooltip>Cambiar unidad de compra</q-tooltip>
+              </q-select>
             </div>
           </q-card-section>
           <q-card-section class="flex q-col-gutter-sm justify-between items-center">
@@ -976,6 +990,11 @@ export default {
        * @type {Number}
        */
       currentAmount: 0,
+      /**
+       * Selected UOM in quantity dialog
+       * @type {Object}
+       */
+      selectedUom: null,
       /**
        * Description cashflow
        * @type {String}
@@ -1261,6 +1280,7 @@ export default {
         },
         { name: 'cost', align: 'right', label: 'Costo', field: 'cost', sortable: true },
         { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
+        { name: 'uom', align: 'left', label: 'Unidad', field: 'uom_acronym', sortable: true },
         { name: 'subtotal', align: 'right', label: 'Importe', field: 'subtotal', sortable: true },
         { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
       ]
@@ -1285,6 +1305,15 @@ export default {
       })
       return totalPayment
     },
+    /**
+     * Filter available UOMs based on current product category
+     */
+    availableUoms () {
+      if (!this.productQuantity?.unit_of_measure?.uom_category_id) return []
+      return this.unitOfMeasures.filter(uom =>
+        uom.uom_category_id === this.productQuantity.unit_of_measure.uom_category_id
+      )
+    },
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   watch: {
@@ -1292,10 +1321,16 @@ export default {
       if (!data) {
         this.quantity = 1
         this.currentAmount = 0
+        this.selectedUom = null
       }
     },
     openAddProduct (data) {
       this.tab = 'basicData'
+    },
+    selectedUom (val) {
+      if (val) {
+        this.updateValues('quantity')
+      }
     },
     unitOfMeasure (data) {
       this.product.unit_of_measure_id = data
@@ -1386,10 +1421,13 @@ export default {
      * @param {String} inputName input name
      */
     updateValues (inputName) {
+      const ratio = this.selectedUom?.ratio || 1
+      const unitCost = this.productQuantity.cost * ratio
+
       if (inputName === 'quantity') {
-        this.currentAmount = this.roundToFourDecimals(this.quantity * this.productQuantity.cost)
+        this.currentAmount = this.roundToFourDecimals(this.quantity * unitCost)
       } else if (inputName === 'currentAmount') {
-        this.quantity = this.roundToFourDecimals(this.currentAmount / this.productQuantity.cost)
+        this.quantity = this.roundToFourDecimals(this.currentAmount / unitCost)
       }
     },
     /**
@@ -1964,7 +2002,10 @@ export default {
      * @param {Object} data props products
      */
     calculate (data) {
-      data.subtotal = data.cost * data.quantity
+      const quantity = isNaN(data.quantity) ? 0 : data.quantity
+      const cost = isNaN(data.cost) ? 0 : data.cost
+      const factor = data.conversion_factor || 1
+      data.subtotal = parseFloat((cost * quantity * factor).toFixed(4))
       this.calculateTotal()
     },
     /**
@@ -1976,10 +2017,13 @@ export default {
         id: product.id,
         name: product.name,
         quantity: product.quantity || 1,
-        subtotal: product.subtotal || parseFloat(((product.quantity || 1) * (product.cost || 0)).toFixed(2)),
+        subtotal: product.subtotal || parseFloat(((product.quantity || 1) * (product.cost || 0) * (product.conversion_factor || 1)).toFixed(2)),
         product_id: product.id,
         cost: product.cost,
-        barcode: product.barcode
+        barcode: product.barcode,
+        unit_of_measure_id: this.selectedUom?.id || product.unit_of_measure_id,
+        uom_acronym: this.selectedUom?.acronym || product.unit_of_measure?.acronym,
+        conversion_factor: product.conversion_factor || 1
       })
     },
     /**
@@ -1988,38 +2032,56 @@ export default {
      */
     validateProduct (data, validUnitMeasurement = false) {
       const findProduct = this.products.find(product => product.id === data.id)
-      const unitMeasurement = data?.unit_of_measure?.acronym === 'KG'
-      data.cost = data?.cost || 0
-      if (validUnitMeasurement && unitMeasurement) {
+      const hasUom = !!data?.unit_of_measure
+      const baseCost = data?.cost || 0
+      if (validUnitMeasurement && hasUom) {
         this.quantityDialog = true
-        this.currentAmount = data.cost
+        this.currentAmount = baseCost
         this.productQuantity = data
+        this.selectedUom = data.unit_of_measure
         return
       }
 
+      // Calculate conversion factor
+      // Factor = Selected UOM Ratio / Base Product UOM Ratio
+      const productUomId = data.unit_of_measure_id
+      const productUom = this.unitOfMeasures.find(u => u.id === productUomId)
+      const baseRatio = productUom ? parseFloat(productUom.ratio) : 1
+
+      const selectedUomId = this.selectedUom?.id || data.unit_of_measure_id
+      const selectedUomObj = this.unitOfMeasures.find(u => u.id === selectedUomId)
+      const selectedRatio = selectedUomObj ? parseFloat(selectedUomObj.ratio) : (this.selectedUom?.ratio ? parseFloat(this.selectedUom.ratio) : 1)
+
+      const conversionFactor = selectedRatio / baseRatio
+
+      const quantityToAdd = this.quantity
+
       if (findProduct) {
-        const quantity = unitMeasurement ? this.quantity : findProduct?.quantity
-        findProduct.quantity = quantity
-        findProduct.product_id = findProduct.id
+        findProduct.unit_of_measure_id = selectedUomId
+        findProduct.uom_acronym = selectedUomObj ? selectedUomObj.acronym : (this.selectedUom?.acronym || findProduct.uom_acronym)
+        // Keep the base cost, just update the factor
+        findProduct.cost = baseCost
+        findProduct.conversion_factor = conversionFactor
+        findProduct.quantity = quantityToAdd
         this.calculate(findProduct)
       } else {
-        data.product_id = data.id
-        data.quantity = this.quantity
-        if (this.currentAmount) {
-          data.quantity = this.currentAmount / this.productQuantity.cost
-          data.subtotal = this.currentAmount
-          this.pushProduct(data)
-          this.calculateTotal()
-        } else {
-          data.quantity = this.quantity
-          this.calculate(data)
-          this.pushProduct(data)
-          this.calculateTotal()
+        const newProductData = {
+          ...data,
+          product_id: data.id,
+          cost: baseCost,
+          quantity: quantityToAdd,
+          conversion_factor: conversionFactor,
+          subtotal: 0 // Will be calculated
         }
+        // Calculate initial subtotal
+        newProductData.subtotal = baseCost * quantityToAdd * conversionFactor
+        this.pushProduct(newProductData)
+        this.calculateTotal()
       }
       this.quantity = 1
       this.currentAmount = 0
       this.quantityDialog = false
+      this.selectedUom = null
     },
     closeModal () {
       this.openAddProduct = false
@@ -2054,8 +2116,7 @@ export default {
     async getUnitOfMeasures () {
       try {
         const { data } = await this.$api.get('unit-of-measures')
-        this.unitOfMeasures = data.map(unit => ({ label: unit.name, value: unit.id }))
-        this.unitOfMeasure = this.unitOfMeasures[0]?.value
+        this.unitOfMeasures = data
       } catch (error) {
         Notify.create({
           message: error.message,
