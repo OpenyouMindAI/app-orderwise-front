@@ -406,6 +406,18 @@ const routes = [
         name: 'Welcome',
         meta: { requiresAuth: true },
         component: () => import('pages/WelcomePage.vue')
+      },
+      {
+        path: 'support',
+        name: 'Support',
+        meta: { requiresAuth: true },
+        component: () => import('pages/SupportChatPage.vue')
+      },
+      {
+        path: 'admin/support',
+        name: 'AdminSupport',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AdminSupportPage.vue')
       }
     ]
   },

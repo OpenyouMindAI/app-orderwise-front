@@ -1,10 +1,11 @@
 <template>
-  <div class="grid q-gutter-sm">
+  <div class="grid">
     <!-- Recipe Configuration Info -->
     <q-btn icon="add" color="primary" label="Agregar Ingrediente" @click="openAddIngredient = true"/>
     <q-table
       title="Ingredientes"
       row-key="id"
+      dense
       :columns="columns"
       :rows="recipeItems"
       :loading="loadingTable"
@@ -26,8 +27,20 @@
           </q-btn>
         </q-td>
       </template>
+      <template v-slot:bottom-row>
+        <q-td colspan="4">
+          <div class="row flex justify-end text-subtitle1 text-primary text-bold">
+            Total:
+          </div>
+        </q-td>
+        <q-td>
+          <div class="row flex justify-end text-subtitle1 text-primary text-bold">
+            {{ formatNumber(totalRecipeCost) }}
+          </div>
+        </q-td>
+      </template>
     </q-table>
-    <div class="row q-col-gutter-sm q-mb-md q-pa-sm">
+    <div class="row q-col-gutter-sm">
       <div class="col-12 text-subtitle1 text-primary text-bold">Configuración de Receta</div>
       <div class="col-md-3 col-sm-6 col-xs-12">
         <q-input
@@ -37,6 +50,7 @@
           type="number"
           dense
           hint="Para cuántas porciones rinde esta receta"
+          @update:model-value="calculateCostByUnitOfMeasure"
         />
       </div>
       <div class="col-md-3 col-sm-6 col-xs-12">
@@ -51,9 +65,38 @@
           option-label="name"
           option-value="id"
           hint="Unidad en la que se expresa el rendimiento"
+          @update:model-value="calculateCostByUnitOfMeasure"
         />
       </div>
       <div class="col-md-3 col-sm-6 col-xs-12">
+      <div class="flex items-center justify-between">
+        <div class="flex q-gutter-sm">
+          <q-input
+            v-model="productSelected.cost"
+            :label="`Costo por ${productSelected?.unit_of_measure?.name}`"
+            prefix="$"
+            type="number"
+            dense
+            filled
+            style="width: 200px"
+          />
+          <q-separator vertical/>
+          <q-btn
+            flat
+            dense
+            color="primary"
+            icon="calculate"
+            label="Recalcular Costo"
+            size="sm"
+            @click="calculateCost"
+            :loading="calculating"
+          >
+            <q-tooltip>Actualizar costo basado en ingredientes</q-tooltip>
+          </q-btn>
+        </div>
+      </div>
+      </div>
+      <div class="col-md-6 col-sm-6 col-xs-12">
         <q-input
           filled
           v-model="productSelected.preparation_time"
@@ -62,7 +105,7 @@
           dense
         />
       </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
+      <div class="col-md-6 col-sm-6 col-xs-12">
         <q-input
           filled
           v-model="productSelected.cooking_time"
@@ -86,32 +129,6 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between">
-      <div class="flex q-gutter-sm">
-        <q-input
-          v-model="productSelected.cost"
-          label="Costo Total"
-          prefix="$"
-          type="number"
-          dense
-          filled
-          style="width: 200px"
-        />
-        <q-separator vertical/>
-         <q-btn
-            flat
-            dense
-            color="primary"
-            icon="calculate"
-            label="Recalcular Costo"
-            @click="calculateCost"
-            :loading="calculating"
-         >
-            <q-tooltip>Actualizar costo basado en ingredientes</q-tooltip>
-         </q-btn>
-      </div>
-    </div>
-
     <!-- Modal Agregar/Editar Ingrediente -->
     <q-dialog v-model="openAddIngredient" persistent>
       <q-card style="width: 600px; max-width: 80vw;">
@@ -130,12 +147,12 @@
                 v-model="ingredientForm.ingredient"
                 :options="productOptions"
                 option-value="id"
+                option-label="name"
                 label="Ingrediente (Materia Prima o Sub-receta)"
                 use-input
                 @filter="filterProducts"
                 @update:model-value="setProduct"
                 :rules="[val => !!val || 'El ingrediente es requerido']"
-                :option-label="opt => opt.name ? `${opt.name} ($${opt.cost})` : ''"
               >
                 <template v-slot:no-option>
                   <q-item>
@@ -162,7 +179,6 @@
             <div class="col-6">
                <q-select
                   filled
-                  disable
                   v-model="ingredientForm.unit_of_measure_id"
                   :options="unitOfMeasures"
                   option-value="id"
@@ -222,7 +238,7 @@ const columns = [
   { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true, format: val => formatNumber(val) },
   { name: 'unit', align: 'left', label: 'Unidad', field: row => row.unit_of_measure?.name || '-' },
   { name: 'waste', align: 'right', label: '% Merma', field: 'waste_percentage', format: val => `${val}%` },
-  { name: 'cost_impact', align: 'right', label: 'Costo Impacto', field: row => `$${calculateItemCost(row)}` },
+  { name: 'cost_impact', align: 'right', label: 'Costo Impacto', field: row => `$${formatNumber(calculateItemCost(row))}` },
   { name: 'actions', align: 'center', label: 'Acciones' }
 ]
 
@@ -234,6 +250,7 @@ const openAddIngredient = ref(false)
 const editingIngredient = ref(null)
 
 const productSelected = ref(props.product)
+const totalRecipeCost = ref(0)
 
 const productOptions = ref([])
 const unitOfMeasures = ref([])
@@ -251,14 +268,35 @@ const paginationConfig = ref({
 
 // Computed
 const estimatedCost = computed(() => {
-  if (!ingredientForm.value.ingredient || !ingredientForm.value.quantity) return 0
-  const baseCost = parseFloat(ingredientForm.value.ingredient.cost || 0)
+  if (!ingredientForm.value.ingredient || !ingredientForm.value.quantity || !ingredientForm.value.unit_of_measure_id) return 0
+
+  const ingredient = ingredientForm.value.ingredient
+  const fromUomId = ingredientForm.value.unit_of_measure_id
+  const toUomId = ingredient.unit_of_measure_id
+
+  const factor = getConversionFactor(fromUomId, toUomId)
+
+  const baseCost = parseFloat(ingredient.cost || 0)
   const qty = parseFloat(ingredientForm.value.quantity)
   const waste = parseFloat(ingredientForm.value.waste_percentage || 0)
-  return (baseCost * qty * (1 + waste / 100)).toFixed(2)
+
+  // Cost = (Quantity * Factor) * UnitCost * (1 + Waste)
+  return ((qty * factor) * baseCost * (1 + waste / 100)).toFixed(2)
 })
 
 // Methods
+const getConversionFactor = (fromUomId, toUomId) => {
+  if (fromUomId === toUomId) return 1
+
+  const fromUom = unitOfMeasures.value.find(u => u.id === fromUomId)
+  const toUom = unitOfMeasures.value.find(u => u.id === toUomId)
+
+  if (!fromUom || !toUom) return 1
+
+  // Logic: (quantity * fromRatio) / toRatio
+  // Factor = fromRatio / toRatio
+  return (parseFloat(fromUom.ratio) / parseFloat(toUom.ratio)) || 1
+}
 const loadRecipeItems = async () => {
   if (!productSelected.value?.id) return
   loadingTable.value = true
@@ -293,7 +331,10 @@ const filterProducts = async (val, update) => {
         perPage: 40,
         paginate: true,
         sortBy: 'name',
-        sortOrder: 'asc'
+        sortOrder: 'asc',
+        whereIn: {
+          product_type: ['RAW_MATERIAL', 'SUB_RECIPE']
+        }
       }
     })
     productOptions.value = data.data.filter(p => p.id !== productSelected.value.id)
@@ -302,6 +343,28 @@ const filterProducts = async (val, update) => {
     console.error(error)
     update()
   }
+}
+
+const calculateCostByUnitOfMeasure = () => {
+  const cost = parseFloat(totalRecipeCost.value) || 0
+  const servings = parseFloat(productSelected.value.servings) || 0
+
+  if (servings === 0) {
+    productSelected.value.cost = 0
+    return
+  }
+
+  const yieldUnitId = productSelected.value.yield_unit_id
+  const baseUnitId = productSelected.value.unit_of_measure_id
+
+  let factor = 1
+  if (yieldUnitId && baseUnitId) {
+    factor = getConversionFactor(yieldUnitId, baseUnitId)
+  }
+
+  // Cost per base unit = TotalCost / (QuantityInBaseUnits)
+  // QuantityInBaseUnits = Servings * Factor(Yield -> Base)
+  productSelected.value.cost = (cost / (servings * factor)).toFixed(2)
 }
 
 const saveIngredient = async () => {
@@ -359,8 +422,9 @@ const calculateCost = async () => {
   calculating.value = true
   try {
     const { data } = await api.get(`products/${productSelected.value.id}/recipe/cost`)
-    productSelected.value.cost = data.cost
-    notify(`Costo actualizado: $${data.cost}`, 'positive')
+    totalRecipeCost.value = data.cost
+    calculateCostByUnitOfMeasure()
+    notify(`Costo actualizado: $${productSelected.value.cost}`, 'positive')
   } catch (error) {
     notify('Error al calcular costo', 'negative')
   } finally {
@@ -381,11 +445,19 @@ const closeIngredientModal = () => {
 
 const calculateItemCost = (row) => {
   if (!row.ingredient || !row.quantity) return 0
-  return (row.ingredient.cost * row.quantity * (1 + row.waste_percentage / 100)).toFixed(2)
+  const fromUomId = row.unit_of_measure_id
+  const toUomId = row.ingredient.unit_of_measure_id
+  const factor = getConversionFactor(fromUomId, toUomId)
+
+  return ((row.quantity * factor) * row.ingredient.cost * (1 + row.waste_percentage / 100)).toFixed(2)
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadRecipeItems()
-  loadUnitOfMeasures()
+  await loadUnitOfMeasures()
+  // Calculate initial cost if servings are set
+  if (productSelected.value.servings) {
+    await calculateCost()
+  }
 })
 </script>

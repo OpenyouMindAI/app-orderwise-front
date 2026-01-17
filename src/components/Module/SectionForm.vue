@@ -62,12 +62,12 @@ import IconPicker from './IconPicker.vue'
 const props = defineProps({
   section: {
     type: Object,
-    default: () => ({}),
+    default: () => ({})
   },
   isEditing: {
     type: Boolean,
-    default: false,
-  },
+    default: false
+  }
 })
 
 const emit = defineEmits(['save', 'cancel'])
@@ -81,7 +81,7 @@ const form = reactive({
   id: null,
   name: '',
   icon: 'folder',
-  index: 1,
+  index: 1
 })
 
 // Watch for changes in props.section
@@ -93,7 +93,7 @@ watch(
         id: newSection.id,
         name: newSection.name || '',
         icon: newSection.icon || 'folder',
-        index: newSection.index || 1,
+        index: newSection.index || 1
       })
     }
   },

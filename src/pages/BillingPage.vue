@@ -649,8 +649,6 @@
                           </div>
                         </div>
 
-
-
                         <div v-else>
                           <div class="text-grey-6">No hay detalles adicionales para este producto</div>
                         </div>

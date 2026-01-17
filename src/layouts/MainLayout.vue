@@ -69,7 +69,7 @@
         <q-space />
 
         <!-- Branch Office Indicator -->
-        <div v-if="branchOffice && branchOffices.lenght > 1" class="branch-indicator">
+        <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
           <q-chip
             dense
             square
@@ -280,6 +280,24 @@
                     <q-icon name="android" size="24px" />
                     <span class="tool-label">App</span>
                   </a>
+                  <div
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'AdminSupport' }"
+                    @click="changeRoute('AdminSupport', 'Suporte Admin')"
+                    v-if="userSession.is_root"
+                  >
+                    <q-icon name="support_agent" size="24px" />
+                    <span class="tool-label">Suporte Admin</span>
+                  </div>
+                  <div
+                    v-else
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'Support' }"
+                    @click="changeRoute('Support', 'Suporte')"
+                  >
+                    <q-icon name="support_agent" size="24px" />
+                    <span class="tool-label">Suporte</span>
+                  </div>
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
@@ -1540,8 +1558,7 @@ export default {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
-
-          if (data.invoice_id) {
+          if (data?.invoice_id) {
             const notification = createNotification(this.$t(`command.${data.name}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
@@ -1551,11 +1568,11 @@ export default {
             }
           }
 
-          if (data.error_type) {
+          if (data?.error_type) {
             const notification = createNotification(this.$t(`command.${data?.error_type?.toLowerCase()}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
-            }, true)
+            }, false)
             notification.onclick = () => {
               window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
             }
@@ -1576,7 +1593,7 @@ export default {
         const { data } = await api.get('notifications', {
           params: { unread: true }
         })
-        this.numberOfNotifications = data
+        this.numberOfNotifications = data.data
       } catch (error) {
         console.log(error.message)
       }
@@ -1731,7 +1748,7 @@ export default {
         // Save or update company integration
         await api.post('company-integrations', {
           integration_id: integration.id,
-          credentials: credentials
+          credentials
         })
 
         notify('Configuración guardada exitosamente', 'positive', 'check_circle')

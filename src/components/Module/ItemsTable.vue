@@ -167,12 +167,12 @@ import { ref, computed, reactive, watch } from 'vue'
 const props = defineProps({
   modules: {
     type: Array,
-    default: () => [],
+    default: () => []
   },
   sections: {
     type: Array,
-    default: () => [],
-  },
+    default: () => []
+  }
 })
 
 defineEmits(['edit-module', 'delete-module', 'add-module'])
@@ -182,7 +182,7 @@ const loading = ref(false)
 const filters = reactive({
   search: '',
   section: null,
-  icon: '',
+  icon: ''
 })
 
 const pagination = ref({
@@ -190,7 +190,7 @@ const pagination = ref({
   descending: true,
   page: 1,
   rowsPerPage: 10,
-  rowsNumber: 0,
+  rowsNumber: 0
 })
 
 // Computed properties
@@ -200,7 +200,7 @@ const sectionOptions = computed(() => {
     .map((section) => ({
       label: section.name,
       value: section.id,
-      icon: section.icon,
+      icon: section.icon
     }))
 })
 
@@ -228,28 +228,28 @@ const columns = [
     label: 'Icon',
     field: 'icon',
     align: 'center',
-    sortable: true,
+    sortable: true
   },
   {
     name: 'title',
     label: 'Title',
     field: 'title',
     align: 'left',
-    sortable: true,
+    sortable: true
   },
   {
     name: 'link',
     label: 'Link/Route',
     field: 'link',
     align: 'left',
-    sortable: true,
+    sortable: true
   },
   {
     name: 'section',
     label: 'Section',
     field: 'section_name',
     align: 'left',
-    sortable: true,
+    sortable: true
   },
   {
     name: 'position',
@@ -277,15 +277,15 @@ const columns = [
     label: 'Timestamps',
     field: 'updated_at',
     align: 'left',
-    sortable: true,
+    sortable: true
   },
   {
     name: 'actions',
     label: 'Actions',
     field: 'actions',
     align: 'center',
-    sortable: false,
-  },
+    sortable: false
+  }
 ]
 
 // Helper functions

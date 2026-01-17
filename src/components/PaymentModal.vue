@@ -721,7 +721,6 @@ export default {
       emit('update:show', false)
     }
 
-
     const getPaymentIcon = (acronym) => {
       const icons = {
         EFE: 'payments',

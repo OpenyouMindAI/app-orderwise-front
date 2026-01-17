@@ -1489,7 +1489,6 @@ const assignDemo = async () => {
  */
 const initializeGoogleAuthMobile = async () => {
   try {
-
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'

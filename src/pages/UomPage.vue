@@ -251,7 +251,7 @@ export default {
       savingUom: false,
       savingCategory: false,
       uomFilter: '',
-      
+
       uomDialog: false,
       uom: {
         id: null,

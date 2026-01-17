@@ -2159,7 +2159,7 @@ const registerPayment = async () => {
     if (invoice.value) {
       invoice.value.pending = newBalance
       invoice.value.balance = newBalance
-      
+
       // Add new payment to invoice_payments array
       if (newPayment && invoice.value.invoice_payments) {
         invoice.value.invoice_payments.push({

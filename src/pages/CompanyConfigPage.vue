@@ -994,7 +994,7 @@ onMounted(async () => {
 const initializeAddress = () => {
   if (company.value?.address) {
     formattedAddress.value = company.value?.address?.formattedAddress
-address.value = company.value.address
+    address.value = company.value.address
   } else {
     formattedAddress.value = ''
     address.value = null
@@ -1198,7 +1198,7 @@ const formDate = (data) => {
     }))
   } else if (data.address) {
     // Fallback final: usar lo que venga en data
-    formData.append('address', typeof data.address === 'string' 
+    formData.append('address', typeof data.address === 'string'
       ? JSON.stringify({ formattedAddress: data.address })
       : JSON.stringify(data.address)
     )

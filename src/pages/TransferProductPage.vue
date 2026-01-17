@@ -584,7 +584,7 @@
                 </q-select>
                 <q-input
                   v-model="currentTransfer.observations"
-                  label="Observaciones"
+                  label="Descripción"
                   type="textarea"
                   outlined
                   dense
@@ -783,10 +783,10 @@
                       <q-input
                         v-model.number="product.quantity"
                         type="number"
-                        label="Cant."
+                        :label="`Cant.${product?.unit_of_measurement?.name}`"
                         outlined
                         dense
-                        min="1"
+                        :step="0.001"
                         :rules="[val => val > 0 || 'Requerido']"
                         @update:model-value="updateTotals"
                       >

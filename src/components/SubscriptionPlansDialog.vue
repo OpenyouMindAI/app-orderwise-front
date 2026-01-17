@@ -986,7 +986,7 @@ body:not(.q-dark) .branch-current-info {
 /* Skeleton Styles */
 .plan-skeleton {
   pointer-events: none;
-  
+
   &:hover {
     transform: none;
     border-color: rgba(255, 255, 255, 0.1);
