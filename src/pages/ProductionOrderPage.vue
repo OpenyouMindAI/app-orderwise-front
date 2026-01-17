@@ -40,139 +40,279 @@
     </div>
 
     <!-- Modal para nueva orden -->
-    <q-dialog v-model="openNewOrder" persistent full-width>
-      <q-card style="max-width: 1000px; width: 100%;">
-        <q-form @submit="createOrder">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Nueva Orden de Producción</div>
+    <q-dialog
+      v-model="openNewOrder"
+      persistent
+      backdrop-filter="blur(4px)"
+      :maximized="$q.screen.lt.sm"
+      transition-show="scale"
+      transition-hide="scale"
+    >
+      <q-card
+        :style="$q.screen.gt.xs ? 'width: 1200px; max-width: 95vw; height: 90vh;' : ''"
+        :class="[$q.dark.isActive ? 'bg-dark' : 'bg-grey-1', $q.screen.gt.xs ? 'rounded-lg shadow-24' : '']"
+        class="column no-wrap overflow-hidden"
+      >
+        <q-form @submit="createOrder" class="column full-height">
+          <!-- Professional Compact Header -->
+          <q-card-section class="bg-primary text-white q-py-sm q-px-md row items-center no-wrap shadow-2">
+            <q-icon name="precision_manufacturing" size="xs" class="q-mr-sm" />
+            <div class="column">
+              <div class="text-subtitle1 text-weight-bold line-height-1">Nueva Orden de Producción</div>
+            </div>
             <q-space />
-            <q-btn icon="close" flat round dense @click="closeNewOrderModal" />
+            <q-btn icon="close" flat round dense @click="closeNewOrderModal" v-close-popup size="sm" />
           </q-card-section>
 
-          <q-card-section>
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-12">
-                <q-select
-                  filled
-                  v-model="orderForm.branch_office_id"
-                  :options="branchOffices"
-                  option-value="id"
-                  option-label="name"
-                  emit-value
-                  map-options
-                  label="Sucursal"
-                />
-              </div>
-              <div class="col-12">
-                <q-input
-                  filled
-                  v-model="orderForm.planned_date"
-                  label="Fecha planeada"
-                  type="datetime-local"
-                />
-              </div>
-              <div class="col-12">
-                <div class="row items-center q-mb-md q-col-gutter-sm">
-                  <div class="col-12 col-md-6 flex items-center q-gutter-sm">
-                     <span class="text-h6">Productos a Fabricar</span>
-                     <q-btn
-                        label="Fabricar Falta (Stock Mín.)"
-                        color="secondary"
-                        size="sm"
-                        icon="auto_fix_high"
-                        @click="setQuantitiesToMinimum"
-                        :disable="!orderForm.branch_office_id"
-                      >
-                        <q-tooltip>Establecer cantidad para cubrir el stock mínimo de todos los productos</q-tooltip>
-                     </q-btn>
-                     <q-btn
-                        label="Reset"
-                        color="warning"
-                        size="sm"
-                        icon="restart_alt"
-                        @click="resetQuantitiesToZero"
-                      >
-                        <q-tooltip>Poner todas las cantidades en 0</q-tooltip>
-                     </q-btn>
-                  </div>
-                  <div class="col-12 col-md-6 flex justify-end items-center q-gutter-sm">
-                      <q-input
-                        dense
-                        filled
-                        v-model.number="percentageIncrease"
-                        type="number"
-                        label="% Extra"
-                        style="width: 100px"
-                        min="0"
-                      />
-                      <q-btn
-                        label="Aplicar %"
-                        color="primary"
-                        size="sm"
-                        icon="trending_up"
-                        @click="applyPercentageIncrease"
-                        :disable="!hasSelectedItems"
-                      />
-                  </div>
-                </div>
+          <q-card-section class="col scroll q-pa-md">
+            <div class="row q-col-gutter-md full-height">
+              
+              <!-- LEFT SIDEBAR (1/3): Order Summary & General Info -->
+              <div class="col-12 col-md-4">
+                <div class="column q-gutter-y-sm">
+                  
+                  <!-- Metadata Card -->
+                  <q-card flat bordered class="shadow-1 rounded-lg" :class="$q.dark.isActive ? 'bg-grey-9 border-grey-8' : 'bg-white'">
+                    <q-card-section class="q-pa-sm">
+                      <div class="text-caption text-weight-bold q-mb-sm flex items-center text-primary">
+                        <q-icon name="info" size="xs" class="q-mr-xs" />
+                        INFORMACIÓN GENERAL
+                      </div>
+                      <div class="column q-gutter-y-sm">
+                        <q-select
+                          outlined
+                          v-model="orderForm.branch_office_id"
+                          :options="branchOffices"
+                          option-value="id"
+                          option-label="name"
+                          emit-value
+                          map-options
+                          dense
+                          label="Sucursal"
+                          :bg-color="$q.dark.isActive ? 'grey-10' : 'grey-1'"
+                        />
+                        <q-input
+                          outlined
+                          v-model="orderForm.planned_date"
+                          dense
+                          label="Fecha/Hora Estimada"
+                          type="datetime-local"
+                          stack-label
+                          :bg-color="$q.dark.isActive ? 'grey-10' : 'grey-1'"
+                        />
+                      </div>
+                    </q-card-section>
+                  </q-card>
 
-                <q-table
-                  :rows="productsWithRecipe"
-                  :columns="productSelectionColumns"
-                  row-key="id"
-                  flat
-                  bordered
-                  :filter="filterProducts"
-                  :loading="loadingProducts"
-                  :pagination="{ rowsPerPage: 10 }"
-                >
-                  <template v-slot:top-right>
-                    <q-input
-                      v-model="filterProducts"
-                      debounce="300"
-                      placeholder="Buscar"
-                      style="max-width: 200px"
-                    />
-                  </template>
-                  <template v-slot:body="props">
-                    <q-tr :props="props">
-                       <q-td key="name" :props="props">
-                          <div class="text-weight-bold">{{ props.row.name }}</div>
-                          <div class="text-caption text-grey">{{ props.row.category?.name }}</div>
-                       </q-td>
-                       <q-td key="stock" :props="props" class="text-right">
-                          {{ props.row.stock }}
-                       </q-td>
-                        <q-td key="min_stock" :props="props" class="text-right">
-                          {{ props.row.minimum_stock || 0 }}
-                       </q-td>
-                       <q-td key="difference" :props="props" class="text-right">
-                          <q-badge :color="getStockStatusColor(props.row)" text-color="white">
-                            {{ getStockDifference(props.row) }}
-                          </q-badge>
-                       </q-td>
-                       <q-td key="quantity" :props="props" style="width: 150px">
-                          <q-input
-                            dense
-                            filled
-                            v-model.number="props.row.planned_quantity"
-                            type="number"
-                            min="0"
-                            step="1"
-                            placeholder="0"
-                            bg-color="white"
-                          />
-                       </q-td>
-                    </q-tr>
-                  </template>
-                </q-table>
+                  <!-- Total Investment Summary Card (Compact) -->
+                  <q-card flat class="bg-primary text-white shadow-2 rounded-lg">
+                    <q-card-section class="q-pa-md">
+                      <div class="text-overline opacity-8 line-height-1">TOTAL INVERSIÓN</div>
+                      <div class="text-h5 text-weight-bolder font-numeric">
+                        ${{ formatNumber(totalOrderCost) }}
+                      </div>
+                      <div class="text-caption opacity-7">
+                        {{ orderForm.items.length }} ítems en lista
+                      </div>
+                    </q-card-section>
+                  </q-card>
+
+                  <!-- Cart Sidebar: Items in Order (Tight) -->
+                  <q-card flat bordered class="column rounded-lg shadow-1 flex-grow overflow-hidden" :class="$q.dark.isActive ? 'bg-grey-9 border-grey-8' : 'bg-white'">
+                    <q-toolbar class="bg-grey-1 text-weight-bold text-overline" :class="$q.dark.isActive ? 'bg-grey-8' : ''" style="min-height: 32px">
+                      <q-icon name="shopping_cart" size="xs" class="q-mr-xs" />
+                      PRODUCTOS SELECCIONADOS
+                    </q-toolbar>
+                    <q-separator />
+                    <q-scroll-area style="height: 300px">
+                      <q-list v-if="orderForm.items.length > 0" separator dense>
+                        <q-item v-for="(item, index) in orderForm.items" :key="index" class="q-py-xs">
+                          <q-item-section>
+                            <q-item-label class="text-caption text-weight-bold">{{ getProductName(item.product_id) }}</q-item-label>
+                            <q-item-label caption class="text-primary text-weight-bold" style="font-size: 10px">
+                              {{ formatNumber(item.planned_quantity) }} un. | ${{ formatNumber(getItemCost(item)) }}
+                            </q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <div class="row q-gutter-none">
+                              <q-btn flat round dense color="grey-7" icon="edit" size="xs" @click="editConfiguredItem(item)" />
+                              <q-btn flat round dense color="negative" icon="delete" size="xs" @click="removeConfiguredItem(index)" />
+                            </div>
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                      <div v-else class="flex flex-center column q-pa-lg text-grey-5 text-center">
+                        <q-icon name="inventory_2" size="2em" class="q-mb-xs" />
+                        <div class="text-caption">Lista vacía</div>
+                      </div>
+                    </q-scroll-area>
+                  </q-card>
+                </div>
+              </div>
+
+              <!-- MAIN PANEL (2/3): Catalog or Configurator -->
+              <div class="col-12 col-md-8">
+                <q-slide-transition mode="out-in">
+                  
+                  <!-- Catalog View -->
+                  <div v-if="!selectedProductConfig" class="column full-height">
+                    <q-card flat bordered class="column full-height rounded-lg shadow-1" :class="$q.dark.isActive ? 'bg-grey-9 border-grey-8' : 'bg-white'">
+                      <q-toolbar class="q-px-md q-py-sm">
+                         <q-icon name="list" size="sm" class="text-primary q-mr-sm"/>
+                         <q-toolbar-title class="text-subtitle1 text-weight-bold">Catálogo de Productos</q-toolbar-title>
+                         <q-input
+                           v-model="filterProducts"
+                           debounce="300"
+                           placeholder="Buscar producto..."
+                           outlined
+                           dense
+                           class="q-ml-md"
+                           style="width: 250px"
+                           :bg-color="$q.dark.isActive ? 'grey-10' : 'white'"
+                         >
+                           <template v-slot:prepend><q-icon name="search" /></template>
+                         </q-input>
+                      </q-toolbar>
+                      <q-separator />
+                      <div class="col overflow-auto">
+                        <q-table
+                          :rows="productsWithRecipe"
+                          :columns="productSelectionColumns"
+                          row-key="id"
+                          flat
+                          dense
+                          :filter="filterProducts"
+                          :loading="loadingProducts"
+                          :pagination="{ rowsPerPage: 15 }"
+                          @row-click="(evt, row) => selectProductForConfig(row)"
+                          class="cursor-pointer sticky-header"
+                        >
+                          <template v-slot:body="props">
+                            <q-tr :props="props" @click="selectProductForConfig(props.row)" class="cursor-pointer hover-accent transition-all">
+                               <q-td key="name" :props="props">
+                                  <div class="text-weight-bold">{{ props.row.name }}</div>
+                                  <div class="text-caption text-grey-6">{{ props.row.category?.name || 'Varios' }}</div>
+                               </q-td>
+                               <q-td key="stock" :props="props" class="text-right">
+                                  <q-badge :color="props.row.stock < props.row.minimum_stock ? 'red-2' : 'green-2'" 
+                                           :text-color="props.row.stock < props.row.minimum_stock ? 'red-9' : 'green-9'"
+                                           class="text-weight-bold">
+                                    {{ formatNumber(props.row.stock) }} {{ props.row.unit_of_measure?.name }}
+                                  </q-badge>
+                               </q-td>
+                               <q-td key="difference" :props="props" class="text-right">
+                                  <q-chip :color="getStockStatusColor(props.row)" size="sm" text-color="white" class="text-weight-bold">
+                                    {{ getStockDifference(props.row) }}
+                                  </q-chip>
+                               </q-td>
+                            </q-tr>
+                          </template>
+                        </q-table>
+                      </div>
+                    </q-card>
+                  </div>
+
+                  <!-- Configurator View (Compact) -->
+                  <div v-else class="column full-height">
+                    <q-card flat bordered class="column full-height rounded-lg shadow-1" :class="$q.dark.isActive ? 'bg-grey-9 border-grey-8' : 'bg-white'">
+                      <q-toolbar class="q-pa-sm bg-grey-1" :class="$q.dark.isActive ? 'bg-grey-8' : ''" style="min-height: 48px">
+                        <q-btn flat round icon="arrow_back" dense @click="selectedProductConfig = null" color="primary" size="sm" class="q-mr-sm" />
+                        <div class="column">
+                          <div class="text-weight-bold">{{ selectedProductConfig.name }}</div>
+                          <div class="text-caption text-primary line-height-1" style="font-size: 10px">Configuración Detallada</div>
+                        </div>
+                      </q-toolbar>
+                      <q-separator />
+
+                      <q-card-section class="col scroll q-pa-md">
+                        <div class="row q-col-gutter-lg">
+                          <!-- Config Params -->
+                          <div class="col-12 col-md-5">
+                            <div class="column q-gutter-y-md">
+                              <div class="text-caption text-weight-bold flex items-center text-grey-7">
+                                <q-icon name="tune" color="primary" class="q-mr-xs" />
+                                PARÁMETROS DE LOTE
+                              </div>
+                              <q-input
+                                outlined
+                                v-model.number="configQuantities.units"
+                                label="Cant. Recetas (Lotes)"
+                                type="number"
+                                dense
+                                @update:model-value="updateFromUnits"
+                              />
+                              <q-input
+                                outlined
+                                v-model.number="configQuantities.portions"
+                                label="Producción Estimada"
+                                type="number"
+                                dense
+                                @update:model-value="updateFromPortions"
+                              />
+
+                              <!-- Investment Summary Inline -->
+                              <div class="bg-blue-1 q-pa-md rounded-lg border-blue-2" :class="$q.dark.isActive ? 'bg-blue-10 text-white' : 'text-blue-9'">
+                                <div class="text-overline text-weight-bolder line-height-1">INVERSIÓN ITEM</div>
+                                <div class="text-h6 text-weight-bolder font-numeric">${{ formatNumber(currentConfigCost) }}</div>
+                              </div>
+
+                              <q-btn
+                                unelevated
+                                color="primary"
+                                :label="isEditingItem ? 'Actualizar' : 'Agregar'"
+                                icon="add_circle"
+                                size="md"
+                                class="full-width text-weight-bold"
+                                @click="confirmProductConfig"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Ingredients Preview (Dense List) -->
+                          <div class="col-12 col-md-7">
+                            <div class="text-caption text-weight-bold q-mb-xs flex items-center text-grey-7">
+                              <q-icon name="list_alt" color="primary" class="q-mr-xs" />
+                              REQUERIMIENTO TEÓRICO
+                            </div>
+                            <q-list bordered separator class="rounded-lg bg-grey-1" :class="$q.dark.isActive ? 'bg-grey-10' : ''">
+                              <q-item v-for="(item, idx) in recipePreviewItems" :key="idx" class="q-py-xs" style="min-height: 40px">
+                                <q-item-section>
+                                  <q-item-label class="text-caption text-weight-bold">{{ item.ingredient?.name }}</q-item-label>
+                                </q-item-section>
+                                <q-item-section side class="text-right">
+                                  <div class="text-subtitle2 text-primary text-weight-bolder font-numeric">{{ formatNumber(item.quantity * configQuantities.units) }} {{ item.unit_of_measure?.name }}</div>
+                                </q-item-section>
+                              </q-item>
+                              <div v-if="recipePreviewItems.length === 0" class="q-pa-md text-center text-grey-5 text-caption">
+                                Sin detalles de receta
+                              </div>
+                            </q-list>
+                          </div>
+                        </div>
+                      </q-card-section>
+                    </q-card>
+                  </div>
+                </q-slide-transition>
               </div>
             </div>
           </q-card-section>
 
-          <q-card-actions align="right">
-            <q-btn color="secondary" label="Cancelar" @click="closeNewOrderModal" />
-            <q-btn color="primary" label="Crear Orden" type="submit" :loading="visible" :disable="!hasSelectedItems"/>
+          <q-separator />
+
+          <!-- Compact Footer Actions -->
+          <q-card-actions align="right" class="q-pa-sm bg-grey-1" :class="$q.dark.isActive ? 'bg-grey-9' : ''">
+            <q-btn flat label="Cancelar" color="grey-7" @click="closeNewOrderModal" v-close-popup size="sm" class="q-px-md" />
+            <q-btn
+              unelevated
+              color="primary"
+              label="Procesar Orden"
+              type="submit"
+              icon="send"
+              size="sm"
+              :loading="visible"
+              :disable="!hasSelectedItems"
+              class="q-px-lg text-weight-bold shadow-1"
+            />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -345,7 +485,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Notify } from 'quasar'
 import { api } from 'boot/axios'
 
@@ -372,15 +512,89 @@ const openProductPicker = ref(false)
 const selectedProductForOrder = ref(null)
 const filterProducts = ref('')
 const percentageIncrease = ref(0)
-const hasSelectedItems = computed(() => {
-  return productsWithRecipe.value.some(p => p.planned_quantity > 0)
+
+/**
+ * State for product being configured
+ * @type {Ref<Object|null>}
+ */
+const selectedProductConfig = ref(null)
+
+/**
+ * State for quantities in configuration mode
+ * @type {Ref<{units: number, portions: number}>}
+ */
+const configQuantities = ref({
+  units: 1,
+  portions: 1
 })
+
+/**
+ * Preview items for the selected product recipe
+ * @type {Ref<Array>}
+ */
+const recipePreviewItems = ref([])
+
+/**
+ * Flag to indicate if we are editing an existing item in the order
+ * @type {Ref<boolean>}
+ */
+const isEditingItem = ref(false)
+
+/**
+ * Index of the item being edited
+ * @type {Ref<number>}
+ */
+const editingIndex = ref(-1)
 
 const orderForm = ref({
   branch_office_id: null,
   planned_date: null,
   items: []
 })
+
+/**
+ * Computed to check if order has items
+ * @type {ComputedRef<boolean>}
+ */
+const hasSelectedItems = computed(() => {
+  return orderForm.value.items.length > 0
+})
+
+/**
+ * Computed to calculate total order cost
+ * @type {ComputedRef<number>}
+ */
+const totalOrderCost = computed(() => {
+  return orderForm.value.items.reduce((acc, item) => {
+    return acc + getItemCost(item)
+  }, 0)
+})
+
+/**
+ * Computed to calculate cost of the product currently being configured
+ * @type {ComputedRef<number>}
+ */
+const currentConfigCost = computed(() => {
+  if (!selectedProductConfig.value) return 0
+  const cost = parseFloat(selectedProductConfig.value.cost) || 0
+  return cost * configQuantities.value.units
+})
+
+/**
+ * Helper to get cost for a specific order item
+ * @params {Object} item
+ * @return {number}
+ */
+const getItemCost = (item) => {
+  const product = allProductsWithRecipe.value.find(p => p.id === item.product_id)
+  if (!product) return 0
+  const cost = parseFloat(product.cost) || 0
+  return cost * item.planned_quantity
+}
+
+const formatNumber = (val) => {
+  return parseFloat(val || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 const completionForm = ref({})
 
@@ -417,8 +631,12 @@ const productSelectionColumns = [
   { name: 'name', align: 'left', label: 'Producto', field: 'name', sortable: true },
   { name: 'stock', align: 'right', label: 'Stock Actual', field: 'stock', sortable: true },
   { name: 'min_stock', align: 'right', label: 'Stock Mín.', field: 'minimum_stock', sortable: true },
-  { name: 'difference', align: 'right', label: 'Diferencia', field: row => row.stock - row.minimum_stock, sortable: true },
-  { name: 'quantity', align: 'center', label: 'A Fabricar', field: 'planned_quantity' }
+  { name: 'difference', align: 'right', label: 'Diferencia', field: row => row.stock - row.minimum_stock, sortable: true }
+]
+
+const previewColumns = [
+  { name: 'name', align: 'left', label: 'Insumo', field: row => row.ingredient?.name },
+  { name: 'qty', align: 'right', label: 'Cantidad', field: 'qty' }
 ]
 
 const getStatusColor = (status) => {
@@ -485,15 +703,16 @@ const viewOrder = async (event, row) => {
 const createOrder = async () => {
   visible.value = true
   try {
-    // Filter items with quantity > 0
-    orderForm.value.items = productsWithRecipe.value
-      .filter(p => p.planned_quantity > 0)
-      .map(p => ({
-        product_id: p.id,
-        planned_quantity: p.planned_quantity
+    // API expects product_id and planned_quantity for each item
+    const payload = {
+      ...orderForm.value,
+      items: orderForm.value.items.map(item => ({
+        product_id: item.product_id,
+        planned_quantity: item.planned_quantity
       }))
+    }
 
-    await api.post('production-orders', orderForm.value)
+    await api.post('production-orders', payload)
     Notify.create({
       message: 'Orden creada exitosamente',
       icon: 'check_circle',
@@ -629,14 +848,123 @@ const closeNewOrderModal = () => {
     planned_date: null,
     items: []
   }
-  // Reset quantities
-  productsWithRecipe.value.forEach(p => { p.planned_quantity = 0 })
+  // Reset configuration state
+  selectedProductConfig.value = null
+  recipePreviewItems.value = []
 }
 
 const closeViewOrderModal = () => {
   openViewOrder.value = false
   selectedOrder.value = null
   materialRequirements.value = []
+}
+
+/**
+ * Handle product selection to enter configuration mode
+ * @params {Object} row
+ */
+const selectProductForConfig = async (row) => {
+  selectedProductConfig.value = row
+  isEditingItem.value = false
+  editingIndex.value = -1
+
+  // Reset quantities to default based on recipe yield (servings)
+  const servings = parseFloat(row.servings) || 1
+  configQuantities.value = {
+    units: 1,
+    portions: servings
+  }
+
+  // Load recipe preview
+  try {
+    const { data } = await api.get(`products/${row.id}/recipe`)
+    recipePreviewItems.value = data
+  } catch (error) {
+    recipePreviewItems.value = []
+  }
+}
+
+/**
+ * Update portions based on unit count (batch size)
+ */
+const updateFromUnits = (val) => {
+  const servings = parseFloat(selectedProductConfig.value.servings) || 1
+  configQuantities.value.portions = parseFloat((val * servings).toFixed(2))
+}
+
+/**
+ * Update units (batch count) based on portion count
+ */
+const updateFromPortions = (val) => {
+  const servings = parseFloat(selectedProductConfig.value.servings) || 1
+  configQuantities.value.units = parseFloat((val / servings).toFixed(2))
+}
+
+/**
+ * Get product name for already selected items list
+ * @params {number} id
+ */
+const getProductName = (id) => {
+  const p = allProductsWithRecipe.value.find(prod => prod.id === id)
+  return p ? p.name : 'Unknown Product'
+}
+
+/**
+ * Confirms current configuration and adds/updates the order item list
+ */
+const confirmProductConfig = () => {
+  if (configQuantities.value.units <= 0) {
+    Notify.create({ message: 'La cantidad debe ser mayor a 0', color: 'warning' })
+    return
+  }
+
+  const item = {
+    product_id: selectedProductConfig.value.id,
+    planned_quantity: configQuantities.value.units,
+    planned_servings: configQuantities.value.portions
+  }
+
+  if (isEditingItem.value && editingIndex.value > -1) {
+    orderForm.value.items[editingIndex.value] = item
+  } else {
+    // If product already in list, update it instead of adding duplicate
+    const existingIndex = orderForm.value.items.findIndex(i => i.product_id === item.product_id)
+    if (existingIndex > -1) {
+      orderForm.value.items[existingIndex] = item
+    } else {
+      orderForm.value.items.push(item)
+    }
+  }
+
+  // Exit config mode
+  selectedProductConfig.value = null
+  isEditingItem.value = false
+  editingIndex.value = -1
+}
+
+/**
+ * Re-enters configuration mode for an item already in the list
+ * @params {Object} item
+ */
+const editConfiguredItem = (item) => {
+  const product = allProductsWithRecipe.value.find(p => p.id === item.product_id)
+  if (product) {
+    selectProductForConfig(product)
+    configQuantities.value = {
+      units: item.planned_quantity,
+      portions: item.planned_servings
+    }
+    isEditingItem.value = true
+    editingIndex.value = orderForm.value.items.findIndex(i => i.product_id === item.product_id)
+  }
+}
+
+/**
+ * Removes an item from the planned items list
+ * @params {number} index
+ */
+const removeConfiguredItem = (index) => {
+  orderForm.value.items.splice(index, 1)
 }
 
 const filterProductsWithRecipe = (val, update) => {
@@ -711,8 +1039,6 @@ const loadProductsWithRecipe = async () => {
 }
 
 // Watchers for reloading products when context changes
-import { watch, computed } from 'vue'
-
 watch(() => orderForm.value.branch_office_id, () => {
   if (openNewOrder.value) loadProductsWithRecipe()
 })
@@ -777,3 +1103,36 @@ onMounted(() => {
   loadProductsWithRecipe()
 })
 </script>
+
+<style scoped>
+.font-numeric { font-variant-numeric: tabular-nums; }
+.transition-all { transition: all 0.3s ease-in-out; }
+
+.hover-accent:hover {
+  background-color: rgba(var(--q-primary-rgb), 0.05) !important;
+}
+
+.sticky-header :deep(thead tr th) {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  background: #f5f5f5;
+  font-weight: 700;
+}
+
+.body--dark .sticky-header :deep(thead tr th) {
+  background: #1d1d1d;
+}
+
+.border-blue-2 {
+  border: 1px solid rgba(21, 101, 192, 0.2);
+}
+
+.q-border-dark {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 599px) {
+  .text-h3 { font-size: 2rem; }
+}
+</style>

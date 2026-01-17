@@ -1,223 +1,334 @@
 <template>
-  <div class="grid">
-    <!-- Recipe Configuration Info -->
-    <q-btn icon="add" color="primary" label="Agregar Ingrediente" @click="openAddIngredient = true"/>
-    <q-table
-      title="Ingredientes"
-      row-key="id"
-      dense
-      :columns="columns"
-      :rows="recipeItems"
-      :loading="loadingTable"
-      binary-state-sort
-      :pagination="paginationConfig"
-      no-data-label="No hay ingredientes agregados"
-    >
-      <template v-slot:loading>
-        <q-inner-loading showing color="primary" />
-      </template>
+  <div class="test-design">
+    <div class="row q-col-gutter-lg">
+      <!-- Left Panel: Configuration & Stats -->
+      <div class="col-12 col-md-4">
+        <div class="column q-gutter-y-md">
 
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props">
-          <q-btn size="sm" color="primary" round dense flat icon="edit" @click="editIngredient(props.row)">
-            <q-tooltip>Editar</q-tooltip>
-          </q-btn>
-          <q-btn size="sm" color="negative" round dense flat icon="delete" @click="deleteIngredient(props.row)">
-            <q-tooltip>Eliminar</q-tooltip>
-          </q-btn>
-        </q-td>
-      </template>
-      <template v-slot:bottom-row>
-        <q-td colspan="4">
-          <div class="row flex justify-end text-subtitle1 text-primary text-bold">
-            Total:
-          </div>
-        </q-td>
-        <q-td>
-          <div class="row flex justify-end text-subtitle1 text-primary text-bold">
-            {{ formatNumber(totalRecipeCost) }}
-          </div>
-        </q-td>
-      </template>
-    </q-table>
-    <div class="row q-col-gutter-sm">
-      <div class="col-12 text-subtitle1 text-primary text-bold">Configuración de Receta</div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-input
-          filled
-          v-model="productSelected.servings"
-          label="Rinde (Rendimiento/Porciones)"
-          type="number"
-          dense
-          hint="Para cuántas porciones rinde esta receta"
-          @update:model-value="calculateCostByUnitOfMeasure"
-        />
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-select
-          filled
-          v-model="productSelected.yield_unit_id"
-          :options="unitOfMeasures"
-          label="Unidad de medida del Rinde"
-          emit-value
-          map-options
-          dense
-          option-label="name"
-          option-value="id"
-          hint="Unidad en la que se expresa el rendimiento"
-          @update:model-value="calculateCostByUnitOfMeasure"
-        />
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-      <div class="flex items-center justify-between">
-        <div class="flex q-gutter-sm">
-          <q-input
-            v-model="productSelected.cost"
-            :label="`Costo por ${productSelected?.unit_of_measure?.name}`"
-            prefix="$"
-            type="number"
-            dense
-            filled
-            style="width: 200px"
-          />
-          <q-separator vertical/>
-          <q-btn
-            flat
-            dense
-            color="primary"
-            icon="calculate"
-            label="Recalcular Costo"
-            size="sm"
-            @click="calculateCost"
-            :loading="calculating"
-          >
-            <q-tooltip>Actualizar costo basado en ingredientes</q-tooltip>
-          </q-btn>
+          <!-- Cost Card -->
+          <q-card class="bg-primary text-white shadow-3">
+            <q-card-section>
+              <div class="text-subtitle2 text-white-8" style="opacity: 0.9">Costo Unitario ({{ productSelected?.unit_of_measure?.name || 'Unidad' }})</div>
+              <div class="row items-center q-mt-xs">
+                <q-input
+                  v-model="productSelected.cost"
+                  borderless
+                  dark
+                  dense
+                  class="col"
+                  input-class="text-h4 text-weight-bold"
+                >
+                  <template v-slot:prepend>
+                    <span class="text-h5 text-white" style="opacity: 0.8">$</span>
+                  </template>
+                </q-input>
+                <q-btn
+                  flat
+                  round
+                  icon="sync"
+                  color="white"
+                  :loading="calculating"
+                  @click="calculateCost"
+                >
+                  <q-tooltip class="bg-white text-primary text-body2">Recalcular basado en ingredientes</q-tooltip>
+                </q-btn>
+              </div>
+              <div class="text-caption text-white" style="opacity: 0.8">
+                 Costo Total Ingredientes: {{ totalRecipeCost ? '$' + formatNumber(totalRecipeCost) : '$0.00' }}
+              </div>
+            </q-card-section>
+          </q-card>
+
+          <!-- Configuration Card -->
+          <q-card flat bordered :class="['shadow-1', $q.dark.isActive ? 'bg-dark q-border-dark' : 'bg-white']">
+            <q-card-section>
+              <div class="text-subtitle1 text-weight-bold q-mb-md flex items-center" :class="$q.dark.isActive ? 'text-white' : 'text-grey-9'">
+                <q-icon name="settings" class="q-mr-sm text-primary"/>
+                Configuración de Receta
+              </div>
+
+              <div class="row q-col-gutter-md">
+                <!-- Servings & Yield -->
+                <div class="col-12">
+                   <div class="text-caption text-weight-medium text-grey-7">Rendimiento</div>
+                </div>
+                <div class="col-6">
+                  <q-input
+                    outlined
+                    dense
+                    v-model="productSelected.servings"
+                    label="Cant. Rinde"
+                    type="number"
+                    :bg-color="$q.dark.isActive ? 'grey-9' : 'grey-1'"
+                    hint="Porciones"
+                    @update:model-value="calculateCostByUnitOfMeasure"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-select
+                    outlined
+                    dense
+                    v-model="productSelected.yield_unit_id"
+                    :options="unitOfMeasures"
+                    label="Unidad Rinde"
+                    emit-value
+                    map-options
+                    option-label="name"
+                    option-value="id"
+                    :bg-color="$q.dark.isActive ? 'grey-9' : 'grey-1'"
+                    hint="Unidad"
+                    @update:model-value="calculateCostByUnitOfMeasure"
+                  />
+                </div>
+
+                <div class="col-12">
+                   <q-separator />
+                </div>
+
+                <!-- Times -->
+                 <div class="col-12">
+                   <div class="text-caption text-weight-medium text-grey-7">Tiempos de Elaboración</div>
+                </div>
+                <div class="col-6">
+                  <q-input
+                    outlined
+                    dense
+                    v-model="productSelected.preparation_time"
+                    label="Preparación"
+                    suffix="min"
+                    type="number"
+                    :bg-color="$q.dark.isActive ? 'grey-9' : 'grey-1'"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-input
+                    outlined
+                    dense
+                    v-model="productSelected.cooking_time"
+                    label="Cocción"
+                    suffix="min"
+                    type="number"
+                    :bg-color="$q.dark.isActive ? 'grey-9' : 'grey-1'"
+                  />
+                </div>
+
+                 <!-- Procedure -->
+                 <div class="col-12">
+                  <q-input
+                    outlined
+                    dense
+                    v-model="productSelected.procedure"
+                    label="Procedimiento / Pasos"
+                    type="textarea"
+                    rows="4"
+                    :bg-color="$q.dark.isActive ? 'grey-9' : 'grey-1'"
+                    placeholder="Describa el proceso de elaboración..."
+                  />
+                 </div>
+              </div>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
-      </div>
-      <div class="col-md-6 col-sm-6 col-xs-12">
-        <q-input
-          filled
-          v-model="productSelected.preparation_time"
-          label="Tiempo Preparación (min)"
-          type="number"
-          dense
-        />
-      </div>
-      <div class="col-md-6 col-sm-6 col-xs-12">
-        <q-input
-          filled
-          v-model="productSelected.cooking_time"
-          label="Tiempo Cocción (min)"
-          type="number"
-          dense
-        />
-      </div>
-      <div class="col-12">
-        <q-input
-          filled
-          v-model="productSelected.procedure"
-          label="Preparación / Procedimiento"
-          type="textarea"
-          dense
-          hint="Pasos para elaborar la receta"
-        />
-      </div>
-      <div class="col-12">
-        <q-separator class="q-my-sm"/>
-      </div>
-    </div>
 
-    <!-- Modal Agregar/Editar Ingrediente -->
-    <q-dialog v-model="openAddIngredient" persistent>
-      <q-card style="width: 600px; max-width: 80vw;">
-        <q-form @submit="saveIngredient">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">{{ editingIngredient ? 'Editar' : 'Agregar' }} Ingrediente</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeIngredientModal" />
-          </q-card-section>
-
-          <q-card-section class="row q-col-gutter-md">
-            <!-- Selección de Ingrediente -->
-            <div class="col-12">
-              <q-select
-                filled
-                v-model="ingredientForm.ingredient"
-                :options="productOptions"
-                option-value="id"
-                option-label="name"
-                label="Ingrediente (Materia Prima o Sub-receta)"
-                use-input
-                @filter="filterProducts"
-                @update:model-value="setProduct"
-                :rules="[val => !!val || 'El ingrediente es requerido']"
-              >
-                <template v-slot:no-option>
-                  <q-item>
-                    <q-item-section class="text-grey">
-                      No se encontraron resultados
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </q-select>
-            </div>
-
-            <!-- Cantidad y Unidad -->
-            <div class="col-6">
-              <q-input
-                filled
-                v-model.number="ingredientForm.quantity"
-                label="Cantidad"
-                type="number"
-                step="0.001"
-                min="0"
-                :rules="[val => val > 0 || 'Debe ser mayor a 0']"
+      <!-- Right Panel: Ingredients List -->
+      <div class="col-12 col-md-8">
+        <q-card flat bordered class="shadow-1 fit column" :class="$q.dark.isActive ? 'bg-dark q-border-dark' : 'bg-white'">
+          <q-toolbar class="q-pa-md" :class="$q.dark.isActive ? 'bg-dark text-white' : 'bg-white text-grey-9'">
+             <q-icon name="restaurant" size="sm" class="text-primary q-mr-sm"/>
+             <q-toolbar-title class="text-subtitle1 text-weight-bold">
+               Ingredientes
+             </q-toolbar-title>
+             <q-btn
+                unelevated
+                color="primary"
+                icon="add"
+                label="Agregar Ingrediente"
+                no-caps
+                class="q-px-md shadow-2"
+                @click="openAddIngredient = true"
               />
-            </div>
-            <div class="col-6">
-               <q-select
-                  filled
-                  v-model="ingredientForm.unit_of_measure_id"
-                  :options="unitOfMeasures"
-                  option-value="id"
-                  option-label="name"
-                  emit-value
-                  map-options
-                  label="Unidad"
-                  :rules="[val => !!val || 'Requerido']"
-                />
-            </div>
+          </q-toolbar>
 
-            <!-- Merma -->
-            <div class="col-6">
-              <q-input
-                filled
-                v-model.number="ingredientForm.waste_percentage"
-                label="% Merma (Desperdicio)"
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-                hint="Ej: 10% se pierde en la preparación"
-              />
-            </div>
+          <q-separator />
 
-             <div class="col-6 flex items-center">
-                <div class="text-grey-8" v-if="estimatedCost > 0">
-                    Costo Estimado: <b>${{ estimatedCost }}</b>
+          <q-table
+            flat
+            :rows="recipeItems"
+            :columns="columns"
+            row-key="id"
+            :loading="loadingTable"
+            :pagination="paginationConfig"
+            hide-pagination
+            binary-state-sort
+            class="full-width"
+          >
+             <template v-slot:header="props">
+                <q-tr :props="props" :class="$q.dark.isActive ? 'bg-grey-9 text-white' : 'bg-grey-1 text-grey-8'">
+                  <q-th v-for="col in props.cols" :key="col.name" :props="props" class="text-weight-bold">
+                    {{ col.label }}
+                  </q-th>
+                </q-tr>
+             </template>
+
+             <template v-slot:body-cell-ingredient="props">
+                <q-td :props="props">
+                   <div class="text-weight-medium text-primary">{{ props.row.ingredient?.name }}</div>
+                </q-td>
+             </template>
+
+             <template v-slot:body-cell-unit="props">
+                <q-td :props="props">
+                   <q-badge color="grey-3" text-color="grey-9" :label="props.row.unit_of_measure?.name || '-'" />
+                </q-td>
+             </template>
+
+             <template v-slot:body-cell-actions="props">
+              <q-td :props="props" class="text-center">
+                  <q-btn size="sm" color="grey-7" round flat icon="edit" @click="editIngredient(props.row)">
+                    <q-tooltip>Editar</q-tooltip>
+                  </q-btn>
+                  <q-btn size="sm" color="negative" round flat icon="delete" @click="deleteIngredient(props.row)">
+                    <q-tooltip>Eliminar</q-tooltip>
+                  </q-btn>
+              </q-td>
+            </template>
+
+             <template v-slot:bottom-row>
+               <q-tr :class="$q.dark.isActive ? 'bg-grey-9 text-white' : 'bg-grey-1 text-grey-8'" class="text-subtitle1">
+                  <q-td colspan="4" class="text-right text-weight-bold">
+                      Costo Total Ingredientes:
+                  </q-td>
+                  <q-td class="text-right text-weight-bold text-primary">
+                      ${{ formatNumber(totalRecipeCost) }}
+                  </q-td>
+                  <q-td></q-td> <!-- Empty cell for actions column -->
+               </q-tr>
+             </template>
+
+             <template v-slot:no-data>
+                <div class="column flex-center q-pa-xl text-grey-5 full-width">
+                  <q-icon name="playlist_add" size="4em" class="q-mb-sm"/>
+                  <div class="text-h6">No hay ingredientes</div>
+                  <div class="text-caption">Agrega ingredientes para calcular el costo</div>
                 </div>
-             </div>
-          </q-card-section>
+             </template>
+             
+             <template v-slot:loading>
+               <q-inner-loading showing color="primary" />
+             </template>
+          </q-table>
+        </q-card>
+      </div>
 
-          <q-card-actions align="right">
-            <q-btn color="secondary" label="Cancelar" @click="closeIngredientModal" />
-            <q-btn color="primary" label="Guardar" type="submit" :loading="loadingForm"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
+      <!-- Modal Agregar/Editar Ingrediente -->
+      <q-dialog v-model="openAddIngredient" persistent>
+        <q-card style="width: 600px; max-width: 95vw;" class="shadow-5">
+          <q-form @submit="saveIngredient">
+            <q-card-section class="row items-center bg-primary text-white q-py-sm">
+              <div class="text-h6 text-weight-bold">{{ editingIngredient ? 'Editar' : 'Agregar' }} Ingrediente</div>
+              <q-space />
+              <q-btn icon="close" flat round dense @click="closeIngredientModal" />
+            </q-card-section>
+
+            <q-card-section class="q-pa-md">
+              <div class="row q-col-gutter-md">
+                <!-- Selección de Ingrediente -->
+                <div class="col-12">
+                  <q-select
+                    outlined
+                    v-model="ingredientForm.ingredient"
+                    :options="productOptions"
+                    option-value="id"
+                    option-label="name"
+                    label="Buscar Ingrediente"
+                    use-input
+                    @filter="filterProducts"
+                    @update:model-value="setProduct"
+                    :rules="[val => !!val || 'El ingrediente es requerido']"
+                    :bg-color="$q.dark.isActive ? 'grey-9' : 'white'"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="search" />
+                    </template>
+                    <template v-slot:no-option>
+                      <q-item>
+                        <q-item-section class="text-grey">
+                          No se encontraron resultados
+                        </q-item-section>
+                      </q-item>
+                    </template>
+                    <template v-slot:option="scope">
+                      <q-item v-bind="scope.itemProps">
+                        <q-item-section>
+                          <q-item-label>{{ scope.opt.name }}</q-item-label>
+                          <q-item-label caption>Costo Base: ${{ scope.opt.cost }} / {{ scope.opt.unit_of_measure?.name }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- Cantidad y Unidad -->
+                <div class="col-6">
+                  <q-input
+                    outlined
+                    v-model.number="ingredientForm.quantity"
+                    label="Cantidad"
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    :rules="[val => val > 0 || 'Debe ser mayor a 0']"
+                  />
+                </div>
+                <div class="col-6">
+                   <q-select
+                      outlined
+                      v-model="ingredientForm.unit_of_measure_id"
+                      :options="unitOfMeasures"
+                      option-value="id"
+                      option-label="name"
+                      emit-value
+                      map-options
+                      label="Unidad"
+                      :rules="[val => !!val || 'Requerido']"
+                    />
+                </div>
+
+                <!-- Merma -->
+                <div class="col-6">
+                  <q-input
+                    outlined
+                    v-model.number="ingredientForm.waste_percentage"
+                    label="% Merma"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    hint="Desperdicio en la preparación"
+                  >
+                    <template v-slot:append>%</template>
+                  </q-input>
+                </div>
+
+                 <div class="col-6 flex items-center justify-end">
+                    <div class="text-subtitle1 text-primary bg-blue-1 q-px-md q-py-sm rounded-borders" v-if="estimatedCost > 0">
+                        Costo: <b>${{ estimatedCost }}</b>
+                    </div>
+                 </div>
+              </div>
+            </q-card-section>
+
+            <q-separator />
+
+            <q-card-actions align="right" class="q-pa-md" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-1'">
+              <q-btn flat :color="$q.dark.isActive ? 'white' : 'grey-8'" label="Cancelar" @click="closeIngredientModal" class="q-mr-sm"/>
+              <q-btn unelevated color="primary" label="Guardar Ingrediente" type="submit" :loading="loadingForm" class="q-px-lg"/>
+            </q-card-actions>
+          </q-form>
+        </q-card>
+      </q-dialog>
+    </div>
   </div>
 </template>
 
@@ -226,6 +337,10 @@ import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
 import { onMounted, ref, computed } from 'vue'
 
+/**
+ * Component props
+ * @type {Object}
+ */
 const props = defineProps({
   product: {
     type: Object,
@@ -233,6 +348,10 @@ const props = defineProps({
   }
 })
 
+/**
+ * Table columns configuration
+ * @type {Array}
+ */
 const columns = [
   { name: 'ingredient', align: 'left', label: 'Ingrediente', field: row => row.ingredient?.name, sortable: true },
   { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true, format: val => formatNumber(val) },
@@ -242,19 +361,70 @@ const columns = [
   { name: 'actions', align: 'center', label: 'Acciones' }
 ]
 
+/**
+ * List of recipe ingredients
+ * @type {Ref<Array>}
+ */
 const recipeItems = ref([])
+
+/**
+ * Loading state for the table
+ * @type {Ref<boolean>}
+ */
 const loadingTable = ref(false)
+
+/**
+ * Loading state for the form submission
+ * @type {Ref<boolean>}
+ */
 const loadingForm = ref(false)
+
+/**
+ * State for cost recalculation process
+ * @type {Ref<boolean>}
+ */
 const calculating = ref(false)
+
+/**
+ * State for the add ingredient modal visibility
+ * @type {Ref<boolean>}
+ */
 const openAddIngredient = ref(false)
+
+/**
+ * Currently editing ingredient row
+ * @type {Ref<Object|null>}
+ */
 const editingIngredient = ref(null)
 
+/**
+ * Selected product reference from props
+ * @type {Ref<Object>}
+ */
 const productSelected = ref(props.product)
+
+/**
+ * Sum of all ingredient costs (total recipe cost)
+ * @type {Ref<number>}
+ */
 const totalRecipeCost = ref(0)
 
+/**
+ * List of products for ingredient selection
+ * @type {Ref<Array>}
+ */
 const productOptions = ref([])
+
+/**
+ * List of available units of measure
+ * @type {Ref<Array>}
+ */
 const unitOfMeasures = ref([])
 
+/**
+ * Form data for adding/editing an ingredient
+ * @type {Ref<Object>}
+ */
 const ingredientForm = ref({
   ingredient: null,
   quantity: 1,
@@ -262,11 +432,19 @@ const ingredientForm = ref({
   waste_percentage: 0
 })
 
+/**
+ * Pagination configuration for the ingredients table
+ * @type {Ref<Object>}
+ */
 const paginationConfig = ref({
   rowsPerPage: 0 // All
 })
 
 // Computed
+/**
+ * Calculates the estimated cost of the current ingredient in the form
+ * @type {ComputedRef<number|string>}
+ */
 const estimatedCost = computed(() => {
   if (!ingredientForm.value.ingredient || !ingredientForm.value.quantity || !ingredientForm.value.unit_of_measure_id) return 0
 
@@ -285,6 +463,12 @@ const estimatedCost = computed(() => {
 })
 
 // Methods
+/**
+ * Gets the conversion factor between two units of measure
+ * @params {number} fromUomId Source unit ID
+ * @params {number} toUomId Target unit ID
+ * @return {number} Conversion factor
+ */
 const getConversionFactor = (fromUomId, toUomId) => {
   if (fromUomId === toUomId) return 1
 
@@ -297,6 +481,10 @@ const getConversionFactor = (fromUomId, toUomId) => {
   // Factor = fromRatio / toRatio
   return (parseFloat(fromUom.ratio) / parseFloat(toUom.ratio)) || 1
 }
+/**
+ * Loads the ingredients associated with the current product recipe
+ * @return {Promise<void>}
+ */
 const loadRecipeItems = async () => {
   if (!productSelected.value?.id) return
   loadingTable.value = true
@@ -310,10 +498,19 @@ const loadRecipeItems = async () => {
   }
 }
 
+/**
+ * Sets default unit of measure when a product is selected as an ingredient
+ * @params {Object} product Selected product object
+ * @return {void}
+ */
 const setProduct = (product) => {
   ingredientForm.value.unit_of_measure_id = product.unit_of_measure_id
 }
 
+/**
+ * Loads all available units of measure
+ * @return {Promise<void>}
+ */
 const loadUnitOfMeasures = async () => {
   try {
     const { data } = await api.get('unit-of-measures')
@@ -323,6 +520,12 @@ const loadUnitOfMeasures = async () => {
   }
 }
 
+/**
+ * Filters products for the ingredient selection dropdown
+ * @params {string} val Search term
+ * @params {Function} update Quasar update function
+ * @return {Promise<void>}
+ */
 const filterProducts = async (val, update) => {
   try {
     const { data } = await api.get('products', {
@@ -345,6 +548,10 @@ const filterProducts = async (val, update) => {
   }
 }
 
+/**
+ * Calculates the product cost per base unit based on the total recipe cost and yield
+ * @return {void}
+ */
 const calculateCostByUnitOfMeasure = () => {
   const cost = parseFloat(totalRecipeCost.value) || 0
   const servings = parseFloat(productSelected.value.servings) || 0
@@ -367,6 +574,10 @@ const calculateCostByUnitOfMeasure = () => {
   productSelected.value.cost = (cost / (servings * factor)).toFixed(2)
 }
 
+/**
+ * Saves or updates an ingredient in the current product recipe
+ * @return {Promise<void>}
+ */
 const saveIngredient = async () => {
   loadingForm.value = true
   try {
@@ -396,6 +607,11 @@ const saveIngredient = async () => {
   }
 }
 
+/**
+ * Prepares the form with ingredient data for editing
+ * @params {Object} row Ingredient row data
+ * @return {void}
+ */
 const editIngredient = (row) => {
   editingIngredient.value = row
   ingredientForm.value = {
@@ -407,6 +623,11 @@ const editIngredient = (row) => {
   openAddIngredient.value = true
 }
 
+/**
+ * Deletes an ingredient from the recipe
+ * @params {Object} row Ingredient row data
+ * @return {Promise<void>}
+ */
 const deleteIngredient = async (row) => {
   try {
     await api.delete(`products/${productSelected.value.id}/recipe/${row.id}`)
@@ -418,13 +639,16 @@ const deleteIngredient = async (row) => {
   }
 }
 
+/**
+ * Triggers a cost recalculation for the entire recipe from the server
+ * @return {Promise<void>}
+ */
 const calculateCost = async () => {
   calculating.value = true
   try {
     const { data } = await api.get(`products/${productSelected.value.id}/recipe/cost`)
     totalRecipeCost.value = data.cost
     calculateCostByUnitOfMeasure()
-    notify(`Costo actualizado: $${productSelected.value.cost}`, 'positive')
   } catch (error) {
     notify('Error al calcular costo', 'negative')
   } finally {
@@ -432,6 +656,10 @@ const calculateCost = async () => {
   }
 }
 
+/**
+ * Closes the ingredient modal and resets form data
+ * @return {void}
+ */
 const closeIngredientModal = () => {
   openAddIngredient.value = false
   editingIngredient.value = null
@@ -443,6 +671,11 @@ const closeIngredientModal = () => {
   }
 }
 
+/**
+ * Calculates the individual cost impact of a single ingredient row
+ * @params {Object} row Ingredient row data
+ * @return {number|string} Calculated cost
+ */
 const calculateItemCost = (row) => {
   if (!row.ingredient || !row.quantity) return 0
   const fromUomId = row.unit_of_measure_id
