@@ -75,7 +75,6 @@ async function connectSession (store) {
     const fingerprint = generateFingerprint()
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-    console.log(store.access_token)
     const { data } = await api.post('user-sessions/connect', {
       fingerprint,
       timezone

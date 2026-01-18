@@ -111,7 +111,6 @@ const getUser = async () => {
       user: data
     })
 
-
     router.push({ name: route.params.redirect })
   } catch (err) {
     console.log(err)

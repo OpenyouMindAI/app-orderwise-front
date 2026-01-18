@@ -118,6 +118,12 @@ const routes = [
         component: () => import('pages/TaxePage.vue')
       },
       {
+        path: 'uom',
+        meta: { requiresAuth: true },
+        name: 'Uom',
+        component: () => import('pages/UomPage.vue')
+      },
+      {
         path: 'profile',
         name: 'Profile',
         meta: { requiresAuth: true },
@@ -226,6 +232,18 @@ const routes = [
         component: () => import('pages/CashboxPage.vue')
       },
       {
+        path: 'finances/cashboxes',
+        name: 'FinanceCashbox',
+        meta: { requiresAuth: true },
+        component: () => import('pages/FinanceCashboxPage.vue')
+      },
+      {
+        path: 'finances/payments-by-method',
+        name: 'FinancePaymentsByMethod',
+        meta: { requiresAuth: true },
+        component: () => import('pages/FinancePaymentsByMethodPage.vue')
+      },
+      {
         path: 'transfer-products',
         name: 'TransferProduct',
         meta: { requiresAuth: true },
@@ -244,7 +262,6 @@ const routes = [
         meta: { requiresAuth: true },
         component: () => import('pages/ActiveTransportPage.vue')
       },
-      // Invoice Delivery Routes - Own Delivery System
       {
         path: 'delivery/tray',
         name: 'InvoiceDeliveryTray',
@@ -385,10 +402,34 @@ const routes = [
         component: () => import('src/pages/AiChatPage.vue')
       },
       {
+        path: 'integrations',
+        name: 'Integrations',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/IntegrationsPage.vue')
+      },
+      {
+        path: 'production-orders',
+        name: 'ProductionOrder',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ProductionOrderPage.vue')
+      },
+      {
         path: 'welcome',
         name: 'Welcome',
         meta: { requiresAuth: true },
         component: () => import('pages/WelcomePage.vue')
+      },
+      {
+        path: 'support',
+        name: 'Support',
+        meta: { requiresAuth: true },
+        component: () => import('pages/SupportChatPage.vue')
+      },
+      {
+        path: 'admin/support',
+        name: 'AdminSupport',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AdminSupportPage.vue')
       }
     ]
   },

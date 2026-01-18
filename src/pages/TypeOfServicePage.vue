@@ -244,7 +244,7 @@ export default {
           let message = 'Error al actualizar el servicio'
 
           if (error.response?.data?.message) {
-            message = error.response.data.message
+            message = error.message
           } else if (error.response?.status === 422) {
             message = 'Complete todos los campos correctamente'
           } else if (!error.response && error.request) {

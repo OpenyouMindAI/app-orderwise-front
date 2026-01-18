@@ -511,11 +511,11 @@ export default {
         })
         .catch(err => {
           this.visible = false
-          
+
           // Manejar errores de validación de Laravel
           if (err.response?.status === 422) {
             const errors = err.response?.data?.errors || {}
-            
+
             // Si hay error de límite de sucursales
             if (errors.branch_limit) {
               Notify.create({
@@ -540,7 +540,7 @@ export default {
               })
               return
             }
-            
+
             // Otros errores de validación
             const firstError = Object.values(errors)[0]
             const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError

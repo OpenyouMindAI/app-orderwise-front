@@ -14,221 +14,286 @@
         <q-img :src="qBitsLogo.black" class="logo-img"/>
       </div>
 
-      <!-- Título -->
-      <div class="header-section">
-        <span class="welcome-title">Crear cuenta</span>
-        <p class="welcome-subtitle">Regístrate para comenzar</p>
-      </div>
+      <q-tab-panels v-model="currentTab" animated class="bg-transparent">
+        <!-- Panel Registro -->
+        <q-tab-panel name="register" class="q-pa-none">
+          <!-- Título -->
+          <div class="header-section">
+            <span class="welcome-title">Crear cuenta</span>
+            <p class="welcome-subtitle">Regístrate para comenzar</p>
+          </div>
 
-      <!-- Formulario -->
-      <q-form @submit="register" class="register-form">
-        <!-- Input Nombre -->
-        <div class="input-container">
-          <q-input
-            v-model="form.name"
-            placeholder="Nombre completo"
-            dark
-            class="custom-input"
-            hide-bottom-space
-            :rules="[val => !!val || 'El nombre es requerido']"
-          >
-            <template v-slot:prepend>
-              <q-icon name="person" color="primary" size="20px"/>
-            </template>
-          </q-input>
-        </div>
-
-        <!-- Input Email -->
-        <div class="input-container">
-          <q-input
-            v-model="form.email"
-            type="email"
-            placeholder="Correo electrónico"
-            dark
-            class="custom-input"
-            hide-bottom-space
-            :rules="[
-              val => !!val || 'El correo es requerido',
-              val => /.+@.+\..+/.test(val) || 'Correo inválido'
-            ]"
-          >
-            <template v-slot:prepend>
-              <q-icon name="email" color="primary" size="20px"/>
-            </template>
-          </q-input>
-        </div>
-
-        <!-- Input Teléfono -->
-        <div class="input-container phone-input-container">
-          <div class="row">
-            <!-- País -->
-            <div class="col-4">
-              <q-select
-                v-model="selectedCountry"
-                :options="countryOptions"
-                option-label="label"
-                dark
-                class="custom-input country-select"
-                hide-bottom-space
-                emit-value
-                map-options
-                behavior="menu"
-                popup-content-class="country-dropdown"
-                dense
-                borderless
-              >
-                <template v-slot:selected>
-                  <div class="row items-center no-wrap">
-                    <span class="country-flag q-mr-xs">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
-                    <span class="text-caption ellipsis">{{ selectedCountry ? selectedCountry.code : '' }}</span>
-                  </div>
-                </template>
-                <template v-slot:option="scope">
-                  <q-item v-bind="scope.itemProps">
-                    <q-item-section avatar>
-                      <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>{{ scope.opt.label }}</q-item-label>
-                      <q-item-label caption>{{ scope.opt.code }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </q-select>
-            </div>
-
-            <!-- Teléfono -->
-            <div class="col-8 q-pl-sm">
+          <!-- Formulario -->
+          <q-form @submit="register" class="register-form">
+            <!-- Input Nombre -->
+            <div class="input-container">
               <q-input
-                v-model="form.phone_number"
-                placeholder="Teléfono"
+                v-model="form.name"
+                placeholder="Nombre completo"
                 dark
                 class="custom-input"
                 hide-bottom-space
-                type="tel"
-                :rules="phoneRule"
+                :rules="[val => !!val || 'El nombre es requerido']"
               >
                 <template v-slot:prepend>
-                  <q-icon name="phone" color="primary" size="20px"/>
+                  <q-icon name="person" color="primary" size="20px"/>
                 </template>
               </q-input>
             </div>
+
+            <!-- Input Email -->
+            <div class="input-container">
+              <q-input
+                v-model="form.email"
+                type="email"
+                placeholder="Correo electrónico"
+                dark
+                class="custom-input"
+                hide-bottom-space
+                :rules="[
+                  val => !!val || 'El correo es requerido',
+                  val => /.+@.+\..+/.test(val) || 'Correo inválido'
+                ]"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="email" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Input Teléfono -->
+            <div class="input-container phone-input-container">
+              <div class="row">
+                <!-- País -->
+                <div class="col-4">
+                  <q-select
+                    v-model="selectedCountry"
+                    :options="countryOptions"
+                    option-label="label"
+                    dark
+                    class="custom-input country-select"
+                    hide-bottom-space
+                    emit-value
+                    map-options
+                    behavior="menu"
+                    popup-content-class="country-dropdown"
+                    dense
+                    borderless
+                  >
+                    <template v-slot:selected>
+                      <div class="row items-center no-wrap">
+                        <span class="country-flag q-mr-xs">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
+                        <span class="text-caption ellipsis">{{ selectedCountry ? selectedCountry.code : '' }}</span>
+                      </div>
+                    </template>
+                    <template v-slot:option="scope">
+                      <q-item v-bind="scope.itemProps">
+                        <q-item-section avatar>
+                          <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label>{{ scope.opt.label }}</q-item-label>
+                          <q-item-label caption>{{ scope.opt.code }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- Teléfono -->
+                <div class="col-8 q-pl-sm">
+                  <q-input
+                    v-model="form.phone_number"
+                    placeholder="Teléfono"
+                    dark
+                    class="custom-input"
+                    hide-bottom-space
+                    type="tel"
+                    :rules="phoneRule"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="phone" color="primary" size="20px"/>
+                    </template>
+                  </q-input>
+                </div>
+              </div>
+            </div>
+
+            <!-- Input Contraseña -->
+            <div class="input-container">
+              <q-input
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Contraseña"
+                dark
+                class="custom-input"
+                hide-bottom-space
+                :rules="[
+                  val => !!val || 'La contraseña es requerida',
+                  val => val.length >= 8 || 'Mínimo 8 caracteres'
+                ]"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="lock" color="primary" size="20px"/>
+                </template>
+                <template v-slot:append>
+                  <q-icon
+                    :name="showPassword ? 'visibility' : 'visibility_off'"
+                    color="grey-5"
+                    size="20px"
+                    class="cursor-pointer"
+                    @click="showPassword = !showPassword"
+                  />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Input Confirmar Contraseña -->
+            <div class="input-container">
+              <q-input
+                v-model="form.password_confirmation"
+                :type="showPasswordConfirm ? 'text' : 'password'"
+                placeholder="Confirmar contraseña"
+                dark
+                class="custom-input"
+                hide-bottom-space
+                :rules="[
+                  val => !!val || 'Confirma tu contraseña',
+                  val => val === form.password || 'Las contraseñas no coinciden'
+                ]"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="lock" color="primary" size="20px"/>
+                </template>
+                <template v-slot:append>
+                  <q-icon
+                    :name="showPasswordConfirm ? 'visibility' : 'visibility_off'"
+                    color="grey-5"
+                    size="20px"
+                    class="cursor-pointer"
+                    @click="showPasswordConfirm = !showPasswordConfirm"
+                  />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Botón Registrarse -->
+            <q-btn
+              type="submit"
+              color="primary"
+              class="register-btn"
+              :loading="loading"
+              :disable="loading"
+              unelevated
+              no-caps
+              size="lg"
+            >
+              <q-icon name="person_add" size="20px" class="q-mr-sm"/>
+              Registrarse
+            </q-btn>
+
+            <!-- Divider -->
+            <div class="divider-container">
+              <div class="divider-line"></div>
+              <span class="divider-text">O regístrate con</span>
+              <div class="divider-line"></div>
+            </div>
+
+            <!-- Botón Google -->
+            <button type="button" class="social-btn google-btn" @click="registerWithGoogle" :disabled="loadingGoogle || loading">
+              <q-spinner v-if="loadingGoogle" color="grey-8" size="18px"/>
+              <template v-else>
+                <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                <span>Google</span>
+              </template>
+            </button>
+
+            <!-- Link a Login -->
+            <div class="register-link-container">
+              <span class="register-text">¿Ya tienes cuenta? </span>
+              <router-link to="/login" class="register-link">Inicia sesión</router-link>
+            </div>
+          </q-form>
+        </q-tab-panel>
+
+        <!-- Panel OTP -->
+        <q-tab-panel name="otp" class="q-pa-none">
+          <div class="header-section">
+            <span class="welcome-title">Verificación</span>
           </div>
-        </div>
 
-        <!-- Input Contraseña -->
-        <div class="input-container">
-          <q-input
-            v-model="form.password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Contraseña"
-            dark
-            class="custom-input"
-            hide-bottom-space
-            :rules="[
-              val => !!val || 'La contraseña es requerida',
-              val => val.length >= 8 || 'Mínimo 8 caracteres'
-            ]"
-          >
-            <template v-slot:prepend>
-              <q-icon name="lock" color="primary" size="20px"/>
-            </template>
-            <template v-slot:append>
-              <q-icon
-                :name="showPassword ? 'visibility' : 'visibility_off'"
-                color="grey-5"
-                size="20px"
-                class="cursor-pointer"
-                @click="showPassword = !showPassword"
-              />
-            </template>
-          </q-input>
-        </div>
+          <q-form @submit.prevent="verifyOtp" class="register-form">
+             <div class="text-center q-mb-lg">
+               <q-icon name="email" size="64px" color="primary"/>
+               <p class="text-grey-7" style="font-size: 15px; margin: 0;">
+                 Hemos enviado un código de verificación a tu correo
+               </p>
+               <p class="text-primary text-weight-bold" style="font-size: 16px; margin-top: 4px;">
+                 {{ form.email }}
+               </p>
+             </div>
 
-        <!-- Input Confirmar Contraseña -->
-        <div class="input-container">
-          <q-input
-            v-model="form.password_confirmation"
-            :type="showPasswordConfirm ? 'text' : 'password'"
-            placeholder="Confirmar contraseña"
-            dark
-            class="custom-input"
-            hide-bottom-space
-            :rules="[
-              val => !!val || 'Confirma tu contraseña',
-              val => val === form.password || 'Las contraseñas no coinciden'
-            ]"
-          >
-            <template v-slot:prepend>
-              <q-icon name="lock" color="primary" size="20px"/>
-            </template>
-            <template v-slot:append>
-              <q-icon
-                :name="showPasswordConfirm ? 'visibility' : 'visibility_off'"
-                color="grey-5"
-                size="20px"
-                class="cursor-pointer"
-                @click="showPasswordConfirm = !showPasswordConfirm"
-              />
-            </template>
-          </q-input>
-        </div>
+             <!-- Input OTP Custom (6 dígitos) -->
+             <div class="row justify-center no-wrap q-gutter-x-sm q-mb-xl">
+               <q-input
+                 v-for="(digit, index) in 6"
+                 :key="index"
+                 v-model="otpDigits[index]"
+                 dense
+                 outlined
+                 class="otp-digit-input"
+                 input-class="text-center text-weight-bold text-h6 text-uppercase"
+                 :ref="el => otpInputs[index] = el"
+                 @update:model-value="val => handleDigitInput(index, val)"
+                 @keydown.delete="e => handleDigitDelete(index, e)"
+                 @paste="handlePaste"
+                 maxlength="1"
+                 :autofocus="index === 0"
+               />
+             </div>
 
-        <!-- Botón Registrarse -->
-        <q-btn
-          type="submit"
-          color="primary"
-          class="register-btn"
-          :loading="loading"
-          :disable="loading"
-          unelevated
-          no-caps
-          size="lg"
-        >
-          <q-icon name="person_add" size="20px" class="q-mr-sm"/>
-          Registrarse
-        </q-btn>
+             <!-- Botón Verificar -->
+             <q-btn
+               type="submit"
+               color="primary"
+               class="register-btn q-mb-md"
+               :loading="loadingOtp"
+               :disable="loadingOtp || otpCode.length < 6"
+               unelevated
+               no-caps
+               size="lg"
+             >
+               Verificar Código
+             </q-btn>
 
-        <!-- Divider -->
-        <div class="divider-container">
-          <div class="divider-line"></div>
-          <span class="divider-text">O regístrate con</span>
-          <div class="divider-line"></div>
-        </div>
+             <!-- Botón Reenviar Código -->
+             <div class="text-center q-mb-md">
+               <q-btn
+                 flat
+                 dense
+                 no-caps
+                 color="primary"
+                 :disable="!canResend"
+                 @click="resendOtp"
+                 :label="canResend ? 'Reenviar código' : `Reenviar en ${resendTimer}s`"
+               />
+             </div>
 
-        <!-- Botón Google -->
-        <button type="button" class="social-btn google-btn" @click="registerWithGoogle" :disabled="loadingGoogle || loading">
-          <q-spinner v-if="loadingGoogle" color="grey-8" size="18px"/>
-          <template v-else>
-            <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            <span>Google</span>
-          </template>
-        </button>
-
-        <!-- Link a Login -->
-        <div class="register-link-container">
-          <span class="register-text">¿Ya tienes cuenta? </span>
-          <router-link to="/login" class="register-link">Inicia sesión</router-link>
-        </div>
-      </q-form>
-
-      <!-- Footer -->
-      <div class="footer-container">
-        <q-icon name="laptop_mac" size="18px" color="grey-6"/>
-        <span class="footer-text">Powered by</span>
-        <a href="https://site.qbitsinc.com" target="_blank">
-          <q-img :src="qBitsLogo.black" class="qbits-logo"/>
-        </a>
-      </div>
+             <!-- Volver (por si se equivocó de número) -->
+             <div class="register-link-container">
+               <span class="register-text">¿Número incorrecto? </span>
+               <a href="#" class="register-link" @click.prevent="currentTab = 'register'">Volver al registro</a>
+             </div>
+          </q-form>
+        </q-tab-panel>
+      </q-tab-panels>
     </div>
 
-    <!-- Modal de Setup de Empresa -->
-    <!-- Modal de selección: Demo o Registrar Empresa -->
     <q-dialog v-model="showCompanyOptions" persistent transition-show="scale" transition-hide="scale">
       <q-card class="modern-options-dialog">
         <!-- Header minimalista -->
@@ -245,7 +310,7 @@
         <q-card-section class="q-pa-xl">
           <div class="row q-col-gutter-lg">
             <!-- Opción: Ver Demo -->
-            <div class="col-12 col-md-6">
+            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <div class="modern-option-card demo-card" @click="selectDemoOption">
                 <div class="option-icon-wrapper demo-icon">
                   <q-icon name="visibility" size="40px" />
@@ -267,7 +332,7 @@
             </div>
 
             <!-- Opción: Registrar Mi Empresa -->
-            <div class="col-12 col-md-6">
+            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
               <div class="modern-option-card business-card" @click="selectRegisterOption">
                 <div class="option-icon-wrapper business-icon">
                   <q-icon name="business" size="40px" />
@@ -292,7 +357,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- Modal de selección de rubro para demo -->
     <q-dialog v-model="showDemoBusinessTypeSelection" persistent transition-show="scale" transition-hide="scale">
       <q-card class="business-type-dialog">
         <!-- Header -->
@@ -384,7 +448,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- Modal de configuración de empresa -->
     <q-dialog v-model="showCompanySetup" persistent transition-show="scale" transition-hide="scale">
       <q-card class="modern-company-setup-dialog">
         <!-- Header moderno -->
@@ -597,7 +660,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
@@ -625,6 +688,30 @@ const loading = ref(false)
 const loadingGoogle = ref(false)
 const showCompanySetup = ref(false)
 
+// OTP Verification
+const currentTab = ref('register')
+const otpDigits = ref(['', '', '', '', '', ''])
+const otpInputs = ref([])
+const otpCode = computed(() => otpDigits.value.join(''))
+const loadingOtp = ref(false)
+
+// OTP Session
+const otpSessionToken = ref('')
+
+// Constantes para persistencia OTP
+const OTP_STORAGE_KEY = 'otp_pending_verification'
+const OTP_EXPIRATION_TIME = 30 * 60 * 1000 // 30 minutos en milisegundos
+
+// Constantes para persistencia de sesión de registro
+const REGISTER_SESSION_KEY = 'register_session_data'
+const REGISTER_CREDENTIALS_KEY = 'register_credentials'
+const otpExpiresIn = ref(0)
+
+// Resend OTP
+const resendTimer = ref(0)
+let resendInterval = null
+const canResend = computed(() => resendTimer.value === 0)
+
 // Company setup form
 const companyForm = ref({
   company_name: '',
@@ -648,8 +735,8 @@ const registeredCredentials = ref({
   password: ''
 })
 
-// Validation & Country Data
 const selectedCountry = ref(null)
+
 const countryOptions = [
   { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
   { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
@@ -657,14 +744,13 @@ const countryOptions = [
   { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
   { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
   { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
+  { label: 'Venezuela', code: '+58', mask: '### ### ####', regex: /^(\+?58)?\s?4[\d]{9}$/, flag: '🇻🇪' },
   { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
   { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
 ]
 
-// Set default country (e.g., Argentina as base)
 selectedCountry.value = countryOptions[0]
 
-// Phone validation rule
 const phoneRule = computed(() => {
   return [
     val => !!val || 'El teléfono es requerido',
@@ -676,7 +762,6 @@ const phoneRule = computed(() => {
   ]
 })
 
-// Company address data
 const companyAddressData = ref({
   name: '',
   street: '',
@@ -691,8 +776,8 @@ const companyAddressData = ref({
   types: []
 })
 
-// Business type search
 const businessTypeSearch = ref('')
+
 const filteredBusinessTypes = computed(() => {
   if (!businessTypeSearch.value) {
     return businessTypes.value
@@ -705,6 +790,8 @@ const filteredBusinessTypes = computed(() => {
 
 /**
  * Filter business types
+ * @param {string} value - The search value
+ * @param {function} update - The update function
  */
 const filterBusinessTypes = async (value, update) => {
   try {
@@ -723,19 +810,8 @@ const filterBusinessTypes = async (value, update) => {
 }
 
 /**
- * Load business types when opening modal
- */
-const loadBusinessTypes = async () => {
-  try {
-    const { data } = await api.get('business-types')
-    businessTypes.value = data.data || data
-  } catch (error) {
-    console.error('Error loading business types:', error)
-  }
-}
-
-/**
  * Search business types
+ * @param {string} value - The search value
  */
 const searchBusinessTypes = (value) => {
   // El filtrado se hace automáticamente con el computed
@@ -743,6 +819,7 @@ const searchBusinessTypes = (value) => {
 
 /**
  * Select business type
+ * @param {object} type - The business type
  */
 const selectBusinessType = (type) => {
   demoBusinessType.value = type
@@ -750,6 +827,7 @@ const selectBusinessType = (type) => {
 
 /**
  * Get icon for business type
+ * @param {string} name - The business type name
  */
 const getBusinessIcon = (name) => {
   const iconMap = {
@@ -798,15 +876,13 @@ const getBusinessIcon = (name) => {
 
 /**
  * Handle company address selected
+ * @param {object} addressDetails - The address details
  */
 const handleCompanyAddressSelected = (addressDetails) => {
   if (addressDetails) {
-    // Guardar los detalles completos de la dirección
     companyAddressData.value = { ...addressDetails }
-    // Actualizar el campo company_address con la dirección formateada
-    companyForm.value.company_address = addressDetails.formattedAddress || addressDetails.street || ''
+    companyForm.value.company_address = addressDetails
   } else {
-    // Limpiar si se resetea la dirección
     companyAddressData.value = {
       name: '',
       street: '',
@@ -831,7 +907,6 @@ const setupCompany = async () => {
   try {
     loadingCompanySetup.value = true
 
-    // Preparar payload con business_type_id
     const payload = {
       ...companyForm.value,
       business_type_id: companyForm.value.business_type?.id,
@@ -840,59 +915,30 @@ const setupCompany = async () => {
         : ''
     }
 
-    await api.post('authentication/setup-company', payload)
+    const { data } = await api.post('authentication/setup-company', payload)
 
     notify('Empresa configurada exitosamente', 'positive', 'check_circle')
 
-    // Cerrar modal
+    if (data.user) {
+      store.setSessionData({
+        user: data.user,
+        access_token: data.access_token || localStorage.getItem('access_token'),
+        token_type: data.token_type || 'Bearer',
+        expires_in: data.expires_in
+      })
+    }
+
+    localStorage.removeItem(REGISTER_SESSION_KEY)
+    localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+
     showCompanySetup.value = false
 
-    // Si fue registro con Google, ya tiene sesión activa, solo redirigir
-    if (isGoogleRegister.value) {
-      router.push({ name: 'CompanyConfig' })
-    } else {
-      // Hacer login automático con las credenciales guardadas
-      await loginAfterCompanySetup()
-    }
+    router.push({ name: 'CompanyConfig' })
   } catch (error) {
     const message = error.response?.data?.message || 'Error al configurar empresa'
     notify(message, 'negative', 'warning')
   } finally {
     loadingCompanySetup.value = false
-  }
-}
-
-/**
- * Login after company setup
- */
-const loginAfterCompanySetup = async () => {
-  try {
-    const { data } = await api.post('authentication/login', {
-      username: registeredCredentials.value.email,
-      password: registeredCredentials.value.password
-    })
-
-    // Guardar token en localStorage
-    localStorage.setItem('access_token', data.access_token)
-    api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
-
-    // Guardar sesión completa en el store
-    store.setSessionData({
-      user: data.user,
-      access_token: data.access_token,
-      token_type: data.token_type,
-      expires_in: data.expires_in
-    })
-
-    notify('¡Bienvenido! Configura tu empresa', 'positive', 'check_circle')
-
-    // Redirigir a configuración de empresa
-    router.push({
-      name: 'CompanyConfig'
-    })
-  } catch (error) {
-    const message = error.response?.data?.message || 'Error al iniciar sesión'
-    notify(message, 'negative', 'warning')
   }
 }
 
@@ -917,33 +963,455 @@ const register = async () => {
     localStorage.setItem('access_token', data.access_token)
     api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
 
-    notify('Registro exitoso', 'positive', 'check_circle')
-
-    // Marcar que NO fue registro con Google
-    isGoogleRegister.value = false
+    // Guardar datos de sesión de registro en localStorage
+    localStorage.setItem(REGISTER_SESSION_KEY, JSON.stringify({
+      user: data.user,
+      access_token: data.access_token,
+      token_type: data.token_type,
+      expires_in: data.expires_in,
+      timestamp: Date.now()
+    }))
 
     // Guardar credenciales para login posterior
     registeredCredentials.value = {
       email: form.value.email,
       password: form.value.password
     }
+    localStorage.setItem(REGISTER_CREDENTIALS_KEY, JSON.stringify(registeredCredentials.value))
 
-    // Pre-llenar formulario de empresa
+    // Actualizar store de Pinia con los datos de sesión
+    store.setSessionData(data)
+
+    notify('Registro exitoso', 'positive', 'check_circle')
+
+    isGoogleRegister.value = false
+
     companyForm.value.company_email = form.value.email
     companyForm.value.company_phone = form.value.phone_number || ''
 
-    // Cargar business types
-    await loadBusinessTypes()
+    otpDigits.value = ['', '', '', '', '', '']
 
-    // Mostrar modal de opciones (Demo o Registrar)
-    showCompanyOptions.value = true
+    currentTab.value = 'otp'
+
+    // Guardar estado OTP en localStorage para persistencia entre recargas
+    localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({
+      email: form.value.email,
+      timestamp: Date.now()
+    }))
+
+    startResendTimer()
+
+    notify('Código de verificación enviado a tu correo', 'positive', 'chat')
   } catch (error) {
-    const message = error.response?.data?.message || error.message || 'Error al registrar usuario'
-    notify(message, 'negative', 'warning')
+    console.log(error)
   } finally {
     loading.value = false
   }
 }
+
+/**
+ * Verify OTP code
+ */
+const verifyOtp = async () => {
+  if (otpCode.value.length < 6) {
+    notify('Por favor ingresa el código completo de 6 dígitos', 'negative', 'warning')
+    return
+  }
+
+  try {
+    loadingOtp.value = true
+
+    await api.post('otp/verify', {
+      identifier: form.value.email,
+      code: otpCode.value,
+      purpose: 'verify_email',
+      session_token: otpSessionToken.value
+    })
+
+    notify('Teléfono verificado exitosamente', 'positive', 'check_circle')
+
+    // Limpiar estado OTP de localStorage tras verificación exitosa
+    clearOtpPendingState()
+
+    // Marcar OTP como verificado en la sesión de registro
+    const registerSession = localStorage.getItem(REGISTER_SESSION_KEY)
+    if (registerSession) {
+      const sessionData = JSON.parse(registerSession)
+      sessionData.otp_verified = true
+      localStorage.setItem(REGISTER_SESSION_KEY, JSON.stringify(sessionData))
+    }
+
+    // Continuar al flujo de setup de empresa
+    showCompanyOptions.value = true
+  } catch (error) {
+    // Manejar errores específicos
+    if (error.response?.status === 400) {
+      const message = error.message || 'Código incorrecto'
+      const remaining = error.remaining_attempts
+
+      if (remaining !== undefined) {
+        notify(`${message}. Le quedan ${remaining} intentos.`, 'negative', 'warning')
+      } else {
+        notify(message, 'negative', 'warning')
+      }
+    } else if (error.response?.status === 422) {
+      const errors = error.errors
+      const message = errors?.code?.[0] || error.message || 'Datos inválidos'
+      notify(message, 'negative', 'warning')
+    } else if (error.response?.status === 429) {
+      const retryAfter = error.retry_after || 60
+      notify(
+        error.message || `Demasiados intentos. Intente nuevamente en ${retryAfter} segundos.`,
+        'negative',
+        'warning'
+      )
+    } else {
+      notify(
+        error.response?.data?.message || 'Código inválido o expirado',
+        'negative',
+        'warning'
+      )
+    }
+  } finally {
+    loadingOtp.value = false
+  }
+}
+
+/**
+ * Handle digit input
+ * @param {number} index - The index of the input
+ * @param {string} value - The value of the input
+ */
+const handleDigitInput = (index, value) => {
+  if (!value) return
+
+  // Allow alphanumeric, remove special chars
+  const char = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+
+  // Update current index
+  otpDigits.value[index] = char.slice(-1)
+
+  // Move to next input if value exists
+  if (char && index < 5) {
+    otpInputs.value[index + 1].focus()
+  }
+}
+
+/**
+ * Handle digit delete / backspace
+ * @param {number} index - The index of the input
+ * @param {Event} event - The event object
+ */
+const handleDigitDelete = (index, event) => {
+  if (!otpDigits.value[index] && index > 0) {
+    otpInputs.value[index - 1].focus()
+  }
+}
+
+/**
+ * Handle paste event
+ * @param {Event} event - The event object
+ */
+const handlePaste = (event) => {
+  event.preventDefault()
+  const pastedData = event.clipboardData.getData('text').replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+
+  if (pastedData) {
+    const chars = pastedData.split('').slice(0, 6)
+    chars.forEach((char, i) => {
+      otpDigits.value[i] = char
+    })
+    // Focus last filled input or the last input if full
+    const focusIndex = Math.min(chars.length, 5)
+    otpInputs.value[focusIndex].focus()
+  }
+}
+
+/**
+ * Start resend timer
+ */
+const startResendTimer = () => {
+  resendTimer.value = 60
+  if (resendInterval) clearInterval(resendInterval)
+
+  resendInterval = setInterval(() => {
+    if (resendTimer.value > 0) {
+      resendTimer.value--
+    } else {
+      clearInterval(resendInterval)
+    }
+  }, 1000)
+}
+
+/**
+ * Resend OTP
+ */
+const resendOtp = async () => {
+  try {
+    const { data } = await api.post('otp/resend', {
+      identifier: form.value.email,
+      channel: 'email',
+      purpose: 'register',
+      session_token: otpSessionToken.value
+    })
+
+    // Actualizar session token
+    otpSessionToken.value = data.session_token
+    otpExpiresIn.value = data.expires_in_seconds || 300
+
+    notify('Código reenviado exitosamente', 'positive', 'chat')
+    startResendTimer()
+  } catch (error) {
+    // Manejar errores específicos
+    if (error.response?.status === 400 || error.response?.status === 429) {
+      const retryAfter = error.retry_after || 60
+      notify(
+        error.message || `Debe esperar ${retryAfter} segundos antes de reenviar.`,
+        'negative',
+        'warning'
+      )
+      // Establecer temporizador con retry_after
+      resendTimer.value = retryAfter
+    } else if (error.response?.status === 422) {
+      const message = error.message || 'Datos inválidos'
+      notify(message, 'negative', 'warning')
+    } else {
+      notify(
+        error.response?.data?.message || 'Error al reenviar código',
+        'negative',
+        'warning'
+      )
+    }
+  }
+}
+
+/**
+ * Verifica el estado de la sesión OTP en el servidor
+ *
+ * Esta función consulta el backend para determinar si existe una sesión OTP activa
+ * para el email actual. Si la sesión existe y es válida, restaura el estado de
+ * verificación y cambia automáticamente al panel OTP.
+ *
+ * @async
+ * @returns {Promise<void>}
+ *
+ * Casos de uso:
+ * - Recuperación de sesión después de recarga de página
+ * - Validación de sesión OTP existente
+ * - Restauración automática del flujo de verificación
+ */
+const checkOtpStatus = async () => {
+  if (!form.value.email) {
+    console.log('No se puede verificar estado OTP: email no disponible')
+    return
+  }
+
+  const email = form.value.email
+  const data = localStorage.getItem('access_token')
+
+  api.defaults.headers.common.Authorization = `Bearer ${data}`
+
+  try {
+    const { data } = await api.get('otp/status', {
+      params: {
+        identifier: email,
+        purpose: 'register'
+      }
+    })
+
+    const isValidOtpSession = data.exists && !data.is_expired && data.is_available
+
+    if (isValidOtpSession) {
+      otpExpiresIn.value = data.remaining_time_seconds || 0
+      resendTimer.value = Math.max(0, otpExpiresIn.value - 60)
+
+      currentTab.value = 'otp'
+
+      const timeRemaining = data.remaining_time_formatted || 'desconocido'
+      notify(
+        `Sesión de verificación restaurada. Tiempo restante: ${timeRemaining}`,
+        'info',
+        'info'
+      )
+    }
+  } catch (error) {
+    // Error silencioso: el usuario continuará en el formulario de registro normalmente
+    console.log('No hay sesión OTP activa para recuperar:', error.message || error)
+  }
+}
+
+/**
+ * Limpia el estado OTP del localStorage
+ *
+ * Función auxiliar para mantener el localStorage limpio y evitar
+ * estados obsoletos o corruptos.
+ */
+const clearOtpPendingState = () => {
+  localStorage.removeItem(OTP_STORAGE_KEY)
+}
+
+/**
+ * Restaura la sesión de registro desde localStorage
+ *
+ * Esta función recupera los datos de sesión guardados durante el registro
+ * y restaura el estado completo de la aplicación, incluyendo el token,
+ * datos del usuario y credenciales.
+ *
+ * @returns {boolean} true si se restauró exitosamente, false en caso contrario
+ */
+const restoreRegisterSession = () => {
+  try {
+    const registerSessionData = localStorage.getItem(REGISTER_SESSION_KEY)
+    const credentialsData = localStorage.getItem(REGISTER_CREDENTIALS_KEY)
+
+    if (!registerSessionData) {
+      return false
+    }
+
+    const sessionData = JSON.parse(registerSessionData)
+
+    // Validar que la sesión no haya expirado (30 minutos)
+    if (!isOtpSessionValid(sessionData.timestamp)) {
+      console.log('Sesión de registro expirada')
+      localStorage.removeItem(REGISTER_SESSION_KEY)
+      localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+      return false
+    }
+
+    // Restaurar token en axios
+    if (sessionData.access_token) {
+      localStorage.setItem('access_token', sessionData.access_token)
+      api.defaults.headers.common.Authorization = `Bearer ${sessionData.access_token}`
+    }
+
+    // Restaurar datos en el store de Pinia
+    store.setSessionData({
+      user: sessionData.user,
+      access_token: sessionData.access_token,
+      token_type: sessionData.token_type,
+      expires_in: sessionData.expires_in
+    })
+
+    // Restaurar credenciales si existen
+    if (credentialsData) {
+      registeredCredentials.value = JSON.parse(credentialsData)
+    }
+
+    // Si OTP ya fue verificado, mostrar opciones de empresa
+    if (sessionData.otp_verified) {
+      showCompanyOptions.value = true
+    }
+
+    console.log('Sesión de registro restaurada exitosamente')
+    return true
+  } catch (error) {
+    console.error('Error al restaurar sesión de registro:', error)
+    localStorage.removeItem(REGISTER_SESSION_KEY)
+    localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+    return false
+  }
+}
+
+/**
+ * Valida si el timestamp de la sesión OTP no ha expirado
+ *
+ * @param {number} timestamp - Timestamp en milisegundos cuando se guardó el estado
+ * @returns {boolean} true si la sesión es válida, false si expiró
+ */
+const isOtpSessionValid = (timestamp) => {
+  if (!timestamp || typeof timestamp !== 'number') {
+    return false
+  }
+
+  const elapsedTime = Date.now() - timestamp
+  return elapsedTime < OTP_EXPIRATION_TIME
+}
+
+/**
+ * Restaura el estado de verificación OTP desde localStorage
+ *
+ * Esta función intenta recuperar y validar una sesión OTP pendiente.
+ * Si la sesión es válida, restaura el email y cambia al panel OTP.
+ *
+ * @async
+ * @param {string} otpDataJson - Datos OTP en formato JSON string
+ * @returns {Promise<boolean>} true si se restauró exitosamente, false en caso contrario
+ */
+const restoreOtpSession = async (otpDataJson) => {
+  try {
+    // Parsear datos del localStorage
+    const otpData = JSON.parse(otpDataJson)
+    const { email, timestamp } = otpData
+
+    // Validar estructura de datos
+    if (!email || !timestamp) {
+      console.warn('Datos OTP incompletos en localStorage')
+      clearOtpPendingState()
+      return false
+    }
+
+    // Validar que la sesión no haya expirado
+    if (!isOtpSessionValid(timestamp)) {
+      console.log('Sesión OTP expirada, limpiando localStorage')
+      clearOtpPendingState()
+      return false
+    }
+
+    // Restaurar el email en el formulario
+    form.value.email = email
+
+    // Cambiar al panel de verificación OTP
+    currentTab.value = 'otp'
+
+    // Verificar el estado de la sesión en el servidor
+    await checkOtpStatus()
+
+    console.log('Sesión OTP restaurada exitosamente')
+    return true
+  } catch (error) {
+    console.error('Error al parsear o restaurar estado OTP:', error)
+    clearOtpPendingState()
+    return false
+  }
+}
+
+/**
+ * Hook de ciclo de vida: Montaje del componente
+ *
+ * Al montar el componente, verifica si existe una verificación OTP pendiente
+ * en localStorage. Si existe y es válida, restaura automáticamente el estado
+ * de verificación. Esto permite que el usuario pueda recargar la página sin
+ * perder su progreso en el proceso de verificación.
+ *
+ * Flujo:
+ * 1. Buscar estado OTP en localStorage
+ * 2. Si existe: validar y restaurar sesión
+ * 3. Si no existe: verificar estado normal en servidor
+ *
+ * @async
+ */
+onMounted(async () => {
+  // Primero intentar restaurar la sesión de registro completa
+  const sessionRestored = restoreRegisterSession()
+
+  if (sessionRestored) {
+    console.log('Sesión de registro restaurada, verificando estado OTP...')
+  }
+
+  // Luego verificar si hay OTP pendiente
+  const otpPendingData = localStorage.getItem(OTP_STORAGE_KEY)
+
+  if (otpPendingData) {
+    await restoreOtpSession(otpPendingData)
+  } else if (!sessionRestored) {
+    // Solo verificar estado OTP si no se restauró una sesión completa
+    await checkOtpStatus()
+  }
+})
+
+onBeforeUnmount(() => {
+  if (resendInterval) clearInterval(resendInterval)
+})
 
 /**
  * Select demo option
@@ -996,25 +1464,21 @@ const assignDemo = async () => {
       business_type_id: demoBusinessType.value.id
     })
 
-    // Actualizar sesión completa en el store (igual que LoginPage)
     store.setSessionData(data)
 
     notify('¡Bienvenido a la demo!', 'positive', 'check_circle')
 
-    // Cerrar modal
     showDemoBusinessTypeSelection.value = false
 
-    // Redirigir según roles (igual que LoginPage)
     if (data.user?.is_root) {
       router.push({ name: 'Billing' })
     } else if (data.user?.roles?.length === 0) {
       notify('Usuario no tiene permisos', 'negative', 'warning')
     } else {
-      router.push({ name: 'Tutorial' })
+      router.push({ name: 'Billing' })
     }
   } catch (error) {
-    const message = error.response?.data?.message || 'Error al asignar empresa demo'
-    notify(message, 'negative', 'warning')
+    console.log(error)
   } finally {
     loadingDemo.value = false
   }
@@ -1025,14 +1489,6 @@ const assignDemo = async () => {
  */
 const initializeGoogleAuthMobile = async () => {
   try {
-    console.log('Initializing Google Auth for mobile...')
-    console.log('Platform info:', {
-      isNativeMobile: $q.platform.is.nativeMobile,
-      isCapacitor: $q.platform.is.capacitor,
-      hasCapacitor: !!window.Capacitor,
-      platform: $q.platform
-    })
-
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
@@ -1098,7 +1554,6 @@ const registerWithGoogleMobile = async () => {
       if (data.needs_company_setup) {
         isGoogleRegister.value = true
         companyForm.value.company_email = userInfo.email
-        await loadBusinessTypes()
         showCompanyOptions.value = true
       } else {
         router.push('/')
@@ -1187,9 +1642,6 @@ const registerWithGoogle = async () => {
               // Pre-llenar email de empresa con el email de Google
               companyForm.value.company_email = userInfo.email
 
-              // Cargar business types
-              await loadBusinessTypes()
-
               // Mostrar modal de opciones (Demo o Registrar)
               showCompanyOptions.value = true
             } else {
@@ -1216,7 +1668,6 @@ const registerWithGoogle = async () => {
  * On mounted - Inicializar Google Auth
  */
 onMounted(async () => {
-  // Inicializar Google Auth para móvil si es Capacitor
   if ($q.platform.is.nativeMobile && window.Capacitor) {
     await initializeGoogleAuthMobile()
   }
@@ -1267,6 +1718,25 @@ onMounted(async () => {
   z-index: 0;
   overflow: hidden;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+/* OTP Input Styles */
+.otp-digit-input {
+  width: 45px;
+  height: 50px;
+}
+
+.otp-digit-input :deep(.q-field__control) {
+  height: 50px;
+  padding: 0;
+  border-radius: 8px;
+  background: white;
+}
+
+.otp-digit-input :deep(.q-field__native) {
+  font-size: 24px;
+  padding: 0;
+  line-height: 56px;
 }
 
 /* Formas decorativas del fondo */

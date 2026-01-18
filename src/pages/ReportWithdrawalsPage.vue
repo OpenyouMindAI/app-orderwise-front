@@ -21,16 +21,32 @@
             </div>
           </div>
           <div class="col-auto">
-            <q-btn
-              unelevated
-              rounded
-              color="white"
-              text-color="primary"
-              icon="help_outline"
-              label="Ayuda"
-              @click="showHelp = true"
-              class="help-button"
-            />
+            <div class="row q-gutter-sm">
+              <q-btn
+                unelevated
+                rounded
+                color="positive"
+                text-color="white"
+                icon="summarize"
+                label="Arqueo Global"
+                @click="openGlobalWithdrawalModal"
+                :loading="loadingGlobalSummary"
+                :disable="!hasData || loadingGlobalSummary"
+                class="global-btn"
+              >
+                <q-tooltip>Generar consolidado de arqueos del período</q-tooltip>
+              </q-btn>
+              <q-btn
+                unelevated
+                rounded
+                color="white"
+                text-color="primary"
+                icon="help_outline"
+                label="Ayuda"
+                @click="showHelp = true"
+                class="help-button"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -402,7 +418,7 @@
                   <div class="row items-center justify-between q-mb-md">
                     <div>
                       <div class="text-subtitle1 text-weight-bold">
-                        🏦 {{ cashbox.cashbox.name }}
+                        🏦 {{ cashbox.cashbox?.name || 'Caja sin nombre' }}
                       </div>
                       <div v-if="cashbox.user" class="text-caption text-grey-7">
                         Cajero: {{ cashbox.user.name }}
@@ -414,7 +430,7 @@
                       icon="add"
                       label="Agregar Arqueo"
                       size="sm"
-                      @click="openCashflowModal(cashbox)"
+                      @click="openCashflowModal(cashbox, day)"
                     />
                   </div>
 
@@ -514,65 +530,12 @@
       @update:modelValue="onCashflowSaved"
     />
 
-    <!-- Image Preview Dialog -->
-    <q-dialog
+    <!-- Image Carousel Dialog -->
+    <NewImageCarouselDialog
       v-model="showImagePreview"
-      :maximized="$q.screen.lt.md"
-      :full-width="$q.screen.gt.sm"
-      :full-height="$q.screen.gt.sm"
-    >
-      <q-card class="image-preview-card">
-        <q-card-section class="row items-center q-pa-sm bg-dark text-white">
-          <div class="text-subtitle1 text-weight-medium">Previsualización de Imagen - Retiro</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup color="white" size="sm" />
-        </q-card-section>
-
-        <q-card-section class="image-container">
-          <div v-if="imageLoading" class="image-placeholder">
-            <q-spinner-dots size="50px" color="primary" />
-            <div class="text-primary q-mt-md">Cargando imagen...</div>
-          </div>
-
-          <div v-else-if="imageError" class="image-placeholder">
-            <q-icon name="broken_image" size="80px" color="grey-5" />
-            <div class="text-grey-8 q-mt-md text-weight-medium">Error al cargar la imagen</div>
-            <div class="text-grey-6 q-mt-sm text-caption">{{ imageError }}</div>
-          </div>
-
-          <img
-            v-else-if="previewImageUrl"
-            :src="previewImageUrl"
-            class="preview-image"
-            @error="handleImageError"
-            @load="imageLoading = false"
-          />
-
-          <div v-else class="image-placeholder">
-            <q-icon name="image_not_supported" size="80px" color="grey-5" />
-            <div class="text-grey-8 q-mt-md text-weight-medium">No hay imagen disponible</div>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="center" class="q-pa-md bg-grey-1">
-          <q-btn
-            v-if="previewImageUrl && !imageError"
-            color="primary"
-            icon="download"
-            label="Descargar"
-            @click="downloadImage"
-            unelevated
-          />
-          <q-btn
-            color="grey-7"
-            icon="close"
-            label="Cerrar"
-            v-close-popup
-            flat
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+      :images="selectedImages"
+      :title="'Imágenes - Retiro ' + (currentWithdrawal?.time || '')"
+    />
 
     <!-- Help Dialog - Elegant & Compact -->
     <q-dialog v-model="showHelp" :maximized="$q.screen.lt.md">
@@ -719,6 +682,206 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Global Withdrawal Warning Modal (Uncounted Withdrawals) -->
+    <q-dialog v-model="showGlobalWarningModal" persistent>
+      <q-card class="global-modal-card" style="min-width: 400px; max-width: 550px;">
+        <q-card-section class="bg-warning text-white">
+          <div class="row items-center q-gutter-sm">
+            <q-icon name="warning" size="28px" />
+            <div class="text-h6">Arqueos Sin Contar</div>
+            <q-space />
+            <q-btn flat round dense icon="close" @click="showGlobalWarningModal = false" color="white" />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pa-lg">
+          <div class="text-body1 q-mb-md">
+            Se encontraron <strong class="text-warning">{{ uncountedWithdrawals.length }}</strong> arqueo(s) que no han sido contados (sin monto real ingresado).
+          </div>
+
+          <q-list v-if="uncountedWithdrawals.length <= 5" bordered separator class="rounded-borders q-mb-md">
+            <q-item v-for="unc in uncountedWithdrawals" :key="unc.id" dense>
+              <q-item-section>
+                <q-item-label>Arqueo #{{ unc.id }}</q-item-label>
+                <q-item-label caption>
+                  {{ unc.payment_method_name || 'Sin método' }} • {{ formatCurrency(unc.amount) }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge color="warning" text-color="dark" label="Sin contar" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <q-banner v-else class="bg-blue-1 text-blue-9 rounded-borders">
+            <template v-slot:avatar>
+              <q-icon name="info" color="blue" />
+            </template>
+            Hay muchos arqueos sin contar. Se recomienda completarlos antes de generar el reporte global.
+          </q-banner>
+
+          <div class="text-caption text-grey-7 q-mt-md">
+            ¿Desea continuar de todas formas? Los arqueos sin contar se incluirán con monto real $0.
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="grey-7"
+            @click="showGlobalWarningModal = false"
+          />
+          <q-btn
+            unelevated
+            label="Continuar de todas formas"
+            color="warning"
+            text-color="dark"
+            icon-right="arrow_forward"
+            @click="continueToSummary"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Global Withdrawal Summary Modal -->
+    <q-dialog v-model="showGlobalSummaryModal" persistent :maximized="$q.screen.lt.md">
+      <q-card class="global-modal-card" style="width: 700px; max-width: 95vw;">
+        <q-card-section class="bg-primary text-white">
+          <div class="row items-center q-gutter-sm">
+            <q-icon name="summarize" size="28px" />
+            <div>
+              <div class="text-h6">Generar Arqueo Global</div>
+              <div class="text-caption">{{ formatDate(dateFrom) }} - {{ formatDate(dateTo) }}</div>
+            </div>
+            <q-space />
+            <q-btn flat round dense icon="close" @click="showGlobalSummaryModal = false" color="white" />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pa-lg">
+          <!-- Summary Cards -->
+          <div class="row q-col-gutter-md q-mb-lg">
+            <div class="col-6 col-sm-3">
+              <div class="summary-mini-card">
+                <div class="text-caption text-grey-7">Total Ventas</div>
+                <div class="text-subtitle1 text-weight-bold text-positive">
+                  {{ formatCurrency(globalTotals.total_sales) }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3">
+              <div class="summary-mini-card">
+                <div class="text-caption text-grey-7">Esperado</div>
+                <div class="text-subtitle1 text-weight-bold text-blue">
+                  {{ formatCurrency(globalTotals.total_expected) }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3">
+              <div class="summary-mini-card">
+                <div class="text-caption text-grey-7">Contado</div>
+                <div class="text-subtitle1 text-weight-bold text-orange">
+                  {{ formatCurrency(globalTotals.total_counted) }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-sm-3">
+              <div class="summary-mini-card">
+                <div class="text-caption text-grey-7">Diferencia</div>
+                <div
+                  class="text-subtitle1 text-weight-bold"
+                  :class="globalTotals.difference >= 0 ? 'text-positive' : 'text-negative'"
+                >
+                  {{ globalTotals.difference >= 0 ? '+' : '' }}{{ formatCurrency(globalTotals.difference) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Methods Table -->
+          <div class="text-subtitle2 text-weight-bold q-mb-sm">
+            <q-icon name="payment" size="18px" class="q-mr-xs" />
+            Resumen por Método de Pago
+          </div>
+
+          <q-list bordered separator class="rounded-borders">
+            <q-item v-for="pm in globalSummary" :key="pm.payment_method_id" class="q-py-md">
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{ pm.payment_method_name }}
+                </q-item-label>
+                <q-item-label caption>
+                  {{ pm.count }} arqueo(s) •
+                  Esperado: {{ formatCurrency(pm.total_expected) }} →
+                  Contado: {{ formatCurrency(pm.total_counted) }}
+                </q-item-label>
+              </q-item-section>
+
+              <q-item-section side class="col-5">
+                <q-select
+                  v-model="pm.destination_cashbox_id"
+                  :options="cashboxOptions"
+                  option-value="id"
+                  option-label="name"
+                  emit-value
+                  map-options
+                  label="Caja Destino"
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Requerido']"
+                  class="full-width"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="account_balance" size="18px" />
+                  </template>
+                </q-select>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <q-banner v-if="globalSummary.length === 0" class="bg-grey-2 rounded-borders q-mt-md">
+            <template v-slot:avatar>
+              <q-icon name="info" color="grey-6" />
+            </template>
+            No hay arqueos disponibles para consolidar en el período seleccionado.
+          </q-banner>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="grey-7"
+            @click="showGlobalSummaryModal = false"
+            :disable="savingGlobal"
+          />
+          <q-btn
+            unelevated
+            label="Generar Arqueo Global"
+            color="primary"
+            icon="check"
+            @click="saveGlobalWithdrawal"
+            :loading="savingGlobal"
+            :disable="savingGlobal || globalSummary.length === 0"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Global Withdrawal Success Modal -->
+    <SuccessModal
+      v-model="showGlobalSuccessModal"
+      title="¡Arqueo Global Creado!"
+      :subtitle="`Arqueo Global <span class='text-primary text-weight-bold'>#${createdGlobalWithdrawal?.id || ''}</span><br>Período: ${formatDate(`${dateFrom} 00:00:00`)} - ${formatDate(`${dateTo} 23:59:59`)} `"
+      icon="summarize"
+      :show-view="false"
+      :show-download="false"
+      :show-share="false"
+      close-label="Cerrar"
+      @close="closeGlobalModals"
+    />
   </q-page>
 </template>
 
@@ -728,6 +891,8 @@ import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import CashflowModal from 'src/components/CashflowModal.vue'
+import NewImageCarouselDialog from 'src/components/NewImageCarouselDialog.vue'
+import SuccessModal from 'src/components/SuccessModal.vue'
 
 /**
  * Component for displaying and managing daily withdrawal reports
@@ -738,7 +903,9 @@ import CashflowModal from 'src/components/CashflowModal.vue'
 export default {
   name: 'WithdrawalsReport',
   components: {
-    CashflowModal
+    CashflowModal,
+    NewImageCarouselDialog,
+    SuccessModal
   },
 
   watch: {
@@ -903,22 +1070,10 @@ export default {
     const showImagePreview = ref(false)
 
     /*
-     * URL of the image being previewed
-     * @type {import('vue').Ref<string|null>}
+     * List of images selected for preview
+     * @type {import('vue').Ref<Array>}
      */
-    const previewImageUrl = ref(null)
-
-    /*
-     * Loading state for the image preview
-     * @type {import('vue').Ref<boolean>}
-     */
-    const imageLoading = ref(false)
-
-    /*
-     * Error message for image loading failures
-     * @type {import('vue').Ref<string|null>}
-     */
-    const imageError = ref(null)
+    const selectedImages = ref([])
 
     /*
      * Currently selected withdrawal for preview
@@ -928,6 +1083,67 @@ export default {
     const cashflow = ref({})
     const savingWithdrawalId = ref(null)
     const showFilters = ref(true)
+
+    // Global Withdrawal State
+    /**
+     * Controls visibility of the uncounted withdrawals warning modal
+     * @type {import('vue').Ref<boolean>}
+     */
+    const showGlobalWarningModal = ref(false)
+
+    /**
+     * Controls visibility of the global withdrawal summary modal
+     * @type {import('vue').Ref<boolean>}
+     */
+    const showGlobalSummaryModal = ref(false)
+
+    /**
+     * Controls visibility of the success modal after creating global withdrawal
+     * @type {import('vue').Ref<boolean>}
+     */
+    const showGlobalSuccessModal = ref(false)
+
+    /**
+     * Summary data grouped by payment method for global withdrawal
+     * @type {import('vue').Ref<Array>}
+     */
+    const globalSummary = ref([])
+
+    /**
+     * List of withdrawals that have not been counted (actual_amount is null/0)
+     * @type {import('vue').Ref<Array>}
+     */
+    const uncountedWithdrawals = ref([])
+
+    /**
+     * Available cashboxes for destination selection
+     * @type {import('vue').Ref<Array>}
+     */
+    const cashboxOptions = ref([])
+
+    /**
+     * Totals for the global withdrawal
+     * @type {import('vue').Ref<Object>}
+     */
+    const globalTotals = ref({})
+
+    /**
+     * Created global withdrawal object after successful save
+     * @type {import('vue').Ref<Object|null>}
+     */
+    const createdGlobalWithdrawal = ref(null)
+
+    /**
+     * Loading state for saving global withdrawal
+     * @type {import('vue').Ref<boolean>}
+     */
+    const savingGlobal = ref(false)
+
+    /**
+     * Loading state for fetching global summary
+     * @type {import('vue').Ref<boolean>}
+     */
+    const loadingGlobalSummary = ref(false)
 
     /**
      * Computed property that calculates the total amount of all withdrawals
@@ -1096,7 +1312,24 @@ export default {
 
         const response = await api.get('/reports/withdrawals-per-day', { params })
         if (isMounted.value) {
-          daysData.value = response.data.days || []
+          const processedDays = response.data.days || []
+
+          // Calculate counted_amount for each day from withdrawals
+          processedDays.forEach(day => {
+            let totalCounted = 0
+            if (day.cashboxes && Array.isArray(day.cashboxes)) {
+              day.cashboxes.forEach(cb => {
+                if (cb.withdrawals && Array.isArray(cb.withdrawals)) {
+                  cb.withdrawals.forEach(w => {
+                    totalCounted += Number(w.actual_amount || 0)
+                  })
+                }
+              })
+            }
+            day.counted_amount = totalCounted
+          })
+
+          daysData.value = processedDays
           totalsAmount.value = response.data.meta
         }
       } catch (error) {
@@ -1352,6 +1585,8 @@ export default {
           return
         }
 
+        console.log(withdrawal)
+
         // Set loading state for this specific withdrawal
         savingWithdrawalId.value = withdrawal.id
 
@@ -1363,7 +1598,6 @@ export default {
           type_cashflow: 'withdrawal',
           cashbox_user_id: withdrawal.cashbox_user_id,
           payment_method_id: withdrawal.payment_method_id,
-          created_at: withdrawal.created_at,
           actual_amount: newAmount
         }
 
@@ -1488,20 +1722,19 @@ export default {
      * @param {Object} row - The row data containing date and cashbox information
      * @returns {void}
      */
-    const openCashflowModal = (row) => {
-      selectedDate.value = row.day
+    const openCashflowModal = (cashbox, day) => {
+      selectedDate.value = day.day
       showCashflowModal.value = true
       cashflow.value = {
         cashboxUser: {
-          id: row.cashbox_user_id
+          id: cashbox.cashbox_user_id
         },
-        paymentMethodId: row.by_payment_method[0]?.payment_method_id || paymentMethods.value[0]?.id,
-        createdAt: row.closed_at,
+        paymentMethodId: paymentMethods.value[0]?.id,
+        createdAt: `${day.day} 00:00:00`,
         branchOffice: branchOffice.value,
         description: 'Arqueo'
       }
-      // Ensure the row is expanded when adding a new record
-      expandedRows.value.add(row.day)
+      expandedRows.value.add(day.day)
     }
 
     /**
@@ -1530,73 +1763,18 @@ export default {
      * @returns {void}
      */
     const openFileWithdrawal = (withdrawal) => {
-      try {
-        currentWithdrawal.value = withdrawal
-        imageLoading.value = true
-        imageError.value = null
-        previewImageUrl.value = null
-        showImagePreview.value = true
+      currentWithdrawal.value = withdrawal
+      selectedImages.value = withdrawal.images || []
 
-        // Check if withdrawal has images
-        if (withdrawal.images && withdrawal.images.length > 0) {
-          // Use the first image URL directly from the API response
-          const firstImage = withdrawal.images[0]
-          if (firstImage.url) {
-            previewImageUrl.value = firstImage.url
-            imageLoading.value = false
-          } else {
-            throw new Error('URL de imagen no disponible')
-          }
-        } else {
-          throw new Error('No hay imágenes disponibles para este retiro')
-        }
-      } catch (error) {
-        console.error('Error loading withdrawal image:', error)
-        imageError.value = error.message || 'Error al cargar la imagen'
-        previewImageUrl.value = null
-        imageLoading.value = false
-      }
-    }
-
-    /**
-     * Handles image loading errors
-     * @returns {void}
-     */
-    const handleImageError = () => {
-      imageError.value = 'Error al cargar la imagen'
-      imageLoading.value = false
-    }
-
-    /**
-     * Initiates download of the currently viewed image
-     * @returns {void}
-     */
-    const downloadImage = () => {
-      if (previewImageUrl.value && currentWithdrawal.value) {
-        const link = document.createElement('a')
-        link.href = previewImageUrl.value
-
-        // Create a descriptive filename
-        const date = currentWithdrawal.value.created_at
-          ? currentWithdrawal.value.created_at.split('T')[0]
-          : new Date().toISOString().split('T')[0]
-        const description = currentWithdrawal.value.description?.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '') || 'retiro'
-        const extension = previewImageUrl.value.includes('.jpg') ? '.jpg'
-          : previewImageUrl.value.includes('.png') ? '.png'
-            : previewImageUrl.value.includes('.jpeg') ? '.jpeg' : '.jpg'
-
-        link.download = `${description}-${currentWithdrawal.value.id}-${date}${extension}`
-        link.target = '_blank'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-
+      if (selectedImages.value.length === 0) {
         $q.notify({
-          type: 'positive',
-          message: 'Descarga iniciada',
-          caption: 'La imagen se está descargando...'
+          type: 'warning',
+          message: 'No hay imágenes disponibles para este retiro'
         })
+        return
       }
+
+      showImagePreview.value = true
     }
 
     /**
@@ -1672,6 +1850,138 @@ export default {
       printWindow.document.close()
       printWindow.print()
     }
+
+    // Global Withdrawal Functions
+    /**
+     * Opens the global withdrawal modal flow
+     * First checks for uncounted withdrawals, then shows summary
+     * @async
+     * @returns {Promise<void>}
+     */
+    const openGlobalWithdrawalModal = async () => {
+      loadingGlobalSummary.value = true
+      try {
+        const params = {
+          date_from: dateFrom.value,
+          date_to: dateTo.value
+        }
+
+        if (filters.value.branch_office_ids?.length) {
+          params.branch_office_ids = filters.value.branch_office_ids.map(data => data?.id)
+        }
+
+        const response = await api.get('/reports/withdrawals/summary-for-global', { params })
+        const data = response.data
+
+        globalSummary.value = data.summary || []
+        uncountedWithdrawals.value = data.uncounted_withdrawals || []
+        cashboxOptions.value = data.cashboxes || []
+        globalTotals.value = data.totals || {}
+
+        // Check if there are uncounted withdrawals
+        if (data.has_uncounted) {
+          showGlobalWarningModal.value = true
+        } else {
+          showGlobalSummaryModal.value = true
+        }
+      } catch (error) {
+        console.error('Error fetching global withdrawal summary:', error)
+        $q.notify({
+          type: 'negative',
+          message: 'Error al obtener resumen de arqueos',
+          caption: error.response?.data?.message || error.message
+        })
+      } finally {
+        loadingGlobalSummary.value = false
+      }
+    }
+
+    /**
+     * Continues to summary modal after warning
+     * @returns {void}
+     */
+    const continueToSummary = () => {
+      showGlobalWarningModal.value = false
+      showGlobalSummaryModal.value = true
+    }
+
+    /**
+     * Saves the global withdrawal with selected destination cashboxes
+     * @async
+     * @returns {Promise<void>}
+     */
+    const saveGlobalWithdrawal = async () => {
+      // Validate all payment methods have destination cashbox selected
+      const invalidMethods = globalSummary.value.filter(pm => !pm.destination_cashbox_id)
+      if (invalidMethods.length > 0) {
+        $q.notify({
+          type: 'warning',
+          message: 'Selecciona una caja destino para cada método de pago',
+          icon: 'warning'
+        })
+        return
+      }
+
+      savingGlobal.value = true
+      try {
+        const payload = {
+          date_from: dateFrom.value,
+          date_to: dateTo.value,
+          branch_office_id: filters.value.branch_office_ids?.[0]?.id || null,
+          payment_methods: globalSummary.value.map(pm => ({
+            payment_method_id: pm.payment_method_id,
+            destination_cashbox_id: pm.destination_cashbox_id,
+            cashflow_ids: pm.cashflow_ids
+          }))
+        }
+
+        const response = await api.post('/reports/withdrawals/global', payload)
+        createdGlobalWithdrawal.value = response.data.data
+
+        showGlobalSummaryModal.value = false
+        showGlobalSuccessModal.value = true
+
+        // Reload data to reflect the changes
+        await loadData(false)
+
+        $q.notify({
+          type: 'positive',
+          message: 'Arqueo global creado exitosamente',
+          icon: 'check_circle'
+        })
+      } catch (error) {
+        console.error('Error creating global withdrawal:', error)
+        $q.notify({
+          type: 'negative',
+          message: 'Error al crear arqueo global',
+          caption: error.response?.data?.message || error.message
+        })
+      } finally {
+        savingGlobal.value = false
+      }
+    }
+
+    /**
+     * Closes all global withdrawal modals
+     * @returns {void}
+     */
+    const closeGlobalModals = () => {
+      showGlobalWarningModal.value = false
+      showGlobalSummaryModal.value = false
+      showGlobalSuccessModal.value = false
+    }
+
+    /**
+     * Checks if there are any withdrawals available for global consolidation
+     * @returns {boolean}
+     */
+    const hasWithdrawalsForGlobal = computed(() => {
+      return daysData.value.some(day =>
+        day.cashboxes?.some(cb =>
+          cb.withdrawals?.length > 0
+        )
+      )
+    })
 
     // Helper functions
     /**
@@ -1844,13 +2154,26 @@ export default {
 
       // Image preview
       showImagePreview,
-      previewImageUrl,
-      imageLoading,
-      imageError,
+      selectedImages,
       currentWithdrawal,
       openFileWithdrawal,
-      handleImageError,
-      downloadImage
+
+      // Global Withdrawal
+      showGlobalWarningModal,
+      showGlobalSummaryModal,
+      showGlobalSuccessModal,
+      globalSummary,
+      uncountedWithdrawals,
+      cashboxOptions,
+      globalTotals,
+      createdGlobalWithdrawal,
+      savingGlobal,
+      loadingGlobalSummary,
+      hasWithdrawalsForGlobal,
+      openGlobalWithdrawalModal,
+      continueToSummary,
+      saveGlobalWithdrawal,
+      closeGlobalModals
     }
   }
 }
@@ -3087,6 +3410,67 @@ export default {
 
   .modern-page {
     background: white;
+  }
+}
+
+/* Global Withdrawal Styles */
+.global-btn {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+}
+
+.global-btn:hover {
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+  transform: translateY(-1px);
+}
+
+.global-modal-card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.body--dark .global-modal-card {
+  background: #1e293b;
+}
+
+.summary-mini-card {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+
+.body--dark .summary-mini-card {
+  background: #334155;
+  border-color: #475569;
+}
+
+/* Animate summary cards */
+.summary-mini-card {
+  transition: all 0.2s ease;
+}
+
+.summary-mini-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile adjustments for global button */
+@media (max-width: 599px) {
+  .global-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .global-btn .q-btn__content {
+    flex-direction: column;
+  }
+
+  .global-btn .q-icon {
+    margin-right: 0;
+    margin-bottom: 4px;
   }
 }
 </style>

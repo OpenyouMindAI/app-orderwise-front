@@ -1,5 +1,5 @@
 <template>
-  <q-page padding>
+  <q-page class="q-pa-sm">
     <!-- Tour Overlay -->
     <div v-if="showTour" class="tour-overlay">
       <div class="tour-spotlight" :style="spotlightStyle"></div>
@@ -36,13 +36,20 @@
       </q-card>
     </div>
 
-    <div v-if="$route.query.id">
-      <span class="text-subtitle1">Factura número: </span>
-      <span class="text-subtitle2">{{ invoice?.code }}</span>
+    <div v-if="$route.query.id" class="invoice-header-compact q-mb-sm">
+      <q-chip
+        square
+        color="primary"
+        text-color="white"
+        icon="receipt_long"
+        class="invoice-chip"
+      >
+        <span class="text-weight-medium">{{ invoice?.code }}</span>
+      </q-chip>
     </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
+    <q-form ref="saveBill" @submit="saveBill">
       <div class="billing-panel-container">
-        <div>
+        <div style="min-width: 0;">
           <!-- Panel de facturación -->
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales - Solo desktop -->
@@ -72,7 +79,6 @@
                 </q-select>
               </div>
 
-              <!-- Select tipo de factura -->
               <div id="tour-tipo-factura" class="billing-select-item">
                 <q-select
                   filled
@@ -90,10 +96,26 @@
                   hide-bottom-space
                   @filter="filterInvoiceTypes"
                   label="Tipo de factura"
-                />
+                  @update:model-value="validateInvoiceType"
+                >
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps" :disable="false" :class="{ 'bg-grey-3': (subscriptionPlan || 'Free') === 'Free' && scope.opt.acronym_serie === 'B' }">
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.name }}</q-item-label>
+                      </q-item-section>
+                      <q-item-section side v-if="(subscriptionPlan || 'Free') === 'Free' && scope.opt.acronym_serie === 'B'">
+                        <premium-badge
+                          :show="true"
+                          :size="15"
+                          padding="4px"
+                          tooltip-text="Disponible en plan Premium"
+                        />
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
               </div>
 
-              <!-- Select tipo de factura (Arca) -->
               <div v-if="invoiceType.bill" class="billing-select-item">
                 <q-select
                   filled
@@ -114,7 +136,6 @@
                 />
               </div>
 
-              <!-- Select tipo de servicio -->
               <div id="tour-type-service" class="billing-select-item">
                 <q-select
                   filled
@@ -153,6 +174,7 @@
             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
               <div>
                 <q-btn
+                  id="tour-cliente-mobile"
                   color="secondary"
                   icon="person"
                   :label="client?.name || 'Cliente'"
@@ -222,6 +244,7 @@
                 </q-btn>
               </div>
               <q-fab
+                id="tour-fab-config"
                 color="primary"
                 icon="tune"
                 type="button"
@@ -232,6 +255,7 @@
               >
                 <!-- FAB Tipo de Factura -->
                 <q-fab-action
+                  id="tour-tipo-factura-mobile"
                   color="accent"
                   icon="receipt"
                   :label="invoiceType?.name || 'Tipo'"
@@ -259,6 +283,7 @@
                             clickable
                             v-ripple
                             :active="invoiceType?.id === type.id"
+                            :class="{ 'bg-grey-3': (subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B' }"
                             @click="selectInvoiceType(type)"
                           >
                             <q-item-section>
@@ -266,6 +291,14 @@
                             </q-item-section>
                             <q-item-section side v-if="invoiceType?.id === type.id">
                               <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                            <q-item-section side v-if="(subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B'">
+                              <premium-badge
+                                :show="true"
+                                :size="15"
+                                padding="4px"
+                                tooltip-text="Disponible en plan Premium"
+                              />
                             </q-item-section>
                           </q-item>
                         </q-list>
@@ -317,6 +350,7 @@
 
                 <!-- FAB Tipo de Servicio -->
                 <q-fab-action
+                  id="tour-type-service-mobile"
                   color="positive"
                   icon="category"
                   :label="typeOfService?.name || 'Servicio'"
@@ -357,6 +391,7 @@
                 </q-fab-action>
               </q-fab>
               <q-fab
+                id="tour-fab-opciones"
                 square
                 type="button"
                 color="orange"
@@ -367,6 +402,7 @@
                 v-model="rightFabOpen"
               >
                 <q-fab-action
+                  id="tour-btn-cobro-parcial-mobile"
                   color="primary"
                   icon="splitscreen"
                   label="Cobro Parcial"
@@ -377,6 +413,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-mesas-mobile"
                   v-if="companyConfig.is_table"
                   color="orange"
                   icon="table_restaurant"
@@ -387,6 +424,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-cashflow-mobile"
                   color="info"
                   icon="payments"
                   label="Entrada/Salida"
@@ -395,6 +433,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-buscar-mobile"
                   color="teal"
                   icon="search"
                   label="Buscar"
@@ -412,6 +451,7 @@
                 />
 
                 <q-fab-action
+                  id="tour-btn-borrar-mobile"
                   color="negative"
                   icon="delete"
                   label="Borrar"
@@ -423,6 +463,7 @@
             <div class="col-12 articles-section" :class="{ 'articles-section-hidden': productsFullscreen }" id="tour-tabla-articulos">
               <!-- Desktop view -->
               <q-table
+                id="tour-products-table"
                 v-if="$q.screen.gt.xs"
                 row-key="id"
                 title="Artículos"
@@ -608,10 +649,6 @@
                           </div>
                         </div>
 
-                        <div v-else-if="props.row.is_bundle">
-                          <div class="text-grey-6">Producto promocional sin detalles específicos</div>
-                        </div>
-
                         <div v-else>
                           <div class="text-grey-6">No hay detalles adicionales para este producto</div>
                         </div>
@@ -619,10 +656,23 @@
                     </q-td>
                   </q-tr>
                 </template>
+                <!-- Template para cuando no hay artículos -->
+                <template v-slot:no-data>
+                  <div class="full-width column flex-center" style="padding: 60px 20px;">
+                    <q-icon size="4rem" name="inventory_2" color="grey-4" class="q-mb-md" />
+                    <div class="text-center">
+                      <div class="text-h5 text-grey-6 q-mb-sm">Sin artículos</div>
+                    </div>
+                  </div>
+                </template>
               </q-table>
 
               <!-- Mobile view - Cart style -->
-              <div v-else-if="products.length > 0" class="mobile-cart-container">
+              <div
+                v-else-if="products.length > 0"
+                id="tour-products-table-mobile"
+                class="mobile-cart-container"
+              >
                 <div class="mobile-cart-list">
                   <div
                     v-for="(product, rowIndex) in products"
@@ -657,6 +707,7 @@
                             <q-input
                               label="Precio"
                               type="number"
+                              @focus="e => e.target.select()"
                               v-model.number="scope.value"
                               dense
                               autofocus
@@ -688,6 +739,7 @@
                             <q-input
                               label="Cantidad"
                               type="number"
+                              @focus="e => e.target.select()"
                               v-model.number="scope.value"
                               dense
                               autofocus
@@ -715,17 +767,17 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
-              <div class="col-12" v-if="isNotLocal">
+              <div class="col-12" v-if="isDelivery">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12" v-if="isNotLocal">
+              <div class="col-12" v-if="isDelivery">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
               </div>
-              <div class="col-12" id="tour-descripcion" v-if="isNotLocal">
+              <div class="col-12" id="tour-descripcion" v-if="isDelivery">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
@@ -1381,35 +1433,11 @@
         </template>
       </drawer-table>
     </q-dialog>
-    <q-dialog v-model="searchInvoice">
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-card-section class="q-py-sm bg-primary text-white flex justify-between items-center">
-          <span class="text-h6">Buscar factura</span>
-          <q-btn flat icon="close" round size="md" v-close-popup/>
-        </q-card-section>
-        <q-card-section>
-          <q-form @submit="getInvoiceOne(search)" class="row full-width items-center q-gutter-md">
-            <div class="col-10">
-              <q-input
-                name="search"
-                autocomplete="search"
-                v-model="search"
-                color="primary"
-                label="Número de factura"
-                filled
-                clearable
-                type="search"
-                required
-                autofocus
-              />
-            </div>
-            <div class="col-auto text-right">
-              <q-btn type="submit" color="primary" icon="search" size="lg" :loading="loadingSearch"/>
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+
+    <search-pending-invoices-dialog
+      v-model="searchInvoice"
+      @invoice-selected="handleInvoiceSelected"
+    />
 
     <!-- Cash Box Dialog -->
     <CashBoxDialog
@@ -1465,7 +1493,21 @@
             </div>
 
             <!-- Fila 1: Tipo de documento y Número -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12" style="position: relative;">
+              <div
+                v-if="(subscriptionPlan || 'Free') === 'Free'"
+                class="absolute-full"
+                style="z-index: 10; cursor: pointer;"
+                @click.stop="handleRestrictedClick"
+              ></div>
+              <premium-badge
+                :show="(subscriptionPlan || 'Free') === 'Free'"
+                :size="15"
+                top="0px"
+                right="4px"
+                padding="4px"
+                tooltip-text="PREMIUM"
+              />
               <q-select
                 filled
                 use-input
@@ -1476,6 +1518,7 @@
                 v-model="clientAdded.document_type"
                 :options="documentTypes"
                 @filter="getDocumentTypes"
+                :disable="(subscriptionPlan || 'Free') === 'Free'"
               />
             </div>
             <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
@@ -1504,7 +1547,21 @@
             </div>
 
             <!-- Condición de IVA -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12" style="position: relative;">
+              <div
+                v-if="(subscriptionPlan || 'Free') === 'Free'"
+                class="absolute-full"
+                style="z-index: 10; cursor: pointer;"
+                @click.stop="handleRestrictedClick"
+              ></div>
+              <premium-badge
+                :show="(subscriptionPlan || 'Free') === 'Free'"
+                :size="15"
+                top="0px"
+                right="4px"
+                padding="4px"
+                tooltip-text="PREMIUM"
+              />
               <q-select
                 filled
                 use-input
@@ -1515,6 +1572,7 @@
                 v-model="clientAdded.condition_iva_receptor"
                 :options="conditionIvaReceptors"
                 @filter="getConditionIvaReceptor"
+                :disable="(subscriptionPlan || 'Free') === 'Free'"
               />
             </div>
 
@@ -1618,11 +1676,21 @@
       @action="handleValidationAction"
     />
 
+    <q-inner-loading :showing="loadingSearch">
+      <q-spinner-gears size="90px" color="primary" />
+    </q-inner-loading>
+
+    <subscription-plans-dialog
+      v-model="showSubscriptionDialog"
+      @subscription-updated="loadSubscriptionInfo"
+    />
   </q-page>
 </template>
 
 <script>
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import PremiumBadge from 'src/components/PremiumBadge.vue'
+import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -1643,7 +1711,8 @@ import CashBoxDialog from 'src/components/Billing/CashBoxDialog.vue'
 import CashflowModal from 'src/components/CashflowModal.vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
-import { LOCAL } from 'src/const/typeOfServices.js'
+import SearchPendingInvoicesDialog from 'src/components/SearchPendingInvoicesDialog.vue'
+import { LOCAL, DELIVERY } from 'src/const/typeOfServices.js'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1656,6 +1725,8 @@ export default {
   name: 'BillingPage',
   components: {
     AddressComponent,
+    PremiumBadge,
+    SubscriptionPlansDialog,
     DrawerTable,
     PaymentModal,
     PartialPaymentModal,
@@ -1665,96 +1736,21 @@ export default {
     TransferMpDialog,
     CashflowModal,
     FileComponent,
-    OnboardingValidationModal
+    OnboardingValidationModal,
+    SearchPendingInvoicesDialog
   },
   data () {
     const tourStore = useTourStore()
     tourStore.initFromLocalStorage()
 
     return {
-      // Tour System
       tourStore,
       LOCAL,
-      activeMobileMenu: null, // 'client', 'center', 'right' or null
+      DELIVERY,
+      activeMobileMenu: null,
       showTour: false,
       currentTourStep: 0,
-      tourSteps: [
-        {
-          target: '#select-client',
-          title: '👤 Seleccionar Cliente',
-          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
-        },
-        {
-          target: '#tour-tipo-factura',
-          title: '🧾 Tipo de Factura',
-          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
-        },
-        {
-          target: '#tour-type-service',
-          title: '🍽️ Tipo de Servicio',
-          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
-        },
-        {
-          target: '#tour-barcode',
-          title: '🔍 Código de Barras',
-          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
-        },
-        {
-          target: '#tour-products-table',
-          title: '📦 Lista de Artículos',
-          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
-        },
-        {
-          target: '#tour-descripcion',
-          title: '📝 Descripción',
-          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.'
-        },
-        {
-          target: '#tour-btn-cobrar',
-          title: '💰 Botón Cobrar (F1)',
-          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
-        },
-        {
-          target: '#tour-btn-cobro-parcial',
-          title: '💳 Cobro Parcial',
-          description: 'Permite dividir la cuenta entre varios clientes o realizar pagos parciales. Útil para grupos que desean pagar por separado.'
-        },
-        {
-          target: '#tour-btn-mesas',
-          title: '🪑 Botón Mesas (F10)',
-          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
-        },
-        {
-          target: '#tour-btn-cashflow',
-          title: '💵 Entrada/Salida de Dinero (F11)',
-          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
-        },
-        {
-          target: '#tour-btn-buscar',
-          title: '🔎 Buscar Factura (F12)',
-          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
-        },
-        {
-          target: '#tour-btn-borrar',
-          title: '🗑️ Borrar Factura',
-          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
-        },
-        {
-          target: '#tour-select-categoria',
-          title: '🏷️ Filtro de Categorías',
-          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
-        },
-        {
-          target: '#tour-input-buscar-producto',
-          title: '🔍 Buscar Producto',
-          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
-        },
-        {
-          target: '#tour-seccion-productos',
-          title: '🛍️ Sección de Productos',
-          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
-        }
-      ],
+      // tourSteps moved to computed for dynamic filtering
       spotlightStyle: {},
       tourCardStyle: {},
 
@@ -1838,6 +1834,11 @@ export default {
        * @type {Boolean}
        */
       quantityDialog: false,
+      /**
+       * Subscription dialog
+       * @type {Boolean}
+       */
+      showSubscriptionDialog: false,
       /**
        * Product quantity
        * @type {Object}
@@ -2271,7 +2272,219 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession', 'branchOffice']),
+    tourSteps () {
+      const isMobile = this.$q.screen.lt.md
+
+      // En móvil: mismos pasos conceptuales que desktop, pero apuntando a elementos móviles
+      if (isMobile) {
+        const mobileSteps = [
+          {
+            target: '#tour-cliente-mobile',
+            title: '👤 Seleccionar Cliente',
+            description: 'Toca aquí para seleccionar o agregar un cliente para la factura.'
+          },
+          {
+            target: '#tour-tipo-factura-mobile',
+            title: '🧾 Tipo de Factura',
+            description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc.',
+            mobileAction: () => { this.centerFabOpen = true }
+          },
+          {
+            target: '#tour-type-service-mobile',
+            title: '🍽️ Tipo de Servicio',
+            description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc.',
+            mobileAction: () => { this.centerFabOpen = true }
+          },
+          // Código de barras omitido en móvil
+          {
+            target: '#tour-products-table, #tour-products-table-mobile',
+            title: '📦 Lista de Artículos',
+            description: 'Aquí aparecen los productos agregados. Puedes editar cantidades y eliminar productos.',
+            mobileAction: () => {
+              this.centerFabOpen = false
+              this.rightFabOpen = false
+              // Agregar producto falso si la lista está vacía
+              if (this.products.length === 0) {
+                this.products.push({
+                  id: 999999,
+                  name: 'Producto de Ejemplo',
+                  price: 150.00,
+                  quantity: 1,
+                  amount: 1,
+                  subtotal: 150.00,
+                  isTourFakeProduct: true
+                })
+              }
+            }
+          },
+          {
+            target: '#tour-descripcion',
+            title: '📝 Descripción',
+            description: 'Agrega notas o comentarios adicionales sobre la factura.',
+            mobileAction: () => {
+              this.centerFabOpen = false
+              this.rightFabOpen = false
+              // Limpiar producto falso si existe
+              const fakeIndex = this.products.findIndex(p => p.isTourFakeProduct)
+              if (fakeIndex !== -1) {
+                this.products.splice(fakeIndex, 1)
+              }
+            }
+          },
+          {
+            target: '#tour-btn-cobrar-mobile',
+            title: '💰 Botón Cobrar',
+            description: 'Toca este botón para procesar el cobro y finalizar la venta.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-btn-cobro-parcial-mobile',
+            title: '💳 Cobro Parcial',
+            description: 'Divide la cuenta entre varios clientes o realiza pagos parciales.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-mesas-mobile',
+            title: '🪑 Mesas',
+            description: 'Administra las mesas del restaurante y asigna pedidos.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-cashflow-mobile',
+            title: '💵 Entrada/Salida de Dinero',
+            description: 'Registra entradas y salidas de dinero en efectivo.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-buscar-mobile',
+            title: '🔎 Buscar Factura',
+            description: 'Busca facturas anteriores por número, cliente o fecha.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-btn-borrar-mobile',
+            title: '🗑️ Borrar Factura',
+            description: 'Limpia todos los productos y datos de la factura actual.',
+            mobileAction: () => { this.rightFabOpen = true }
+          },
+          {
+            target: '#tour-select-categoria',
+            title: '🏷️ Filtro de Categorías',
+            description: 'Filtra los productos por categoría para encontrarlos más rápido.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-input-buscar-producto',
+            title: '🔍 Buscar Producto',
+            description: 'Busca productos por nombre o código.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          },
+          {
+            target: '#tour-seccion-productos',
+            title: '🛍️ Sección de Productos',
+            description: 'Toca un producto para agregarlo a la factura.',
+            mobileAction: () => { this.centerFabOpen = false; this.rightFabOpen = false }
+          }
+        ]
+
+        // Filtrar pasos que no aplican según configuración
+        return mobileSteps.filter(step => {
+          // Filtrar cobro parcial y mesas si is_table está deshabilitado
+          if (step.target === '#tour-btn-cobro-parcial-mobile' || step.target === '#tour-btn-mesas-mobile') {
+            return this.companyConfig?.is_table
+          }
+          // Filtrar descripción si es servicio local
+          if (step.target === '#tour-descripcion') {
+            return this.isNotLocal
+          }
+          return true
+        })
+      }
+
+      // Desktop: pasos originales
+      const allSteps = [
+        {
+          target: '#select-client',
+          title: '👤 Seleccionar Cliente',
+          description: 'Aquí seleccionas el cliente para la factura. Puedes buscar por nombre o documento, o agregar un nuevo cliente con el botón +.'
+        },
+        {
+          target: '#tour-tipo-factura',
+          title: '🧾 Tipo de Factura',
+          description: 'Selecciona el tipo de factura: Venta, Nota de crédito, etc. Este campo determina el tipo de documento que se generará.'
+        },
+        {
+          target: '#tour-type-service',
+          title: '🍽️ Tipo de Servicio',
+          description: 'Selecciona el tipo de servicio: Mesa, Para llevar, Delivery, etc. Esto ayuda a organizar tus ventas.'
+        },
+        {
+          target: '#tour-barcode',
+          title: '🔍 Código de Barras',
+          description: 'Escanea o escribe el código de barras del producto. Presiona Enter para agregarlo automáticamente a la lista.'
+        },
+        {
+          target: '#tour-products-table',
+          title: '📦 Lista de Artículos',
+          description: 'Aquí aparecen todos los productos agregados. Puedes editar cantidades, precios, y eliminar productos desde esta tabla.'
+        },
+        {
+          target: '#tour-descripcion',
+          title: '📝 Descripción',
+          description: 'Agrega notas o comentarios adicionales sobre la factura. Este campo es opcional pero útil para detalles especiales.',
+          condition: () => this.isNotLocal
+        },
+        {
+          target: '#tour-btn-cobrar',
+          title: '💰 Botón Cobrar (F1)',
+          description: 'Presiona este botón para abrir el diálogo de pago y procesar el cobro. También puedes usar la tecla F1.'
+        },
+        {
+          target: '#tour-btn-cobro-parcial',
+          title: '💳 Cobro Parcial',
+          description: 'Permite dividir la cuenta entre varios clientes o realizar pagos parciales. Útil para grupos que desean pagar por separado.'
+        },
+        {
+          target: '#tour-btn-mesas',
+          title: '🪑 Botón Mesas (F10)',
+          description: 'Administra las mesas del restaurante. Asigna pedidos a mesas específicas y controla su estado. Atajo: F10.'
+        },
+        {
+          target: '#tour-btn-cashflow',
+          title: '💵 Entrada/Salida de Dinero (F11)',
+          description: 'Registra entradas y salidas de dinero en efectivo. Útil para gastos, retiros o ingresos adicionales. Atajo: F11.'
+        },
+        {
+          target: '#tour-btn-buscar',
+          title: '🔎 Buscar Factura (F12)',
+          description: 'Busca facturas anteriores por número, cliente o fecha. Útil para consultas y reimpresiones. Atajo: F12.'
+        },
+        {
+          target: '#tour-btn-borrar',
+          title: '🗑️ Borrar Factura',
+          description: 'Limpia todos los productos y datos de la factura actual. Úsalo para empezar una nueva factura desde cero.'
+        },
+        {
+          target: '#tour-select-categoria',
+          title: '🏷️ Filtro de Categorías',
+          description: 'Filtra los productos por categoría para encontrarlos más rápido. Selecciona una categoría o déjalo vacío para ver todos.'
+        },
+        {
+          target: '#tour-input-buscar-producto',
+          title: '🔍 Buscar Producto',
+          description: 'Busca productos por nombre o código. Escribe para filtrar la lista de productos disponibles en tiempo real.'
+        },
+        {
+          target: '#tour-seccion-productos',
+          title: '🛍️ Sección de Productos',
+          description: 'Aquí se muestran todos los productos disponibles. Haz click en un producto para agregarlo a la factura.'
+        }
+      ]
+
+      // Filtrar pasos basado en condiciones
+      return allSteps.filter(step => !step.condition || step.condition())
+    },
+    ...mapState(authentication, ['userSession', 'branchOffice', 'subscriptionPlan', 'isDemo']),
     branchOfficeCharged () {
       return this.branchOffice
     },
@@ -2292,6 +2505,9 @@ export default {
     },
     isNotLocal () {
       return Number(this.typeOfService.code) !== this.LOCAL
+    },
+    isDelivery () {
+      return Number(this.typeOfService.code) === this.DELIVERY
     },
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
@@ -2442,15 +2658,16 @@ export default {
     }
   },
   async mounted () {
+    /**
+     * Get products with pagination
+     */
+    this.reloadProducts()
+
     const isValid = await this.checkOnboardingStatus()
     if (isValid) {
       await this.checkCashBoxStatus()
       this.checkAndStartTour()
     }
-    /**
-     * Get products with pagination
-     */
-    this.reloadProducts()
 
     /**
      * Check if should show tour (only once after company creation)
@@ -2536,6 +2753,10 @@ export default {
       }
     },
     async checkOnboardingStatus () {
+      const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+      if (isConfigured) {
+        return true
+      }
       try {
         const { data } = await api.get('/onboarding/tasks/status')
         if (data && data.tasks) {
@@ -2597,7 +2818,11 @@ export default {
       this.currentTourStep = 0
       // Usar tourStore en lugar de localStorage
       this.tourStore.startTour()
-      this.updateTourPosition()
+
+      // Esperar a que Vue actualice el DOM antes de posicionar
+      this.$nextTick(() => {
+        this.updateTourPosition()
+      })
     },
 
     /**
@@ -2696,6 +2921,17 @@ export default {
      * @param {Object} type - Invoice type selected
      */
     async selectInvoiceType (type) {
+      // Validar si es una opción premium y el plan es Free
+      if ((this.subscriptionPlan || 'Free') === 'Free' && type?.acronym_serie === 'B') {
+        this.handleRestrictedClick()
+        // Revertir a tipo T si existe
+        this.$nextTick(() => {
+          const typeT = this.invoiceTypes.find(t => t.acronym_serie === 'T')
+          this.invoiceType = typeT || null
+        })
+        return
+      }
+
       this.invoiceType = type
       // Si el tipo de factura requiere Arca (bill: true)
       if (type.bill) {
@@ -2749,6 +2985,13 @@ export default {
       this.showTour = false
       // Usar tourStore en lugar de localStorage
       this.tourStore.finishTour()
+
+      // Limpiar producto falso si existe (por si se cierra el tour en ese paso)
+      const fakeIndex = this.products.findIndex(p => p.isTourFakeProduct)
+      if (fakeIndex !== -1) {
+        this.products.splice(fakeIndex, 1)
+      }
+
       this.$q.notify({
         message: '¡Tour completado! Ya puedes comenzar a facturar',
         color: 'positive',
@@ -2762,91 +3005,131 @@ export default {
     updateTourPosition () {
       this.$nextTick(() => {
         const step = this.tourSteps[this.currentTourStep]
-        const element = document.querySelector(step.target)
 
-        if (element) {
-          // Scroll to element first
-          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
-
-          // Wait for scroll to finish before calculating positions
-          setTimeout(() => {
-            const rect = element.getBoundingClientRect()
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-
-            // Update spotlight position
-            this.spotlightStyle = {
-              top: `${rect.top + scrollTop - 10}px`,
-              left: `${rect.left + scrollLeft - 10}px`,
-              width: `${rect.width + 20}px`,
-              height: `${rect.height + 20}px`
-            }
-
-            // Position tour card with better logic
-            const cardWidth = 400
-            const cardHeight = 280
-            const padding = 20
-            const viewportHeight = window.innerHeight
-            const viewportWidth = window.innerWidth
-
-            let cardTop = rect.top + scrollTop
-            let cardLeft = rect.left + scrollLeft
-
-            // Detectar si es la sección de productos o categorías/búsqueda
-            const isProductSection = step.target === '#tour-seccion-productos' ||
-                                    step.target === '#tour-select-categoria' ||
-                                    step.target === '#tour-input-buscar-producto'
-
-            if (isProductSection) {
-              // Para sección de productos, posicionar a la IZQUIERDA del elemento
-              // Calcular posición: elemento.left - ancho del card - espacio
-              const spaceFromElement = 30 // Espacio entre el card y el elemento
-              cardLeft = rect.left + scrollLeft - cardWidth - spaceFromElement
-
-              // Si no cabe a la izquierda, posicionar en el borde izquierdo con margen
-              if (cardLeft < padding) {
-                cardLeft = padding
-              }
-
-              // Centrar verticalmente con el elemento
-              cardTop = rect.top + scrollTop + (rect.height / 2) - (cardHeight / 2)
-            } else {
-              // Para otros elementos, posicionar DEBAJO
-              cardTop = rect.bottom + scrollTop + padding
-
-              // If card goes below viewport, position it above the element
-              if (rect.bottom + cardHeight + padding > viewportHeight) {
-                cardTop = rect.top + scrollTop - cardHeight - padding
-              }
-
-              // If still goes above viewport, position it in the middle
-              if (cardTop < scrollTop) {
-                cardTop = scrollTop + (viewportHeight - cardHeight) / 2
-              }
-            }
-
-            // Adjust horizontal position
-            if (cardLeft + cardWidth > viewportWidth) {
-              cardLeft = viewportWidth - cardWidth - padding
-            }
-            if (cardLeft < 0) {
-              cardLeft = padding
-            }
-
-            // Adjust vertical position to keep in viewport
-            if (cardTop + cardHeight > scrollTop + viewportHeight) {
-              cardTop = scrollTop + viewportHeight - cardHeight - padding
-            }
-            if (cardTop < scrollTop) {
-              cardTop = scrollTop + padding
-            }
-
-            this.tourCardStyle = {
-              top: `${cardTop}px`,
-              left: `${cardLeft}px`
-            }
-          }, 300)
+        // Ejecutar acción móvil si existe (para abrir menús, etc)
+        if (this.$q.screen.lt.md && step.mobileAction) {
+          step.mobileAction()
         }
+
+        // Dar un pequeño tiempo para que la acción móvil se complete (ej: abrir menú)
+        setTimeout(() => {
+          const element = document.querySelector(step.target)
+
+          // Si el elemento no existe o no está visible, saltar al siguiente paso
+          if (!element || element.offsetParent === null) {
+            // Elemento no existe o está oculto (display: none)
+            if (this.currentTourStep < this.tourSteps.length - 1) {
+              this.currentTourStep++
+              this.updateTourPosition() // Recursivo para verificar el siguiente
+            } else {
+              this.finishTour() // Ya no hay más pasos
+            }
+            return
+          }
+
+          if (element) {
+            // Scroll to element first
+            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+
+            // Wait for scroll to finish before calculating positions
+            setTimeout(() => {
+              const rect = element.getBoundingClientRect()
+              const isMobile = this.$q.screen.lt.md
+              const viewportHeight = window.innerHeight
+              const viewportWidth = window.innerWidth
+
+              // Update spotlight position
+              // Calcular posición relativa al overlay para evitar problemas con scroll
+              const overlay = document.querySelector('.tour-overlay')
+              let overlayRect = { top: 0, left: 0 }
+              if (overlay) {
+                overlayRect = overlay.getBoundingClientRect()
+              }
+
+              // Update spotlight position
+              this.spotlightStyle = {
+                top: `${rect.top - overlayRect.top - 6}px`,
+                left: `${rect.left - overlayRect.left - 6}px`,
+                width: `${rect.width + 12}px`,
+                height: `${rect.height + 12}px`
+              }
+
+              // En móvil: posicionar tarjeta fija en la parte inferior
+              if (isMobile) {
+                this.tourCardStyle = {
+                  position: 'fixed',
+                  bottom: '100px',
+                  left: '16px',
+                  right: '16px',
+                  top: 'auto'
+                }
+                return
+              }
+
+              // Posicionar tarjeta (Desktop) relativa al overlay
+              const cardWidth = 400
+              const cardHeight = 280
+              const padding = 20
+
+              // Definir coordenadas base relativas al overlay
+              const relTop = rect.top - overlayRect.top
+              const relBottom = rect.bottom - overlayRect.top
+              const relLeft = rect.left - overlayRect.left
+              const relRight = rect.right - overlayRect.left
+
+              // Identificar tipo de elemento
+              const isProductSection = ['#tour-seccion-productos'].includes(step.target)
+              const isRightElement = ['#tour-btn-cobrar', '#tour-btn-cobro-parcial', '#tour-btn-mesas', '#tour-btn-cashflow', '#tour-btn-buscar', '#tour-btn-borrar', '#tour-select-categoria', '#tour-input-buscar-producto'].includes(step.target)
+
+              let cardTop, cardLeft, cardRight = null
+
+              if (isProductSection) {
+              // Posicionar a la izquierda del elemento
+                cardLeft = Math.max(padding, relLeft - cardWidth - 30)
+                cardTop = relTop + (rect.height - cardHeight) / 2
+              } else if (isRightElement) {
+              // Posicionar debajo alineado a la derecha
+                cardRight = viewportWidth - rect.right - 10 // Right es relativo al viewport width
+                // Convertir right a coordenada left relativa al overlay si es necesario, o mantener right fijo
+                // Mejor usar left calculado relativo al overlay:
+                cardLeft = relRight - cardWidth
+                cardTop = relBottom + padding
+
+                // Si no cabe abajo (usando viewport para chequear), ponerlo arriba
+                if (rect.bottom + cardHeight + padding > viewportHeight) {
+                  cardTop = relTop - cardHeight - padding
+                }
+              } else {
+              // Posicionar debajo del elemento
+                cardLeft = relLeft - 10
+                cardTop = relBottom + padding
+
+                // Si no cabe abajo, ponerlo arriba
+                if (rect.bottom + cardHeight + padding > viewportHeight) {
+                  cardTop = relTop - cardHeight - padding
+                }
+
+                // Solo ajustar si se sale completamente del viewport
+                if (rect.left + cardWidth > viewportWidth) {
+                  cardLeft = viewportWidth - cardWidth - padding
+                }
+                if (cardLeft < 0) {
+                  cardLeft = padding
+                }
+              }
+
+              // Ajustes finales de top para no salir del overlay
+              // (Opcional, pero asegura que no quede negativo)
+              if (cardTop < 0) cardTop = padding
+
+              this.tourCardStyle = {
+                top: `${cardTop}px`,
+                left: isRightElement ? 'auto' : `${cardLeft}px`,
+                right: isRightElement ? `${cardRight}px` : 'auto'
+              }
+            }, 300)
+          }
+        }, 300)
       })
     },
 
@@ -3532,15 +3815,11 @@ export default {
      * @param {Object} table  table data
      */
     async selectInvoice (table) {
-      // Selecting invoice from table
-
       loading(true)
       const invoiceOne = table.invoices[0]
       await this.getInvoiceOne(invoiceOne.id)
       this.dialogTable = false
       loading(false)
-
-      // Invoice loaded from table
     },
     /**
      * Free table
@@ -3767,6 +4046,7 @@ export default {
         }
         this.loadingSearch = false
         this.invoice = invoice
+        this.invoice.status = this.isDelivered ? 'delivered' : invoice.status
         this.products = invoice.products.map(product => {
           return {
             ...product,
@@ -3793,8 +4073,19 @@ export default {
         this.calculateTotal()
         this.search = ''
         this.setPayments(invoice.invoice_payments)
+        this.isDelivered = false
       } else {
         notify('No se encontró la factura', 'negative', 'warning')
+      }
+    },
+    /**
+     * Handle invoice selected from search dialog
+     * @param {Object} invoice - Selected invoice
+     */
+    async handleInvoiceSelected (invoice) {
+      if (invoice && invoice.id) {
+        this.isDelivered = true
+        await this.getInvoiceOne(invoice.id)
       }
     },
     /**
@@ -3888,6 +4179,8 @@ export default {
       // Determinar si es cuenta corriente (CC) o contado
       const isCuentaCorriente = this.invoiceType?.acronym_serie === 'CC'
       const paymentType = isCuentaCorriente ? 'credit' : 'cash'
+
+      console.log(this.invoice?.status || (this.isNotLocal ? 'pending' : 'delivered'))
 
       const invoiceModel = {
         ...this.invoice,
@@ -5033,6 +5326,38 @@ export default {
       })
       this.invoiceFiles = []
       this.deletedInvoiceFiles = []
+    },
+
+    /**
+     * Load subscription info
+     */
+    async loadSubscriptionInfo () {
+      await authentication().loadSubscriptionInfo()
+    },
+
+    /**
+     * Handle restricted feature click
+     */
+    handleRestrictedClick () {
+      if (this.isDemo) {
+        eventBus.emit('open-create-company')
+      } else {
+        this.showSubscriptionDialog = true
+      }
+    },
+
+    /**
+     * Validate selected invoice type against subscription plan
+     * @param {Object} val Selected invoice type
+     */
+    validateInvoiceType (val) {
+      if ((this.subscriptionPlan || 'Free') === 'Free' && val?.acronym_serie === 'B') {
+        this.handleRestrictedClick()
+        this.$nextTick(() => {
+          const typeT = this.invoiceTypes.find(t => t.acronym_serie === 'T')
+          this.invoiceType = typeT || null
+        })
+      }
     }
   }
 }
@@ -5749,7 +6074,7 @@ export default {
 
 /* Tour Styles */
 .tour-overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -5854,17 +6179,43 @@ export default {
 /* Responsive tour */
 @media (max-width: 768px) {
   .tour-card {
-    min-width: 300px;
-    max-width: 90vw;
-    left: 5vw !important;
+    position: fixed !important;
+    bottom: 100px !important;
+    left: 16px !important;
+    right: 16px !important;
+    top: auto !important;
+    min-width: auto;
+    max-width: none;
+    z-index: 10001;
+  }
+
+  .tour-header {
+    padding: 10px 14px;
   }
 
   .tour-title {
-    font-size: 18px;
+    font-size: 16px;
+    margin-bottom: 8px;
   }
 
   .tour-description {
     font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .tour-card .q-card-actions {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .tour-card .q-card-actions .q-btn {
+    min-height: 44px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .tour-spotlight {
+    border-width: 3px;
   }
 }
 
@@ -6043,7 +6394,7 @@ export default {
 .products-section {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 104px);
+  height: calc(100dvh - 76px);
 }
 
 .products-section-fullscreen {
@@ -6149,6 +6500,25 @@ export default {
   min-width: 55px;
   text-align: right;
   flex-shrink: 0;
+}
+
+/* Invoice Header Compact */
+.invoice-header-compact {
+  display: flex;
+  align-items: center;
+}
+
+.invoice-chip {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.invoice-chip:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 </style>

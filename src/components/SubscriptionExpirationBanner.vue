@@ -42,7 +42,7 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
-import { api } from 'src/boot/axios'
+import { authentication } from 'src/stores/module-authentication'
 
 export default {
   name: 'SubscriptionExpirationBanner',
@@ -56,6 +56,8 @@ export default {
   setup (props, { emit }) {
     const subscriptionInfo = ref(null)
     const dismissed = ref(false)
+
+    const store = authentication()
 
     const showBanner = computed(() => {
       if (!subscriptionInfo.value || props.isDemo) return false
@@ -89,18 +91,17 @@ export default {
 
     const bannerMessage = computed(() => {
       if (!subscriptionInfo.value) return ''
-      const planName = subscriptionInfo.value.subscription?.plan?.name || 'actual'
+      const planName = subscriptionInfo.value?.plan?.name || 'actual'
       return `Renueva tu plan ${planName} para seguir disfrutando de todas las funcionalidades`
     })
 
     const loadSubscriptionInfo = async () => {
       try {
-        const { data } = await api.get('subscriptions/current')
-        subscriptionInfo.value = data
+        subscriptionInfo.value = store.currentSubscription
 
-        // Reset dismissed state if subscription changed
         const storedSubId = localStorage.getItem('dismissed_banner_sub_id')
-        const currentSubId = data.subscription?.id
+        const currentSubId = subscriptionInfo.value?.id
+
         if (storedSubId !== String(currentSubId)) {
           dismissed.value = false
           localStorage.removeItem('dismissed_banner_sub_id')
@@ -112,12 +113,12 @@ export default {
 
     const handleDismiss = () => {
       dismissed.value = true
-      if (subscriptionInfo.value?.subscription?.id) {
-        localStorage.setItem('dismissed_banner_sub_id', String(subscriptionInfo.value.subscription.id))
+      if (subscriptionInfo.value?.id) {
+        localStorage.setItem('dismissed_banner_sub_id', String(subscriptionInfo.value.id))
       }
       emit('banner-dismissed', {
         daysLeft: subscriptionInfo.value?.days_left,
-        subscriptionId: subscriptionInfo.value?.subscription?.id
+        subscriptionId: subscriptionInfo.value?.id
       })
     }
 

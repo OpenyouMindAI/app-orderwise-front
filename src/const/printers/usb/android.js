@@ -222,12 +222,12 @@ export async function printCommandUsb (invoice, config) {
         const quantity = parseFloat(product.pivot.quantity).toFixed(2)
         const qtyLen = quantity.length
         const maxNameLen = lineWidth
-  
+
         const nameLines = []
         for (let i = 0; i < name.length; i += maxNameLen) {
           nameLines.push(name.substring(i, i + maxNameLen))
         }
-  
+
         nameLines.forEach((line, idx) => {
           if (idx === nameLines.length - 1) {
             const spaces = ' '.repeat(Math.max(0, lineWidth - line.length - qtyLen))

@@ -1,7 +1,7 @@
 <template>
   <q-page class="session-monitor-page">
     <!-- Header -->
-    <div class="dashboard-header">
+    <div class="dashboard-header text-white">
       <div class="header-content">
         <div class="row items-center no-wrap">
           <q-btn flat round icon="arrow_back" class="header-btn" @click="$router.back()" />
@@ -182,7 +182,12 @@
 
               <div class="session-status">
                 <div class="status-text" :class="session.status">{{ getOnlineStatusText(session) }}</div>
-                <div class="session-time">{{ formatTimeAgo(session.last_activity_at) }}</div>
+                <div class="session-time" v-if="session.status === 'online' || session.status === 'idle'">
+                  Última actividad: {{ formatTimeAgo(session.last_activity_at) }}
+                </div>
+                <div class="session-time" v-else-if="session.disconnected_at">
+                  {{ formatDate(session.disconnected_at) }}
+                </div>
               </div>
 
               <div class="session-actions">
@@ -916,28 +921,46 @@ function getInitial (name) {
 
 function getOnlineStatusText (session) {
   if (!session) return ''
+
+  // Usuario activamente en línea
   if (session.status === 'online') return 'En línea'
 
-  const lastActivity = session.last_activity_at
-  if (!lastActivity) return getStatusLabel(session.status)
-
   const now = new Date()
-  const lastDate = new Date(lastActivity)
-  const diffMinutes = differenceInMinutes(now, lastDate)
-  const diffHours = differenceInHours(now, lastDate)
-  const diffDays = differenceInDays(now, lastDate)
 
+  // Para usuarios inactivos, usar last_activity_at
   if (session.status === 'idle') {
+    const lastActivity = session.last_activity_at
+    if (!lastActivity) return 'Inactivo'
+
+    const lastDate = new Date(lastActivity)
+    const diffMinutes = differenceInMinutes(now, lastDate)
+    const diffHours = differenceInHours(now, lastDate)
+    const diffDays = differenceInDays(now, lastDate)
+
     if (diffMinutes < 1) return 'Inactivo'
     if (diffMinutes < 60) return `Inactivo hace ${diffMinutes} min`
     if (diffHours < 24) return `Inactivo hace ${diffHours} h`
     return `Inactivo hace ${diffDays} d`
   }
 
-  if (diffMinutes < 1) return 'Hace un momento'
-  if (diffMinutes < 60) return `Hace ${diffMinutes} min`
-  if (diffHours < 24) return `Hace ${diffHours} h`
-  return `Hace ${diffDays} d`
+  // Para usuarios desconectados (offline/logout), usar disconnected_at o last_activity_at
+  if (session.status === 'offline' || session.status === 'logout') {
+    const disconnectTime = session.disconnected_at || session.last_activity_at
+    if (!disconnectTime) return 'Desconectado'
+
+    const disconnectDate = new Date(disconnectTime)
+    const diffMinutes = differenceInMinutes(now, disconnectDate)
+    const diffHours = differenceInHours(now, disconnectDate)
+    const diffDays = differenceInDays(now, disconnectDate)
+
+    if (diffMinutes < 1) return 'Desconectado hace un momento'
+    if (diffMinutes < 60) return `Desconectado hace ${diffMinutes} min`
+    if (diffHours < 24) return `Desconectado hace ${diffHours} h`
+    return `Desconectado hace ${diffDays} d`
+  }
+
+  // Fallback para otros estados
+  return getStatusLabel(session.status)
 }
 
 function getSessionDuration (session) {

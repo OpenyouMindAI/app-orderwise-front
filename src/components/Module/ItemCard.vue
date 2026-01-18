@@ -93,28 +93,28 @@ import { defineProps, defineEmits } from 'vue'
 const props = defineProps({
   item: {
     type: Object,
-    required: true,
+    required: true
   },
   sectionName: {
     type: String,
-    default: '',
+    default: ''
   },
   isFirst: {
     type: Boolean,
-    default: false,
+    default: false
   },
   isLast: {
     type: Boolean,
-    default: false,
+    default: false
   },
   position: {
     type: Number,
-    required: true,
+    required: true
   },
   totalItems: {
     type: Number,
-    required: true,
-  },
+    required: true
+  }
 })
 
 defineEmits(['edit', 'delete', 'move-up', 'move-down'])

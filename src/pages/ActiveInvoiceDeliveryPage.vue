@@ -1554,9 +1554,9 @@ async function attemptFinishRoute () {
   // Determine dialog content based on proximity
   const isNear = isNearOrigin.value
   const branchName = originBranch.value?.name || 'la sucursal de origen'
-  
+
   let title, message, dialogType
-  
+
   if (isNear) {
     // Near origin - positive confirmation
     title = '¡Has llegado al origen!'
@@ -1572,8 +1572,8 @@ async function attemptFinishRoute () {
 
   // Show confirmation dialog
   $q.dialog({
-    title: title,
-    message: message,
+    title,
+    message,
     cancel: {
       label: 'Cancelar',
       flat: true,

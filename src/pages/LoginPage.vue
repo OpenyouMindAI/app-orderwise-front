@@ -133,15 +133,6 @@
           <span class="register-text">¿No tienes cuenta? <router-link to="/register" class="register-link">Crear cuenta</router-link></span>
         </div>
       </q-form>
-
-      <!-- Footer -->
-      <div class="footer-container">
-        <q-icon name="laptop_mac" size="18px" color="grey-6"/>
-        <span class="footer-text">Powered by</span>
-        <a href="https://site.qbitsinc.com" target="_blank">
-          <q-img :src="qBitsLogo.black" class="qbits-logo"/>
-        </a>
-      </div>
     </div>
 
     <!-- Password Reset Dialogs -->
@@ -167,6 +158,21 @@
       :session-token="resetData.sessionToken"
       @password-reset="handlePasswordReset"
     />
+
+    <!-- Email Verification Modal -->
+    <EmailVerificationModal
+      v-model="showEmailVerification"
+      :user-email="userEmail"
+      @verified="handleEmailVerified"
+      @email-updated="handleEmailUpdated"
+    />
+
+    <!-- Company Setup Modal -->
+    <CompanySetupModal
+      v-model="showCompanySetup"
+      :user-email="userEmail"
+      @success="handleCompanySetupSuccess"
+    />
   </div>
 </template>
 <script>
@@ -179,51 +185,140 @@ import { darkModeStore } from '../stores/darkModeStore'
 import ForgotPasswordDialog from 'src/components/ForgotPasswordDialog.vue'
 import VerifyResetCodeDialog from 'src/components/VerifyResetCodeDialog.vue'
 import NewPasswordDialog from 'src/components/NewPasswordDialog.vue'
+import EmailVerificationModal from 'src/components/Auth/EmailVerificationModal.vue'
+import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 
 export default {
   name: 'LoginPage',
   components: {
     ForgotPasswordDialog,
     VerifyResetCodeDialog,
-    NewPasswordDialog
+    NewPasswordDialog,
+    EmailVerificationModal,
+    CompanySetupModal
   },
   data () {
     return {
+      /**
+       * QBits logo object
+       * @type {Object}
+       */
       qBitsLogo,
+      /**
+       * Remember me checkbox state
+       * @type {Boolean}
+       */
       remember: true,
+      /**
+       * Dialog visibility state
+       * @type {Boolean}
+       */
       dialog: false,
+      /**
+       * Logo object
+       * @type {Object}
+       */
       logo,
+      /**
+       * Slide state
+       * @type {String}
+       */
       slide: 'style',
+      /**
+       * Show/hide password toggle
+       * @type {Boolean}
+       */
       showPassword: false,
+      /**
+       * Google login loading state
+       * @type {Boolean}
+       */
       googleLoading: false,
+      /**
+       * Facebook login loading state
+       * @type {Boolean}
+       */
       facebookLoading: false,
+      /**
+       * Google OAuth client instance
+       * @type {Object|null}
+       */
       googleClient: null,
+      /**
+       * Facebook SDK loaded state
+       * @type {Boolean}
+       */
       facebookSDKLoaded: false,
-      // Password reset flow
+      /**
+       * Show forgot password dialog
+       * @type {Boolean}
+       */
       showForgotPasswordDialog: false,
+      /**
+       * Show verify code dialog
+       * @type {Boolean}
+       */
       showVerifyCodeDialog: false,
+      /**
+       * Show new password dialog
+       * @type {Boolean}
+       */
       showNewPasswordDialog: false,
+      /**
+       * Password reset flow data
+       * @type {Object}
+       */
       resetData: {
         identifier: '',
-        channel: '',
+        channel: 'email',
         sessionToken: null,
         expiresAt: null,
         code: ''
       },
       /**
-       * Email User
+       * Show email verification modal
+       * @type {Boolean}
+       */
+      showEmailVerification: false,
+      /**
+       * Show company setup modal
+       * @type {Boolean}
+       */
+      showCompanySetup: false,
+      /**
+       * User email for verification
+       * @type {String}
+       */
+      userEmail: '',
+      /**
+       * Username or email for login
        * @type {String}
        */
       username: '',
       /**
-       * Password User
+       * Password for login
        * @type {String}
        */
       password: '',
+      /**
+       * Redirect route after login
+       * @type {String|null}
+       */
       redirect: null,
-
+      /**
+       * Login button disabled state
+       * @type {Boolean}
+       */
       btnDisable: false,
+      /**
+       * Download URL
+       * @type {String|null}
+       */
       urlDownload: null,
+      /**
+       * Error message translations
+       * @type {Object}
+       */
       messageError: {
         'The user credentials were incorrect.':
           'El usuario o contraseña son incorrectos.'
@@ -249,17 +344,15 @@ export default {
     this.loadGoogleScript()
     this.loadFacebookSDK()
 
-    // Inicializar Google Auth para móvil si es Capacitor
     if (this.$q.platform.is.nativeMobile && window.Capacitor) {
       await this.initializeGoogleAuthMobile()
     }
 
-    // Auto-login si existen username y password en query params
     await this.checkAutoLogin()
   },
   methods: {
     /**
-     * Inicializar Google Auth para móvil
+     * Initialize Google Auth for mobile devices
      */
     async initializeGoogleAuthMobile () {
       try {
@@ -274,22 +367,18 @@ export default {
         const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
 
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
-        console.log('Client ID:', clientId)
-
         await GoogleAuth.initialize({
           clientId,
           scopes: ['profile', 'email'],
           grantOfflineAccess: true
         })
-
-        console.log('Google Auth initialized successfully on mount')
       } catch (error) {
         console.error('Error initializing Google Auth on mount:', error)
         console.error('Init error details:', error.message)
       }
     },
     /**
-     * Verificar y ejecutar auto-login si existen parámetros en la URL
+     * Check and execute auto-login if URL parameters exist
      */
     async checkAutoLogin () {
       try {
@@ -331,7 +420,7 @@ export default {
       }
     },
     /**
-     * Cargar el script de Google Identity Services
+     * Load Google Identity Services script
      */
     loadGoogleScript () {
       const script = document.createElement('script')
@@ -344,7 +433,7 @@ export default {
       document.head.appendChild(script)
     },
     /**
-     * Inicializar Google Sign-In
+     * Initialize Google Sign-In
      */
     initializeGoogleSignIn () {
       if (window.google && window.google.accounts) {
@@ -369,7 +458,7 @@ export default {
       }
     },
     /**
-     * Manejar el clic en el botón de Google
+     * Handle Google login button click
      */
     async handleGoogleLogin () {
       this.googleLoading = true
@@ -405,7 +494,7 @@ export default {
       }
     },
     /**
-     * Manejar login de Google en móvil nativo
+     * Handle Google login on native mobile devices
      */
     async handleGoogleLoginMobile () {
       try {
@@ -466,7 +555,7 @@ export default {
       }
     },
     /**
-     * Abrir popup de OAuth2 de Google
+     * Open Google OAuth2 popup
      */
     openGoogleOAuthPopup () {
       if (this.googleClient) {
@@ -482,7 +571,8 @@ export default {
       }
     },
     /**
-     * Manejar respuesta del token de OAuth2
+     * Handle OAuth2 token response
+     * @param {Object} tokenResponse - OAuth2 token response object
      */
     async handleGoogleTokenResponse (tokenResponse) {
       if (tokenResponse && tokenResponse.access_token) {
@@ -508,7 +598,11 @@ export default {
       }
     },
     /**
-     * Autenticar con Google en el backend
+     * Authenticate with Google on backend
+     * @param {String} email - User email
+     * @param {String} name - User name
+     * @param {String} googleId - Google user ID
+     * @param {String} picture - User profile picture URL
      */
     async authenticateWithGoogle (email, name, googleId, picture) {
       try {
@@ -555,7 +649,8 @@ export default {
       }
     },
     /**
-     * Callback de Google después de la autenticación
+     * Google callback after authentication
+     * @param {Object} response - Google authentication response
      */
     async handleGoogleCallback (response) {
       if (!response.credential) {
@@ -605,7 +700,7 @@ export default {
       }
     },
     /**
-     * Cargar Facebook SDK
+     * Load Facebook SDK
      */
     loadFacebookSDK () {
       // Verificar si ya está cargado
@@ -644,7 +739,7 @@ export default {
       document.body.appendChild(script)
     },
     /**
-     * Manejar login con Facebook
+     * Handle Facebook login
      */
     handleFacebookLogin () {
       // Verificar si el SDK está cargado
@@ -677,7 +772,8 @@ export default {
       }, { scope: 'public_profile,email' })
     },
     /**
-     * Obtener información del usuario de Facebook
+     * Get Facebook user information
+     * @param {String} accessToken - Facebook access token
      */
     getFacebookUserInfo (accessToken) {
       console.log('Obteniendo información del usuario con accessToken:', accessToken)
@@ -708,7 +804,11 @@ export default {
       })
     },
     /**
-     * Autenticar con Facebook en el backend
+     * Authenticate with Facebook on backend
+     * @param {String} email - User email
+     * @param {String} name - User name
+     * @param {String} facebookId - Facebook user ID
+     * @param {String} picture - User profile picture URL
      */
     async authenticateWithFacebook (email, name, facebookId, picture) {
       try {
@@ -754,25 +854,43 @@ export default {
       }
     },
     /**
-     * Login app
+     * Execute login with username and password
      */
     async loginAt () {
       try {
         this.btnDisable = true
         const data = await this.login({ username: this.username, password: this.password })
+
+        this.userEmail = data.email
+
+        if (data.email_verified_at === null || !data.email_verified_at) {
+          notify('Debes verificar tu correo electrónico para continuar', 'warning', 'mail')
+          this.showEmailVerification = true
+          this.btnDisable = false
+          return
+        }
+
+        if (!data.company_session || data.company_session === null) {
+          notify('Configura tu empresa para continuar', 'info', 'business')
+          this.showCompanySetup = true
+          this.btnDisable = false
+          return
+        }
+
         if (data.is_root) {
           this.$router.push({ name: 'Billing' })
           return
         }
+
         if (data?.roles?.length === 0) {
           notify('Usuario no tiene permisos', 'negative', 'warning')
           return
         }
-        this.$router.push({ name: this.redirect || 'Tutorial' })
+        this.$router.push({ name: this.redirect || 'Billing' })
         this.btnDisable = false
       } catch (error) {
         Notify.create({
-          message: this.messageError[error?.message] || error.message,
+          message: this.messageError[error?.data?.message] || error.message,
           color: 'negative',
           position: 'top',
           icon: 'warning',
@@ -793,7 +911,8 @@ export default {
     },
 
     /**
-     * Manejar cuando se envía el código de recuperación
+     * Handle when recovery code is sent
+     * @param {Object} data - Recovery code data
      */
     handleCodeSent (data) {
       this.resetData.identifier = data.identifier
@@ -804,7 +923,8 @@ export default {
     },
 
     /**
-     * Manejar cuando se verifica el código correctamente
+     * Handle when code is verified successfully
+     * @param {Object} data - Verification data
      */
     handleCodeVerified (data) {
       this.resetData.code = data.code
@@ -812,7 +932,8 @@ export default {
     },
 
     /**
-     * Manejar cuando se solicita reenviar el código
+     * Handle when code resend is requested
+     * @param {Object} data - Resend data
      */
     handleResendRequested (data) {
       this.resetData.sessionToken = data.sessionToken
@@ -820,7 +941,8 @@ export default {
     },
 
     /**
-     * Manejar cuando se resetea la contraseña exitosamente
+     * Handle when password is reset successfully
+     * @param {Object} data - Password reset data
      */
     handlePasswordReset (data) {
       if (data.success) {
@@ -837,6 +959,75 @@ export default {
         if (this.resetData.identifier && this.resetData.identifier.includes('@')) {
           this.username = this.resetData.identifier
         }
+      }
+    },
+
+    /**
+     * Handle when email is verified successfully
+     */
+    async handleEmailVerified () {
+      try {
+        // Cerrar modal de verificación
+        this.showEmailVerification = false
+
+        // Recargar sesión del usuario para actualizar email_verified_at
+        const { data } = await this.$api.get('user/session')
+        await this.setSessionData(data)
+
+        notify('Correo verificado exitosamente', 'positive', 'check_circle')
+
+        // Verificar si tiene empresa asignada
+        if (!data.user.company_session || data.user.company_session === null) {
+          // Pequeña pausa antes de mostrar el siguiente modal
+          await new Promise(resolve => setTimeout(resolve, 300))
+          notify('Ahora configura tu empresa', 'info', 'business')
+          this.showCompanySetup = true
+        } else {
+          // Tiene empresa, redirigir al dashboard
+          if (data.user.is_root) {
+            this.$router.push({ name: 'Billing' })
+          } else if (data.user?.roles?.length === 0) {
+            notify('Usuario no tiene permisos', 'negative', 'warning')
+          } else {
+            this.$router.push({ name: this.redirect || 'Tutorial' })
+          }
+        }
+      } catch (error) {
+        console.error('Error al verificar email:', error)
+        notify('Error al verificar el correo', 'negative', 'warning')
+      }
+    },
+
+    /**
+     * Handle when email is updated
+     * @param {String} newEmail - New email address
+     */
+    handleEmailUpdated (newEmail) {
+      this.userEmail = newEmail
+    },
+
+    /**
+     * Handle when company setup is completed successfully
+     */
+    async handleCompanySetupSuccess () {
+      try {
+        this.showCompanySetup = false
+
+        const { data } = await this.$api.get('user/session')
+        await this.setSessionData(data)
+
+        notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+
+        if (data.user.is_root) {
+          this.$router.push({ name: 'Billing' })
+        } else if (data.user?.roles?.length === 0) {
+          notify('Usuario no tiene permisos', 'negative', 'warning')
+        } else {
+          this.$router.push({ name: this.redirect || 'Tutorial' })
+        }
+      } catch (error) {
+        console.error('Error al configurar empresa:', error)
+        notify('Error al configurar la empresa', 'negative', 'warning')
       }
     },
 

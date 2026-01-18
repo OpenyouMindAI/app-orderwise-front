@@ -12,20 +12,28 @@
         </div>
       </template>
       <template v-slot:top-right>
-        <q-tabs
-          v-model="tab"
-          indicator-color="transparent"
-          active-bg-color="primary"
-          active-class="text-white"
-          class="q-pa-xs"
-          style="border-radius: 50px;"
-          dense
-        >
-          <q-tab name="diary" label="Por dia" style="border-radius: 50px;"/>
-          <q-tab name="weekly" label="Semanal" style="border-radius: 50px;"/>
-          <q-tab name="monthly" label="Mensual" style="border-radius: 50px;"/>
-          <q-tab name="yearly" label="Anual" style="border-radius: 50px;"/>
-        </q-tabs>
+        <div class="row q-gutter-sm items-center">
+          <q-select
+            v-model="selectedYear"
+            :options="yearOptions"
+            dense
+            outlined
+            style="min-width: 100px;"
+            label="Año"
+          />
+          <q-tabs
+            v-model="tab"
+            indicator-color="transparent"
+            class="q-pa-xs"
+            style="border-radius: 50px;"
+            dense
+          >
+            <q-tab name="diary" label="Por dia" style="border-radius: 50px;"/>
+            <q-tab name="weekly" label="Semanal" style="border-radius: 50px;"/>
+            <q-tab name="monthly" label="Mensual" style="border-radius: 50px;"/>
+            <q-tab name="yearly" label="Anual" style="border-radius: 50px;"/>
+          </q-tabs>
+        </div>
       </template>
     </ChartComponent>
   </div>
@@ -64,6 +72,29 @@ const props = defineProps({
 const store = authentication()
 
 /**
+ * Current year
+ * @type {number}
+ */
+const currentYear = new Date().getFullYear()
+
+/**
+ * Selected year
+ * @type {number}
+ */
+const selectedYear = ref(currentYear)
+
+/**
+ * Year options (from 2025 to current year)
+ * @type {Array}
+ */
+const yearOptions = ref(
+  Array.from(
+    { length: currentYear - 2025 + 1 },
+    (_, i) => 2025 + i
+  ).reverse()
+)
+
+/**
  * Tabs
  * @type {string}
  */
@@ -88,7 +119,7 @@ const salesData = ref([])
 const params = ref({
   groupBy: tab.value,
   branch_office_id: store.branchOffice?.id,
-  year: 2025
+  year: selectedYear.value
 })
 
 /**
@@ -116,6 +147,14 @@ watch(() => props.filters, (filters) => {
  */
 watch(() => tab.value, (groupBy) => {
   filterDate({ ...params.value, groupBy })
+})
+
+/**
+ * Watch selected year
+ */
+watch(() => selectedYear.value, (year) => {
+  params.value.year = year
+  filterDate(params.value)
 })
 
 /**

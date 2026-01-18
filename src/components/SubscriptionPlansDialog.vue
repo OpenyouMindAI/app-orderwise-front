@@ -29,7 +29,23 @@
 
           <!-- Plans Grid -->
           <div class="plans-grid">
+            <!-- Skeleton Loading -->
+            <template v-if="loadingPlans">
+              <div v-for="n in 2" :key="'skeleton-' + n" class="plan-card plan-skeleton">
+                <q-skeleton height="24px" width="60%" class="q-mb-md" />
+                <q-skeleton height="16px" width="80%" class="q-mb-lg" />
+                <q-skeleton height="48px" width="100%" class="q-mb-lg" />
+                <q-skeleton height="16px" width="100%" class="q-mb-sm" />
+                <q-skeleton height="16px" width="100%" class="q-mb-sm" />
+                <q-skeleton height="16px" width="100%" class="q-mb-sm" />
+                <q-skeleton height="16px" width="100%" class="q-mb-lg" />
+                <q-skeleton height="40px" width="100%" />
+              </div>
+            </template>
+
+            <!-- Plans Cards -->
             <div
+              v-else
               v-for="plan in plans.filter(p => p.slug?.toLowerCase() !== 'free')"
               :key="plan.id"
               :class="[
@@ -88,20 +104,49 @@
                 <div class="branch-label">
                   Sucursales adicionales: ${{ plan.price_per_branch }}/mes
                 </div>
-                <q-input
-                  v-model.number="branchCount"
-                  type="number"
-                  min="1"
-                  outlined
-                  dense
-                  label="Número de sucursales"
-                  class="branch-input"
-                  @update:model-value="() => calculateProTeamPrice(plan)"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="store" size="18px" />
-                  </template>
-                </q-input>
+                <div class="branch-current-info">
+                  <q-icon name="info" size="14px" color="primary" />
+                  <span>Actualmente tienes {{ currentBranchCount }} sucursal{{ currentBranchCount > 1 ? 'es' : '' }}</span>
+                </div>
+                <div class="branch-input-wrapper">
+                  <q-btn
+                    v-if="branchCount > currentBranchCount"
+                    flat
+                    dense
+                    round
+                    icon="remove"
+                    color="negative"
+                    @click="decrementBranch(plan)"
+                    class="branch-btn"
+                  >
+                    <q-tooltip>Disminuir sucursales</q-tooltip>
+                  </q-btn>
+                  <q-input
+                    v-model.number="branchCount"
+                    type="number"
+                    :min="currentBranchCount"
+                    outlined
+                    dense
+                    readonly
+                    :label="`Número de sucursales (mín: ${currentBranchCount})`"
+                    class="branch-input"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="store" size="18px" />
+                    </template>
+                  </q-input>
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="add"
+                    color="positive"
+                    @click="incrementBranch(plan)"
+                    class="branch-btn"
+                  >
+                    <q-tooltip>Agregar sucursales</q-tooltip>
+                  </q-btn>
+                </div>
                 <div class="branch-total">
                   Total: {{ getPlanCurrencySymbol(plan) }}{{ proTeamTotalPrice }}/mes
                 </div>
@@ -180,7 +225,9 @@ export default {
     const plans = ref([])
     const currentSubscription = ref(null)
     const loading = ref(false)
+    const loadingPlans = ref(true)
     const branchCount = ref(1)
+    const currentBranchCount = ref(1)
     const proTeamTotalPrice = ref(0)
     const pricingByPlan = ref({})
     const showCancelDialog = ref(false)
@@ -262,44 +309,73 @@ export default {
       return pricing ? pricing.local_currency_code : null
     }
 
-    const fetchPlanPricing = async (plan, branches) => {
-      if (plan.price === 0) return
+    const fetchAllPricing = async (branches) => {
       try {
-        const { data } = await api.post(`subscription-plans/${plan.id}/calculate-price`, {
+        const { data } = await api.post('subscription-plans/calculate-all-prices', {
           branch_count: branches
         })
-        pricingByPlan.value = {
-          ...pricingByPlan.value,
-          [plan.id]: data
-        }
-
-        if (plan.slug?.toLowerCase() === 'pro_team') {
-          proTeamTotalPrice.value = data.total_price_local
-            ? formatNumber(data.total_price_local)
-            : formatNumber(data.total_price_usd)
-        }
+        return data
       } catch (error) {
-        console.error('Error fetching plan pricing', error)
+        console.error('Error fetching pricing', error)
+        return null
+      }
+    }
+
+    const incrementBranch = async (plan) => {
+      branchCount.value++
+      await calculateProTeamPrice(plan)
+    }
+
+    const decrementBranch = async (plan) => {
+      if (branchCount.value > currentBranchCount.value) {
+        branchCount.value--
+        await calculateProTeamPrice(plan)
       }
     }
 
     const calculateProTeamPrice = async (plan) => {
       if (plan.slug?.toLowerCase() !== 'pro_team') return
-      await fetchPlanPricing(plan, branchCount.value)
+
+      // Recalcular todos los precios con el nuevo branch count
+      const pricingData = await fetchAllPricing(branchCount.value)
+
+      if (pricingData && pricingData.pricing) {
+        pricingByPlan.value = pricingData.pricing
+
+        if (pricingByPlan.value[plan.id]) {
+          const pricing = pricingByPlan.value[plan.id]
+          proTeamTotalPrice.value = pricing.total_price_local
+            ? formatNumber(pricing.total_price_local)
+            : formatNumber(pricing.total_price_usd)
+        }
+      }
     }
 
     const loadPlans = async () => {
+      loadingPlans.value = true
       try {
         const { data } = await api.get('subscription-plans')
         plans.value = data
 
-        // Cargar precios (y conversión) para todos los planes
-        for (const plan of plans.value) {
-          const branches = plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1
-          await fetchPlanPricing(plan, branches)
+        // Cargar todos los precios en una sola petición
+        const pricingData = await fetchAllPricing(branchCount.value)
+
+        if (pricingData && pricingData.pricing) {
+          pricingByPlan.value = pricingData.pricing
+
+          // Actualizar precio total de Pro Team
+          const proTeamPlan = plans.value.find(p => p.slug?.toLowerCase() === 'pro_team')
+          if (proTeamPlan && pricingByPlan.value[proTeamPlan.id]) {
+            const pricing = pricingByPlan.value[proTeamPlan.id]
+            proTeamTotalPrice.value = pricing.total_price_local
+              ? formatNumber(pricing.total_price_local)
+              : formatNumber(pricing.total_price_usd)
+          }
         }
       } catch (error) {
         notify(error.message || 'Error al cargar planes', 'negative', 'warning')
+      } finally {
+        loadingPlans.value = false
       }
     }
 
@@ -309,10 +385,22 @@ export default {
         currentSubscription.value = data.subscription
 
         if (data.subscription && data.subscription.branch_offices_count) {
-          branchCount.value = data.subscription.branch_offices_count
-          const proTeamPlan = plans.value.find(p => p.slug === 'pro_team')
-          if (proTeamPlan) {
-            await fetchPlanPricing(proTeamPlan, branchCount.value)
+          const currentBranches = data.subscription.branch_offices_count
+          branchCount.value = currentBranches
+          currentBranchCount.value = currentBranches
+
+          // Recalcular precios con el branch count actual
+          const pricingData = await fetchAllPricing(branchCount.value)
+          if (pricingData && pricingData.pricing) {
+            pricingByPlan.value = pricingData.pricing
+
+            const proTeamPlan = plans.value.find(p => p.slug === 'pro_team')
+            if (proTeamPlan && pricingByPlan.value[proTeamPlan.id]) {
+              const pricing = pricingByPlan.value[proTeamPlan.id]
+              proTeamTotalPrice.value = pricing.total_price_local
+                ? formatNumber(pricing.total_price_local)
+                : formatNumber(pricing.total_price_usd)
+            }
           }
         }
       } catch (error) {
@@ -421,7 +509,9 @@ export default {
       plans,
       currentSubscription,
       loading,
+      loadingPlans,
       branchCount,
+      currentBranchCount,
       proTeamTotalPrice,
       showCancelDialog,
       cancellationReason,
@@ -430,6 +520,8 @@ export default {
       canUpgrade,
       getActionLabel,
       formatDate,
+      incrementBranch,
+      decrementBranch,
       calculateProTeamPrice,
       getPlanLocalPrice,
       getPlanCurrencySymbol,
@@ -775,8 +867,44 @@ body:not(.q-dark) .branch-divider {
   margin-bottom: 10px;
 }
 
-.branch-input {
+.branch-current-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 8px 12px;
+  background: rgba(var(--q-primary-rgb), 0.1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+}
+
+body:not(.q-dark) .branch-current-info {
+  background: rgba(var(--q-primary-rgb), 0.08);
+}
+
+.branch-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
+}
+
+.branch-input {
+  flex: 1;
+}
+
+.branch-btn {
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 .branch-total {
@@ -852,6 +980,24 @@ body:not(.q-dark) .branch-divider {
 
   .price-amount {
     font-size: 28px;
+  }
+}
+
+/* Skeleton Styles */
+.plan-skeleton {
+  pointer-events: none;
+
+  &:hover {
+    transform: none;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+  }
+}
+
+body:not(.q-dark) .plan-skeleton {
+  &:hover {
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
   }
 }
 </style>

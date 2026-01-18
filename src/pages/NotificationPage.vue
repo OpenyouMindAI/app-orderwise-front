@@ -59,22 +59,22 @@
             <q-card-section class="notification-header">
               <div class="notification-icon">
                 <q-avatar
-                  :color="getErrorColor(notification)"
+                  :color="getNotificationColor(notification)"
                   text-color="white"
-                  :icon="getErrorIcon(notification)"
+                  :icon="getNotificationIcon(notification)"
                   size="48px"
                 />
               </div>
 
               <div class="notification-content">
                 <div class="notification-title">
-                  {{ notification.data?.error_type || 'GENERAL_ERROR' }}
+                  {{ getNotificationTitle(notification) }}
                 </div>
-                <div class="notification-exception">
+                <div class="notification-exception" v-if="notification.data?.type === 'api_error'">
                   {{ notification.data?.exception }}
                 </div>
                 <div class="notification-message">
-                  {{ notification.data?.message }}
+                  {{ getNotificationMessage(notification) }}
                 </div>
 
                 <div class="notification-meta">
@@ -440,7 +440,7 @@ export default defineComponent({
     const loading = ref(false)
     const route = useRoute()
     const router = useRouter()
-    
+
     const pagination = ref({
       current_page: 1,
       last_page: 1,
@@ -463,12 +463,16 @@ export default defineComponent({
     })
 
     const typeToggleOptions = [
-      { label: 'Base de Datos', value: 'DATABASE_ERROR', icon: 'storage' },
-      { label: 'Aplicación', value: 'APPLICATION_ERROR', icon: 'code' },
+      { label: 'Errores BD', value: 'DATABASE_ERROR', icon: 'storage' },
+      { label: 'Errores App', value: 'APPLICATION_ERROR', icon: 'code' },
+      { label: 'Sistema', value: 'system_event', icon: 'notifications_active' },
       { label: 'General', value: 'GENERAL_ERROR', icon: 'error' }
     ]
 
-    const getErrorColor = (notification) => {
+    const getNotificationColor = (notification) => {
+      if (notification?.data?.type === 'system_event') {
+        return notification?.data?.color || 'primary'
+      }
       const errorType = notification?.data?.error_type
       switch (errorType) {
         case 'DATABASE_ERROR': return 'red-7'
@@ -478,7 +482,10 @@ export default defineComponent({
       }
     }
 
-    const getErrorIcon = (notification) => {
+    const getNotificationIcon = (notification) => {
+      if (notification?.data?.type === 'system_event') {
+        return notification?.data?.icon || 'notifications'
+      }
       const errorType = notification?.data?.error_type
       switch (errorType) {
         case 'DATABASE_ERROR': return 'storage'
@@ -486,6 +493,28 @@ export default defineComponent({
         case 'GENERAL_ERROR': return 'error'
         default: return 'warning'
       }
+    }
+
+    const getNotificationTitle = (notification) => {
+      if (notification?.data?.type === 'system_event') {
+        return notification?.data?.title || 'Evento del Sistema'
+      }
+      return notification?.data?.error_type || 'GENERAL_ERROR'
+    }
+
+    const getNotificationMessage = (notification) => {
+      if (notification?.data?.type === 'system_event') {
+        return notification?.data?.message || ''
+      }
+      return notification?.data?.message || ''
+    }
+
+    const getErrorColor = (notification) => {
+      return getNotificationColor(notification)
+    }
+
+    const getErrorIcon = (notification) => {
+      return getNotificationIcon(notification)
     }
 
     const getMethodIcon = (method) => {
@@ -533,7 +562,7 @@ export default defineComponent({
       loading.value = true
       try {
         const params = {
-          page: page,
+          page,
           per_page: pagination.value.per_page,
           search: search.value || null,
           type: typeFilter.value || null
@@ -648,7 +677,7 @@ export default defineComponent({
       // Intentar obtener el trace del response_body primero (nuevo formato)
       const responseBody = parseResponseBody(selected.value?.data?.api_activity_log?.response_body)
       if (responseBody?.trace && Array.isArray(responseBody.trace)) {
-        return responseBody.trace.map((t, i) => 
+        return responseBody.trace.map((t, i) =>
           `#${i} ${t.file}:${t.line}\n    ${t.class ? t.class + '::' : ''}${t.function}`
         ).join('\n\n')
       }
@@ -681,6 +710,10 @@ export default defineComponent({
       loading,
       pagination,
       typeToggleOptions,
+      getNotificationColor,
+      getNotificationIcon,
+      getNotificationTitle,
+      getNotificationMessage,
       getErrorColor,
       getErrorIcon,
       getMethodIcon,

@@ -993,24 +993,9 @@ onMounted(async () => {
  */
 const initializeAddress = () => {
   if (company.value?.address) {
-    formattedAddress.value = company.value.address
-
-    // Crear objeto de dirección para AddressComponent
-    address.value = {
-      name: '',
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      latitude: company.value.latitude || null,
-      longitude: company.value.longitude || null,
-      formattedAddress: company.value.address,
-      placeId: company.value.place_id || '',
-      types: []
-    }
+    formattedAddress.value = company.value?.address?.formattedAddress
+    address.value = company.value.address
   } else {
-    // Si no hay dirección, limpiar campos
     formattedAddress.value = ''
     address.value = null
   }
@@ -1021,11 +1006,9 @@ const initializeAddress = () => {
 
 // Computed
 const isFreePlan = computed(() => {
-  // Use subscription data from Pinia store
   const subscriptionPlan = store.subscriptionPlan
   const currentSubscription = store.currentSubscription
 
-  // Check if no subscription or if it's the free plan
   return !currentSubscription || !subscriptionPlan || subscriptionPlan.toLowerCase() === 'free'
 })
 
@@ -1205,9 +1188,23 @@ const formDate = (data) => {
   formData.append('file', file.value.file)
   formData.append('name', data.name)
 
-  // Usar la dirección formateada si está disponible
-  const addressToSend = formattedAddress.value || data.address || ''
-  formData.append('address', addressToSend)
+  // Enviar el objeto completo de la dirección como JSON
+  if (address.value && typeof address.value === 'object') {
+    formData.append('address', JSON.stringify(address.value))
+  } else if (formattedAddress.value) {
+    // Fallback: si solo hay string, crear objeto básico
+    formData.append('address', JSON.stringify({
+      formattedAddress: formattedAddress.value
+    }))
+  } else if (data.address) {
+    // Fallback final: usar lo que venga en data
+    formData.append('address', typeof data.address === 'string'
+      ? JSON.stringify({ formattedAddress: data.address })
+      : JSON.stringify(data.address)
+    )
+  } else {
+    formData.append('address', JSON.stringify({}))
+  }
 
   formData.append('document_number', data.document_number)
   formData.append('email', data.email)
@@ -1216,19 +1213,6 @@ const formDate = (data) => {
   // Agregar business_type_id si está disponible
   if (data.business_type && data.business_type.id) {
     formData.append('business_type_id', data.business_type.id)
-  }
-
-  // Agregar coordenadas GPS si están disponibles
-  if (address.value && typeof address.value === 'object') {
-    if (address.value.latitude !== undefined && address.value.latitude !== null) {
-      formData.append('latitude', address.value.latitude)
-    }
-    if (address.value.longitude !== undefined && address.value.longitude !== null) {
-      formData.append('longitude', address.value.longitude)
-    }
-    if (address.value.placeId) {
-      formData.append('place_id', address.value.placeId)
-    }
   }
 
   formData.append('_method', 'put')
@@ -1587,6 +1571,13 @@ const checkContinueConfiguration = async () => {
  */
 const checkIfComplete = async () => {
   try {
+    const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+    if (isConfigured) {
+      return {
+        isComplete: true,
+        percentage: 100
+      }
+    }
     const { data } = await api.get('/onboarding/tasks/status')
     const tasks = data.tasks || []
     const total = tasks.length
@@ -1611,7 +1602,7 @@ const showCelebration = async () => {
     const { data } = await api.post('/companies/mark-configured')
     store.setCompanySession({
       ...company.value,
-      company_config: data
+      company_config: data.data
     })
     const CelebrationDialog = await import('src/components/CelebrationDialog.vue')
     $q.dialog({
@@ -1702,7 +1693,6 @@ const handleAddressSelected = (selectedAddress) => {
   if (!selectedAddress) {
     address.value = null
     formattedAddress.value = ''
-    company.value.address = ''
     return
   }
 
@@ -1739,16 +1729,7 @@ const handleAddressSelected = (selectedAddress) => {
     formattedAddress.value = String(selectedAddress)
   }
 
-  // Actualizar el campo de dirección de la empresa
-  company.value.address = formattedAddress.value
-
-  console.log('📍 Dirección seleccionada:', {
-    formatted: formattedAddress.value,
-    coordinates: {
-      lat: address.value?.latitude,
-      lng: address.value?.longitude
-    }
-  })
+  // Dirección procesada correctamente - no necesita reinicialización del componente
 }
 </script>
 
@@ -2096,6 +2077,7 @@ const handleAddressSelected = (selectedAddress) => {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  padding-top: 10px;
   border-top: 1px solid #f1f5f9;
 }
 

@@ -60,7 +60,7 @@
               <q-icon v-if="channel === 'email'" name="check_circle" class="check-icon" color="primary" size="24px" />
             </div>
 
-            <div
+            <!-- <div
               class="method-card"
               :class="{ 'selected': channel === 'whatsapp' }"
               @click="channel = 'whatsapp'"
@@ -73,7 +73,7 @@
               <div class="method-title">WhatsApp</div>
               <div class="method-description">Recibe el código por WhatsApp</div>
               <q-icon v-if="channel === 'whatsapp'" name="check_circle" class="check-icon" color="positive" size="24px" />
-            </div>
+            </div> -->
           </div>
         </div>
 
@@ -487,7 +487,7 @@ export default {
       try {
         const response = await api.post('otp/verify', {
           identifier: identifier.value,
-          code: code,
+          code,
           purpose: 'reset_password',
           session_token: sessionToken.value
         })
@@ -515,7 +515,7 @@ export default {
       try {
         const response = await api.post('password-reset/reset', {
           identifier: identifier.value,
-          code: code,
+          code,
           new_password: newPassword.value,
           new_password_confirmation: confirmPassword.value,
           session_token: sessionToken.value
@@ -830,7 +830,7 @@ body.body--dark .input-label {
     background: #f9fafb;
     min-height: 40px;
   }
-  
+
   :deep(.q-field__native) {
     font-size: 13px;
   }
@@ -1062,7 +1062,7 @@ body.body--dark .otp-input:focus {
     :deep(.q-field__control) {
       min-height: 38px;
     }
-    
+
     :deep(.q-field__native) {
       font-size: 13px;
     }

@@ -69,7 +69,7 @@
         <q-space />
 
         <!-- Branch Office Indicator -->
-        <div v-if="branchOffice && branchOffices.lenght > 1" class="branch-indicator">
+        <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
           <q-chip
             dense
             square
@@ -136,7 +136,6 @@
             <q-tooltip>Ver tutorial de esta página</q-tooltip>
           </q-btn>
 
-          <!-- Botón de Renovar Suscripción (cuando el banner está cerrado) -->
           <q-btn
             v-if="showRenewButton"
             flat
@@ -157,7 +156,6 @@
             </q-tooltip>
           </q-btn>
 
-          <!-- Botón de segunda pantalla (solo si hay 2 pantallas) -->
           <q-btn
             flat
             dense
@@ -169,7 +167,6 @@
             <q-tooltip>Segunda pantalla</q-tooltip>
           </q-btn>
 
-          <!-- Botón de escaneo QR -->
           <q-btn
             flat
             dense
@@ -181,7 +178,6 @@
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
 
-          <!-- Botón Chat con IA -->
           <q-btn
             flat
             dense
@@ -196,7 +192,7 @@
           </q-btn>
 
           <!-- Herramientas -->
-          <q-btn flat dense icon="apps" round>
+          <q-btn flat dense icon="apps" round @click="loadIntegrations">
             <q-tooltip class="text-body2">
               Herramientas
             </q-tooltip>
@@ -277,19 +273,71 @@
                     <span class="tool-label">Impresora</span>
                   </a>
                   <a
-                    href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/orderwise.apk"
+                    href="https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/apk/qbits.apk"
                     target="_blank"
                     class="tool-item tool-link"
                   >
                     <q-icon name="android" size="24px" />
                     <span class="tool-label">App</span>
                   </a>
+                  <div
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'AdminSupport' }"
+                    @click="changeRoute('AdminSupport', 'Suporte Admin')"
+                    v-if="userSession.is_root"
+                  >
+                    <q-icon name="support_agent" size="24px" />
+                    <span class="tool-label">Suporte Admin</span>
+                  </div>
+                  <div
+                    v-else
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'Support' }"
+                    @click="changeRoute('Support', 'Suporte')"
+                  >
+                    <q-icon name="support_agent" size="24px" />
+                    <span class="tool-label">Suporte</span>
+                  </div>
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
-                    <div class="integration-item" @click="openDialogArca">
-                      <img src="images/circle-arca.png" alt="ARCA" class="integration-logo" />
-                    </div>
+                    <!-- Skeleton loaders while loading -->
+                    <template v-if="loadingIntegrations">
+                      <div v-for="i in 4" :key="'skeleton-' + i" class="integration-item">
+                        <q-skeleton type="circle" size="60px" />
+                      </div>
+                    </template>
+
+                    <template v-else>
+                      <div
+                        v-for="integration in availableIntegrations"
+                        :key="integration.id"
+                        class="integration-item"
+                        @click="openIntegrationDialog(integration)"
+                        style="position: relative;"
+                      >
+                        <img
+                          v-if="integration.icon_url"
+                          :src="integration.icon_url"
+                          :alt="integration.name"
+                          class="integration-logo"
+                        >
+                        <div v-else class="integration-logo-placeholder">
+                          <q-icon name="extension" size="32px" color="primary" />
+                        </div>
+                        <premium-badge
+                          :show="subscriptionPlan === 'Free'"
+                          :size="15"
+                          top="0px"
+                          right="4px"
+                          padding="4px"
+                          tooltip-text="PREMIUM"
+                        />
+                        <q-tooltip>
+                          {{ integration.name }}
+                        </q-tooltip>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </q-card>
@@ -418,7 +466,7 @@
                       clickable
                       dense
                       class="profile-action-item-compact"
-                      @click="openSubscriptionDialog"
+                      @click="showSubscriptionDialog = true"
                       v-close-popup
                     >
                       <q-item-section avatar class="min-width-auto">
@@ -496,7 +544,6 @@
               outlined
               placeholder="Buscar"
               class="menu-search-input"
-              bg-color="white"
               autofocus
             >
               <template v-slot:append>
@@ -557,59 +604,11 @@
         </div>
       </div>
     </q-drawer>
-    <q-dialog v-model="arcaDialog">
-      <q-card style="width: 500px; max-width: 80vw;">
-        <q-card-section class="modern-dialog-header flex justify-center items-center">
-          <q-img src="images/arca.svg" style="width: 400px; max-width: 60vw;" alt="Arca" />
-        </q-card-section>
-        <q-card-section class="text-center q-gutter-y-md" v-if="!download">
-          <div class="text-h6">Iniciar sesión con Arca</div>
-          <q-input autofocus filled v-model="cuit" label="Usuario (Cuit)"  />
-          <q-input filled v-model="password" label="Contraseña" type="password" />
-        </q-card-section>
-
-        <q-card-section v-else>
-          <div class="column full-width q-gutter-y-lg justify-center items-center text-center">
-            <q-icon
-              name="check_circle"
-              size="100px"
-              color="positive"
-            />
-            <span class="text-h6">
-              El certificado fue creado y
-              autorizado exitosamente
-            </span>
-            <div class="text-subtitle1 text-center q-gutter-sm">
-              <q-btn
-                :href="download?.certificate_url"
-                target="_blank"
-                label="Descargar certificado"
-                outline
-                color="blue-10"
-                />
-                <q-btn
-                  :href="download?.key_url"
-                  target="_blank"
-                  label="Descargar key"
-                  outline
-                  color="cyan-10"
-                />
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right" class="text-primary" v-if="!download">
-          <q-btn flat label="Cerrar" v-close-popup />
-          <q-btn flat label="Aceptar" @click="generateCertificate" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
 
     <q-page-container>
       <router-view />
     </q-page-container>
 
-    <!-- Floating Onboarding Button -->
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
       position="bottom-right"
@@ -637,12 +636,22 @@
       </q-btn>
     </q-page-sticky>
 
+    <!-- Dynamic Integration Dialog -->
+    <integration-dynamic
+      v-model="showIntegrationDialog"
+      :key="selectedIntegrationSlug"
+      :integration-slug="selectedIntegrationSlug"
+      :download="download"
+      @connect="handleIntegrationConnect"
+      @generate="handleIntegrationGenerate"
+    />
+
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
 
-    <!-- Subscription Plans Dialog -->
     <subscription-plans-dialog
+      v-if="showSubscriptionDialog"
       v-model="showSubscriptionDialog"
       @subscription-updated="onSubscriptionUpdated"
     />
@@ -651,241 +660,28 @@
       @open-subscription-dialog="showSubscriptionDialog = true"
       @banner-dismissed="handleBannerDismissed"
     />
-    <!-- Create Company Dialog -->
-    <q-dialog
+    <!-- Register Dialog -->
+    <register-dialog
       v-model="showCreateCompanyDialog"
-      persistent
-      transition-show="scale"
-      transition-hide="scale"
-    >
-      <q-card v-if="isDemo" class="demo-register-card" style="width: 480px; max-width: 90vh; overflow: hidden;">
-        <!-- Header con gradiente atractivo -->
-        <div class="demo-register-header">
-          <q-btn
-            flat
-            round
-            dense
-            icon="close"
-            color="white"
-            @click="closeCreateCompanyDialog"
-            class="absolute-top-right q-ma-md"
-            style="z-index: 10;"
-          />
+      @success="handleRegisterSuccess"
+      @google-success="handleGoogleRegisterSuccess"
+    />
 
-          <div class="demo-register-icon-container">
-            <q-icon name="rocket_launch" size="44px" color="white" class="demo-register-icon" />
-          </div>
+    <!-- OTP Verification Dialog -->
+    <otp-verification-dialog
+      v-model="showOtpVerification"
+      :identifier="otpIdentifier"
+      :session-token="otpSessionToken"
+      :purpose="'verify_email'"
+      @verified="handleOtpVerified"
+    />
 
-          <div class="text-h6 text-weight-bold text-white q-mt-md">
-            ¡Bienvenido a la era digital!
-          </div>
-          <div class="text-body2 text-white q-mt-sm" style="opacity: 0.95;">
-            Crea tu cuenta gratis y desbloquea todas las funcionalidades
-          </div>
-        </div>
-
-        <!-- Contenido -->
-        <q-card-section class="q-pa-xl">
-          <!-- Beneficios -->
-          <div class="q-mb-lg">
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Gestión completa de tu negocio</span>
-            </div>
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Control de stock</span>
-            </div>
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Reportes y estadísticas en tiempo real</span>
-            </div>
-            <div class="demo-benefit-item">
-              <q-icon name="check_circle" color="positive" size="24px" />
-              <span>Soporte técnico dedicado</span>
-            </div>
-          </div>
-
-          <!-- Botón de Google mejorado -->
-          <google-register-button @success="handleGoogleRegisterSuccess" @error="handleGoogleRegisterError" />
-
-          <!-- Texto adicional -->
-          <div class="text-center q-mt-md text-caption text-grey-7">
-            Al registrarte, aceptas nuestros <a href="https://politicas.qbits.com.ar" target="_blank">términos y condiciones</a>
-          </div>
-        </q-card-section>
-      </q-card>
-      <q-card class="create-company-card" style="min-width: 500px; max-width: 600px;" v-else>
-        <!-- Header con gradiente -->
-        <q-card-section class="create-company-header">
-          <div class="row items-center">
-            <q-icon name="add_business" size="32px" class="q-mr-md" />
-            <div>
-              <div class="text-h6 text-weight-bold">Crear Mi Empresa</div>
-              <div class="text-caption">Deja la demo y crea tu cuenta empresarial</div>
-            </div>
-            <q-space />
-            <q-btn
-              flat
-              round
-              dense
-              icon="close"
-              @click="closeCreateCompanyDialog"
-            />
-          </div>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-section class="q-pt-md" style="max-height: 60vh; overflow-y: auto;">
-          <!-- Información de Demo -->
-          <q-banner rounded class="bg-orange-1 q-mb-md">
-            <template v-slot:avatar>
-              <q-icon name="info" color="orange" />
-            </template>
-            <div class="text-body2">
-              Actualmente estás usando una <strong>cuenta demo</strong>.
-              Al crear tu empresa, todos tus datos se guardarán en tu propia cuenta.
-            </div>
-          </q-banner>
-
-          <!-- Formulario -->
-          <q-form ref="companyForm" @submit="createCompany">
-            <div class="row q-col-gutter-md">
-              <!-- Nombre de la empresa -->
-              <div class="col-12">
-                <q-input
-                  v-model="companyData.company_name"
-                  label="Nombre de la Empresa *"
-                  outlined
-                  dense
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="business" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- RUT/Documento -->
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="companyData.company_document"
-                  label="RUT/Documento *"
-                  outlined
-                  dense
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="badge" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Teléfono -->
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="companyData.company_phone"
-                  label="Teléfono *"
-                  outlined
-                  dense
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="phone" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Email -->
-              <div class="col-12">
-                <q-input
-                  v-model="companyData.company_email"
-                  label="Email *"
-                  type="email"
-                  outlined
-                  dense
-                  :rules="[
-                    val => !!val || 'Campo requerido',
-                    val => /.+@.+\..+/.test(val) || 'Email inválido'
-                  ]"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="email" />
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- Dirección -->
-              <div class="col-12">
-                <AddressComponent
-                  :initial-address="companyAddressData"
-                  @address-selected="handleCompanyAddressSelected"
-                />
-              </div>
-
-              <!-- Tipo de Negocio -->
-              <div class="col-12">
-                <q-select
-                  v-model="companyData.business_type"
-                  :options="businessTypes"
-                  option-label="name"
-                  option-value="id"
-                  label="Tipo de Negocio *"
-                  outlined
-                  dense
-                  use-input
-                  input-debounce="300"
-                  @filter="filterBusinessTypes"
-                  :rules="[val => !!val || 'Campo requerido']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="category" />
-                  </template>
-                  <template v-slot:no-option>
-                    <q-item>
-                      <q-item-section class="text-grey">
-                        No hay resultados
-                      </q-item-section>
-                    </q-item>
-                  </template>
-                </q-select>
-              </div>
-
-              <!-- Copiar productos demo -->
-              <div class="col-12">
-                <q-checkbox
-                  v-model="companyData.copy_test_products"
-                  label="Copiar productos y categorías de la empresa demo"
-                  color="primary"
-                />
-              </div>
-            </div>
-          </q-form>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn
-            flat
-            label="Cancelar"
-            color="grey-7"
-            @click="closeCreateCompanyDialog"
-            :disable="loadingCreateCompany"
-          />
-          <q-btn
-            unelevated
-            label="Crear Empresa"
-            color="primary"
-            icon-right="arrow_forward"
-            @click="createCompany"
-            :loading="loadingCreateCompany"
-            class="create-btn"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <!-- Company Setup Modal -->
+    <company-setup-modal
+      v-model="showCompanySetup"
+      :user-email="companySetupEmail"
+      @success="handleCompanySetupSuccess"
+    />
 
   </q-layout>
 </template>
@@ -896,8 +692,11 @@ import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
-import AddressComponent from 'src/components/Billing/AddressComponent.vue'
-import GoogleRegisterButton from 'src/components/Auth/GoogleRegisterButton.vue'
+import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
+import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
+import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import PremiumBadge from 'src/components/PremiumBadge.vue'
+import IntegrationDynamic from 'src/components/Integrations/IntegrationDynamic.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -921,19 +720,25 @@ export default {
     FloatingThemeSelector,
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
-    AddressComponent,
-    GoogleRegisterButton
+    RegisterDialog,
+    OtpVerificationDialog,
+    CompanySetupModal,
+    PremiumBadge,
+    IntegrationDynamic
   },
   data () {
     return {
       logo,
-      arcaDialog: false,
       branchOffices: [],
       role: null,
       notify,
       cuit: '',
       password: '',
       download: null,
+      loadingIntegrations: false,
+      availableIntegrations: [],
+      showIntegrationDialog: false,
+      selectedIntegrationSlug: null,
       numberOfNotifications: [],
       notifications: [],
       labelDrown: null,
@@ -973,6 +778,31 @@ export default {
        * @type {Boolean}
        */
       showCreateCompanyDialog: false,
+      /**
+       * Show OTP verification dialog
+       * @type {Boolean}
+       */
+      showOtpVerification: false,
+      /**
+       * OTP identifier (email or phone)
+       * @type {String}
+       */
+      otpIdentifier: '',
+      /**
+       * OTP session token
+       * @type {String}
+       */
+      otpSessionToken: '',
+      /**
+       * Show company setup modal
+       * @type {Boolean}
+       */
+      showCompanySetup: false,
+      /**
+       * Company setup email
+       * @type {String}
+       */
+      companySetupEmail: '',
       /**
        * Loading create company
        * @type {Boolean}
@@ -1171,39 +1001,6 @@ export default {
             }).length > 0
           )
         })
-
-        // Agregar entrada de Chat con IA si no existe
-        const hasAiChat = this.dataMenu.some(section =>
-          section.modules.some(module => module.link === 'AiChat')
-        )
-
-        if (!hasAiChat) {
-          // Buscar sección de Herramientas o crear una nueva
-          let toolsSection = this.dataMenu.find(section =>
-            section.name === 'Herramientas' || section.name === 'Tools'
-          )
-
-          if (!toolsSection) {
-            toolsSection = {
-              id: 'tools-section',
-              name: 'Herramientas',
-              icon: 'build',
-              modules: []
-            }
-            this.dataMenu.push(toolsSection)
-          }
-
-          // Agregar módulo de Chat con IA
-          toolsSection.modules.push({
-            id: 'ai-chat-module',
-            name: 'ai-chat',
-            title: 'Chat con IA',
-            link: 'AiChat',
-            icon: 'smart_toy',
-            roles: ['super_admin', 'admin', 'user'],
-            visible: true
-          })
-        }
       }
     },
     $route (to, from) {
@@ -1232,6 +1029,10 @@ export default {
     // Listen for global keyboard shortcuts
     window.addEventListener('keydown', this.handleGlobalKeyDown)
 
+    eventBus.on('open-create-company', () => {
+      this.showCreateCompanyDialog = true
+    })
+
     this.startDemoReminder()
   },
   beforeUnmount () {
@@ -1239,6 +1040,7 @@ export default {
   },
   unmounted () {
     window.removeEventListener('keydown', this.handleGlobalKeyDown)
+    eventBus.off('open-create-company')
   },
   created () {
     this.loadingPage()
@@ -1336,15 +1138,55 @@ export default {
       }
     },
     /**
+     * Handle register success
+     */
+    async handleRegisterSuccess (data) {
+      try {
+        this.showCreateCompanyDialog = false
+
+        await this.store.setSessionData(data)
+
+        this.companySetupEmail = data.user_email || data.user?.email
+        this.otpIdentifier = data.user_email || data.user?.email
+        this.otpSessionToken = data.session_token || ''
+
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        this.showOtpVerification = true
+
+        notify('Código de verificación enviado a tu correo', 'positive', 'mail')
+      } catch (error) {
+        console.error('Error al procesar registro:', error)
+        notify('Error al procesar el registro', 'negative', 'warning')
+      }
+    },
+    /**
      * Handle Google register success
      */
     async handleGoogleRegisterSuccess (data) {
-      if (data.needsCompanySetup) {
+      try {
+        // Cerrar el diálogo de registro primero
+        this.showCreateCompanyDialog = false
+
+        // Esperar a que el diálogo se cierre completamente
+        await this.$nextTick()
+
+        // Iniciar sesión automáticamente con los datos del usuario
         await this.store.setSessionData(data.user)
-        this.companyData.company_email = data.userInfo.email
-        this.showCreateCompanyDialog = true
-      } else {
-        this.closeCreateCompanyDialog()
+
+        // Guardar el email para el setup de la empresa
+        this.companySetupEmail = data.userInfo?.email || data.user.email
+
+        // Pequeña pausa antes de mostrar el siguiente modal
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Mostrar el modal de configuración de empresa
+        this.showCompanySetup = true
+
+        notify('Registro exitoso con Google. Configura tu empresa', 'positive', 'check_circle')
+      } catch (error) {
+        console.error('Error al procesar registro con Google:', error)
+        notify('Error al procesar el registro', 'negative', 'warning')
       }
     },
     /**
@@ -1352,6 +1194,49 @@ export default {
      */
     handleGoogleRegisterError (error) {
       console.error('Error en registro con Google:', error)
+    },
+    /**
+     * Handle OTP verified
+     */
+    async handleOtpVerified () {
+      try {
+        this.showOtpVerification = false
+
+        this.showCompanySetup = true
+
+        notify('Correo verificado. Ahora crea tu empresa', 'positive', 'check_circle')
+      } catch (error) {
+        console.error('Error al procesar verificación OTP:', error)
+        notify('Error al procesar la verificación', 'negative', 'warning')
+      }
+    },
+    /**
+     * Handle company setup success
+     */
+    async handleCompanySetupSuccess (data) {
+      try {
+        this.showCompanySetup = false
+
+        // El backend devuelve { user, company, branch_office, ... }
+        if (data?.user) {
+          Object.assign(this.store.userSession, data.user)
+          this.store.isDemo = false
+
+          // Actualizar branch office si viene
+          if (data.branch_office) {
+            this.store.branchOffice = data.branch_office
+          }
+
+          // Esperar a que Pinia persista los cambios
+          await this.$nextTick()
+        }
+
+        notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+        this.$router.push({ name: 'Welcome' })
+      } catch (error) {
+        console.error('Error al procesar configuración de empresa:', error)
+        notify('Error al procesar la configuración', 'negative', 'warning')
+      }
     },
     /**
      * Handle company address selected
@@ -1673,8 +1558,7 @@ export default {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
-
-          if (data.invoice_id) {
+          if (data?.invoice_id) {
             const notification = createNotification(this.$t(`command.${data.name}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
@@ -1684,11 +1568,11 @@ export default {
             }
           }
 
-          if (data.error_type) {
+          if (data?.error_type) {
             const notification = createNotification(this.$t(`command.${data?.error_type?.toLowerCase()}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
-            }, true)
+            }, false)
             notification.onclick = () => {
               window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
             }
@@ -1709,7 +1593,7 @@ export default {
         const { data } = await api.get('notifications', {
           params: { unread: true }
         })
-        this.numberOfNotifications = data
+        this.numberOfNotifications = data.data
       } catch (error) {
         console.log(error.message)
       }
@@ -1721,75 +1605,14 @@ export default {
           notify('Link copiado exitosamente', 'positive', 'check_circle')
         })
     },
-
-    async openDialogArca () {
-      try {
-        // Validación 2: Verificar que no sea cuenta demo
-        if (this.isDemo) {
-          notify('Crea una empresa real para acceder a las integraciones', 'info', 'info')
-          this.showCreateCompanyDialog = true
-          return
-        }
-
-        loading(true)
-
-        const hasApiAccess = await this.verifyApiAccess()
-
-        if (!hasApiAccess) {
-          notify('Tu plan actual no incluye acceso a integraciones. Actualiza tu plan.', 'warning', 'upgrade')
-          this.showSubscriptionDialog = true
-          return
-        }
-
-        // Validación 4: Verificar datos de facturación
-        if (!this.userSession?.company_session?.billing) {
-          const documentNumber = this.userSession?.company_session?.document_number
-          const userName = this.userSession?.name
-          const userEmail = this.userSession?.email
-
-          if (!documentNumber || !userName || !userEmail) {
-            notify('Datos de empresa incompletos. Contacta al administrador.', 'negative', 'error')
-            return
-          }
-
-          const { data } = await this.$apiArca('companies', {
-            params: {
-              user: {
-                name: userName,
-                email: userEmail
-              },
-              document_number: documentNumber
-            }
-          })
-
-          // Validar respuesta
-          if (!data?.certificate_url || !data?.key_url) {
-            throw new Error('Respuesta inválida del servidor ARCA')
-          }
-
-          this.download = {
-            certificate_url: data.certificate_url,
-            key_url: data.key_url
-          }
-
-          // Abrir diálogo solo si todo fue exitoso
-          this.arcaDialog = true
-        }
-      } catch (error) {
-        this.arcaDialog = true
-      } finally {
-        loading(false)
-      }
-    },
-
     /**
      * Verificar acceso a API desde el backend (no confiar en localStorage)
      */
     async verifyApiAccess () {
       try {
+        loading(true)
         // Llamar al backend para verificar la suscripción actual
         const { data } = await this.$api.get('subscriptions/current')
-
         // Actualizar el store con datos verificados del backend
         if (data.subscription) {
           this.store.currentSubscription = data.subscription
@@ -1806,6 +1629,8 @@ export default {
         console.error('[Subscription] Verification error:', error)
         // En caso de error, denegar acceso por seguridad
         return false
+      } finally {
+        loading(false)
       }
     },
     /**
@@ -1829,7 +1654,7 @@ export default {
     /**
      * Generate certificate
      */
-    async generateCertificate () {
+    async generateCertificate (credentials) {
       try {
         loading(true,
           {
@@ -1839,8 +1664,8 @@ export default {
           }
         )
         const { data } = await apiArca.post('metadata/generate-cert', {
-          cuit: this.cuit,
-          password: this.password,
+          cuit: credentials.cuit,
+          password: credentials.password,
           company: this.userSession?.company_session,
           user: {
             email: this.userSession?.email,
@@ -1856,10 +1681,96 @@ export default {
           ...res.data
         })
         this.download = data
+        notify('Certificado generado exitosamente', 'positive', 'check_circle')
       } catch (error) {
         notify(error?.response.data?.message || error.message, 'negative', 'warning')
       } finally {
         loading(false)
+      }
+    },
+    /**
+     * Load available integrations
+     */
+    async loadIntegrations () {
+      if (this.availableIntegrations.length > 0) {
+        return
+      }
+
+      this.loadingIntegrations = true
+      try {
+        const { data } = await api.get('company-integrations/available')
+        this.availableIntegrations = data
+      } catch (error) {
+        console.error('Error loading integrations:', error)
+        notify('Error al cargar integraciones', 'negative', 'warning')
+      } finally {
+        this.loadingIntegrations = false
+      }
+    },
+    /**
+     * Open integration dialog
+     */
+    async openIntegrationDialog (integration) {
+      const hasApiAccess = await this.verifyApiAccess()
+
+      if (!hasApiAccess) {
+        notify('Tu plan actual no incluye acceso a integraciones. Actualiza tu plan.', 'warning', 'upgrade')
+        this.showSubscriptionDialog = true
+        return
+      }
+
+      this.selectedIntegrationSlug = integration.slug
+
+      setTimeout(() => {
+        this.showIntegrationDialog = true
+      }, 100)
+    },
+    /**
+     * Handle integration connection (generic)
+     */
+    async handleIntegrationConnect (credentials) {
+      try {
+        loading(true, {
+          message: 'Guardando configuración...',
+          backgroundColor: 'primary',
+          customClass: 'text-subtitle1 text-center'
+        })
+
+        // Find the integration to get its ID
+        const integration = this.availableIntegrations.find(
+          i => i.slug === this.selectedIntegrationSlug
+        )
+
+        if (!integration) {
+          throw new Error('Integración no encontrada')
+        }
+
+        // Save or update company integration
+        await api.post('company-integrations', {
+          integration_id: integration.id,
+          credentials
+        })
+
+        notify('Configuración guardada exitosamente', 'positive', 'check_circle')
+        this.showIntegrationDialog = false
+      } catch (error) {
+        notify(
+          error?.response?.data?.message || 'Error al guardar configuración',
+          'negative',
+          'warning'
+        )
+      } finally {
+        loading(false)
+      }
+    },
+    /**
+     * Handle integration generate (for special cases like ARCA)
+     */
+    async handleIntegrationGenerate (credentials) {
+      if (this.selectedIntegrationSlug === 'arca') {
+        await this.generateCertificate(credentials)
+      } else {
+        await this.handleIntegrationConnect(credentials)
       }
     },
     /**
@@ -1915,9 +1826,16 @@ export default {
     /**
      * Logout application
      */
-    logoutAt () {
-      this.$router.push({ name: 'Login' })
-      this.logout()
+    async logoutAt () {
+      try {
+        loading(true)
+        await this.logout()
+        this.$router.push({ name: 'Login' })
+      } catch (error) {
+        console.log(error)
+      } finally {
+        loading(false)
+      }
     },
     /**
      * Dark mode application
@@ -1942,8 +1860,8 @@ export default {
      */
     async loadingTasks () {
       try {
-        // No hacer peticiones si la empresa ya está configurada al 100%
-        const isConfigured = this.userSession?.company_session?.configured
+        const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
+
         if (isConfigured) {
           this.showOnboardingFab = false
           this.onboardingProgress = 100
@@ -1971,6 +1889,19 @@ export default {
           const isDismissed = localStorage.getItem('onboarding_dismissed') === 'true'
           const isCompletedPermanently = localStorage.getItem('onboarding_completed') === 'true'
           this.showOnboardingFab = !isCompletedPermanently && (hasCompletedAny || !isDismissed)
+
+          if (this.onboardingProgress === 100) {
+            try {
+              const { data } = await api.post('/companies/mark-configured')
+              console.log(data)
+              this.setCompanySession({
+                ...this.userSession.company_session,
+                company_config: data.data
+              })
+            } catch (error) {
+              console.error('Error marking company as configured:', error)
+            }
+          }
         }
       } catch (error) {
         console.log(error)
@@ -3360,6 +3291,16 @@ body.body--dark .integration-item {
   width: 52px;
   height: 52px;
   object-fit: contain;
+}
+
+.integration-logo-placeholder {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--q-primary-rgb), 0.1);
+  border-radius: 50%;
 }
 
 .integration-label {
