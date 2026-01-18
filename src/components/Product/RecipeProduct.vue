@@ -213,7 +213,7 @@
                   <div class="text-caption">Agrega ingredientes para calcular el costo</div>
                 </div>
              </template>
-             
+
              <template v-slot:loading>
                <q-inner-loading showing color="primary" />
              </template>
@@ -682,7 +682,19 @@ const calculateItemCost = (row) => {
   const toUomId = row.ingredient.unit_of_measure_id
   const factor = getConversionFactor(fromUomId, toUomId)
 
-  return ((row.quantity * factor) * row.ingredient.cost * (1 + row.waste_percentage / 100)).toFixed(2)
+  // Calculate quantity in base unit
+  const quantityInBaseUnit = row.quantity * factor
+
+  // Apply waste percentage
+  const effectiveQuantity = quantityInBaseUnit * (1 + row.waste_percentage / 100)
+
+  // Calculate proportional cost based on base_quantity
+  // Example: If ingredient costs $1400 per 100g (base_quantity=100)
+  // and we use 80g, cost = (80 / 100) * 1400 = $1120
+  const baseQuantity = row.ingredient.base_quantity || 1
+  const unitCost = row.ingredient.cost / baseQuantity
+
+  return (effectiveQuantity * unitCost).toFixed(2)
 }
 
 onMounted(async () => {

@@ -483,12 +483,28 @@
                             dense
                           />
                         </div>
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-start items-center">
-                          <q-option-group
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-select
+                            filled
+                            dense
                             v-model="unitOfMeasure"
                             :options="unitOfMeasures"
-                            color="positive"
-                            inline
+                            option-label="name"
+                            option-value="id"
+                            label="Unidad de Medida"
+                            :rules="[val => !!val || 'Requerido']"
+                          />
+                        </div>
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-input
+                            filled
+                            dense
+                            v-model.number="product.base_quantity"
+                            label="Cantidad de la unidad"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            hint="Cantidad del producto en gramos o mililitros"
                           />
                         </div>
                         <div class="col-12">
@@ -930,12 +946,28 @@
                             </template>
                           </q-select>
                       </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-start items-center">
-                        <q-option-group
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-select
+                          filled
+                          dense
                           v-model="unitOfMeasure"
                           :options="unitOfMeasures"
-                          color="positive"
-                          inline
+                          option-label="name"
+                          option-value="id"
+                          label="Unidad de Medida"
+                          :rules="[val => !!val || 'Requerido']"
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          filled
+                          dense
+                          v-model.number="product.base_quantity"
+                          label="Cantidad de la unidad"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          hint="Cantidad del producto en gramos o mililitros"
                         />
                       </div>
                       <div class="col-12">
@@ -2128,7 +2160,8 @@ export default {
         skip_stock: 0,
         profit_percentage: 0,
         images: [],
-        product_type: 'PRODUCT'
+        product_type: 'PRODUCT',
+        base_quantity: 1
       },
       productTypeOptions: [
         { label: 'Producto', value: 'PRODUCT', description: 'Producto para venta' },
@@ -2328,7 +2361,7 @@ export default {
       this.category = data.category
     },
     unitOfMeasure (data) {
-      this.product.unit_of_measure_id = data
+      this.product.unit_of_measure_id = data.id
     }
   },
   created () {
@@ -3212,8 +3245,8 @@ export default {
     async getUnitOfMeasures () {
       try {
         const { data } = await this.$api.get('unit-of-measures')
-        this.unitOfMeasures = data.map(unit => ({ label: unit.name, value: unit.id }))
-        this.unitOfMeasure = this.unitOfMeasures[0]?.value
+        this.unitOfMeasures = data
+        this.unitOfMeasure = this.unitOfMeasures[0]
       } catch (error) {
         Notify.create({
           message: error.message,
@@ -3275,7 +3308,7 @@ export default {
       this.product = this.deepCloneProduct(row)
 
       this.openEditProduct = true
-      this.unitOfMeasure = this.product.unit_of_measure_id
+      this.unitOfMeasure = this.product.unit_of_measure
       this.addonsProducts = this.product.addons || []
       this.priceLists = this.product.product_price_lists || []
 

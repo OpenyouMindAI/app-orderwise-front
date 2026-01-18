@@ -66,11 +66,11 @@
 
           <q-card-section class="col scroll q-pa-md">
             <div class="row q-col-gutter-md full-height">
-              
+
               <!-- LEFT SIDEBAR (1/3): Order Summary & General Info -->
               <div class="col-12 col-md-4">
                 <div class="column q-gutter-y-sm">
-                  
+
                   <!-- Metadata Card -->
                   <q-card flat bordered class="shadow-1 rounded-lg" :class="$q.dark.isActive ? 'bg-grey-9 border-grey-8' : 'bg-white'">
                     <q-card-section class="q-pa-sm">
@@ -121,7 +121,7 @@
                   <q-card flat bordered class="column rounded-lg shadow-1 flex-grow overflow-hidden" :class="$q.dark.isActive ? 'bg-grey-9 border-grey-8' : 'bg-white'">
                     <q-toolbar class="bg-grey-1 text-weight-bold text-overline" :class="$q.dark.isActive ? 'bg-grey-8' : ''" style="min-height: 32px">
                       <q-icon name="shopping_cart" size="xs" class="q-mr-xs" />
-                      PRODUCTOS SELECCIONADOS
+                      RECETAS SELECCIONADAS
                     </q-toolbar>
                     <q-separator />
                     <q-scroll-area style="height: 300px">
@@ -153,17 +153,17 @@
               <!-- MAIN PANEL (2/3): Catalog or Configurator -->
               <div class="col-12 col-md-8">
                 <q-slide-transition mode="out-in">
-                  
+
                   <!-- Catalog View -->
                   <div v-if="!selectedProductConfig" class="column full-height">
                     <q-card flat bordered class="column full-height rounded-lg shadow-1" :class="$q.dark.isActive ? 'bg-grey-9 border-grey-8' : 'bg-white'">
                       <q-toolbar class="q-px-md q-py-sm">
                          <q-icon name="list" size="sm" class="text-primary q-mr-sm"/>
-                         <q-toolbar-title class="text-subtitle1 text-weight-bold">Catálogo de Productos</q-toolbar-title>
+                         <q-toolbar-title class="text-subtitle1 text-weight-bold">Catálogo de Recetas</q-toolbar-title>
                          <q-input
                            v-model="filterProducts"
                            debounce="300"
-                           placeholder="Buscar producto..."
+                           placeholder="Buscar receta..."
                            outlined
                            dense
                            class="q-ml-md"
@@ -194,7 +194,7 @@
                                   <div class="text-caption text-grey-6">{{ props.row.category?.name || 'Varios' }}</div>
                                </q-td>
                                <q-td key="stock" :props="props" class="text-right">
-                                  <q-badge :color="props.row.stock < props.row.minimum_stock ? 'red-2' : 'green-2'" 
+                                  <q-badge :color="props.row.stock < props.row.minimum_stock ? 'red-2' : 'green-2'"
                                            :text-color="props.row.stock < props.row.minimum_stock ? 'red-9' : 'green-9'"
                                            class="text-weight-bold">
                                     {{ formatNumber(props.row.stock) }} {{ props.row.unit_of_measure?.name }}
@@ -251,8 +251,8 @@
                               />
 
                               <!-- Investment Summary Inline -->
-                              <div class="bg-blue-1 q-pa-md rounded-lg border-blue-2" :class="$q.dark.isActive ? 'bg-blue-10 text-white' : 'text-blue-9'">
-                                <div class="text-overline text-weight-bolder line-height-1">INVERSIÓN ITEM</div>
+                              <div class="bg-blue-1 q-px-md q-py-sm rounded-lg border-blue-2" :class="$q.dark.isActive ? 'bg-blue-10 text-white' : 'text-blue-9'">
+                                <div class="text-overline text-weight-bolder line-height-1">COSTO POR RECETA</div>
                                 <div class="text-h6 text-weight-bolder font-numeric">${{ formatNumber(currentConfigCost) }}</div>
                               </div>
 
@@ -353,7 +353,7 @@
             <div class="col-12 col-md-8">
               <q-card flat bordered>
                 <q-card-section>
-                  <div class="text-h6">Productos a Fabricar</div>
+                  <div class="text-h6">Recetas a Fabricar</div>
                   <q-separator class="q-my-sm"/>
                   <q-list bordered separator>
                     <q-item v-for="item in selectedOrder.items" :key="item.id">

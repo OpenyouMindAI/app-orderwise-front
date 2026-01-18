@@ -731,12 +731,29 @@
                           dense
                         />
                       </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-start items-center">
-                        <q-option-group
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-select
+                          filled
+                          dense
                           v-model="unitOfMeasure"
                           :options="unitOfMeasures"
-                          color="positive"
-                          inline
+                          option-label="name"
+                          option-value="id"
+                          label="Unidad de Medida"
+                          :rules="[val => !!val || 'Requerido']"
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          filled
+                          dense
+                          v-model.number="product.base_quantity"
+                          label="Cantidad Base"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          hint="Cantidad para el costo (ej: 100 para $X por 100g)"
+                          :rules="[val => val > 0 || 'Debe ser mayor a 0']"
                         />
                       </div>
                       <div class="col-12">
@@ -1515,7 +1532,8 @@ export default {
         show_catalog: 0,
         skip_stock: 0,
         profit_percentage: 0,
-        images: []
+        images: [],
+        base_quantity: 1
       },
       /**
        * product price list
