@@ -402,7 +402,7 @@
                   <div class="row items-center justify-between q-mb-md">
                     <div>
                       <div class="text-subtitle1 text-weight-bold">
-                        🏦 {{ cashbox.cashbox.name }}
+                        🏦 {{ cashbox.cashbox?.name || 'Caja sin nombre' }}
                       </div>
                       <div v-if="cashbox.user" class="text-caption text-grey-7">
                         Cajero: {{ cashbox.user.name }}
@@ -414,7 +414,7 @@
                       icon="add"
                       label="Agregar Arqueo"
                       size="sm"
-                      @click="openCashflowModal(cashbox)"
+                      @click="openCashflowModal(cashbox, day)"
                     />
                   </div>
 
@@ -514,65 +514,12 @@
       @update:modelValue="onCashflowSaved"
     />
 
-    <!-- Image Preview Dialog -->
-    <q-dialog
+    <!-- Image Carousel Dialog -->
+    <NewImageCarouselDialog
       v-model="showImagePreview"
-      :maximized="$q.screen.lt.md"
-      :full-width="$q.screen.gt.sm"
-      :full-height="$q.screen.gt.sm"
-    >
-      <q-card class="image-preview-card">
-        <q-card-section class="row items-center q-pa-sm bg-dark text-white">
-          <div class="text-subtitle1 text-weight-medium">Previsualización de Imagen - Retiro</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup color="white" size="sm" />
-        </q-card-section>
-
-        <q-card-section class="image-container">
-          <div v-if="imageLoading" class="image-placeholder">
-            <q-spinner-dots size="50px" color="primary" />
-            <div class="text-primary q-mt-md">Cargando imagen...</div>
-          </div>
-
-          <div v-else-if="imageError" class="image-placeholder">
-            <q-icon name="broken_image" size="80px" color="grey-5" />
-            <div class="text-grey-8 q-mt-md text-weight-medium">Error al cargar la imagen</div>
-            <div class="text-grey-6 q-mt-sm text-caption">{{ imageError }}</div>
-          </div>
-
-          <img
-            v-else-if="previewImageUrl"
-            :src="previewImageUrl"
-            class="preview-image"
-            @error="handleImageError"
-            @load="imageLoading = false"
-          />
-
-          <div v-else class="image-placeholder">
-            <q-icon name="image_not_supported" size="80px" color="grey-5" />
-            <div class="text-grey-8 q-mt-md text-weight-medium">No hay imagen disponible</div>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="center" class="q-pa-md bg-grey-1">
-          <q-btn
-            v-if="previewImageUrl && !imageError"
-            color="primary"
-            icon="download"
-            label="Descargar"
-            @click="downloadImage"
-            unelevated
-          />
-          <q-btn
-            color="grey-7"
-            icon="close"
-            label="Cerrar"
-            v-close-popup
-            flat
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+      :images="selectedImages"
+      :title="'Imágenes - Retiro ' + (currentWithdrawal?.time || '')"
+    />
 
     <!-- Help Dialog - Elegant & Compact -->
     <q-dialog v-model="showHelp" :maximized="$q.screen.lt.md">
@@ -728,6 +675,7 @@ import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import CashflowModal from 'src/components/CashflowModal.vue'
+import NewImageCarouselDialog from 'src/components/NewImageCarouselDialog.vue'
 
 /**
  * Component for displaying and managing daily withdrawal reports
@@ -738,7 +686,8 @@ import CashflowModal from 'src/components/CashflowModal.vue'
 export default {
   name: 'WithdrawalsReport',
   components: {
-    CashflowModal
+    CashflowModal,
+    NewImageCarouselDialog
   },
 
   watch: {
@@ -903,22 +852,10 @@ export default {
     const showImagePreview = ref(false)
 
     /*
-     * URL of the image being previewed
-     * @type {import('vue').Ref<string|null>}
+     * List of images selected for preview
+     * @type {import('vue').Ref<Array>}
      */
-    const previewImageUrl = ref(null)
-
-    /*
-     * Loading state for the image preview
-     * @type {import('vue').Ref<boolean>}
-     */
-    const imageLoading = ref(false)
-
-    /*
-     * Error message for image loading failures
-     * @type {import('vue').Ref<string|null>}
-     */
-    const imageError = ref(null)
+    const selectedImages = ref([])
 
     /*
      * Currently selected withdrawal for preview
@@ -1096,7 +1033,24 @@ export default {
 
         const response = await api.get('/reports/withdrawals-per-day', { params })
         if (isMounted.value) {
-          daysData.value = response.data.days || []
+          const processedDays = response.data.days || []
+
+          // Calculate counted_amount for each day from withdrawals
+          processedDays.forEach(day => {
+            let totalCounted = 0
+            if (day.cashboxes && Array.isArray(day.cashboxes)) {
+              day.cashboxes.forEach(cb => {
+                if (cb.withdrawals && Array.isArray(cb.withdrawals)) {
+                  cb.withdrawals.forEach(w => {
+                    totalCounted += Number(w.actual_amount || 0)
+                  })
+                }
+              })
+            }
+            day.counted_amount = totalCounted
+          })
+
+          daysData.value = processedDays
           totalsAmount.value = response.data.meta
         }
       } catch (error) {
@@ -1352,6 +1306,8 @@ export default {
           return
         }
 
+        console.log(withdrawal)
+
         // Set loading state for this specific withdrawal
         savingWithdrawalId.value = withdrawal.id
 
@@ -1363,7 +1319,6 @@ export default {
           type_cashflow: 'withdrawal',
           cashbox_user_id: withdrawal.cashbox_user_id,
           payment_method_id: withdrawal.payment_method_id,
-          created_at: withdrawal.created_at,
           actual_amount: newAmount
         }
 
@@ -1488,20 +1443,19 @@ export default {
      * @param {Object} row - The row data containing date and cashbox information
      * @returns {void}
      */
-    const openCashflowModal = (row) => {
-      selectedDate.value = row.day
+    const openCashflowModal = (cashbox, day) => {
+      selectedDate.value = day.day
       showCashflowModal.value = true
       cashflow.value = {
         cashboxUser: {
-          id: row.cashbox_user_id
+          id: cashbox.cashbox_user_id
         },
-        paymentMethodId: row.by_payment_method[0]?.payment_method_id || paymentMethods.value[0]?.id,
-        createdAt: row.closed_at,
+        paymentMethodId: paymentMethods.value[0]?.id,
+        createdAt: `${day.day} 00:00:00`,
         branchOffice: branchOffice.value,
         description: 'Arqueo'
       }
-      // Ensure the row is expanded when adding a new record
-      expandedRows.value.add(row.day)
+      expandedRows.value.add(day.day)
     }
 
     /**
@@ -1530,73 +1484,18 @@ export default {
      * @returns {void}
      */
     const openFileWithdrawal = (withdrawal) => {
-      try {
-        currentWithdrawal.value = withdrawal
-        imageLoading.value = true
-        imageError.value = null
-        previewImageUrl.value = null
-        showImagePreview.value = true
+      currentWithdrawal.value = withdrawal
+      selectedImages.value = withdrawal.images || []
 
-        // Check if withdrawal has images
-        if (withdrawal.images && withdrawal.images.length > 0) {
-          // Use the first image URL directly from the API response
-          const firstImage = withdrawal.images[0]
-          if (firstImage.url) {
-            previewImageUrl.value = firstImage.url
-            imageLoading.value = false
-          } else {
-            throw new Error('URL de imagen no disponible')
-          }
-        } else {
-          throw new Error('No hay imágenes disponibles para este retiro')
-        }
-      } catch (error) {
-        console.error('Error loading withdrawal image:', error)
-        imageError.value = error.message || 'Error al cargar la imagen'
-        previewImageUrl.value = null
-        imageLoading.value = false
-      }
-    }
-
-    /**
-     * Handles image loading errors
-     * @returns {void}
-     */
-    const handleImageError = () => {
-      imageError.value = 'Error al cargar la imagen'
-      imageLoading.value = false
-    }
-
-    /**
-     * Initiates download of the currently viewed image
-     * @returns {void}
-     */
-    const downloadImage = () => {
-      if (previewImageUrl.value && currentWithdrawal.value) {
-        const link = document.createElement('a')
-        link.href = previewImageUrl.value
-
-        // Create a descriptive filename
-        const date = currentWithdrawal.value.created_at
-          ? currentWithdrawal.value.created_at.split('T')[0]
-          : new Date().toISOString().split('T')[0]
-        const description = currentWithdrawal.value.description?.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '') || 'retiro'
-        const extension = previewImageUrl.value.includes('.jpg') ? '.jpg'
-          : previewImageUrl.value.includes('.png') ? '.png'
-            : previewImageUrl.value.includes('.jpeg') ? '.jpeg' : '.jpg'
-
-        link.download = `${description}-${currentWithdrawal.value.id}-${date}${extension}`
-        link.target = '_blank'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-
+      if (selectedImages.value.length === 0) {
         $q.notify({
-          type: 'positive',
-          message: 'Descarga iniciada',
-          caption: 'La imagen se está descargando...'
+          type: 'warning',
+          message: 'No hay imágenes disponibles para este retiro'
         })
+        return
       }
+
+      showImagePreview.value = true
     }
 
     /**
@@ -1844,13 +1743,9 @@ export default {
 
       // Image preview
       showImagePreview,
-      previewImageUrl,
-      imageLoading,
-      imageError,
+      selectedImages,
       currentWithdrawal,
-      openFileWithdrawal,
-      handleImageError,
-      downloadImage
+      openFileWithdrawal
     }
   }
 }

@@ -232,6 +232,18 @@ const routes = [
         component: () => import('pages/CashboxPage.vue')
       },
       {
+        path: 'finances/cashboxes',
+        name: 'FinanceCashbox',
+        meta: { requiresAuth: true },
+        component: () => import('pages/FinanceCashboxPage.vue')
+      },
+      {
+        path: 'finances/payments-by-method',
+        name: 'FinancePaymentsByMethod',
+        meta: { requiresAuth: true },
+        component: () => import('pages/FinancePaymentsByMethodPage.vue')
+      },
+      {
         path: 'transfer-products',
         name: 'TransferProduct',
         meta: { requiresAuth: true },
