@@ -80,11 +80,6 @@
                     @update:model-value="calculateCostByUnitOfMeasure"
                   />
                 </div>
-
-                <div class="col-12">
-                   <q-separator />
-                </div>
-
                 <!-- Times -->
                  <div class="col-12">
                    <div class="text-caption text-weight-medium text-grey-7">Tiempos de Elaboración</div>
@@ -357,7 +352,7 @@ const columns = [
   { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true, format: val => formatNumber(val) },
   { name: 'unit', align: 'left', label: 'Unidad', field: row => row.unit_of_measure?.name || '-' },
   { name: 'waste', align: 'right', label: '% Merma', field: 'waste_percentage', format: val => `${val}%` },
-  { name: 'cost_impact', align: 'right', label: 'Costo Impacto', field: row => `$${formatNumber(calculateItemCost(row))}` },
+  { name: 'cost_impact', align: 'right', label: 'Costo Impacto', field: row => `$${formatNumber(row.cost_impact || 0)}` },
   { name: 'actions', align: 'center', label: 'Acciones' }
 ]
 
@@ -454,12 +449,16 @@ const estimatedCost = computed(() => {
 
   const factor = getConversionFactor(fromUomId, toUomId)
 
-  const baseCost = parseFloat(ingredient.cost || 0)
   const qty = parseFloat(ingredientForm.value.quantity)
   const waste = parseFloat(ingredientForm.value.waste_percentage || 0)
 
-  // Cost = (Quantity * Factor) * UnitCost * (1 + Waste)
-  return ((qty * factor) * baseCost * (1 + waste / 100)).toFixed(2)
+  // Calculate proportional cost based on base_quantity
+  // Example: If ingredient costs $1400 per 100g (base_quantity=100)
+  // and we use 80g, cost = (80 / 100) * 1400 = $1120
+  const baseQuantity = ingredient.base_quantity || 1
+  const unitCost = (ingredient.cost || 0) / baseQuantity
+
+  return ((qty * factor) * unitCost * (1 + waste / 100)).toFixed(2)
 })
 
 // Methods
@@ -670,33 +669,6 @@ const closeIngredientModal = () => {
     waste_percentage: 0
   }
 }
-
-/**
- * Calculates the individual cost impact of a single ingredient row
- * @params {Object} row Ingredient row data
- * @return {number|string} Calculated cost
- */
-const calculateItemCost = (row) => {
-  if (!row.ingredient || !row.quantity) return 0
-  const fromUomId = row.unit_of_measure_id
-  const toUomId = row.ingredient.unit_of_measure_id
-  const factor = getConversionFactor(fromUomId, toUomId)
-
-  // Calculate quantity in base unit
-  const quantityInBaseUnit = row.quantity * factor
-
-  // Apply waste percentage
-  const effectiveQuantity = quantityInBaseUnit * (1 + row.waste_percentage / 100)
-
-  // Calculate proportional cost based on base_quantity
-  // Example: If ingredient costs $1400 per 100g (base_quantity=100)
-  // and we use 80g, cost = (80 / 100) * 1400 = $1120
-  const baseQuantity = row.ingredient.base_quantity || 1
-  const unitCost = row.ingredient.cost / baseQuantity
-
-  return (effectiveQuantity * unitCost).toFixed(2)
-}
-
 onMounted(async () => {
   loadRecipeItems()
   await loadUnitOfMeasures()

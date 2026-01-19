@@ -106,9 +106,9 @@
 
                   <!-- Total Investment Summary Card (Compact) -->
                   <q-card flat class="bg-primary text-white shadow-2 rounded-lg">
-                    <q-card-section class="q-pa-md">
-                      <div class="text-overline opacity-8 line-height-1">TOTAL INVERSIÓN</div>
-                      <div class="text-h5 text-weight-bolder font-numeric">
+                    <q-card-section class="q-pa-none">
+                      <div class="opacity-8">TOTAL INVERSIÓN</div>
+                      <div class="text-h5 text-weight-bolder">
                         ${{ formatNumber(totalOrderCost) }}
                       </div>
                       <div class="text-caption opacity-7">
@@ -124,7 +124,7 @@
                       RECETAS SELECCIONADAS
                     </q-toolbar>
                     <q-separator />
-                    <q-scroll-area style="height: 300px">
+                    <q-scroll-area style="height: 190px">
                       <q-list v-if="orderForm.items.length > 0" separator dense>
                         <q-item v-for="(item, index) in orderForm.items" :key="index" class="q-py-xs">
                           <q-item-section>
@@ -186,6 +186,7 @@
                           :pagination="{ rowsPerPage: 15 }"
                           @row-click="(evt, row) => selectProductForConfig(row)"
                           class="cursor-pointer sticky-header"
+                          style="max-height: calc(100vh - 260px)"
                         >
                           <template v-slot:body="props">
                             <q-tr :props="props" @click="selectProductForConfig(props.row)" class="cursor-pointer hover-accent transition-all">
@@ -197,12 +198,15 @@
                                   <q-badge :color="props.row.stock < props.row.minimum_stock ? 'red-2' : 'green-2'"
                                            :text-color="props.row.stock < props.row.minimum_stock ? 'red-9' : 'green-9'"
                                            class="text-weight-bold">
-                                    {{ formatNumber(props.row.stock) }} {{ props.row.unit_of_measure?.name }}
+                                    {{ formatNumber(props.row.stock) }} {{ props.row.unit_of_measure?.acronym }}
                                   </q-badge>
+                               </q-td>
+                               <q-td key="min_stock" :props="props" class="text-right">
+                                  {{ formatNumber(props.row.minimum_stock) }} {{ props.row.unit_of_measure?.acronym }}
                                </q-td>
                                <q-td key="difference" :props="props" class="text-right">
                                   <q-chip :color="getStockStatusColor(props.row)" size="sm" text-color="white" class="text-weight-bold">
-                                    {{ getStockDifference(props.row) }}
+                                    {{ props.row.stock - props.row.minimum_stock }}
                                   </q-chip>
                                </q-td>
                             </q-tr>
@@ -274,16 +278,29 @@
                               <q-icon name="list_alt" color="primary" class="q-mr-xs" />
                               REQUERIMIENTO TEÓRICO
                             </div>
-                            <q-list bordered separator class="rounded-lg bg-grey-1" :class="$q.dark.isActive ? 'bg-grey-10' : ''">
-                              <q-item v-for="(item, idx) in recipePreviewItems" :key="idx" class="q-py-xs" style="min-height: 40px">
-                                <q-item-section>
-                                  <q-item-label class="text-caption text-weight-bold">{{ item.ingredient?.name }}</q-item-label>
-                                </q-item-section>
-                                <q-item-section side class="text-right">
-                                  <div class="text-subtitle2 text-primary text-weight-bolder font-numeric">{{ formatNumber(item.quantity * configQuantities.units) }} {{ item.unit_of_measure?.name }}</div>
-                                </q-item-section>
-                              </q-item>
-                              <div v-if="recipePreviewItems.length === 0" class="q-pa-md text-center text-grey-5 text-caption">
+                            <q-list dense separator class="rounded-lg bg-grey-1" :class="$q.dark.isActive ? 'bg-grey-10' : ''">
+                              <template v-if="loadingRecipe">
+                                <q-item v-for="i in 3" :key="i" class="q-py-sm">
+                                  <q-item-section>
+                                    <q-skeleton type="text" width="60%" height="20px" />
+                                    <q-skeleton type="text" width="40%" height="14px" class="q-mt-xs" />
+                                  </q-item-section>
+                                  <q-item-section side>
+                                    <q-skeleton type="rect" width="60px" height="20px" class="rounded-borders" />
+                                  </q-item-section>
+                                </q-item>
+                              </template>
+                              <template v-else-if="recipePreviewItems.length > 0">
+                                <q-item v-for="(item, idx) in recipePreviewItems" :key="idx" class="q-py-xs" style="min-height: 40px">
+                                  <q-item-section>
+                                    <q-item-label class="text-caption text-weight-bold">{{ item.ingredient?.name }}</q-item-label>
+                                  </q-item-section>
+                                  <q-item-section side class="text-right">
+                                    <div class="text-subtitle2 text-primary text-weight-bolder font-numeric">{{ formatNumber(item.quantity * configQuantities.units) }} {{ item.unit_of_measure?.name }}</div>
+                                  </q-item-section>
+                                </q-item>
+                              </template>
+                              <div v-else class="q-pa-md text-center text-grey-5 text-caption">
                                 Sin detalles de receta
                               </div>
                             </q-list>
@@ -378,9 +395,19 @@
             <div class="col-12">
               <q-card flat bordered>
                 <q-card-section>
-                  <div class="row items-center">
+                  <div class="row items-center q-gutter-x-sm">
                     <div class="text-h6">Requerimientos de Materiales</div>
                     <q-space/>
+                    <div class="row items-center q-gutter-x-xs">
+                       <div class="text-caption text-grey-7 q-mr-xs">Unificar:</div>
+                       <q-btn outline color="primary" dense icon="expand_less" label="MAX" @click="convertAllToRefUnit('max')" size="sm" class="q-px-sm">
+                          <q-tooltip>Convertir todo a unidad máxima</q-tooltip>
+                       </q-btn>
+                       <q-btn outline color="primary" dense icon="expand_more" label="MIN" @click="convertAllToRefUnit('min')" size="sm" class="q-px-sm">
+                          <q-tooltip>Convertir todo a unidad mínima</q-tooltip>
+                       </q-btn>
+                    </div>
+                    <q-separator vertical class="q-mx-sm" v-if="!$q.screen.lt.sm"/>
                     <q-btn color="primary" label="Ver Lista de Picking" @click="viewPickingList" size="sm"/>
                   </div>
                   <q-separator class="q-my-sm"/>
@@ -391,9 +418,23 @@
                     flat
                     dense
                   >
+                    <template v-slot:body-cell-required_quantity="props">
+                      <q-td :props="props">
+                        <div class="row items-center justify-end no-wrap">
+                          <span class="text-weight-bold q-mr-xs">{{ formatNumber(props.row.required_quantity) }}</span>
+                          <span class="text-grey-6" style="font-size: 0.8rem">{{ props.row.unit_of_measure?.acronym }}</span>
+                        </div>
+                      </q-td>
+                    </template>
+                    <template v-slot:body-cell-available_quantity="props">
+                      <q-td :props="props">
+                         <span class="text-weight-medium">{{ formatNumber(props.row.available_quantity) }}</span>
+                         <span class="text-grey-6 q-ml-xs" style="font-size: 0.8rem">{{ props.row.unit_of_measure?.acronym }}</span>
+                      </q-td>
+                    </template>
                     <template v-slot:body-cell-status="props">
                       <q-td :props="props">
-                        <q-badge :color="props.row.status === 'SUFFICIENT' ? 'positive' : 'negative'">
+                        <q-badge :color="props.row.status === 'SUFFICIENT' ? 'positive' : 'negative'" class="text-weight-bold">
                           {{ props.row.status === 'SUFFICIENT' ? 'Suficiente' : 'Insuficiente' }}
                         </q-badge>
                       </q-td>
@@ -481,6 +522,42 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <!-- Modal para detalle de receta -->
+    <q-dialog v-model="openRecipeDetail">
+      <q-card style="width: 700px; max-width: 90vw;">
+        <q-card-section class="row items-center bg-primary text-white">
+          <div class="text-h6">Detalle de Receta: {{ selectedRecipeProduct?.name }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-subtitle2 q-mb-md">Base para fabricación de: {{ selectedRecipeQuantity }} unidades</div>
+          <q-table
+            :rows="selectedRecipeItems"
+            :columns="[
+              { name: 'ingredient', align: 'left', label: 'Ingrediente', field: row => row.ingredient?.name },
+              { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity' },
+              { name: 'uom', align: 'left', label: 'Unidad', field: row => row.unit_of_measure?.acronym }
+            ]"
+            row-key="id"
+            flat
+            dense
+            separator="horizontal"
+          >
+            <template v-slot:body-cell-quantity="props">
+              <q-td :props="props" class="text-weight-bold">
+                {{ formatNumber(props.row.quantity) }}
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cerrar" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -488,6 +565,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { Notify } from 'quasar'
 import { api } from 'boot/axios'
+import { authentication } from 'src/stores/module-authentication'
 
 const orders = ref([])
 const selectedOrder = ref(null)
@@ -511,8 +589,10 @@ const selectedRecipeItems = ref([])
 const openProductPicker = ref(false)
 const selectedProductForOrder = ref(null)
 const filterProducts = ref('')
-const percentageIncrease = ref(0)
+const loadingRecipe = ref(false)
+const store = authentication()
 
+const { branchOffice } = store
 /**
  * State for product being configured
  * @type {Ref<Object|null>}
@@ -547,7 +627,7 @@ const isEditingItem = ref(false)
 const editingIndex = ref(-1)
 
 const orderForm = ref({
-  branch_office_id: null,
+  branch_office_id: branchOffice.id,
   planned_date: null,
   items: []
 })
@@ -622,8 +702,8 @@ const columns = [
 
 const materialColumns = [
   { name: 'product', align: 'left', label: 'Material', field: row => row.product?.name },
-  { name: 'required', align: 'right', label: 'Requerido', field: 'required_quantity' },
-  { name: 'available', align: 'right', label: 'Disponible', field: 'available_quantity' },
+  { name: 'required_quantity', align: 'right', label: 'Requerido', field: 'required_quantity' },
+  { name: 'available_quantity', align: 'right', label: 'Disponible', field: 'available_quantity' },
   { name: 'status', align: 'center', label: 'Estado', field: 'status' }
 ]
 
@@ -631,12 +711,7 @@ const productSelectionColumns = [
   { name: 'name', align: 'left', label: 'Producto', field: 'name', sortable: true },
   { name: 'stock', align: 'right', label: 'Stock Actual', field: 'stock', sortable: true },
   { name: 'min_stock', align: 'right', label: 'Stock Mín.', field: 'minimum_stock', sortable: true },
-  { name: 'difference', align: 'right', label: 'Diferencia', field: row => row.stock - row.minimum_stock, sortable: true }
-]
-
-const previewColumns = [
-  { name: 'name', align: 'left', label: 'Insumo', field: row => row.ingredient?.name },
-  { name: 'qty', align: 'right', label: 'Cantidad', field: 'qty' }
+  { name: 'difference', align: 'right', label: 'Diferencia', field: 'difference', sortable: true }
 ]
 
 const getStatusColor = (status) => {
@@ -805,19 +880,42 @@ const downloadPdf = async () => {
   }
 }
 
+/**
+ * Converts all requirements to their suggested reference unit (max/min)
+ * @params {string} mode
+ */
+const convertAllToRefUnit = async (mode) => {
+  if (!selectedOrder.value) return
+
+  visible.value = true
+  try {
+    const { data } = await api.get(`production-orders/${selectedOrder.value.id}/materials`, {
+      params: { mode }
+    })
+
+    materialRequirements.value = data.requirements
+
+    Notify.create({
+      message: `Materiales unificados en unidad ${mode === 'max' ? 'máxima' : 'mínima'}`,
+      color: 'positive',
+      icon: mode === 'max' ? 'expand_less' : 'expand_more'
+    })
+  } catch (error) {
+    Notify.create({
+      message: 'Error al convertir masivamente',
+      color: 'negative'
+    })
+  } finally {
+    visible.value = false
+  }
+}
+
 const viewRecipeForProduct = async (item) => {
   selectedRecipeProduct.value = item.product
   selectedRecipeQuantity.value = item.planned_quantity
+  loadingRecipe.value = true
   try {
-    // Fetch recipe structure
     const { data } = await api.get(`products/${item.product_id}/recipe`)
-
-    // Calculate based on quantity
-    // Note: Recipe items usually define quantity for 1 unit (or recipe yield).
-    // Assuming recipe is for 1 unit for simplicity, or we should check recipe yield.
-    // The RecipeService logic does this complex calculation. For frontend "preview",
-    // strictly speaking we should replicate that logic or ask backend.
-    // For now, simpler aproach: just show the base recipe multiplied.
 
     selectedRecipeItems.value = data.map(r => ({
       ...r,
@@ -827,6 +925,8 @@ const viewRecipeForProduct = async (item) => {
     openRecipeDetail.value = true
   } catch (error) {
     Notify.create({ message: 'Error al cargar receta', color: 'negative' })
+  } finally {
+    loadingRecipe.value = false
   }
 }
 
@@ -853,6 +953,9 @@ const closeNewOrderModal = () => {
   recipePreviewItems.value = []
 }
 
+/**
+ * Closes the view order modal and resets related state.
+ */
 const closeViewOrderModal = () => {
   openViewOrder.value = false
   selectedOrder.value = null
@@ -860,32 +963,32 @@ const closeViewOrderModal = () => {
 }
 
 /**
- * Handle product selection to enter configuration mode
- * @params {Object} row
+ * Selects a product for configuration in the new order modal.
+ * @param {Object} product - The product object to configure.
  */
-const selectProductForConfig = async (row) => {
-  selectedProductConfig.value = row
+const selectProductForConfig = async (product) => {
+  selectedProductConfig.value = product
+  configQuantities.value = {
+    units: 1, // Default to 1 unit
+    portions: parseFloat(product.servings || 1) // Default portions from servings
+  }
   isEditingItem.value = false
   editingIndex.value = -1
 
-  // Reset quantities to default based on recipe yield (servings)
-  const servings = parseFloat(row.servings) || 1
-  configQuantities.value = {
-    units: 1,
-    portions: servings
-  }
-
-  // Load recipe preview
+  loadingRecipe.value = true
   try {
-    const { data } = await api.get(`products/${row.id}/recipe`)
+    const { data } = await api.get(`products/${product.id}/recipe`)
     recipePreviewItems.value = data
   } catch (error) {
+    Notify.create({ message: 'Error al cargar ingredientes', color: 'negative' })
     recipePreviewItems.value = []
+  } finally {
+    loadingRecipe.value = false
   }
 }
 
 /**
- * Update portions based on unit count (batch size)
+ * Update portions based on units (batch count)
  */
 const updateFromUnits = (val) => {
   const servings = parseFloat(selectedProductConfig.value.servings) || 1
@@ -1046,47 +1149,12 @@ watch(() => orderForm.value.branch_office_id, () => {
 watch(openNewOrder, (val) => {
   if (val) loadProductsWithRecipe()
 })
-
-// Logic functions
-const getStockDifference = (row) => {
-  return (row.stock - row.minimum_stock).toFixed(2)
-}
-
 const getStockStatusColor = (row) => {
   const diff = row.stock - row.minimum_stock
   if (diff < 0) return 'negative'
   if (diff === 0) return 'warning'
   return 'positive'
 }
-
-const setQuantitiesToMinimum = () => {
-  productsWithRecipe.value.forEach(p => {
-    const diff = p.minimum_stock - p.stock
-    if (diff > 0) {
-      p.planned_quantity = diff
-    }
-  })
-  Notify.create({ message: 'Cantidades actualizadas para cubrir stock mínimo', color: 'positive', icon: 'check' })
-}
-
-const applyPercentageIncrease = () => {
-  if (percentageIncrease.value <= 0) return
-
-  productsWithRecipe.value.forEach(p => {
-    if (p.planned_quantity > 0) {
-      const increase = p.planned_quantity * (percentageIncrease.value / 100)
-      p.planned_quantity = parseFloat((p.planned_quantity + increase).toFixed(2))
-    }
-  })
-  Notify.create({ message: `Cantidades aumentadas en un ${percentageIncrease.value}%`, color: 'positive', icon: 'trending_up' })
-}
-
-const resetQuantitiesToZero = () => {
-  productsWithRecipe.value.forEach(p => {
-    p.planned_quantity = 0
-  })
-}
-
 const setPagination = (data) => {
   params.value.sortOrder = data.pagination.descending ? 'desc' : 'asc'
   params.value.page = data.pagination.page
