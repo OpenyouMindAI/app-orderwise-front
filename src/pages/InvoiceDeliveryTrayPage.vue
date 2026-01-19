@@ -238,7 +238,7 @@
             class="close-btn-floating"
             @click="handleCloseMap"
           />
-          
+
           <!-- Info when all delivered - can't close map -->
           <div v-else class="map-info-badge">
             <q-icon name="info" size="16px" />
@@ -492,13 +492,13 @@ async function checkActiveRun () {
     if (response.data.delivery_run && response.data.delivery_run.id) {
       hasActiveRun.value = true
       console.log('Active delivery run found:', response.data.delivery_run.id)
-      
+
       $q.notify({
         type: 'info',
         message: 'Tienes una entrega activa',
         position: 'top'
       })
-      
+
       // Only redirect if we have a valid ID
       if (response.data.delivery_run.id) {
         router.push({
@@ -617,7 +617,7 @@ async function startMultipleDeliveries () {
 /**
  * FUNCIÓN DESHABILITADA - Ya no se optimiza la ruta
  * Se respeta el orden establecido en DeliveryRoute (stop_order)
- * 
+ *
  * Optimizes the delivery route order using backend algorithm
  * @async
  * @param {Array<Object>} invoices - Array of invoice objects to optimize
@@ -1003,7 +1003,7 @@ async function renderCompleteRoute () {
 
     stops.forEach((stop) => {
       const clientAddress = stop?.client?.address
-      
+
       if (clientAddress?.latitude && clientAddress?.longitude) {
         const marker = new window.google.maps.Marker({
           position: { lat: parseFloat(clientAddress.latitude), lng: parseFloat(clientAddress.longitude) },
@@ -1367,9 +1367,9 @@ function startLocationTracking () {
         lat: position.coords.latitude,
         lng: position.coords.longitude
       }
-      
+
       currentLocation.value = currentPos
-      
+
       // Calculate distance to origin
       const distance = calculateDistance(
         currentPos.lat,
@@ -1377,15 +1377,15 @@ function startLocationTracking () {
         originBranch.value.lat,
         originBranch.value.lng
       )
-      
+
       distanceToOrigin.value = distance
       isNearOrigin.value = distance <= ORIGIN_RADIUS
-      
+
       // Update map route if map is open
       if (showMapDialog.value && map.value) {
         showReturnRouteOnMap()
       }
-      
+
       console.log(`Distance to origin: ${distance.toFixed(0)}m, Near: ${isNearOrigin.value}`)
     },
     (error) => {

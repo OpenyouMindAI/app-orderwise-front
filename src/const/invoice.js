@@ -22,5 +22,5 @@ export const status = {
   paid: {
     label: 'Pagada',
     color: 'blue-10'
-  } 
+  }
 }

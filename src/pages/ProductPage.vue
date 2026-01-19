@@ -395,7 +395,7 @@
             <q-inner-loading showing color="primary" />
           </template>
           <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+            <q-input filled dense debounce="800" v-model="filter" placeholder="Buscar">
               <template v-slot:append>
                 <q-icon name="search" />
               </template>
@@ -422,14 +422,16 @@
             narrow-indicator
           >
             <q-tab name="basicData" label="Datos básicos" />
-            <q-tab name="stock" label="stock" v-if="!product.is_bundle"/>
-            <q-tab name="product" label="Productos" v-if="product.is_bundle" />
+            <q-tab name="stock" label="Stock" v-if="!product.is_bundle"/>
+            <q-tab name="product" label="Combo / Pack" v-if="product.is_bundle" />
+            <q-tab name="recipe" label="Receta (Ingredientes)" v-if="isRecipeType && !isProduct"/>
           </q-tabs>
+
           <q-separator />
 
-          <q-tab-panels v-model="tab" animated>
+          <q-tab-panels v-model="tab" animated class="scroll" style="max-height: calc(100vh - 240px);">
             <q-tab-panel name="basicData">
-              <div class="row q-col-gutter-sm scroll" style="height: calc(100vh - 240px);">
+              <div class="row q-col-gutter-sm">
                 <div class="row col-md-7 col-xs-12 col-sm-12">
                   <!-- Datos básicos -->
                   <div class="col-12">
@@ -481,12 +483,28 @@
                             dense
                           />
                         </div>
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-start items-center">
-                          <q-option-group
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-select
+                            filled
+                            dense
                             v-model="unitOfMeasure"
                             :options="unitOfMeasures"
-                            color="positive"
-                            inline
+                            option-label="name"
+                            option-value="id"
+                            label="Unidad de Medida"
+                            :rules="[val => !!val || 'Requerido']"
+                          />
+                        </div>
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-input
+                            filled
+                            dense
+                            v-model.number="product.base_quantity"
+                            label="Cantidad de la unidad"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            hint="Cantidad del producto en gramos o mililitros"
                           />
                         </div>
                         <div class="col-12">
@@ -743,6 +761,29 @@
                         <q-icon name="settings" class="q-mr-sm" />
                         Configuración
                       </div>
+                      <div class="row q-col-gutter-md q-mb-md">
+                        <div class="col-12">
+                          <q-select
+                            filled
+                            v-model="product.product_type"
+                            :options="productTypeOptions"
+                            label="Tipo de Producto"
+                            emit-value
+                            map-options
+                            dense
+                            :rules="[val => !!val || 'Requerido']"
+                          >
+                             <template v-slot:option="scope">
+                              <q-item v-bind="scope.itemProps">
+                                <q-item-section>
+                                  <q-item-label>{{ scope.opt.label }}</q-item-label>
+                                  <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                                </q-item-section>
+                              </q-item>
+                            </template>
+                          </q-select>
+                        </div>
+                      </div>
                       <div class="row q-col-gutter-md">
                         <div class="col-6">
                           <q-toggle
@@ -811,6 +852,9 @@
             <q-tab-panel name="product">
               <pack-product :product="product"/>
             </q-tab-panel>
+            <q-tab-panel name="recipe">
+              <recipe-product :product="product"/>
+            </q-tab-panel>
           </q-tab-panels>
           <q-card-actions align="right" class="text-primary">
             <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
@@ -870,7 +914,7 @@
                           use-input
                           filled
                           label="Categoría"
-                          input-debounce="0"
+                          input-debounce="500"
                           option-label="name"
                           option-value="id"
                           v-model="category"
@@ -881,12 +925,49 @@
                           dense
                         />
                       </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-start items-center">
-                        <q-option-group
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-select
+                            filled
+                            v-model="product.product_type"
+                            :options="productTypeOptions"
+                            label="Tipo de Producto"
+                            emit-value
+                            map-options
+                            dense
+                            :rules="[val => !!val || 'Requerido']"
+                          >
+                             <template v-slot:option="scope">
+                              <q-item v-bind="scope.itemProps">
+                                <q-item-section>
+                                  <q-item-label>{{ scope.opt.label }}</q-item-label>
+                                  <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                                </q-item-section>
+                              </q-item>
+                            </template>
+                          </q-select>
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-select
+                          filled
+                          dense
                           v-model="unitOfMeasure"
                           :options="unitOfMeasures"
-                          color="positive"
-                          inline
+                          option-label="name"
+                          option-value="id"
+                          label="Unidad de Medida"
+                          :rules="[val => !!val || 'Requerido']"
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          filled
+                          dense
+                          v-model.number="product.base_quantity"
+                          label="Cantidad de la unidad"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          hint="Cantidad del producto en gramos o mililitros"
                         />
                       </div>
                       <div class="col-12">
@@ -1322,7 +1403,7 @@
                 use-input
                 filled
                 label="Categoría"
-                input-debounce="0"
+                input-debounce="500"
                 option-value="id"
                 option-label="name"
                 clearable
@@ -1998,10 +2079,11 @@ import { mapActions, mapState } from 'pinia'
 import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import StockProduct from 'src/components/Product/StockProduct.vue'
+import RecipeProduct from 'src/components/Product/RecipeProduct.vue'
 import PackProduct from 'src/components/Product/PackProduct.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import { getDownload } from 'src/const/services'
-import { loading, notify } from 'src/const/mixins'
+import { formatNumber, loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
 import eventBus from 'src/utils/eventBus'
 import { api } from 'boot/axios'
@@ -2013,7 +2095,7 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 export default {
-  components: { StockProduct, PackProduct, BulkPriceDialog, OnboardingValidationModal },
+  components: { StockProduct, BulkPriceDialog, OnboardingValidationModal, RecipeProduct, PackProduct },
   data () {
     return {
       qrDialog: false,
@@ -2077,8 +2159,16 @@ export default {
         is_addons: 0,
         skip_stock: 0,
         profit_percentage: 0,
-        images: []
+        images: [],
+        product_type: 'PRODUCT',
+        base_quantity: 1
       },
+      productTypeOptions: [
+        { label: 'Producto', value: 'PRODUCT', description: 'Producto para venta' },
+        { label: 'Materia Prima', value: 'RAW_MATERIAL', description: 'Insumo básico para recetas' },
+        { label: 'Sub-receta', value: 'SUB_RECIPE', description: 'Producto intermedio fabricado' },
+        { label: 'Receta', value: 'FINISHED_GOOD', description: 'Receta para fabricar un producto' }
+      ],
       // Decimal input formatting for profit percentage
       profitPercentageValue: 0, // Internal value in centésimas (0.01 = 1)
       profitPercentageDisplay: '0',
@@ -2157,7 +2247,7 @@ export default {
           name: 'stock',
           align: 'right',
           label: 'Stock',
-          field: row => row?.is_bundle ? row.bundle_stock : row?.normal_stock
+          field: row => row?.is_bundle ? formatNumber(row.bundle_stock) : formatNumber(row?.normal_stock)
         }
       ],
       paginationConfig: {
@@ -2233,6 +2323,12 @@ export default {
      */
     visibleColumns () {
       return this.columns.filter(col => this.visibleColumnNames.includes(col.name))
+    },
+    isRecipeType () {
+      return ['SUB_RECIPE', 'FINISHED_GOOD'].includes(this.product.product_type)
+    },
+    isProduct () {
+      return ['PRODUCT'].includes(this.product.product_type)
     }
   },
   watch: {
@@ -2265,7 +2361,7 @@ export default {
       this.category = data.category
     },
     unitOfMeasure (data) {
-      this.product.unit_of_measure_id = data
+      this.product.unit_of_measure_id = data.id
     }
   },
   created () {
@@ -2658,7 +2754,8 @@ export default {
         measurement_unit_id: null,
         is_pack: null,
         is_addon: null,
-        show_in_catalog: null
+        show_in_catalog: null,
+        product_type: 'PRODUCT'
       }
 
       // Limpiar completamente los parámetros de filtro antes de recargar
@@ -3148,8 +3245,8 @@ export default {
     async getUnitOfMeasures () {
       try {
         const { data } = await this.$api.get('unit-of-measures')
-        this.unitOfMeasures = data.map(unit => ({ label: unit.name, value: unit.id }))
-        this.unitOfMeasure = this.unitOfMeasures[0]?.value
+        this.unitOfMeasures = data
+        this.unitOfMeasure = this.unitOfMeasures[0]
       } catch (error) {
         Notify.create({
           message: error.message,
@@ -3211,7 +3308,7 @@ export default {
       this.product = this.deepCloneProduct(row)
 
       this.openEditProduct = true
-      this.unitOfMeasure = this.product.unit_of_measure_id
+      this.unitOfMeasure = this.product.unit_of_measure
       this.addonsProducts = this.product.addons || []
       this.priceLists = this.product.product_price_lists || []
 

@@ -584,7 +584,7 @@
                 </q-select>
                 <q-input
                   v-model="currentTransfer.observations"
-                  label="Observaciones"
+                  label="Descripción"
                   type="textarea"
                   outlined
                   dense
@@ -750,10 +750,10 @@
                         use-input
                         hide-selected
                         fill-input
-                        option-label="name"
                         option-value="id"
                         input-debounce="500"
                         @filter="getProducts"
+                        :option-label="(opt) => `${opt.name} - ${opt?.unit_of_measure?.name}`"
                         :rules="[val => !!val || 'Requerido']"
                         @update:model-value="(value) => setProducts(value, product)"
                       >
@@ -783,10 +783,9 @@
                       <q-input
                         v-model.number="product.quantity"
                         type="number"
-                        label="Cant."
                         outlined
                         dense
-                        min="1"
+                        :step="0.001"
                         :rules="[val => val > 0 || 'Requerido']"
                         @update:model-value="updateTotals"
                       >
@@ -870,7 +869,7 @@
                         use-input
                         hide-selected
                         fill-input
-                        option-label="name"
+                        :option-label="(opt) => `${opt.name} - ${opt?.unit_of_measure?.name}`"
                         option-value="id"
                         input-debounce="500"
                         @filter="getProducts"
@@ -892,8 +891,7 @@
                         type="number"
                         outlined
                         dense
-                        min="1"
-                        step="1"
+                        :step="0.001"
                         :rules="[val => val > 0 || 'Requerido']"
                         @update:model-value="updateTotals"
                       >
@@ -1125,7 +1123,7 @@
 
           <q-card-actions v-if="!isTransferVerified" align="right" class="q-pa-md">
             <q-btn
-              label="Editar"
+              label="Guardar"
               color="primary"
               type="submit"
               :disable="currentTransfer.products.length === 0 || (editMode && !canEditTransfer)"

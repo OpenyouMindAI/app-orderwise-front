@@ -649,16 +649,21 @@
                           </div>
                         </div>
 
-                        <div v-else-if="props.row.is_bundle">
-                          <div class="text-grey-6">Producto promocional sin detalles específicos</div>
-                        </div>
-
                         <div v-else>
                           <div class="text-grey-6">No hay detalles adicionales para este producto</div>
                         </div>
                       </div>
                     </q-td>
                   </q-tr>
+                </template>
+                <!-- Template para cuando no hay artículos -->
+                <template v-slot:no-data>
+                  <div class="full-width column flex-center" style="padding: 60px 20px;">
+                    <q-icon size="4rem" name="inventory_2" color="grey-4" class="q-mb-md" />
+                    <div class="text-center">
+                      <div class="text-h5 text-grey-6 q-mb-sm">Sin artículos</div>
+                    </div>
+                  </div>
                 </template>
               </q-table>
 
@@ -1439,11 +1444,9 @@
       v-model="showCashBoxDialog"
       :cashier-id="userSession?.id"
       :is-box-already-open="isUserBoxOpen"
-      :available-cash-boxes="availableCashBoxes"
       :branch-office="branchOffice"
       @box-opened="handleBoxOpened"
       @box-closed="handleBoxClosed"
-      @box-created="loadAvailableCashBoxes"
     />
 
     <!-- Cashflow Modal Component -->
@@ -1756,7 +1759,6 @@ export default {
       // Cash Box System
       showCashBoxDialog: false,
       isUserBoxOpen: false,
-      availableCashBoxes: [],
       cashBoxState: null,
       /**
        * Show payment details modal
@@ -2267,6 +2269,9 @@ export default {
     }
   },
   computed: {
+    ...mapState(authentication, ['userSession', 'branchOffice', 'subscriptionPlan', 'isDemo']),
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    ...mapState(useCommandStore, ['setInvoice']),
     tourSteps () {
       const isMobile = this.$q.screen.lt.md
 
@@ -2479,7 +2484,6 @@ export default {
       // Filtrar pasos basado en condiciones
       return allSteps.filter(step => !step.condition || step.condition())
     },
-    ...mapState(authentication, ['userSession', 'branchOffice', 'subscriptionPlan', 'isDemo']),
     branchOfficeCharged () {
       return this.branchOffice
     },
@@ -2537,8 +2541,6 @@ export default {
       // Si emptySpaces es igual a productsPerRow, significa que la última fila está completa
       return emptySpaces === productsPerRow ? productsPerRow : emptySpaces
     },
-    ...mapState(authentication, ['userSession', 'branchOffice']),
-    ...mapState(useCommandStore, ['setInvoice']),
     clientMenuOpen: {
       get () {
         return this.activeMobileMenu === 'client'
@@ -4240,16 +4242,22 @@ export default {
         this.loadingBilling = true
         const params = this.setParamsBill()
         let res = null
+
+        if (this.openCashBox) {
+          if (!this.isUserBoxOpen) {
+            this.showCashBoxDialog = true
+            return
+          }
+        }
+
         if (!params) return
 
-        // Paso 1: Guardar factura con datos JSON
         if (this.$route.query.id) {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
           res = await this.$api.post('invoices', params)
         }
 
-        // Paso 2: Si hay archivos adjuntos y es tipo pedido (code === 5), enviarlos
         const invoiceId = res.data.data?.id
         if (invoiceId && this.invoiceFiles.length > 0 && this.typeOfService?.code === 5) {
           await this.uploadInvoiceFiles(invoiceId)
@@ -4258,13 +4266,10 @@ export default {
         await this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
 
-        // Cerrar modal y limpiar después de guardar exitoso
         this.dialogPayment = false
         if (!this.tableClose) {
-          // Limpiar siempre después de facturar exitosamente, excepto si viene de mesa
           setTimeout(() => this.clear(), 500)
         }
-        // Recargar productos para actualizar stock después de la venta
         this.reloadProducts()
       } catch (error) {
         notify(error.message, 'negative', 'warning')
@@ -4605,10 +4610,6 @@ export default {
      * Checks the current cash box status for the user
      * using the new API structure
      */
-    /**
-     * Simplified method that just calls loadAvailableCashBoxes
-     * All cashbox logic is now handled in loadAvailableCashBoxes
-     */
     async checkCashBoxStatus () {
       if (!this.openCashBox) return
       try {
@@ -4630,23 +4631,21 @@ export default {
             end_balance: data.end_balance,
             user_close_id: data.user_close_id
           }
-          this.availableCashBoxes = []
         } else {
           // Respuesta exitosa pero sin sesión activa
           await this.handleNoActiveSession()
         }
       } catch (error) {
-        if (error.response?.status === 404 ||
-            error.message?.includes('No query results for model') ||
-            error.message?.includes('CashboxUser')) {
+        if (error?.status === 404 ||
+            error?.data?.message?.includes('No query results for model') ||
+            error?.data?.message?.includes('CashboxUser')) {
           // 404 o sin datos es comportamiento normal - no hay sesión activa
-          await this.handleNoActiveSession()
+          this.handleNoActiveSession()
         } else {
           // Error real del servidor
           console.error('Error al verificar estado de caja:', error)
           this.isUserBoxOpen = false
           this.cashBoxState = null
-          this.availableCashBoxes = []
         }
       }
     },
@@ -4657,7 +4656,6 @@ export default {
     async handleNoActiveSession () {
       this.isUserBoxOpen = false
       this.cashBoxState = null
-      await this.loadAvailableCashBoxes()
 
       // No mostrar el modal si el tour está activo o va a comenzar
       if (this.tourStore.isTourActiveOrPending) {
@@ -4673,44 +4671,9 @@ export default {
      * Handle cash box button click - load boxes before showing modal
      */
     async handleCashBoxButtonClick () {
-      if (!this.isUserBoxOpen) {
-        await this.loadAvailableCashBoxes()
-      }
-
       this.showCashBoxDialog = true
     },
 
-    /**
-     * Loads available cash boxes from API with open/closed status
-     */
-    async loadAvailableCashBoxes () {
-      if (!this.branchOffice?.id) {
-        console.error('Error: branchOffice.id no está disponible')
-        this.availableCashBoxes = []
-        return
-      }
-
-      try {
-        const response = await this.$api.get('cashboxes', {
-          params: {
-            dataEqualFilter: {
-              branch_office_id: this.branchOffice?.id
-            }
-          }
-        })
-
-        const allBoxes = response.data || []
-
-        this.availableCashBoxes = allBoxes
-          .filter(box => box.branch_office_id === this.branchOffice?.id && !box.deleted_at)
-          .map(box => ({
-            ...box,
-            open: box.current_session ? box.current_session.open : false
-          }))
-      } catch (error) {
-        this.availableCashBoxes = []
-      }
-    },
 
     /**
      * Handle when a cash box is opened
@@ -4724,7 +4687,6 @@ export default {
         init_balance: boxData.initialBalance,
         open: true
       }
-      this.availableCashBoxes = []
     },
 
     /**
@@ -4733,16 +4695,6 @@ export default {
     handleBoxClosed (closeData) {
       this.isUserBoxOpen = false
       this.cashBoxState = null
-      // Reload available boxes after closing
-      this.loadAvailableCashBoxes()
-    },
-
-    /**
-     * Handle when a new cash box is created
-     */
-    handleBoxCreated (newBox) {
-      // Reload available boxes to include the new one
-      this.loadAvailableCashBoxes()
     },
 
     /*

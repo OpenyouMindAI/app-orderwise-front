@@ -79,27 +79,26 @@ export const previewCommand = async (data, userSession) => {
       })
     }
   })
-  if(data.promotions) {
+  if (data.promotions) {
     data.promotions.forEach((product) => {
-    const lines = doc.splitTextToSize(product.name, maxWidth)
-    lines.forEach((linea, index) => {
-      if (index === 0) {
-        doc.text(linea, 5, y)
-        doc.text(formatNumber(product.pivot.quantity), 65, y)
-      } else {
-        doc.text(linea, 5, y)
-      }
-      y += 5
-    })
-    if (product.pivot.observation) {
-      const observationLines = doc.splitTextToSize(`Observación: ${product.pivot.observation}`, maxWidth)
-      observationLines.forEach((linea) => {
-        doc.text(linea, 5, y)
+      const lines = doc.splitTextToSize(product.name, maxWidth)
+      lines.forEach((linea, index) => {
+        if (index === 0) {
+          doc.text(linea, 5, y)
+          doc.text(formatNumber(product.pivot.quantity), 65, y)
+        } else {
+          doc.text(linea, 5, y)
+        }
         y += 5
       })
-    }
-  })
-
+      if (product.pivot.observation) {
+        const observationLines = doc.splitTextToSize(`Observación: ${product.pivot.observation}`, maxWidth)
+        observationLines.forEach((linea) => {
+          doc.text(linea, 5, y)
+          y += 5
+        })
+      }
+    })
   }
 
   doc.text('--------------------------------', 5, y)

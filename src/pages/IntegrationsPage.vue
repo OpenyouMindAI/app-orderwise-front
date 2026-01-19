@@ -1235,7 +1235,7 @@ onMounted(() => {
 .close-dialog-btn {
   flex-shrink: 0;
   transition: all 0.3s ease;
-  
+
   &:hover {
     background: rgba(255, 255, 255, 0.2);
     transform: rotate(90deg);

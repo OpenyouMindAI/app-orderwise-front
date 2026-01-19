@@ -255,7 +255,7 @@ export default {
       })
     }
   },
-  created() {
+  created () {
     const view = this.$route.query.view
     if (view === 'cart') this.currentTab = 'cart'
     else if (view === 'orders') this.currentTab = 'orders'

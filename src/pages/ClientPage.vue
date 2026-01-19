@@ -1022,7 +1022,7 @@ export default {
             })
           }
         }
-        
+
         reader.readAsArrayBuffer(file)
       } catch (err) {
         console.error('Error reading file:', err)
@@ -1062,7 +1062,7 @@ export default {
         this.showImportDialog = false
         this.showImportResults = true
         this.importLoading = false
-        
+
         Notify.create({
           message: data.message,
           icon: 'check_circle',

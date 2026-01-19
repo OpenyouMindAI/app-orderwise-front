@@ -69,7 +69,7 @@
         <q-space />
 
         <!-- Branch Office Indicator -->
-        <div v-if="branchOffice && branchOffices.lenght > 1" class="branch-indicator">
+        <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
           <q-chip
             dense
             square
@@ -280,6 +280,24 @@
                     <q-icon name="android" size="24px" />
                     <span class="tool-label">App</span>
                   </a>
+                  <div
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'AdminSupport' }"
+                    @click="changeRoute('AdminSupport', 'Suporte Admin')"
+                    v-if="userSession.is_root"
+                  >
+                    <q-icon name="support_agent" size="24px" />
+                    <span class="tool-label">Suporte Admin</span>
+                  </div>
+                  <div
+                    v-else
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'Support' }"
+                    @click="changeRoute('Support', 'Suporte')"
+                  >
+                    <q-icon name="support_agent" size="24px" />
+                    <span class="tool-label">Suporte</span>
+                  </div>
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
@@ -591,23 +609,6 @@
       <router-view />
     </q-page-container>
 
-    <!-- Dynamic Integration Dialog -->
-    <integration-dynamic
-      v-model="showIntegrationDialog"
-      :key="selectedIntegrationSlug"
-      :integration-slug="selectedIntegrationSlug"
-      :download="download"
-      @connect="handleIntegrationConnect"
-      @generate="handleIntegrationGenerate"
-    />
-
-    <!-- Arca Dialog (special case) -->
-    <arca-dialog
-      v-model="arcaDialog"
-      :download="download"
-      @generate="generateCertificate"
-    />
-
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
       position="bottom-right"
@@ -634,6 +635,16 @@
         </q-badge>
       </q-btn>
     </q-page-sticky>
+
+    <!-- Dynamic Integration Dialog -->
+    <integration-dynamic
+      v-model="showIntegrationDialog"
+      :key="selectedIntegrationSlug"
+      :integration-slug="selectedIntegrationSlug"
+      :download="download"
+      @connect="handleIntegrationConnect"
+      @generate="handleIntegrationGenerate"
+    />
 
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
@@ -686,7 +697,6 @@ import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import PremiumBadge from 'src/components/PremiumBadge.vue'
 import IntegrationDynamic from 'src/components/Integrations/IntegrationDynamic.vue'
-import ArcaDialog from 'src/components/Integrations/ArcaDialog.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
@@ -714,13 +724,11 @@ export default {
     OtpVerificationDialog,
     CompanySetupModal,
     PremiumBadge,
-    IntegrationDynamic,
-    ArcaDialog
+    IntegrationDynamic
   },
   data () {
     return {
       logo,
-      arcaDialog: false,
       branchOffices: [],
       role: null,
       notify,
@@ -1550,8 +1558,7 @@ export default {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
-
-          if (data.invoice_id) {
+          if (data?.invoice_id) {
             const notification = createNotification(this.$t(`command.${data.name}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
@@ -1561,11 +1568,11 @@ export default {
             }
           }
 
-          if (data.error_type) {
+          if (data?.error_type) {
             const notification = createNotification(this.$t(`command.${data?.error_type?.toLowerCase()}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
-            }, true)
+            }, false)
             notification.onclick = () => {
               window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
             }
@@ -1586,7 +1593,7 @@ export default {
         const { data } = await api.get('notifications', {
           params: { unread: true }
         })
-        this.numberOfNotifications = data
+        this.numberOfNotifications = data.data
       } catch (error) {
         console.log(error.message)
       }
@@ -1598,72 +1605,12 @@ export default {
           notify('Link copiado exitosamente', 'positive', 'check_circle')
         })
     },
-
-    async openDialogArca () {
-      try {
-        // Validación 2: Verificar que no sea cuenta demo
-        if (this.isDemo) {
-          notify('Crea una empresa real para acceder a las integraciones', 'info', 'info')
-          this.showCreateCompanyDialog = true
-          return
-        }
-
-        loading(true)
-
-        const hasApiAccess = await this.verifyApiAccess()
-
-        if (!hasApiAccess) {
-          notify('Tu plan actual no incluye acceso a integraciones. Actualiza tu plan.', 'warning', 'upgrade')
-          this.showSubscriptionDialog = true
-          return
-        }
-
-        // Validación 4: Verificar datos de facturación
-        if (!this.userSession?.company_session?.billing) {
-          const documentNumber = this.userSession?.company_session?.document_number
-          const userName = this.userSession?.name
-          const userEmail = this.userSession?.email
-
-          if (!documentNumber || !userName || !userEmail) {
-            notify('Datos de empresa incompletos. Contacta al administrador.', 'negative', 'error')
-            return
-          }
-
-          const { data } = await this.$apiArca('companies', {
-            params: {
-              user: {
-                name: userName,
-                email: userEmail
-              },
-              document_number: documentNumber
-            }
-          })
-
-          // Validar respuesta
-          if (!data?.certificate_url || !data?.key_url) {
-            throw new Error('Respuesta inválida del servidor ARCA')
-          }
-
-          this.download = {
-            certificate_url: data.certificate_url,
-            key_url: data.key_url
-          }
-
-          // Abrir diálogo solo si todo fue exitoso
-          this.arcaDialog = true
-        }
-      } catch (error) {
-        this.arcaDialog = true
-      } finally {
-        loading(false)
-      }
-    },
-
     /**
      * Verificar acceso a API desde el backend (no confiar en localStorage)
      */
     async verifyApiAccess () {
       try {
+        loading(true)
         // Llamar al backend para verificar la suscripción actual
         const { data } = await this.$api.get('subscriptions/current')
         // Actualizar el store con datos verificados del backend
@@ -1682,6 +1629,8 @@ export default {
         console.error('[Subscription] Verification error:', error)
         // En caso de error, denegar acceso por seguridad
         return false
+      } finally {
+        loading(false)
       }
     },
     /**
@@ -1743,7 +1692,6 @@ export default {
      * Load available integrations
      */
     async loadIntegrations () {
-      // Only load if not already loaded
       if (this.availableIntegrations.length > 0) {
         return
       }
@@ -1762,9 +1710,17 @@ export default {
     /**
      * Open integration dialog
      */
-    openIntegrationDialog (integration) {
-      console.log(integration)
+    async openIntegrationDialog (integration) {
+      const hasApiAccess = await this.verifyApiAccess()
+
+      if (!hasApiAccess) {
+        notify('Tu plan actual no incluye acceso a integraciones. Actualiza tu plan.', 'warning', 'upgrade')
+        this.showSubscriptionDialog = true
+        return
+      }
+
       this.selectedIntegrationSlug = integration.slug
+
       setTimeout(() => {
         this.showIntegrationDialog = true
       }, 100)
@@ -1792,7 +1748,7 @@ export default {
         // Save or update company integration
         await api.post('company-integrations', {
           integration_id: integration.id,
-          credentials: credentials
+          credentials
         })
 
         notify('Configuración guardada exitosamente', 'positive', 'check_circle')
@@ -1811,11 +1767,9 @@ export default {
      * Handle integration generate (for special cases like ARCA)
      */
     async handleIntegrationGenerate (credentials) {
-      // Redirect to specific handler based on integration
       if (this.selectedIntegrationSlug === 'arca') {
         await this.generateCertificate(credentials)
       } else {
-        // Default behavior: save credentials
         await this.handleIntegrationConnect(credentials)
       }
     },

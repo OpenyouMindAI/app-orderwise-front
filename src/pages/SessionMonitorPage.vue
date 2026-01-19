@@ -921,12 +921,12 @@ function getInitial (name) {
 
 function getOnlineStatusText (session) {
   if (!session) return ''
-  
+
   // Usuario activamente en línea
   if (session.status === 'online') return 'En línea'
 
   const now = new Date()
-  
+
   // Para usuarios inactivos, usar last_activity_at
   if (session.status === 'idle') {
     const lastActivity = session.last_activity_at
