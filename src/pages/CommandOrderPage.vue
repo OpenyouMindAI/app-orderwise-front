@@ -70,9 +70,46 @@
       </div>
     </transition>
 
+    <!-- Swiper Tabs for Mobile/Tablet -->
+    <div class="lt-md sticky-tabs q-px-md">
+      <swiper
+        :slides-per-view="3"
+        :space-between="10"
+        :centered-slides="true"
+        :breakpoints="{
+          600: {
+            slidesPerView: 5,
+            loop: false,
+            centeredSlides: false
+          }
+        }"
+        :loop="true"
+        class="bg-white text-black"
+        @swiper="onSwiper"
+        style="padding: 10px 5px;"
+      >
+        <swiper-slide
+          v-for="status in filteredStatuses"
+          :key="status.value"
+          @click="tab = status.value"
+          class="cursor-pointer"
+        >
+          <div
+            class="column items-center q-gutter-xs q-pa-xs rounded-borders transition-all"
+            :class="tab === status.value ? 'bg-primary text-white' : 'text-grey-8'"
+            style="transition: all 0.3s ease;"
+          >
+            <q-icon :name="status.icon" :color="tab === status.value ? 'white' : status.color" size="20px" />
+            <span class="text-weight-medium" style="font-size: 11px; white-space: nowrap;">{{ status.label }}</span>
+            <q-badge color="red" floating v-if="status.total > 0" :style="tab === status.value ? 'border: 1px solid white' : ''">{{ status.total }}</q-badge>
+          </div>
+        </swiper-slide>
+      </swiper>
+    </div>
+
     <!-- Tablero Trello -->
-    <div class="trello-columns">
-      <div v-for="(status, index) in filteredStatuses" :key="index" class="trello-column">
+    <div v-if="!$q.screen.lt.md" class="trello-columns">
+      <div v-for="(status, index) in displayStatuses" :key="status.value" class="trello-column">
         <!-- Column Header -->
         <div class="column-header">
           <div class="flex items-center justify-between">
@@ -118,7 +155,7 @@
           @change="onDragChange($event, status, index)"
           :animation="200"
           ghost-class="ghost-card"
-          :disabled="status.value === 'in_delivery' || status.value === 'delivered'"
+          :disabled="!isDraggable || status.value === 'in_delivery' || status.value === 'delivered'"
         >
           <template #item="{ element: invoice }">
             <q-card
@@ -293,6 +330,246 @@
         <q-inner-loading :showing="status.loading" color="primary" />
       </div>
     </div>
+
+    <!-- Mobile Swipeable View -->
+    <q-tab-panels
+      v-else
+      v-model="tab"
+      animated
+      swipeable
+      infinite
+      transition-prev="slide-right"
+      transition-next="slide-left"
+      class="bg-transparent"
+    >
+      <q-tab-panel
+        v-for="(status, index) in displayStatuses"
+        :key="status.value"
+        :name="status.value"
+        class="q-pa-none"
+      >
+        <div class="trello-column full-width q-mx-auto" :style="$q.screen.sm ? 'max-width: 900px;' : 'max-width: 500px;'">
+          <!-- Column Header -->
+          <div class="column-header">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center q-gutter-xs">
+                <!-- Select All Checkbox -->
+                <q-checkbox
+                  :model-value="isColumnSelected(status)"
+                  @update:model-value="toggleColumnSelection(status)"
+                  dense
+                  size="xs"
+                  color="primary"
+                >
+                  <q-tooltip>Seleccionar toda la columna</q-tooltip>
+                </q-checkbox>
+                <q-icon :name="status.icon" size="18px" :color="status.color" />
+                <span class="text-subtitle2 text-weight-bold">{{ status.label }}</span>
+              </div>
+              <div class="flex items-center q-gutter-xs">
+                <!-- View All Drivers Button (only for in_delivery) -->
+                <q-btn
+                  v-if="status.value === 'in_delivery'"
+                  icon="map"
+                  size="sm"
+                  flat
+                  dense
+                  round
+                  color="teal"
+                  @click="openAllDriversMap"
+                >
+                  <q-tooltip>Ver todos los conductores</q-tooltip>
+                </q-btn>
+                <q-badge :color="status.color" rounded>{{ status.total }}</q-badge>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cards Container with Drag & Drop -->
+          <draggable
+            v-model="status.data"
+            :group="{ name: 'orders', pull: status.value !== 'in_delivery' && status.value !== 'delivered', put: status.value !== 'in_delivery' && status.value !== 'delivered' }"
+            item-key="id"
+            class="cards-container"
+            @change="onDragChange($event, status, index)"
+            :animation="200"
+            ghost-class="ghost-card"
+            :disabled="!isDraggable || status.value === 'in_delivery' || status.value === 'delivered'"
+          >
+            <template #item="{ element: invoice }">
+              <q-card
+                class="order-card"
+                :class="{ 'selected-card': isInvoiceSelected(invoice.id) }"
+                @click="showInvoices(invoice)"
+              >
+
+                <!-- Card Header -->
+                <div class="card-header">
+                  <div class="flex items-center justify-between q-mb-xs">
+                    <div class="flex items-center q-gutter-xs">
+                      <!-- Selection Checkbox -->
+                      <q-checkbox
+                        :model-value="isInvoiceSelected(invoice.id)"
+                        @update:model-value="toggleInvoiceSelection(invoice)"
+                        @click.stop
+                        dense
+                        size="xs"
+                        color="primary"
+                      />
+                      <span class="text-weight-bold text-body2">{{ invoice.code }}</span>
+                    </div>
+                    <q-badge :color="getInvoiceTypeColor(invoice.invoice_type?.name)" text-color="white" class="text-caption">
+                      {{ invoice.invoice_type?.name }}
+                    </q-badge>
+                  </div>
+                  <div class="text-caption text-grey-7">{{ invoice.branch_office?.name }}</div>
+                </div>
+                <!-- Products List with Checkboxes -->
+                <div class="card-products">
+                  <div
+                    v-for="product in invoice.products.slice(0, 3)"
+                    :key="product.id"
+                    class="product-item"
+                    @click.stop
+                  >
+                    <q-checkbox
+                      v-model="product.pivot.is_ready"
+                      dense
+                      size="xs"
+                      color="green"
+                      :disable="status.value === 'in_delivery' || status.value === 'delivered'"
+                      @update:model-value="toggleProductReady(invoice, product)"
+                    />
+                    <div class="product-info">
+                      <span class="text-body2">{{ product.name }}</span>
+                      <span class="text-caption text-grey-6">x{{ Number(product?.pivot?.amount).toFixed(0) }}</span>
+                    </div>
+                  </div>
+                  <div v-if="invoice.products.length > 3" class="text-caption text-grey-6 q-mt-xs q-ml-md">
+                    +{{ invoice.products.length - 3 }} más...
+                  </div>
+
+                  <!-- Progress Bar -->
+                  <div class="q-mt-xs">
+                    <q-linear-progress
+                      :value="getProductsProgress(invoice)"
+                      color="green"
+                      size="4px"
+                      class="rounded-borders"
+                    />
+                    <div class="text-caption text-grey-6 q-mt-xs">
+                      {{ getReadyProductsCount(invoice) }}/{{ invoice.products.length }} listos
+                    </div>
+                  </div>
+                </div>
+                <!-- Card Footer -->
+                <div class="card-footer">
+                  <!-- Cliente -->
+                  <div v-if="invoice.client" class="flex items-center q-gutter-xs q-mb-xs">
+                    <q-icon name="person" size="14px" color="grey-6" />
+                    <span class="text-caption text-grey-7">{{ invoice.client?.name }}</span>
+                  </div>
+
+                  <!-- Descripción -->
+                  <div v-if="invoice.description" class="flex items-start q-gutter-xs q-mb-xs">
+                    <q-icon name="description" size="14px" color="grey-6" class="q-mt-xs" />
+                    <span class="text-caption text-grey-7">{{ invoice.description }}</span>
+                  </div>
+
+                  <!-- Delivery Person Assignment -->
+                  <div class="delivery-assignment" @click.stop>
+                    <q-select
+                      v-model="invoice.delivery_person"
+                      :options="deliveryPersons"
+                      option-label="name"
+                      option-value="id"
+                      dense
+                      borderless
+                      placeholder="Asignar repartidor"
+                      class="delivery-select"
+                      :disable="status.value === 'in_delivery' || status.value === 'delivered'"
+                      @update:model-value="assignDeliveryPerson(invoice, $event)"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="delivery_dining" size="16px" color="primary" />
+                      </template>
+                      <template v-slot:selected>
+                        <span class="text-caption" v-if="invoice.delivery_person">
+                          {{ invoice.delivery_person.name }}
+                        </span>
+                        <span class="text-caption text-grey-6" v-else>
+                          Sin asignar
+                        </span>
+                      </template>
+                    </q-select>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="flex items-center justify-between q-mt-xs">
+                    <div class="flex items-center q-gutter-xs">
+                      <q-icon name="schedule" size="14px" color="grey-6" />
+                      <span class="text-caption text-grey-6">{{ formatDate(invoice.created_at, 'HH:mm') }}</span>
+                    </div>
+                    <div class="flex items-center q-gutter-xs">
+                      <!-- Track Delivery Button (only for in_delivery status) -->
+                      <q-btn
+                        v-if="status.value === 'in_delivery' && invoice.delivery_run_id"
+                        icon="map"
+                        size="xs"
+                        flat
+                        dense
+                        color="teal"
+                        @click.stop="openTrackingMap(invoice)"
+                      >
+                        <q-tooltip>Ver ubicación en tiempo real</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        icon="print"
+                        size="xs"
+                        flat
+                        dense
+                        color="grey-7"
+                        @click.stop="print(invoice)"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Payment Button (if pending balance) -->
+                  <div v-if="invoice.pending > 0" class="q-mt-sm">
+                    <q-btn
+                      color="green"
+                      size="sm"
+                      dense
+                      no-caps
+                      class="full-width"
+                      @click.stop="openPaymentDialogFromCard(invoice)"
+                    >
+                      <q-icon name="payments" size="16px" class="q-mr-xs" />
+                      <span class="text-caption">Cobrar {{ formatNumber(invoice.pending) }}</span>
+                    </q-btn>
+                  </div>
+                </div>
+              </q-card>
+            </template>
+          </draggable>
+
+          <!-- Column Footer -->
+          <div class="column-footer" v-if="status.total > status.data.length">
+            <q-btn
+              flat
+              dense
+              color="primary"
+              label="Cargar más"
+              size="sm"
+              @click="loadMore(status)"
+              :loading="status.loading"
+            />
+          </div>
+
+          <q-inner-loading :showing="status.loading" color="primary" />
+        </div>
+      </q-tab-panel>
+    </q-tab-panels>
     <q-dialog v-model="openEditInvoice" persistent :maximized="$q.screen.lt.sm">
       <q-card class="column" :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 80vw;'">
         <q-card-section class="flex justify-between items-center bg-primary text-white">
@@ -1221,11 +1498,6 @@ const invoice = ref(null)
  */
 const selectedInvoices = ref([])
 /**
- * Show bulk actions toolbar
- * @type {Boolean}
- */
-const showBulkActions = ref(false)
-/**
  * Bulk action delivery person
  * @type {Object}
  */
@@ -1396,11 +1668,57 @@ const statuses = ref([
   { label: 'Entregado', value: 'delivered', data: [], page: 1, loading: false, permissions: [], icon: 'done_all', color: 'purple', total: 0 }
 ])
 
+import { Swiper, SwiperSlide } from 'swiper/vue'
+import 'swiper/css'
+
 /**
  * Filtered statuses (computed to avoid v-if with v-for)
  */
 const filteredStatuses = computed(() => {
   return statuses.value.filter(status => !setPermissionsByUser(status.permissions))
+})
+
+/**
+ * Active tab for mobile view
+ */
+const tab = ref('pending') // Default to first pending status
+
+// Swiper logic
+const swiperRef = ref(null)
+
+const onSwiper = (swiper) => {
+  swiperRef.value = swiper
+}
+
+const slideToLoop = (index) => {
+  if (swiperRef.value) {
+    swiperRef.value.slideToLoop(index)
+  }
+}
+
+// Watch tab change to update swiper slide
+watch(tab, (newVal) => {
+  const index = filteredStatuses.value.findIndex(status => status.value === newVal)
+  if (index !== -1) {
+    slideToLoop(index)
+  }
+})
+
+/**
+ * Statuses to display based on screen size
+ */
+const displayStatuses = computed(() => {
+  // Always return all filtered statuses. visibility is handled by q-tabs/q-tab-panels in mobile
+  // and by flex layout in desktop.
+  return filteredStatuses.value
+})
+
+/**
+ * Check if drag and drop is allowed
+ */
+const isDraggable = computed(() => {
+  // Disable drag and drop on mobile phones (XS), enable on tablets (SM) and desktop (MD+)
+  return !$q.screen.xs
 })
 
 /**
@@ -1775,15 +2093,6 @@ const getInvoiceTypes = async () => {
   try {
     const { data } = await api.get('invoice-types')
     invoiceTypes.value = data
-  } catch (error) {
-    notify(error.message, 'negative', 'warning')
-  }
-}
-
-const nextStatus = async (data, index) => {
-  try {
-    await api.put(`invoice-status-command/${data.id}`, { status: statuses.value[index].value })
-    getInvoices(params.value)
   } catch (error) {
     notify(error.message, 'negative', 'warning')
   }
@@ -2704,6 +3013,7 @@ function addDriverToMap (deliveryRun) {
         // Skip if invalid coordinates
         if (isNaN(lat) || isNaN(lng)) return
 
+        // eslint-disable-next-line no-new
         new google.maps.Marker({
           position: { lat, lng },
           map: allDriversMap.value,
@@ -2971,6 +3281,12 @@ watch(showAllDriversMap, (newVal) => {
   padding: 0;
 }
 
+@media (max-width: 1023px) {
+  .trello-board {
+    padding-bottom: 80px;
+  }
+}
+
 .board-header {
   background: white;
   padding: 16px 20px;
@@ -2978,19 +3294,25 @@ watch(showAllDriversMap, (newVal) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
-  top: 0;
   z-index: 100;
 }
 
 /* Bulk Actions Toolbar */
+.sticky-tabs {
+  position: sticky;
+  top: 56px;
+  z-index: 98;
+  background: white;
+  margin-bottom: 8px;
+}
+
 .bulk-actions-toolbar {
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   padding: 16px 20px;
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
   position: sticky;
-  top: 64px;
-  z-index: 99;
+  top: 0; /* Ahora se pega al borde superior o debajo del navbar directamente */
+  z-index: 99; /* Mayor que sticky-tabs para superponerse si es necesario */
 }
 
 /* Slide down animation */
@@ -3080,6 +3402,31 @@ watch(showAllDriversMap, (newVal) => {
   flex-direction: column;
   height: fit-content;
   max-height: calc(100vh - 120px);
+}
+
+.trello-column.full-width {
+  min-width: 100%;
+  max-width: 100%;
+  max-height: none;
+}
+
+.trello-column.full-width .cards-container {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* Grid de 2 columnas para tablets */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .trello-column.full-width .cards-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .trello-column.full-width .cards-container .order-card {
+    margin-bottom: 0;
+  }
 }
 
 .column-header {
