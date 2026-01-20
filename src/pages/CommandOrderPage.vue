@@ -12,62 +12,74 @@
       <q-btn icon="tune" label="Filtros" color="primary" flat @click="dialogFilter = true" />
     </div>
 
-    <!-- Bulk Actions Toolbar -->
-    <transition name="slide-down">
-      <div v-if="selectedInvoices.length > 0" class="bulk-actions-toolbar">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center q-gutter-sm">
-            <q-icon name="check_circle" size="24px" color="white" />
-            <span class="text-subtitle1 text-weight-medium text-white">
-              {{ selectedInvoices.length }} orden(es) seleccionada(s)
-            </span>
-            <q-btn
-              label="Deseleccionar todo"
+    <!-- Bulk Actions Notification Floating Bottom -->
+    <transition name="slide-up">
+      <q-page-sticky position="bottom" :offset="[0, 18]" v-if="selectedInvoices.length > 0" style="z-index: 10001;">
+        <div id="bulk-notification-container" class="bg-dark text-white q-pa-sm rounded-borders shadow-10 flex items-center justify-between q-gutter-x-md" style="border-radius: 24px; min-width: 300px; max-width: 90vw;">
+          <div class="flex items-center q-pl-sm">
+            <q-btn round flat dense icon="close" size="sm" color="grey-5" @click="clearSelection" class="q-mr-sm" />
+            <span class="text-subtitle2">{{ selectedInvoices.length }} seleccionada(s)</span>
+          </div>
+
+          <div class="flex items-center q-gutter-x-sm">
+            <!-- Assign Delivery -->
+            <DropdownMenu
+              ref="deliveryDropdownRef"
               flat
               dense
+              round
               color="white"
-              size="sm"
-              @click="clearSelection"
-            />
-          </div>
-          <div class="flex items-center q-gutter-sm">
-            <!-- Assign Delivery Person -->
-            <q-select
-              v-model="bulkDeliveryPerson"
-              :options="deliveryPersons"
-              option-label="name"
-              option-value="id"
-              dense
-              filled
-              dark
-              label="Asignar repartidor"
-              style="min-width: 200px"
-              @update:model-value="applyBulkDeliveryPerson"
+              icon="delivery_dining"
+              target="#bulk-notification-container"
+              anchor="top middle"
+              :offset="[0, 10]"
             >
-              <template v-slot:prepend>
-                <q-icon name="delivery_dining" />
-              </template>
-            </q-select>
+              <q-list>
+                <q-item-label header>Asignar Repartidor</q-item-label>
+                <q-item
+                  v-for="dp in deliveryPersons"
+                  :key="dp.id"
+                  clickable
+                  @click="applyBulkDeliveryPerson(dp); deliveryDropdownRef?.close()"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="two_wheeler" />
+                  </q-item-section>
+                  <q-item-section>{{ dp.name }}</q-item-section>
+                </q-item>
+              </q-list>
+            </DropdownMenu>
+
             <!-- Change Status -->
-            <q-select
-              v-model="bulkStatus"
-              :options="statuses"
-              option-label="label"
-              option-value="value"
+            <DropdownMenu
+              ref="statusDropdownRef"
+              flat
               dense
-              filled
-              dark
-              label="Cambiar estado"
-              style="min-width: 180px"
-              @update:model-value="applyBulkStatus"
+              round
+              color="white"
+              icon="swap_horiz"
+              target="#bulk-notification-container"
+              anchor="top middle"
+              :offset="[0, 10]"
             >
-              <template v-slot:prepend>
-                <q-icon name="swap_horiz" />
-              </template>
-            </q-select>
+              <q-list>
+                <q-item-label header>Cambiar Estado</q-item-label>
+                <q-item
+                  v-for="st in statuses"
+                  :key="st.value"
+                  clickable
+                  @click="applyBulkStatus(st); statusDropdownRef?.close()"
+                >
+                  <q-item-section avatar>
+                    <q-icon :name="st.icon" :color="st.color" />
+                  </q-item-section>
+                  <q-item-section>{{ st.label }}</q-item-section>
+                </q-item>
+              </q-list>
+            </DropdownMenu>
           </div>
         </div>
-      </div>
+      </q-page-sticky>
     </transition>
 
     <!-- Swiper Tabs for Mobile/Tablet -->
@@ -1423,6 +1435,7 @@ import { commandPrint } from 'src/const/printers'
 import { useQuasar } from 'quasar'
 import ImageGalleryPreview from 'src/components/ImageGalleryComponent.vue'
 import draggable from 'vuedraggable'
+import DropdownMenu from 'src/components/DropdownMenu.vue'
 import { loadGoogleMaps } from 'src/config/maps'
 
 const store = authentication()
@@ -1497,6 +1510,8 @@ const invoice = ref(null)
  * @type {Array}
  */
 const selectedInvoices = ref([])
+const deliveryDropdownRef = ref(null)
+const statusDropdownRef = ref(null)
 /**
  * Bulk action delivery person
  * @type {Object}
@@ -3328,6 +3343,18 @@ watch(showAllDriversMap, (newVal) => {
 
 .slide-down-leave-to {
   transform: translateY(-100%);
+  opacity: 0;
+}
+
+/* Slide up animation */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
   opacity: 0;
 }
 
