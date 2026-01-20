@@ -27,6 +27,17 @@
               </q-tooltip>
             </q-btn>
             <q-btn
+              label="Modo afiliado"
+              :icon="store.partnerMode ? 'check_box' : 'check_box_outline_blank'"
+              @click="togglePartnerMode"
+              class="modern-btn-secondary"
+              v-if="isAdmin"
+            >
+              <q-tooltip>
+                {{ store.partnerMode ? 'Modo afiliado activado' : 'Modo afiliado desactivado' }}
+              </q-tooltip>
+            </q-btn>
+            <q-btn
               icon="filter_alt"
               label="Filtros"
               unelevated
@@ -1824,6 +1835,11 @@ export default {
       return `${year}-${month}-${day}`
     },
 
+    async togglePartnerMode () {
+      await this.store.togglePartnerMode()
+      this.loadClients()
+    },
+
     /**
      * Loads available branch offices based on userSession role
      * If root/superadmin: shows all branch offices
@@ -1839,8 +1855,6 @@ export default {
             'branchOfficeUsers.user_id': this.userSession.id
           }
         }
-
-        console.log(this.userSession)
 
         const { data } = await this.$api.get('branch-offices', { params })
 
@@ -1892,6 +1906,7 @@ export default {
           perPage: rowsPerPage,
           sortBy: sortBy || 'balance',
           sortOrder: descending ? 'desc' : 'asc',
+          onlyClients: Boolean(!this.store.partnerMode),
           branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
           search: this.search,
           ...this.filters
@@ -1932,6 +1947,9 @@ export default {
      * Wrapper method for initial load and filter changes
      */
     async loadClients () {
+      if (this.userSession?.is_partner) {
+        this.store.partnerMode = true
+      }
       await this.onRequest({ pagination: this.pagination })
     },
 

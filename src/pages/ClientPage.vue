@@ -2,6 +2,17 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right q-gutter-sm">
+        <q-btn
+          label="Modo afiliado"
+          :icon="store.partnerMode ? 'check_box' : 'check_box_outline_blank'"
+          @click="togglePartnerMode"
+          color="primary"
+          v-if="isAdmin"
+        >
+          <q-tooltip>
+            {{ store.partnerMode ? 'Modo afiliado activado' : 'Modo afiliado desactivado' }}
+          </q-tooltip>
+        </q-btn>
         <q-btn color="teal" @click="exportClients" icon="download" label="Exportar" />
         <q-btn color="indigo" @click="openImportDialog" icon="upload" label="Importar" />
         <q-btn color="primary" @click="openNewClientModal" icon="add_circle"/>
@@ -124,6 +135,27 @@
                 @filter="getConditionIvaReceptor"
               />
             </div>
+            <!-- Affiliate Configuration -->
+            <div class="col-12 flex q-gutter-x-lg q-pt-md">
+              <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
+              <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" />
+            </div>
+            <div class="col-12" v-if="!client.is_partner">
+              <q-select
+                filled
+                v-model="client.partner"
+                label="Afiliado"
+                :options="partners"
+                @filter="getPartners"
+                use-input
+                option-label="name"
+                option-value="id"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="group" />
+                </template>
+              </q-select>
+            </div>
             <!-- Sección de Dirección - MANTENER IGUAL -->
             <div class="col-12">
               <AddressComponent
@@ -243,12 +275,26 @@
               />
             </div>
 
-            <!-- Checkbox cuenta corriente -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-checkbox
-                v-model="client.is_credit"
-                label="¿Maneja cuenta corriente?"
-              />
+            <!-- Affiliate Configuration -->
+            <div class="col-12 flex q-gutter-x-lg q-pt-md">
+              <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
+              <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" />
+            </div>
+            <div class="col-12" v-if="!client.is_partner">
+              <q-select
+                filled
+                v-model="client.partner"
+                label="Afiliado"
+                :options="partners"
+                @filter="getPartners"
+                use-input
+                option-label="name"
+                option-value="id"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="group" />
+                </template>
+              </q-select>
             </div>
 
             <!-- Sección de Dirección - MANTENER IGUAL -->
@@ -491,6 +537,7 @@ export default {
   },
   data () {
     return {
+      store: authentication(),
       clients: [],
       documentTypes: [],
       client: {},
@@ -541,14 +588,8 @@ export default {
       openAddClient: false,
       openEditClient: null,
       conditionIvaReceptors: [],
+      partners: [],
       columns: [
-        {
-          name: 'document_number',
-          align: 'left',
-          label: 'Número de documento',
-          field: 'document_number',
-          sortable: true
-        },
         {
           name: 'name',
           align: 'left',
@@ -557,10 +598,19 @@ export default {
           sortable: true
         },
         {
+          name: 'document_number',
+          align: 'left',
+          label: 'Número de documento',
+          field: 'document_number',
+          format: (value) => value || '-',
+          sortable: true
+        },
+        {
           name: 'phone_number',
           align: 'left',
           label: 'Número de teléfono',
           field: 'phone_number',
+          format: (value) => value || '-',
           sortable: true
         },
         {
@@ -568,6 +618,7 @@ export default {
           align: 'left',
           label: 'Correo',
           field: 'email',
+          format: (value) => value || '-',
           sortable: true
         }
       ],
@@ -581,10 +632,7 @@ export default {
     }
   },
   mounted () {
-    this.setPagination({
-      pagination: this.paginationConfig,
-      filter: undefined
-    })
+    this.loadClients()
   },
   watch: {
     filter (data) {
@@ -592,7 +640,14 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession']),
+    /**
+     * Checks if the current user is an administrator
+     * @returns {Boolean} True if user is root or super admin
+     */
+    isAdmin () {
+      return this.userSession?.is_root || this.userSession?.is_super_admin
+    }
   },
   methods: {
     /**
@@ -611,7 +666,8 @@ export default {
         address: '',
         condition_iva_receptor: null,
         document_type: null,
-        is_credit: true
+        is_credit: true,
+        partner: null
       }
       this.role = null
 
@@ -659,6 +715,7 @@ export default {
      */
     getClients (params = this.params) {
       this.visible = true
+      params.onlyClients = Boolean(!this.store.partnerMode)
       this.$api.get('clients', { params })
         .then(({ data }) => {
           this.clients = data.data
@@ -719,6 +776,33 @@ export default {
       }
     },
     /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getPartners (value, update) {
+      try {
+        const { data } = await this.$api.get('partners', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            },
+            paginate: true,
+            page: 1,
+            perPage: 20,
+            sortBy: 'id',
+            sortOrder: 'desc'
+          }
+        })
+        update(() => {
+          this.partners = data.data
+        })
+      } catch (err) {
+        notify('Error en la conexión', 'negative', 'warning')
+      }
+    },
+    /**
      * Set data pagination emit event
      * @param  {Object} data value pagination
      */
@@ -748,12 +832,14 @@ export default {
         clientData.document_type = JSON.stringify(clientData.document_type)
       }
 
-      // Guardar dirección como objeto JSON (igual que BranchOfficePage)
+      if (clientData?.partner?.id) {
+        clientData.partner_id = clientData.partner.id
+      }
+
       clientData.address = this.address || this.client.address || null
 
       this.$api.post('clients', clientData)
         .then(({ data }) => {
-          console.log('✅ Cliente creado exitosamente:', data)
           this.getClients()
           this.openAddClient = false
           this.visible = false
@@ -806,11 +892,13 @@ export default {
     saveEdit () {
       this.visible = true
 
-      // Preparar datos del cliente con dirección formateada
       const clientData = { ...this.client }
 
-      // Guardar dirección como objeto JSON (igual que BranchOfficePage)
       clientData.address = this.address || this.client.address || null
+
+      if (clientData?.partner?.id) {
+        clientData.partner_id = clientData.partner.id
+      }
 
       this.$api.put(`clients/${this.client.id}`, clientData)
         .then(({ data }) => {
@@ -1077,6 +1165,25 @@ export default {
           color: 'negative'
         })
       }
+    },
+    /**
+     * Initial load and state handling
+     */
+    async loadClients () {
+      if (this.userSession?.is_partner) {
+        this.store.partnerMode = true
+      }
+      this.setPagination({
+        pagination: this.paginationConfig,
+        filter: undefined
+      })
+    },
+    /**
+     * Toggle partner mode
+     */
+    async togglePartnerMode () {
+      await this.store.togglePartnerMode()
+      this.getClients()
     }
   }
 }

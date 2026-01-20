@@ -1574,6 +1574,27 @@
               />
             </div>
 
+            <!-- Affiliate Configuration -->
+            <div class="col-4 flex q-gutter-x-lg q-pt-md">
+              <q-checkbox v-model="clientAdded.is_partner" label="¿Es Afiliado?" dense color="primary" />
+            </div>
+            <div class="col-8" v-if="!clientAdded.is_partner">
+              <q-select
+                filled
+                v-model="clientAdded.partner"
+                label="Afiliado"
+                :options="partners"
+                @filter="getPartners"
+                use-input
+                option-label="name"
+                option-value="id"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="group" />
+                </template>
+              </q-select>
+            </div>
+
             <!-- Sección de Dirección - MANTENER IGUAL -->
             <div class="col-12">
               <AddressComponent
@@ -1751,6 +1772,7 @@ export default {
       // tourSteps moved to computed for dynamic filtering
       spotlightStyle: {},
       tourCardStyle: {},
+      partners: [],
 
       currentCashierSession: null,
 
@@ -1944,7 +1966,9 @@ export default {
        * @type {Object}
        */
       clientAdded: {
-        is_credit: false
+        is_credit: true,
+        is_partner: false,
+        partner: null
       },
       /**
        * Invoice data
@@ -2100,6 +2124,10 @@ export default {
        * @type {Array}
        */
       tables: [],
+      /**
+       * Partners
+       * @type {Array}
+       */
       /**
        * Pagination option
        * @type {Object}
@@ -3449,6 +3477,33 @@ export default {
       }
     },
     /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getPartners (value, update) {
+      try {
+        const { data } = await this.$api.get('partners', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            },
+            paginate: true,
+            page: 1,
+            perPage: 20,
+            sortBy: 'id',
+            sortOrder: 'desc'
+          }
+        })
+        update(() => {
+          this.partners = data.data
+        })
+      } catch (err) {
+        notify('A ocurrido un error al cargar los afiliados', 'negative', 'warning')
+      }
+    },
+    /**
      * Update values
      * @param {String} inputName input name
      */
@@ -3584,7 +3639,22 @@ export default {
      */
     saveClient () {
       this.loadingClient = true
-      this.$api.post('clients', this.clientAdded)
+
+      const clientData = { ...this.clientAdded }
+
+      if (clientData.condition_iva_receptor && typeof clientData.condition_iva_receptor === 'object') {
+        clientData.condition_iva_receptor = JSON.stringify(clientData.condition_iva_receptor)
+      }
+
+      if (clientData.document_type && typeof clientData.document_type === 'object') {
+        clientData.document_type = JSON.stringify(clientData.document_type)
+      }
+
+      if (clientData?.partner?.id) {
+        clientData.partner_id = clientData.partner.id
+      }
+
+      this.$api.post('clients', clientData)
         .then(({ data }) => {
           this.closeAddClientModal()
           this.client = data
@@ -5029,7 +5099,9 @@ export default {
     closeAddClientModal () {
       this.openAddClient = false
       this.clientAdded = {
-        is_credit: false
+        is_credit: true,
+        is_partner: false,
+        partner: null
       }
       this.address = null
       // Resetear el componente AddressComponent incrementando su key

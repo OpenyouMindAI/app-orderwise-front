@@ -155,6 +155,13 @@ export const authentication = defineStore('authentication', {
       localStorage.setItem('hideAmounts', this.hideAmounts)
     },
     /**
+     * Toggle partner mode
+     */
+    togglePartnerMode () {
+      this.partnerMode = !this.partnerMode
+      localStorage.setItem('partnerMode', this.partnerMode)
+    },
+    /**
      * Set company session
      * @param  {Object} companySession
      */
