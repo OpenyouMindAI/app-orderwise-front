@@ -1407,6 +1407,7 @@
                 option-value="id"
                 option-label="name"
                 clearable
+                multiple
                 v-model="filters.category_id"
                 :options="categories"
                 @filter="filterCategories"
@@ -2725,12 +2726,13 @@ export default {
 
       const dataEqualFilter = {}
       const dataSearch = {}
+      const whereIn = { category_id: [] }
 
       if (this.filters.name) dataSearch.name = this.filters.name
       if (this.filters.description) dataSearch.description = this.filters.description
       if (this.filters.barcode) dataSearch.barcode = this.filters.barcode
 
-      if (this.filters.category_id) dataEqualFilter.category_id = this.filters.category_id.id
+      if (this.filters?.category_id?.length > 0) whereIn.category_id = this.filters?.category_id?.map(category => category.id)
       if (this.filters.measurement_unit_id) dataEqualFilter.unit_of_measure_id = this.filters.measurement_unit_id.id
       if (this.filters.is_pack !== null) dataEqualFilter.is_bundle = this.filters.is_pack.value
       if (this.filters.is_addon !== null) dataEqualFilter.is_addons = this.filters.is_addon.value
@@ -2740,6 +2742,7 @@ export default {
 
       this.params.dataEqualFilter = dataEqualFilter
       this.params.dataSearch = dataSearch
+      this.params.whereIn = whereIn
 
       this.getProducts(this.params)
       this.dialogFilter = false
