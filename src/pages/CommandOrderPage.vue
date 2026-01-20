@@ -3,11 +3,15 @@
     <!-- Header Compacto -->
     <div class="board-header">
       <div class="flex items-center q-gutter-sm">
-        <q-icon name="dashboard" size="24px" color="primary" />
-        <span class="text-h6 text-weight-medium">Tablero de Órdenes</span>
-        <q-badge v-for="branchOffice in branchOfficeSelect" :key="branchOffice?.id" color="primary" class="q-ml-xs">
-          {{ branchOffice.name }}
-        </q-badge>
+        <div>
+          <q-icon name="dashboard" size="24px" color="primary" />
+          <span class="text-h6 text-weight-medium">Tablero de Órdenes</span>
+        </div>
+        <div>
+          <q-badge v-for="branchOffice in branchOfficeSelect" :key="branchOffice?.id" color="primary" class="q-ml-xs">
+            {{ branchOffice.name }}
+          </q-badge>
+        </div>
       </div>
       <q-btn icon="tune" label="Filtros" color="primary" flat @click="dialogFilter = true" />
     </div>
