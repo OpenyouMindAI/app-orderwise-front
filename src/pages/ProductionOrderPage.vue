@@ -1,43 +1,111 @@
 <template>
   <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
-        <q-btn color="primary" label="Nueva Orden de Producción" @click="openNewOrder = true" icon="add_circle"/>
+    <!-- Page Header -->
+    <div class="row items-center q-mb-md">
+      <div class="col">
+        <div class="text-h6 text-weight-bold">
+          <q-icon
+            name="precision_manufacturing"
+            size="md"
+            color="primary"
+            class="q-mr-sm"
+          />
+          Órdenes de Producción
+        </div>
+        <div class="text-caption text-grey-6">
+          Gestiona y monitorea las órdenes de producción
+        </div>
       </div>
-      <div class="col-12">
-        <q-table
-          title="Órdenes de Producción"
-          row-key="id"
-          :columns="columns"
-          :rows="orders"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          v-model:pagination="paginationConfig"
-          @row-click="viewOrder"
-          @request="setPagination"
-          no-data-label="Registro no encontrado"
-        >
-          <template v-slot:loading>
-            <q-inner-loading showing color="primary" />
-          </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
-          <template v-slot:body-cell-status="props">
-            <q-td :props="props">
-              <q-badge :color="getStatusColor(props.row.status)">
-                {{ getStatusLabel(props.row.status) }}
-              </q-badge>
-            </q-td>
-          </template>
-        </q-table>
+      <div class="col-auto">
+        <q-btn
+          unelevated
+          color="primary"
+          label="Nueva Orden"
+          @click="openNewOrder = true"
+          icon="add_circle"
+          class="q-px-lg"
+        />
       </div>
     </div>
+    <!-- Main Table Card -->
+    <q-card flat bordered class="rounded-lg">
+      <q-table
+        row-key="id"
+        :columns="columns"
+        :rows="orders"
+        :loading="visible"
+        :filter="filter"
+        binary-state-sort
+        v-model:pagination="paginationConfig"
+        @row-click="viewOrder"
+        @request="setPagination"
+        no-data-label="No hay órdenes de producción"
+        flat
+        class="production-table"
+      >
+        <template v-slot:loading>
+          <q-inner-loading showing color="primary">
+            <q-spinner-gears size="40px" color="primary" />
+          </q-inner-loading>
+        </template>
+        <template v-slot:top>
+          <div class="row full-width items-center q-pa-sm">
+            <div class="text-subtitle1 text-weight-bold q-mr-auto">
+              <q-icon name="list" size="sm" class="q-mr-xs" />
+              Listado de Órdenes
+            </div>
+            <q-input
+              outlined
+              dense
+              debounce="500"
+              v-model="filter"
+              placeholder="Buscar orden..."
+              class="q-ml-md"
+              style="width: 250px"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" />
+              </template>
+              <template v-slot:append v-if="filter">
+                <q-icon name="close" class="cursor-pointer" @click="filter = ''" />
+              </template>
+            </q-input>
+          </div>
+        </template>
+        <template v-slot:body="props">
+          <q-tr :props="props" @click="viewOrder($event, props.row)" class="cursor-pointer table-row-hover">
+            <q-td key="order_number" :props="props">
+              <div class="text-weight-bold text-primary">{{ props.row.order_number }}</div>
+            </q-td>
+            <q-td key="status" :props="props">
+              <q-chip
+                :color="getStatusColor(props.row.status)"
+                text-color="white"
+                size="sm"
+                :icon="getStatusIcon(props.row.status)"
+                class="text-weight-medium"
+              >
+                {{ getStatusLabel(props.row.status) }}
+              </q-chip>
+            </q-td>
+            <q-td key="planned_date" :props="props">
+              <div class="row items-center no-wrap">
+                <q-icon name="event" size="xs" color="grey-6" class="q-mr-xs" />
+                {{ formatDate(props.row.planned_date) }}
+              </div>
+            </q-td>
+            <q-td key="deposit" :props="props">
+              {{ props.row.deposit?.name || 'No disponible' }}
+            </q-td>
+            <q-td key="actions" :props="props" auto-width>
+              <q-btn flat round dense color="primary" icon="visibility" size="sm">
+                <q-tooltip>Ver detalles</q-tooltip>
+              </q-btn>
+            </q-td>
+          </q-tr>
+        </template>
+      </q-table>
+    </q-card>
 
     <!-- Modal para nueva orden -->
     <q-dialog
@@ -91,6 +159,31 @@
                           label="Sucursal"
                           :bg-color="$q.dark.isActive ? 'grey-10' : 'grey-1'"
                         />
+                        <q-select
+                          outlined
+                          v-model="orderForm.responsible_user_id"
+                          :options="users"
+                          option-value="id"
+                          option-label="name"
+                          emit-value
+                          map-options
+                          dense
+                          clearable
+                          label="Responsable"
+                          :bg-color="$q.dark.isActive ? 'grey-10' : 'grey-1'"
+                          @filter="filterUsers"
+                          use-input
+                          input-debounce="300"
+                        >
+                          <template v-slot:prepend>
+                            <q-icon name="person" size="xs" />
+                          </template>
+                          <template v-slot:no-option>
+                            <q-item>
+                              <q-item-section class="text-grey">Sin resultados</q-item-section>
+                            </q-item>
+                          </template>
+                        </q-select>
                         <q-input
                           outlined
                           v-model="orderForm.planned_date"
@@ -335,127 +428,388 @@
       </q-card>
     </q-dialog>
 
-    <!-- Modal para ver orden -->
-    <q-dialog v-model="openViewOrder" persistent full-width>
-      <q-card style="max-width: 1200px; width: 100%;">
-        <q-card-section class="row items-center bg-primary text-white">
-          <div class="text-h6">Orden {{ selectedOrder?.order_number }}</div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="closeViewOrderModal" />
+    <!-- Modal para ver orden (Rediseñado) -->
+    <q-dialog
+      v-model="openViewOrder"
+      persistent
+      :maximized="$q.screen.lt.md"
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card
+        :style="$q.screen.gt.sm ? 'width: 1200px; max-width: 95vw;' : ''"
+        :class="[$q.dark.isActive ? 'bg-dark' : 'bg-grey-1']"
+        class="column no-wrap"
+      >
+        <!-- Header con gradiente -->
+        <q-card-section class="bg-primary text-white q-py-md">
+          <div class="row items-center no-wrap">
+            <q-icon name="precision_manufacturing" size="md" class="q-mr-md" />
+            <div class="column">
+              <div class="text-h6 text-weight-bold">Orden {{ selectedOrder?.order_number }}</div>
+              <div class="text-caption opacity-8">
+                {{ formatDate(selectedOrder?.created_at) }}
+              </div>
+            </div>
+            <q-space />
+            <q-badge
+              :color="getStatusColor(selectedOrder?.status)"
+              class="text-weight-bold q-px-md q-py-xs"
+              style="font-size: 0.9rem"
+            >
+              {{ getStatusLabel(selectedOrder?.status) }}
+            </q-badge>
+            <q-btn icon="close" flat round dense @click="closeViewOrderModal" class="q-ml-md" />
+          </div>
         </q-card-section>
 
-        <q-card-section v-if="selectedOrder">
+        <!-- Loading overlay -->
+        <q-inner-loading :showing="loadingOrderDetail" color="primary">
+          <q-spinner-gears size="50px" color="primary" />
+          <div class="q-mt-sm text-primary">Cargando detalles...</div>
+        </q-inner-loading>
+
+        <q-card-section v-if="selectedOrder && !loadingOrderDetail" class="col scroll q-pa-md">
           <div class="row q-col-gutter-md">
-            <!-- Información general -->
+
+            <!-- Panel izquierdo: Info + Acciones rápidas -->
             <div class="col-12 col-md-4">
-              <q-card flat bordered>
-                <q-card-section>
-                  <div class="text-h6">Información</div>
-                  <q-separator class="q-my-sm"/>
-                  <div class="q-gutter-sm">
-                    <div><strong>Estado:</strong>
-                      <q-badge :color="getStatusColor(selectedOrder.status)">
-                        {{ getStatusLabel(selectedOrder.status) }}
+              <div class="column q-gutter-y-md">
+
+                <!-- Información General -->
+                <q-card flat bordered class="rounded-lg" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'">
+                  <q-card-section class="q-pa-md">
+                    <div class="text-overline text-primary text-weight-bold q-mb-sm">
+                      <q-icon name="info" size="xs" class="q-mr-xs" />
+                      INFORMACIÓN
+                    </div>
+                    <q-list dense>
+                      <q-item class="q-px-none">
+                        <q-item-section avatar>
+                          <q-icon name="store" color="grey-7" size="sm" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label caption>Sucursal</q-item-label>
+                          <q-item-label class="text-weight-bold">{{ selectedOrder.branch_office?.name || 'N/A' }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item class="q-px-none">
+                        <q-item-section avatar>
+                          <q-icon name="warehouse" color="grey-7" size="sm" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label caption>Depósito</q-item-label>
+                          <q-item-label class="text-weight-bold">{{ selectedOrder.deposit?.name || 'No disponible' }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item class="q-px-none">
+                        <q-item-section avatar>
+                          <q-icon name="person" color="grey-7" size="sm" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label caption>Responsable</q-item-label>
+                          <q-item-label class="text-weight-bold">
+                            {{ selectedOrder.responsible_user?.name || 'Sin asignar' }}
+                          </q-item-label>
+                        </q-item-section>
+                      </q-item>
+                      <q-item class="q-px-none">
+                        <q-item-section avatar>
+                          <q-icon name="event" color="grey-7" size="sm" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label caption>Fecha Planeada</q-item-label>
+                          <q-item-label class="text-weight-bold">{{ formatDate(selectedOrder.planned_date) }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-card-section>
+                </q-card>
+
+                <!-- Cambiar Estado -->
+                <q-card flat bordered class="rounded-lg" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'">
+                  <q-card-section class="q-pa-md">
+                    <div class="text-overline text-primary text-weight-bold q-mb-sm">
+                      <q-icon name="sync" size="xs" class="q-mr-xs" />
+                      CAMBIAR ESTADO
+                    </div>
+                    <q-select
+                      v-model="newStatus"
+                      :options="statusOptions"
+                      option-value="value"
+                      option-label="label"
+                      emit-value
+                      map-options
+                      outlined
+                      dense
+                      :loading="updatingStatus"
+                      :disable="updatingStatus"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon :name="getStatusIcon(newStatus)" :color="getStatusColor(newStatus)" />
+                      </template>
+                    </q-select>
+                    <q-btn
+                      unelevated
+                      color="primary"
+                      label="Actualizar Estado"
+                      icon="save"
+                      class="full-width q-mt-sm"
+                      :loading="updatingStatus"
+                      :disable="newStatus === selectedOrder?.status"
+                      @click="updateOrderStatus"
+                    />
+                  </q-card-section>
+                </q-card>
+
+                <!-- Acciones Rápidas -->
+                <q-card flat bordered class="rounded-lg" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'">
+                  <q-card-section class="q-pa-md">
+                    <div class="text-overline text-primary text-weight-bold q-mb-sm">
+                      <q-icon name="flash_on" size="xs" class="q-mr-xs" />
+                      ACCIONES
+                    </div>
+                    <div class="column q-gutter-y-sm">
+                      <q-btn
+                        outline
+                        color="info"
+                        icon="print"
+                        label="Imprimir Orden"
+                        class="full-width"
+                        :loading="downloadingPdf"
+                        @click="downloadPdf"
+                      />
+                      <q-btn-dropdown
+                        outline
+                        color="deep-purple"
+                        icon="menu_book"
+                        label="Imprimir Recetas"
+                        class="full-width"
+                        :loading="downloadingRecipes"
+                      >
+                        <q-list>
+                          <q-item clickable v-close-popup @click="downloadAllRecipesPdf">
+                            <q-item-section avatar>
+                              <q-icon name="library_books" color="deep-purple" />
+                            </q-item-section>
+                            <q-item-section>
+                              <q-item-label>Todas las Recetas</q-item-label>
+                              <q-item-label caption>{{ selectedOrder?.items?.length || 0 }} recetas en PDF</q-item-label>
+                            </q-item-section>
+                          </q-item>
+                          <q-separator />
+                          <q-item-label header class="text-weight-bold">Recetas Individuales</q-item-label>
+                          <q-item
+                            v-for="item in selectedOrder?.items"
+                            :key="item.id"
+                            clickable
+                            v-close-popup
+                            @click="downloadRecipePdf(item.id)"
+                          >
+                            <q-item-section avatar>
+                              <q-icon name="restaurant" color="grey-7" />
+                            </q-item-section>
+                            <q-item-section>
+                              <q-item-label>{{ item.product?.name }}</q-item-label>
+                              <q-item-label caption>{{ item.planned_quantity }} unidades</q-item-label>
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-btn-dropdown>
+                      <q-btn
+                        outline
+                        color="secondary"
+                        icon="edit"
+                        label="Editar Orden"
+                        class="full-width"
+                        :disable="selectedOrder?.status === 'COMPLETED' || selectedOrder?.status === 'CANCELLED'"
+                        @click="openEditOrderModal"
+                      />
+                      <q-btn
+                        v-if="selectedOrder?.status === 'PLANNED' || selectedOrder?.status === 'IN_PROGRESS'"
+                        unelevated
+                        color="positive"
+                        icon="check_circle"
+                        label="Completar Producción"
+                        class="full-width"
+                        @click="openCompleteModal = true"
+                      />
+                      <q-btn
+                        v-if="selectedOrder?.status !== 'CANCELLED' && selectedOrder?.status !== 'COMPLETED'"
+                        flat
+                        color="negative"
+                        icon="cancel"
+                        label="Cancelar Orden"
+                        class="full-width"
+                        @click="confirmCancelOrder"
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+
+            <!-- Panel derecho: Recetas y Materiales -->
+            <div class="col-12 col-md-8">
+              <div class="column q-gutter-y-md">
+
+                <!-- Productos a Fabricar -->
+                <q-card flat bordered class="rounded-lg" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'">
+                  <q-card-section class="q-pa-md">
+                    <div class="row items-center q-mb-md">
+                      <q-icon name="inventory_2" size="sm" color="primary" class="q-mr-sm" />
+                      <div class="text-subtitle1 text-weight-bold">Recetas a Fabricar</div>
+                      <q-space />
+                      <q-badge color="primary" class="q-px-sm">
+                        {{ selectedOrder?.items?.length || 0 }} ítems
                       </q-badge>
                     </div>
-                    <div><strong>Depósito:</strong> {{ selectedOrder.deposit?.name }}</div>
-                    <div><strong>Sucursal:</strong> {{ selectedOrder.branch_office?.name || 'N/A' }}</div>
-                    <div><strong>Fecha planeada:</strong> {{ formatDate(selectedOrder.planned_date) }}</div>
-                  </div>
-                </q-card-section>
-              </q-card>
-            </div>
+                    <q-list bordered separator class="rounded-borders">
+                      <q-item v-for="item in selectedOrder?.items" :key="item.id">
+                        <q-item-section avatar>
+                          <q-avatar color="primary" text-color="white" size="md">
+                            <q-icon name="restaurant" size="xs" />
+                          </q-avatar>
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-weight-bold">{{ item.product?.name }}</q-item-label>
+                          <q-item-label caption>
+                            <span class="text-primary">Planeado: {{ item.planned_quantity }}</span>
+                            <span class="q-mx-sm">|</span>
+                            <span :class="item.produced_quantity > 0 ? 'text-positive' : 'text-grey'">
+                              Producido: {{ item.produced_quantity || 0 }}
+                            </span>
+                          </q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-btn flat round color="primary" icon="receipt_long" size="sm" @click="viewRecipeForProduct(item)">
+                            <q-tooltip>Ver detalle de receta</q-tooltip>
+                          </q-btn>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-card-section>
+                </q-card>
 
-            <!-- Productos a fabricar -->
-            <div class="col-12 col-md-8">
-              <q-card flat bordered>
-                <q-card-section>
-                  <div class="text-h6">Recetas a Fabricar</div>
-                  <q-separator class="q-my-sm"/>
-                  <q-list bordered separator>
-                    <q-item v-for="item in selectedOrder.items" :key="item.id">
-                      <q-item-section>
-                        <q-item-label>{{ item.product?.name }}</q-item-label>
-                        <q-item-label caption>
-                          Planeado: {{ item.planned_quantity }} | Producido: {{ item.produced_quantity }}
-                        </q-item-label>
-                      </q-item-section>
-                       <q-item-section side>
-                           <q-btn flat round color="primary" icon="receipt_long" size="sm" @click="viewRecipeForProduct(item)">
-                              <q-tooltip>Ver detalle de receta</q-tooltip>
-                           </q-btn>
-                       </q-item-section>
-                    </q-item>
-                  </q-list>
-                </q-card-section>
-              </q-card>
-            </div>
-
-            <!-- Requerimientos de materiales -->
-            <div class="col-12">
-              <q-card flat bordered>
-                <q-card-section>
-                  <div class="row items-center q-gutter-x-sm">
-                    <div class="text-h6">Requerimientos de Materiales</div>
-                    <q-space/>
-                    <div class="row items-center q-gutter-x-xs">
-                       <div class="text-caption text-grey-7 q-mr-xs">Unificar:</div>
-                       <q-btn outline color="primary" dense icon="expand_less" label="MAX" @click="convertAllToRefUnit('max')" size="sm" class="q-px-sm">
-                          <q-tooltip>Convertir todo a unidad máxima</q-tooltip>
-                       </q-btn>
-                       <q-btn outline color="primary" dense icon="expand_more" label="MIN" @click="convertAllToRefUnit('min')" size="sm" class="q-px-sm">
-                          <q-tooltip>Convertir todo a unidad mínima</q-tooltip>
-                       </q-btn>
+                <!-- Requerimientos de Materiales -->
+                <q-card flat bordered class="rounded-lg" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'">
+                  <q-card-section class="q-pa-md">
+                    <div class="row items-center q-mb-md">
+                      <q-icon name="list_alt" size="sm" color="primary" class="q-mr-sm" />
+                      <div class="text-subtitle1 text-weight-bold">Requerimientos de Materiales</div>
+                      <q-space />
+                      <div class="row q-gutter-x-xs">
+                        <q-btn outline color="primary" dense icon="expand_less" size="sm" @click="convertAllToRefUnit('max')">
+                          <q-tooltip>Unificar a unidad máxima</q-tooltip>
+                        </q-btn>
+                        <q-btn outline color="primary" dense icon="expand_more" size="sm" @click="convertAllToRefUnit('min')">
+                          <q-tooltip>Unificar a unidad mínima</q-tooltip>
+                        </q-btn>
+                      </div>
                     </div>
-                    <q-separator vertical class="q-mx-sm" v-if="!$q.screen.lt.sm"/>
-                    <q-btn color="primary" label="Ver Lista de Picking" @click="viewPickingList" size="sm"/>
-                  </div>
-                  <q-separator class="q-my-sm"/>
-                  <q-table
-                    :rows="materialRequirements"
-                    :columns="materialColumns"
-                    row-key="id"
-                    flat
-                    dense
-                  >
-                    <template v-slot:body-cell-required_quantity="props">
-                      <q-td :props="props">
-                        <div class="row items-center justify-end no-wrap">
-                          <span class="text-weight-bold q-mr-xs">{{ formatNumber(props.row.required_quantity) }}</span>
-                          <span class="text-grey-6" style="font-size: 0.8rem">{{ props.row.unit_of_measure?.acronym }}</span>
-                        </div>
-                      </q-td>
-                    </template>
-                    <template v-slot:body-cell-available_quantity="props">
-                      <q-td :props="props">
-                         <span class="text-weight-medium">{{ formatNumber(props.row.available_quantity) }}</span>
-                         <span class="text-grey-6 q-ml-xs" style="font-size: 0.8rem">{{ props.row.unit_of_measure?.acronym }}</span>
-                      </q-td>
-                    </template>
-                    <template v-slot:body-cell-status="props">
-                      <q-td :props="props">
-                        <q-badge :color="props.row.status === 'SUFFICIENT' ? 'positive' : 'negative'" class="text-weight-bold">
-                          {{ props.row.status === 'SUFFICIENT' ? 'Suficiente' : 'Insuficiente' }}
-                        </q-badge>
-                      </q-td>
-                    </template>
-                  </q-table>
-                </q-card-section>
-              </q-card>
+                    <q-table
+                      :rows="materialRequirements"
+                      :columns="materialColumns"
+                      row-key="id"
+                      flat
+                      dense
+                      :loading="loadingMaterials"
+                      hide-pagination
+                      :rows-per-page-options="[0]"
+                    >
+                      <template v-slot:body-cell-required_quantity="props">
+                        <q-td :props="props">
+                          <div class="row items-center justify-end no-wrap">
+                            <span class="text-weight-bold q-mr-xs">{{ formatNumber(props.row.required_quantity) }}</span>
+                            <span class="text-grey-6" style="font-size: 0.8rem">{{ props.row.unit_of_measure?.acronym }}</span>
+                          </div>
+                        </q-td>
+                      </template>
+                      <template v-slot:body-cell-available_quantity="props">
+                        <q-td :props="props">
+                          <span class="text-weight-medium">{{ formatNumber(props.row.available_quantity) }}</span>
+                          <span class="text-grey-6 q-ml-xs" style="font-size: 0.8rem">{{ props.row.unit_of_measure?.acronym }}</span>
+                        </q-td>
+                      </template>
+                      <template v-slot:body-cell-status="props">
+                        <q-td :props="props">
+                          <q-badge :color="props.row.status === 'SUFFICIENT' ? 'positive' : 'negative'" class="text-weight-bold">
+                            {{ props.row.status === 'SUFFICIENT' ? 'Suficiente' : 'Insuficiente' }}
+                          </q-badge>
+                        </q-td>
+                      </template>
+                    </q-table>
+                  </q-card-section>
+                </q-card>
+              </div>
             </div>
           </div>
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn color="secondary" label="Cerrar" @click="closeViewOrderModal" />
-          <q-btn color="info" icon="print" label="Imprimir" @click="downloadPdf" :loading="downloadingPdf"/>
-          <q-btn
-            v-if="selectedOrder?.status === 'PLANNED' || selectedOrder?.status === 'IN_PROGRESS'"
-            color="positive"
-            label="Completar Producción"
-            @click="openCompleteModal = true"
-          />
+        <q-separator />
+        <q-card-actions align="right" class="q-pa-md" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-2'">
+          <q-btn flat label="Cerrar" color="grey-7" @click="closeViewOrderModal" />
         </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Modal para editar orden -->
+    <q-dialog v-model="openEditOrder" persistent :maximized="$q.screen.lt.sm">
+      <q-card style="width: 700px; max-width: 90vw;">
+        <q-form @submit="saveEditOrder">
+          <q-card-section class="row items-center bg-secondary text-white">
+            <q-icon name="edit" size="sm" class="q-mr-sm" />
+            <div class="text-h6">Editar Orden {{ selectedOrder?.order_number }}</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="openEditOrder = false" />
+          </q-card-section>
+
+          <q-card-section class="q-gutter-y-md">
+            <q-select
+              outlined
+              v-model="editForm.branch_office_id"
+              :options="branchOffices"
+              option-value="id"
+              option-label="name"
+              emit-value
+              map-options
+              label="Sucursal"
+            />
+            <q-input
+              outlined
+              v-model="editForm.planned_date"
+              label="Fecha/Hora Planeada"
+              type="datetime-local"
+              stack-label
+            />
+
+            <div class="text-subtitle2 q-mt-md">Ítems de la orden</div>
+            <q-list bordered separator class="rounded-borders">
+              <q-item v-for="(item, index) in editForm.items" :key="index">
+                <q-item-section>
+                  <q-item-label>{{ getProductName(item.product_id) }}</q-item-label>
+                </q-item-section>
+                <q-item-section side style="width: 120px">
+                  <q-input
+                    v-model.number="item.planned_quantity"
+                    type="number"
+                    dense
+                    outlined
+                    min="1"
+                  />
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn flat round dense color="negative" icon="delete" @click="editForm.items.splice(index, 1)" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancelar" color="grey-7" @click="openEditOrder = false" />
+            <q-btn unelevated color="primary" label="Guardar Cambios" type="submit" :loading="savingEdit" icon="save" />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
 
@@ -494,34 +848,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- Modal para seleccionar producto -->
-    <q-dialog v-model="openProductPicker" persistent>
-      <q-card style="width: 500px; max-width: 80vw;">
-        <q-card-section class="row items-center bg-primary text-white">
-          <div class="text-h6">Seleccionar Producto</div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="openProductPicker = false" />
-        </q-card-section>
-
-        <q-card-section>
-          <q-select
-            filled
-            v-model="selectedProductForOrder"
-            :options="productsWithRecipe"
-            option-value="id"
-            option-label="name"
-            label="Producto"
-            use-input
-            @filter="filterProductsWithRecipe"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn color="secondary" label="Cancelar" @click="openProductPicker = false" />
-          <q-btn color="primary" label="Agregar" @click="addProductToOrder" :disable="!selectedProductForOrder"/>
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
     <!-- Modal para detalle de receta -->
     <q-dialog v-model="openRecipeDetail">
       <q-card style="width: 700px; max-width: 90vw;">
@@ -563,36 +889,229 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { Notify } from 'quasar'
+import { Notify, useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 import { authentication } from 'src/stores/module-authentication'
 
+/**
+ * Quasar instance
+ * @type {Object}
+ */
+const $q = useQuasar()
+
+/**
+ * List of production orders
+ * @type {Ref<Array>}
+ */
 const orders = ref([])
+
+/**
+ * Currently selected production order for viewing/editing
+ * @type {Ref<Object|null>}
+ */
 const selectedOrder = ref(null)
+
+/**
+ * List of material requirements for the selected order
+ * @type {Ref<Array>}
+ */
 const materialRequirements = ref([])
+
+/**
+ * List of available deposits
+ * @type {Ref<Array>}
+ */
 const deposits = ref([])
+
+/**
+ * List of available branch offices
+ * @type {Ref<Array>}
+ */
 const branchOffices = ref([])
+
+/**
+ * Filtered list of products that have a recipe
+ * @type {Ref<Array>}
+ */
 const productsWithRecipe = ref([])
+
+/**
+ * Unfiltered list of all products that have a recipe
+ * @type {Ref<Array>}
+ */
 const allProductsWithRecipe = ref([])
+
+/**
+ * Search filter for the orders table
+ * @type {Ref<string>}
+ */
 const filter = ref('')
+
+/**
+ * Loading state for general actions
+ * @type {Ref<boolean>}
+ */
 const visible = ref(false)
+
+/**
+ * Loading state for PDF downloads
+ * @type {Ref<boolean>}
+ */
 const downloadingPdf = ref(false)
+
+/**
+ * Loading state for recipes PDF downloads
+ * @type {Ref<boolean>}
+ */
+const downloadingRecipes = ref(false)
+
+/**
+ * Loading state for products list
+ * @type {Ref<boolean>}
+ */
 const loadingProducts = ref(false)
+
+/**
+ * Loading state for completion process
+ * @type {Ref<boolean>}
+ */
 const completing = ref(false)
+
+/**
+ * Visibility state for the new order modal
+ * @type {Ref<boolean>}
+ */
 const openNewOrder = ref(false)
+
+/**
+ * Visibility state for the view order modal
+ * @type {Ref<boolean>}
+ */
 const openViewOrder = ref(false)
+
+/**
+ * Visibility state for the completion modal
+ * @type {Ref<boolean>}
+ */
 const openCompleteModal = ref(false)
+
+/**
+ * Visibility state for the recipe detail modal
+ * @type {Ref<boolean>}
+ */
 const openRecipeDetail = ref(false)
+
+/**
+ * Currently selected product recipe for detailed view
+ * @type {Ref<Object|null>}
+ */
 const selectedRecipeProduct = ref(null)
+
+/**
+ * Quantity for the selected recipe in detailed view
+ * @type {Ref<number>}
+ */
 const selectedRecipeQuantity = ref(0)
+
+/**
+ * Filtered list of users for responsible assignment
+ * @type {Ref<Array>}
+ */
+const users = ref([])
+
+/**
+ * Full list of users
+ * @type {Ref<Array>}
+ */
+const allUsers = ref([])
+
+/**
+ * Visibility state for the edit order modal
+ * @type {Ref<boolean>}
+ */
+const openEditOrder = ref(false)
+
+/**
+ * Loading state for edit form submission
+ * @type {Ref<boolean>}
+ */
+const savingEdit = ref(false)
+
+/**
+ * Loading state for order details
+ * @type {Ref<boolean>}
+ */
+const loadingOrderDetail = ref(false)
+
+/**
+ * Loading state for material requirements
+ * @type {Ref<boolean>}
+ */
+const loadingMaterials = ref(false)
+
+/**
+ * Loading state for status updates
+ * @type {Ref<boolean>}
+ */
+const updatingStatus = ref(false)
+
+/**
+ * Target status value for update
+ * @type {Ref<string>}
+ */
+const newStatus = ref('')
+
+/**
+ * State for the order edit form
+ * @type {Ref<Object>}
+ */
+const editForm = ref({
+  branch_office_id: null,
+  planned_date: null,
+  items: []
+})
+
+/**
+ * Available status options for filter and updates
+ * @type {Array<Object>}
+ */
+const statusOptions = [
+  { value: 'DRAFT', label: 'Borrador' },
+  { value: 'PLANNED', label: 'Planeado' },
+  { value: 'IN_PROGRESS', label: 'En Progreso' },
+  { value: 'CANCELLED', label: 'Cancelado' }
+]
+
+/**
+ * List of items in the selected recipe
+ * @type {Ref<Array>}
+ */
 const selectedRecipeItems = ref([])
-const openProductPicker = ref(false)
-const selectedProductForOrder = ref(null)
+
+/**
+ * Search filter for the product catalog
+ * @type {Ref<string>}
+ */
 const filterProducts = ref('')
+
+/**
+ * Loading state for recipe data
+ * @type {Ref<boolean>}
+ */
 const loadingRecipe = ref(false)
+
+/**
+ * Authentication store instance
+ * @type {Object}
+ */
 const store = authentication()
 
+/**
+ * Current branch office from session
+ * @type {Object}
+ */
 const { branchOffice } = store
+
 /**
  * State for product being configured
  * @type {Ref<Object|null>}
@@ -600,7 +1119,7 @@ const { branchOffice } = store
 const selectedProductConfig = ref(null)
 
 /**
- * State for quantities in configuration mode
+ * State for quantities in configuration mode (batch units and resulting portions)
  * @type {Ref<{units: number, portions: number}>}
  */
 const configQuantities = ref({
@@ -621,19 +1140,24 @@ const recipePreviewItems = ref([])
 const isEditingItem = ref(false)
 
 /**
- * Index of the item being edited
+ * Index of the item being edited in the orders list
  * @type {Ref<number>}
  */
 const editingIndex = ref(-1)
 
+/**
+ * Form state for creating a new production order
+ * @type {Ref<Object>}
+ */
 const orderForm = ref({
   branch_office_id: branchOffice.id,
+  responsible_user_id: null,
   planned_date: null,
   items: []
 })
 
 /**
- * Computed to check if order has items
+ * Computed property to check if the current order form has any items selected
  * @type {ComputedRef<boolean>}
  */
 const hasSelectedItems = computed(() => {
@@ -641,7 +1165,7 @@ const hasSelectedItems = computed(() => {
 })
 
 /**
- * Computed to calculate total order cost
+ * Computed property to calculate the total cost of the order based on items
  * @type {ComputedRef<number>}
  */
 const totalOrderCost = computed(() => {
@@ -651,7 +1175,7 @@ const totalOrderCost = computed(() => {
 })
 
 /**
- * Computed to calculate cost of the product currently being configured
+ * Computed property to calculate the cost of the product currently being configured
  * @type {ComputedRef<number>}
  */
 const currentConfigCost = computed(() => {
@@ -676,8 +1200,16 @@ const formatNumber = (val) => {
   return parseFloat(val || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/**
+ * Form state for production completion (actual quantities produced)
+ * @type {Ref<Object>}
+ */
 const completionForm = ref({})
 
+/**
+ * Base parameters for fetching and sorting orders
+ * @type {Ref<Object>}
+ */
 const params = ref({
   paginate: true,
   sortBy: 'id',
@@ -685,6 +1217,10 @@ const params = ref({
   perPage: 20
 })
 
+/**
+ * Pagination configuration for the main table
+ * @type {Ref<Object>}
+ */
 const paginationConfig = ref({
   rowsPerPage: 20,
   rowsNumber: 20,
@@ -693,13 +1229,22 @@ const paginationConfig = ref({
   descending: true
 })
 
+/**
+ * Column definitions for the production orders table
+ * @type {Array<Object>}
+ */
 const columns = [
   { name: 'order_number', align: 'left', label: 'Número', field: 'order_number', sortable: true },
   { name: 'status', align: 'center', label: 'Estado', field: 'status', sortable: true },
   { name: 'planned_date', align: 'left', label: 'Fecha Planeada', field: 'planned_date', sortable: true, format: val => formatDate(val) },
-  { name: 'deposit', align: 'left', label: 'Depósito', field: row => row.deposit?.name }
+  { name: 'deposit', align: 'left', label: 'Depósito', field: row => row.deposit?.name },
+  { name: 'actions', align: 'center', label: 'Acciones', field: 'actions' }
 ]
 
+/**
+ * Column definitions for the material requirements table
+ * @type {Array<Object>}
+ */
 const materialColumns = [
   { name: 'product', align: 'left', label: 'Material', field: row => row.product?.name },
   { name: 'required_quantity', align: 'right', label: 'Requerido', field: 'required_quantity' },
@@ -707,6 +1252,10 @@ const materialColumns = [
   { name: 'status', align: 'center', label: 'Estado', field: 'status' }
 ]
 
+/**
+ * Column definitions for the product selection table (catalog)
+ * @type {Array<Object>}
+ */
 const productSelectionColumns = [
   { name: 'name', align: 'left', label: 'Producto', field: 'name', sortable: true },
   { name: 'stock', align: 'right', label: 'Stock Actual', field: 'stock', sortable: true },
@@ -714,6 +1263,11 @@ const productSelectionColumns = [
   { name: 'difference', align: 'right', label: 'Diferencia', field: 'difference', sortable: true }
 ]
 
+/**
+ * Returns the corresponding color for a given status
+ * @params {string} status
+ * @return {string}
+ */
 const getStatusColor = (status) => {
   const colors = {
     DRAFT: 'grey',
@@ -725,6 +1279,11 @@ const getStatusColor = (status) => {
   return colors[status] || 'grey'
 }
 
+/**
+ * Returns the user-friendly label for a status code
+ * @params {string} status
+ * @return {string}
+ */
 const getStatusLabel = (status) => {
   const labels = {
     DRAFT: 'Borrador',
@@ -736,11 +1295,36 @@ const getStatusLabel = (status) => {
   return labels[status] || status
 }
 
+/**
+ * Gets the icon for a given status
+ * @param {String} status - The status value
+ * @return {String} - Material icon name
+ */
+const getStatusIcon = (status) => {
+  const icons = {
+    DRAFT: 'edit_note',
+    PLANNED: 'schedule',
+    IN_PROGRESS: 'pending',
+    COMPLETED: 'check_circle',
+    CANCELLED: 'cancel'
+  }
+  return icons[status] || 'help'
+}
+
+/**
+ * Formats a date string to a localized readable format
+ * @params {string} date
+ * @return {string}
+ */
 const formatDate = (date) => {
   if (!date) return 'N/A'
   return new Date(date).toLocaleString('es-ES')
 }
 
+/**
+ * Fetches the list of production orders from the API
+ * @return {Promise<void>}
+ */
 const getOrders = async () => {
   visible.value = true
   try {
@@ -758,23 +1342,128 @@ const getOrders = async () => {
   }
 }
 
+/**
+ * Load users for responsible selection
+ */
+const loadUsers = async () => {
+  try {
+    const { data } = await api.get('users', { params: { perPage: 100 } })
+    allUsers.value = data.data || data
+    users.value = allUsers.value
+  } catch (err) {
+    console.error('Error loading users:', err)
+  }
+}
+
+/**
+ * Filter users for autocomplete
+ * @param {String} val - Search query
+ * @param {Function} update - Update callback
+ */
+const filterUsers = (val, update) => {
+  update(() => {
+    if (val === '') {
+      users.value = allUsers.value
+    } else {
+      const needle = val.toLowerCase()
+      users.value = allUsers.value.filter(
+        u => u.name.toLowerCase().includes(needle)
+      )
+    }
+  })
+}
+
+/**
+ * Download individual recipe PDF
+ * @param {Number} itemId - Production order item ID
+ */
+const downloadRecipePdf = async (itemId) => {
+  if (!selectedOrder.value) return
+  downloadingRecipes.value = true
+  try {
+    const response = await api.get(`production-orders/${selectedOrder.value.id}/recipe-pdf/${itemId}`, {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `receta-${itemId}-${selectedOrder.value.order_number}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (err) {
+    Notify.create({
+      message: 'Error al descargar la receta',
+      icon: 'warning',
+      color: 'negative'
+    })
+  } finally {
+    downloadingRecipes.value = false
+  }
+}
+
+/**
+ * Download all recipes PDF
+ */
+const downloadAllRecipesPdf = async () => {
+  if (!selectedOrder.value) return
+  downloadingRecipes.value = true
+  try {
+    const response = await api.get(`production-orders/${selectedOrder.value.id}/recipes-pdf`, {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `todas-recetas-${selectedOrder.value.order_number}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (err) {
+    Notify.create({
+      message: 'Error al descargar las recetas',
+      icon: 'warning',
+      color: 'negative'
+    })
+  } finally {
+    downloadingRecipes.value = false
+  }
+}
+
+/**
+ * Loads and displays detailed info for a specific production order
+ * @params {Event} event
+ * @params {Object} row
+ * @return {Promise<void>}
+ */
 const viewOrder = async (event, row) => {
+  openViewOrder.value = true
+  loadingOrderDetail.value = true
+  loadingMaterials.value = true
+
   try {
     const { data } = await api.get(`production-orders/${row.id}`)
     selectedOrder.value = data
+    newStatus.value = data.status
+
     const materialsResponse = await api.get(`production-orders/${row.id}/materials`)
     materialRequirements.value = materialsResponse.data.requirements
-
-    openViewOrder.value = true
   } catch (err) {
     Notify.create({
       message: 'Error al cargar la orden',
       icon: 'warning',
       color: 'negative'
     })
+  } finally {
+    loadingOrderDetail.value = false
+    loadingMaterials.value = false
   }
 }
 
+/**
+ * Submits the create order form to the API
+ * @return {Promise<void>}
+ */
 const createOrder = async () => {
   visible.value = true
   try {
@@ -806,6 +1495,10 @@ const createOrder = async () => {
   }
 }
 
+/**
+ * Submits completed production quantities to finalize records
+ * @return {Promise<void>}
+ */
 const completeProduction = async () => {
   completing.value = true
   try {
@@ -836,25 +1529,10 @@ const completeProduction = async () => {
   }
 }
 
-const viewPickingList = async () => {
-  try {
-    const { data } = await api.get(`production-orders/${selectedOrder.value.id}/picking-list`)
-    console.log('Picking List:', data)
-    // Aquí podrías abrir un modal o descargar un PDF
-    Notify.create({
-      message: 'Lista de picking generada (ver consola)',
-      icon: 'info',
-      color: 'info'
-    })
-  } catch (err) {
-    Notify.create({
-      message: 'Error al generar lista de picking',
-      icon: 'warning',
-      color: 'negative'
-    })
-  }
-}
-
+/**
+ * Generates and downloads the production order PDF
+ * @return {Promise<void>}
+ */
 const downloadPdf = async () => {
   if (!selectedOrder.value) return
   downloadingPdf.value = true
@@ -910,6 +1588,11 @@ const convertAllToRefUnit = async (mode) => {
   }
 }
 
+/**
+ * Fetches and displays detail for a specific product recipe
+ * @params {Object} item
+ * @return {Promise<void>}
+ */
 const viewRecipeForProduct = async (item) => {
   selectedRecipeProduct.value = item.product
   selectedRecipeQuantity.value = item.planned_quantity
@@ -929,22 +1612,15 @@ const viewRecipeForProduct = async (item) => {
     loadingRecipe.value = false
   }
 }
-
-const addProductToOrder = () => {
-  if (selectedProductForOrder.value) {
-    orderForm.value.items.push({
-      product_id: selectedProductForOrder.value.id,
-      planned_quantity: 1
-    })
-    selectedProductForOrder.value = null
-    openProductPicker.value = false
-  }
-}
-
+/**
+ * Closes the new order modal and resets the form state
+ * @return {void}
+ */
 const closeNewOrderModal = () => {
   openNewOrder.value = false
   orderForm.value = {
     branch_office_id: null,
+    responsible_user_id: null,
     planned_date: null,
     items: []
   }
@@ -954,12 +1630,156 @@ const closeNewOrderModal = () => {
 }
 
 /**
- * Closes the view order modal and resets related state.
+ * Closes the view order modal and resets related state
+ * @return {void}
  */
 const closeViewOrderModal = () => {
   openViewOrder.value = false
   selectedOrder.value = null
   materialRequirements.value = []
+  newStatus.value = ''
+}
+
+/**
+ * Submits a request to update the status of the currently selected order
+ * @return {Promise<void>}
+ */
+const updateOrderStatus = async () => {
+  if (!selectedOrder.value || newStatus.value === selectedOrder.value.status) return
+
+  updatingStatus.value = true
+  try {
+    await api.patch(`production-orders/${selectedOrder.value.id}`, {
+      status: newStatus.value
+    })
+
+    selectedOrder.value.status = newStatus.value
+
+    Notify.create({
+      message: 'Estado actualizado correctamente',
+      icon: 'check_circle',
+      color: 'positive'
+    })
+
+    getOrders()
+  } catch (err) {
+    Notify.create({
+      message: err.response?.data?.message || 'Error al actualizar el estado',
+      icon: 'warning',
+      color: 'negative'
+    })
+  } finally {
+    updatingStatus.value = false
+  }
+}
+
+/**
+ * Opens the edit order modal and populates the form with existing order data
+ * @return {void}
+ */
+const openEditOrderModal = () => {
+  if (!selectedOrder.value) return
+
+  editForm.value = {
+    branch_office_id: selectedOrder.value.branch_office_id,
+    planned_date: selectedOrder.value.planned_date
+      ? new Date(selectedOrder.value.planned_date).toISOString().slice(0, 16)
+      : null,
+    items: selectedOrder.value.items.map(item => ({
+      id: item.id,
+      product_id: item.product_id,
+      planned_quantity: item.planned_quantity
+    }))
+  }
+
+  openEditOrder.value = true
+}
+
+/**
+ * Submits the edit form to save changes to an existing production order
+ * @return {Promise<void>}
+ */
+const saveEditOrder = async () => {
+  if (!selectedOrder.value) return
+
+  savingEdit.value = true
+  try {
+    const payload = {
+      branch_office_id: editForm.value.branch_office_id,
+      planned_date: editForm.value.planned_date,
+      items: editForm.value.items.map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        planned_quantity: item.planned_quantity
+      }))
+    }
+
+    const { data } = await api.put(`production-orders/${selectedOrder.value.id}`, payload)
+    selectedOrder.value = data
+
+    Notify.create({
+      message: 'Orden actualizada correctamente',
+      icon: 'check_circle',
+      color: 'positive'
+    })
+
+    openEditOrder.value = false
+    getOrders()
+  } catch (err) {
+    Notify.create({
+      message: err.response?.data?.message || 'Error al guardar los cambios',
+      icon: 'warning',
+      color: 'negative'
+    })
+  } finally {
+    savingEdit.value = false
+  }
+}
+
+/**
+ * Prompts for confirmation and cancels the currently viewed production order
+ * @return {void}
+ */
+const confirmCancelOrder = () => {
+  $q.dialog({
+    title: 'Cancelar Orden',
+    message: '¿Está seguro que desea cancelar esta orden de producción? Esta acción no se puede deshacer.',
+    cancel: {
+      label: 'No, mantener',
+      color: 'grey'
+    },
+    ok: {
+      label: 'Sí, cancelar',
+      color: 'negative'
+    },
+    persistent: true
+  }).onOk(async () => {
+    updatingStatus.value = true
+    try {
+      await api.patch(`production-orders/${selectedOrder.value.id}`, {
+        status: 'CANCELLED'
+      })
+
+      selectedOrder.value.status = 'CANCELLED'
+      newStatus.value = 'CANCELLED'
+
+      Notify.create({
+        message: 'Orden cancelada correctamente',
+        icon: 'check_circle',
+        color: 'positive'
+      })
+
+      getOrders()
+    } catch (err) {
+      Notify.create({
+        message: err.response?.data?.message || 'Error al cancelar la orden',
+        icon: 'warning',
+        color: 'negative'
+      })
+    } finally {
+      updatingStatus.value = false
+    }
+  })
 }
 
 /**
@@ -988,7 +1808,9 @@ const selectProductForConfig = async (product) => {
 }
 
 /**
- * Update portions based on units (batch count)
+ * Updates the estimated portions based on the number of units (batches)
+ * @params {number} val
+ * @return {void}
  */
 const updateFromUnits = (val) => {
   const servings = parseFloat(selectedProductConfig.value.servings) || 1
@@ -996,7 +1818,9 @@ const updateFromUnits = (val) => {
 }
 
 /**
- * Update units (batch count) based on portion count
+ * Updates the number of units (batches) based on the target portion count
+ * @params {number} val
+ * @return {void}
  */
 const updateFromPortions = (val) => {
   const servings = parseFloat(selectedProductConfig.value.servings) || 1
@@ -1004,8 +1828,9 @@ const updateFromPortions = (val) => {
 }
 
 /**
- * Get product name for already selected items list
+ * Returns the name of a product given its ID
  * @params {number} id
+ * @return {string}
  */
 const getProductName = (id) => {
   const p = allProductsWithRecipe.value.find(prod => prod.id === id)
@@ -1013,7 +1838,8 @@ const getProductName = (id) => {
 }
 
 /**
- * Confirms current configuration and adds/updates the order item list
+ * Confirms the current product configuration and adds or updates it in the order items list
+ * @return {void}
  */
 const confirmProductConfig = () => {
   if (configQuantities.value.units <= 0) {
@@ -1046,8 +1872,9 @@ const confirmProductConfig = () => {
 }
 
 /**
- * Re-enters configuration mode for an item already in the list
+ * Opens configuration mode for an item already present in the order list
  * @params {Object} item
+ * @return {void}
  */
 const editConfiguredItem = (item) => {
   const product = allProductsWithRecipe.value.find(p => p.id === item.product_id)
@@ -1063,26 +1890,18 @@ const editConfiguredItem = (item) => {
 }
 
 /**
- * Removes an item from the planned items list
+ * Removes an item from the planned items list by its index
  * @params {number} index
+ * @return {void}
  */
 const removeConfiguredItem = (index) => {
   orderForm.value.items.splice(index, 1)
 }
 
-const filterProductsWithRecipe = (val, update) => {
-  update(() => {
-    if (val === '') {
-      productsWithRecipe.value = allProductsWithRecipe.value
-    } else {
-      const needle = val.toLowerCase()
-      productsWithRecipe.value = allProductsWithRecipe.value.filter(
-        v => v.name.toLowerCase().indexOf(needle) > -1
-      )
-    }
-  })
-}
-
+/**
+ * Loads available deposits from the API
+ * @return {Promise<void>}
+ */
 const loadDeposits = async () => {
   try {
     const { data } = await api.get('deposits', { params: { perPage: 100 } })
@@ -1092,6 +1911,10 @@ const loadDeposits = async () => {
   }
 }
 
+/**
+ * Loads available branch offices from the API
+ * @return {Promise<void>}
+ */
 const loadBranchOffices = async () => {
   try {
     const { data } = await api.get('branch-offices', { params: { perPage: 100 } })
@@ -1101,6 +1924,10 @@ const loadBranchOffices = async () => {
   }
 }
 
+/**
+ * Fetches products that have recipes defined, including their current stock and requirements
+ * @return {Promise<void>}
+ */
 const loadProductsWithRecipe = async () => {
   loadingProducts.value = true
   try {
@@ -1126,10 +1953,8 @@ const loadProductsWithRecipe = async () => {
     allProductsWithRecipe.value = data.data.map(p => ({
       ...p,
       planned_quantity: 0,
-      // If backend doesn't filter stock by deposit, we might need to assume 'stock' field is correct for the request context
-      // The ProductsController seems to respect branch_office_id or standard filters.
-      // Ensuring numbers
-      stock: parseFloat(p.stock || p.stock_quantity || 0), // Adjust field name if necessary based on API response
+      // Ensure numbers
+      stock: parseFloat(p.stock || p.stock_quantity || 0),
       minimum_stock: parseFloat(p.minimum_stock || 0)
     }))
 
@@ -1149,12 +1974,21 @@ watch(() => orderForm.value.branch_office_id, () => {
 watch(openNewOrder, (val) => {
   if (val) loadProductsWithRecipe()
 })
+/**
+ * Returns the corresponding color for stock status based on minimum levels
+ * @params {Object} row
+ * @return {string}
+ */
 const getStockStatusColor = (row) => {
   const diff = row.stock - row.minimum_stock
   if (diff < 0) return 'negative'
   if (diff === 0) return 'warning'
   return 'positive'
 }
+/**
+ * Handles table pagination and sorting changes
+ * @params {Object} data
+ */
 const setPagination = (data) => {
   params.value.sortOrder = data.pagination.descending ? 'desc' : 'asc'
   params.value.page = data.pagination.page
@@ -1169,12 +2003,58 @@ onMounted(() => {
   loadDeposits()
   loadBranchOffices()
   loadProductsWithRecipe()
+  loadUsers()
 })
 </script>
 
 <style scoped>
 .font-numeric { font-variant-numeric: tabular-nums; }
 .transition-all { transition: all 0.3s ease-in-out; }
+
+/* Stat Cards */
+.stat-card {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.body--dark .stat-card {
+  background: #1e1e1e;
+  border-color: #333;
+}
+
+/* Table Styling */
+.production-table {
+  border-radius: 12px;
+}
+
+.production-table :deep(thead tr th) {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  background: #f8f9fa;
+}
+
+.body--dark .production-table :deep(thead tr th) {
+  background: #2d2d2d;
+}
+
+.table-row-hover {
+  transition: all 0.2s ease;
+}
+
+.table-row-hover:hover {
+  background-color: rgba(var(--q-primary-rgb), 0.08) !important;
+}
+
+.body--dark .table-row-hover:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
 
 .hover-accent:hover {
   background-color: rgba(var(--q-primary-rgb), 0.05) !important;
@@ -1200,7 +2080,14 @@ onMounted(() => {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Rounded cards */
+.rounded-lg {
+  border-radius: 12px !important;
+}
+
+/* Responsive */
 @media (max-width: 599px) {
   .text-h3 { font-size: 2rem; }
+  .stat-card .text-h6 { font-size: 1.1rem; }
 }
 </style>
