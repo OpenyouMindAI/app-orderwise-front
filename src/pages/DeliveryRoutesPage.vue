@@ -112,7 +112,6 @@
                 <q-tooltip>Editar</q-tooltip>
               </q-btn>
               <q-btn
-                v-if="props.row.status === 'draft'"
                 flat
                 dense
                 round
@@ -128,90 +127,121 @@
         </q-table>
       </q-card-section>
     </q-card>
-
-    <!-- Route Details Dialog -->
-    <q-dialog v-model="showDetailsDialog" persistent>
-      <q-card style="min-width: 700px; max-width: 90vw;">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">
-            {{ selectedRoute?.route_number }}
-          </div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
-        </q-card-section>
-
-        <q-card-section v-if="selectedRoute">
-          <!-- Route Info -->
-          <div class="row q-col-gutter-md q-mb-md">
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Estado</div>
-              <q-chip
-                :color="getStatusColor(selectedRoute.status)"
-                text-color="white"
-                dense
-              >
-                {{ getStatusLabel(selectedRoute.status) }}
-              </q-chip>
-            </div>
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Repartidor</div>
-              <div>{{ selectedRoute.courier?.name || 'Sin asignar' }}</div>
-            </div>
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Distancia Total</div>
-              <div>{{ selectedRoute.total_distance_km || 0 }} km</div>
-            </div>
-            <div class="col-6">
-              <div class="text-caption text-grey-7">Tiempo Estimado</div>
-              <div>{{ selectedRoute.estimated_duration_minutes || 0 }} min</div>
-            </div>
-          </div>
-
-          <!-- Stops List -->
-          <div class="text-subtitle2 q-mb-sm">Paradas ({{ selectedRoute.stops?.length || 0 }})</div>
-          <q-list bordered separator class="rounded-borders" style="max-height: 400px; overflow-y: auto;">
-            <q-item v-for="(stop, index) in selectedRoute.stops" :key="stop.id">
-              <q-item-section avatar>
-                <q-avatar :color="getStopColor(stop.delivery_status)" text-color="white">
-                  {{ index + 1 }}
-                </q-avatar>
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>{{ stop.client?.name || 'Cliente' }}</q-item-label>
-                <q-item-label caption v-if="stop.client?.address">
-                  <q-icon name="place" size="12px" />
-                  {{ getClientAddress(stop.client) }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <div class="text-caption text-grey-7">
-                  <div v-if="stop.distance_text">
-                    <q-icon name="route" size="14px" />
-                    {{ stop.distance_text }}
-                  </div>
-                  <div v-if="stop.duration_text">
-                    <q-icon name="schedule" size="14px" />
-                    {{ stop.duration_text }}
+    <!-- Route Details Dialog (Minimalist Preview) -->
+    <q-dialog v-model="showDetailsDialog">
+      <q-card class="preview-card" style="width: 900px; max-width: 95vw;">
+        <div class="row no-wrap" style="height: 500px;">
+          <!-- Left Panel: Info & Stops -->
+          <div
+            class="col-4 flex flex-column"
+            :class="$q.dark.isActive ? 'bg-dark' : 'bg-grey-1'"
+            :style="{ borderRight: `1px solid ${$q.dark.isActive ? '#444' : '#eee'}` }"
+          >
+            <q-card-section class="q-pb-none">
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-subtitle2 text-grey-7 font-mono">{{ selectedRoute?.route_number }}</div>
+                  <div class="text-h6 text-weight-bold truncate" style="max-width: 250px;">
+                    {{ selectedRoute?.name || 'Ruta sin nombre' }}
                   </div>
                 </div>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
+                <q-btn
+                  icon="edit"
+                  flat
+                  round
+                  dense
+                  v-close-popup
+                  color="grey-7"
+                  size="sm"
+                  @click="editRoute(selectedRoute)"
+                />
+                <q-btn
+                  icon="close"
+                  flat
+                  round
+                  dense
+                  v-close-popup
+                  color="grey-7"
+                  size="sm"
+                />
+              </div>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cerrar" color="primary" v-close-popup />
-        </q-card-actions>
+              <!-- Partner & Courier Info -->
+              <div class="column q-mt-sm q-gutter-y-xs">
+                <div class="row items-center no-wrap text-caption text-weight-medium" v-if="selectedRoute?.partner">
+                  <q-icon name="handshake" size="16px" color="primary" class="q-mr-xs" />
+                  <span class="truncate">{{ selectedRoute.partner.name }}</span>
+                </div>
+                <div class="row items-center no-wrap text-caption text-grey-7" v-if="selectedRoute?.courier">
+                  <q-icon name="person" size="16px" class="q-mr-xs" />
+                  <span class="truncate">{{ selectedRoute.courier.name }}</span>
+                </div>
+              </div>
+              <div class="row q-mt-sm text-caption text-grey-6 q-gutter-x-md">
+                <div v-if="selectedRoute?.total_distance_km" class="row items-center">
+                  <q-icon name="straighten" class="q-mr-xs" /> {{ selectedRoute.total_distance_km }} km
+                </div>
+                <div v-if="selectedRoute?.estimated_duration_minutes" class="row items-center">
+                  <q-icon name="schedule" class="q-mr-xs" /> {{ selectedRoute.estimated_duration_minutes }} min
+                </div>
+              </div>
+            </q-card-section>
+
+            <q-separator q-mt-md />
+
+            <q-card-section class="q-pa-none overflow-auto" style="flex: 1;">
+              <div
+                class="text-subtitle2 text-weight-bold"
+                :class="$q.dark.isActive ? 'text-grey-3' : 'text-grey-8'"
+              >
+                Paradas ({{ previewStops.length }})
+              </div>
+              <q-list dense padding>
+                <q-item v-for="(stop, index) in previewStops" :key="stop.id" class="q-py-sm">
+                  <q-item-section avatar style="min-width: 32px;">
+                    <div class="stop-num">{{ index + 1 }}</div>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-medium text-body2 truncate">
+                      {{ stop.client?.name }}
+                    </q-item-label>
+                    <q-item-label caption class="text-truncate-2 text-grey-6" style="line-height: 1.2; font-size: 11px;">
+                      {{ getClientAddress(stop.client) }}
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side v-if="stop.delivery_status">
+                    <q-icon
+                      :name="stop.delivery_status === 'delivered' ? 'check_circle' : 'radio_button_unchecked'"
+                      :color="getStopColor(stop.delivery_status)"
+                      size="18px"
+                    />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-card-section>
+          </div>
+
+          <!-- Right Panel: Map Preview -->
+          <div class="col-8 relative-position">
+            <div id="preview-map" ref="mapContainer" style="width: 100%; height: 100%;"></div>
+            <!-- Empty state for map -->
+            <div v-if="!previewStops.length" class="absolute-center text-center text-grey-5">
+              <q-icon name="map" size="48px" />
+              <div>Sin paradas para mostrar</div>
+            </div>
+          </div>
+        </div>
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import { loadGoogleMaps, darkMapStyles } from 'src/config/maps'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -223,6 +253,22 @@ const loading = ref(false)
 const showDetailsDialog = ref(false)
 const selectedRoute = ref(null)
 const filter = ref('')
+
+// Map Preview Refs
+const mapContainer = ref(null)
+const map = ref(null)
+const stopMarkers = ref([])
+const routePaths = ref([])
+const mapReady = ref(false)
+
+// Computed stops for preview (handling different possible field names)
+const previewStops = computed(() => {
+  if (!selectedRoute.value) return []
+  return selectedRoute.value.stops ||
+         selectedRoute.value.route_clients ||
+         selectedRoute.value.routeClients ||
+         []
+})
 
 // Pagination config (like ProductPage)
 const paginationConfig = ref({
@@ -261,6 +307,14 @@ const columns = [
     sortable: true
   },
   {
+    name: 'partner',
+    label: 'Jefe de ruta',
+    field: 'partner',
+    format: row => `${row?.name || '-'}`,
+    align: 'left',
+    sortable: true
+  },
+  {
     name: 'courier',
     label: 'Repartidor',
     field: 'courier',
@@ -294,6 +348,126 @@ watch(filter, () => {
   params.value.page = 1
   getRoutes(params.value)
 })
+
+// Wash Dialog for map initialization
+watch(showDetailsDialog, async (val) => {
+  if (val) {
+    await nextTick()
+    await initializePreviewMap()
+    await updatePreviewMap()
+  } else {
+    // Clear map refs
+    map.value = null
+    stopMarkers.value = []
+    routePaths.value = []
+  }
+})
+
+/**
+ * Initializes the Google Map for the route preview
+ */
+async function initializePreviewMap () {
+  try {
+    await loadGoogleMaps()
+    if (!mapContainer.value) return
+
+    const google = window.google
+    const isDarkMode = $q.dark.isActive
+    const center = { lat: -34.6037, lng: -58.3816 } // Default (Buenos Aires)
+
+    map.value = new google.maps.Map(mapContainer.value, {
+      center,
+      zoom: 12,
+      styles: isDarkMode ? darkMapStyles : [],
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: 'cooperative'
+    })
+
+    mapReady.value = true
+  } catch (error) {
+    console.error('Error initializing preview map:', error)
+  }
+}
+
+/**
+ * Updates the preview map with markers and route paths
+ */
+async function updatePreviewMap () {
+  if (!map.value || !selectedRoute.value) return
+
+  const google = window.google
+  const stops = previewStops.value
+
+  // Clear existing markers/paths
+  stopMarkers.value.forEach(m => m.setMap(null))
+  stopMarkers.value = []
+  routePaths.value.forEach(p => p.setMap(null))
+  routePaths.value = []
+
+  if (stops.length === 0) return
+
+  const bounds = new google.maps.LatLngBounds()
+
+  // Add stops markers
+  stops.forEach((stop, index) => {
+    const lat = parseFloat(stop.latitude)
+    const lng = parseFloat(stop.longitude)
+
+    if (isNaN(lat) || isNaN(lng)) return
+
+    const position = { lat, lng }
+    bounds.extend(position)
+
+    const marker = new google.maps.Marker({
+      position,
+      map: map.value,
+      label: {
+        text: (index + 1).toString(),
+        color: 'white',
+        fontWeight: 'bold'
+      },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        fillColor: getStopColor(stop.delivery_status),
+        fillOpacity: 1,
+        strokeColor: 'white',
+        strokeWeight: 2,
+        scale: 14
+      },
+      title: stop.client?.name || 'Parada'
+    })
+
+    stopMarkers.value.push(marker)
+  })
+
+  // Draw simple path between stops if coordinates exist
+  const pathCoordinates = stops
+    .map(s => ({ lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) }))
+    .filter(c => !isNaN(c.lat) && !isNaN(c.lng))
+
+  if (pathCoordinates.length > 1) {
+    const routePath = new google.maps.Polyline({
+      path: pathCoordinates,
+      geodesic: true,
+      strokeColor: '#2196F3',
+      strokeOpacity: 0.8,
+      strokeWeight: 4
+    })
+
+    routePath.setMap(map.value)
+    routePaths.value.push(routePath)
+  }
+
+  // Adjust map to fit bounds
+  if (!bounds.isEmpty()) {
+    map.value.fitBounds(bounds)
+    // Avoid too much zoom if only one stop
+    if (stops.length === 1) {
+      map.value.setZoom(15)
+    }
+  }
+}
 
 async function loadCouriers () {
   try {
@@ -423,3 +597,73 @@ function getClientAddress (client) {
   return ''
 }
 </script>
+
+<style scoped>
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stop-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #2196FB;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#preview-map {
+  background-color: #f8f9fa;
+  border-left: 1px solid rgba(0,0,0,0.05);
+}
+
+.preview-card {
+  border-radius: 12px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2) !important;
+  overflow: hidden;
+}
+
+.font-mono {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+/* Custom Scrollbar for the stops list */
+.overflow-auto::-webkit-scrollbar {
+  width: 4px;
+}
+.overflow-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.1);
+  border-radius: 10px;
+}
+.body--dark .overflow-auto::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+}
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.2);
+}
+</style>

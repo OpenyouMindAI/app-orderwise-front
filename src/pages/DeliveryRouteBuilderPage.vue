@@ -1,14 +1,21 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page>
+    <DeliveryRouteBuilderSkeleton v-if="loadingInitial" />
+    <template v-else>
+      <div class="q-pa-md">
     <!-- Header -->
     <div class="row items-center justify-between q-mb-md">
       <div>
-        <div class="text-h5 text-weight-bold">
+        <div class="text-h6 text-weight-bold">
+          <q-btn
+            flat
+            color="grey-7"
+            icon="arrow_back"
+            round
+            @click="$router.back()"
+        />
           <q-icon name="route" color="primary" size="32px" class="q-mr-sm" />
           {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
-        </div>
-        <div class="text-caption text-grey-7">
-          {{ deliveryRoute?.name || routeForm.name || 'Construye tu ruta de entrega' }}
         </div>
       </div>
       <div class="row q-gutter-sm">
@@ -20,13 +27,6 @@
           @click="saveRoute"
           :loading="saving"
           :disable="stops.length === 0"
-        />
-        <q-btn
-          flat
-          color="grey-7"
-          label="Volver"
-          icon="arrow_back"
-          @click="$router.back()"
         />
       </div>
     </div>
@@ -379,6 +379,8 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+      </div>
+    </template>
   </q-page>
 </template>
 
@@ -392,6 +394,7 @@ import { echo } from 'src/boot/pusher'
 import { loadGoogleMaps, darkMapStyles } from 'src/config/maps'
 import draggable from 'vuedraggable'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import DeliveryRouteBuilderSkeleton from 'src/components/Skeletons/DeliveryRouteBuilderSkeleton.vue'
 
 const router = useRouter()
 const routeParams = useRoute()
@@ -411,6 +414,7 @@ const partners = ref([])
 const selectedPartner = ref(null)
 const saving = ref(false)
 const optimizing = ref(false)
+const loadingInitial = ref(true)
 
 /**
  * Modal state for adding address to client
@@ -514,24 +518,18 @@ const totalDuration = computed(() => {
 })
 
 onMounted(async () => {
-  console.log('=== Component Mounted ===')
-  console.log('Route params:', routeParams.params)
-  console.log('Route ID:', routeParams.params.id)
-
   await loadInitialData()
   await initializeMap()
 
   if (routeParams.params.id) {
-    console.log('Loading route with ID:', routeParams.params.id)
     await loadRoute()
-  } else {
-    console.log('No route ID found, skipping loadRoute()')
   }
 
-  // Listen for real-time updates
   if (deliveryRoute.value) {
     listenForUpdates()
   }
+
+  loadingInitial.value = false
 })
 
 onUnmounted(() => {
@@ -647,12 +645,35 @@ async function onPartnerChange (partner) {
     const data = partner.clients || []
 
     if (data && data.length > 0) {
+      // Filter out clients already in the stops list
+      const existingClientIds = stops.value.map(s => s.client_id)
+      const newClients = data.filter(c => !existingClientIds.includes(c.id))
+
+      if (newClients.length === 0) {
+        $q.loading.hide()
+        $q.notify({
+          type: 'info',
+          message: 'Todos los clientes de este socio ya están en la ruta',
+          icon: 'info'
+        })
+        return
+      }
+
       // Initialize queue for processing clients
-      clientsQueue.value = [...data]
+      clientsQueue.value = [...newClients]
       currentClientIndex.value = 0
       processingPartnerClients.value = true
 
       $q.loading.hide()
+
+      // Notify if some clients were skipped
+      if (newClients.length < data.length) {
+        $q.notify({
+          type: 'info',
+          message: `Se omitieron ${data.length - newClients.length} clientes que ya estaban en la ruta`,
+          timeout: 2000
+        })
+      }
 
       // Start processing clients one by one
       await processNextClientInQueue()
@@ -685,7 +706,6 @@ async function processNextClientInQueue () {
     currentClientIndex.value = 0
 
     // Show summary
-    const withAddress = stops.value.filter(s => s.latitude && s.longitude).length
     const withoutAddress = stops.value.filter(s => !s.latitude || !s.longitude).length
 
     $q.notify({
@@ -800,13 +820,6 @@ async function loadRoute () {
         duration_value: stop.duration_value
       }
 
-      console.log(`Mapped stop ${index + 1}:`, {
-        client_name: stop.client?.name,
-        final_latitude: mappedStop.latitude,
-        final_longitude: mappedStop.longitude,
-        has_coordinates: !!(mappedStop.latitude && mappedStop.longitude)
-      })
-
       return mappedStop
     })
 
@@ -814,9 +827,11 @@ async function loadRoute () {
     routeForm.value = {
       name: deliveryRoute.value.name || '',
       courier: deliveryRoute.value.courier || null,
+      partner: deliveryRoute.value.partner || null,
       origin_branch: deliveryRoute.value.originBranch || deliveryRoute.value.origin_branch || null,
       notes: deliveryRoute.value.notes || ''
     }
+    selectedPartner.value = deliveryRoute.value.partner || null
     await nextTick()
     updateMapRoute()
   } catch (error) {
@@ -1099,6 +1114,7 @@ function filterClients (value, update) {
     params: {
       sortBy: 'id',
       sortOrder: 'desc',
+      onlyClients: true,
       dataSearch: {
         name: value,
         document_number: value
@@ -1147,6 +1163,17 @@ function getOpeningHoursText (openingHours) {
  */
 async function addClientToPredefinedRoute () {
   if (!selectedClient.value) return
+
+  // Check if client is already in the stops list
+  if (stops.value.some(s => s.client_id === selectedClient.value.id)) {
+    $q.notify({
+      type: 'warning',
+      message: 'Este cliente ya está agregado a la ruta',
+      icon: 'warning'
+    })
+    selectedClient.value = null
+    return
+  }
 
   // Extract coordinates from client address
   let lat = null
@@ -1462,6 +1489,7 @@ async function createRoute () {
     const payload = {
       name: routeForm.value.name || 'Nueva Ruta',
       courier_id: routeForm.value.courier?.id,
+      partner_id: selectedPartner.value?.id,
       origin_branch_id: routeForm.value.origin_branch?.id,
       notes: routeForm.value.notes
     }
@@ -1519,6 +1547,8 @@ async function saveRoute () {
       !stop.client.partner_id || stop.client.partner_id !== selectedPartner.value.id
     )
 
+    console.log('Unassociated clients:', unassociatedClients)
+
     if (unassociatedClients.length > 0) {
       const confirmed = await showPartnerAssociationDialog(unassociatedClients)
       if (confirmed) {
@@ -1533,6 +1563,7 @@ async function saveRoute () {
     const payload = {
       name: routeForm.value.name,
       courier_id: routeForm.value.courier?.id,
+      partner_id: selectedPartner.value?.id,
       origin_branch_id: routeForm.value.origin_branch?.id,
       notes: routeForm.value.notes
     }
