@@ -645,10 +645,15 @@
     </q-dialog>
     <q-dialog
       v-model="dialogFilter"
-      position="right"
-      seamless
+      :position="$q.screen.lt.sm ? 'standard' : 'right'"
+      :seamless="!$q.screen.lt.sm"
+      :maximized="$q.screen.lt.sm"
     >
-      <q-card style="width: 500px; max-width: 80vw;">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column' : ''"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'"
+      >
+        <!-- CABECERA (Header) - Fija arriba -->
         <q-card-section class="bg-primary text-white row items-center justify-between">
           <div class="text-h6">
             Filtros
@@ -662,7 +667,11 @@
           />
         </q-card-section>
 
-        <q-card-section class="q-pt-sm scroll" style="max-height: calc(100vh - 200px);">
+        <!-- CONTENIDO (Body) - Scrollable -->
+        <q-card-section
+          :class="$q.screen.lt.sm ? 'col scroll q-pt-sm' : 'q-pt-sm scroll'"
+          :style="$q.screen.lt.sm ? '' : 'max-height: calc(100vh - 200px);'"
+        >
           <div class="column q-gutter-y-sm">
             <q-option-group
               v-model="panel"
@@ -791,6 +800,7 @@
           </div>
         </q-card-section>
 
+        <!-- FOOTER (Pie de página) - Fijo al fondo -->
         <q-card-actions align="right">
           <q-btn
             color="secondary"
