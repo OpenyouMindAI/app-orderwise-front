@@ -1,14 +1,21 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page>
+    <DeliveryRouteBuilderSkeleton v-if="loadingInitial" />
+    <template v-else>
+      <div class="q-pa-md">
     <!-- Header -->
     <div class="row items-center justify-between q-mb-md">
       <div>
-        <div class="text-h5 text-weight-bold">
+        <div class="text-h6 text-weight-bold">
+          <q-btn
+            flat
+            color="grey-7"
+            icon="arrow_back"
+            round
+            @click="$router.back()"
+        />
           <q-icon name="route" color="primary" size="32px" class="q-mr-sm" />
           {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
-        </div>
-        <div class="text-caption text-grey-7">
-          {{ deliveryRoute?.name || routeForm.name || 'Construye tu ruta de entrega' }}
         </div>
       </div>
       <div class="row q-gutter-sm">
@@ -20,13 +27,6 @@
           @click="saveRoute"
           :loading="saving"
           :disable="stops.length === 0"
-        />
-        <q-btn
-          flat
-          color="grey-7"
-          label="Volver"
-          icon="arrow_back"
-          @click="$router.back()"
         />
       </div>
     </div>
@@ -49,6 +49,29 @@
               dense
               class="q-mb-md"
             />
+
+            <!-- Partner Selection -->
+            <q-select
+              v-model="selectedPartner"
+              :options="partners"
+              option-label="name"
+              option-value="id"
+              label="Seleccionar Afiliado (Cargar Clientes)"
+              outlined
+              dense
+              clearable
+              use-input
+              hide-selected
+              fill-input
+              input-debounce="0"
+              class="q-mb-md"
+              @update:model-value="onPartnerChange"
+              @filter="filterPartners"
+            >
+              <template v-slot:prepend>
+                <q-icon name="handshake" />
+              </template>
+            </q-select>
 
             <!-- Courier Selection -->
             <q-select
@@ -251,27 +274,43 @@
                             <q-icon name="flag" size="14px" />
                             Punto de inicio
                           </span>
-                          <span v-if="!element.distance_text && !element.duration_text && index > 0" class="text-orange">
-                            <q-icon name="pending" size="14px" />
-                            Calculando ruta...
-                          </span>
                         </div>
                         <div v-if="element.client?.opening_hours" class="text-caption text-primary">
-                          <q-icon name="schedule" size="12px" />
+                          <q-icon name="schedule" size="14px" />
                           {{ getOpeningHoursText(element.client.opening_hours) }}
+                        </div>
+                        <!-- Warning for clients without address -->
+                        <div v-if="!element.latitude || !element.longitude" class="text-caption text-warning q-mt-xs">
+                          <q-icon name="warning" size="14px" />
+                          Sin dirección - No se muestra en el mapa
                         </div>
                       </div>
 
                       <!-- Actions -->
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        icon="delete"
-                        color="negative"
-                        size="sm"
-                        @click.stop="removeStop(element)"
-                      />
+                      <div class="row q-gutter-xs">
+                        <!-- Edit address button -->
+                        <q-btn
+                          v-if="!element.latitude || !element.longitude"
+                          flat
+                          dense
+                          round
+                          icon="edit_location"
+                          color="primary"
+                          size="sm"
+                          @click.stop="editStopAddress(element)"
+                        >
+                          <q-tooltip>Agregar dirección</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          icon="delete"
+                          color="negative"
+                          size="sm"
+                          @click.stop="removeStop(element)"
+                        />
+                      </div>
                     </div>
                   </q-card-section>
                 </q-card>
@@ -288,6 +327,60 @@
         </q-card>
       </div>
     </div>
+
+    <!-- Modal para agregar dirección al cliente -->
+    <q-dialog v-model="showAddressModal" persistent>
+      <q-card style="min-width: 500px; max-width: 600px;">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">
+            <q-icon name="warning" color="warning" size="24px" class="q-mr-sm" />
+            Dirección requerida
+          </div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="cancelAddressModal" />
+        </q-card-section>
+
+        <q-card-section>
+          <!-- Client name with transition -->
+          <transition name="fade-slide" mode="out-in">
+            <div :key="clientWithoutAddress?.id" class="client-name-container q-mb-md">
+              <div class="text-h5 text-weight-bold text-primary q-mb-xs">
+                {{ clientWithoutAddress?.name }}
+              </div>
+              <div class="text-body2 text-grey-7">
+                Por favor, ingresa la dirección para poder agregarlo a la ruta.
+              </div>
+            </div>
+          </transition>
+
+          <AddressComponent
+            ref="addressComponentRef"
+            label="Dirección del cliente"
+            @address-selected="onAddressSelected"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn
+            flat
+            label="Omitir"
+            color="grey-7"
+            @click="skipClientAddress"
+          />
+          <q-space />
+          <q-btn
+            unelevated
+            label="Guardar y Agregar"
+            color="primary"
+            :disable="!newClientAddress"
+            :loading="savingClientAddress"
+            @click="saveClientAddressAndAdd"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+      </div>
+    </template>
   </q-page>
 </template>
 
@@ -300,6 +393,8 @@ import { api } from 'src/boot/axios'
 import { echo } from 'src/boot/pusher'
 import { loadGoogleMaps, darkMapStyles } from 'src/config/maps'
 import draggable from 'vuedraggable'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import DeliveryRouteBuilderSkeleton from 'src/components/Skeletons/DeliveryRouteBuilderSkeleton.vue'
 
 const router = useRouter()
 const routeParams = useRoute()
@@ -315,8 +410,65 @@ const couriers = ref([])
 const branches = ref([])
 const clients = ref([])
 const selectedClient = ref(null)
+const partners = ref([])
+const selectedPartner = ref(null)
 const saving = ref(false)
 const optimizing = ref(false)
+const loadingInitial = ref(true)
+
+/**
+ * Modal state for adding address to client
+ * @type {boolean}
+ */
+const showAddressModal = ref(false)
+
+/**
+ * Client that needs an address
+ * @type {object|null}
+ */
+const clientWithoutAddress = ref(null)
+
+/**
+ * New address selected for the client
+ * @type {object|null}
+ */
+const newClientAddress = ref(null)
+
+/**
+ * Loading state for saving client address
+ * @type {boolean}
+ */
+const savingClientAddress = ref(false)
+
+/**
+ * Reference to the AddressComponent
+ * @type {object|null}
+ */
+const addressComponentRef = ref(null)
+
+/**
+ * The actual stop being edited (if in edit mode)
+ * @type {object|null}
+ */
+const stopBeingEdited = ref(null)
+
+/**
+ * Queue of clients from partner that need address processing
+ * @type {array}
+ */
+const clientsQueue = ref([])
+
+/**
+ * Current index in the clients queue being processed
+ * @type {number}
+ */
+const currentClientIndex = ref(0)
+
+/**
+ * Flag to indicate if we're processing partner clients
+ * @type {boolean}
+ */
+const processingPartnerClients = ref(false)
 
 // Form
 const routeForm = ref({
@@ -366,23 +518,33 @@ const totalDuration = computed(() => {
 })
 
 onMounted(async () => {
-  console.log('=== Component Mounted ===')
-  console.log('Route params:', routeParams.params)
-  console.log('Route ID:', routeParams.params.id)
+  try {
+    // Load initial data while showing skeleton
+    await loadInitialData()
+    
+    if (routeParams.params.id) {
+      await loadRoute()
+    }
 
-  await loadInitialData()
-  await initializeMap()
+    // Hide skeleton and wait for DOM update to ensure mapContainer is available
+    loadingInitial.value = false
+    await nextTick()
 
-  if (routeParams.params.id) {
-    console.log('Loading route with ID:', routeParams.params.id)
-    await loadRoute()
-  } else {
-    console.log('No route ID found, skipping loadRoute()')
-  }
+    // Now safe to initialize map
+    await initializeMap()
 
-  // Listen for real-time updates
-  if (deliveryRoute.value) {
-    listenForUpdates()
+    // Draw existing route if stops exist
+    if (stops.value.length > 0) {
+      await updateMapRoute()
+    }
+
+    // Listen for real-time updates
+    if (deliveryRoute.value) {
+      listenForUpdates()
+    }
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+    loadingInitial.value = false
   }
 })
 
@@ -450,31 +612,187 @@ function filterBranches (value, update) {
     })
 }
 
+/**
+ * Filters the list of partners based on the input value.
+ * @params {string} value The search term to filter partners by.
+ * @params {function} update The Quasar update function to refresh the options list.
+ * @return {void}
+ */
+function filterPartners (value, update) {
+  api.get('partners', {
+    params: {
+      sortBy: 'id',
+      sortOrder: 'desc',
+      dataSearch: {
+        name: value,
+        document_number: value
+      }
+    }
+  })
+    .then(({ data }) => {
+      update(() => {
+        partners.value = data || []
+      })
+    })
+    .catch(err => {
+      console.error('Error loading partners:', err)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al buscar socios',
+        icon: 'warning'
+      })
+    })
+}
+
+/**
+ * Handles the event when a partner is selected.
+ * Fetches all clients associated with the selected partner and adds them as stops.
+ * @params {object} partner The selected partner object.
+ * @return {Promise<void>}
+ */
+async function onPartnerChange (partner) {
+  if (!partner) return
+
+  $q.loading.show({
+    message: `Cargando clientes de ${partner.name}...`
+  })
+
+  try {
+    const data = partner.clients || []
+
+    if (data && data.length > 0) {
+      // Filter out clients already in the stops list
+      const existingClientIds = stops.value.map(s => s.client_id)
+      const newClients = data.filter(c => !existingClientIds.includes(c.id))
+
+      if (newClients.length === 0) {
+        $q.loading.hide()
+        $q.notify({
+          type: 'info',
+          message: 'Todos los clientes de este socio ya están en la ruta',
+          icon: 'info'
+        })
+        return
+      }
+
+      // Initialize queue for processing clients
+      clientsQueue.value = [...newClients]
+      currentClientIndex.value = 0
+      processingPartnerClients.value = true
+
+      $q.loading.hide()
+
+      // Notify if some clients were skipped
+      if (newClients.length < data.length) {
+        $q.notify({
+          type: 'info',
+          message: `Se omitieron ${data.length - newClients.length} clientes que ya estaban en la ruta`,
+          timeout: 2000
+        })
+      }
+
+      // Start processing clients one by one
+      await processNextClientInQueue()
+    } else {
+      $q.loading.hide()
+      $q.notify({
+        type: 'warning',
+        message: 'El socio seleccionado no tiene clientes asociados'
+      })
+    }
+  } catch (err) {
+    console.error('Error loading partner clients:', err)
+    $q.loading.hide()
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar los clientes del socio'
+    })
+  }
+}
+
+/**
+ * Processes the next client in the queue from partner selection
+ * @return {Promise<void>}
+ */
+async function processNextClientInQueue () {
+  if (!processingPartnerClients.value || currentClientIndex.value >= clientsQueue.value.length) {
+    // Finished processing all clients
+    processingPartnerClients.value = false
+    clientsQueue.value = []
+    currentClientIndex.value = 0
+
+    // Show summary
+    const withoutAddress = stops.value.filter(s => !s.latitude || !s.longitude).length
+
+    $q.notify({
+      type: 'positive',
+      message: `Se procesaron ${stops.value.length} clientes`,
+      caption: withoutAddress > 0 ? `${withoutAddress} sin dirección (no se muestran en el mapa)` : ''
+    })
+
+    await nextTick()
+    updateMapRoute()
+    return
+  }
+
+  const client = clientsQueue.value[currentClientIndex.value]
+
+  // Extract coordinates
+  let lat = null
+  let lng = null
+  const clientAddress = client.address
+
+  if (clientAddress) {
+    if (typeof clientAddress === 'string') {
+      try {
+        const parsed = JSON.parse(clientAddress)
+        lat = parsed.latitude
+        lng = parsed.longitude
+      } catch (e) {
+        console.warn('Could not parse client address:', clientAddress)
+      }
+    } else if (typeof clientAddress === 'object') {
+      lat = clientAddress.latitude
+      lng = clientAddress.longitude
+    }
+  }
+
+  lat = lat || client.latitude
+  lng = lng || client.longitude
+
+  if (!lat || !lng) {
+    // Client doesn't have address - show modal
+    clientWithoutAddress.value = client
+    newClientAddress.value = null
+    showAddressModal.value = true
+    // Modal actions will handle continuing the queue
+  } else {
+    // Client has address - add directly
+    const newStop = {
+      id: Date.now() + currentClientIndex.value,
+      client_id: client.id,
+      client,
+      stop_order: stops.value.length + 1,
+      delivery_status: 'pending',
+      latitude: lat,
+      longitude: lng,
+      products: []
+    }
+    stops.value.push(newStop)
+
+    // Move to next client
+    currentClientIndex.value++
+    await processNextClientInQueue()
+  }
+}
+
 async function loadRoute () {
   try {
-    console.log('Loading route ID:', routeParams.params.id)
     const response = await api.get(`/delivery-routes/${routeParams.params.id}`)
-    console.log('API Response:', response.data)
     deliveryRoute.value = response.data.route
-    console.log('deliveryRoute.value:', deliveryRoute.value)
-    console.log('deliveryRoute.value.route_clients:', deliveryRoute.value.route_clients)
-    console.log('deliveryRoute.value.routeClients:', deliveryRoute.value.routeClients)
-    console.log('deliveryRoute.value.stops:', deliveryRoute.value.stops)
-
     // Process routeClients (static routes) - API returns snake_case
     const routeClients = deliveryRoute.value.route_clients || deliveryRoute.value.routeClients || deliveryRoute.value.stops || []
-    console.log('routeClients to process:', routeClients)
-
     stops.value = routeClients.map((stop, index) => {
-      console.log(`Processing stop ${index + 1}:`, {
-        stop_id: stop.id,
-        client_name: stop.client?.name,
-        stop_latitude: stop.latitude,
-        stop_longitude: stop.longitude,
-        stop_latitude_type: typeof stop.latitude,
-        stop_longitude_type: typeof stop.longitude
-      })
-
       // Extract latitude and longitude from client address
       let lat = stop.latitude
       let lng = stop.longitude
@@ -518,13 +836,6 @@ async function loadRoute () {
         duration_value: stop.duration_value
       }
 
-      console.log(`Mapped stop ${index + 1}:`, {
-        client_name: stop.client?.name,
-        final_latitude: mappedStop.latitude,
-        final_longitude: mappedStop.longitude,
-        has_coordinates: !!(mappedStop.latitude && mappedStop.longitude)
-      })
-
       return mappedStop
     })
 
@@ -532,14 +843,11 @@ async function loadRoute () {
     routeForm.value = {
       name: deliveryRoute.value.name || '',
       courier: deliveryRoute.value.courier || null,
+      partner: deliveryRoute.value.partner || null,
       origin_branch: deliveryRoute.value.originBranch || deliveryRoute.value.origin_branch || null,
       notes: deliveryRoute.value.notes || ''
     }
-
-    console.log('Loaded stops:', stops.value)
-    console.log('Stops with coordinates:', stops.value.filter(s => s.latitude && s.longitude).length)
-
-    // Update map
+    selectedPartner.value = deliveryRoute.value.partner || null
     await nextTick()
     updateMapRoute()
   } catch (error) {
@@ -582,12 +890,6 @@ async function initializeMap () {
 }
 
 async function updateMapRoute () {
-  console.log('=== updateMapRoute called ===')
-  console.log('Map initialized:', !!map.value)
-  console.log('Origin branch:', routeForm.value.origin_branch)
-  console.log('Stops count:', stops.value.length)
-  console.log('Stops data:', JSON.stringify(stops.value, null, 2))
-
   // Clear existing markers and paths
   if (originMarker.value) {
     originMarker.value.setMap(null)
@@ -598,22 +900,42 @@ async function updateMapRoute () {
   routePaths.value = []
 
   if (!map.value) {
-    console.error('Map not initialized!')
+    console.warn('updateMapRoute: Map not initialized yet')
     return
   }
 
-  if (!routeForm.value.origin_branch || stops.value.length === 0) {
-    console.warn('Missing origin_branch or stops, skipping map update')
-    console.warn('origin_branch:', routeForm.value.origin_branch)
-    console.warn('stops.length:', stops.value.length)
+  if (!routeForm.value.origin_branch) {
+    console.warn('updateMapRoute: Missing origin_branch')
     return
   }
+
+  if (stops.value.length === 0) {
+    console.warn('updateMapRoute: No stops to draw')
+    return
+  }
+
+  console.log('updateMapRoute: Data check:', {
+    origin: routeForm.value.origin_branch,
+    stopsCount: stops.value.length
+  })
 
   // Add origin marker
   const origin = routeForm.value.origin_branch
-  const originAddress = origin.address || {}
-  const originLat = originAddress.latitude || origin.latitude
-  const originLng = originAddress.longitude || origin.longitude
+  let originLat = null
+  let originLng = null
+
+  // Extract coordinates from origin branch
+  if (origin.address) {
+    const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
+    originLat = addr.latitude
+    originLng = addr.longitude
+  }
+
+  // Fallback to direct properties if any
+  originLat = originLat || origin.latitude
+  originLng = originLng || origin.longitude
+
+  console.log('updateMapRoute: Origin coordinates:', { originLat, originLng })
 
   if (originLat && originLng) {
     originMarker.value = new google.maps.Marker({
@@ -700,8 +1022,14 @@ async function updateMapRoute () {
   await calculateDistancesAndTimes()
 }
 
+// Watch origin branch for map updates
+watch(() => routeForm.value.origin_branch, async () => {
+  await nextTick()
+  updateMapRoute()
+})
+
 async function calculateDistancesAndTimes () {
-  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+  if (!map.value || !routeForm.value.origin_branch || stops.value.length === 0) {
     return
   }
 
@@ -709,9 +1037,19 @@ async function calculateDistancesAndTimes () {
 
   // Get origin coordinates
   const origin = routeForm.value.origin_branch
-  const originAddress = origin.address || {}
-  const originLat = originAddress.latitude || origin.latitude
-  const originLng = originAddress.longitude || origin.longitude
+  let originLat = null
+  let originLng = null
+
+  // Extract coordinates from origin branch
+  if (origin.address) {
+    const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
+    originLat = addr.latitude
+    originLng = addr.longitude
+  }
+
+  // Fallback to direct properties
+  originLat = originLat || origin.latitude
+  originLng = originLng || origin.longitude
 
   if (!originLat || !originLng) return
 
@@ -769,19 +1107,36 @@ async function calculateDistancesAndTimes () {
 }
 
 async function drawRoute () {
-  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+  if (!map.value || !routeForm.value.origin_branch || stops.value.length === 0) {
+    console.warn('drawRoute: Missing map, origin_branch or stops')
     return
   }
 
+  console.log('drawRoute: Starting route drawing...')
   const directionsService = new google.maps.DirectionsService()
 
   // Build waypoints
   const origin = routeForm.value.origin_branch
-  const originAddress = origin.address || {}
-  const originLat = originAddress.latitude || origin.latitude
-  const originLng = originAddress.longitude || origin.longitude
+  let originLat = null
+  let originLng = null
 
-  if (!originLat || !originLng) return
+  // Extract coordinates from origin branch
+  if (origin.address) {
+    const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
+    originLat = addr.latitude
+    originLng = addr.longitude
+  }
+
+  // Fallback to direct properties if any
+  originLat = originLat || origin.latitude
+  originLng = originLng || origin.longitude
+
+  console.log('drawRoute: Origin:', { originLat, originLng })
+
+  if (!originLat || !originLng) {
+    console.warn('drawRoute: Origin missing coordinates')
+    return
+  }
 
   // Draw route segments
   let prevLat = originLat
@@ -792,7 +1147,12 @@ async function drawRoute () {
     const stopLat = stop.latitude
     const stopLng = stop.longitude
 
-    if (!stopLat || !stopLng) continue
+    console.log(`drawRoute: Processing segment to stop ${i + 1}:`, { stopLat, stopLng })
+
+    if (!stopLat || !stopLng) {
+      console.warn(`drawRoute: Stop ${i + 1} missing coordinates, skipping path`)
+      continue
+    }
 
     try {
       const result = await directionsService.route({
@@ -828,6 +1188,7 @@ function filterClients (value, update) {
     params: {
       sortBy: 'id',
       sortOrder: 'desc',
+      onlyClients: true,
       dataSearch: {
         name: value,
         document_number: value
@@ -870,8 +1231,23 @@ function getOpeningHoursText (openingHours) {
   return `${todayHours.open} - ${todayHours.close}`
 }
 
+/**
+ * Adds a client to the predefined route. If client has no address, shows modal to add one.
+ * @return {Promise<void>}
+ */
 async function addClientToPredefinedRoute () {
   if (!selectedClient.value) return
+
+  // Check if client is already in the stops list
+  if (stops.value.some(s => s.client_id === selectedClient.value.id)) {
+    $q.notify({
+      type: 'warning',
+      message: 'Este cliente ya está agregado a la ruta',
+      icon: 'warning'
+    })
+    selectedClient.value = null
+    return
+  }
 
   // Extract coordinates from client address
   let lat = null
@@ -901,14 +1277,12 @@ async function addClientToPredefinedRoute () {
   lng = lng || selectedClient.value.longitude
 
   if (!lat || !lng) {
-    $q.notify({
-      type: 'warning',
-      message: 'El cliente no tiene coordenadas de ubicación',
-      caption: 'Asegúrate de que el cliente tenga una dirección válida'
-    })
+    // Show modal to add address
+    clientWithoutAddress.value = selectedClient.value
+    newClientAddress.value = null
+    showAddressModal.value = true
     return
   }
-
   // For predefined routes, just add client to stops list (no products yet)
   const newStop = {
     id: Date.now(), // Temporary ID
@@ -921,9 +1295,25 @@ async function addClientToPredefinedRoute () {
     products: [] // No products for predefined routes
   }
 
-  stops.value.push(newStop)
+  // Automatic partner association if a partner is selected
+  if (selectedPartner.value && (!newStop.client.partner_id || newStop.client.partner_id !== selectedPartner.value.id)) {
+    try {
+      await api.put(`/clients/${newStop.client.id}`, {
+        ...newStop.client,
+        partner_id: selectedPartner.value.id
+      })
+      newStop.client.partner_id = selectedPartner.value.id
+      $q.notify({
+        type: 'info',
+        message: `Cliente asociado a ${selectedPartner.value.name}`,
+        timeout: 1000
+      })
+    } catch (e) {
+      console.error('Error auto-associating client:', e)
+    }
+  }
 
-  console.log('Added stop:', newStop)
+  stops.value.push(newStop)
 
   $q.notify({
     type: 'positive',
@@ -938,7 +1328,231 @@ async function addClientToPredefinedRoute () {
   updateMapRoute()
 }
 
+/**
+ * Handles address selection from AddressComponent
+ * @params {object} address The selected address object
+ * @return {void}
+ */
+function onAddressSelected (address) {
+  newClientAddress.value = address
+}
+
+/**
+ * Cancels the address modal and resets state
+ * @return {void}
+ */
+function cancelAddressModal () {
+  showAddressModal.value = false
+  clientWithoutAddress.value = null
+  newClientAddress.value = null
+  stopBeingEdited.value = null
+
+  // If not processing partner clients, also reset selectedClient
+  if (!processingPartnerClients.value) {
+    selectedClient.value = null
+  }
+
+  if (addressComponentRef.value) {
+    addressComponentRef.value.resetAddress()
+  }
+
+  // If processing partner clients, stop the queue
+  if (processingPartnerClients.value) {
+    processingPartnerClients.value = false
+    clientsQueue.value = []
+    currentClientIndex.value = 0
+  }
+}
+
+/**
+ * Skips adding address for current client and adds them without coordinates
+ * @return {Promise<void>}
+ */
+async function skipClientAddress () {
+  if (!clientWithoutAddress.value) return
+
+  // Check if we're editing an existing stop
+  if (stopBeingEdited.value) {
+    // Just close the modal, don't add duplicate
+    showAddressModal.value = false
+    clientWithoutAddress.value = null
+    newClientAddress.value = null
+    stopBeingEdited.value = null
+
+    if (addressComponentRef.value) {
+      addressComponentRef.value.resetAddress()
+    }
+
+    $q.notify({
+      type: 'info',
+      message: 'No se realizaron cambios en la dirección'
+    })
+    return
+  }
+
+  // Add client to stops WITHOUT coordinates (only if not editing)
+  const newStop = {
+    id: Date.now(),
+    client_id: clientWithoutAddress.value.id,
+    client: clientWithoutAddress.value,
+    stop_order: stops.value.length + 1,
+    delivery_status: 'pending',
+    latitude: null,
+    longitude: null,
+    products: []
+  }
+
+  stops.value.push(newStop)
+
+  // Reset address component for next client
+  if (addressComponentRef.value) {
+    addressComponentRef.value.resetAddress()
+  }
+
+  // Continue processing queue if in partner mode
+  if (processingPartnerClients.value) {
+    // Close modal temporarily to show transition
+    showAddressModal.value = false
+    await nextTick()
+
+    currentClientIndex.value++
+    await processNextClientInQueue()
+  } else {
+    // Single client mode
+    showAddressModal.value = false
+    clientWithoutAddress.value = null
+    newClientAddress.value = null
+    selectedClient.value = null
+    await nextTick()
+    updateMapRoute()
+  }
+}
+
+/**
+ * Opens the address modal to edit a stop's address
+ * @params {object} stop The stop to edit
+ * @return {void}
+ */
+function editStopAddress (stop) {
+  stopBeingEdited.value = stop // Store the stop being edited
+  clientWithoutAddress.value = stop.client
+  newClientAddress.value = null
+  processingPartnerClients.value = false // Not in partner mode
+  showAddressModal.value = true
+}
+
+/**
+ * Saves the client address and adds them to the route
+ * @return {Promise<void>}
+ */
+async function saveClientAddressAndAdd () {
+  if (!clientWithoutAddress.value || !newClientAddress.value) return
+
+  savingClientAddress.value = true
+
+  try {
+    // Update client with new address
+    await api.put(`/clients/${clientWithoutAddress.value.id}`, {
+      ...clientWithoutAddress.value,
+      address: newClientAddress.value
+    })
+
+    // Check if we're editing an existing stop
+    if (stopBeingEdited.value) {
+      // Update the existing stop
+      stopBeingEdited.value.latitude = newClientAddress.value.latitude
+      stopBeingEdited.value.longitude = newClientAddress.value.longitude
+      stopBeingEdited.value.client.address = newClientAddress.value
+
+      $q.notify({
+        type: 'positive',
+        message: 'Dirección actualizada correctamente'
+      })
+
+      showAddressModal.value = false
+      clientWithoutAddress.value = null
+      newClientAddress.value = null
+      stopBeingEdited.value = null
+
+      if (addressComponentRef.value) {
+        addressComponentRef.value.resetAddress()
+      }
+
+      await nextTick()
+      updateMapRoute()
+    } else {
+      // Add new stop with the new coordinates
+      const newStop = {
+        id: Date.now(),
+        client_id: clientWithoutAddress.value.id,
+        client: {
+          ...clientWithoutAddress.value,
+          address: newClientAddress.value
+        },
+        stop_order: stops.value.length + 1,
+        delivery_status: 'pending',
+        latitude: newClientAddress.value.latitude,
+        longitude: newClientAddress.value.longitude,
+        products: []
+      }
+
+      stops.value.push(newStop)
+
+      $q.notify({
+        type: 'positive',
+        message: 'Dirección guardada y cliente agregado a la ruta'
+      })
+
+      // Reset address component for next client
+      if (addressComponentRef.value) {
+        addressComponentRef.value.resetAddress()
+      }
+
+      // Continue processing queue if in partner mode
+      if (processingPartnerClients.value) {
+        // Close modal temporarily to show transition
+        showAddressModal.value = false
+        await nextTick()
+
+        currentClientIndex.value++
+        await processNextClientInQueue()
+      } else {
+        // Single client mode
+        showAddressModal.value = false
+        clientWithoutAddress.value = null
+        newClientAddress.value = null
+        selectedClient.value = null
+        await nextTick()
+        updateMapRoute()
+      }
+    }
+  } catch (error) {
+    console.error('Error saving client address:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al guardar la dirección del cliente',
+      caption: error.message || 'Intenta nuevamente'
+    })
+  } finally {
+    savingClientAddress.value = false
+  }
+}
+
 async function createRoute () {
+  // Check partner associations before saving
+  if (selectedPartner.value) {
+    const unassociatedClients = stops.value.filter(stop =>
+      !stop.client.partner_id || stop.client.partner_id !== selectedPartner.value.id
+    )
+
+    if (unassociatedClients.length > 0) {
+      const confirmed = await showPartnerAssociationDialog(unassociatedClients)
+      if (confirmed) {
+        await associateClientsWithPartner(unassociatedClients)
+      }
+    }
+  }
+
   // Si ya existe una ruta, actualizar en lugar de crear
   if (deliveryRoute.value) {
     await saveRoute()
@@ -949,6 +1563,7 @@ async function createRoute () {
     const payload = {
       name: routeForm.value.name || 'Nueva Ruta',
       courier_id: routeForm.value.courier?.id,
+      partner_id: selectedPartner.value?.id,
       origin_branch_id: routeForm.value.origin_branch?.id,
       notes: routeForm.value.notes
     }
@@ -1000,12 +1615,29 @@ async function saveRoute () {
     return
   }
 
+  // Check partner associations before saving
+  if (selectedPartner.value) {
+    const unassociatedClients = stops.value.filter(stop =>
+      !stop.client.partner_id || stop.client.partner_id !== selectedPartner.value.id
+    )
+
+    console.log('Unassociated clients:', unassociatedClients)
+
+    if (unassociatedClients.length > 0) {
+      const confirmed = await showPartnerAssociationDialog(unassociatedClients)
+      if (confirmed) {
+        await associateClientsWithPartner(unassociatedClients)
+      }
+    }
+  }
+
   saving.value = true
 
   try {
     const payload = {
       name: routeForm.value.name,
       courier_id: routeForm.value.courier?.id,
+      partner_id: selectedPartner.value?.id,
       origin_branch_id: routeForm.value.origin_branch?.id,
       notes: routeForm.value.notes
     }
@@ -1048,6 +1680,79 @@ async function saveRoute () {
     })
   } finally {
     saving.value = false
+  }
+}
+
+/**
+ * Shows a dialog to confirm associating clients with the selected partner.
+ * @params {array} clients List of clients to be associated.
+ * @return {Promise<boolean>}
+ */
+function showPartnerAssociationDialog (clients) {
+  return new Promise((resolve) => {
+    $q.dialog({
+      title: 'Asociar Clientes',
+      message: `Hay ${clients.length} cliente(s) que no están asociados al afiliado <b>${selectedPartner.value.name}</b>. ¿Deseas asociarlos automáticamente antes de guardar?`,
+      html: true,
+      ok: {
+        label: 'Sí, asociar todos',
+        color: 'positive',
+        unelevated: true
+      },
+      cancel: {
+        label: 'No, solo guardar',
+        color: 'grey-7',
+        flat: true
+      },
+      persistent: true
+    }).onOk(() => {
+      resolve(true)
+    }).onCancel(() => {
+      resolve(false)
+    }).onDismiss(() => {
+      resolve(false)
+    })
+  })
+}
+
+/**
+ * Associates a list of clients with the selected partner via API.
+ * @params {array} stopsToUpdate List of stops whose clients need association.
+ * @return {Promise<void>}
+ */
+async function associateClientsWithPartner (stopsToUpdate) {
+  $q.loading.show({
+    message: `Asociando ${stopsToUpdate.length} clientes a ${selectedPartner.value.name}...`
+  })
+
+  try {
+    const promises = stopsToUpdate.map(stop => {
+      return api.put(`/clients/${stop.client.id}`, {
+        ...stop.client,
+        partner_id: selectedPartner.value.id
+      })
+    })
+
+    await Promise.all(promises)
+
+    // Update local state to reflect changes
+    stopsToUpdate.forEach(stop => {
+      stop.client.partner_id = selectedPartner.value.id
+    })
+
+    $q.notify({
+      type: 'positive',
+      message: `${stopsToUpdate.length} clientes asociados exitosamente`
+    })
+  } catch (error) {
+    console.error('Error associating clients:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al asociar algunos clientes',
+      caption: 'La ruta se guardará igualmente'
+    })
+  } finally {
+    $q.loading.hide()
   }
 }
 
@@ -1253,5 +1958,34 @@ function stopListening () {
 
 .stops-list {
   min-height: 100px;
+}
+
+/* Transition for client name change in modal */
+.client-name-container {
+  padding: 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.02) 100%);
+  border-left: 4px solid #2196F3;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.fade-slide-enter-to,
+.fade-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
 }
 </style>

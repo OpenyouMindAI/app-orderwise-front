@@ -4,8 +4,8 @@
     <div class="header-card animate-slide-down">
       <div class="header-gradient"></div>
       <div class="header-content">
-        <div class="row items-center justify-between">
-          <div class="col">
+        <div class="row items-center justify-between q-col-gutter-y-md">
+          <div class="col-12 col-md">
             <div class="flex items-center q-gutter-md">
               <div class="icon-wrapper">
                 <q-icon name="analytics" size="48px" class="text-white" />
@@ -20,8 +20,8 @@
               </div>
             </div>
           </div>
-          <div class="col-auto">
-            <div class="row q-gutter-sm">
+          <div class="col-12 col-md-auto">
+            <div class="row q-gutter-sm justify-end">
               <q-btn
                 unelevated
                 rounded
@@ -78,8 +78,8 @@
         <!-- Compact Date Range -->
         <div class="row q-col-gutter-sm items-center q-mb-sm">
           <!-- Quick Date Buttons -->
-          <div class="col-auto">
-            <q-btn-group unelevated class="date-btn-group">
+          <div class="col-12 col-md-auto">
+            <q-btn-group unelevated class="date-btn-group full-width full-md-width">
               <q-btn
                 :unelevated="isCurrentMonth"
                 :outline="!isCurrentMonth"
@@ -90,7 +90,7 @@
                 size="md"
                 @click="setCurrentMonth"
                 no-caps
-                class="date-filter-btn"
+                class="date-filter-btn flex-1"
               />
               <q-btn
                 :unelevated="isPreviousMonth"
@@ -102,7 +102,7 @@
                 size="md"
                 @click="setPreviousMonth"
                 no-caps
-                class="date-filter-btn"
+                class="date-filter-btn flex-1"
               />
               <q-btn
                 :unelevated="isToday"
@@ -114,69 +114,75 @@
                 size="md"
                 @click="setToday"
                 no-caps
-                class="date-filter-btn"
+                class="date-filter-btn flex-1"
               />
             </q-btn-group>
           </div>
 
           <!-- Date Range Inputs -->
-          <div class="col-auto">
-            <div class="row q-gutter-xs items-center">
-              <q-input
-                v-model="dateFrom"
-                outlined
-                dense
-                readonly
-                class="date-input-compact"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="event" size="18px" color="primary" />
-                </template>
-                <template v-slot:append>
-                  <q-icon name="edit_calendar" size="16px" color="primary" class="cursor-pointer">
-                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date
-                        v-model="dateFrom"
-                        @update:model-value="loadData"
-                        mask="YYYY-MM-DD"
-                        color="primary"
-                      >
-                        <div class="row items-center justify-end q-pa-sm">
-                          <q-btn v-close-popup label="OK" color="primary" flat size="sm" />
-                        </div>
-                      </q-date>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-              <q-icon name="arrow_forward" size="16px" color="grey-5" />
-              <q-input
-                v-model="dateTo"
-                outlined
-                dense
-                readonly
-                class="date-input-compact"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="event" size="18px" color="primary" />
-                </template>
-                <template v-slot:append>
-                  <q-icon name="edit_calendar" size="16px" color="primary" class="cursor-pointer">
-                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date
-                        v-model="dateTo"
-                        @update:model-value="loadData"
-                        mask="YYYY-MM-DD"
-                        color="primary"
-                      >
-                        <div class="row items-center justify-end q-pa-sm">
-                          <q-btn v-close-popup label="OK" color="primary" flat size="sm" />
-                        </div>
-                      </q-date>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
+          <div class="col-12 col-md-auto">
+            <div class="row q-col-gutter-xs items-center justify-center justify-md-start">
+              <div class="col-auto">
+                <q-input
+                  v-model="dateFrom"
+                  outlined
+                  dense
+                  readonly
+                  class="date-input-compact"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="event" size="18px" color="primary" />
+                  </template>
+                  <template v-slot:append>
+                    <q-icon name="edit_calendar" size="16px" color="primary" class="cursor-pointer">
+                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                        <q-date
+                          v-model="dateFrom"
+                          @update:model-value="loadData"
+                          mask="YYYY-MM-DD"
+                          color="primary"
+                        >
+                          <div class="row items-center justify-end q-pa-sm">
+                            <q-btn v-close-popup label="OK" color="primary" flat size="sm" />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-auto">
+                <q-icon name="arrow_forward" size="16px" color="grey-5" />
+              </div>
+              <div class="col-auto">
+                <q-input
+                  v-model="dateTo"
+                  outlined
+                  dense
+                  readonly
+                  class="date-input-compact"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="event" size="18px" color="primary" />
+                  </template>
+                  <template v-slot:append>
+                    <q-icon name="edit_calendar" size="16px" color="primary" class="cursor-pointer">
+                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                        <q-date
+                          v-model="dateTo"
+                          @update:model-value="loadData"
+                          mask="YYYY-MM-DD"
+                          color="primary"
+                        >
+                          <div class="row items-center justify-end q-pa-sm">
+                            <q-btn v-close-popup label="OK" color="primary" flat size="sm" />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
             </div>
           </div>
         </div>
@@ -330,74 +336,93 @@
       >
         <!-- Day Header with Status -->
         <q-card-section
-          class="cursor-pointer"
+          class="cursor-pointer q-pa-sm q-pa-md-md"
           @click="toggleExpanded(day.day)"
         >
-          <div class="row items-center justify-between">
-            <div class="col">
-              <div class="row items-center q-gutter-sm">
+          <div class="row items-center q-col-gutter-sm">
+            <!-- Left Info: Date & Status -->
+            <div class="col-12 col-md">
+              <div class="row items-center no-wrap q-gutter-sm">
                 <q-icon
                   :name="getDayStatusIcon(day)"
                   size="32px"
                   :color="getDayStatusColor(day)"
+                  class="shrink-0"
                 />
-                <div>
+                <div class="ellipsis">
                   <div class="text-subtitle1 text-weight-bold">
                     {{ formatDate(`${day.day} 00:00:00`) }}
                   </div>
-                  <div class="text-caption text-grey-7">
+                  <div class="text-caption text-grey-7 ellipsis">
                     {{ getDayStatusText(day) }}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="col-auto">
-              <div class="row q-gutter-md items-center">
-                <!-- Sales -->
-                <div class="text-right">
-                  <div class="text-caption text-grey-7">Ventas</div>
-                  <div class="text-h6 text-weight-bold text-positive">
-                    {{ formatCurrency(day.paid_sales) }}
-                  </div>
-                </div>
+            <!-- Right Info: Financial Metrics -->
+            <div class="col-12 col-md-auto">
+              <div class="row q-col-gutter-md items-center justify-end">
+                <!-- Metrics Grid for small screens -->
+                <div class="col-12 col-sm-auto">
+                  <div class="row q-col-gutter-md justify-end">
+                    <!-- Sales -->
+                    <div class="col-6 col-sm-auto text-right">
+                      <div class="text-caption text-grey-7">Ventas</div>
+                      <div class="text-subtitle1 text-md-h6 text-weight-bold text-positive">
+                        {{ formatCurrency(day.paid_sales) }}
+                      </div>
+                    </div>
 
-                <!-- Expected Amount -->
-                <div class="text-right">
-                  <div class="text-caption text-grey-7">Esperado</div>
-                  <div class="text-h6 text-weight-bold text-blue">
-                    {{ formatCurrency(day.expected_amount) }}
-                  </div>
-                </div>
+                    <!-- Expected Amount -->
+                    <div class="col-6 col-sm-auto text-right">
+                      <div class="text-caption text-grey-7">Esperado</div>
+                      <div class="text-subtitle1 text-md-h6 text-weight-bold text-blue">
+                        {{ formatCurrency(day.expected_amount) }}
+                      </div>
+                    </div>
 
-                <!-- Counted Amount -->
-                <div class="text-right">
-                  <div class="text-caption text-grey-7">Contado</div>
-                  <div class="text-h6 text-weight-bold text-orange">
-                    {{ formatCurrency(day.counted_amount) }}
-                  </div>
-                </div>
+                    <!-- Counted Amount -->
+                    <div class="col-6 col-sm-auto text-right">
+                      <div class="text-caption text-grey-7">Contado</div>
+                      <div class="text-subtitle1 text-md-h6 text-weight-bold text-orange">
+                        {{ formatCurrency(day.counted_amount) }}
+                      </div>
+                    </div>
 
-                <!-- Difference (Counted - Sales) -->
-                <div class="text-right" style="min-width: 120px;">
-                  <div class="text-caption text-grey-7">Diferencia</div>
-                  <div
-                    class="text-h6 text-weight-bold"
-                    :class="day.difference_counted_sales >= 0 ? 'text-positive' : 'text-negative'"
-                  >
-                    {{ day.difference_counted_sales >= 0 ? '+' : '-' }}{{ formatCurrency(Math.abs(day.difference_counted_sales || 0)) }}
+                    <!-- Difference (Counted - Sales) -->
+                    <div class="col-6 col-sm-auto text-right" style="min-width: 100px;">
+                      <div class="text-caption text-grey-7">Diferencia</div>
+                      <div
+                        class="text-subtitle1 text-md-h6 text-weight-bold"
+                        :class="day.difference_counted_sales >= 0 ? 'text-positive' : 'text-negative'"
+                      >
+                        {{ day.difference_counted_sales >= 0 ? '+' : '-' }}{{ formatCurrency(Math.abs(day.difference_counted_sales || 0)) }}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Expand Button -->
-                <q-btn
-                  flat
-                  round
-                  :icon="expandedRows.has(day.day) ? 'expand_less' : 'expand_more'"
-                  color="primary"
-                >
-                  <q-tooltip>{{ expandedRows.has(day.day) ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
-                </q-btn>
+                <div class="col-auto gt-xs">
+                  <q-btn
+                    flat
+                    round
+                    :icon="expandedRows.has(day.day) ? 'expand_less' : 'expand_more'"
+                    color="primary"
+                  >
+                    <q-tooltip>{{ expandedRows.has(day.day) ? 'Ocultar' : 'Ver' }} detalles</q-tooltip>
+                  </q-btn>
+                </div>
+
+                <!-- Mobile Expand Icon (visible only on XS) -->
+                <div class="lt-sm absolute-top-right q-pa-sm">
+                  <q-icon
+                    :name="expandedRows.has(day.day) ? 'expand_less' : 'expand_more'"
+                    color="primary"
+                    size="24px"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -2341,6 +2366,16 @@ export default {
 .date-filter-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+@media (max-width: 1023px) {
+  .full-md-width {
+    width: 100%;
+  }
 }
 
 /* Compact Date Inputs */

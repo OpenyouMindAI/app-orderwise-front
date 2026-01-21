@@ -4,6 +4,12 @@ import { cutWords, header, setQrImage } from '../common'
 import qbitsLogo from '../../logo'
 import autoTable from 'jspdf-autotable'
 
+const addressFormat = (address) => {
+  if (typeof address === 'string') {
+    return address?.toUpperCase()
+  }
+  return address?.formattedAddress?.toUpperCase()
+}
 /**
  * Print invoice
  * @param {Object} data invoice saved
@@ -24,7 +30,7 @@ export const previewTicket = async (data, userSession) => {
   }
 
   y = cutWords(`Razón social: ${companySession?.name?.toUpperCase()}`, 65, doc, y, false, 95)
-  y = cutWords(`Dirección: ${companySession?.address?.toUpperCase()}`, 65, doc, y, false, 95)
+  y = cutWords(`Dirección: ${addressFormat(companySession?.address)}`, 65, doc, y, false, 95)
   y = cutWords(`C.U.I.T: ${companySession?.document_number}`, 65, doc, y, false, 95)
   if (data.billing) {
     y = cutWords(`IIBB: ${fields?.income_brut}`, 70, doc, y, false, 95)
