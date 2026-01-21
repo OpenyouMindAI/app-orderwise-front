@@ -518,18 +518,34 @@ const totalDuration = computed(() => {
 })
 
 onMounted(async () => {
-  await loadInitialData()
-  await initializeMap()
+  try {
+    // Load initial data while showing skeleton
+    await loadInitialData()
+    
+    if (routeParams.params.id) {
+      await loadRoute()
+    }
 
-  if (routeParams.params.id) {
-    await loadRoute()
+    // Hide skeleton and wait for DOM update to ensure mapContainer is available
+    loadingInitial.value = false
+    await nextTick()
+
+    // Now safe to initialize map
+    await initializeMap()
+
+    // Draw existing route if stops exist
+    if (stops.value.length > 0) {
+      await updateMapRoute()
+    }
+
+    // Listen for real-time updates
+    if (deliveryRoute.value) {
+      listenForUpdates()
+    }
+  } catch (error) {
+    console.error('Error in onMounted:', error)
+    loadingInitial.value = false
   }
-
-  if (deliveryRoute.value) {
-    listenForUpdates()
-  }
-
-  loadingInitial.value = false
 })
 
 onUnmounted(() => {
@@ -884,22 +900,42 @@ async function updateMapRoute () {
   routePaths.value = []
 
   if (!map.value) {
-    console.error('Map not initialized!')
+    console.warn('updateMapRoute: Map not initialized yet')
     return
   }
 
-  if (!routeForm.value.origin_branch || stops.value.length === 0) {
-    console.warn('Missing origin_branch or stops, skipping map update')
-    console.warn('origin_branch:', routeForm.value.origin_branch)
-    console.warn('stops.length:', stops.value.length)
+  if (!routeForm.value.origin_branch) {
+    console.warn('updateMapRoute: Missing origin_branch')
     return
   }
+
+  if (stops.value.length === 0) {
+    console.warn('updateMapRoute: No stops to draw')
+    return
+  }
+
+  console.log('updateMapRoute: Data check:', {
+    origin: routeForm.value.origin_branch,
+    stopsCount: stops.value.length
+  })
 
   // Add origin marker
   const origin = routeForm.value.origin_branch
-  const originAddress = origin.address || {}
-  const originLat = originAddress.latitude || origin.latitude
-  const originLng = originAddress.longitude || origin.longitude
+  let originLat = null
+  let originLng = null
+
+  // Extract coordinates from origin branch
+  if (origin.address) {
+    const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
+    originLat = addr.latitude
+    originLng = addr.longitude
+  }
+
+  // Fallback to direct properties if any
+  originLat = originLat || origin.latitude
+  originLng = originLng || origin.longitude
+
+  console.log('updateMapRoute: Origin coordinates:', { originLat, originLng })
 
   if (originLat && originLng) {
     originMarker.value = new google.maps.Marker({
@@ -986,8 +1022,14 @@ async function updateMapRoute () {
   await calculateDistancesAndTimes()
 }
 
+// Watch origin branch for map updates
+watch(() => routeForm.value.origin_branch, async () => {
+  await nextTick()
+  updateMapRoute()
+})
+
 async function calculateDistancesAndTimes () {
-  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+  if (!map.value || !routeForm.value.origin_branch || stops.value.length === 0) {
     return
   }
 
@@ -995,9 +1037,19 @@ async function calculateDistancesAndTimes () {
 
   // Get origin coordinates
   const origin = routeForm.value.origin_branch
-  const originAddress = origin.address || {}
-  const originLat = originAddress.latitude || origin.latitude
-  const originLng = originAddress.longitude || origin.longitude
+  let originLat = null
+  let originLng = null
+
+  // Extract coordinates from origin branch
+  if (origin.address) {
+    const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
+    originLat = addr.latitude
+    originLng = addr.longitude
+  }
+
+  // Fallback to direct properties
+  originLat = originLat || origin.latitude
+  originLng = originLng || origin.longitude
 
   if (!originLat || !originLng) return
 
@@ -1055,19 +1107,36 @@ async function calculateDistancesAndTimes () {
 }
 
 async function drawRoute () {
-  if (!routeForm.value.origin_branch || stops.value.length === 0) {
+  if (!map.value || !routeForm.value.origin_branch || stops.value.length === 0) {
+    console.warn('drawRoute: Missing map, origin_branch or stops')
     return
   }
 
+  console.log('drawRoute: Starting route drawing...')
   const directionsService = new google.maps.DirectionsService()
 
   // Build waypoints
   const origin = routeForm.value.origin_branch
-  const originAddress = origin.address || {}
-  const originLat = originAddress.latitude || origin.latitude
-  const originLng = originAddress.longitude || origin.longitude
+  let originLat = null
+  let originLng = null
 
-  if (!originLat || !originLng) return
+  // Extract coordinates from origin branch
+  if (origin.address) {
+    const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
+    originLat = addr.latitude
+    originLng = addr.longitude
+  }
+
+  // Fallback to direct properties if any
+  originLat = originLat || origin.latitude
+  originLng = originLng || origin.longitude
+
+  console.log('drawRoute: Origin:', { originLat, originLng })
+
+  if (!originLat || !originLng) {
+    console.warn('drawRoute: Origin missing coordinates')
+    return
+  }
 
   // Draw route segments
   let prevLat = originLat
@@ -1078,7 +1147,12 @@ async function drawRoute () {
     const stopLat = stop.latitude
     const stopLng = stop.longitude
 
-    if (!stopLat || !stopLng) continue
+    console.log(`drawRoute: Processing segment to stop ${i + 1}:`, { stopLat, stopLng })
+
+    if (!stopLat || !stopLng) {
+      console.warn(`drawRoute: Stop ${i + 1} missing coordinates, skipping path`)
+      continue
+    }
 
     try {
       const result = await directionsService.route({
