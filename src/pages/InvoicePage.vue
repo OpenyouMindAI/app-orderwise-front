@@ -92,56 +92,59 @@
 
         <template v-slot:item="props">
           <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
-            <q-card class="cursor-pointer q-hoverable shadow-2" style="border-radius: 12px" @click="editInvoice(null, props.row)">
+            <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editInvoice(null, props.row)">
               <span class="q-focus-helper"></span>
 
-              <q-card-section class="row justify-between items-start" style="padding: 0.5rem !important">
+              <q-card-section class="row justify-between items-start compact-card-header">
                 <div class="column">
-                   <div class="text-subtitle1 text-weight-bold text-primary">{{ props.row.code }}</div>
-                   <div class="text-caption text-grey-7">{{ props.row.invoice_type?.name }}</div>
+                   <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">{{ props.row.code }}</div>
+                   <div class="text-caption text-grey-6 text-weight-medium">{{ props.row.invoice_type?.name }}</div>
                 </div>
                 <div class="column items-end">
                    <q-badge
                      v-if="props.row.status"
                      :color="status[props.row.status]?.color"
                      :label="status[props.row.status]?.label"
-                     class="q-py-xs q-px-sm"
+                     class="q-py-xs q-px-sm text-weight-bold shadow-1"
                      rounded
+                     style="font-size: 10px; letter-spacing: 0.5px"
                    />
                 </div>
               </q-card-section>
 
-              <q-separator spaced inset style="margin: 0 !important"/>
+              <q-separator color="grey-2" inset />
 
-              <q-card-section style="padding: 0.5rem !important">
-                <div class="row q-col-gutter-xs">
+              <q-card-section class="compact-card-body">
+                <div class="row q-col-gutter-y-sm">
                   <div class="col-8">
-                     <div class="text-caption text-grey-6">Cliente</div>
-                     <div class="text-body2 text-weight-medium ellipsis">{{ props.row.client?.name || '-' }}</div>
+                     <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Cliente</div>
+                     <div class="text-body2 text-grey-9 text-weight-bold ellipsis">{{ props.row.client?.name || '-' }}</div>
                   </div>
                   <div class="col-4 text-right">
-                     <div class="text-caption text-grey-6">Fecha</div>
-                     <div class="text-body2">{{ props.row.created_at?.split('T')[0] || '-' }}</div>
+                     <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Fecha</div>
+                     <div class="text-body2 text-grey-8">{{ props.row.created_at?.split('T')[0] || '-' }}</div>
                   </div>
-                  <div class="col-12 q-mt-xs" v-if="props.row.seller">
-                     <div class="text-caption text-grey-6">Vendedor</div>
-                     <div class="text-body2">{{ props.row.seller.name }}</div>
+                  <div class="col-12" v-if="props.row.seller">
+                     <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Vendedor</div>
+                     <div class="text-body2 text-grey-8">{{ props.row.seller.name }}</div>
                   </div>
                 </div>
               </q-card-section>
 
-              <q-card-section style="padding: 0 !important">
-                 <div class="row items-center justify-between bg-grey-1 q-pa-sm" style="border-radius: 8px">
+              <q-card-section class="compact-card-footer">
+                <div class="row items-center justify-between bg-grey-1 compact-total-container" style="border-radius: 12px">
                     <div>
-                      <div class="text-caption text-grey-7">Total</div>
-                      <div class="text-h6 text-primary lh-100">{{ formatNumber(props.row.total) }}</div>
+                      <div class="text-caption text-grey-6 text-weight-medium">Total a pagar</div>
+                      <div class="text-h6 text-primary text-weight-bolder lh-100" style="letter-spacing: -0.5px">{{ formatNumber(props.row.total) }}</div>
                     </div>
                     <div>
                       <q-btn
                         round
+                        unelevated
                         color="negative"
                         icon="restart_alt"
                         size="md"
+                        class="shadow-1"
                         v-if="!props.row.billing && props.row?.electronic_invoice?.fields?.error"
                         @click.stop="alertBeforeSend(props.row)"
                       >
@@ -149,9 +152,12 @@
                       </q-btn>
                       <q-btn
                         round
+                        unelevated
                         color="warning"
+                        text-color="white"
                         icon="send"
                         size="md"
+                        class="shadow-1"
                         v-else-if="!props.row.billing"
                         @click.stop="alertBeforeSend(props.row)"
                       >
@@ -159,9 +165,11 @@
                       </q-btn>
                       <q-btn
                         round
+                        unelevated
                         color="positive"
                         icon="check_circle"
                         size="md"
+                        class="shadow-1"
                         v-if="props.row.billing"
                         @click.stop
                       >
@@ -1869,5 +1877,45 @@ export default {
 
 .invoice-files-grid::-webkit-scrollbar-thumb:hover {
   background: #9e9e9e;
+}
+
+/* Clases para tarjetas compactas */
+.compact-card-header {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-body {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-footer {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-top: 0 !important;
+}
+
+.compact-total-container {
+  padding: 0.5rem !important;
+}
+
+@media (max-width: 1023px) {
+  /* Reducir padding del top de la tabla - usando deep selector para sobrescribir Quasar */
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  :deep(.q-table__top .q-select) {
+    max-width: 200px;
+  }
+
+  :deep(.q-table__top .q-input) {
+    flex: 1;
+  }
 }
 </style>
