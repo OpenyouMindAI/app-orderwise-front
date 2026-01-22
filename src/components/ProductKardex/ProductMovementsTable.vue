@@ -28,6 +28,7 @@ const columns = [
   { name: 'details', label: 'Detalle', field: 'details', align: 'left' },
   { name: 'inputQty', label: 'Entrada', field: 'inputQty', align: 'right', format: row => formatNumber(row) },
   { name: 'outputQty', label: 'Salida', field: 'outputQty', align: 'right', format: row => formatNumber(row) },
+  { name: 'balance', label: 'Stock', field: 'balance', align: 'right', format: row => formatNumber(row) },
   { name: 'unitCost', label: 'Costo Unit.', field: 'unitCost', align: 'right', format: row => formatNumber(row) },
   { name: 'totalValue', label: 'Valor Total', field: 'totalValue', align: 'right', format: row => formatNumber(row) }
 ]

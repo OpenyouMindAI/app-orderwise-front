@@ -940,7 +940,7 @@
               <recipe-product :product="product"/>
             </q-tab-panel>
           </q-tab-panels>
-          <q-card-actions align="right" class="text-primary col-auto bg-white q-pa-md">
+          <q-card-actions align="right" class="col-auto q-pa-md">
             <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
@@ -1378,7 +1378,7 @@
               </div>
             </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary q-pa-md col-auto bg-white">
+          <q-card-actions align="right" class="q-pa-md col-auto">
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible" unelevated />
           </q-card-actions>
@@ -2346,15 +2346,17 @@ export default {
         {
           name: 'cost',
           align: 'right',
-          label: 'Costo',
+          label: 'Costo ($)',
           field: 'cost',
+          format: (val) => formatNumber(val),
           sortable: true
         },
         {
           name: 'price',
           align: 'right',
-          label: 'Precio',
+          label: 'Precio ($)',
           field: 'price',
+          format: (val) => formatNumber(val),
           sortable: true
         },
         {

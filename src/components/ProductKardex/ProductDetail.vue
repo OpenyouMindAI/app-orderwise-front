@@ -69,11 +69,11 @@ watch(dateRange, (data) => {
       <!-- Back button and product info -->
       <div class="col-12 col-md-8">
         <div class="row items-center q-gutter-sm">
-          <q-btn 
-            flat 
-            icon="arrow_back" 
-            @click="emit('goBack')" 
-            round 
+          <q-btn
+            flat
+            icon="arrow_back"
+            @click="emit('goBack')"
+            round
             color="primary"
             size="sm"
           />
@@ -87,7 +87,7 @@ watch(dateRange, (data) => {
           </div>
         </div>
       </div>
-      
+
       <!-- Export buttons -->
       <div class="col-12 col-md-4 q-mt-sm q-mt-md-none">
         <div class="row justify-end q-gutter-xs">

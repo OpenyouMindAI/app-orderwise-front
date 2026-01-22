@@ -106,7 +106,7 @@ async function exportToExcel () {
       params: params.value,
       responseType: 'blob'
     })
-    
+
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url
@@ -114,7 +114,7 @@ async function exportToExcel () {
     document.body.appendChild(link)
     link.click()
     link.remove()
-    
+
     notify('Kardex exportado exitosamente', 'positive', 'check_circle')
   } catch (error) {
     notify(error.message || 'Error al exportar', 'negative', 'warning')
@@ -133,7 +133,7 @@ async function exportToPdf () {
       params: params.value,
       responseType: 'blob'
     })
-    
+
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url
@@ -141,7 +141,7 @@ async function exportToPdf () {
     document.body.appendChild(link)
     link.click()
     link.remove()
-    
+
     notify('Kardex exportado exitosamente', 'positive', 'check_circle')
   } catch (error) {
     notify(error.message || 'Error al exportar', 'negative', 'warning')

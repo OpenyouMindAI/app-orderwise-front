@@ -97,7 +97,16 @@ const formatDate = (dateStr) => {
           </div>
 
           <div class="col-6 text-right">
-            <span class="text-caption">Total:</span>
+            <span class="text-caption">Stock:</span>
+            <q-badge color="accent" class="q-ml-xs text-weight-bolder">
+              {{ row.balance }}
+            </q-badge>
+          </div>
+        </div>
+
+        <div class="row justify-end q-mt-xs">
+          <div class="col-auto">
+            <span class="text-caption text-grey-7">Valor:</span>
             <span class="text-weight-bolder q-ml-xs">
               ${{ formatNumber(row.totalValue) }}
             </span>
