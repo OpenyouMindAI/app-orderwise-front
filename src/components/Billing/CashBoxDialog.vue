@@ -242,9 +242,9 @@ export default {
   // ==========================================
   // LIFECYCLE HOOKS
   // ==========================================
-  mounted () {
-    // The watcher for modelValue will handle initialization on open
-    this.filterAvailableCashBoxes(null, null, false)
+  async beforeMount () {
+    await this.filterAvailableCashBoxes(null, null, false)
+    this.isReady = true
   },
 
   // ==========================================
