@@ -1,6 +1,6 @@
 <template>
-  <div class="q-pa-md">
-    <div class="column q-gutter-sm">
+  <q-page padding>
+    <div class="q-gutter-sm">
       <!-- <div class="full-width text-right q-gutter-sm">
         <q-btn
           class="text-right"
@@ -44,6 +44,11 @@
           @click="dialogFilter = true"
         />
       </div> -->
+      <div class="row justify-between items-center">
+        <span class="text-h6">
+          Lista de compras
+        </span>
+      </div>
       <q-table
         title="Lista de compras"
         row-key="name"
@@ -57,32 +62,74 @@
         @row-click="editPurchase"
         @request="setPagination"
         no-data-label="Registro no encontrado"
+        :grid="$q.screen.lt.md"
       >
         <template v-slot:loading>
           <q-inner-loading showing color="primary" />
         </template>
-        <template v-slot:top-left>
-          <q-select
-            v-model="visibleColumns"
-            multiple
-            outlined
-            dense
-            options-dense
-            :display-value="$q.lang.table.columns"
-            emit-value
-            map-options
-            :options="columns"
-            option-value="name"
-            options-cover
-            style="min-width: 150px"
-          />
+        <template v-slot:top>
+          <div class="flex justify-between items-center full-width">
+            <q-select
+              v-model="visibleColumns"
+              multiple
+              outlined
+              dense
+              options-dense
+              :display-value="$q.lang.table.columns"
+              emit-value
+              map-options
+              :options="columns"
+              option-value="name"
+              options-cover
+            />
+            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
         </template>
-        <template v-slot:top-right>
-          <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+            <q-card
+              class="cursor-pointer q-hoverable no-shadow transition-all purchase-card"
+              style="border-radius: 16px; border: 1px solid #eef0f3"
+              @click="editPurchase(null, props.row)"
+            >
+              <span class="q-focus-helper"></span>
+
+              <q-card-section class="compact-card-section">
+                <!-- Fila 1: Código y Fecha -->
+                <div class="row justify-between items-start q-mb-sm">
+                  <div class="col">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">{{ props.row.invoice_type?.name || 'Sin tipo' }}</div>
+                    <div class="text-h6 text-indigo-10 text-weight-bold" style="letter-spacing: -0.5px">
+                      {{ props.row.purchase_code || '—' }}
+                    </div>
+                  </div>
+                  <div class="col-auto text-right">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 4px">Fecha</div>
+                    <div class="text-body1 text-grey-8 text-weight-medium">{{ props.row.created_at?.split('T')[0] || '—' }}</div>
+                  </div>
+                </div>
+
+                <q-separator color="grey-3" class="q-my-sm" />
+
+                <!-- Fila 3: Proveedor y Total -->
+                <div class="row justify-between ">
+                  <div class="col">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 0.7rem">Proveedor</div>
+                    <div class="text-body2 text-grey-9 text-weight-bold ellipsis">{{ props.row.provider?.name || '—' }}</div>
+                  </div>
+                  <div class="col-auto text-right">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 4px">Total</div>
+                    <div class="text-h6 text-primary text-weight-bolder" style="letter-spacing: -0.5px">{{ formatNumber(props.row.total) }}</div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
         </template>
       </q-table>
     </div>
@@ -322,7 +369,7 @@
         class="text-lime q-ma-md"
       />
     </q-inner-loading>
-  </div>
+  </q-page>
 </template>
 
 <script>
@@ -821,5 +868,38 @@ export default {
 
 .image-preview-card:hover {
   transform: scale(1.05);
+}
+
+/* Tarjetas de compras */
+.purchase-card {
+  transition: all 0.2s ease;
+}
+
+.purchase-card:hover {
+  border-color: #d0d5dd !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Padding compacto consistente con InvoicePage */
+.compact-card-section {
+  padding: 0.5rem 1rem !important;
+}
+
+/* Media query para optimizar header en mobile */
+@media (max-width: 1023px) {
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  :deep(.q-table__top .q-select) {
+    max-width: 200px;
+  }
+  :deep(.q-table__top .q-input) {
+    flex: 1;
+  }
 }
 </style>
