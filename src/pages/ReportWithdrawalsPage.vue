@@ -435,6 +435,16 @@
             <q-card-section class="expanded-section">
               <div class="q-gutter-md">
                 <!-- Cashbox Details -->
+                 <div class="row justify-end">
+                   <q-btn
+                     outline
+                     color="primary"
+                     icon="add"
+                     label="Agregar Arqueo"
+                     size="sm"
+                     @click="openCashflowModal(cashbox, day)"
+                   />
+                 </div>
                 <div
                   v-for="cashbox in day.cashboxes"
                   :key="cashbox.cashbox_user_id"
@@ -1752,7 +1762,7 @@ export default {
       showCashflowModal.value = true
       cashflow.value = {
         cashboxUser: {
-          id: cashbox.cashbox_user_id
+          id: cashbox?.cashbox_user_id
         },
         paymentMethodId: paymentMethods.value[0]?.id,
         createdAt: `${day.day} 00:00:00`,
