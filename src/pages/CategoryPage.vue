@@ -1,24 +1,32 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right q-gutter-sm">
+  <q-page padding>
+    <div class="q-gutter-y-sm">
+      <div class="row justify-between items-center q-gutter-x-sm q-mb-sm">
+        <span class="text-h6">
+          Categorías
+        </span>
+        <div class="text-right q-gutter-x-sm">
         <!-- Botones modo edición -->
         <template v-if="editingOrder">
           <q-btn
             color="negative"
             icon="close"
-            label="Cancelar"
             @click="cancelOrderEditing"
             :disable="savingOrder"
             outline
-          />
+            round
+          >
+            <q-tooltip>Cancelar</q-tooltip>
+          </q-btn>
           <q-btn
             color="positive"
             icon="save"
-            label="Guardar Secuencia"
             @click="saveOrder"
             :loading="savingOrder"
-          />
+            round
+          >
+            <q-tooltip>Guardar Secuencia</q-tooltip>
+          </q-btn>
         </template>
         <!-- Botón modo normal -->
         <template v-else>
@@ -26,22 +34,27 @@
             id="tour-btn-editar-secuencia"
             color="primary"
             icon="sort"
-            label="Editar Secuencia"
             @click="startOrderEditing"
-          />
+            round
+          >
+            <q-tooltip>Editar Secuencia</q-tooltip>
+          </q-btn>
         </template>
         <q-btn
           id="tour-btn-agregar"
           color="primary"
           @click="openAddCategoryDialog"
           icon="add_circle"
-          label="Agregar"
-        />
+          round
+        >
+          <q-tooltip>Agregar</q-tooltip>
+        </q-btn>
+        </div>
       </div>
-      <div class="col-12">
-        <q-table
-          id="tour-tabla-categorias"
-          title="Categorías"
+      <div class="row q-col-gutter-sm">
+        <div class="col-12">
+          <q-table
+            id="tour-tabla-categorias"
           row-key="name"
           :columns="columns"
           :rows="categories"
@@ -135,12 +148,21 @@
           <template v-slot:loading>
             <q-inner-loading showing color="primary" />
           </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
+          <template v-slot:top>
+            <div class="flex justify-end items-center full-width">
+              <q-input
+                filled
+                dense
+                debounce="500"
+                v-model="filter"
+                placeholder="Buscar"
+                :class="{ 'full-width': $q.screen.lt.md }"
+              >
+                <template v-slot:append>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </div>
           </template>
           <template v-slot:body-cell-actions="props" v-if="editingOrder">
             <q-td :props="props" class="q-gutter-xs">
@@ -452,7 +474,8 @@
         </q-form>
       </q-card>
     </q-dialog>
-  </div>
+    </div>
+  </q-page>
 </template>
 
 <script>
