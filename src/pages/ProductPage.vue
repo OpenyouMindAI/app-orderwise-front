@@ -390,6 +390,7 @@
           @row-click="editProduct"
           @request="setPagination"
           no-data-label="Registro no encontrado"
+          :grid="$q.screen.lt.md"
         >
           <template v-slot:loading>
             <q-inner-loading showing color="primary" />
@@ -400,6 +401,66 @@
                 <q-icon name="search" />
               </template>
             </q-input>
+          </template>
+
+          <template v-slot:item="props">
+            <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+              <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editProduct($event, props.row)">
+                <span class="q-focus-helper"></span>
+
+                <q-card-section class="row justify-between items-start compact-card-header">
+                  <div class="col-9" style="max-width: 70%">
+                    <div class="text-caption text-grey-5 text-uppercase text-weight-bold">{{ props.row.barcode || 'Sin código' }}</div>
+                    <div class="text-indigo-10 text-weight-bold text-body1 ellipsis" style="font-size: 1.1rem; letter-spacing: -0.5px">{{ props.row.name }}</div>
+                    <div class="row q-gutter-xs q-mt-xs">
+                      <q-badge
+                        v-if="props.row.show_catalog"
+                        color="positive"
+                        label="Catálogo"
+                        class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                        rounded
+                        style="font-size: 10px; letter-spacing: 0.5px"
+                      />
+                      <q-badge
+                        v-if="props.row.is_bundle"
+                        color="orange-8"
+                        label="Pack"
+                        class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                        rounded
+                        style="font-size: 10px; letter-spacing: 0.5px"
+                      />
+                      <q-badge
+                        v-if="props.row.is_addons"
+                        color="indigo-7"
+                        label="Adicional"
+                        class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                        rounded
+                        style="font-size: 10px; letter-spacing: 0.5px"
+                      />
+                    </div>
+                  </div>
+                  <div class="col-3 text-right">
+                    <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Stock</div>
+                    <div class="text-body2 text-grey-8">{{ props.row.is_bundle ? formatNumber(props.row.bundle_stock) : formatNumber(props.row.normal_stock) }}</div>
+                  </div>
+                </q-card-section>
+
+                <q-separator color="grey-2" inset />
+
+                <q-card-section class="compact-card-body">
+                  <div class="row q-col-gutter-y-sm">
+                    <div class="col-6">
+                      <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Categoría</div>
+                      <div class="text-body1 text-grey-9 text-weight-bold ellipsis">{{ props.row.category?.name || '-' }}</div>
+                    </div>
+                    <div class="col-6 text-right">
+                      <div class="text-caption text-grey-5 text-uppercase text-weight-bold">Precio</div>
+                      <div class="text-h6 text-primary text-weight-bolder" style="letter-spacing: -0.5px">{{ formatNumber(props.row.price) }}</div>
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
           </template>
         </q-table>
       </div>
@@ -2370,6 +2431,7 @@ export default {
     this.getMeasurementUnits()
   },
   methods: {
+    formatNumber,
     async checkOnboardingStatus () {
       try {
         const isConfigured = this.userSession?.company_session?.company_config?.other?.configured
@@ -4631,6 +4693,48 @@ export default {
     left: 16px;
     max-width: none;
     min-width: auto;
+  }
+}
+</style>
+
+<style lang="scss" scoped>
+/* Clases para tarjetas compactas */
+.compact-card-header {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-body {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-footer {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-top: 0 !important;
+}
+
+.compact-total-container {
+  padding: 0.5rem !important;
+}
+
+@media (max-width: 1023px) {
+  /* Reducir padding del top de la tabla - usando deep selector para sobrescribir Quasar */
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  :deep(.q-table__top .q-select) {
+    max-width: 200px;
+  }
+
+  :deep(.q-table__top .q-input) {
+    flex: 1;
   }
 }
 </style>
