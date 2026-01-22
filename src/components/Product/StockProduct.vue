@@ -20,9 +20,36 @@
       @row-click="editStock"
       @request="setPagination"
       no-data-label="Registro no encontrado"
+      :grid="$q.screen.lt.md"
     >
       <template v-slot:loading>
         <q-inner-loading showing color="primary" />
+      </template>
+
+      <template v-slot:item="props">
+        <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+          <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editStock($event, props.row)">
+            <span class="q-focus-helper"></span>
+
+            <q-card-section class="row justify-between items-start compact-card-header">
+              <div class="column" style="max-width: 70%">
+                 <div class="text-indigo-10 text-weight-bold text-body1 ellipsis" style="font-size: 1.1rem; letter-spacing: -0.5px">ID: {{ props.row.id }}</div>
+                 <div class="text-caption text-grey-6 text-weight-medium">{{ formatDate(props.row.created_at, 'DD/MM/YYYY HH:mm') }}</div>
+              </div>
+              <div class="column items-end">
+                 <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Cantidad</div>
+                 <div class="text-h6 text-primary text-weight-bolder lh-100" style="letter-spacing: -0.5px">{{ props.row.quantity }}</div>
+              </div>
+            </q-card-section>
+
+            <q-separator color="grey-2" inset />
+
+            <q-card-section class="compact-card-body">
+              <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Descripción</div>
+              <div class="text-body2 text-grey-8 ellipsis-2-lines" style="min-height: 2.4em">{{ props.row.description || '-' }}</div>
+            </q-card-section>
+          </q-card>
+        </div>
       </template>
       <template v-slot:top-right>
         <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
@@ -340,3 +367,21 @@ const deleteStockProduct = async () => {
 }
 
 </script>
+
+<style lang="scss" scoped>
+/* Clases para tarjetas compactas */
+.compact-card-header {
+  padding: 1rem !important;
+}
+
+.compact-card-body {
+  padding: 1rem !important;
+}
+
+@media (max-width: 1023px) {
+  /* Reducir padding del top de la tabla */
+  :deep(.q-table__top) {
+    padding: 0.5rem !important;
+  }
+}
+</style>

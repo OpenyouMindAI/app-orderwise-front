@@ -503,7 +503,7 @@
             :style="$q.screen.lt.sm ? '' : 'max-height: calc(100vh - 240px);'"
           >
             <q-tab-panel name="basicData">
-              <div class="row q-col-gutter-sm">
+              <div class="row q-col-gutter-md">
                 <div class="row col-md-7 col-xs-12 col-sm-12">
                   <!-- Datos básicos -->
                   <div class="col-12">
@@ -512,7 +512,7 @@
                         <q-icon name="info" class="q-mr-sm" />
                         Datos básicos
                       </div>
-                      <div class="row q-col-gutter-sm">
+                      <div class="row q-col-gutter-md">
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-input
                             id="tour-edit-barcode"
@@ -521,6 +521,7 @@
                             autofocus
                             label="Código de barra"
                             dense
+                            hide-bottom-space
                             @keyup.enter="getOneProduct(product.barcode)"
                           >
                             <template v-slot:append v-if="$q.platform.is.nativeMobile">
@@ -536,6 +537,7 @@
                             v-model="product.name"
                             label="Nombre"
                             dense
+                            hide-bottom-space
                           />
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
@@ -553,6 +555,7 @@
                             @filter="filterCategories"
                             @update:model-value="setCategory"
                             dense
+                            hide-bottom-space
                           />
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
@@ -565,6 +568,7 @@
                             option-value="id"
                             label="Unidad de Medida"
                             :rules="[val => !!val || 'Requerido']"
+                            hide-bottom-space
                           />
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
@@ -576,6 +580,7 @@
                             type="number"
                             step="0.01"
                             min="0.01"
+                            hide-bottom-space
                             hint="Cantidad del producto en gramos o mililitros"
                           />
                         </div>
@@ -587,6 +592,7 @@
                             autogrow
                             label="Descripción"
                             dense
+                            hide-bottom-space
                           />
                         </div>
                       </div>
@@ -600,7 +606,7 @@
                         <q-icon name="attach_money" class="q-mr-sm" />
                         Precios
                       </div>
-                      <div class="row q-col-gutter-sm q-mb-md">
+                      <div class="row q-col-gutter-md">
                         <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
                           <q-input
                             :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
@@ -609,6 +615,7 @@
                             label="Costo"
                             type="number"
                             dense
+                            hide-bottom-space
                             @update:model-value="updateCost"
                           />
                         </div>
@@ -619,6 +626,7 @@
                             v-model="profitPercentageDisplay"
                             label="Margen %"
                             dense
+                            hide-bottom-space
                             class="profit-percentage-input"
                             @keydown="handleProfitPercentageKeydown"
                             @focus="initializeProfitPercentage"
@@ -633,6 +641,7 @@
                             type="number"
                             step=".00"
                             dense
+                            hide-bottom-space
                             @update:model-value="updatePrice"
                           />
                         </div>
@@ -644,6 +653,7 @@
                             type="number"
                             step=".00"
                             dense
+                            hide-bottom-space
                           />
                         </div>
                       </div>
@@ -722,7 +732,7 @@
                         </q-card>
                       </div>
 
-                      <div class="row q-col-gutter-sm">
+                      <div class="row q-col-gutter-md">
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-select
                             use-input
@@ -735,6 +745,7 @@
                             :options="aliquotTypes"
                             @filter="getAliquotTypes"
                             dense
+                            hide-bottom-space
                           />
                         </div>
                       </div>
@@ -762,7 +773,7 @@
                         <!-- Image Preview Grid -->
                         <div class="col-12" v-if="product.images.length">
                           <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                          <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
+                          <div class="row q-col-gutter-md scroll q-pa-sm" style="max-height: 400px;">
                             <div
                               v-for="(image, index) in product.images"
                               :key="index"
@@ -833,7 +844,7 @@
                         <q-icon name="settings" class="q-mr-sm" />
                         Configuración
                       </div>
-                      <div class="row q-col-gutter-md q-mb-md">
+                      <div class="row q-col-gutter-md">
                         <div class="col-12">
                           <q-select
                             filled
@@ -843,6 +854,7 @@
                             emit-value
                             map-options
                             dense
+                            hide-bottom-space
                             :rules="[val => !!val || 'Requerido']"
                           >
                              <template v-slot:option="scope">
@@ -951,11 +963,11 @@
           ref="formAddProduct"
           :class="$q.screen.lt.sm ? 'col column' : ''"
         >
-          <q-card-section
+            <q-card-section
             :class="$q.screen.lt.sm ? 'col scroll' : 'scroll'"
             :style="$q.screen.lt.sm ? '' : 'height: calc(100vh - 200px);'"
           >
-            <div class="row q-col-gutter-sm">
+            <div class="row q-col-gutter-md">
               <div class="row col-md-7 col-xs-12 col-sm-12">
                 <!-- Datos básicos -->
                 <div class="col-12">
@@ -964,104 +976,111 @@
                       <q-icon name="info" class="q-mr-sm" />
                       Datos básicos
                     </div>
-                    <div class="row q-col-gutter-sm">
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-input
-                          id="tour-add-barcode"
-                          filled
-                          v-model="product.barcode"
-                          autofocus
-                          label="Código de barra"
-                          dense
-                          @keyup.enter="getOneProduct(product.barcode)"
-                        >
-                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
-                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
-                          </template>
-                        </q-input>
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-input
-                          id="tour-add-nombre"
-                          :rules="[val => !!val || 'El campo es requerido.']"
-                          filled
-                          v-model="product.name"
-                          label="Nombre"
-                          dense
-                        />
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-select
-                          id="tour-add-categoria"
-                          use-input
-                          filled
-                          label="Categoría"
-                          input-debounce="500"
-                          option-label="name"
-                          option-value="id"
-                          v-model="category"
-                          :options="categories"
-                          :rules="[val => !!val || 'El campo es requerido.']"
-                          @filter="filterCategories"
-                          @update:model-value="setCategory"
-                          dense
-                        />
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                    <div class="row q-col-gutter-md">
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-input
+                            id="tour-add-barcode"
+                            filled
+                            v-model="product.barcode"
+                            autofocus
+                            label="Código de barra"
+                            dense
+                            hide-bottom-space
+                            @keyup.enter="getOneProduct(product.barcode)"
+                          >
+                            <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                              <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                            </template>
+                          </q-input>
+                        </div>
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-input
+                            id="tour-add-nombre"
+                            :rules="[val => !!val || 'El campo es requerido.']"
+                            filled
+                            v-model="product.name"
+                            label="Nombre"
+                            dense
+                            hide-bottom-space
+                          />
+                        </div>
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-select
+                            id="tour-add-categoria"
+                            use-input
+                            filled
+                            label="Categoría"
+                            input-debounce="500"
+                            option-label="name"
+                            option-value="id"
+                            v-model="category"
+                            :options="categories"
+                            :rules="[val => !!val || 'El campo es requerido.']"
+                            @filter="filterCategories"
+                            @update:model-value="setCategory"
+                            dense
+                            hide-bottom-space
+                          />
+                        </div>
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                            <q-select
+                              filled
+                              v-model="product.product_type"
+                              :options="productTypeOptions"
+                              label="Tipo de Producto"
+                              emit-value
+                              map-options
+                              dense
+                              hide-bottom-space
+                              :rules="[val => !!val || 'Requerido']"
+                            >
+                               <template v-slot:option="scope">
+                                <q-item v-bind="scope.itemProps">
+                                  <q-item-section>
+                                    <q-item-label>{{ scope.opt.label }}</q-item-label>
+                                    <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                                  </q-item-section>
+                                </q-item>
+                              </template>
+                            </q-select>
+                        </div>
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-select
                             filled
-                            v-model="product.product_type"
-                            :options="productTypeOptions"
-                            label="Tipo de Producto"
-                            emit-value
-                            map-options
                             dense
+                            v-model="unitOfMeasure"
+                            :options="unitOfMeasures"
+                            option-label="name"
+                            option-value="id"
+                            label="Unidad de Medida"
+                            hide-bottom-space
                             :rules="[val => !!val || 'Requerido']"
-                          >
-                             <template v-slot:option="scope">
-                              <q-item v-bind="scope.itemProps">
-                                <q-item-section>
-                                  <q-item-label>{{ scope.opt.label }}</q-item-label>
-                                  <q-item-label caption>{{ scope.opt.description }}</q-item-label>
-                                </q-item-section>
-                              </q-item>
-                            </template>
-                          </q-select>
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-select
-                          filled
-                          dense
-                          v-model="unitOfMeasure"
-                          :options="unitOfMeasures"
-                          option-label="name"
-                          option-value="id"
-                          label="Unidad de Medida"
-                          :rules="[val => !!val || 'Requerido']"
-                        />
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-input
-                          filled
-                          dense
-                          v-model.number="product.base_quantity"
-                          label="Cantidad de la unidad"
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          hint="Cantidad del producto en gramos o mililitros"
-                        />
-                      </div>
-                      <div class="col-12">
-                        <q-input
-                          filled
-                          v-model="product.description"
-                          type="textarea"
-                          autogrow
-                          label="Descripción"
-                          dense
-                        />
-                      </div>
+                          />
+                        </div>
+                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                          <q-input
+                            filled
+                            dense
+                            v-model.number="product.base_quantity"
+                            label="Cantidad de la unidad"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            hide-bottom-space
+                            hint="Cantidad del producto en gramos o mililitros"
+                          />
+                        </div>
+                        <div class="col-12">
+                          <q-input
+                            filled
+                            v-model="product.description"
+                            type="textarea"
+                            autogrow
+                            label="Descripción"
+                            dense
+                            hide-bottom-space
+                          />
+                        </div>
                     </div>
                   </q-card>
                 </div>
@@ -1073,7 +1092,7 @@
                       <q-icon name="attach_money" class="q-mr-sm" />
                       Precios
                     </div>
-                    <div class="row q-col-gutter-sm q-mb-md">
+                    <div class="row q-col-gutter-md">
                       <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
                         <q-input
                           :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
@@ -1082,6 +1101,7 @@
                           label="Costo"
                           type="number"
                           dense
+                          hide-bottom-space
                           @update:model-value="updateCost"
                         />
                       </div>
@@ -1092,6 +1112,7 @@
                           v-model="profitPercentageDisplay"
                           label="Margen %"
                           dense
+                          hide-bottom-space
                           class="profit-percentage-input"
                           @keydown="handleProfitPercentageKeydown"
                           @focus="initializeProfitPercentage"
@@ -1106,6 +1127,7 @@
                           type="number"
                           step=".00"
                           dense
+                          hide-bottom-space
                           @update:model-value="updatePrice"
                         />
                       </div>
@@ -1117,6 +1139,7 @@
                           type="number"
                           step=".00"
                           dense
+                          hide-bottom-space
                         />
                       </div>
                     </div>
@@ -1195,7 +1218,7 @@
                         </q-card>
                     </div>
 
-                    <div class="row q-col-gutter-sm">
+                    <div class="row q-col-gutter-md">
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                         <q-select
                           use-input
@@ -1208,6 +1231,7 @@
                           :options="aliquotTypes"
                           @filter="getAliquotTypes"
                           dense
+                          hide-bottom-space
                         />
                       </div>
                     </div>
@@ -1235,7 +1259,7 @@
                       <!-- Image Preview Grid -->
                       <div class="col-12" v-if="product.images.length">
                         <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                        <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
+                        <div class="row q-col-gutter-md scroll q-pa-sm" style="max-height: 400px;">
                           <div
                             v-for="(image, index) in product.images"
                             :key="index"
