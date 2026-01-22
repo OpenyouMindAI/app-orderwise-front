@@ -158,21 +158,6 @@
                   </q-item-section>
                 </q-item>
 
-                <q-separator />
-
-                <q-item
-                  clickable
-                  v-close-popup
-                  @click="columnDialog = true"
-                >
-                  <q-item-section avatar>
-                    <q-icon name="view_column" color="info" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>Mostrar/Ocultar columnas</q-item-label>
-                  </q-item-section>
-                </q-item>
-
                 <q-separator v-if="userSession.is_root" />
 
                 <q-item
@@ -339,12 +324,13 @@
                   </q-item-section>
                 </q-item>
 
-                <q-separator />
+                <q-separator v-if="$q.screen.gt.sm" />
 
                 <q-item
                   clickable
                   v-close-popup
                   @click="columnDialog = true"
+                  v-if="$q.screen.gt.sm"
                 >
                   <q-item-section avatar>
                     <q-icon name="view_column" color="info" />
@@ -374,6 +360,23 @@
           </q-btn>
         </div>
       </div>
+
+      <!-- Selection mode banner -->
+      <div v-if="multipleSelected" class="col-12">
+        <q-card flat class="bg-blue-1 text-primary q-pa-md" style="border-radius: 12px; border: 1px solid #90caf9;">
+          <div class="row items-center q-gutter-sm">
+            <q-icon name="check_circle" color="primary" size="24px" />
+            <div class="col text-weight-medium">
+              Modo de selección activo
+              <span v-if="selection.length > 0" class="text-weight-bold">
+                ({{ selection.length }})
+              </span>
+            </div>
+            <q-btn flat round dense icon="close" color="primary" size="sm" @click="toggleMultipleSelection" style="box-shadow: none !important;"/>
+          </div>
+        </q-card>
+      </div>
+
       <div class="col-12">
         <q-table
           id="tour-tabla-productos"
@@ -405,7 +408,12 @@
 
           <template v-slot:item="props">
             <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
-              <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editProduct($event, props.row)">
+              <q-card
+                class="cursor-pointer q-hoverable no-shadow transition-all"
+                :class="{ 'selected-card': isProductSelected(props.row) }"
+                style="border-radius: 16px; border: 1px solid #eef0f3"
+                @click="handleCardClick(props.row)"
+              >
                 <span class="q-focus-helper"></span>
 
                 <q-card-section class="row justify-between items-start compact-card-header">
@@ -1852,16 +1860,22 @@
     />
 
     <!-- QR Dialog -->
-    <q-dialog v-model="qrDialog" persistent>
-      <q-card style="width: 900px; max-width: 95vw;">
-        <q-card-section class="row items-center bg-teal text-white q-py-sm">
+    <q-dialog v-model="qrDialog" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 95vw;'"
+        :class="$q.screen.lt.sm ? 'column full-height' : ''"
+      >
+        <q-card-section class="row items-center bg-teal text-white q-py-sm col-auto">
           <q-icon name="qr_code" size="sm" class="q-mr-sm" />
           <div class="text-h6">Códigos QR de Productos</div>
           <q-space />
           <q-btn icon="close" flat round dense @click="closeQrDialog" />
         </q-card-section>
 
-        <q-card-section v-if="!qrCodes.length">
+        <q-card-section
+          v-if="!qrCodes.length"
+          :class="$q.screen.lt.sm ? 'col scroll flex flex-center' : ''"
+        >
           <div class="text-center q-pa-lg">
             <q-icon name="qr_code_scanner" size="4rem" color="grey-5" class="q-mb-md" />
             <div class="text-h6 text-grey-7 q-mb-sm">
@@ -1873,14 +1887,18 @@
           </div>
         </q-card-section>
 
-        <q-card-section v-else class="scroll" style="max-height: 60vh;">
+        <q-card-section
+          v-else
+          :class="$q.screen.lt.sm ? 'col scroll' : 'scroll'"
+          :style="$q.screen.lt.sm ? '' : 'max-height: 60vh;'"
+        >
           <div class="row q-col-gutter-md">
             <div
               v-for="qr in qrCodes"
               :key="qr.product_id"
               class="col-xs-12 col-sm-6 col-md-4"
             >
-              <q-card flat bordered class="q-pa-md text-center">
+              <q-card flat bordered class="q-pa-md text-center" style="border-radius: 12px;">
                 <div class="text-subtitle2 text-weight-bold q-mb-sm text-primary">
                   {{ qr.product_name }}
                 </div>
@@ -1915,7 +1933,7 @@
           </div>
         </q-card-section>
 
-        <q-card-actions align="right" class="q-pa-md q-gutter-sm">
+        <q-card-actions align="right" class="q-pa-md q-gutter-sm col-auto bg-white">
           <q-btn
             color="secondary"
             label="Cerrar"
@@ -1949,6 +1967,7 @@
             :loading="loadingQr"
             :disable="!selection.length"
             v-if="!qrCodes.length"
+            unelevated
           />
           <q-btn
             color="teal"
@@ -1957,6 +1976,7 @@
             @click="generateQrAll"
             :loading="loadingQr"
             v-if="!qrCodes.length"
+            unelevated
           />
         </q-card-actions>
       </q-card>
@@ -2517,6 +2537,33 @@ export default {
       // Clear selection when disabling multiple selection
       if (!this.multipleSelected) {
         this.selection = []
+      }
+    },
+    /**
+     * Handle card click in mobile view
+     */
+    handleCardClick (product) {
+      if (this.multipleSelected) {
+        this.toggleProductSelection(product)
+      } else {
+        this.editProduct(null, product)
+      }
+    },
+    /**
+     * Check if product is selected
+     */
+    isProductSelected (product) {
+      return this.selection.some(p => p.id === product.id)
+    },
+    /**
+     * Toggle product selection
+     */
+    toggleProductSelection (product) {
+      const index = this.selection.findIndex(p => p.id === product.id)
+      if (index > -1) {
+        this.selection.splice(index, 1)
+      } else {
+        this.selection.push(product)
       }
     },
     /**
@@ -4770,6 +4817,13 @@ export default {
 
 .compact-total-container {
   padding: 0.5rem !important;
+}
+
+/* Selected card styles */
+.selected-card {
+  outline: 2px solid #1976d2 !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 @media (max-width: 1023px) {

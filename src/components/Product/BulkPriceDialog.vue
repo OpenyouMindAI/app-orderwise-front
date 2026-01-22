@@ -1,8 +1,18 @@
 <template>
-  <q-dialog v-model="showDialog" persistent transition-show="slide-up" transition-hide="slide-down">
-    <q-card class="bulk-price-dialog" style="max-width: 90vw; width: 1200px;">
+  <q-dialog
+    v-model="showDialog"
+    persistent
+    transition-show="slide-up"
+    transition-hide="slide-down"
+    :maximized="$q.screen.lt.sm"
+  >
+    <q-card
+      class="bulk-price-dialog"
+      :style="$q.screen.lt.sm ? '' : 'max-width: 90vw; width: 1200px;'"
+      :class="$q.screen.lt.sm ? 'column full-height' : ''"
+    >
       <!-- Header elegante -->
-      <q-card-section class="dialog-header">
+      <q-card-section class="dialog-header col-auto">
         <div class="row items-center">
           <div class="header-icon-wrapper">
             <q-icon name="tune" size="24px" />
@@ -21,7 +31,7 @@
           />
         </div>
       </q-card-section>
-      <q-card-section v-show="alertProductAll">
+      <q-card-section v-show="alertProductAll" class="col-auto q-pa-none">
         <q-banner inline-actions rounded class="bg-negative text-white" dense v-if="typeof products === 'string' && products === 'all'">
           <template v-slot:avatar>
             <q-icon name="warning" />
@@ -36,7 +46,10 @@
       </q-card-section>
 
       <!-- Contenido principal con layout de dos columnas -->
-      <q-card-section class="dialog-content">
+      <q-card-section
+        class="dialog-content"
+        :class="$q.screen.lt.sm ? 'col scroll' : ''"
+      >
         <div class="content-grid">
 
           <!-- Columna izquierda - Configuración -->
@@ -157,7 +170,10 @@
               </q-btn>
             </div>
 
-            <div class="prices-content scroll q-pt-sm" style="max-height: calc(100vh - 320px);">
+            <div
+              class="prices-content scroll q-pt-sm"
+              :style="$q.screen.lt.sm ? '' : 'max-height: calc(100vh - 320px);'"
+            >
               <transition-group name="price-item" tag="div" class="prices-list">
                 <q-input
                   v-model.number="form.profit_percentage"
@@ -234,7 +250,7 @@
       </q-card-section>
 
       <!-- Footer con acciones -->
-      <q-card-section class="dialog-footer">
+      <q-card-section class="dialog-footer col-auto">
         <div class="footer-actions">
           <q-btn
             label="Cancelar"
@@ -502,7 +518,6 @@ export default {
 .dialog-content {
   flex: 1;
   padding: 0;
-  overflow: hidden;
 }
 
 .content-grid {
@@ -638,7 +653,6 @@ export default {
 /* Prices Panel */
 .prices-panel {
   padding: 0px 24px;
-  overflow-y: auto;
 }
 
 .prices-header {
