@@ -53,7 +53,85 @@
           @request="setPagination"
           no-data-label="Registro no encontrado"
           :class="{ 'table-editing-order': editingOrder }"
+          :grid="$q.screen.lt.md"
         >
+          <template v-slot:item="props">
+            <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+              <q-card
+                class="cursor-pointer q-hoverable no-shadow transition-all"
+                style="border-radius: 16px; border: 1px solid #eef0f3"
+                @click="handleRowClick(null, props.row)"
+              >
+                <span class="q-focus-helper"></span>
+
+                <q-card-section class="row justify-between items-start compact-card-header">
+                  <div class="column">
+                    <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">
+                      {{ props.row.name }}
+                    </div>
+                    <div class="text-caption text-grey-6 text-weight-medium">
+                      {{ props.row.aliquot_type?.Desc || 'Sin impuesto' }}
+                    </div>
+                  </div>
+                  <div class="column items-end">
+                    <q-badge
+                      color="primary"
+                      :label="`Pos # ${props.row.sort_order}`"
+                      class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                      rounded
+                      style="font-size: 10px; letter-spacing: 0.5px"
+                    />
+                  </div>
+                </q-card-section>
+
+                <q-separator color="grey-2" inset />
+
+                <q-card-section class="compact-card-body">
+                  <div class="row q-col-gutter-y-sm">
+                    <div class="col-8">
+                      <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Impresora</div>
+                      <div class="text-body2 text-grey-9 text-weight-bold ellipsis">{{ props.row.printer?.name || '-' }}</div>
+                    </div>
+                    <div class="col-4 text-right">
+                      <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">En Catálogo</div>
+                      <div class="text-body2 text-grey-8">{{ props.row.show_catalog ? 'Sí' : 'No' }}</div>
+                    </div>
+                  </div>
+                </q-card-section>
+
+                <q-card-section v-if="editingOrder" class="compact-card-footer">
+                  <div class="row items-center justify-center bg-grey-1 compact-total-container" style="border-radius: 12px">
+                    <div class="q-gutter-x-md">
+                      <q-btn
+                        size="md"
+                        round
+                        unelevated
+                        color="positive"
+                        icon="keyboard_arrow_up"
+                        @click.stop="moveUp(props.row)"
+                        :disable="props.row.sort_order === 1"
+                        class="shadow-1"
+                      >
+                        <q-tooltip>Subir</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        size="md"
+                        round
+                        unelevated
+                        color="positive"
+                        icon="keyboard_arrow_down"
+                        @click.stop="moveDown(props.row)"
+                        :disable="isLast(props.row)"
+                        class="shadow-1"
+                      >
+                        <q-tooltip>Bajar</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
+          </template>
           <template v-slot:loading>
             <q-inner-loading showing color="primary" />
           </template>
@@ -129,213 +207,247 @@
     </div>
 
     <q-dialog v-model="openEditCategory" persistent :maximized="$q.screen.lt.sm">
-      <q-card style="width: 600px; max-width: 95vw;">
-        <q-form @submit="saveEdit">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 85vw;'}`"
+      >
+        <q-form @submit="saveEdit" class="column full-height">
           <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Modificar categoría</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                id="tour-edit-nombre"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="category.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-12">
-              <q-select
-                id="tour-edit-iva"
-                use-input
-                filled
-                label="Iva (%)"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="category.aliquot_type"
-                :options="aliquotTypes"
-                @filter="getAliquotTypes"
-              />
-            </div>
-            <div class="col-12">
-              <q-select
-                id="tour-edit-impresora"
-                use-input
-                filled
-                clearable
-                label="Impresora"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category.printer"
-                :options="printers"
-                @filter="getPrinters"
-              />
-            </div>
-            <div class="col-12">
-              <div class="row items-center q-mb-sm">
-                <div class="col">
-                  <label class="text-subtitle2">Sucursales</label>
-                </div>
-                <div class="col-auto">
-                  <q-btn
-                    flat
-                    dense
-                    size="sm"
-                    color="primary"
-                    label="Seleccionar todas"
-                    @click="selectAllBranchOffices"
-                  />
-                </div>
+
+          <q-card-section class="scroll col q-pa-md">
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  id="tour-edit-nombre"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="category.name"
+                  autofocus
+                  label="Nombre"
+                  dense
+                  hide-bottom-space
+                />
               </div>
-              <q-select
-                id="tour-edit-sucursales"
-                filled
-                multiple
-                use-chips
-                label="Seleccionar sucursales"
-                option-label="name"
-                option-value="id"
-                v-model="selectedBranchOffices"
-                :options="branchOffices"
-                emit-value
-                map-options
-              >
-                <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
-                  <q-item v-bind="itemProps">
-                    <q-item-section side>
-                      <q-checkbox :model-value="selected" @update:model-value="toggleOption(opt)" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>{{ opt.name }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </q-select>
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-toggle
-                id="tour-edit-catalogo"
-                v-model="category.show_catalog"
-                label="Mostrar en catálogo"
-                :true-value="1"
-                :false-value="0"
-              />
+              <div class="col-12 col-sm-6">
+                <q-select
+                  id="tour-edit-iva"
+                  use-input
+                  filled
+                  label="Iva (%)"
+                  input-debounce="0"
+                  option-label="Desc"
+                  option-value="id"
+                  v-model="category.aliquot_type"
+                  :options="aliquotTypes"
+                  @filter="getAliquotTypes"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-select
+                  id="tour-edit-impresora"
+                  use-input
+                  filled
+                  clearable
+                  label="Impresora"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="category.printer"
+                  :options="printers"
+                  @filter="getPrinters"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-toggle
+                  id="tour-edit-catalogo"
+                  v-model="category.show_catalog"
+                  label="Mostrar en catálogo"
+                  :true-value="1"
+                  :false-value="0"
+                  class="full-width"
+                />
+              </div>
+
+              <div class="col-12">
+                <div class="row items-center q-mb-sm q-mt-sm">
+                  <div class="col">
+                    <label class="text-subtitle2 text-grey-8">Sucursales</label>
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      flat
+                      dense
+                      size="sm"
+                      color="primary"
+                      label="Seleccionar todas"
+                      @click="selectAllBranchOffices"
+                    />
+                  </div>
+                </div>
+                <q-select
+                  id="tour-edit-sucursales"
+                  filled
+                  multiple
+                  use-chips
+                  label="Seleccionar sucursales"
+                  option-label="name"
+                  option-value="id"
+                  v-model="selectedBranchOffices"
+                  :options="branchOffices"
+                  emit-value
+                  map-options
+                  dense
+                  hide-bottom-space
+                >
+                  <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
+                    <q-item v-bind="itemProps">
+                      <q-item-section side>
+                        <q-checkbox :model-value="selected" @update:model-value="toggleOption(opt)" />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ opt.name }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
             </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn id="tour-edit-btn-eliminar" color="negative" label="Eliminar" @click="deleteCategory" :loading="visible" />
-            <q-btn id="tour-edit-btn-guardar" color="primary" label="Guardar" type="submit" :loading="visible"/>
+
+          <q-card-actions align="right" class="text-primary bg-grey-1">
+            <q-btn id="tour-edit-btn-eliminar" color="negative" flat icon="delete" label="Eliminar" @click="deleteCategory" :loading="visible" />
+            <q-btn id="tour-edit-btn-guardar" color="primary" unelevated icon="save" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
     <q-dialog v-model="openAddCategory" persistent :maximized="$q.screen.lt.sm">
-      <q-card style="width: 600px; max-width: 95vw;">
-        <q-form @submit="saveCategory">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 85vw;'}`"
+      >
+        <q-form @submit="saveCategory" class="column full-height">
           <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="text-h6">Agregar categoría</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                id="tour-add-nombre"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="category.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-12">
-              <q-select
-                id="tour-add-iva"
-                use-input
-                filled
-                label="Iva (%)"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="category.aliquot_type"
-                :options="aliquotTypes"
-                @filter="getAliquotTypes"
-              />
-            </div>
-            <div class="col-12">
-              <q-select
-                id="tour-add-impresora"
-                use-input
-                filled
-                clearable
-                label="Impresora"
-                input-debounce="0"
-                option-label="name"
-                option-value="id"
-                v-model="category.printer"
-                :options="printers"
-                @filter="getPrinters"
-              />
-            </div>
-            <div class="col-12">
-              <div class="row items-center q-mb-sm">
-                <div class="col">
-                  <label class="text-subtitle2">Sucursales</label>
-                </div>
-                <div class="col-auto">
-                  <q-btn
-                    flat
-                    dense
-                    size="sm"
-                    color="primary"
-                    label="Seleccionar todas"
-                    @click="selectAllBranchOffices"
-                  />
-                </div>
+
+          <q-card-section class="scroll col q-pa-md">
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  id="tour-add-nombre"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="category.name"
+                  autofocus
+                  label="Nombre"
+                  dense
+                  hide-bottom-space
+                />
               </div>
-              <q-select
-                id="tour-add-sucursales"
-                filled
-                multiple
-                use-chips
-                label="Seleccionar sucursales"
-                option-label="name"
-                option-value="id"
-                v-model="selectedBranchOffices"
-                :options="branchOffices"
-                emit-value
-                map-options
-              >
-                <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
-                  <q-item v-bind="itemProps">
-                    <q-item-section side>
-                      <q-checkbox :model-value="selected" @update:model-value="toggleOption(opt)" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>{{ opt.name }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </q-select>
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-toggle
-                id="tour-add-catalogo"
-                v-model="category.show_catalog"
-                label="Mostrar en catálogo"
-                :true-value="1"
-                :false-value="0"
-              />
+              <div class="col-12 col-sm-6">
+                <q-select
+                  id="tour-add-iva"
+                  use-input
+                  filled
+                  label="Iva (%)"
+                  input-debounce="0"
+                  option-label="Desc"
+                  option-value="id"
+                  v-model="category.aliquot_type"
+                  :options="aliquotTypes"
+                  @filter="getAliquotTypes"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-select
+                  id="tour-add-impresora"
+                  use-input
+                  filled
+                  clearable
+                  label="Impresora"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="id"
+                  v-model="category.printer"
+                  :options="printers"
+                  @filter="getPrinters"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-toggle
+                  id="tour-add-catalogo"
+                  v-model="category.show_catalog"
+                  label="Mostrar en catálogo"
+                  :true-value="1"
+                  :false-value="0"
+                  class="full-width"
+                />
+              </div>
+
+              <div class="col-12">
+                <div class="row items-center q-mb-sm q-mt-sm">
+                  <div class="col">
+                    <label class="text-subtitle2 text-grey-8">Sucursales</label>
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      flat
+                      dense
+                      size="sm"
+                      color="primary"
+                      label="Seleccionar todas"
+                      @click="selectAllBranchOffices"
+                    />
+                  </div>
+                </div>
+                <q-select
+                  id="tour-add-sucursales"
+                  filled
+                  multiple
+                  use-chips
+                  label="Seleccionar sucursales"
+                  option-label="name"
+                  option-value="id"
+                  v-model="selectedBranchOffices"
+                  :options="branchOffices"
+                  emit-value
+                  map-options
+                  dense
+                  hide-bottom-space
+                >
+                  <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
+                    <q-item v-bind="itemProps">
+                      <q-item-section side>
+                        <q-checkbox :model-value="selected" @update:model-value="toggleOption(opt)" />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ opt.name }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
             </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn id="tour-add-btn-cancelar" color="secondary" label="Cancelar" @click="closeModal" />
-            <q-btn id="tour-add-btn-agregar" color="primary" label="Agregar" type="submit" :loading="visible"/>
+
+          <q-card-actions align="right" class="text-primary bg-grey-1">
+            <q-btn id="tour-add-btn-cancelar" color="secondary" flat label="Cancelar" @click="closeModal" />
+            <q-btn id="tour-add-btn-agregar" color="primary" unelevated icon="add_circle" label="Agregar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -1278,124 +1390,110 @@ export default {
   text-align: center;
 }
 
-/* Tour Styles */
+</style>
+
+<style scoped>
+.compact-card-header {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-body {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-footer {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-top: 0 !important;
+}
+
+.compact-total-container {
+  padding: 0.5rem !important;
+}
+
+@media (max-width: 1023px) {
+  /* Reducir padding del top de la tabla - usando deep selector para sobrescribir Quasar */
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+  :deep(.q-table__top > div) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  :deep(.q-table__top .q-input) {
+    flex: 1;
+  }
+}
+
+.table-editing-order :deep(tbody tr) {
+  cursor: default !important;
+}
+
 .tour-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: transparent;
-  z-index: 10000;
-  pointer-events: auto;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  pointer-events: all;
 }
 
 .tour-spotlight {
   position: absolute;
-  background: transparent;
-  border: 4px solid var(--q-primary);
-  border-radius: 12px;
-  box-shadow:
-    0 0 0 9999px rgba(0, 0, 0, 0.75),
-    0 0 0 8px rgba(255, 255, 255, 0.1),
-    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
   transition: all 0.3s ease;
-  z-index: 10001;
+  z-index: 10000;
   pointer-events: none;
-  animation: pulse-border 2s infinite;
-}
-
-@keyframes pulse-border {
-  0%, 100% {
-    border-color: var(--q-primary);
-    box-shadow:
-      0 0 0 9999px rgba(0, 0, 0, 0.75),
-      0 0 0 8px rgba(255, 255, 255, 0.1),
-      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
-  }
-  50% {
-    border-color: var(--q-primary);
-    box-shadow:
-      0 0 0 9999px rgba(0, 0, 0, 0.75),
-      0 0 0 8px rgba(255, 255, 255, 0.15),
-      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
-  }
 }
 
 .tour-card {
   position: absolute;
-  z-index: 10002;
-  min-width: 350px;
-  max-width: 450px;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  animation: tour-card-appear 0.3s ease-out;
-}
-
-@keyframes tour-card-appear {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  width: 320px;
+  z-index: 10001;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .tour-header {
+  background: var(--q-primary);
+  color: white;
+  padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
-  color: white;
-  border-radius: 16px 16px 0 0;
 }
 
 .tour-step-indicator {
   font-size: 12px;
   font-weight: 600;
-  opacity: 0.9;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .tour-title {
-  font-size: 20px;
+  font-size: 1.1rem;
   font-weight: 700;
-  margin-bottom: 12px;
-  color: var(--q-primary);
-  line-height: 1.3;
-}
-
-.body--dark .tour-title {
-  color: var(--q-primary);
+  color: #1a1a1a;
+  margin-bottom: 8px;
 }
 
 .tour-description {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #666;
+  font-size: 0.95rem;
+  color: #4a4a4a;
+  line-height: 1.4;
 }
 
-.body--dark .tour-description {
-  color: #b0b0b0;
-}
-
-/* Responsive tour */
-@media (max-width: 768px) {
-  .tour-card {
-    min-width: 300px;
-    max-width: 90vw;
-    left: 5vw !important;
-  }
-
-  .tour-title {
-    font-size: 18px;
-  }
-
-  .tour-description {
-    font-size: 13px;
-  }
+.transition-all {
+  transition: all 0.3s ease;
 }
 </style>
