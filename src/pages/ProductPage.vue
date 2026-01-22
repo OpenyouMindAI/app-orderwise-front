@@ -467,16 +467,22 @@
     </div>
 
     <q-dialog v-model="openEditProduct" persistent :maximized="$q.screen.lt.sm">
-      <q-card style="width: 1200px; max-width: 95vw;">
-        <q-card-section class="row items-center bg-primary text-white q-py-sm">
+      <q-card
+        :style="$q.screen.lt.sm ? '' : 'width: 1200px; max-width: 95vw;'"
+        :class="$q.screen.lt.sm ? 'column full-height' : ''"
+      >
+        <q-card-section class="row items-center bg-primary text-white q-py-sm col-auto">
           <div class="text-h6">Modificar producto</div>
           <q-space />
           <q-btn icon="close" flat round dense @click="closeModal" />
         </q-card-section>
-        <q-form @submit="saveEdit">
+        <q-form
+          @submit="saveEdit"
+          :class="$q.screen.lt.sm ? 'col column' : ''"
+        >
           <q-tabs
             v-model="tab"
-            class="text-grey"
+            class="text-grey col-auto"
             active-color="primary"
             indicator-color="primary"
             align="justify"
@@ -490,7 +496,12 @@
 
           <q-separator />
 
-          <q-tab-panels v-model="tab" animated class="scroll" style="max-height: calc(100vh - 240px);">
+          <q-tab-panels
+            v-model="tab"
+            animated
+            :class="$q.screen.lt.sm ? 'col scroll' : 'scroll'"
+            :style="$q.screen.lt.sm ? '' : 'max-height: calc(100vh - 240px);'"
+          >
             <q-tab-panel name="basicData">
               <div class="row q-col-gutter-sm">
                 <div class="row col-md-7 col-xs-12 col-sm-12">
@@ -917,7 +928,7 @@
               <recipe-product :product="product"/>
             </q-tab-panel>
           </q-tab-panels>
-          <q-card-actions align="right" class="text-primary">
+          <q-card-actions align="right" class="text-primary col-auto bg-white q-pa-md">
             <q-btn color="negative" label="Eliminar" @click="deleteProduct" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
@@ -926,14 +937,24 @@
       </q-card>
     </q-dialog>
     <q-dialog v-model="openAddProduct" persistent :maximized="$q.screen.lt.sm">
-      <q-card style="width: 1200px; max-width: 95vw;">
-        <q-card-section class="row items-center q-py-sm bg-primary text-white">
+      <q-card
+        :style="$q.screen.lt.sm ? '' : 'width: 1200px; max-width: 95vw;'"
+        :class="$q.screen.lt.sm ? 'column full-height' : ''"
+      >
+        <q-card-section class="row items-center q-py-sm bg-primary text-white col-auto">
           <div class="text-h6">Agregar producto</div>
           <q-space />
           <q-btn icon="close" flat round dense @click="closeModal" />
         </q-card-section>
-        <q-form @submit="saveProduct" ref="formAddProduct">
-          <q-card-section class="scroll " style="height: calc(100vh - 200px);">
+        <q-form
+          @submit="saveProduct"
+          ref="formAddProduct"
+          :class="$q.screen.lt.sm ? 'col column' : ''"
+        >
+          <q-card-section
+            :class="$q.screen.lt.sm ? 'col scroll' : 'scroll'"
+            :style="$q.screen.lt.sm ? '' : 'height: calc(100vh - 200px);'"
+          >
             <div class="row q-col-gutter-sm">
               <div class="row col-md-7 col-xs-12 col-sm-12">
                 <!-- Datos básicos -->
@@ -1333,7 +1354,7 @@
               </div>
             </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary q-pa-md">
+          <q-card-actions align="right" class="text-primary q-pa-md col-auto bg-white">
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible" unelevated />
           </q-card-actions>
@@ -1399,10 +1420,14 @@
     </q-dialog>
     <q-dialog
       v-model="dialogFilter"
-      position="right"
-      seamless
+      :position="$q.screen.lt.sm ? 'standard' : 'right'"
+      :seamless="!$q.screen.lt.sm"
+      :maximized="$q.screen.lt.sm"
     >
-      <q-card style="width: 500px; max-width: 80vw;">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column' : ''"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'"
+      >
         <q-card-section class="bg-primary text-white row items-center justify-between">
           <div class="text-h6">
             <q-icon name="filter_alt" class="q-mr-sm" />
@@ -1417,7 +1442,10 @@
           />
         </q-card-section>
 
-        <q-card-section class="q-pt-sm scroll" style="max-height: calc(100vh - 200px);">
+        <q-card-section
+          :class="$q.screen.lt.sm ? 'col scroll q-pt-sm' : 'q-pt-sm scroll'"
+          :style="$q.screen.lt.sm ? '' : 'max-height: calc(100vh - 200px);'"
+        >
           <div class="column q-gutter-y-md">
 
             <!-- Filtros de texto -->
