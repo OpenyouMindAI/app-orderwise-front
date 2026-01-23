@@ -1,152 +1,175 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row justify-between items-center q-mb-md">
-      <div class="text-h4"></div>
-      <q-btn
-        color="primary"
-        icon="add"
-        label=""
-        @click="openDialog('create')"
-      />
-    </div>
-
-    <q-table
-      flat
-      bordered
-      title="Listado de Cajas"
-      :rows="boxes"
-      :columns="columns"
-      row-key="id"
-      :loading="loading"
-      :filter="filter"
-      :pagination="pagination"
-      @request="onRequest"
-      binary-state-sort
-    >
-      <template v-slot:top-right>
-        <q-input
-          borderless
-          dense
-          debounce="300"
-          v-model="filter"
-          placeholder="Buscar"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-      </template>
-
-      <template v-slot:body-cell-status="props">
-        <q-td :props="props">
-          <q-badge
-            :color="statusColors[props.row.status]"
-            :label="statusLabels[props.row.status]"
-          />
-        </q-td>
-      </template>
-
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props" class="q-gutter-sm">
+  <q-page padding>
+    <div class="q-gutter-y-sm">
+      <div class="row justify-between items-center q-gutter-x-sm">
+        <span class="text-h6">
+          Listado de Cajas
+        </span>
+        <div class="text-right">
           <q-btn
-            dense
             round
-            flat
             color="primary"
-            icon="edit"
-            @click="openDialog('edit', props.row)"
-          />
-          <q-btn
-            dense
-            round
-            flat
-            color="red"
-            icon="delete"
-            @click="confirmDelete(props.row)"
-          />
-        </q-td>
-      </template>
-    </q-table>
+            icon="add"
+            @click="openDialog('create')"
+          >
+            <q-tooltip>Nueva Caja</q-tooltip>
+          </q-btn>
+        </div>
+      </div>
 
-    <q-dialog v-model="dialog.show" persistent>
-      <q-card style="min-width: 400px">
-        <q-card-section class="bg-orange text-white row items-center q-pb-none">
-          <div class="text-h6">{{ dialog.title }}</div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="closeDialog" />
-        </q-card-section>
+      <q-table
+        title="Cajas"
+        row-key="id"
+        :rows="boxes"
+        :columns="columns"
+        :loading="loading"
+        :filter="filter"
+        :visible-columns="visibleColumns"
+        binary-state-sort
+        v-model:pagination="pagination"
+        @request="onRequest"
+        @row-click="(_, row) => openDialog('edit', row)"
+        no-data-label="Registro no encontrado"
+        :grid="$q.screen.lt.md"
+        class="cashbox-table"
+      >
+        <template v-slot:loading>
+          <q-inner-loading showing color="primary" />
+        </template>
 
-        <q-card-section>
-          <q-form @submit="submitForm">
-            <q-input
-              v-model="formData.name"
-              label="Nombre"
-              filled
-              lazy-rules
-              :rules="[val => !!val || 'El campo es requerido.']"
-              class="q-mb-sm"
-              :error="!!formData.nameError"
-              :error-message="formData.nameError"
+        <template v-slot:top>
+          <div class="flex justify-end items-center full-width">
+            <q-input filled dense debounce="300" v-model="filter" placeholder="Buscar">
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
+        </template>
+
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6">
+            <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="openDialog('edit', props.row)">
+              <span class="q-focus-helper"></span>
+
+              <q-card-section class="row justify-between items-center compact-card-header">
+                <div class="column">
+                  <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">{{ props.row.name }}</div>
+                  <div class="text-caption text-grey-6 text-weight-medium">ID: {{ props.row.id }}</div>
+                </div>
+                <div class="column items-end">
+                  <q-badge
+                    :color="statusColors[props.row.status]"
+                    :label="statusLabels[props.row.status]"
+                    class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                    rounded
+                    style="font-size: 10px; letter-spacing: 0.5px"
+                  />
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </template>
+
+        <template v-slot:body-cell-status="props">
+          <q-td :props="props">
+            <q-badge
+              :color="statusColors[props.row.status]"
+              :label="statusLabels[props.row.status]"
+              class="q-pa-sm"
             />
+          </q-td>
+        </template>
+      </q-table>
 
-            <q-select
-              v-model="formData.status"
-              label="Estado *"
-              filled
-              :options="statusOptions"
-              emit-value
-              map-options
-              :rules="[val => !!val || 'Seleccione un estado']"
-              class="q-mb-sm"
-            />
+      <q-dialog v-model="dialog.show" persistent :maximized="$q.screen.lt.sm">
+        <q-card :style="$q.screen.lt.sm ? '' : 'width: 600px; max-width: 95vw;'" :class="$q.screen.lt.sm ? 'column full-height' : ''">
+          <q-card-section class="bg-primary text-white row items-center q-py-sm col-auto">
+            <div class="text-h6">{{ dialog.title }}</div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="closeDialog" />
+          </q-card-section>
 
-            <q-card-actions align="right" class="q-pt-none">
+          <q-form @submit="submitForm" :class="$q.screen.lt.sm ? 'col column' : ''">
+            <q-card-section :class="$q.screen.lt.sm ? 'col scroll q-pa-md' : 'q-pa-md'">
+              <div class="row q-col-gutter-md">
+                <div class="col-12">
+                  <q-input
+                    v-model="formData.name"
+                    label="Nombre"
+                    filled
+                    dense
+                    hide-bottom-space
+                    lazy-rules
+                    :rules="[val => !!val || 'El campo es requerido.']"
+                    autofocus
+                  />
+                </div>
+
+                <div class="col-12">
+                  <q-select
+                    v-model="formData.status"
+                    label="Estado *"
+                    filled
+                    dense
+                    hide-bottom-space
+                    :options="statusOptions"
+                    emit-value
+                    map-options
+                    :rules="[val => !!val || 'Seleccione un estado']"
+                  />
+                </div>
+              </div>
+            </q-card-section>
+
+            <q-card-actions align="right" class="q-pa-md col-auto border-top">
               <q-btn
                 v-if="dialog.mode === 'edit'"
-                flat
+                outline
                 label="Eliminar"
                 color="negative"
                 @click="confirmDelete(formData)"
               />
-              <q-btn label="Cancelar" color="teal" @click="closeDialog" />
+              <q-btn label="Cancelar" color="grey-7" flat @click="closeDialog" />
               <q-btn
                 type="submit"
                 label="Guardar"
                 color="primary"
+                unelevated
                 :loading="submitting"
               />
             </q-card-actions>
           </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+        </q-card>
+      </q-dialog>
 
-    <q-dialog v-model="confirmDialog.show">
-      <q-card>
-        <q-card-section class="bg-orange text-white">
-          <div class="text-h6">Confirmar eliminación</div>
-        </q-card-section>
+      <q-dialog v-model="confirmDialog.show">
+        <q-card style="min-width: 300px">
+          <q-card-section class="bg-negative text-white q-py-sm">
+            <div class="text-h6">Confirmar eliminación</div>
+          </q-card-section>
 
-        <q-card-section class="q-pa-md">
-          ¿Estás seguro de eliminar la caja "{{ confirmDialog.boxName }}"?
-        </q-card-section>
+          <q-card-section class="q-pa-md">
+            ¿Estás seguro de eliminar la caja <strong>{{ confirmDialog.boxName }}</strong>?
+          </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn
-            label="CANCELAR"
-            color="teal"
-            @click="confirmDialog.show = false"
-          />
-          <q-btn
-            label="OK"
-            color="primary"
-            @click="deleteBox(confirmDialog.box)"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-  </div>
+          <q-card-actions align="right" class="q-pb-md q-pr-md">
+            <q-btn
+              label="Cancelar"
+              color="grey-7"
+              flat
+              @click="confirmDialog.show = false"
+            />
+            <q-btn
+              label="Eliminar"
+              color="negative"
+              @click="deleteBox(confirmDialog.box)"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+    </div>
+  </q-page>
 </template>
 
 <script>
@@ -164,6 +187,7 @@ export default {
     const submitting = ref(false)
     const filter = ref('')
     const boxes = ref([])
+    const visibleColumns = ref(['id', 'name', 'status'])
     const formData = ref({
       id: null,
       name: '',
@@ -203,8 +227,8 @@ export default {
     }
 
     const statusColors = {
-      active: 'green',
-      inactive: 'red',
+      active: 'positive',
+      inactive: 'negative',
       maintenance: 'orange'
     }
 
@@ -232,13 +256,6 @@ export default {
         align: 'left',
         field: 'status',
         sortable: true
-      },
-      {
-        name: 'actions',
-        label: 'Acciones',
-        align: 'center',
-        field: '',
-        sortable: false
       }
     ]
 
@@ -338,7 +355,7 @@ export default {
         await api.delete(`/cashboxes/${box.id}`)
         showSuccess('Caja eliminada exitosamente')
         fetchBoxes(pagination.value)
-        closeDialog()
+        if (dialog.value.show) closeDialog()
       } catch (error) {
         showError('Error al eliminar la caja', error)
       } finally {
@@ -372,6 +389,7 @@ export default {
       submitting,
       filter,
       boxes,
+      visibleColumns,
       formData,
       dialog,
       confirmDialog,
@@ -392,7 +410,35 @@ export default {
 </script>
 
 <style scoped>
-.q-table {
-  height: calc(100vh - 180px);
+.cashbox-table tbody tr {
+  cursor: pointer;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.compact-card-header {
+  padding: 0.8rem 1rem !important;
+}
+
+.border-top {
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 1023px) {
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  :deep(.q-table__top .q-input) {
+    flex: 1;
+  }
 }
 </style>
