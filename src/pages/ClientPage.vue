@@ -2,7 +2,7 @@
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
       <div class="col-12 text-right q-gutter-sm">
-        <q-btn
+        <!-- <q-btn
           label="Modo afiliado"
           :icon="store.partnerMode ? 'check_box' : 'check_box_outline_blank'"
           @click="togglePartnerMode"
@@ -12,7 +12,7 @@
           <q-tooltip>
             {{ store.partnerMode ? 'Modo afiliado activado' : 'Modo afiliado desactivado' }}
           </q-tooltip>
-        </q-btn>
+        </q-btn> -->
         <q-btn color="teal" @click="exportClients" icon="download" label="Exportar" />
         <q-btn color="indigo" @click="openImportDialog" icon="upload" label="Importar" />
         <q-btn color="primary" @click="openNewClientModal" icon="add_circle"/>
@@ -138,9 +138,9 @@
             <!-- Affiliate Configuration -->
             <div class="col-12 flex q-gutter-x-lg q-pt-md">
               <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
-              <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" />
+              <!-- <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" /> -->
             </div>
-            <div class="col-12" v-if="!client.is_partner">
+            <!-- <div class="col-12" v-if="!client.is_partner">
               <q-select
                 filled
                 v-model="client.partner"
@@ -155,7 +155,7 @@
                   <q-icon name="group" />
                 </template>
               </q-select>
-            </div>
+            </div> -->
             <!-- Sección de Dirección - MANTENER IGUAL -->
             <div class="col-12">
               <AddressComponent
@@ -278,9 +278,9 @@
             <!-- Affiliate Configuration -->
             <div class="col-12 flex q-gutter-x-lg q-pt-md">
               <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
-              <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" />
+              <!-- <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" /> -->
             </div>
-            <div class="col-12" v-if="!client.is_partner">
+            <!-- <div class="col-12" v-if="!client.is_partner">
               <q-select
                 filled
                 v-model="client.partner"
@@ -295,7 +295,7 @@
                   <q-icon name="group" />
                 </template>
               </q-select>
-            </div>
+            </div> -->
 
             <!-- Sección de Dirección - MANTENER IGUAL -->
             <div class="col-12">
@@ -640,14 +640,14 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession']),
+    ...mapState(authentication, ['userSession'])
     /**
      * Checks if the current user is an administrator
      * @returns {Boolean} True if user is root or super admin
      */
-    isAdmin () {
+    /* isAdmin () {
       return this.userSession?.is_root || this.userSession?.is_super_admin
-    }
+    } */
   },
   methods: {
     /**
@@ -715,7 +715,7 @@ export default {
      */
     getClients (params = this.params) {
       this.visible = true
-      params.onlyClients = Boolean(!this.store.partnerMode)
+      // params.onlyClients = Boolean(!this.store.partnerMode)
       this.$api.get('clients', { params })
         .then(({ data }) => {
           this.clients = data.data
@@ -780,7 +780,7 @@ export default {
      * @param {String} value Value filter
      * @param {Callback} update update options
      */
-    async getPartners (value, update) {
+    /* async getPartners (value, update) {
       try {
         const { data } = await this.$api.get('partners', {
           params: {
@@ -801,7 +801,7 @@ export default {
       } catch (err) {
         notify('Error en la conexión', 'negative', 'warning')
       }
-    },
+    }, */
     /**
      * Set data pagination emit event
      * @param  {Object} data value pagination
@@ -832,9 +832,9 @@ export default {
         clientData.document_type = JSON.stringify(clientData.document_type)
       }
 
-      if (clientData?.partner?.id) {
+      /* if (clientData?.partner?.id) {
         clientData.partner_id = clientData.partner.id
-      }
+      } */
 
       clientData.address = this.address || this.client.address || null
 
@@ -896,9 +896,9 @@ export default {
 
       clientData.address = this.address || this.client.address || null
 
-      if (clientData?.partner?.id) {
+      /* if (clientData?.partner?.id) {
         clientData.partner_id = clientData.partner.id
-      }
+      } */
 
       this.$api.put(`clients/${this.client.id}`, clientData)
         .then(({ data }) => {
@@ -1170,21 +1170,21 @@ export default {
      * Initial load and state handling
      */
     async loadClients () {
-      if (this.userSession?.is_partner) {
+      /* if (this.userSession?.is_partner) {
         this.store.partnerMode = true
-      }
+      } */
       this.setPagination({
         pagination: this.paginationConfig,
         filter: undefined
       })
-    },
+    }
     /**
      * Toggle partner mode
      */
-    async togglePartnerMode () {
+    /* async togglePartnerMode () {
       await this.store.togglePartnerMode()
       this.getClients()
-    }
+    } */
   }
 }
 </script>
