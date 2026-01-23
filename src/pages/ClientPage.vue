@@ -1,21 +1,31 @@
 <template>
   <div class="q-pa-md">
     <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right q-gutter-sm">
-        <!-- <q-btn
-          label="Modo afiliado"
-          :icon="store.partnerMode ? 'check_box' : 'check_box_outline_blank'"
-          @click="togglePartnerMode"
-          color="primary"
-          v-if="isAdmin"
+      <div class="col-12 text-right q-gutter-x-sm">
+        <q-btn
+          color="teal"
+          @click="exportClients"
+          icon="download"
+          :round="$q.screen.lt.sm"
+          :label="$q.screen.gt.xs ? 'Exportar' : ''"
         >
-          <q-tooltip>
-            {{ store.partnerMode ? 'Modo afiliado activado' : 'Modo afiliado desactivado' }}
-          </q-tooltip>
-        </q-btn> -->
-        <q-btn color="teal" @click="exportClients" icon="download" label="Exportar" />
-        <q-btn color="indigo" @click="openImportDialog" icon="upload" label="Importar" />
-        <q-btn color="primary" @click="openNewClientModal" icon="add_circle"/>
+          <q-tooltip v-if="$q.screen.lt.sm">Exportar</q-tooltip>
+        </q-btn>
+        <q-btn
+          color="indigo"
+          @click="openImportDialog"
+          icon="upload"
+          :round="$q.screen.lt.sm"
+          :label="$q.screen.gt.xs ? 'Importar' : ''"
+        >
+          <q-tooltip v-if="$q.screen.lt.sm">Importar</q-tooltip>
+        </q-btn>
+        <q-btn
+          color="primary"
+          @click="openNewClientModal"
+          icon="add_circle"
+          round
+        />
       </div>
       <div class="col-12">
         <q-table
@@ -30,16 +40,68 @@
           @row-click="editClient"
           @request="setPagination"
           no-data-label="Registro no encontrado"
+          :grid="$q.screen.lt.md"
         >
           <template v-slot:loading>
             <q-inner-loading showing color="primary" />
           </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
+          <template v-slot:top>
+            <div class="flex justify-between items-center full-width">
+              <div class="text-h6" v-if="$q.screen.gt.xs">Clientes</div>
+              <div class="row items-center no-wrap" :class="$q.screen.lt.md ? 'full-width' : ''">
+                <q-input
+                  filled
+                  dense
+                  debounce="500"
+                  v-model="filter"
+                  placeholder="Buscar"
+                  class="col"
+                >
+                  <template v-slot:append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </div>
+            </div>
+          </template>
+
+          <template v-slot:item="props">
+            <div class="q-pa-xs col-xs-12 col-sm-6">
+              <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editClient(null, props.row)">
+                <span class="q-focus-helper"></span>
+
+                <q-card-section class="row justify-between items-start compact-card-header">
+                  <div class="column">
+                     <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">
+                       {{ props.row.name }}
+                     </div>
+                     <div class="text-caption text-grey-6 text-weight-medium">
+                       {{ props.row.document_number || 'Sin documento' }}
+                     </div>
+                  </div>
+                </q-card-section>
+
+                <q-separator color="grey-2" inset />
+
+                <q-card-section class="compact-card-body">
+                  <div class="row q-col-gutter-y-sm">
+                    <div class="col-12">
+                       <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Contacto</div>
+                       <div class="row items-center q-gutter-x-sm">
+                         <div class="text-body2 text-grey-9 text-weight-bold ellipsis">
+                           <q-icon name="phone" size="14px" color="grey-6" class="q-mr-xs" />
+                           {{ props.row.phone_number || '-' }}
+                         </div>
+                         <div class="text-body2 text-grey-8 ellipsis">
+                           <q-icon name="email" size="14px" color="grey-6" class="q-mr-xs" />
+                           {{ props.row.email || '-' }}
+                         </div>
+                       </div>
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
           </template>
           <template v-slot:body-cell-address="props">
             <q-td :props="props">
@@ -54,128 +116,125 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditClient" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveEdit">
+    <q-dialog v-model="openEditClient" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column' : ''"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 80vw;'"
+      >
+        <q-form @submit="saveEdit" class="column full-height">
           <!-- Header con estilo naranja -->
-          <q-card-section class="row items-center text-white bg-primary">
+          <q-card-section class="row items-center text-white bg-primary q-py-sm">
             <div class="text-h6">Modificar cliente</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
 
           <!-- Body con tema oscuro -->
-          <q-card-section class="row q-col-gutter-sm">
-            <!-- Nombre - Campo principal con asterisco rojo -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.name"
-                label="Nombre *"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                autofocus
-              />
-            </div>
+          <q-card-section class="scroll col q-pa-md">
+            <div class="row q-col-gutter-md">
+              <!-- Nombre - Campo principal con asterisco rojo -->
+              <div class="col-12">
+                <q-input
+                  filled
+                  v-model="client.name"
+                  label="Nombre *"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  autofocus
+                  dense
+                />
+              </div>
 
-            <!-- Información adicional -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-grey-7 q-mt-sm">
-              Información adicional (opcional)
-            </div>
+              <!-- Información adicional -->
+              <div class="col-12 text-grey-7 q-mt-sm">
+                Información adicional (opcional)
+              </div>
 
-            <!-- Fila 1: Tipo de documento y Número -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                filled
-                use-input
-                label="Tipo de documento"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="client.document_type"
-                :options="documentTypes"
-                @filter="getDocumentTypes"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.document_number"
-                label="Número de documento"
-              />
-            </div>
+              <!-- Fila 1: Tipo de documento y Número -->
+              <div class="col-12 col-sm-6">
+                <q-select
+                  filled
+                  use-input
+                  label="Tipo de documento"
+                  input-debounce="0"
+                  option-label="Desc"
+                  option-value="id"
+                  v-model="client.document_type"
+                  :options="documentTypes"
+                  @filter="getDocumentTypes"
+                  dense
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.document_number"
+                  label="Número de documento"
+                  dense
+                />
+              </div>
 
-            <!-- Fila 2: Correo y Teléfono -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.phone_number"
-                label="Teléfono"
-              />
-            </div>
+              <!-- Fila 2: Correo y Teléfono -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.email"
+                  type="email"
+                  label="Correo"
+                  dense
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.phone_number"
+                  label="Teléfono"
+                  dense
+                />
+              </div>
 
-            <!-- Condición de IVA -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-select
-                filled
-                use-input
-                label="Condición de IVA"
-                input-debounce="0"
-                option-label="name"
-                option-value="code"
-                v-model="client.condition_iva_receptor"
-                :options="conditionIvaReceptors"
-                @filter="getConditionIvaReceptor"
-              />
-            </div>
-            <!-- Affiliate Configuration -->
-            <div class="col-12 flex q-gutter-x-lg q-pt-md">
-              <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
-              <!-- <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" /> -->
-            </div>
-            <!-- <div class="col-12" v-if="!client.is_partner">
-              <q-select
-                filled
-                v-model="client.partner"
-                label="Afiliado"
-                :options="partners"
-                @filter="getPartners"
-                use-input
-                option-label="name"
-                option-value="id"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="group" />
-                </template>
-              </q-select>
-            </div> -->
-            <!-- Sección de Dirección - MANTENER IGUAL -->
-            <div class="col-12">
-              <AddressComponent
-                :key="addressComponentKey"
-                :initial-address="address"
-                @address-selected="handleAddressSelected"
-              />
-            </div>
-            <div class="col-12">
-              <q-input
-                filled
-                v-model="client.reference"
-                label="Referencia"
-              />
+              <!-- Condición de IVA -->
+              <div class="col-12">
+                <q-select
+                  filled
+                  use-input
+                  label="Condición de IVA"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="code"
+                  v-model="client.condition_iva_receptor"
+                  :options="conditionIvaReceptors"
+                  @filter="getConditionIvaReceptor"
+                  dense
+                />
+              </div>
+              <!-- Affiliate Configuration -->
+              <div class="col-12 flex q-gutter-x-lg q-pt-md">
+                <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
+              </div>
+
+              <!-- Sección de Dirección -->
+              <div class="col-12">
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
+                />
+              </div>
+              <div class="col-12">
+                <q-input
+                  filled
+                  v-model="client.reference"
+                  label="Referencia"
+                  dense
+                />
+              </div>
             </div>
           </q-card-section>
 
           <!-- Botones de acción -->
-          <q-card-actions align="right" class="text-primary">
+          <q-card-actions align="right" class="text-primary bg-grey-1">
             <q-btn
+              flat
               icon="delete"
               color="negative"
               label="ELIMINAR"
@@ -183,6 +242,7 @@
               :loading="visible"
             />
             <q-btn
+              unelevated
               icon="save"
               color="primary"
               label="GUARDAR"
@@ -193,130 +253,126 @@
         </q-form>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddClient" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveClient">
+    <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column' : ''"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 80vw;'"
+      >
+        <q-form @submit="saveClient" class="column full-height">
           <!-- Header con estilo naranja -->
-          <q-card-section class="row items-center text-white bg-primary">
+          <q-card-section class="row items-center text-white bg-primary q-py-sm">
             <div class="text-h6">Agregar cliente</div>
             <q-space />
             <q-btn icon="close" flat round dense @click="closeModal" />
           </q-card-section>
 
           <!-- Body con tema oscuro -->
-          <q-card-section class="row q-col-gutter-sm">
-            <!-- Nombre - Campo principal con asterisco rojo -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.name"
-                label="Nombre *"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                autofocus
-              />
-            </div>
+          <q-card-section class="scroll col q-pa-md">
+            <div class="row q-col-gutter-md">
+              <!-- Nombre - Campo principal con asterisco rojo -->
+              <div class="col-12">
+                <q-input
+                  filled
+                  v-model="client.name"
+                  label="Nombre *"
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  autofocus
+                  dense
+                />
+              </div>
 
-            <!-- Información adicional -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 text-grey-7 q-mt-sm">
-              Información adicional (opcional)
-            </div>
+              <!-- Información adicional -->
+              <div class="col-12 text-grey-7 q-mt-sm">
+                Información adicional (opcional)
+              </div>
 
-            <!-- Fila 1: Tipo de documento y Número -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-select
-                filled
-                use-input
-                label="Tipo de documento"
-                input-debounce="0"
-                option-label="Desc"
-                option-value="id"
-                v-model="client.document_type"
-                :options="documentTypes"
-                @filter="getDocumentTypes"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.document_number"
-                label="Número de documento"
-              />
-            </div>
+              <!-- Fila 1: Tipo de documento y Número -->
+              <div class="col-12 col-sm-6">
+                <q-select
+                  filled
+                  use-input
+                  label="Tipo de documento"
+                  input-debounce="0"
+                  option-label="Desc"
+                  option-value="id"
+                  v-model="client.document_type"
+                  :options="documentTypes"
+                  @filter="getDocumentTypes"
+                  dense
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.document_number"
+                  label="Número de documento"
+                  dense
+                />
+              </div>
 
-            <!-- Fila 2: Correo y Teléfono -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.phone_number"
-                label="Teléfono"
-              />
-            </div>
+              <!-- Fila 2: Correo y Teléfono -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.email"
+                  type="email"
+                  label="Correo"
+                  dense
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.phone_number"
+                  label="Teléfono"
+                  dense
+                />
+              </div>
 
-            <!-- Condición de IVA -->
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-select
-                filled
-                use-input
-                label="Condición de IVA"
-                input-debounce="0"
-                option-label="name"
-                option-value="code"
-                v-model="client.condition_iva_receptor"
-                :options="conditionIvaReceptors"
-                @filter="getConditionIvaReceptor"
-              />
-            </div>
+              <!-- Condición de IVA -->
+              <div class="col-12">
+                <q-select
+                  filled
+                  use-input
+                  label="Condición de IVA"
+                  input-debounce="0"
+                  option-label="name"
+                  option-value="code"
+                  v-model="client.condition_iva_receptor"
+                  :options="conditionIvaReceptors"
+                  @filter="getConditionIvaReceptor"
+                  dense
+                />
+              </div>
 
-            <!-- Affiliate Configuration -->
-            <div class="col-12 flex q-gutter-x-lg q-pt-md">
-              <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
-              <!-- <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" /> -->
-            </div>
-            <!-- <div class="col-12" v-if="!client.is_partner">
-              <q-select
-                filled
-                v-model="client.partner"
-                label="Afiliado"
-                :options="partners"
-                @filter="getPartners"
-                use-input
-                option-label="name"
-                option-value="id"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="group" />
-                </template>
-              </q-select>
-            </div> -->
+              <!-- Affiliate Configuration -->
+              <div class="col-12 flex q-gutter-x-lg q-pt-md">
+                <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
+              </div>
 
-            <!-- Sección de Dirección - MANTENER IGUAL -->
-            <div class="col-12">
-              <AddressComponent
-                :key="addressComponentKey"
-                :initial-address="address"
-                @address-selected="handleAddressSelected"
-              />
-            </div>
-            <div class="col-12">
-              <q-input
-                filled
-                v-model="client.reference"
-                label="Referencia"
-              />
+              <!-- Sección de Dirección -->
+              <div class="col-12">
+                <AddressComponent
+                  :key="addressComponentKey"
+                  :initial-address="address"
+                  @address-selected="handleAddressSelected"
+                />
+              </div>
+              <div class="col-12">
+                <q-input
+                  filled
+                  v-model="client.reference"
+                  label="Referencia"
+                  dense
+                />
+              </div>
             </div>
           </q-card-section>
 
           <!-- Botón guardar mejorado -->
-          <q-card-actions align="right" class="text-primary">
+          <q-card-actions align="right" class="text-primary bg-grey-1">
             <q-btn
+              unelevated
               icon="save"
               color="primary"
               label="GUARDAR"
@@ -329,8 +385,11 @@
     </q-dialog>
 
     <!-- Import Dialog -->
-    <q-dialog v-model="showImportDialog" persistent>
-      <q-card style="width: 700px; max-width: 90vw;">
+    <q-dialog v-model="showImportDialog" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column' : ''"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 90vw;'"
+      >
         <!-- Header -->
         <q-card-section class="row items-center text-white bg-indigo">
           <q-icon name="upload_file" size="md" class="q-mr-sm" />
@@ -1201,6 +1260,22 @@ export default {
 
 .address-cell:hover {
   color: var(--q-primary);
+}
+
+/* Clases para tarjetas compactas (Consistencia con InvoicePage) */
+.compact-card-header {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-body {
+  padding: 0.5rem 1rem !important;
+}
+
+@media (max-width: 1023px) {
+  /* Reducir padding del top de la tabla */
+  :deep(.q-table__top) {
+    padding: 0.5rem !important;
+  }
 }
 
 /* Import Dialog Styles */
