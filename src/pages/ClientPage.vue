@@ -191,7 +191,32 @@
                   dense
                 />
               </div>
-
+            <!-- Fila 3: Usuario y Contraseña -->
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="client.username"
+                label="Usuario"
+                autocomplete="off"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="client.password"
+                :type="showPassword ? 'text' : 'password'"
+                label="Contraseña"
+                autocomplete="new-password"
+              >
+                <template v-slot:append>
+                  <q-icon
+                    :name="showPassword ? 'visibility_off' : 'visibility'"
+                    class="cursor-pointer"
+                    @click="showPassword = !showPassword"
+                  />
+                </template>
+              </q-input>
+            </div>
               <!-- Condición de IVA -->
               <div class="col-12">
                 <q-select
@@ -328,6 +353,33 @@
                   dense
                 />
               </div>
+
+            <!-- Fila 3: Usuario y Contraseña -->
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="client.username"
+                label="Usuario"
+                autocomplete="off"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                filled
+                v-model="client.password"
+                :type="showPassword ? 'text' : 'password'"
+                label="Contraseña"
+                autocomplete="new-password"
+              >
+                <template v-slot:append>
+                  <q-icon
+                    :name="showPassword ? 'visibility_off' : 'visibility'"
+                    class="cursor-pointer"
+                    @click="showPassword = !showPassword"
+                  />
+                </template>
+              </q-input>
+            </div>
 
               <!-- Condición de IVA -->
               <div class="col-12">
@@ -606,6 +658,7 @@ export default {
       importPreview: [],
       importLoading: false,
       isDragging: false,
+      showPassword: false,
       showImportResults: false,
       importResults: {
         imported: 0,
@@ -726,9 +779,12 @@ export default {
         condition_iva_receptor: null,
         document_type: null,
         is_credit: true,
-        partner: null
+        partner: null,
+        username: '',
+        password: ''
       }
       this.role = null
+      this.showPassword = false
 
       // Limpiar las variables de dirección
       this.address = null
@@ -748,9 +804,12 @@ export default {
         address: '',
         condition_iva_receptor: null,
         document_type: null,
-        is_credit: true
+        is_credit: true,
+        username: '',
+        password: ''
       }
       this.role = null
+      this.showPassword = false
       this.address = null
       this.formattedAddress = ''
       this.addressComponentKey += 1

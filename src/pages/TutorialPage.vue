@@ -1572,9 +1572,16 @@ const saveVideo = async () => {
       formData.append('video', videoForm.value.video)
     }
 
+    const config = {
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        loading(true, { message: `Subiendo archivo... ${percentCompleted}%` })
+      }
+    }
+
     if (editingVideo.value) {
       formData.append('_method', 'put')
-      const { data } = await api.post(`tutorials/${editingVideo.value.id}`, formData)
+      const { data } = await api.post(`tutorials/${editingVideo.value.id}`, formData, config)
       if (selectedVideo.value && selectedVideo.value.id === editingVideo.value.id) {
         selectedVideo.value = data
       }
@@ -1588,7 +1595,7 @@ const saveVideo = async () => {
       }
       // Miniature is now optional
 
-      await api.post('tutorials', formData)
+      await api.post('tutorials', formData, config)
       notify('Video agregado correctamente', 'positive', 'add')
     }
 

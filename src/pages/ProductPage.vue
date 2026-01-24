@@ -399,7 +399,7 @@
             <q-inner-loading showing color="primary" />
           </template>
           <template v-slot:top-right>
-            <q-input filled dense debounce="800" v-model="filter" placeholder="Buscar">
+            <q-input clearable filled dense debounce="800" v-model="filter" placeholder="Buscar">
               <template v-slot:append>
                 <q-icon name="search" />
               </template>
