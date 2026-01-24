@@ -785,17 +785,17 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
-              <div class="col-12" v-if="isDelivery">
+              <div class="col-12" v-if="isDelivery || isOrder">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12" v-if="isDelivery">
+              <div class="col-12" v-if="isDelivery || isOrder">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
               </div>
-              <div class="col-12" id="tour-descripcion" v-if="isDelivery">
+              <div class="col-12" id="tour-descripcion" v-if="isDelivery || isOrder">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
@@ -1749,7 +1749,7 @@ import CashflowModal from 'src/components/CashflowModal.vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import SearchPendingInvoicesDialog from 'src/components/SearchPendingInvoicesDialog.vue'
-import { LOCAL, DELIVERY } from 'src/const/typeOfServices.js'
+import { LOCAL, DELIVERY, ORDER } from 'src/const/typeOfServices.js'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1783,6 +1783,7 @@ export default {
     return {
       tourStore,
       LOCAL,
+      ORDER,
       DELIVERY,
       activeMobileMenu: null,
       showTour: false,
@@ -2553,6 +2554,9 @@ export default {
     },
     isDelivery () {
       return Number(this.typeOfService.code) === this.DELIVERY
+    },
+    isOrder () {
+      return Number(this.typeOfService.code) === this.ORDER
     },
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
