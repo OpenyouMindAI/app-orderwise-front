@@ -29,7 +29,7 @@
             <div class="input-container">
               <q-input
                 v-model="form.name"
-                placeholder="Nombre completo"
+                placeholder="Nombre"
                 dark
                 class="custom-input"
                 hide-bottom-space
@@ -37,6 +37,22 @@
               >
                 <template v-slot:prepend>
                   <q-icon name="person" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Input Apellido -->
+            <div class="input-container">
+              <q-input
+                v-model="form.last_name"
+                placeholder="Apellido"
+                dark
+                class="custom-input"
+                hide-bottom-space
+                :rules="[val => !!val || 'El apellido es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="person_outline" color="primary" size="20px"/>
                 </template>
               </q-input>
             </div>
@@ -667,14 +683,17 @@ import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import { usePixel } from 'src/composables/usePixel'
 
 const router = useRouter()
 const store = authentication()
 const $q = useQuasar()
+const fbq = usePixel()
 
 // Form data
 const form = ref({
   name: '',
+  last_name: '',
   email: '',
   phone_number: '',
   password: '',
@@ -931,6 +950,16 @@ const setupCompany = async () => {
     localStorage.removeItem(REGISTER_SESSION_KEY)
     localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
 
+    // Pixel Event: CrearEmpresa
+    if (fbq?.event) {
+      const companyData = {
+        business_type: payload.business_type?.label,
+        country: selectedCountry.value?.label,
+        company_name: payload.name
+      }
+      fbq.event('CrearEmpresa', companyData)
+    }
+
     showCompanySetup.value = false
 
     router.push({ name: 'CompanyConfig' })
@@ -982,6 +1011,22 @@ const register = async () => {
     // Actualizar store de Pinia con los datos de sesión
     store.setSessionData(data)
 
+    // Actualizar Facebook Pixel con los datos del usuario
+    if (window.fbq && data.user) {
+      const pixelUserData = {}
+      if (data.user.email) pixelUserData.em = data.user.email
+      if (data.user.id) pixelUserData.external_id = data.user.id
+      if (data.user.name) pixelUserData.fn = data.user.name
+      if (data.user.last_name) pixelUserData.ln = data.user.last_name
+
+      const rawPhone = data.user.phone_number || data.user.phone
+      if (rawPhone) {
+        pixelUserData.ph = rawPhone.toString().replace(/^\+/, '')
+      }
+
+      window.fbq('init', import.meta.env.VITE_FACEBOOK_PIXEL_ID, pixelUserData)
+    }
+
     notify('Registro exitoso', 'positive', 'check_circle')
 
     isGoogleRegister.value = false
@@ -1032,6 +1077,11 @@ const verifyOtp = async () => {
 
     // Limpiar estado OTP de localStorage tras verificación exitosa
     clearOtpPendingState()
+
+    // Pixel Event: Complete Registration (Email)
+    if (fbq?.event) {
+      fbq.event('CompleteRegistration')
+    }
 
     // Marcar OTP como verificado en la sesión de registro
     const registerSession = localStorage.getItem(REGISTER_SESSION_KEY)
@@ -1550,6 +1600,11 @@ const registerWithGoogleMobile = async () => {
 
       notify('Registro exitoso con Google', 'positive', 'check_circle')
 
+      // Pixel Event: Complete Registration (Google Mobile)
+      if (fbq?.event) {
+        fbq.event('CompleteRegistration')
+      }
+
       // Mostrar modal de setup de empresa
       if (data.needs_company_setup) {
         isGoogleRegister.value = true
@@ -1633,6 +1688,11 @@ const registerWithGoogle = async () => {
             store.setSessionData(data)
 
             notify('Registro exitoso con Google', 'positive', 'check_circle')
+
+            // Pixel Event: Complete Registration (Google Web)
+            if (fbq?.event) {
+              fbq.event('CompleteRegistration')
+            }
 
             // Mostrar modal de setup de empresa
             if (data.needs_company_setup) {

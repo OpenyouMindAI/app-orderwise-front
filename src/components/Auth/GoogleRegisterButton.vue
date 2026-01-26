@@ -21,13 +21,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { authentication } from 'src/stores/module-authentication'
 import { notify } from 'src/const/mixins'
 import { api } from 'src/boot/axios'
-import { useFbq } from 'vue3-facebook-pixel'
 
 const router = useRouter()
-const store = authentication()
 const loading = ref(false)
 
 const emit = defineEmits(['success', 'error'])

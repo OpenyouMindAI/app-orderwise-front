@@ -211,6 +211,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import { notify, notifyValidationErrors } from 'src/const/mixins'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import { usePixel } from 'src/composables/usePixel'
 
 const props = defineProps({
   modelValue: {
@@ -224,6 +225,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'success'])
+const fbq = usePixel()
 
 // State
 const loading = ref(false)
@@ -352,6 +354,16 @@ const setupCompany = async () => {
 
     // Emitir evento de éxito con los datos de la respuesta
     emit('success', data)
+
+    // Pixel Event: CrearEmpresa
+    if (fbq?.event) {
+      const companyData = {
+        business_type: form.value.business_type?.name,
+        country: selectedCountry.value?.label,
+        company_name: form.value.company_name
+      }
+      fbq.event('CrearEmpresa', companyData)
+    }
 
     // Cerrar modal
     emit('update:modelValue', false)

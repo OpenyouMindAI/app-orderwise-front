@@ -3993,6 +3993,13 @@ export default {
           // Mostrar celebración al 100%
           this.showCelebration()
         } else {
+          // Emitir evento de Pixel antes de mostrar el diálogo
+          if (this.$fbq) {
+            this.$fbq.event('PrimerProducto', {
+              company_id: this.userSession?.company_session?.id,
+              business_type: this.userSession?.company_session?.business_type?.name
+            })
+          }
           // Preguntar si quiere continuar con la siguiente tarea
           setTimeout(() => {
             this.$q.dialog({

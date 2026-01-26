@@ -1196,41 +1196,49 @@ export default {
      * Check if should continue configuration
      */
     async checkContinueConfiguration () {
-      // Solo preguntar si viene desde WelcomePage
-      const cameFromWelcome = localStorage.getItem('came_from_welcome_category')
+      // Limpiar flag si existe, aunque ya no dependemos estrictamente de ella
+      localStorage.removeItem('came_from_welcome_category')
 
-      if (cameFromWelcome === 'true') {
-        // Limpiar flag
-        localStorage.removeItem('came_from_welcome_category')
+      // Si ya está configurada la empresa, no hacemos nada para evitar spam
+      if (this.userSession?.company_session?.company_config?.other?.configured) {
+        return
+      }
 
-        // Verificar si el progreso está al 100%
-        const progressData = await this.checkIfComplete()
+      // Verificar si el progreso está al 100%
+      const progressData = await this.checkIfComplete()
 
-        if (progressData.isComplete) {
-          // Mostrar celebración al 100%
-          this.showCelebration()
-        } else {
-          // Preguntar si quiere continuar con la siguiente tarea
-          setTimeout(() => {
-            this.$q.dialog({
-              title: '¡Categorías configuradas! ✅',
-              message: '¿Deseas continuar con la siguiente tarea de configuración?',
-              cancel: {
-                label: 'Más tarde',
-                color: 'grey-7',
-                flat: true
-              },
-              ok: {
-                label: 'Continuar',
-                color: 'primary',
-                unelevated: true
-              },
-              persistent: false
-            }).onOk(() => {
-              this.$router.push({ name: 'Welcome' })
-            })
-          }, 500)
+      if (progressData.isComplete) {
+        // Mostrar celebración al 100%
+        this.showCelebration()
+      } else {
+        // Emitir evento de Pixel antes de mostrar el diálogo
+        if (this.$fbq) {
+          this.$fbq.event('PrimeraCategoria', {
+            company_id: this.userSession?.company_session?.id,
+            business_type: this.userSession?.company_session?.business_type?.name
+          })
         }
+        // Preguntar si quiere continuar con la siguiente tarea
+        // Mostrar siempre si no ha terminado la configuración
+        setTimeout(() => {
+          this.$q.dialog({
+            title: '¡Categorías configuradas! ✅',
+            message: '¿Deseas continuar con la siguiente tarea de configuración?',
+            cancel: {
+              label: 'Más tarde',
+              color: 'grey-7',
+              flat: true
+            },
+            ok: {
+              label: 'Continuar',
+              color: 'primary',
+              unelevated: true
+            },
+            persistent: false
+          }).onOk(() => {
+            this.$router.push({ name: 'Welcome' })
+          })
+        }, 500)
       }
     },
     /**
