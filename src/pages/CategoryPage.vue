@@ -268,6 +268,7 @@
                   @filter="getAliquotTypes"
                   dense
                   hide-bottom-space
+                  :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
                 />
               </div>
               <div class="col-12 col-sm-6">
@@ -285,6 +286,7 @@
                   @filter="getPrinters"
                   dense
                   hide-bottom-space
+                  :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
                 />
               </div>
               <div class="col-12 col-sm-6">
@@ -328,6 +330,7 @@
                   map-options
                   dense
                   hide-bottom-space
+                  :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
                 >
                   <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
                     <q-item v-bind="itemProps">
@@ -391,6 +394,7 @@
                   @filter="getAliquotTypes"
                   dense
                   hide-bottom-space
+                  :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
                 />
               </div>
               <div class="col-12 col-sm-6">
@@ -408,6 +412,7 @@
                   @filter="getPrinters"
                   dense
                   hide-bottom-space
+                  :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
                 />
               </div>
               <div class="col-12 col-sm-6">
@@ -451,6 +456,7 @@
                   map-options
                   dense
                   hide-bottom-space
+                  :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
                 >
                   <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
                     <q-item v-bind="itemProps">
