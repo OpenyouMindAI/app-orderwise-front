@@ -7,7 +7,8 @@
       :maximized="$q.screen.lt.sm"
     >
       <q-card
-        style="width: 1200px; max-width: 90vw;"
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 1200px; max-width: 90vw;'}`"
         class="promotion-modal"
       >
         <q-card-section class="row items-center bg-primary text-white q-py-sm">
@@ -52,29 +53,31 @@
               <!-- Tab: Datos Básicos -->
               <q-tab-panel name="basic" class="q-pa-md">
                 <div class="row q-col-gutter-md q-pb-md">
-                  <div class="col-12 col-md-8">
+                  <div :class="$q.screen.lt.sm ? 'col-12' : 'col-12 col-md-8'">
                     <q-card flat bordered class="q-pa-md q-mb-md">
                       <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
                         <q-icon name="info" class="q-mr-sm" />
                         Información General
                       </div>
-                      <div class="row q-col-gutter-sm">
+                      <div class="row q-col-gutter-md">
                         <div class="col-12">
-                          <div class="row q-col-gutter-sm">
-                            <div class="col-4">
+                          <div class="row q-col-gutter-md">
+                            <div :class="$q.screen.lt.sm ? 'col-12' : 'col-4'">
                               <q-input
                                 v-model="promotion.code"
                                 label="Código"
                                 filled
                                 dense
+                                hide-bottom-space
                               />
                             </div>
-                            <div class="col-8">
+                            <div :class="$q.screen.lt.sm ? 'col-12' : 'col-8'">
                               <q-input
                                 v-model="promotion.name"
                                 label="Nombre de la promoción"
                                 filled
                                 dense
+                                hide-bottom-space
                                 :rules="nameRules"
                               />
                             </div>
@@ -88,6 +91,7 @@
                             filled
                             dense
                             autogrow
+                            hide-bottom-space
                           />
                         </div>
                       </div>
@@ -98,7 +102,7 @@
                         <q-icon name="schedule" class="q-mr-sm" />
                         Vigencia y Canales
                       </div>
-                      <div class="row q-col-gutter-sm">
+                      <div class="row q-col-gutter-md">
                         <div class="col-12 col-md-6">
                           <q-input
                             v-model="promotion.start_date"
@@ -106,6 +110,7 @@
                             type="date"
                             filled
                             dense
+                            hide-bottom-space
                           />
                         </div>
                         <div class="col-12 col-md-6">
@@ -115,6 +120,7 @@
                             type="date"
                             filled
                             dense
+                            hide-bottom-space
                           />
                         </div>
                         <div class="col-12">
@@ -130,13 +136,14 @@
                             emit-value
                             map-options
                             use-chips
+                            hide-bottom-space
                           />
                         </div>
                       </div>
                     </q-card>
                   </div>
 
-                  <div class="col-12 col-md-4">
+                  <div :class="$q.screen.lt.sm ? 'col-12' : 'col-12 col-md-4'">
                     <q-card flat bordered class="q-pa-md q-mb-md">
                       <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
                         <q-icon name="image" class="q-mr-sm" />
@@ -155,7 +162,7 @@
                           <!-- Image Preview Grid -->
                           <div class="col-12" v-if="promotion.images && promotion.images.length">
                             <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                            <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
+                            <div class="row q-col-gutter-md scroll q-pa-sm" style="max-height: 400px;">
                               <div
                                 v-for="(image, index) in promotion.images"
                                 :key="index"
@@ -285,17 +292,18 @@
                         />
                       </div>
 
-                      <div class="row q-col-gutter-sm">
-                        <div class="col-8 col-md-10">
+                      <div class="row q-col-gutter-md">
+                        <div :class="$q.screen.lt.sm ? 'col-12' : 'col-8 col-md-10'">
                           <q-input
                             v-model="group.name"
                             label="Nombre del grupo"
                             filled
                             dense
+                            hide-bottom-space
                             :rules="nameRules"
                           />
                         </div>
-                        <div class="col-4 col-md-2">
+                        <div :class="$q.screen.lt.sm ? 'col-12' : 'col-4 col-md-2'">
                           <q-input
                             v-model.number="group.quantity"
                             label="Cantidad"
@@ -303,6 +311,7 @@
                             min="1"
                             filled
                             dense
+                            hide-bottom-space
                           />
                         </div>
                       </div>
@@ -342,6 +351,7 @@
                                 filled
                                 style="width: 100px;"
                                 label="Cantidad"
+                                hide-bottom-space
                                 @update:model-value="validatePreselectedQuantities(groupIndex)"
                               />
 
@@ -393,6 +403,7 @@
                         option-label="label"
                         option-value="value"
                         use-input
+                        hide-bottom-space
                         @filter="filterProducts"
                         @update:model-value="(selected) => addProductToGroup(groupIndex, selected)"
                       />
@@ -407,7 +418,7 @@
                       </div>
                       <q-separator />
                       <div class="row justify-between items-center q-pt-md">
-                        <div class="col-6">
+                        <div :class="$q.screen.lt.sm ? 'col-12' : 'col-6'">
                           <q-input
                             v-model="promotion.final_price"
                             label="Precio Base de la Promoción"
@@ -417,6 +428,7 @@
                             min="0"
                             step="0.01"
                             prefix="$"
+                            hide-bottom-space
                             :rules="priceRules"
                           />
                           <div class="text-body2 text-weight-medium q-mt-sm">
