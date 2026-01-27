@@ -112,9 +112,9 @@
             <q-separator dark />
             <q-card-section class="q-pa-sm">
               <!-- Dirección Compacta -->
-              <div class="row items-start q-mb-sm bg-grey-8 q-pa-xs" style="border-radius: 6px;">
+              <div class="row items-start q-mb-sm q-pa-xs" style="border-radius: 6px;">
                 <q-icon name="location_on" color="red" size="16px" class="q-mr-xs" />
-                <div class="col text-caption" style="font-size: 11px;">{{ currentAddress }}</div>
+                <div class="col" style="font-size: 12px;">{{ currentAddress }}</div>
               </div>
 
               <!-- Action Button Compacto -->

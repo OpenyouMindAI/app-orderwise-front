@@ -283,7 +283,7 @@ const routes = [
       {
         path: 'delivery/monitor',
         name: 'AdminDeliveryMonitor',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/AdminDeliveryMonitorPage.vue')
       },
       {

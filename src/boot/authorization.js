@@ -24,14 +24,14 @@ const isTokenExpired = ($store) => {
     return true
   }
 
-  // Check if expires_In is set and token is expired
-  if ($store.expires_In) {
-    const tokenExpirationTime = $store.setTimeOut || 0
-    const currentTime = Date.now()
-    if (tokenExpirationTime > 0 && currentTime > tokenExpirationTime) {
-      return true
-    }
-  }
+  // // Check if expires_In is set and token is expired
+  // if ($store.expires_In) {
+  //   const tokenExpirationTime = $store.setTimeOut || 0
+  //   const currentTime = Date.now()
+  //   if (tokenExpirationTime > 0 && currentTime > tokenExpirationTime) {
+  //     return true
+  //   }
+  // }
 
   return false
 }

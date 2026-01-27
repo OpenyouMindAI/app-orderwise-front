@@ -605,12 +605,12 @@
       </div>
     </q-drawer>
 
-    <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md }">
+    <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md && !$route.meta.hideBottomNav }">
       <router-view />
     </q-page-container>
 
     <!-- Bottom Navigation (Mobile Only) -->
-    <bottom-nav :data-menu="dataMenu" />
+    <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
