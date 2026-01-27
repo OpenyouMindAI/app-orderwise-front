@@ -1,153 +1,145 @@
 <template>
   <q-page class="home-page">
-    <!-- Header Section -->
-    <div class="home-header">
-      <div class="home-header__content">
-        <h1 class="home-header__title">
-          {{ greeting }}, {{ userName }}
-        </h1>
-        <p class="home-header__subtitle">
-          {{ currentDate }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Onboarding Progress (if incomplete) -->
-    <div v-if="onboardingProgress < 100" class="onboarding-banner">
-      <div class="onboarding-banner__content">
-        <q-icon name="rocket_launch" size="32px" class="onboarding-banner__icon" />
-        <div class="onboarding-banner__text">
-          <div class="onboarding-banner__title">Configuración inicial</div>
-          <div class="onboarding-banner__subtitle">
-            {{ completedTasks }}/{{ totalTasks }} tareas completadas
+    <!-- Header Cockpit Area -->
+    <div class="header-cockpit">
+      <div class="cockpit-glow"></div>
+      <div class="row items-center justify-between no-wrap">
+        <div class="cockpit-welcome">
+          <div class="greeting-row">
+            <span class="text-h6 text-weight-light opacity-60">{{ greeting }},</span>
+            <span class="text-h6 text-weight-bolder q-ml-xs">{{ userName }}</span>
           </div>
-        </div>
-        <q-circular-progress
-          :value="onboardingProgress"
-          size="56px"
-          :thickness="0.15"
-          color="primary"
-          track-color="grey-3"
-          class="onboarding-banner__progress"
-        >
-          <div class="text-caption text-weight-bold">{{ onboardingProgress }}%</div>
-        </q-circular-progress>
-      </div>
-      <q-btn
-        flat
-        no-caps
-        label="Continuar configuración"
-        icon-right="arrow_forward"
-        color="primary"
-        class="full-width q-mt-sm"
-        @click="goToWelcome"
-      />
-    </div>
-
-    <!-- Quick Actions Grid -->
-    <div class="quick-actions">
-      <div class="section-title">Accesos Rápidos</div>
-      <div class="quick-actions__grid">
-        <div
-          v-for="action in quickActions"
-          :key="action.name"
-          class="quick-action-card"
-          @click="navigateTo(action.route)"
-        >
-          <div class="quick-action-card__icon-wrapper" :style="{ background: action.color }">
-            <q-icon :name="action.icon" size="28px" color="white" />
-          </div>
-          <div class="quick-action-card__label">{{ action.label }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="stats-section">
-      <div class="section-title">Resumen de Hoy</div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-card__icon">
-            <q-icon name="receipt_long" size="24px" color="primary" />
-          </div>
-          <div class="stat-card__content">
-            <div class="stat-card__value">{{ todayStats.invoices }}</div>
-            <div class="stat-card__label">Ventas</div>
+          <div class="date-chip">
+            <q-icon name="calendar_today" size="12px" class="q-mr-xs" />
+            {{ currentDate }}
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-card__icon">
-            <q-icon name="attach_money" size="24px" color="positive" />
-          </div>
-          <div class="stat-card__content">
-            <div class="stat-card__value">{{ formatCurrency(todayStats.revenue) }}</div>
-            <div class="stat-card__label">Ingresos</div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-card__icon">
-            <q-icon name="inventory_2" size="24px" color="warning" />
-          </div>
-          <div class="stat-card__content">
-            <div class="stat-card__value">{{ todayStats.products }}</div>
-            <div class="stat-card__label">Productos</div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-card__icon">
-            <q-icon name="people" size="24px" color="info" />
-          </div>
-          <div class="stat-card__content">
-            <div class="stat-card__value">{{ todayStats.clients }}</div>
-            <div class="stat-card__label">Clientes</div>
+        <!-- Quick Status Dot -->
+        <div class="system-status">
+          <div class="status-indicator">
+            <div class="pulse-dot"></div>
+            <span class="status-text">Sistema Activo</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Recent Activity -->
-    <div class="recent-activity">
-      <div class="section-title">
-        <span>Actividad Reciente</span>
-        <q-btn
-          flat
-          dense
-          no-caps
-          label="Ver todo"
-          color="primary"
-          size="sm"
-          @click="navigateTo('Invoice')"
-        />
-      </div>
-      <div v-if="recentInvoices.length > 0" class="activity-list">
-        <div
-          v-for="invoice in recentInvoices"
-          :key="invoice.id"
-          class="activity-item"
-          @click="viewInvoice(invoice)"
-        >
-          <div class="activity-item__icon">
-            <q-icon name="receipt" size="20px" color="primary" />
+    <!-- Main Bento Grid -->
+    <div class="bento-grid">
+      <!-- Onboarding - Strategic Tile -->
+      <div v-if="onboardingProgress < 100" class="bento-item onboarding-tile span-full">
+        <div class="row items-center q-gutter-md no-wrap">
+          <q-circular-progress
+            show-value
+            font-size="12px"
+            :value="onboardingProgress"
+            size="50px"
+            :thickness="0.2"
+            color="primary"
+            track-color="blue-1"
+            class="q-ma-none onboarding-progress"
+          >
+            {{ onboardingProgress }}%
+          </q-circular-progress>
+          <div class="col">
+            <div class="text-weight-bold text-subtitle2">Configuración Inicial</div>
+            <div class="text-caption opacity-60">{{ completedTasks }} de {{ totalTasks }} pasos completados</div>
           </div>
-          <div class="activity-item__content">
-            <div class="activity-item__title">Venta #{{ invoice.id }}</div>
-            <div class="activity-item__subtitle">
-              {{ invoice.client_name || 'Cliente General' }}
+          <q-btn flat round color="primary" icon="arrow_forward" @click="goToWelcome" />
+        </div>
+      </div>
+
+      <!-- Quick Actions Selection -->
+      <div class="bento-item actions-bento span-full-mobile span-2-desktop">
+        <div class="bento-header">
+          <q-icon name="apps" class="q-mr-xs" />
+          <span>Accesos Rápidos</span>
+        </div>
+        <div class="actions-grid-modern">
+          <div
+            v-for="action in quickActions"
+            :key="action.name"
+            class="action-pill clickable"
+            @click="navigateTo(action.route)"
+          >
+            <div class="action-pill__icon" :style="{ color: action.color.match(/#[A-Fa-f0-9]{6}/)?.[0] || 'var(--q-primary)' }">
+              <q-icon :name="action.icon" size="18px" />
+            </div>
+            <div class="action-pill__label">{{ action.label }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid - Strategic Placement -->
+      <template v-if="isAdmin">
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop sale-tile">
+          <div class="stat-icon-wrap bg-soft-primary">
+            <q-icon name="receipt_long" size="20px" color="primary" />
+          </div>
+          <div class="stat-data">
+            <div class="stat-val">{{ todayStats.invoices }}</div>
+            <div class="stat-lab">Ventas de Hoy</div>
+          </div>
+          <div class="stat-trend grow">
+            <q-icon name="trending_up" size="10px" /> 12%
+          </div>
+        </div>
+
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
+          <div class="stat-icon-wrap bg-soft-positive">
+            <q-icon name="payments" size="20px" color="positive" />
+          </div>
+          <div class="stat-data">
+            <div class="stat-val text-positive">{{ formatCurrency(todayStats.revenue) }}</div>
+            <div class="stat-lab">Ingresos Netos</div>
+          </div>
+        </div>
+
+        <div class="bento-item activity-bento span-full section-fade-in">
+          <div class="row items-center justify-between q-mb-md">
+            <div class="bento-header no-margin">
+              <q-icon name="history" class="q-mr-xs" />
+              <span>Actividad Reciente</span>
+            </div>
+            <q-btn
+              flat
+              dense
+              no-caps
+              label="Ver todo"
+              color="primary"
+              size="11px"
+              class="rounded-button"
+              @click="navigateTo('Invoice')"
+            />
+        </div>
+
+        <div v-if="recentInvoices.length > 0" class="activity-timeline">
+            <div
+              v-for="invoice in recentInvoices"
+              :key="invoice.id"
+              class="timeline-node clickable"
+              @click="viewInvoice(invoice)"
+            >
+              <div class="node-time">{{ formatTime(invoice.created_at) }}</div>
+              <div class="node-line"></div>
+              <div class="node-content">
+                <div class="node-header">
+                  <span class="node-title">#{{ invoice.id }}</span>
+                  <span class="node-amount">{{ formatCurrency(invoice.total) }}</span>
+                </div>
+                <div class="node-subtitle">{{ invoice.client_name || 'Consumidor Final' }}</div>
+              </div>
             </div>
           </div>
-          <div class="activity-item__meta">
-            <div class="activity-item__amount">{{ formatCurrency(invoice.total) }}</div>
-            <div class="activity-item__time">{{ formatTime(invoice.created_at) }}</div>
+          <div v-else class="empty-glitch flex flex-center q-pa-lg">
+            <div class="text-center opacity-40">
+              <q-icon name="biometric_setup" size="40px" class="q-mb-sm" />
+              <div class="text-caption">Monitoreando transacciones...</div>
+            </div>
           </div>
         </div>
-      </div>
-      <div v-else class="empty-state">
-        <q-icon name="inbox" size="48px" color="grey-5" />
-        <div class="empty-state__text">No hay actividad reciente</div>
-      </div>
+      </template>
     </div>
   </q-page>
 </template>
@@ -198,14 +190,19 @@ const todayStats = ref({
  */
 const recentInvoices = ref([])
 
-/**
- * Get user name
- * @return {string}
- */
 const userName = computed(() => {
   if (!userSession.value) return 'Usuario'
   const name = userSession.value.name || ''
   return name.split(' ')[0] || 'Usuario'
+})
+
+/**
+ * Check if user is admin or root
+ * @type {ComputedRef<boolean>}
+ */
+const isAdmin = computed(() => {
+  if (!userSession.value) return false
+  return userSession.value.is_root || userSession.value.is_super_admin
 })
 
 /**
@@ -335,7 +332,7 @@ const formatTime = (datetime) => {
  */
 const loadOnboardingStatus = async () => {
   try {
-    const { data } = await api.get('/onboarding/tasks/status')
+    const { data } = await api.get('onboarding/tasks/status')
     if (data.tasks) {
       totalTasks.value = data.tasks.length
       completedTasks.value = data.tasks.filter(t => t.count > 0 || t.multiple?.client).length
@@ -352,7 +349,7 @@ const loadOnboardingStatus = async () => {
 const loadTodayStats = async () => {
   try {
     // You'll need to create these endpoints or adjust based on your API
-    const { data } = await api.get('/dashboard/today-stats')
+    const { data } = await api.get('dashboard/today-stats')
     todayStats.value = data
   } catch (error) {
     console.error('Error loading today stats:', error)
@@ -371,11 +368,13 @@ const loadTodayStats = async () => {
  */
 const loadRecentInvoices = async () => {
   try {
-    const { data } = await api.get('/invoices', {
+    const { data } = await api.get('invoices', {
       params: {
-        limit: 5,
-        sort: 'created_at',
-        order: 'desc'
+        paginate: true,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+        page: 1,
+        perPage: 5
       }
     })
     recentInvoices.value = data.data || data
@@ -393,350 +392,353 @@ onMounted(() => {
 
 <style scoped>
 /**
- * Home page layout
+ * Home page layout - Main Bento Grid System
  */
 .home-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+  background: #f1f5f9;
+  overflow-x: hidden;
   padding: 16px;
-  padding-bottom: 80px;
-  /* Space for bottom nav */
+  padding-bottom: 96px;
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
 }
 
 body.body--dark .home-page {
-  background: #121212;
+  background: #0b0f1a;
 }
 
 /**
- * Header
+ * Header Cockpit
  */
-.home-header {
-  margin-bottom: 24px;
+.header-cockpit {
+  padding: 24px 8px;
+  margin-bottom: 8px;
+  position: relative;
 }
 
-.home-header__title {
-  font-size: 28px;
+.cockpit-glow {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.1) 0%, transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  background: white;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 11px;
   font-weight: 700;
-  margin: 0 0 4px 0;
-  color: #1a1a1a;
-}
-
-body.body--dark .home-header__title {
-  color: #f5f5f5;
-}
-
-.home-header__subtitle {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
-  text-transform: capitalize;
-}
-
-body.body--dark .home-header__subtitle {
-  color: #aaa;
-}
-
-/**
- * Onboarding banner
- */
-.onboarding-banner {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-body.body--dark .onboarding-banner {
-  background: #1e1e1e;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.onboarding-banner__content {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.onboarding-banner__icon {
   color: var(--q-primary);
+  margin-top: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
-.onboarding-banner__text {
-  flex: 1;
-}
-
-.onboarding-banner__title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 4px;
-}
-
-body.body--dark .onboarding-banner__title {
-  color: #f5f5f5;
-}
-
-.onboarding-banner__subtitle {
-  font-size: 13px;
-  color: #666;
-}
-
-body.body--dark .onboarding-banner__subtitle {
-  color: #aaa;
+body.body--dark .date-chip {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
 }
 
 /**
- * Section title
+ * System Status indicator
  */
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-body.body--dark .section-title {
-  color: #f5f5f5;
-}
-
-/**
- * Quick actions
- */
-.quick-actions {
-  margin-bottom: 32px;
-}
-
-.quick-actions__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-@media (max-width: 380px) {
-  .quick-actions__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.quick-action-card {
+.system-status {
   background: white;
-  border-radius: 16px;
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
 }
 
-body.body--dark .quick-action-card {
-  background: #1e1e1e;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+body.body--dark .system-status {
+  background: #1e293b;
+  border-color: #334155;
 }
 
-.quick-action-card:active {
-  transform: scale(0.95);
-}
-
-.quick-action-card__icon-wrapper {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+.status-indicator {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
 }
 
-.quick-action-card__label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #1a1a1a;
-  text-align: center;
-  line-height: 1.3;
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse 2s infinite;
 }
 
-body.body--dark .quick-action-card__label {
-  color: #f5f5f5;
+@keyframes pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.status-text {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
 }
 
 /**
- * Stats section
+ * Bento Grid Central
  */
-.stats-section {
-  margin-bottom: 32px;
-}
-
-.stats-grid {
+.bento-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
-.stat-card {
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: auto auto;
+    gap: 16px;
+  }
+}
+
+.bento-item {
   background: white;
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 16px;
-  display: flex;
-  gap: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255,255,255,0.8);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-body.body--dark .stat-card {
-  background: #1e1e1e;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+body.body--dark .bento-item {
+  background: #161d2b;
+  border: 1px solid rgba(255,255,255,0.03);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
-.stat-card__icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(var(--q-primary-rgb), 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.bento-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.1);
 }
 
-.stat-card__content {
-  flex: 1;
-}
+.span-full { grid-column: 1 / -1; }
+.span-full-mobile { grid-column: 1 / -1; }
 
-.stat-card__value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 4px;
-}
-
-body.body--dark .stat-card__value {
-  color: #f5f5f5;
-}
-
-.stat-card__label {
-  font-size: 12px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-body.body--dark .stat-card__label {
-  color: #aaa;
+@media (min-width: 1024px) {
+  .span-2-desktop { grid-column: span 2; }
+  .span-1-desktop { grid-column: span 1; }
 }
 
 /**
- * Recent activity
+ * Elements Inside Bento
  */
-.recent-activity {
-  margin-bottom: 24px;
+.bento-header {
+  font-size: 12px;
+  font-weight: 900;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
-.activity-list {
-  display: flex;
-  flex-direction: column;
+/**
+ * Actions Matrix
+ */
+.actions-grid-modern {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
-.activity-item {
-  background: white;
-  border-radius: 12px;
-  padding: 12px;
+.action-pill {
   display: flex;
-  gap: 12px;
   align-items: center;
-  cursor: pointer;
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  gap: 10px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 12px;
+  transition: all 0.2s;
+  border: 1px solid transparent;
 }
 
-body.body--dark .activity-item {
-  background: #1e1e1e;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+body.body--dark .action-pill {
+  background: #1e293b;
 }
 
-.activity-item:active {
-  transform: scale(0.98);
-}
+.action-pill:active { transform: scale(0.96); }
 
-.activity-item__icon {
-  width: 40px;
-  height: 40px;
+.action-pill__icon {
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
-  background: rgba(var(--q-primary-rgb), 0.1);
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.activity-item__content {
-  flex: 1;
-  min-width: 0;
+body.body--dark .action-pill__icon {
+  background: #0f172a;
 }
 
-.activity-item__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 2px;
-}
-
-body.body--dark .activity-item__title {
-  color: #f5f5f5;
-}
-
-.activity-item__subtitle {
-  font-size: 12px;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-body.body--dark .activity-item__subtitle {
-  color: #aaa;
-}
-
-.activity-item__meta {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.activity-item__amount {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--q-positive);
-  margin-bottom: 2px;
-}
-
-.activity-item__time {
+.action-pill__label {
   font-size: 11px;
-  color: #999;
+  font-weight: 700;
+  color: #334155;
+}
+
+body.body--dark .action-pill__label {
+  color: #f1f5f9;
 }
 
 /**
- * Empty state
+ * Stats Tiles
  */
-.empty-state {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
-  text-align: center;
+.stat-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100px;
 }
 
-body.body--dark .empty-state {
-  background: #1e1e1e;
+.stat-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
 }
 
-.empty-state__text {
-  font-size: 14px;
-  color: #999;
+.bg-soft-primary { background: rgba(var(--q-primary-rgb), 0.1); }
+.bg-soft-positive { background: rgba(var(--q-positive-rgb), 0.1); }
+
+.stat-val {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+
+.stat-lab {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.stat-trend {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
   margin-top: 8px;
+  width: fit-content;
+}
+
+.stat-trend.grow { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+/**
+ * Activity Timeline
+ */
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timeline-node {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.node-time {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  width: 45px;
+  text-align: right;
+  padding-top: 2px;
+}
+
+.node-line {
+  width: 2px;
+  background: #e2e8f0;
+  position: relative;
+  border-radius: 2px;
+}
+
+body.body--dark .node-line {
+  background: #1e293b;
+}
+
+.node-line::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--q-primary);
+}
+
+body.body--dark .node-line::after {
+  background: #0f172a;
+}
+
+.node-content {
+  flex: 1;
+  padding-bottom: 24px;
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.node-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.node-amount {
+  font-size: 13px;
+  font-weight: 900;
+  color: #10b981;
+}
+
+.node-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.rounded-button { border-radius: 8px; }
+.opacity-60 { opacity: 0.6; }
+.clickable { cursor: pointer; }
+.no-margin { margin: 0 !important; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-fade-in {
+  animation: fadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1);
 }
 </style>

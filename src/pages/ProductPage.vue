@@ -4112,8 +4112,8 @@ export default {
 
           // Update spotlight position
           this.spotlightStyle = {
-            top: `${rect.top + scrollTop - 10}px`,
-            left: `${rect.left + scrollLeft - 10}px`,
+            top: `${rect.top - 10}px`,
+            left: `${rect.left - 10}px`,
             width: `${rect.width + 20}px`,
             height: `${rect.height + 20}px`
           }
@@ -4125,13 +4125,13 @@ export default {
           const viewportHeight = window.innerHeight
           const viewportWidth = window.innerWidth
 
-          let cardTop = rect.bottom + scrollTop + padding
-          let cardLeft = rect.left + scrollLeft
+          let cardTop = rect.bottom + padding
+          let cardLeft = rect.left
 
           // Special positioning for table - place card at bottom of viewport
           if (step.target === '#tour-tabla-productos' || step.target === '#tour-tabla-productos tbody tr:first-child') {
-            cardTop = scrollTop + viewportHeight - cardHeight - padding
-            cardLeft = scrollLeft + (viewportWidth - cardWidth) / 2
+            cardTop = viewportHeight - cardHeight - padding
+            cardLeft = (viewportWidth - cardWidth) / 2
           } else {
             // Calculate available space below and above
             const spaceBelow = viewportHeight - rect.bottom
@@ -4139,31 +4139,31 @@ export default {
 
             // If not enough space below, try to position above
             if (spaceBelow < cardHeight + padding && spaceAbove > cardHeight + padding) {
-              cardTop = rect.top + scrollTop - cardHeight - padding
+              cardTop = rect.top - cardHeight - padding
             } else if (spaceBelow < cardHeight + padding && spaceAbove < cardHeight + padding) {
               // If not enough space in either direction, center in viewport
-              cardTop = scrollTop + (viewportHeight - cardHeight) / 2
+              cardTop = (viewportHeight - cardHeight) / 2
             }
 
             // Ensure card doesn't go above viewport
-            if (cardTop < scrollTop + padding) {
-              cardTop = scrollTop + padding
+            if (cardTop < padding) {
+              cardTop = padding
             }
 
             // Ensure card doesn't go below viewport
-            if (cardTop + cardHeight > scrollTop + viewportHeight - padding) {
-              cardTop = scrollTop + viewportHeight - cardHeight - padding
+            if (cardTop + cardHeight > viewportHeight - padding) {
+              cardTop = viewportHeight - cardHeight - padding
             }
 
             // Adjust horizontal position to center on element if possible
-            cardLeft = rect.left + scrollLeft + (rect.width / 2) - (cardWidth / 2)
+            cardLeft = rect.left + (rect.width / 2) - (cardWidth / 2)
 
             // Ensure card stays within viewport horizontally
-            if (cardLeft + cardWidth > scrollLeft + viewportWidth - padding) {
-              cardLeft = scrollLeft + viewportWidth - cardWidth - padding
+            if (cardLeft + cardWidth > viewportWidth - padding) {
+              cardLeft = viewportWidth - cardWidth - padding
             }
-            if (cardLeft < scrollLeft + padding) {
-              cardLeft = scrollLeft + padding
+            if (cardLeft < padding) {
+              cardLeft = padding
             }
           }
 
@@ -4275,7 +4275,7 @@ export default {
   right: 0;
   bottom: 0;
   background: transparent;
-  z-index: 10000;
+  z-index: 99999;
   pointer-events: none;
 }
 
@@ -4289,7 +4289,7 @@ export default {
     0 0 0 8px rgba(255, 255, 255, 0.1),
     0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
   transition: all 0.3s ease;
-  z-index: 10001;
+  z-index: 100000;
   pointer-events: none;
   animation: pulse-border 2s infinite;
 }
@@ -4303,7 +4303,7 @@ export default {
 /* Make highlighted element clickeable during tour */
 .tour-element-highlighted {
   position: relative;
-  z-index: 10002 !important;
+  z-index: 100001 !important;
   pointer-events: auto !important;
 }
 
@@ -4326,7 +4326,7 @@ export default {
 
 .tour-card {
   position: absolute;
-  z-index: 10002;
+  z-index: 100002;
   min-width: 350px;
   max-width: 450px;
   border-radius: 16px;
