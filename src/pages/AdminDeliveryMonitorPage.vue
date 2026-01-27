@@ -2406,7 +2406,7 @@ function calculateCompletedDuration (startTime, endTime) {
 
 .full-map {
   width: 100%;
-  height: 100%;
+  height: calc(100vh - 57px);
   border-radius: 0;
   min-height: 200px;
 }
@@ -2500,7 +2500,7 @@ function calculateCompletedDuration (startTime, endTime) {
 .full-expanded {
   flex: 1 1 100% !important;
   width: 100% !important;
-  height: calc(100vh - 56px) !important;
+  height: calc(100vh - 57px) !important;
   border-left: none !important;
 }
 
@@ -2542,7 +2542,7 @@ function calculateCompletedDuration (startTime, endTime) {
   align-items: center;
   justify-content: center;
   text-align: center;
-  height: 100%;
+  height: calc(100vh - 107px);
 }
 
 /* Timeline Components */
