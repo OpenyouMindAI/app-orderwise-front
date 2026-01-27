@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf'
+import { jsPDF as JsPdf } from 'jspdf'
 import { formatDate } from '../mixins'
 import QRCode from 'qrcode'
 
@@ -23,7 +23,8 @@ export const sum = (data) => {
  */
 
 export const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80) => {
-  if (!text) return text
+  let currentY = Number(y) || 10
+  if (!text) return currentY
 
   const centrarTexto = (texto) => {
     const textWidth = doc.getTextWidth(texto)
@@ -33,14 +34,14 @@ export const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80)
 
   lines.forEach((linea) => {
     if (center) {
-      doc.text(linea, centrarTexto(linea), y)
+      doc.text(linea, centrarTexto(linea), currentY)
     } else {
-      doc.text(linea, 5, y)
+      doc.text(linea, 5, currentY)
     }
-    y += 5
+    currentY += 5
   })
 
-  return y
+  return currentY
 }
 
 /**
@@ -51,7 +52,7 @@ export const cutWords = (text, maxWidth, doc, y, center = false, pageWidth = 80)
  */
 
 export const calculateTextHeight = (text, maxWidth) => {
-  if (!text) return 0
+  if (!text || typeof text !== 'string') return 0
   const lines = Math.ceil(text.length / (maxWidth / 2))
   return lines * 5
 }
@@ -64,25 +65,25 @@ export const calculateTextHeight = (text, maxWidth) => {
  */
 
 export const header = (data, companySession, pageWidth = 80) => {
-  const JsPdf = jsPDF
   const maxWidth = 55
-
   let altura = 200
-  altura += calculateTextHeight(companySession?.name, maxWidth)
-  altura += calculateTextHeight(companySession?.address, maxWidth)
-  altura += 5
-  altura += 5
-  altura += data?.products?.length || 1 * 10
+
+  // Calculate height with fallbacks to avoid NaN
+  altura += calculateTextHeight(companySession?.name || '', maxWidth)
+  altura += calculateTextHeight(companySession?.address || '', maxWidth)
+  altura += 10 // Safe padding
+
+  const productCount = data?.products?.length || 1
+  altura += productCount * 10
+
   if (data.description) {
     altura += calculateTextHeight(`Descripción: ${data.description}`, maxWidth)
     altura += 5
   }
   altura += 10
 
-  const doc = new JsPdf({
-    unit: 'mm',
-    format: [pageWidth, altura]
-  })
+  // Use positional arguments for JsPdf constructor (more robust across versions)
+  const doc = new JsPdf('p', 'mm', [pageWidth, altura])
 
   doc.setFont('Courier', 'bold')
   doc.setFontSize(10)
