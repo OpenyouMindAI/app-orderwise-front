@@ -838,7 +838,7 @@
                       />
                     </div>
                   </div>
-                  <div v-if="product.stock !== undefined" class="text-caption text-grey-7 q-mt-xs">
+                  <div v-if="product.stock !== undefined && isSuperAdmin" class="text-caption text-grey-7 q-mt-xs">
                     Stock: {{ product.stock || '-' }}
                   </div>
                 </q-card-section>
@@ -934,7 +934,7 @@
                         @update:model-value="updateTotals"
                       />
                     </q-td>
-                    <q-td key="stock" :props="props">
+                    <q-td key="stock" :props="props" v-if="isSuperAdmin">
                       {{ props.row.stock || '-' }}
                     </q-td>
                     <q-td key="subtotal" :props="props" v-if="isSuperAdmin">
@@ -1051,7 +1051,7 @@
                         @update:model-value="updateTotals"
                       />
                     </q-td>
-                    <q-td key="stock" :props="props">
+                    <q-td key="stock" :props="props" v-if="isSuperAdmin">
                       {{ props.row.stock || '-' }}
                     </q-td>
                     <q-td key="subtotal" :props="props" v-if="isSuperAdmin">
@@ -2228,7 +2228,7 @@ export default {
         columns = columns.filter(col => col.name !== 'actions')
       }
       if (!this.isSuperAdmin) {
-        columns = columns.filter(col => col.name !== 'cost' && col.name !== 'subtotal')
+        columns = columns.filter(col => col.name !== 'cost' && col.name !== 'subtotal' && col.name !== 'stock')
       }
       return columns
     },
