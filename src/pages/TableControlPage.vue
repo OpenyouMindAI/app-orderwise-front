@@ -1,45 +1,45 @@
 <template>
   <div class="luxury-restaurant-designer">
+    <!-- Elevated Header -->
     <header class="luxury-header">
       <div class="header-content-wrapper">
-        <div class="brand-identity flex justify-between items-center">
-          <div class="brand-text-group flex q-gutter-sm items-center">
-            <div class="brand-logo-circle">
-              <q-icon name="restaurant" class="brand-icon" />
-            </div>
-            <div class="column">
-              <span class="app-title">Mesas</span>
-              <span class="app-subtitle">Gestión de Mesas y Pedidos</span>
-            </div>
+        <div class="brand-identity">
+          <div class="brand-logo-circle">
+            <q-icon name="restaurant" class="brand-icon" />
           </div>
-          <div class="header-controls-group">
-            <div class="room-selection-area">
-              <q-select
-                v-model="selectedRoom"
-                :options="roomOptions"
-                option-label="name"
-                option-value="id"
-                label="Seleccionar Sala"
-                outlined
-                dense
-                class="luxury-select"
-                @update:model-value="onRoomChange"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="meeting_room" class="select-icon" />
-                </template>
-              </q-select>
-            </div>
+          <div class="brand-text-group column">
+            <span class="app-title">Mesas</span>
+            <span class="app-subtitle">Gestión de Mesas y Pedidos</span>
+          </div>
+        </div>
 
-            <div class="action-buttons-group">
-              <q-btn
-                icon="refresh"
-                label="Actualizar"
-                @click="refreshTables"
-                class="action-button secondary-action-button"
-                flat
-              />
-            </div>
+        <div class="header-controls-group">
+          <div class="room-selection-area">
+            <q-select
+              v-model="selectedRoom"
+              :options="roomOptions"
+              option-label="name"
+              option-value="id"
+              label="Seleccionar Sala"
+              outlined
+              dense
+              class="luxury-select"
+              @update:model-value="onRoomChange"
+            >
+              <template v-slot:prepend>
+                <q-icon name="meeting_room" class="select-icon" />
+              </template>
+            </q-select>
+          </div>
+
+          <div class="action-buttons-group full-width">
+            <q-btn
+              icon="refresh"
+              label="Actualizar Mesas"
+              @click="refreshTables"
+              class="action-button secondary-action-button"
+              flat
+            />
           </div>
         </div>
       </div>
@@ -2018,6 +2018,9 @@ export default {
   --table-rectangle-bg: linear-gradient(135deg, #16A34A 0%, #15803D 100%); /* Emerald Green */
   --table-oval-bg: linear-gradient(135deg, #DC2626 0%, #991B1B 100%); /* Ruby Red */
 
+  --font-family-primary: 'Inter', sans-serif;
+  --font-family-secondary: 'Playfair Display', serif;
+
   --border-radius-sm: 6px;
   --border-radius-md: 10px;
   --border-radius-lg: 14px;
@@ -2036,6 +2039,8 @@ body.body--dark {
 
 /* --- Base Page Styling --- */
 .luxury-restaurant-designer {
+  background-color: var(--color-background);
+  font-family: var(--font-family-primary);
   color: var(--color-text);
   height: calc(100vh - 50px);
   display: flex;
@@ -2056,6 +2061,7 @@ body.body--dark {
 
 .header-content-wrapper {
   display: flex;
+  flex-direction: column;
   gap: calc(var(--spacing-unit) * 1.5);
 }
 
@@ -2063,7 +2069,6 @@ body.body--dark {
   display: flex;
   align-items: center;
   gap: var(--spacing-unit);
-  width: 76vw;
 }
 
 .brand-logo-circle {
@@ -3143,8 +3148,48 @@ body.body--dark {
   line-height: 1.4;
 }
 
-/* --- Responsive Improvements --- */
+/* --- Responsive Design --- */
+@media (max-width: 1200px) {
+  .header-content-wrapper {
+    flex-direction: column;
+    gap: var(--spacing-unit);
+    align-items: flex-start;
+  }
+
+  .header-controls-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 @media (max-width: 768px) {
+  .luxury-header {
+    padding: 0.8rem;
+  }
+
+  .header-controls-group {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .room-selection-area {
+    width: 100%;
+  }
+
+  .luxury-select {
+    flex: 1;
+    min-width: auto;
+  }
+
+  .action-buttons-group {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .canvas-main-area {
+    padding: 0.8rem;
+  }
+
   .table-quick-actions {
     opacity: 1; /* Always visible on mobile */
   }
@@ -3172,6 +3217,16 @@ body.body--dark {
 }
 
 @media (max-width: 480px) {
+  .luxury-dialog {
+    width: 95vw;
+  }
+
+  .dialog-header-section,
+  .dialog-body-content,
+  .dialog-action-buttons {
+    padding: var(--spacing-unit);
+  }
+
   .header-actions {
     gap: 0.2rem;
   }

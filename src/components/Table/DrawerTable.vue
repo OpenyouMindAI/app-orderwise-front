@@ -1364,12 +1364,6 @@ body.body--dark {
     padding: 0.8rem;
   }
 
-  .brand-identity {
-    flex-direction: column;
-    gap: 0.4rem;
-    text-align: center;
-  }
-
   .header-controls-group {
     flex-direction: column;
     gap: 0.8rem;

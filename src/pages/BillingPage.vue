@@ -1459,14 +1459,14 @@
         </q-card-section>
 
         <!-- Dialog Content (DrawerTable) -->
-        <q-card-section class="col q-pa-none relative-position" style="overflow-y: auto; overflow-x: hidden;">
+        <q-card-section class="full-width col relative-position" style="padding: 0 !important;">
           <drawer-table
             ref="drawerTable"
             :tablesSelected="tableSelected"
             @update:tableSelected="setTableSelected"
             @update:invoice="selectInvoice"
             @update:freeTable="freeTable"
-            style="width: 100% !important; height: 100% !important; max-width: none;"
+            style="width: 100%; height: 100%; max-width: none;"
           />
         </q-card-section>
 
