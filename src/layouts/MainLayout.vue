@@ -610,7 +610,7 @@
     </q-page-container>
 
     <!-- Bottom Navigation (Mobile Only) -->
-    <bottom-nav />
+    <bottom-nav :data-menu="dataMenu" />
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"

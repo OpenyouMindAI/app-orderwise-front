@@ -1,8 +1,8 @@
 <template>
-  <div v-if="$q.screen.lt.md" class="bottom-nav-container">
+  <div v-if="$q.screen.lt.md && !hideOnRoute" class="bottom-nav-container">
     <nav class="bottom-nav" :class="{ 'bottom-nav--hidden': isHidden }">
       <div
-        v-for="tab in tabs"
+        v-for="tab in availableTabs"
         :key="tab.name"
         class="bottom-nav__item"
         :class="{ 'bottom-nav__item--active': isActive(tab.name) }"
@@ -23,13 +23,31 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
+import { storeToRefs } from 'pinia'
+
+/**
+ * Component props
+ */
+const props = defineProps({
+  /**
+   * Menu data from MainLayout for role validation
+   * @type {Array}
+   */
+  dataMenu: {
+    type: Array,
+    default: () => []
+  }
+})
 
 const router = useRouter()
 const route = useRoute()
 const $q = useQuasar()
+const authStore = authentication()
+const { userSession } = storeToRefs(authStore)
 
 /**
  * Bottom navigation visibility state
@@ -38,47 +56,118 @@ const $q = useQuasar()
 const isHidden = ref(false)
 
 /**
+ * Check if the current route should hide the bottom nav
+ * @type {import('vue').ComputedRef<boolean>}
+ */
+const hideOnRoute = computed(() => {
+  return route.meta?.hideBottomNav === true
+})
+
+/**
  * Last scroll position for hide/show logic
  * @type {number}
  */
 let lastScrollTop = 0
 
 /**
- * Navigation tabs configuration
+ * Navigation tabs configuration with module mapping for roles
  * @type {Array}
  */
-const tabs = ref([
+const allTabs = [
   {
     name: 'Home',
     label: 'Inicio',
     icon: 'home',
+    moduleName: 'home', // Always allowed if logged in
     badge: 0
   },
   {
     name: 'Billing',
     label: 'Ventas',
     icon: 'point_of_sale',
+    moduleName: 'billing',
     badge: 0
   },
   {
     name: 'Product',
     label: 'Inventario',
     icon: 'inventory_2',
+    moduleName: 'product',
     badge: 0
   },
   {
     name: 'Dashboard',
     label: 'Reportes',
     icon: 'analytics',
+    moduleName: 'dashboard',
     badge: 0
   },
   {
     name: 'More',
     label: 'Más',
     icon: 'more_horiz',
+    moduleName: 'profile', // Profile/Settings usually allowed
     badge: 0
   }
-])
+]
+
+/**
+ * Validate role for a set of roles
+ * consistent with MainLayout.vue logic
+ * @param {Array} roles - Roles allowed for a module
+ * @return {boolean} Is allowed
+ */
+const validateRole = (roles = []) => {
+  // Get first role of current user
+  const userRol = userSession.value?.roles?.[0]
+
+  // Root always has access
+  if (userSession.value?.is_root) return true
+
+  // If no roles specified for module, assume it's public
+  if (!roles || roles.length === 0) return true
+
+  // Check if user role is in the allowed list
+  if (userRol) {
+    return roles.some((element) => element.id === userRol.id)
+  }
+
+  return false
+}
+
+/**
+ * Filtered tabs based on user roles and menu availability
+ * @type {import('vue').ComputedRef<Array>}
+ */
+const availableTabs = computed(() => {
+  if (!props.dataMenu || props.dataMenu.length === 0) {
+    // If dataMenu isn't loaded yet, show basic tabs user likely has access to
+    // or just 'Home' and 'More'
+    return allTabs.filter(tab => tab.name === 'Home' || tab.name === 'More')
+  }
+
+  return allTabs.filter(tab => {
+    // Home and More are special
+    if (tab.name === 'Home') return true
+    if (tab.name === 'More') return true
+
+    // Search for the corresponding module in dataMenu to get its roles
+    let allowed = false
+    props.dataMenu.forEach(category => {
+      category.modules.forEach(module => {
+        // Match by link (route name) or some unique identifier
+        // Matching by link/name is most reliable if tab.name matches route name
+        if (module.link === tab.name || module.name?.toLowerCase() === tab.moduleName) {
+          if (validateRole(module.roles)) {
+            allowed = true
+          }
+        }
+      })
+    })
+
+    return allowed
+  })
+})
 
 /**
  * Check if tab is active
@@ -110,7 +199,7 @@ const navigateTo = (tabName) => {
 
   // Navigate based on tab
   if (tabName === 'More') {
-    // Open a bottom sheet or navigate to settings
+    // Navigate to profile/settings
     router.push({ name: 'Profile' })
   } else {
     router.push({ name: tabName })

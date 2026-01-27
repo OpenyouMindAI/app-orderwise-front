@@ -265,19 +265,19 @@ const routes = [
       {
         path: 'courier/transport/:id',
         name: 'ActiveTransport',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/ActiveTransportPage.vue')
       },
       {
         path: 'delivery/tray',
         name: 'InvoiceDeliveryTray',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/InvoiceDeliveryTrayPage.vue')
       },
       {
         path: 'delivery/active/:id',
         name: 'ActiveInvoiceDelivery',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/ActiveInvoiceDeliveryPage.vue')
       },
       {
@@ -308,7 +308,7 @@ const routes = [
       {
         path: 'delivery-routes/active/:id',
         name: 'ActiveDeliveryRoute',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/ActiveDeliveryRoutePage.vue')
       },
       {
