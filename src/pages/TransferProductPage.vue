@@ -706,7 +706,7 @@
                   <q-separator class="q-mb-md" />
 
                   <!-- Costo y Subtotal lado a lado -->
-                  <div class="financial-row">
+                  <div class="financial-row" v-if="isSuperAdmin">
                     <div class="financial-item">
                       <div class="financial-label">
                         <q-icon name="attach_money" size="xs" class="q-mr-xs" />
@@ -814,7 +814,7 @@
                         </template>
                       </q-input>
                     </div>
-                    <div class="col-12 col-sm-4">
+                    <div class="col-12 col-sm-4" v-if="isSuperAdmin">
                       <q-input
                         v-model.number="product.cost"
                         type="number"
@@ -827,7 +827,7 @@
                         @update:model-value="updateTotals"
                       />
                     </div>
-                    <div class="col-12 col-sm-4">
+                    <div class="col-12 col-sm-4" v-if="isSuperAdmin">
                       <q-input
                         :model-value="formatCurrency(product.quantity * product.cost)"
                         label="Subtotal"
@@ -920,7 +920,7 @@
                         </template>
                       </q-input>
                     </q-td>
-                    <q-td key="cost" :props="props">
+                    <q-td key="cost" :props="props" v-if="isSuperAdmin">
                       <q-input
                         v-model.number="props.row.cost"
                         type="number"
@@ -937,7 +937,7 @@
                     <q-td key="stock" :props="props">
                       {{ props.row.stock || '-' }}
                     </q-td>
-                    <q-td key="subtotal" :props="props">
+                    <q-td key="subtotal" :props="props" v-if="isSuperAdmin">
                       {{ formatCurrency(props.row.quantity * props.row.cost) }}
                     </q-td>
                     <q-td key="actions" :props="props">
@@ -1033,7 +1033,7 @@
                         @update:model-value="updateTotals"
                       />
                     </q-td>
-                    <q-td key="cost" :props="props">
+                    <q-td key="cost" :props="props" v-if="isSuperAdmin">
                       <div v-if="isTransferVerified">
                         {{ formatCurrency(props.row.cost) }}
                       </div>
@@ -1054,7 +1054,7 @@
                     <q-td key="stock" :props="props">
                       {{ props.row.stock || '-' }}
                     </q-td>
-                    <q-td key="subtotal" :props="props">
+                    <q-td key="subtotal" :props="props" v-if="isSuperAdmin">
                       {{ formatCurrency(props.row.quantity * props.row.cost) }}
                     </q-td>
                     <q-td v-if="!isTransferVerified" key="actions" :props="props">
@@ -1090,7 +1090,7 @@
                 <q-card-section class="q-pa-sm">
                   <div class="row justify-between text-caption">
                     <div><strong>Productos:</strong> {{ getTotalProducts() }}</div>
-                    <div><strong>Total:</strong> {{ formatCurrency(getTotalValue()) }}</div>
+                    <div v-if="isSuperAdmin"><strong>Total:</strong> {{ formatCurrency(getTotalValue()) }}</div>
                   </div>
                 </q-card-section>
               </q-card>
@@ -1113,7 +1113,7 @@
                   <div>
                     <strong>Total productos:</strong> {{ getTotalProducts() }}
                   </div>
-                  <div>
+                  <div v-if="isSuperAdmin">
                     <strong>Valor total:</strong> {{ formatCurrency(getTotalValue()) }}
                   </div>
                 </div>
@@ -2223,10 +2223,14 @@ export default {
      * @returns {Array}
      */
     displayProductColumns () {
+      let columns = this.productColumns
       if (this.isTransferVerified) {
-        return this.productColumns.filter(col => col.name !== 'actions')
+        columns = columns.filter(col => col.name !== 'actions')
       }
-      return this.productColumns
+      if (!this.isSuperAdmin) {
+        columns = columns.filter(col => col.name !== 'cost' && col.name !== 'subtotal')
+      }
+      return columns
     },
     /**
      * Check if there are quantity discrepancies
