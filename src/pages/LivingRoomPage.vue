@@ -118,6 +118,17 @@
             >
               <q-tooltip class="luxury-tooltip">Mostrar Grilla</q-tooltip>
             </q-btn>
+            <q-btn
+              icon="grid_4x4"
+              @click="alignTablesToGrid"
+              class="toolbar-button"
+              flat
+              round
+              size="sm"
+              :disable="currentTables.length === 0"
+            >
+              <q-tooltip class="luxury-tooltip">Alinear Mesas a Grilla</q-tooltip>
+            </q-btn>
           </div>
 
           <div class="toolbar-button-group">
@@ -181,6 +192,8 @@
               :class="getTableWrapperClass(table)"
               :handles-size="8"
               :scale="zoomLevel"
+              @resizing="onTableResizing(index)"
+              @dragging="onTableDragging(index)"
               @deactivated="onTableDeactivated(table, index)"
               @dblclick="onTableActivated(table, index)"
               @touchstart.stop
@@ -760,6 +773,10 @@ export default {
 
     // Table management
     addNewTable () {
+      // Generate random positions aligned to grid
+      const randomX = Math.floor(Math.random() * 10) * this.gridSize + this.gridSize * 2
+      const randomY = Math.floor(Math.random() * 10) * this.gridSize + this.gridSize * 2
+
       const newTable = {
         isNew: true,
         id: Date.now(),
@@ -768,8 +785,8 @@ export default {
         capacity: this.newTable.capacity,
         width: this.getTableDefaultSize(this.newTable.shape).width,
         height: this.getTableDefaultSize(this.newTable.shape).height,
-        x: Math.random() * 200 + 50,
-        y: Math.random() * 200 + 50,
+        x: randomX, // Aligned to grid
+        y: randomY, // Aligned to grid
         status: 'available'
       }
 
@@ -787,6 +804,56 @@ export default {
         // Reemplaza el objeto entero
         this.currentTables.splice(index, 1, { ...this.selectedTable })
       }
+    },
+
+    /**
+     * Align all tables to grid
+     * Rounds positions and dimensions to nearest gridSize multiple
+     */
+    alignTablesToGrid () {
+      if (this.currentTables.length === 0) {
+        this.$q.notify({
+          message: 'No hay mesas para alinear',
+          type: 'info',
+          icon: 'info'
+        })
+        return
+      }
+
+      let alignedCount = 0
+
+      this.currentTables.forEach(table => {
+        // Store original values
+        const originalX = table.x
+        const originalY = table.y
+        const originalWidth = table.width
+        const originalHeight = table.height
+
+        // Round to nearest grid multiple
+        table.x = Math.round(table.x / this.gridSize) * this.gridSize
+        table.y = Math.round(table.y / this.gridSize) * this.gridSize
+        table.width = Math.round(table.width / this.gridSize) * this.gridSize
+        table.height = Math.round(table.height / this.gridSize) * this.gridSize
+
+        // Ensure minimum size (at least 1 grid unit)
+        if (table.width < this.gridSize) table.width = this.gridSize
+        if (table.height < this.gridSize) table.height = this.gridSize
+
+        // Count if table was actually modified
+        if (originalX !== table.x || originalY !== table.y ||
+            originalWidth !== table.width || originalHeight !== table.height) {
+          alignedCount++
+        }
+      })
+
+      this.$q.notify({
+        message: alignedCount > 0
+          ? `${alignedCount} mesa${alignedCount > 1 ? 's' : ''} alineada${alignedCount > 1 ? 's' : ''} a la grilla`
+          : 'Todas las mesas ya están alineadas',
+        type: alignedCount > 0 ? 'positive' : 'info',
+        icon: alignedCount > 0 ? 'check_circle' : 'info',
+        timeout: 2000
+      })
     },
 
     confirmDeleteTable () {
@@ -836,6 +903,40 @@ export default {
     // Table interactions
     onTableActivated (table, index) {
       this.selectedTable = { ...table, index }
+    },
+
+    onTableResizing (index) {
+      const table = this.currentTables[index]
+      if (!table) return
+
+      // Force absolute snapping to grid in real-time
+      table.x = Math.round(table.x / this.gridSize) * this.gridSize
+      table.y = Math.round(table.y / this.gridSize) * this.gridSize
+      table.width = Math.round(table.width / this.gridSize) * this.gridSize
+      table.height = Math.round(table.height / this.gridSize) * this.gridSize
+
+      // Update inspector if this is the selected table
+      if (this.selectedTable && this.selectedTable.id === table.id) {
+        this.selectedTable.x = table.x
+        this.selectedTable.y = table.y
+        this.selectedTable.width = table.width
+        this.selectedTable.height = table.height
+      }
+    },
+
+    onTableDragging (index) {
+      const table = this.currentTables[index]
+      if (!table) return
+
+      // Force absolute snapping to grid in real-time
+      table.x = Math.round(table.x / this.gridSize) * this.gridSize
+      table.y = Math.round(table.y / this.gridSize) * this.gridSize
+
+      // Update inspector if this is the selected table
+      if (this.selectedTable && this.selectedTable.id === table.id) {
+        this.selectedTable.x = table.x
+        this.selectedTable.y = table.y
+      }
     },
 
     onTableDeactivated (table, index) {
@@ -948,11 +1049,12 @@ export default {
     },
 
     getTableDefaultSize (shape) {
+      // All sizes are multiples of gridSize (20px) for grid alignment
       const sizeMap = {
-        round: { width: 80, height: 80 },
-        square: { width: 70, height: 70 },
-        rectangle: { width: 100, height: 60 },
-        oval: { width: 90, height: 70 }
+        round: { width: 80, height: 80 }, // 4 × 20px
+        square: { width: 80, height: 80 }, // 4 × 20px (changed from 70)
+        rectangle: { width: 100, height: 60 }, // 5 × 20px, 3 × 20px
+        oval: { width: 100, height: 80 } // 5 × 20px, 4 × 20px (changed from 90×70)
       }
       return sizeMap[shape] || { width: 80, height: 80 }
     },
@@ -1105,6 +1207,15 @@ export default {
 </script>
 
 <style>
+
+.drv {
+    border: 1px dashed #3a3a3a;
+}
+
+.drv-handles .drv-handle {
+    border: 1px solid #3a3a3a;
+}
+
 /* --- Global Variables for Luxury Theme --- */
 :root {
   --color-background-dark: #121212; /* Very dark gray, not pure black */

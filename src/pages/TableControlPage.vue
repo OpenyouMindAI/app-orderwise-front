@@ -44,85 +44,49 @@
         </div>
       </div>
     </header>
-    <main class="canvas-main-area" v-if="selectedRoom">
-      <div class="canvas-controls">
-        <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
-        <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
-        <q-btn icon="zoom_out" @click="zoomOut" dense round flat class="control-btn"></q-btn>
-      </div>
-      <div
-        class="canvas-viewport-container"
-        @mousedown="startPan"
-        @mousemove="onPan"
-        @mouseup="endPan"
-        @mouseleave="endPan"
-        @touchstart="startPan"
-        @touchmove="onPan"
-        @touchend="endPan"
-      >
-        <div class="canvas-transform-wrapper" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }">
-          <draggable-resizable-container
-            :grid="[gridSize, gridSize]"
-            :show-grid="showGrid"
-            class="luxury-canvas"
-            :style="canvasStyle"
+    <TableCanvas
+      v-if="selectedRoom"
+      :tables="currentTables"
+      :selected-room="selectedRoom"
+      mode="control"
+      :scale-factor="30"
+      :enable-zoom="true"
+      :enable-pan="true"
+      :show-grid="showGrid"
+      :grid-size="gridSize"
+      :show-capacity="false"
+      @table-click="onTableClick"
+      @transfer-click="quickTransfer"
+    >
+      <template #table-actions="{ table }">
+        <div v-if="table.status === 'busy'" class="table-quick-actions">
+          <q-btn
+            icon="swap_horiz"
+            size="xs"
+            round
+            color="white"
+            text-color="primary"
+            @click.stop="quickTransfer(table)"
+            @touchstart.stop
+            class="quick-action-btn"
           >
-            <draggable-resizable-vue
-              v-for="(table, index) in currentTables"
-              :key="table.id || index"
-              v-model:x="table.x"
-              v-model:y="table.y"
-              v-model:h="table.height"
-              v-model:w="table.width"
-              :handles-size="8"
-              :draggable="false"
-              :resizable="false"
-              @click="onTableClick(table)"
-            >
-              <div class="table-visual-surface">
-                <div class="table-gloss-effect"></div>
-                <div class="table-info-overlay">
-                  <span class="table-name-text">{{ table.name }}</span>
-                  <span v-if="table.status === 'busy' && getInvoiceFromTable(table)?.client" class="table-client-text">
-                    <q-icon name="account_circle" class="client-icon" />
-                    {{ getInvoiceFromTable(table).client.name }}
-                  </span>
-                </div>
-                <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
-                <div v-if="table.status === 'busy'" class="table-quick-actions">
-                  <q-btn
-                    icon="swap_horiz"
-                    size="xs"
-                    round
-                    color="white"
-                    text-color="primary"
-                    @click.stop="quickTransfer(table)"
-                    @touchstart.stop
-                    class="quick-action-btn"
-                  >
-                    <q-tooltip>Cambiar Mesa</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="print"
-                    size="xs"
-                    round
-                    color="white"
-                    text-color="primary"
-                    @click.stop="quickPrint(table.invoices[0], 'comanda')"
-                    @touchstart.stop
-                    class="quick-action-btn"
-                  >
-                    <q-tooltip>Imprimir Comanda</q-tooltip>
-                  </q-btn>
-                </div>
-              </div>
-              <div :class="getTableDesignClass(table)">
-              </div>
-            </draggable-resizable-vue>
-          </draggable-resizable-container>
+            <q-tooltip>Cambiar Mesa</q-tooltip>
+          </q-btn>
+          <q-btn
+            icon="print"
+            size="xs"
+            round
+            color="white"
+            text-color="primary"
+            @click.stop="quickPrint(table.invoices[0], 'comanda')"
+            @touchstart.stop
+            class="quick-action-btn"
+          >
+            <q-tooltip>Imprimir Comanda</q-tooltip>
+          </q-btn>
         </div>
-      </div>
-    </main>
+      </template>
+    </TableCanvas>
     <div v-else class="empty-state-container">
       <div class="empty-state-illustration">
         <div class="illustration-circle-bg">
@@ -804,7 +768,7 @@
 
 <script>
 import { Notify, date } from 'quasar'
-import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
+import TableCanvas from 'src/components/Table/TableCanvas.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import { loading, formatNumber, notify } from 'src/const/mixins'
@@ -815,8 +779,7 @@ import PartialPaymentModal from 'src/components/PartialPaymentModal.vue'
 
 export default {
   components: {
-    DraggableResizableContainer,
-    DraggableResizableVue,
+    TableCanvas,
     PaymentModal,
     PartialPaymentModal
   },
@@ -845,15 +808,6 @@ export default {
       livingRooms: [],
       showGrid: true,
       gridSize: 20,
-      canvasWidth: 20,
-      canvasHeight: 15,
-
-      zoomLevel: 1,
-      panX: 0,
-      panY: 0,
-      isPanning: false,
-      startPanX: 0,
-      startPanY: 0,
 
       // Invoice modal state
       showInvoiceModal: false,
