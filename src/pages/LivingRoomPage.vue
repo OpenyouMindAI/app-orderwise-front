@@ -160,6 +160,15 @@
 
     <!-- Main Canvas Area -->
     <main class="canvas-main-area" v-show="selectedRoom">
+      <div class="canvas-edit-controls" v-if="selectedTable">
+        <q-btn icon="edit" @click="showEditTableDialog = true" dense round flat class="control-btn text-white">
+          <q-tooltip>Editar Mesa</q-tooltip>
+        </q-btn>
+        <q-btn icon="delete_outline" @click="confirmDeleteTable" dense round flat class="control-btn text-white">
+          <q-tooltip>Eliminar Mesa</q-tooltip>
+        </q-btn>
+      </div>
+
       <div class="canvas-controls">
         <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
         <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
@@ -167,6 +176,7 @@
       </div>
       <div
         class="canvas-viewport-container"
+        @click="selectedTable = null"
         @mousedown="startPan"
         @mousemove="onPan"
         @mouseup="endPan"
@@ -195,7 +205,7 @@
               @resizing="onTableResizing(index)"
               @dragging="onTableDragging(index)"
               @deactivated="onTableDeactivated(table, index)"
-              @dblclick="onTableActivated(table, index)"
+              @click.stop="onTableActivated(table, index)"
               @touchstart.stop
               @mousedown.stop
             >
@@ -236,62 +246,6 @@
         />
       </div>
     </div>
-
-    <!-- Floating Table Inspector -->
-    <transition name="slide-in-right">
-      <aside v-if="selectedTable" class="table-inspector-panel">
-        <div class="inspector-header-section">
-          <div class="table-shape-preview">
-            <div :class="['preview-shape-demo', `shape-demo-${selectedTable.shape}`]"></div>
-          </div>
-          <div class="table-meta-info">
-
-            <h4 class="inspector-table-name">{{ selectedTable.name }}</h4>
-            <span class="inspector-table-shape">{{ getShapeLabel(selectedTable.shape) }}</span>
-          </div>
-          <q-btn
-            flat
-            round
-            icon="close"
-            @click="selectedTable = null"
-            size="sm"
-            class="inspector-close-button"
-          />
-        </div>
-
-        <div class="inspector-details-list">
-          <div class="detail-item">
-            <q-icon name="people_outline" class="detail-icon" />
-            <span>{{ selectedTable.capacity || 4 }} personas</span>
-          </div>
-          <div class="detail-item">
-            <q-icon name="place" class="detail-icon" />
-            <span>{{ Math.round(selectedTable.x) }}, {{ Math.round(selectedTable.y) }}</span>
-          </div>
-          <div class="detail-item">
-            <q-icon name="aspect_ratio" class="detail-icon" />
-            <span>{{ Math.round(selectedTable.width) }}×{{ Math.round(selectedTable.height) }}</span>
-          </div>
-        </div>
-
-        <div class="inspector-action-buttons">
-          <q-btn
-            flat
-            icon="edit"
-            label="Editar"
-            @click="showEditTableDialog = true"
-            class="inspector-action-button"
-          />
-          <q-btn
-            flat
-            icon="delete_outline"
-            label="Eliminar"
-            @click="confirmDeleteTable"
-            class="inspector-action-button danger-button"
-          />
-        </div>
-      </aside>
-    </transition>
 
     <!-- Refined Dialogs -->
     <!-- New Room Dialog -->
@@ -418,7 +372,7 @@
     </q-dialog>
 
     <!-- Edit Table Dialog -->
-    <q-dialog v-model="showEditTableDialog" persistent>
+    <q-dialog v-model="showEditTableDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
       <q-card class="luxury-dialog table-creation-dialog" v-if="selectedTable">
         <q-form @submit="saveTableEdit">
           <q-card-section class="dialog-header-section">
@@ -1241,8 +1195,9 @@ export default {
 
 /* --- Base Page Styling --- */
 .luxury-restaurant-designer {
-  min-height: 100vh;
+  background-color: var(--color-background);
   font-family: var(--font-family-primary);
+  color: var(--color-text);
   display: flex;
   flex-direction: column;
   overflow-x: hidden; /* Prevent horizontal scroll from transitions */
@@ -1546,9 +1501,10 @@ export default {
     radial-gradient(circle at 25px 25px, rgba(var(--color-border-dark), 0.5) 1px, transparent 1px),
     var(--color-background-dark);
   background-size: 50px 50px;
-  min-height: calc(100vh - 180px); /* Adjusted based on header/stats bar height */
   display: flex;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .canvas-viewport-container {
@@ -1577,15 +1533,32 @@ export default {
   background: rgba(33, 33, 33, 0.95);
   padding: 8px 12px;
   border-radius: 8px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.canvas-controls .control-btn {
+.canvas-edit-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(33, 33, 33, 0.95);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.canvas-controls .control-btn,
+.canvas-edit-controls .control-btn {
   color: var(--color-text-light);
   transition: all 0.2s ease;
 }
 
-.canvas-controls .control-btn:hover {
+.canvas-controls .control-btn:hover,
+.canvas-edit-controls .control-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: scale(1.1);
 }
@@ -1968,6 +1941,26 @@ export default {
   width: 600px; /* Smaller width */
 }
 
+/* Maximized Dialog Adjustments */
+.q-dialog--maximized .luxury-dialog {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+}
+
+.q-dialog--maximized .luxury-dialog .q-form {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.q-dialog--maximized .luxury-dialog .dialog-body-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .dialog-header-section {
   display: flex;
   justify-content: space-between;
@@ -2196,7 +2189,7 @@ export default {
   .header-content-wrapper,
   .stats-content-wrapper {
     flex-direction: column;
-    gap: var(--spacing-unit); /* Reduced gap */
+    gap: var(--spacing-unit);
     align-items: flex-start;
   }
 
@@ -2218,31 +2211,50 @@ export default {
 
   .table-inspector-panel {
     position: fixed;
-    bottom: calc(var(--spacing-unit) * 1.5); /* Reduced offset */
+    bottom: calc(var(--spacing-unit) * 1.5);
     right: var(--spacing-unit);
     left: var(--spacing-unit);
     top: auto;
     transform: none;
     width: auto;
+    max-height: 40vh;
+    overflow-y: auto;
   }
 }
 
 @media (max-width: 768px) {
   .luxury-header,
   .stats-overview-bar {
-    padding: 0.8rem; /* Reduced padding */
+    padding: 0.6rem;
   }
 
   .brand-identity {
     width: 100%;
-    flex-direction: column;
-    gap: 0.4rem; /* Reduced gap */
-    text-align: center;
+    flex-direction: row;
+    gap: 0.5rem;
+    text-align: left;
+  }
+
+  .brand-logo-circle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .brand-icon {
+    font-size: 1.4rem;
+  }
+
+  .brand-text-group .text-h5 {
+    font-size: 1.1rem;
+  }
+
+  .app-subtitle {
+    font-size: 0.65rem;
   }
 
   .header-controls-group {
     flex-direction: column;
-    gap: 0.8rem; /* Reduced gap */
+    gap: 0.6rem;
   }
 
   .room-selection-area {
@@ -2257,11 +2269,121 @@ export default {
   .action-buttons-group {
     justify-content: center;
     flex-wrap: wrap;
+    width: 100%;
   }
 
+  .action-button {
+    flex: 1;
+    min-width: 120px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  /* Stats bar compacto para móvil */
+  .stats-overview-bar {
+    padding: 0.5rem;
+  }
+
+  .room-details-section {
+    gap: 0.3rem;
+  }
+
+  .room-name-display {
+    font-size: 1rem;
+  }
+
+  /* Ocultar métricas menos importantes en móvil */
   .metrics-display-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+  }
+
+  .metric-card {
+    padding: 0.4rem 0.6rem;
+    gap: 0.3rem;
+  }
+
+  .metric-icon {
+    font-size: 1rem;
+  }
+
+  .metric-value {
+    font-size: 0.9rem;
+  }
+
+  .metric-label {
+    font-size: 0.6rem;
+  }
+
+  /* Canvas toolbar compacto */
+  .canvas-toolbar-group {
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-button-group {
+    gap: 0.2rem;
+  }
+
+  .toolbar-button {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  /* Canvas controls móvil */
+  .canvas-controls,
+  .canvas-edit-controls {
+    bottom: 10px;
+    padding: 3px;
+  }
+
+  .canvas-controls {
+    right: 10px;
+  }
+
+  .canvas-edit-controls {
+    left: 10px;
+  }
+
+  .control-btn {
+    width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+  }
+
+  .zoom-level-display {
+    font-size: 0.7rem;
+    min-width: 32px;
+  }
+
+  /* Inspector panel móvil */
+  .table-inspector-panel {
+    padding: 0.8rem;
+    max-height: 35vh;
+  }
+
+  .inspector-title {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .inspector-section-title {
+    font-size: 0.7rem;
+    margin: 0.4rem 0;
+  }
+
+  .inspector-field {
+    margin-bottom: 0.5rem;
+  }
+
+  .inspector-field-label {
+    font-size: 0.7rem;
+  }
+
+  .inspector-field-value {
+    font-size: 0.85rem;
   }
 
   .shape-options-grid {
@@ -2271,26 +2393,102 @@ export default {
   .dimension-grid-inputs {
     grid-template-columns: 1fr;
   }
+
+  /* Diálogos */
+  .luxury-dialog {
+    width: 95vw;
+  }
 }
 
 @media (max-width: 480px) {
+  .luxury-header {
+    padding: 0.5rem;
+  }
+
+  .brand-identity {
+    gap: 0.4rem;
+  }
+
+  .brand-logo-circle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand-icon {
+    font-size: 1.2rem;
+  }
+
+  .brand-text-group .text-h5 {
+    font-size: 1rem;
+  }
+
+  .app-subtitle {
+    display: none; /* Ocultar subtítulo en pantallas muy pequeñas */
+  }
+
+  .action-buttons-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .action-button {
+    width: 100%;
+  }
+
+  /* Stats bar ultra compacto */
+  .stats-overview-bar {
+    padding: 0.4rem;
+  }
+
+  .metrics-display-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.3rem;
+  }
+
+  .metric-card {
+    padding: 0.3rem 0.5rem;
+  }
+
+  /* Toolbar vertical */
   .canvas-toolbar-group {
     flex-direction: column;
-    gap: 0.4rem; /* Reduced gap */
+    gap: 0.3rem;
   }
 
   .toolbar-button-group {
     justify-content: center;
+    width: 100%;
   }
 
+  /* Inspector ultra compacto */
+  .table-inspector-panel {
+    padding: 0.6rem;
+    max-height: 30vh;
+  }
+
+  .inspector-actions {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .inspector-action-btn {
+    flex: 1;
+    min-width: 80px;
+  }
+
+  /* Diálogos */
   .luxury-dialog {
-    width: 95vw;
+    width: 98vw;
   }
 
   .dialog-header-section,
   .dialog-body-content,
   .dialog-action-buttons {
-    padding: var(--spacing-unit); /* Reduced padding */
+    padding: 0.8rem;
+  }
+
+  .dialog-title-text {
+    font-size: 1rem;
   }
 }
 </style>

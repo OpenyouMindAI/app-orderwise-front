@@ -1383,10 +1383,6 @@ body.body--dark {
     flex-wrap: wrap;
   }
 
-  .canvas-main-area {
-    padding: 0.8rem;
-  }
-
   .table-quick-actions {
     opacity: 1; /* Always visible on mobile */
   }
