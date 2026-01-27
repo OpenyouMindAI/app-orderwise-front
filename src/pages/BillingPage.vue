@@ -36,17 +36,6 @@
       </q-card>
     </div>
 
-    <div v-if="$route.query.id" class="invoice-header-compact q-mb-sm">
-      <q-chip
-        square
-        color="primary"
-        text-color="white"
-        icon="receipt_long"
-        class="invoice-chip"
-      >
-        <span class="text-weight-medium">{{ invoice?.code }}</span>
-      </q-chip>
-    </div>
     <q-form ref="saveBill" @submit="saveBill">
       <div class="billing-panel-container">
         <div style="min-width: 0;">
@@ -54,6 +43,17 @@
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales - Solo desktop -->
             <div v-if="$q.screen.gt.sm" class="billing-selects-desktop col-12">
+              <div v-if="$route.query.id">
+                <q-chip
+                  square
+                  color="primary"
+                  text-color="white"
+                  icon="receipt_long"
+                  class="invoice-chip"
+                >
+                  <span>{{ invoice?.code }}</span>
+                </q-chip>
+              </div>
               <!-- Select cliente -->
               <div id="select-client" class="billing-select-item">
                 <q-select
@@ -172,13 +172,26 @@
               </div>
             </div>
             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
+              <div v-if="$route.query.id">
+                <q-chip
+                  square
+                  color="primary"
+                  text-color="white"
+                  icon="receipt_long"
+                  dense
+                  class="invoice-chip"
+                >
+                  <span>{{ invoice?.code }}</span>
+                </q-chip>
+              </div>
               <div>
                 <q-btn
                   id="tour-cliente-mobile"
                   color="secondary"
                   icon="person"
                   :label="client?.name || 'Cliente'"
-                  label-position="left"
+                   label-position="left"
+                  style="height: 100% !important;"
                 >
                   <q-popup-proxy @before-show="loadClientsData()" v-model="clientMenuOpen">
                     <q-card class="fab-popup-card">
@@ -1436,20 +1449,34 @@
       @confirm="handlePartialPaymentConfirm"
     />
 
-    <q-dialog v-model="dialogTable">
-      <drawer-table
-        ref="drawerTable"
-        :tablesSelected="tableSelected"
-        @update:tableSelected="setTableSelected"
-        @update:invoice="selectInvoice"
-        @update:freeTable="freeTable"
-      >
-        <template v-slot:header>
+    <q-dialog v-model="dialogTable" :maximized="$q.screen.lt.md">
+      <q-card class="tables-modal-size column">
+        <!-- Dialog Header -->
+        <q-card-section class="row items-center q-py-sm bg-primary text-white col-auto">
+          <div class="text-h6">Gestión de Mesas</div>
           <q-space />
-          <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
-          <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
-        </template>
-      </drawer-table>
+          <q-btn icon="close" flat round dense @click="dialogTable = false" />
+        </q-card-section>
+
+        <!-- Dialog Content (DrawerTable) -->
+        <q-card-section class="full-width col relative-position" style="padding: 0 !important;">
+          <drawer-table
+            ref="drawerTable"
+            :tablesSelected="tableSelected"
+            @update:tableSelected="setTableSelected"
+            @update:invoice="selectInvoice"
+            @update:freeTable="freeTable"
+            style="width: 100%; height: 100%; max-width: none;"
+          />
+        </q-card-section>
+
+        <!-- Dialog Footer -->
+        <q-separator />
+        <q-card-actions align="right" class="col-auto q-py-md bg-white">
+          <q-btn flat label="Cancelar" color="negative" @click="dialogTable = false" />
+          <q-btn label="Aceptar" color="primary" @click="dialogTable = false" />
+        </q-card-actions>
+      </q-card>
     </q-dialog>
 
     <search-pending-invoices-dialog
@@ -4766,7 +4793,6 @@ export default {
       this.showCashBoxDialog = true
     },
 
-
     /**
      * Handle when a cash box is opened
      */
@@ -6550,16 +6576,34 @@ export default {
 }
 
 .invoice-chip {
-  font-size: 13px;
-  padding: 4px 12px;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  justify-content: center;
+  margin: 0;
+  width: 100%;
+  min-width: 3rem;
+  height: 100%;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2), 0 2px 2px rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12);
+  @media (max-width: 1023px) {
+    :deep(.col) {
+      flex: none !important;
+    }
+  }
 }
 
-.invoice-chip:hover {
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+</style>
+
+<style>
+.tables-modal-size {
+  width: 95vw !important;
+  max-width: 98vw !important;
+  height: 90vh !important;
 }
 
+@media (max-width: 1023px) {
+  .tables-modal-size {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+  }
+}
 </style>

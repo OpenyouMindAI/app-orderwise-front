@@ -1,128 +1,92 @@
 <template>
   <div class="luxury-restaurant-designer">
+    <!-- Elevated Header -->
     <header class="luxury-header">
       <div class="header-content-wrapper">
-        <div class="brand-identity flex justify-between items-center">
-          <div class="brand-text-group flex q-gutter-sm items-center">
-            <div class="brand-logo-circle">
-              <q-icon name="restaurant" class="brand-icon" />
-            </div>
-            <div class="column">
-              <span class="app-title">Mesas</span>
-              <span class="app-subtitle">Gestión de Mesas y Pedidos</span>
-            </div>
+        <div class="brand-identity">
+          <div class="brand-logo-circle">
+            <q-icon name="restaurant" class="brand-icon" />
           </div>
-          <div class="header-controls-group">
-            <div class="room-selection-area">
-              <q-select
-                v-model="selectedRoom"
-                :options="roomOptions"
-                option-label="name"
-                option-value="id"
-                label="Seleccionar Sala"
-                outlined
-                dense
-                class="luxury-select"
-                @update:model-value="onRoomChange"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="meeting_room" class="select-icon" />
-                </template>
-              </q-select>
-            </div>
+          <div class="brand-text-group column">
+            <span class="app-title">Mesas</span>
+            <span class="app-subtitle">Gestión de Mesas y Pedidos</span>
+          </div>
+        </div>
 
-            <div class="action-buttons-group">
-              <q-btn
-                icon="refresh"
-                label="Actualizar"
-                @click="refreshTables"
-                class="action-button secondary-action-button"
-                flat
-              />
-            </div>
+        <div class="header-controls-group">
+          <div class="room-selection-area">
+            <q-select
+              v-model="selectedRoom"
+              :options="roomOptions"
+              option-label="name"
+              option-value="id"
+              label="Seleccionar Sala"
+              outlined
+              dense
+              class="luxury-select"
+              @update:model-value="onRoomChange"
+            >
+              <template v-slot:prepend>
+                <q-icon name="meeting_room" class="select-icon" />
+              </template>
+            </q-select>
+          </div>
+
+          <div class="action-buttons-group full-width">
+            <q-btn
+              icon="refresh"
+              label="Actualizar Mesas"
+              @click="refreshTables"
+              class="action-button secondary-action-button"
+              flat
+            />
           </div>
         </div>
       </div>
     </header>
-    <main class="canvas-main-area" v-if="selectedRoom">
-      <div class="canvas-controls">
-        <q-btn icon="zoom_in" @click="zoomIn" dense round flat class="control-btn"></q-btn>
-        <span class="zoom-level-display">{{ Math.round(zoomLevel * 100) }}%</span>
-        <q-btn icon="zoom_out" @click="zoomOut" dense round flat class="control-btn"></q-btn>
-      </div>
-      <div
-        class="canvas-viewport-container"
-        @mousedown="startPan"
-        @mousemove="onPan"
-        @mouseup="endPan"
-        @mouseleave="endPan"
-        @touchstart="startPan"
-        @touchmove="onPan"
-        @touchend="endPan"
-      >
-        <div class="canvas-transform-wrapper" :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoomLevel})`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }">
-          <draggable-resizable-container
-            :grid="[gridSize, gridSize]"
-            :show-grid="showGrid"
-            class="luxury-canvas"
-            :style="canvasStyle"
+    <TableCanvas
+      v-if="selectedRoom"
+      :tables="currentTables"
+      :selected-room="selectedRoom"
+      mode="control"
+      :scale-factor="30"
+      :enable-zoom="true"
+      :enable-pan="true"
+      :show-grid="showGrid"
+      :grid-size="gridSize"
+      :show-capacity="false"
+      @table-click="onTableClick"
+      @transfer-click="quickTransfer"
+    >
+      <template #table-actions="{ table }">
+        <div v-if="table.status === 'busy'" class="table-quick-actions">
+          <q-btn
+            icon="swap_horiz"
+            size="xs"
+            round
+            color="white"
+            text-color="primary"
+            @click.stop="quickTransfer(table)"
+            @touchstart.stop
+            class="quick-action-btn"
           >
-            <draggable-resizable-vue
-              v-for="(table, index) in currentTables"
-              :key="table.id || index"
-              v-model:x="table.x"
-              v-model:y="table.y"
-              v-model:h="table.height"
-              v-model:w="table.width"
-              :handles-size="8"
-              :draggable="false"
-              :resizable="false"
-              @click="onTableClick(table)"
-            >
-              <div class="table-visual-surface">
-                <div class="table-gloss-effect"></div>
-                <div class="table-info-overlay">
-                  <span class="table-name-text">{{ table.name }}</span>
-                  <span v-if="table.status === 'busy' && getInvoiceFromTable(table)?.client" class="table-client-text">
-                    <q-icon name="account_circle" class="client-icon" />
-                    {{ getInvoiceFromTable(table).client.name }}
-                  </span>
-                </div>
-                <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
-                <div v-if="table.status === 'busy'" class="table-quick-actions">
-                  <q-btn
-                    icon="swap_horiz"
-                    size="xs"
-                    round
-                    color="white"
-                    text-color="primary"
-                    @click.stop="quickTransfer(table)"
-                    @touchstart.stop
-                    class="quick-action-btn"
-                  >
-                    <q-tooltip>Cambiar Mesa</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="print"
-                    size="xs"
-                    round
-                    color="white"
-                    text-color="primary"
-                    @click.stop="quickPrint(table.invoices[0], 'comanda')"
-                    @touchstart.stop
-                    class="quick-action-btn"
-                  >
-                    <q-tooltip>Imprimir Comanda</q-tooltip>
-                  </q-btn>
-                </div>
-              </div>
-              <div :class="getTableDesignClass(table)">
-              </div>
-            </draggable-resizable-vue>
-          </draggable-resizable-container>
+            <q-tooltip>Cambiar Mesa</q-tooltip>
+          </q-btn>
+          <q-btn
+            icon="print"
+            size="xs"
+            round
+            color="white"
+            text-color="primary"
+            @click.stop="quickPrint(table.invoices[0], 'comanda')"
+            @touchstart.stop
+            class="quick-action-btn"
+          >
+            <q-tooltip>Imprimir Comanda</q-tooltip>
+          </q-btn>
         </div>
-      </div>
-    </main>
+      </template>
+    </TableCanvas>
     <div v-else class="empty-state-container">
       <div class="empty-state-illustration">
         <div class="illustration-circle-bg">
@@ -804,7 +768,7 @@
 
 <script>
 import { Notify, date } from 'quasar'
-import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
+import TableCanvas from 'src/components/Table/TableCanvas.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import { loading, formatNumber, notify } from 'src/const/mixins'
@@ -815,8 +779,7 @@ import PartialPaymentModal from 'src/components/PartialPaymentModal.vue'
 
 export default {
   components: {
-    DraggableResizableContainer,
-    DraggableResizableVue,
+    TableCanvas,
     PaymentModal,
     PartialPaymentModal
   },
@@ -845,15 +808,6 @@ export default {
       livingRooms: [],
       showGrid: true,
       gridSize: 20,
-      canvasWidth: 20,
-      canvasHeight: 15,
-
-      zoomLevel: 1,
-      panX: 0,
-      panY: 0,
-      isPanning: false,
-      startPanX: 0,
-      startPanY: 0,
 
       // Invoice modal state
       showInvoiceModal: false,
@@ -2064,6 +2018,9 @@ export default {
   --table-rectangle-bg: linear-gradient(135deg, #16A34A 0%, #15803D 100%); /* Emerald Green */
   --table-oval-bg: linear-gradient(135deg, #DC2626 0%, #991B1B 100%); /* Ruby Red */
 
+  --font-family-primary: 'Inter', sans-serif;
+  --font-family-secondary: 'Playfair Display', serif;
+
   --border-radius-sm: 6px;
   --border-radius-md: 10px;
   --border-radius-lg: 14px;
@@ -2082,6 +2039,8 @@ body.body--dark {
 
 /* --- Base Page Styling --- */
 .luxury-restaurant-designer {
+  background-color: var(--color-background);
+  font-family: var(--font-family-primary);
   color: var(--color-text);
   height: calc(100vh - 50px);
   display: flex;
@@ -2102,6 +2061,7 @@ body.body--dark {
 
 .header-content-wrapper {
   display: flex;
+  flex-direction: column;
   gap: calc(var(--spacing-unit) * 1.5);
 }
 
@@ -2109,7 +2069,6 @@ body.body--dark {
   display: flex;
   align-items: center;
   gap: var(--spacing-unit);
-  width: 76vw;
 }
 
 .brand-logo-circle {
@@ -3189,8 +3148,48 @@ body.body--dark {
   line-height: 1.4;
 }
 
-/* --- Responsive Improvements --- */
+/* --- Responsive Design --- */
+@media (max-width: 1200px) {
+  .header-content-wrapper {
+    flex-direction: column;
+    gap: var(--spacing-unit);
+    align-items: flex-start;
+  }
+
+  .header-controls-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 @media (max-width: 768px) {
+  .luxury-header {
+    padding: 0.8rem;
+  }
+
+  .header-controls-group {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .room-selection-area {
+    width: 100%;
+  }
+
+  .luxury-select {
+    flex: 1;
+    min-width: auto;
+  }
+
+  .action-buttons-group {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .canvas-main-area {
+    padding: 0.8rem;
+  }
+
   .table-quick-actions {
     opacity: 1; /* Always visible on mobile */
   }
@@ -3218,6 +3217,16 @@ body.body--dark {
 }
 
 @media (max-width: 480px) {
+  .luxury-dialog {
+    width: 95vw;
+  }
+
+  .dialog-header-section,
+  .dialog-body-content,
+  .dialog-action-buttons {
+    padding: var(--spacing-unit);
+  }
+
   .header-actions {
     gap: 0.2rem;
   }
