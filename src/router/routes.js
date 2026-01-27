@@ -6,6 +6,12 @@ const routes = [
       {
         path: '',
         meta: { requiresAuth: true },
+        name: 'Home',
+        component: () => import('pages/HomePage.vue')
+      },
+      {
+        path: 'billing',
+        meta: { requiresAuth: true },
         name: 'Billing',
         component: () => import('pages/BillingPage.vue')
       },

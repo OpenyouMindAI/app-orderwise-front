@@ -1,6 +1,8 @@
 /* Importación de fuentes elegantes - Optimizado */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Cormorant:wght@400&family=Lato:wght@400&display=swap');
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+// app global css in SCSS form
+@import './mobile-design-system.css';
 
 :root {
   /* Paleta de colores moderna - Gradiente Púrpura (valores por defecto) */

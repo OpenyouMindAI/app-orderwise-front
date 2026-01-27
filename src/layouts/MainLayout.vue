@@ -605,9 +605,12 @@
       </div>
     </q-drawer>
 
-    <q-page-container>
+    <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md }">
       <router-view />
     </q-page-container>
+
+    <!-- Bottom Navigation (Mobile Only) -->
+    <bottom-nav />
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
@@ -705,6 +708,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
+import BottomNav from 'src/components/Navigation/BottomNav.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -724,7 +728,8 @@ export default {
     OtpVerificationDialog,
     CompanySetupModal,
     PremiumBadge,
-    IntegrationDynamic
+    IntegrationDynamic,
+    BottomNav
   },
   data () {
     return {
@@ -3393,4 +3398,16 @@ body.body--dark .renew-subscription-btn {
     color: #f87171;
   }
 }
+
+/* Bottom Navigation Support */
+.with-bottom-nav {
+  padding-bottom: 64px !important;
+}
+
+@supports (padding: max(0px)) {
+  .with-bottom-nav {
+    padding-bottom: max(64px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
 </style>
