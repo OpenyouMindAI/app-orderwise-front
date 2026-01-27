@@ -249,79 +249,89 @@
 
     <!-- Refined Dialogs -->
     <!-- New Room Dialog -->
-    <q-dialog v-model="showNewRoomDialog" persistent>
-      <q-card class="luxury-dialog">
-        <q-card-section class="dialog-header-section">
-          <div class="dialog-title-group">
-            <q-icon name="meeting_room" class="dialog-icon" />
-            <span class="dialog-title-text">Nueva Sala</span>
-          </div>
-          <q-btn flat round icon="close" @click="showNewRoomDialog = false" class="dialog-close-button" />
-        </q-card-section>
-
-        <q-card-section class="dialog-body-content">
-          <q-input
-            v-model="newRoom.name"
-            label="Nombre de la sala"
-            outlined
-            autofocus
-            class="luxury-input"
-            :rules="[val => !!val || 'El campo es requerido.']"
-          />
-
-          <div class="dimension-input-group">
-            <h6 class="input-group-title">Dimensiones de la Sala</h6>
-            <div class="dimension-grid-inputs">
-              <q-input
-                v-model.number="newRoom.width"
-                label="Ancho"
-                type="number"
-                outlined
-                min="5"
-                max="50"
-                suffix="m"
-                class="luxury-input"
-              />
-              <q-input
-                v-model.number="newRoom.height"
-                label="Alto"
-                type="number"
-                outlined
-                min="5"
-                max="50"
-                suffix="m"
-                class="luxury-input"
-              />
+    <q-dialog v-model="showNewRoomDialog" persistent :maximized="$q.screen.lt.sm" transition-show="slide-up" transition-hide="slide-down">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 85vw;'}`"
+      >
+        <q-form @submit="createNewRoom" class="column full-height">
+          <q-card-section class="row items-center bg-primary text-white q-py-sm">
+            <div class="dialog-title-group">
+              <q-icon name="meeting_room" class="dialog-icon q-mr-sm" />
+              <div class="text-h6">Nueva Sala</div>
             </div>
-          </div>
-        </q-card-section>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="showNewRoomDialog = false" />
+          </q-card-section>
 
-        <q-card-actions class="dialog-action-buttons">
-          <q-btn flat label="Cancelar" @click="showNewRoomDialog = false" class="dialog-cancel-button" />
-          <q-btn
-            label="Crear Sala"
-            @click="createNewRoom"
-            :loading="loadingSave"
-            class="action-button primary-action-button"
-            unelevated
-          />
-        </q-card-actions>
+          <q-card-section class="scroll col q-pa-md">
+            <q-input
+              v-model="newRoom.name"
+              label="Nombre de la sala"
+              outlined
+              autofocus
+              class="luxury-input"
+              :rules="[val => !!val || 'El campo es requerido.']"
+            />
+
+            <div class="dimension-input-group">
+              <h6 class="input-group-title">Dimensiones de la Sala</h6>
+              <div class="dimension-grid-inputs">
+                <q-input
+                  v-model.number="newRoom.width"
+                  label="Ancho"
+                  type="number"
+                  outlined
+                  min="5"
+                  max="50"
+                  suffix="m"
+                  class="luxury-input"
+                />
+                <q-input
+                  v-model.number="newRoom.height"
+                  label="Alto"
+                  type="number"
+                  outlined
+                  min="5"
+                  max="50"
+                  suffix="m"
+                  class="luxury-input"
+                />
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="text-primary bg-grey-1">
+            <q-btn flat label="Cancelar" @click="showNewRoomDialog = false" class="dialog-cancel-button" />
+            <q-btn
+              label="Crear Sala"
+              type="submit"
+              :loading="loadingSave"
+              class="action-button primary-action-button"
+              unelevated
+            />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
 
     <!-- Add Table Dialog -->
-    <q-dialog v-model="showAddTableDialog" persistent>
-      <q-card class="luxury-dialog table-creation-dialog">
-        <q-form @submit="addNewTable">
-          <q-card-section class="dialog-header-section">
+    <q-dialog v-model="showAddTableDialog" persistent :maximized="$q.screen.lt.sm" transition-show="slide-up" transition-hide="slide-down">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 85vw;'}`"
+      >
+        <q-form @submit="addNewTable" class="column full-height">
+          <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="dialog-title-group">
-              <q-icon name="table_restaurant" class="dialog-icon" />
-              <span class="dialog-title-text">Nueva Mesa</span>
+              <q-icon name="table_restaurant" class="dialog-icon q-mr-sm" />
+              <div class="text-h6">Nueva Mesa</div>
             </div>
-            <q-btn flat round icon="close" @click="showAddTableDialog = false" class="dialog-close-button" />
+            <q-space />
+            <q-btn icon="close" flat round dense @click="showAddTableDialog = false" />
           </q-card-section>
 
-          <q-card-section class="dialog-body-content">
+          <q-card-section class="scroll col q-pa-md">
             <q-input
               v-model="newTable.name"
               label="Nombre de la mesa"
@@ -358,7 +368,7 @@
             />
           </q-card-section>
 
-          <q-card-actions class="dialog-action-buttons">
+          <q-card-actions align="right" class="text-primary bg-grey-1">
             <q-btn flat label="Cancelar" @click="showAddTableDialog = false" class="dialog-cancel-button" />
             <q-btn
               label="Agregar Mesa"
@@ -372,18 +382,23 @@
     </q-dialog>
 
     <!-- Edit Table Dialog -->
-    <q-dialog v-model="showEditTableDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="luxury-dialog table-creation-dialog" v-if="selectedTable">
-        <q-form @submit="saveTableEdit">
-          <q-card-section class="dialog-header-section">
+    <q-dialog v-model="showEditTableDialog" persistent :maximized="$q.screen.lt.sm" transition-show="slide-up" transition-hide="slide-down">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 85vw;'}`"
+        v-if="selectedTable"
+      >
+        <q-form @submit="saveTableEdit" class="column full-height">
+          <q-card-section class="row items-center bg-primary text-white q-py-sm">
             <div class="dialog-title-group">
-              <q-icon name="edit" class="dialog-icon" />
-              <span class="dialog-title-text">Editar Mesa</span>
+              <q-icon name="edit" class="dialog-icon q-mr-sm" />
+              <div class="text-h6">Editar Mesa</div>
             </div>
-            <q-btn flat round icon="close" @click="showEditTableDialog = false" class="dialog-close-button" />
+            <q-space />
+            <q-btn icon="close" flat round dense @click="showEditTableDialog = false" />
           </q-card-section>
 
-          <q-card-section class="dialog-body-content">
+          <q-card-section class="scroll col q-pa-md">
             <q-input
               v-model="selectedTable.name"
               label="Nombre de la mesa"
@@ -419,7 +434,7 @@
             />
           </q-card-section>
 
-          <q-card-actions class="dialog-action-buttons">
+          <q-card-actions align="right" class="text-primary bg-grey-1">
             <q-btn flat label="Cancelar" @click="showEditTableDialog = false" class="dialog-cancel-button" />
             <q-btn
               label="Guardar Cambios"
@@ -433,64 +448,70 @@
     </q-dialog>
 
     <!-- Canvas Settings Dialog -->
-    <q-dialog v-model="showCanvasSettings" persistent>
-      <q-card class="luxury-dialog">
-        <q-card-section class="dialog-header-section">
-          <div class="dialog-title-group">
-            <q-icon name="settings" class="dialog-icon" />
-            <span class="dialog-title-text">Configurar Sala</span>
-          </div>
-          <q-btn flat round icon="close" @click="showCanvasSettings = false" class="dialog-close-button" />
-        </q-card-section>
-
-        <q-card-section class="dialog-body-content">
-          <div class="dimension-input-group">
-            <h6 class="input-group-title">Dimensiones de la Sala</h6>
-            <div class="dimension-grid-inputs">
-              <q-input
-                v-model.number="canvasWidth"
-                label="Ancho"
-                type="number"
-                outlined
-                min="5"
-                max="50"
-                suffix="m"
-                class="luxury-input"
-              />
-              <q-input
-                v-model.number="canvasHeight"
-                label="Alto"
-                type="number"
-                outlined
-                min="5"
-                max="50"
-                suffix="m"
-                class="luxury-input"
-              />
+    <q-dialog v-model="showCanvasSettings" persistent :maximized="$q.screen.lt.sm" transition-show="slide-up" transition-hide="slide-down">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 85vw;'}`"
+      >
+        <q-form @submit="applyCanvasSettings" class="column full-height">
+          <q-card-section class="row items-center bg-primary text-white q-py-sm">
+            <div class="dialog-title-group">
+              <q-icon name="settings" class="dialog-icon q-mr-sm" />
+              <div class="text-h6">Configurar Sala</div>
             </div>
-          </div>
+            <q-space />
+            <q-btn icon="close" flat round dense @click="showCanvasSettings = false" />
+          </q-card-section>
 
-          <q-input
-            v-model.number="gridSize"
-            label="Tamaño de grilla"
-            type="number"
-            outlined
-            min="10"
-            max="50"
-            suffix="px"
-            class="luxury-input"
-          />
-        </q-card-section>
+          <q-card-section class="scroll col q-pa-md">
+            <div class="dimension-input-group">
+              <h6 class="input-group-title">Dimensiones de la Sala</h6>
+              <div class="dimension-grid-inputs">
+                <q-input
+                  v-model.number="canvasWidth"
+                  label="Ancho"
+                  type="number"
+                  outlined
+                  min="5"
+                  max="50"
+                  suffix="m"
+                  class="luxury-input"
+                />
+                <q-input
+                  v-model.number="canvasHeight"
+                  label="Alto"
+                  type="number"
+                  outlined
+                  min="5"
+                  max="50"
+                  suffix="m"
+                  class="luxury-input"
+                />
+              </div>
+            </div>
 
-        <q-card-actions class="dialog-action-buttons">
-          <q-btn flat label="Cancelar" @click="showCanvasSettings = false" class="dialog-cancel-button" />
-          <q-btn
-            label="Aplicar"
-            @click="applyCanvasSettings"
-            class="action-button primary-action-button"
-            unelevated
-          />
-        </q-card-actions>
+            <q-input
+              v-model.number="gridSize"
+              label="Tamaño de grilla"
+              type="number"
+              outlined
+              min="10"
+              max="50"
+              suffix="px"
+              class="luxury-input"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right" class="text-primary bg-grey-1">
+            <q-btn flat label="Cancelar" @click="showCanvasSettings = false" class="dialog-cancel-button" />
+            <q-btn
+              label="Aplicar"
+              type="submit"
+              class="action-button primary-action-button"
+              unelevated
+            />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
 
@@ -1523,7 +1544,7 @@ export default {
 }
 
 .canvas-controls {
-  position: fixed;
+  position: absolute;
   bottom: 20px;
   right: 20px;
   z-index: 100;
@@ -1533,12 +1554,11 @@ export default {
   background: rgba(33, 33, 33, 0.95);
   padding: 8px 12px;
   border-radius: 8px;
-  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .canvas-edit-controls {
-  position: fixed;
+  position: absolute;
   bottom: 20px;
   left: 20px;
   z-index: 100;
