@@ -821,7 +821,7 @@
                         label="Costo"
                         outlined
                         dense
-                        min="0"
+                        step="0.01"
                         prefix="$"
                         :rules="[val => val >= 0 || 'Requerido']"
                         @update:model-value="updateTotals"
@@ -926,8 +926,8 @@
                         type="number"
                         outlined
                         dense
-                        min="0"
                         prefix="$"
+                        step="0.01"
                         :rules="[
                           val => val >= 0 || 'El costo no puede ser negativo'
                         ]"
@@ -1043,8 +1043,8 @@
                         type="number"
                         outlined
                         dense
-                        min="0"
                         prefix="$"
+                        step="0.01"
                         :rules="[
                           val => val >= 0 || 'El costo no puede ser negativo'
                         ]"
@@ -2926,9 +2926,15 @@ export default {
       if (!this.manualSearchQuery) return
       try {
         loading(true)
-        const { data } = await api.get(`transfer-stocks/${this.manualSearchQuery}`)
+        const response = await api.get('transfer-stocks', {
+          params: {
+            dataSearch: {
+              transfer_number: this.manualSearchQuery
+            }
+          }
+        })
         this.showQrScanner = false
-
+        const data = response.data[0]
         // Verificar si la transferencia ya está entregada
         if (data.status === 'delivered' || data.verified_at !== null) {
           // Si está entregada, mostrar el detalle (solo lectura)
@@ -3326,7 +3332,7 @@ export default {
         return `Verificar #${this.currentTransfer.transfer_number || ''}`
       } else if (this.currentView === 'form') {
         if (this.editMode) {
-          return `Editar #${this.currentTransfer.id || ''}`
+          return `Editar #${this.currentTransfer.transfer_number || ''}`
         }
         return 'Nueva Transferencia'
       } else if (this.currentView === 'detail') {
