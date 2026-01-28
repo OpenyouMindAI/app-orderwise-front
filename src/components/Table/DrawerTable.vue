@@ -48,90 +48,66 @@
         </div>
       </div>
     </header>
-    <!-- Main Canvas Area -->
-    <main class="canvas-main-area" v-if="selectedRoom">
-      <div class="canvas-viewport-container">
-        <div class="canvas-transform-wrapper" :style="{ transform: `scale(${zoomLevel})` }">
-          <draggable-resizable-container
-            :grid="[gridSize, gridSize]"
-            :show-grid="showGrid"
-            class="luxury-canvas"
-            :style="canvasStyle"
+    <TableCanvas
+      v-if="selectedRoom"
+      :tables="currentTables"
+      :selected-room="selectedRoom"
+      mode="selection"
+      :scale-factor="30"
+      :enable-zoom="true"
+      :enable-pan="true"
+      :show-grid="showGrid"
+      :grid-size="gridSize"
+      :show-capacity="true"
+      :selected-tables="tableSelected"
+      @table-click="onTableClick"
+      @table-selected="toggleTableSelection"
+    >
+      <template #table-actions="{ table }">
+        <!-- Acciones para mesas ocupadas -->
+        <div v-if="table.status === 'busy'" class="table-quick-actions">
+          <q-btn
+            icon="swap_horiz"
+            size="xs"
+            round
+            color="white"
+            text-color="primary"
+            @click.stop="openTransferDialog(table)"
+            @touchstart.stop
+            class="quick-action-btn"
           >
-            <draggable-resizable-vue
-              v-for="(table, index) in currentTables"
-              :key="table.id || index"
-              v-model:x="table.x"
-              v-model:y="table.y"
-              v-model:h="table.height"
-              v-model:w="table.width"
-              :handles-size="8"
-              :draggable="false"
-              :resizable="false"
-              @click="onTableClick(table)"
-              :class="getTableWrapperClass(table)"
-            >
-              <div class="table-visual-surface">
-                <div class="table-gloss-effect"></div>
-                <div class="table-info-overlay">
-                  <span class="table-name-text">{{ table.name }}</span>
-                  <span class="table-capacity-text">
-                    <q-icon name="person" class="capacity-icon" />
-                    {{ table.capacity || 4 }}
-                  </span>
-                </div>
-                <div class="table-status-indicator" :class="table.status || 'unoccupied'"></div>
-
-                <!-- Acciones para mesas ocupadas -->
-                <div v-if="table.status === 'busy'" class="table-quick-actions">
-                  <q-btn
-                    icon="swap_horiz"
-                    size="xs"
-                    round
-                    color="white"
-                    text-color="primary"
-                    @click.stop="openTransferDialog(table)"
-                    @touchstart.stop
-                    class="quick-action-btn"
-                  >
-                    <q-tooltip>Cambiar Mesa</q-tooltip>
-                  </q-btn>
-                  <q-btn
-                    icon="receipt"
-                    size="xs"
-                    round
-                    color="white"
-                    text-color="secondary"
-                    @click.stop="$emit('update:invoice', table)"
-                    @touchstart.stop
-                    class="quick-action-btn"
-                  >
-                    <q-tooltip>Facturar</q-tooltip>
-                  </q-btn>
-                </div>
-
-                <!-- Botón de selección para mesas vacías -->
-                <div v-else-if="table.status === 'unoccupied'" class="table-selection-action">
-                  <q-btn
-                    :icon="tableSelected.includes(table.id) ? 'check_circle' : 'add_circle'"
-                    size="sm"
-                    round
-                    :color="tableSelected.includes(table.id) ? 'positive' : 'primary'"
-                    @click.stop="onTableClick(table)"
-                    @touchstart.stop
-                    class="selection-btn"
-                  >
-                    <q-tooltip>{{ tableSelected.includes(table.id) ? 'Mesa Seleccionada' : 'Seleccionar Mesa' }}</q-tooltip>
-                  </q-btn>
-                </div>
-              </div>
-              <div :class="getTableDesignClass(table)">
-              </div>
-            </draggable-resizable-vue>
-          </draggable-resizable-container>
+            <q-tooltip>Cambiar Mesa</q-tooltip>
+          </q-btn>
+          <q-btn
+            icon="receipt"
+            size="xs"
+            round
+            color="white"
+            text-color="secondary"
+            @click.stop="$emit('update:invoice', table)"
+            @touchstart.stop
+            class="quick-action-btn"
+          >
+            <q-tooltip>Facturar</q-tooltip>
+          </q-btn>
         </div>
-      </div>
-    </main>
+
+        <!-- Botón de selección para mesas vacías -->
+        <div v-else-if="table.status === 'unoccupied'" class="table-selection-action">
+          <q-btn
+            :icon="tableSelected.includes(table.id) ? 'check_circle' : 'add_circle'"
+            size="sm"
+            round
+            :color="tableSelected.includes(table.id) ? 'positive' : 'primary'"
+            @click.stop="toggleTableSelection(table.id)"
+            @touchstart.stop
+            class="selection-btn"
+          >
+            <q-tooltip>{{ tableSelected.includes(table.id) ? 'Mesa Seleccionada' : 'Seleccionar Mesa' }}</q-tooltip>
+          </q-btn>
+        </div>
+      </template>
+    </TableCanvas>
 
     <!-- Elegant Empty State -->
     <div v-else class="empty-state-container">
@@ -287,15 +263,14 @@
 
 <script>
 import { Notify } from 'quasar'
-import { DraggableResizableVue, DraggableResizableContainer } from 'draggable-resizable-vue3'
+import TableCanvas from 'src/components/Table/TableCanvas.vue'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import { loading } from 'src/const/mixins'
 
 export default {
   components: {
-    DraggableResizableContainer,
-    DraggableResizableVue
+    TableCanvas
   },
   props: {
     tablesSelected: {
@@ -315,14 +290,6 @@ export default {
       livingRooms: [],
       showGrid: true,
       gridSize: 20,
-      canvasWidth: 20, // Default width in meters
-      canvasHeight: 15, // Default height in meters
-      zoomLevel: 1,
-      panX: 0,
-      panY: 0,
-      isPanning: false,
-      startPanX: 0,
-      startPanY: 0,
       previousFocus: null,
 
       // Internal state for table selection (synced with prop)
@@ -456,6 +423,15 @@ export default {
         } else {
           this.tableSelected.push(table.id)
         }
+      }
+    },
+
+    toggleTableSelection (tableId) {
+      const index = this.tableSelected.indexOf(tableId)
+      if (index > -1) {
+        this.tableSelected.splice(index, 1)
+      } else {
+        this.tableSelected.push(tableId)
       }
     },
 
@@ -1388,12 +1364,6 @@ body.body--dark {
     padding: 0.8rem;
   }
 
-  .brand-identity {
-    flex-direction: column;
-    gap: 0.4rem;
-    text-align: center;
-  }
-
   .header-controls-group {
     flex-direction: column;
     gap: 0.8rem;
@@ -1411,10 +1381,6 @@ body.body--dark {
   .action-buttons-group {
     justify-content: center;
     flex-wrap: wrap;
-  }
-
-  .canvas-main-area {
-    padding: 0.8rem;
   }
 
   .table-quick-actions {

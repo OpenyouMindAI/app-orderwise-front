@@ -9,6 +9,18 @@
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales - Solo desktop -->
             <div v-if="$q.screen.gt.sm" class="billing-selects-desktop col-12">
+              <div v-if="$route.query.id">
+                <q-chip
+                  square
+                  color="primary"
+                  text-color="white"
+                  icon="receipt_long"
+                  class="invoice-chip"
+                >
+                  <span>{{ purchase?.purchase_number }}</span>
+                </q-chip>
+              </div>
+
               <div class="billing-select-item">
                 <q-select
                   filled
@@ -97,18 +109,6 @@
                         <q-btn round color="teal" icon="add_circle" size="sm" @click="openAddProduct = true"/>
                     </template>
                 </q-input>
-              </div>
-
-              <div v-if="$route.query.id">
-                <q-chip
-                  square
-                  color="primary"
-                  text-color="white"
-                  icon="receipt_long"
-                  class="invoice-chip"
-                >
-                  <span>{{ purchase?.purchase_number }}</span>
-                </q-chip>
               </div>
             </div>
 

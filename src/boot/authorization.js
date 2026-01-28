@@ -69,7 +69,10 @@ export default boot(async ({ router, store }) => {
     'change-password',
     'otp/verify',
     'otp/send',
-    'otp/resend'
+    'otp/resend',
+    'otp/status',
+    'countries',
+    'business-types'
   ]
 
   api.interceptors.response.use(null, async (error) => {
