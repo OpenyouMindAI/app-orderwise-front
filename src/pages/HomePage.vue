@@ -1,25 +1,20 @@
 <template>
   <q-page class="home-page">
     <!-- Header Cockpit Area -->
-    <div class="header-cockpit">
+    <div class="header-cockpit section-fade-in">
       <div class="cockpit-glow"></div>
       <div class="row items-center justify-between no-wrap">
         <div class="cockpit-welcome">
           <div class="greeting-row">
-            <span class="text-h6 text-weight-light opacity-60">{{ greeting }},</span>
-            <span class="text-h6 text-weight-bolder q-ml-xs">{{ userName }}</span>
-          </div>
-          <div class="date-chip">
-            <q-icon name="calendar_today" size="12px" class="q-mr-xs" />
-            {{ currentDate }}
+            <span class="text-h5 text-weight-normal opacity-80">{{ greeting }},</span>
+            <span class="text-h5 text-weight-bolder q-ml-xs">{{ userName }}</span>
           </div>
         </div>
 
-        <!-- Quick Status Dot -->
-        <div class="system-status">
-          <div class="status-indicator">
-            <div class="pulse-dot"></div>
-            <span class="status-text">Sistema Activo</span>
+        <div class="cockpit-meta">
+          <div class="date-chip-modern">
+            <q-icon name="event" size="14px" class="q-mr-xs" />
+            <span>{{ currentDate }}</span>
           </div>
         </div>
       </div>
@@ -455,68 +450,28 @@ body.body--dark .home-page {
   pointer-events: none;
 }
 
-.date-chip {
-  display: inline-flex;
-  align-items: center;
-  background: white;
-  padding: 4px 12px;
-  border-radius: 100px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--q-primary);
-  margin-top: 8px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+.welcome-subtitle {
+  margin-top: 4px;
+  font-weight: 500;
 }
 
-body.body--dark .date-chip {
+.date-chip-modern {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+body.body--dark .date-chip-modern {
   background: #1e293b;
   border-color: #334155;
   color: #94a3b8;
-}
-
-/**
- * System Status indicator
- */
-.system-status {
-  background: white;
-  padding: 6px 12px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-body.body--dark .system-status {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
-.status-text {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #64748b;
 }
 
 /**
