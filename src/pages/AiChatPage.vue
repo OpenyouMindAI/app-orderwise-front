@@ -1,123 +1,108 @@
 <template>
-  <q-page class="ai-chat-page">
-    <div class="chat-container">
-      <!-- Sidebar con lista de conversaciones -->
-      <div class="chat-sidebar" :class="{ 'mobile-hidden': selectedChat && $q.screen.lt.md }">
+  <q-page class="ai-chat-modern">
+    <div class="ai-layout">
+      <!-- Sidebar Minimalista -->
+      <div class="ai-sidebar" :class="{ 'hidden-mobile': selectedChat && $q.screen.lt.md }">
+        <!-- Header Sidebar -->
         <div class="sidebar-header">
-          <div class="header-content">
-            <q-icon name="smart_toy" size="32px" color="primary" />
-            <div class="header-text">
-              <div class="header-title">Asistente IA</div>
-              <div class="header-subtitle">Qbits Assistant</div>
-            </div>
-          </div>
           <q-btn
-            flat
-            round
-            dense
-            icon="add"
+            unelevated
+            rounded
             color="primary"
+            label="Nuevo Chat"
+            icon="add"
+            class="new-chat-button"
             @click="createNewChat"
-            class="new-chat-btn"
-          >
-            <q-tooltip>Nueva conversación</q-tooltip>
-          </q-btn>
+          />
         </div>
 
-        <div class="chat-list">
+        <!-- Lista de Conversaciones -->
+        <div class="conversations-list">
           <q-scroll-area class="fit">
-            <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
-              <q-spinner color="primary" size="40px" />
+            <div v-if="loading && chats.length === 0" class="loading-state">
+              <q-spinner-dots color="primary" size="40px" />
             </div>
 
-            <div v-else-if="chats.length === 0" class="empty-state">
-              <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
-              <div class="empty-text">No hay conversaciones</div>
-              <q-btn
-                flat
-                color="primary"
-                label="Iniciar chat"
-                icon="add"
-                @click="createNewChat"
-              />
+            <div v-else-if="chats.length === 0" class="empty-conversations">
+              <q-icon name="chat_bubble_outline" size="48px" class="text-grey-5" />
+              <p class="text-caption text-grey-6 q-mt-sm">Sin conversaciones</p>
             </div>
 
-            <div v-else class="chats-list-wrapper">
+            <div v-else class="conversation-items">
               <div
                 v-for="chat in chats"
                 :key="chat.id"
-                class="chat-item-wrapper"
+                class="conversation-card"
                 :class="{ 'active': selectedChat?.id === chat.id }"
                 @click="selectChat(chat)"
               >
-                <div class="chat-item-content">
-                  <div class="chat-avatar">
-                    <q-avatar size="49px" color="primary" text-color="white">
-                      <q-icon name="smart_toy" size="24px" />
-                    </q-avatar>
-                  </div>
-                  <div class="chat-info">
-                    <div class="chat-header-row">
-                      <div class="chat-title">{{ chat.title || 'Nueva conversación' }}</div>
-                    </div>
-                    <div class="chat-preview">{{ truncateMessage(chat.last_message?.content) || 'Sin mensajes' }}</div>
-                  </div>
-                  <div class="chat-meta">
-                    <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
-                    <div class="chat-actions" @click.stop>
-                      <q-btn
-                        flat
-                        round
-                        dense
-                        size="sm"
-                        icon="expand_more"
-                        color="grey-6"
-                        class="menu-btn"
-                      >
-                        <q-menu>
-                          <q-list>
-                            <q-item clickable v-close-popup @click="deleteChat(chat)">
-                              <q-item-section avatar>
-                                <q-icon name="delete" color="negative" />
-                              </q-item-section>
-                              <q-item-section>Eliminar</q-item-section>
-                            </q-item>
-                          </q-list>
-                        </q-menu>
-                      </q-btn>
-                    </div>
-                  </div>
+                <div class="conv-icon">
+                  <q-icon name="chat" size="20px" />
                 </div>
+                <div class="conv-content">
+                  <div class="conv-title">{{ chat.title || 'Nueva conversación' }}</div>
+                  <div class="conv-preview">{{ truncateMessage(chat.last_message?.content) || 'Iniciar chat...' }}</div>
+                </div>
+                <q-btn
+                  flat
+                  round
+                  dense
+                  size="sm"
+                  icon="more_vert"
+                  class="conv-menu"
+                  @click.stop
+                >
+                  <q-menu>
+                    <q-list dense>
+                      <q-item clickable v-close-popup @click="deleteChat(chat)">
+                        <q-item-section avatar>
+                          <q-icon name="delete" color="negative" size="18px" />
+                        </q-item-section>
+                        <q-item-section>Eliminar</q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-menu>
+                </q-btn>
               </div>
             </div>
           </q-scroll-area>
         </div>
       </div>
 
-      <!-- Área de chat -->
-      <div class="chat-main" :class="{ 'mobile-hidden': !selectedChat && $q.screen.lt.md }">
-        <!-- Sin chat seleccionado -->
-        <div v-if="!selectedChat" class="chat-empty">
-          <q-icon name="forum" size="120px" color="grey-4" />
-          <div class="empty-title">Bienvenido al Asistente IA</div>
-          <div class="empty-subtitle">
-            Pregúntame sobre el estado de tu empresa, reportes de caja, métodos de pago o cómo usar el sistema
+      <!-- Área Principal del Chat -->
+      <div class="ai-main" :class="{ 'hidden-mobile': !selectedChat && $q.screen.lt.md }">
+        <!-- Estado Vacío -->
+        <div v-if="!selectedChat" class="welcome-screen">
+          <div class="welcome-content">
+            <div class="ai-logo-container">
+              <div class="ai-logo-ring"></div>
+              <q-icon name="auto_awesome" size="64px" class="ai-logo-icon" />
+            </div>
+            <h1 class="welcome-title">Asistente IA Orderwise</h1>
+            <p class="welcome-subtitle">
+              Pregunta sobre tu negocio, analiza datos o solicita reportes en tiempo real
+            </p>
+            <div class="welcome-suggestions">
+              <div class="suggestion-card" @click="quickPrompt('¿Cómo va mi empresa hoy?')">
+                <q-icon name="trending_up" size="24px" />
+                <span>Estado del negocio</span>
+              </div>
+              <div class="suggestion-card" @click="quickPrompt('Muéstrame las ventas de hoy')">
+                <q-icon name="receipt_long" size="24px" />
+                <span>Ventas del día</span>
+              </div>
+              <div class="suggestion-card" @click="quickPrompt('¿Cuál es el producto más vendido?')">
+                <q-icon name="inventory_2" size="24px" />
+                <span>Productos top</span>
+              </div>
+            </div>
           </div>
-          <q-btn
-            unelevated
-            color="primary"
-            label="Iniciar conversación"
-            icon="add_comment"
-            size="lg"
-            @click="createNewChat"
-            class="q-mt-md"
-          />
         </div>
 
-        <!-- Chat seleccionado -->
-        <div v-else class="chat-content">
-          <!-- Header del chat -->
-          <div class="chat-header">
+        <!-- Chat Activo -->
+        <div v-else class="chat-active">
+          <!-- Header del Chat -->
+          <div class="chat-header-modern">
             <q-btn
               v-if="$q.screen.lt.md"
               flat
@@ -127,108 +112,181 @@
               @click="selectedChat = null"
               class="q-mr-sm"
             />
-            <q-avatar color="primary" text-color="white" size="40px">
-              <q-icon name="smart_toy" />
-            </q-avatar>
-            <div class="header-info">
-              <div class="chat-name">Asistente Qbits</div>
-              <div class="chat-status">
-                <q-icon name="circle" size="8px" color="positive" />
-                En línea
+            <div class="chat-header-info">
+              <div class="chat-header-title">{{ selectedChat.title || 'Asistente IA' }}</div>
+              <div class="chat-header-status">
+                <div class="status-dot"></div>
+                <span>En línea</span>
               </div>
             </div>
+            <q-space />
+            <q-btn flat round dense icon="more_vert" color="grey-7">
+              <q-menu>
+                <q-list dense style="min-width: 150px">
+                  <q-item clickable v-close-popup @click="deleteChat(selectedChat)">
+                    <q-item-section avatar>
+                      <q-icon name="delete" color="negative" />
+                    </q-item-section>
+                    <q-item-section>Eliminar chat</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
           </div>
 
           <!-- Mensajes -->
-          <div class="messages-container" ref="messagesContainer">
+          <div class="messages-area" ref="messagesContainer">
             <q-scroll-area class="fit">
-              <div class="messages-list">
+              <div class="messages-wrapper">
                 <div
                   v-for="message in messages"
                   :key="message.id"
-                  :class="['message-wrapper', message.role === 'user' ? 'user-message' : 'assistant-message']"
+                  class="message-block"
+                  :class="message.role"
                 >
-                  <div class="message-bubble">
-                    <div class="message-content" v-html="formatMessage(message.content)"></div>
-                    <div class="message-time">{{ formatTime(message.created_at) }}</div>
-
-                    <!-- Mostrar tutoriales si existen -->
-                    <div v-if="message.metadata?.tutorials?.length > 0" class="tutorials-section">
-                      <div class="tutorials-title">
-                        <q-icon name="play_circle" size="20px" />
-                        Tutoriales relacionados:
+                  <div class="message-avatar">
+                    <q-avatar size="32px" :color="message.role === 'user' ? 'primary' : 'grey-3'">
+                      <q-icon :name="message.role === 'user' ? 'person' : 'smart_toy'" :color="message.role === 'user' ? 'white' : 'grey-7'" />
+                    </q-avatar>
+                  </div>
+                  <div class="message-body">
+                    <div class="message-author">{{ message.role === 'user' ? 'Tú' : 'Asistente IA' }}</div>
+                    <div class="message-text" v-html="formatMessage(message.content)"></div>
+                    
+                    <!-- Tutoriales -->
+                    <div v-if="message.metadata?.tutorials?.length > 0" class="tutorials-container">
+                      <div class="tutorials-header">
+                        <q-icon name="school" size="18px" />
+                        <span>Recursos relacionados</span>
                       </div>
-                      <div
-                        v-for="tutorial in message.metadata.tutorials"
-                        :key="tutorial.id"
-                        class="tutorial-item"
-                        @click="openTutorial(tutorial)"
-                      >
-                        <q-icon name="video_library" color="primary" />
-                        <span>{{ tutorial.title }}</span>
+                      <div class="tutorials-grid">
+                        <div
+                          v-for="tutorial in message.metadata.tutorials"
+                          :key="tutorial.id"
+                          class="tutorial-card-modern"
+                        >
+                          <!-- Video Player Embebido -->
+                          <div class="tutorial-video-wrapper" v-if="tutorial.video_url">
+                            <video
+                              :src="tutorial.video_url"
+                              controls
+                              class="tutorial-video"
+                              :poster="tutorial.miniature_url"
+                            ></video>
+                          </div>
+                          
+                          <!-- Info del Tutorial -->
+                          <div class="tutorial-info">
+                            <div class="tutorial-title">{{ tutorial.title }}</div>
+                            <div class="tutorial-description" v-if="tutorial.description">
+                              {{ tutorial.description }}
+                            </div>
+                            <div class="tutorial-stats">
+                              <span v-if="tutorial.views_count">
+                                <q-icon name="visibility" size="14px" /> {{ tutorial.views_count }}
+                              </span>
+                              <span v-if="tutorial.likes_count">
+                                <q-icon name="favorite" size="14px" /> {{ tutorial.likes_count }}
+                              </span>
+                            </div>
+
+                            <!-- Botón para ir a la aplicación -->
+                            <div class="q-mt-md">
+                              <q-btn
+                                flat
+                                color="primary"
+                                label="Ver tutorial completo"
+                                icon="play_circle_filled"
+                                size="sm"
+                                class="full-width"
+                                @click="$router.push({ name: 'Tutorial', query: { videoId: tutorial.id } })"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    <div class="message-timestamp">{{ formatTime(message.created_at) }}</div>
                   </div>
                 </div>
 
-                <!-- Typing indicator -->
-                <div v-if="isTyping" class="message-wrapper assistant-message">
-                  <div class="message-bubble typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                <!-- Typing Indicator -->
+                <div v-if="isTyping" class="message-block assistant">
+                  <div class="message-avatar">
+                    <q-avatar size="32px" color="grey-3">
+                      <q-icon name="smart_toy" color="grey-7" />
+                    </q-avatar>
+                  </div>
+                  <div class="message-body">
+                    <div class="message-author">Asistente IA</div>
+                    <div class="typing-animation">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
                   </div>
                 </div>
               </div>
             </q-scroll-area>
           </div>
 
-          <div class="q-pa-md">
-            <div class="input-wrapper">
-              <div class="input-field">
-                <q-input
-                  v-model="newMessage"
-                  placeholder="Escribe un mensaje"
-                  filled
-                  autogrow
-                  @keyup.enter.exact="sendMessage"
-                >
-                  <template v-slot:append>
-                    <q-btn
-                      round
-                      icon="send"
-                      size="md"
-                      style="border-radius: 100px;"
-                      color="primary"
-                      @click="sendMessage"
-                      :disable="!newMessage.trim() || isTyping"
-                    />
-                  </template>
-                </q-input>
-              </div>
+          <!-- Input Moderno -->
+          <div class="input-container-modern">
+            <div class="input-box">
+              <q-input
+                v-model="newMessage"
+                placeholder="Envía un mensaje al asistente..."
+                borderless
+                autogrow
+                dense
+                class="modern-input"
+                @keyup.enter.exact="sendMessage"
+              >
+                <template v-slot:prepend>
+                  <q-btn flat round dense icon="attach_file" size="sm" color="grey-6" />
+                </template>
+                <template v-slot:append>
+                  <q-btn
+                    v-if="newMessage.trim()"
+                    unelevated
+                    round
+                    icon="send"
+                    color="primary"
+                    size="sm"
+                    @click="sendMessage"
+                    :disable="isTyping"
+                    class="send-btn-modern"
+                  />
+                  <q-btn v-else flat round dense icon="mic" size="sm" color="grey-6" />
+                </template>
+              </q-input>
+            </div>
+            <div class="input-footer">
+              <span class="text-caption text-grey-6">El asistente puede cometer errores. Verifica la información importante.</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Dialog para ver tutorial -->
+    <!-- Dialog Tutorial -->
     <q-dialog v-model="showTutorialDialog" maximized>
-      <q-card>
+      <q-card class="tutorial-dialog">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">{{ selectedTutorial?.title }}</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
-
         <q-card-section>
           <video
             v-if="selectedTutorial?.video_path"
             :src="getVideoUrl(selectedTutorial.video_path)"
             controls
-            style="width: 100%; max-height: 70vh;"
+            autoplay
+            style="width: 100%; max-height: 70vh; border-radius: 12px;"
           ></video>
-          <div class="q-mt-md">{{ selectedTutorial?.description }}</div>
+          <div class="q-mt-md text-body1">{{ selectedTutorial?.description }}</div>
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -275,10 +333,7 @@ export default {
         this.chats = data.data || data
       } catch (error) {
         console.error('Error loading chats:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Error al cargar las conversaciones'
-        })
+        this.$q.notify({ type: 'negative', message: 'Error al cargar las conversaciones' })
       } finally {
         this.loading = false
       }
@@ -294,10 +349,7 @@ export default {
         this.scrollToBottom()
       } catch (error) {
         console.error('Error loading chat:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Error al cargar el chat'
-        })
+        this.$q.notify({ type: 'negative', message: 'Error al cargar el chat' })
       } finally {
         this.loading = false
       }
@@ -305,101 +357,84 @@ export default {
 
     createNewChat () {
       if (!this.currentCompany) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Por favor selecciona una empresa primero'
-        })
+        this.$q.notify({ type: 'warning', message: 'Por favor selecciona una empresa primero' })
         return
       }
 
       this.$q.dialog({
         title: 'Nueva conversación',
         message: '¿En qué puedo ayudarte?',
-        prompt: {
-          model: '',
-          type: 'textarea',
-          placeholder: 'Ej: ¿Cómo va mi empresa hoy?'
-        },
+        prompt: { model: '', type: 'textarea', placeholder: 'Ej: ¿Cómo va mi empresa hoy?' },
         cancel: true,
         persistent: false
       }).onOk(async (message) => {
         if (!message.trim()) return
-
         this.loading = true
         try {
           const { data } = await api.post('ai-chats', {
             company_id: this.currentCompany.id,
             message
           })
-
           this.chats.unshift(data)
           this.selectedChat = data
           this.messages = data.messages || []
-
           await this.$nextTick()
           this.scrollToBottom()
-
-          this.$q.notify({
-            type: 'positive',
-            message: 'Conversación iniciada'
-          })
+          this.$q.notify({ type: 'positive', message: 'Conversación iniciada' })
         } catch (error) {
           console.error('Error creating chat:', error)
-          this.$q.notify({
-            type: 'negative',
-            message: error.response?.data?.message || 'Error al crear la conversación'
-          })
+          this.$q.notify({ type: 'negative', message: error.response?.data?.message || 'Error al crear la conversación' })
         } finally {
           this.loading = false
         }
       })
     },
 
+    quickPrompt (prompt) {
+      if (!this.currentCompany) {
+        this.$q.notify({ type: 'warning', message: 'Por favor selecciona una empresa primero' })
+        return
+      }
+      this.loading = true
+      api.post('ai-chats', { company_id: this.currentCompany.id, message: prompt })
+        .then(({ data }) => {
+          this.chats.unshift(data)
+          this.selectedChat = data
+          this.messages = data.messages || []
+          this.$nextTick(() => this.scrollToBottom())
+        })
+        .catch(error => {
+          console.error('Error:', error)
+          this.$q.notify({ type: 'negative', message: 'Error al iniciar la conversación' })
+        })
+        .finally(() => { this.loading = false })
+    },
+
     async sendMessage () {
       if (!this.newMessage.trim() || this.isTyping) return
-
       const messageText = this.newMessage
       this.newMessage = ''
-
-      const userMessage = {
-        id: Date.now(),
-        role: 'user',
-        content: messageText,
-        created_at: new Date().toISOString()
-      }
+      const userMessage = { id: Date.now(), role: 'user', content: messageText, created_at: new Date().toISOString() }
       this.messages.push(userMessage)
-
       await this.$nextTick()
       this.scrollToBottom()
-
       this.isTyping = true
 
       try {
-        const { data } = await api.post(`ai-chats/${this.selectedChat.id}/messages`, {
-          message: messageText
-        })
-
+        const { data } = await api.post(`ai-chats/${this.selectedChat.id}/messages`, { message: messageText })
         const userIndex = this.messages.findIndex(m => m.id === userMessage.id)
-        if (userIndex !== -1) {
-          this.messages[userIndex] = data.user_message
-        }
-
+        if (userIndex !== -1) this.messages[userIndex] = data.user_message
         this.messages.push(data.assistant_message)
-
         const chatIndex = this.chats.findIndex(c => c.id === this.selectedChat.id)
         if (chatIndex !== -1) {
           this.chats[chatIndex].last_message = data.assistant_message
           this.chats[chatIndex].last_message_at = data.assistant_message.created_at
         }
-
         await this.$nextTick()
         this.scrollToBottom()
       } catch (error) {
         console.error('Error sending message:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Error al enviar el mensaje'
-        })
+        this.$q.notify({ type: 'negative', message: 'Error al enviar el mensaje' })
         this.messages = this.messages.filter(m => m.id !== userMessage.id)
       } finally {
         this.isTyping = false
@@ -416,22 +451,14 @@ export default {
         try {
           await api.delete(`ai-chats/${chat.id}`)
           this.chats = this.chats.filter(c => c.id !== chat.id)
-
           if (this.selectedChat?.id === chat.id) {
             this.selectedChat = null
             this.messages = []
           }
-
-          this.$q.notify({
-            type: 'positive',
-            message: 'Conversación eliminada'
-          })
+          this.$q.notify({ type: 'positive', message: 'Conversación eliminada' })
         } catch (error) {
           console.error('Error deleting chat:', error)
-          this.$q.notify({
-            type: 'negative',
-            message: 'Error al eliminar la conversación'
-          })
+          this.$q.notify({ type: 'negative', message: 'Error al eliminar la conversación' })
         }
       })
     },
@@ -443,14 +470,8 @@ export default {
 
     formatMessage (content) {
       if (!content) return ''
-
-      let formatted = content.replace(
-        /(https?:\/\/[^\s]+)/g,
-        '<a href="$1" target="_blank" class="message-link">$1</a>'
-      )
-
+      let formatted = content.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="message-link">$1</a>')
       formatted = formatted.replace(/\n/g, '<br>')
-
       return formatted
     },
 
@@ -468,9 +489,7 @@ export default {
       const container = this.$refs.messagesContainer
       if (container) {
         const scrollArea = container.querySelector('.q-scrollarea__container')
-        if (scrollArea) {
-          scrollArea.scrollTop = scrollArea.scrollHeight
-        }
+        if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight
       }
     },
 
@@ -480,7 +499,7 @@ export default {
 
     truncateMessage (message) {
       if (!message) return ''
-      const maxLength = 29
+      const maxLength = 40
       if (message.length <= maxLength) return message
       return message.substring(0, maxLength) + '...'
     }
@@ -489,554 +508,522 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.ai-chat-page {
+.ai-chat-modern {
   height: calc(100vh - 60px);
+  background: #f7f7f8;
   overflow: hidden;
 }
 
-.chat-container {
+.ai-layout {
   display: flex;
   height: 100%;
-  background: var(--q-page);
+  max-width: 1800px;
+  margin: 0 auto;
 }
 
 // Sidebar
-.chat-sidebar {
-  width: 380px;
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
+.ai-sidebar {
+  width: 300px;
+  background: white;
+  border-right: 1px solid #e5e5e5;
   display: flex;
   flex-direction: column;
-  background: white;
 
   @media (max-width: 1023px) {
     width: 100%;
-    border-right: none;
-
-    &.mobile-hidden {
-      display: none;
-    }
+    &.hidden-mobile { display: none; }
   }
 }
 
 .sidebar-header {
   padding: 16px;
-  background: var(--q-primary);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 60px;
+  border-bottom: 1px solid #e5e5e5;
 }
 
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.new-chat-button {
+  width: 100%;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-.header-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: white;
-}
-
-.header-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.new-chat-btn {
-  background: transparent;
-  color: white;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-}
-
-.chat-list {
+.conversations-list {
   flex: 1;
   overflow: hidden;
-  background: white;
 }
 
-.body--dark .chat-sidebar {
-  background: #1e1e1e;
-  border-right-color: rgba(255, 255, 255, 0.12);
-}
-
-.body--dark .chat-list {
-  background: #1e1e1e;
-}
-
-.empty-state {
+.loading-state, .empty-conversations {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  text-align: center;
 }
 
-.empty-text {
-  margin-top: 16px;
-  font-size: 16px;
-  color: var(--q-secondary);
-  margin-bottom: 16px;
+.conversation-items {
+  padding: 8px;
 }
 
-.chats-list-wrapper {
-  padding: 0;
-}
-
-.chat-item-wrapper {
-  cursor: pointer;
-  transition: background 0.15s ease;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  &.active {
-    background: rgba(var(--q-primary-rgb), 0.08);
-  }
-}
-
-.body--dark .chat-item-wrapper {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &.active {
-    background: rgba(var(--q-primary-rgb), 0.15);
-  }
-}
-
-.chat-item-content {
+.conversation-card {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
   gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 4px;
   position: relative;
+
+  &:hover {
+    background: #f5f5f5;
+    .conv-menu { opacity: 1; }
+  }
+
+  &.active {
+    background: #ececf1;
+    .conv-icon { background: var(--q-primary); color: white; }
+  }
 }
 
-.chat-avatar {
-  flex-shrink: 0;
-}
-
-.chat-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.chat-header-row {
-  display: flex;
-  align-items: center;
-}
-
-.chat-title {
-  font-weight: 400;
-  font-size: 16px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.chat-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  flex-shrink: 0;
-  margin-left: 8px;
-}
-
-.chat-time {
-  font-size: 12px;
-  opacity: 0.6;
-  white-space: nowrap;
-}
-
-.chat-preview {
-  opacity: 0.7;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 20px;
-}
-
-.chat-actions {
+.conv-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #ececf1;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  .menu-btn {
-    opacity: 0.6;
-    transition: all 0.2s;
-
-    &:hover {
-      opacity: 1;
-      background: rgba(0, 0, 0, 0.05);
-    }
-  }
+  flex-shrink: 0;
+  transition: all 0.2s;
 }
 
-.body--dark .chat-actions .menu-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+.conv-content {
+  flex: 1;
+  min-width: 0;
 }
 
-// Main chat area
-.chat-main {
+.conv-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #202123;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-preview {
+  font-size: 12px;
+  color: #6e6e80;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.conv-menu {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+// Main Area
+.ai-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f0f2f5;
-}
-
-.body--dark .chat-main {
-  background: #0b141a;
+  background: white;
 
   @media (max-width: 1023px) {
     width: 100%;
-
-    &.mobile-hidden {
-      display: none;
-    }
+    &.hidden-mobile { display: none; }
   }
 }
 
-.chat-empty {
+// Welcome Screen
+.welcome-screen {
+  flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
   padding: 40px;
+}
+
+.welcome-content {
+  max-width: 600px;
   text-align: center;
 }
 
-.empty-title {
-  font-size: 24px;
-  font-weight: 400;
-  margin-top: 24px;
+.ai-logo-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 32px;
 }
 
-.empty-subtitle {
+.ai-logo-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid var(--q-primary);
+  border-radius: 50%;
+  opacity: 0.2;
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.1); opacity: 0.1; }
+}
+
+.ai-logo-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--q-primary);
+}
+
+.welcome-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #202123;
+  margin: 0 0 16px 0;
+}
+
+.welcome-subtitle {
   font-size: 16px;
-  opacity: 0.7;
-  margin-top: 12px;
-  max-width: 500px;
-  line-height: 1.6;
+  color: #6e6e80;
+  margin: 0 0 40px 0;
+  line-height: 1.5;
 }
 
-.chat-content {
+.welcome-suggestions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.suggestion-card {
+  padding: 20px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+
+  &:hover {
+    border-color: var(--q-primary);
+    background: #fafafa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .q-icon { color: var(--q-primary); }
+  span { font-size: 14px; font-weight: 500; color: #202123; }
+}
+
+// Chat Active
+.chat-active {
+  flex: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.chat-header {
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+.chat-header-modern {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e5e5;
   display: flex;
   align-items: center;
-  gap: 12px;
   background: white;
-  min-height: 60px;
+  z-index: 10;
 }
 
-.body--dark .chat-header {
-  background: #202c33;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
+.chat-header-info {
   flex: 1;
 }
 
-.chat-name {
-  font-weight: 500;
+.chat-header-title {
   font-size: 16px;
+  font-weight: 600;
+  color: #202123;
 }
 
-.chat-status {
-  font-size: 13px;
-  opacity: 0.7;
+.chat-header-status {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 13px;
+  color: #6e6e80;
+  margin-top: 2px;
 }
 
-.messages-container {
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10a37f;
+}
+
+// Messages
+.messages-area {
   flex: 1;
   overflow: hidden;
-  position: relative;
-  background: #e5ddd5;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M25 25 L75 25 L50 75 Z" fill="%23000000" opacity="0.04"/></svg>');
-    background-repeat: repeat;
-    opacity: 0.4;
-    pointer-events: none;
-  }
+  background: white;
 }
 
-.body--dark .messages-container {
-  background: #0b141a;
-
-  &::before {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M25 25 L75 25 L50 75 Z" fill="%23ffffff" opacity="0.03"/></svg>');
-  }
+.messages-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
 }
 
-.messages-list {
-  padding: 20px;
-  min-height: 100%;
-  position: relative;
-  z-index: 1;
-}
-
-.message-wrapper {
+.message-block {
   display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+
+  &.user {
+    .message-body { background: #f7f7f8; }
+  }
+
+  &.assistant {
+    .message-body { background: transparent; }
+  }
+}
+
+.message-avatar {
+  flex-shrink: 0;
+}
+
+.message-body {
+  flex: 1;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.message-author {
+  font-size: 13px;
+  font-weight: 700;
+  color: #202123;
   margin-bottom: 8px;
-
-  &.user-message {
-    justify-content: flex-end;
-
-    .message-bubble {
-      background: var(--q-primary);
-      color: white;
-      border-radius: 7.5px 7.5px 0 7.5px;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-  &.assistant-message {
-    justify-content: flex-start;
-
-    .message-bubble {
-      background: white;
-      color: #000;
-      border-radius: 7.5px 7.5px 7.5px 0;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-  }
 }
 
-.body--dark .message-wrapper {
-  &.assistant-message .message-bubble {
-    background: #202c33;
-    color: #e9edef;
-  }
-
-  &.user-message .message-bubble {
-    color: white;
-  }
-}
-
-.message-bubble {
-  max-width: 65%;
-  padding: 6px 7px 8px 9px;
+.message-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #374151;
   word-wrap: break-word;
-  position: relative;
-
-  @media (max-width: 768px) {
-    max-width: 85%;
-  }
-}
-
-.message-content {
-  font-size: 14.2px;
-  line-height: 19px;
 
   :deep(a.message-link) {
-    color: var(--q-accent);
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
+    color: var(--q-primary);
+    text-decoration: underline;
+    &:hover { text-decoration: none; }
   }
 }
 
-.message-time {
-  font-size: 11px;
-  margin-top: 4px;
-  opacity: 0.7;
-  text-align: right;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 3px;
-}
-
-.tutorials-section {
+.message-timestamp {
+  font-size: 12px;
+  color: #9ca3af;
   margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.tutorials-title {
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0.8;
+// Tutorials
+.tutorials-container {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e5e5;
 }
 
-.tutorial-item {
-  padding: 8px 10px;
-  margin-top: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 5px;
-  cursor: pointer;
+.tutorials-header {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  transition: background 0.2s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+  color: #6e6e80;
+  margin-bottom: 12px;
+}
+
+.tutorials-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.tutorial-card-modern {
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 }
 
-// Typing indicator
-.typing-indicator {
+.tutorial-video-wrapper {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; // 16:9 aspect ratio
+  background: #000;
+}
+
+.tutorial-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tutorial-info {
+  padding: 12px;
+}
+
+.tutorial-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #202123;
+  margin-bottom: 6px;
+}
+
+.tutorial-description {
+  font-size: 13px;
+  color: #6e6e80;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.tutorial-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #9ca3af;
+  span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+// Typing Animation
+.typing-animation {
   display: flex;
   gap: 4px;
-  padding: 8px 12px;
-  background: white;
-  border-radius: 7.5px 7.5px 7.5px 0;
-  width: fit-content;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  padding: 8px 0;
 
   span {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.4);
-    animation: typing 1.4s infinite;
+    background: #9ca3af;
+    animation: typing-bounce 1.4s infinite;
 
-    &:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-
-    &:nth-child(3) {
-      animation-delay: 0.4s;
-    }
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
   }
 }
 
-@keyframes typing {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.5;
-  }
-  30% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
-}
-.input-wrapper {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
 }
 
-.attach-btn {
-  opacity: 0.6;
-  margin-bottom: 4px;
+// Input Modern
+.input-container-modern {
+  padding: 16px 24px 24px;
+  background: white;
+  border-top: 1px solid #e5e5e5;
+}
 
-  &:hover {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.05);
+.input-box {
+  max-width: 800px;
+  margin: 0 auto;
+  border-radius: 50px;
+  padding: 6px 12px;
+  transition: all 0.2s;
+
+  &:focus-within {
+    border-color: #9ca3af;
   }
 }
 
-.body--dark .attach-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.input-field {
-  flex: 1;
-}
-
-.message-input {
-  :deep(.q-field__control) {
-    border-radius: 8px;
-    background: #f0f2f5;
-    min-height: 42px;
-
-    &::before {
-      border: none;
-    }
-
-    &::after {
-      border: none;
-    }
-  }
-
+.modern-input {
+  font-size: 15px;
+  border-radius: 50px;
   :deep(.q-field__native) {
     padding: 10px 12px;
-    font-size: 15px;
+    color: #374151;
   }
-}
-
-.body--dark .message-input {
   :deep(.q-field__control) {
-    background: #b4b9bc;
-  }
-
-  :deep(.q-field__native) {
-    color: #e9edef;
-  }
-
-  :deep(.q-field__control-container) {
-    padding: 0;
+    min-height: 44px;
   }
 }
 
-.send-btn {
-  background: var(--q-primary);
-  color: white;
-  width: 42px;
-  height: 42px;
-  margin-bottom: 4px;
+.input-footer {
+  max-width: 800px;
+  margin: 8px auto 0;
+  text-align: center;
+}
 
-  &:hover {
-    opacity: 0.8;
+// Dark Mode
+.body--dark {
+  .ai-chat-modern { background: #212121; }
+  .ai-sidebar { background: #171717; border-color: #2d2d2d; }
+  .sidebar-header { border-color: #2d2d2d; }
+  .conversation-card {
+    &:hover { background: #2d2d2d; }
+    &.active { background: #2d2d2d; .conv-icon { background: var(--q-primary); } }
+  }
+  .conv-icon { background: #2d2d2d; }
+  .conv-title { color: #ececf1; }
+  .conv-preview { color: #9ca3af; }
+
+  .ai-main { background: #212121; }
+  .welcome-title { color: #ececf1; }
+  .welcome-subtitle { color: #9ca3af; }
+  .suggestion-card {
+    background: #2d2d2d;
+    border-color: #3d3d3d;
+    &:hover { background: #3d3d3d; border-color: var(--q-primary); }
+    span { color: #ececf1; }
   }
 
-  &:disabled {
-    opacity: 0.5;
-  }
+  .chat-header-modern { background: #171717; border-color: #2d2d2d; }
+  .chat-header-title { color: #ececf1; }
+  .chat-header-status { color: #9ca3af; }
 
-  :deep(.q-icon) {
-    font-size: 20px;
+  .messages-area { background: #212121; }
+  .message-block.user .message-body { background: #2d2d2d; }
+  .message-author { color: #ececf1; }
+  .message-text { color: #d1d5db; }
+
+  .tutorials-container { border-color: #3d3d3d; }
+  .tutorial-card-modern {
+    background: #2d2d2d;
+    border-color: #3d3d3d;
+    &:hover { background: #3d3d3d; }
   }
+  .tutorial-title { color: #ececf1; }
+  .tutorial-description { color: #9ca3af; }
+  .tutorial-stats { color: #6e6e80; }
+
+  .input-container-modern { background: #171717; border-color: #2d2d2d; }
+  .input-box {
+    background: #2d2d2d;
+    border-color: #3d3d3d;
+    &:focus-within { border-color: #4d4d4d; }
+  }
+  .modern-input :deep(.q-field__native) { color: #ececf1; }
 }
 </style>

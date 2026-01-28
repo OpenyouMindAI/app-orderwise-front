@@ -649,21 +649,30 @@
       @generate="handleIntegrationGenerate"
     />
 
+    <subscription-expiration-banner
+      :is-demo="isDemo"
+      @open-subscription-dialog="showSubscriptionDialog = true"
+      @banner-dismissed="handleBannerDismissed"
+    />
+
     <subscription-plans-dialog
       v-if="showSubscriptionDialog"
       v-model="showSubscriptionDialog"
       @subscription-updated="onSubscriptionUpdated"
     />
-    <SubscriptionExpirationBanner
-      :is-demo="isDemo"
-      @open-subscription-dialog="showSubscriptionDialog = true"
-      @banner-dismissed="handleBannerDismissed"
-    />
+
     <!-- Register Dialog -->
     <register-dialog
       v-model="showCreateCompanyDialog"
       @success="handleRegisterSuccess"
       @google-success="handleGoogleRegisterSuccess"
+    />
+
+    <!-- Company Setup Modal -->
+    <company-setup-modal
+      v-model="showCompanySetup"
+      :user-email="companySetupEmail"
+      @success="handleCompanySetupSuccess"
     />
 
     <!-- OTP Verification Dialog -->
@@ -673,13 +682,6 @@
       :session-token="otpSessionToken"
       :purpose="'verify_email'"
       @verified="handleOtpVerified"
-    />
-
-    <!-- Company Setup Modal -->
-    <company-setup-modal
-      v-model="showCompanySetup"
-      :user-email="companySetupEmail"
-      @success="handleCompanySetupSuccess"
     />
 
     <q-inner-loading :showing="visibleLoading">
