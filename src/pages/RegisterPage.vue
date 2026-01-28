@@ -590,6 +590,31 @@
               </q-input>
             </div>
 
+            <!-- País -->
+            <div class="input-container">
+              <q-select
+                v-model="companyForm.country_id"
+                :options="countries"
+                option-label="name"
+                option-value="id"
+                placeholder="Seleccione el País *"
+                class="custom-input"
+                use-input
+                input-debounce="300"
+                @filter="filterCountries"
+                hide-bottom-space
+                behavior="menu"
+                borderless
+                emit-value
+                map-options
+                :rules="[val => !!val || 'El país es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="public" color="primary" size="20px"/>
+                </template>
+              </q-select>
+            </div>
+
             <!-- Rubro -->
             <div class="input-container">
               <q-select
@@ -705,7 +730,7 @@ const showPassword = ref(false)
 const showPasswordConfirm = ref(false)
 const loading = ref(false)
 const loadingGoogle = ref(false)
-const showCompanySetup = ref(false)
+const showCompanySetup = ref(true)
 
 // OTP Verification
 const currentTab = ref('register')
@@ -739,10 +764,13 @@ const companyForm = ref({
   company_phone: '',
   company_address: '',
   business_type: null,
+  country_id: null,
   copy_test_products: false
 })
 
 const businessTypes = ref([])
+const countries = ref([])
+const countriesOriginal = ref([])
 const loadingCompanySetup = ref(false)
 const isGoogleRegister = ref(false)
 const showCompanyOptions = ref(false)
@@ -794,6 +822,40 @@ const companyAddressData = ref({
   placeId: '',
   types: []
 })
+
+/**
+ * Get countries from API
+ */
+const getCountries = async () => {
+  try {
+    const { data } = await api.get('countries')
+    countriesOriginal.value = data.data || data
+    countries.value = [...countriesOriginal.value]
+  } catch (error) {
+    console.error('Error loading countries:', error)
+  }
+}
+
+/**
+ * Filter countries locally
+ * @param {string} val - The search value
+ * @param {function} update - The update function
+ */
+const filterCountries = (val, update) => {
+  if (val === '') {
+    update(() => {
+      countries.value = [...countriesOriginal.value]
+    })
+    return
+  }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    countries.value = countriesOriginal.value.filter(v =>
+      v.name.toLowerCase().includes(needle)
+    )
+  })
+}
 
 const businessTypeSearch = ref('')
 
@@ -929,6 +991,7 @@ const setupCompany = async () => {
     const payload = {
       ...companyForm.value,
       business_type_id: companyForm.value.business_type?.id,
+      country_id: companyForm.value.country_id,
       company_phone: companyForm.value.company_phone
         ? `${selectedCountry.value?.code || ''}${companyForm.value.company_phone}`.trim()
         : ''
@@ -1457,6 +1520,8 @@ onMounted(async () => {
     // Solo verificar estado OTP si no se restauró una sesión completa
     await checkOtpStatus()
   }
+
+  getCountries()
 })
 
 onBeforeUnmount(() => {
@@ -1997,8 +2062,10 @@ onMounted(async () => {
   line-height: 1; /* Para evitar que el texto afecte la altura */
 }
 
-.custom-input :deep(.q-field__native)::placeholder {
-  color: #9ca3af;
+.custom-input :deep(.q-field__native)::placeholder,
+.custom-input :deep(.q-field__input)::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
 }
 
 .custom-input :deep(.q-field__control):hover {
