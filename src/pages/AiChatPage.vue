@@ -78,7 +78,7 @@
               <div class="ai-logo-ring"></div>
               <q-icon name="auto_awesome" size="64px" class="ai-logo-icon" />
             </div>
-            <h1 class="welcome-title">Asistente IA Orderwise</h1>
+            <h1 class="welcome-title">Asistente IA Palma</h1>
             <p class="welcome-subtitle">
               Pregunta sobre tu negocio, analiza datos o solicita reportes en tiempo real
             </p>
@@ -152,7 +152,7 @@
                   <div class="message-body">
                     <div class="message-author">{{ message.role === 'user' ? 'Tú' : 'Asistente IA' }}</div>
                     <div class="message-text" v-html="formatMessage(message.content)"></div>
-                    
+
                     <!-- Tutoriales -->
                     <div v-if="message.metadata?.tutorials?.length > 0" class="tutorials-container">
                       <div class="tutorials-header">
@@ -174,7 +174,7 @@
                               :poster="tutorial.miniature_url"
                             ></video>
                           </div>
-                          
+
                           <!-- Info del Tutorial -->
                           <div class="tutorial-info">
                             <div class="tutorial-title">{{ tutorial.title }}</div>
@@ -315,9 +315,12 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession']),
+    ...mapState(authentication, ['userSession', 'branchOffice']),
     currentCompany () {
       return this.userSession?.company_session
+    },
+    currentBranchOffice () {
+      return this.branchOffice
     }
   },
   mounted () {
@@ -396,7 +399,11 @@ export default {
         return
       }
       this.loading = true
-      api.post('ai-chats', { company_id: this.currentCompany.id, message: prompt })
+      api.post('ai-chats', {
+        company_id: this.currentCompany.id,
+        message: prompt,
+        branch_office_id: this.currentBranchOffice?.id
+      })
         .then(({ data }) => {
           this.chats.unshift(data)
           this.selectedChat = data
@@ -421,7 +428,10 @@ export default {
       this.isTyping = true
 
       try {
-        const { data } = await api.post(`ai-chats/${this.selectedChat.id}/messages`, { message: messageText })
+        const { data } = await api.post(`ai-chats/${this.selectedChat.id}/messages`, {
+          message: messageText,
+          branch_office_id: this.currentBranchOffice?.id
+        })
         const userIndex = this.messages.findIndex(m => m.id === userMessage.id)
         if (userIndex !== -1) this.messages[userIndex] = data.user_message
         this.messages.push(data.assistant_message)
