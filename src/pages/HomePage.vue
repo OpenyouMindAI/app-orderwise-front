@@ -50,7 +50,53 @@
         </div>
       </div>
 
-      <!-- Quick Actions Selection -->
+      <!-- ROW 1: Stats Ribbon (Desktop 4-cols) -->
+      <template v-if="isAdmin">
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop sale-tile">
+          <div class="stat-icon-wrap bg-soft-primary">
+            <q-icon name="receipt_long" size="28px" color="primary" />
+          </div>
+          <div class="stat-data">
+            <div class="stat-val">{{ todayStats.invoices }}</div>
+            <div class="stat-lab">Ventas de Hoy</div>
+            <div class="stat-trend grow">
+              <q-icon name="trending_up" size="10px" /> 12%
+            </div>
+          </div>
+        </div>
+
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
+          <div class="stat-icon-wrap bg-soft-positive">
+            <q-icon name="payments" size="28px" color="positive" />
+          </div>
+          <div class="stat-data">
+            <div class="stat-val text-positive">{{ formatCurrency(todayStats.revenue) }}</div>
+            <div class="stat-lab">Ingresos Netos</div>
+          </div>
+        </div>
+
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop product-tile">
+          <div class="stat-icon-wrap bg-soft-warning">
+            <q-icon name="inventory_2" size="28px" color="warning" />
+          </div>
+          <div class="stat-data">
+            <div class="stat-val">{{ todayStats.products }}</div>
+            <div class="stat-lab">Productos</div>
+          </div>
+        </div>
+
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop client-tile">
+          <div class="stat-icon-wrap bg-soft-info">
+            <q-icon name="people" size="28px" color="info" />
+          </div>
+          <div class="stat-data">
+            <div class="stat-val text-info">{{ todayStats.clients }}</div>
+            <div class="stat-lab">Clientes Hoy</div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ROW 2: Actions and Activity Side-by-Side -->
       <div class="bento-item actions-bento span-full-mobile span-2-desktop">
         <div class="bento-header">
           <q-icon name="apps" class="q-mr-xs" />
@@ -71,75 +117,49 @@
         </div>
       </div>
 
-      <!-- Stats Grid - Strategic Placement -->
-      <template v-if="isAdmin">
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop sale-tile">
-          <div class="stat-icon-wrap bg-soft-primary">
-            <q-icon name="receipt_long" size="20px" color="primary" />
+      <div v-if="isAdmin" class="bento-item activity-bento span-full-mobile span-2-desktop section-fade-in">
+        <div class="row items-center justify-between q-mb-md">
+          <div class="bento-header no-margin">
+            <q-icon name="history" class="q-mr-xs" />
+            <span>Actividad Reciente</span>
           </div>
-          <div class="stat-data">
-            <div class="stat-val">{{ todayStats.invoices }}</div>
-            <div class="stat-lab">Ventas de Hoy</div>
-          </div>
-          <div class="stat-trend grow">
-            <q-icon name="trending_up" size="10px" /> 12%
-          </div>
-        </div>
-
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
-          <div class="stat-icon-wrap bg-soft-positive">
-            <q-icon name="payments" size="20px" color="positive" />
-          </div>
-          <div class="stat-data">
-            <div class="stat-val text-positive">{{ formatCurrency(todayStats.revenue) }}</div>
-            <div class="stat-lab">Ingresos Netos</div>
-          </div>
-        </div>
-
-        <div class="bento-item activity-bento span-full section-fade-in">
-          <div class="row items-center justify-between q-mb-md">
-            <div class="bento-header no-margin">
-              <q-icon name="history" class="q-mr-xs" />
-              <span>Actividad Reciente</span>
-            </div>
-            <q-btn
-              flat
-              dense
-              no-caps
-              label="Ver todo"
-              color="primary"
-              size="11px"
-              class="rounded-button"
-              @click="navigateTo('Invoice')"
-            />
+          <q-btn
+            flat
+            dense
+            no-caps
+            label="Ver todo"
+            color="primary"
+            size="11px"
+            class="rounded-button"
+            @click="navigateTo('Invoice')"
+          />
         </div>
 
         <div v-if="recentInvoices.length > 0" class="activity-timeline">
-            <div
-              v-for="invoice in recentInvoices"
-              :key="invoice.id"
-              class="timeline-node clickable"
-              @click="viewInvoice(invoice)"
-            >
-              <div class="node-time">{{ formatTime(invoice.created_at) }}</div>
-              <div class="node-line"></div>
-              <div class="node-content">
-                <div class="node-header">
-                  <span class="node-title">#{{ invoice.id }}</span>
-                  <span class="node-amount">{{ formatCurrency(invoice.total) }}</span>
-                </div>
-                <div class="node-subtitle">{{ invoice.client_name || 'Consumidor Final' }}</div>
+          <div
+            v-for="invoice in recentInvoices"
+            :key="invoice.id"
+            class="timeline-node clickable"
+            @click="viewInvoice(invoice)"
+          >
+            <div class="node-time">{{ formatTime(invoice.created_at) }}</div>
+            <div class="node-line"></div>
+            <div class="node-content">
+              <div class="node-header">
+                <span class="node-title">#{{ invoice.id }}</span>
+                <span class="node-amount">{{ formatCurrency(invoice.total) }}</span>
               </div>
-            </div>
-          </div>
-          <div v-else class="empty-glitch flex flex-center q-pa-lg">
-            <div class="text-center opacity-40">
-              <q-icon name="biometric_setup" size="40px" class="q-mb-sm" />
-              <div class="text-caption">Monitoreando transacciones...</div>
+              <div class="node-subtitle">{{ invoice.client_name || 'Consumidor Final' }}</div>
             </div>
           </div>
         </div>
-      </template>
+        <div v-else class="empty-glitch flex flex-center q-pa-lg">
+          <div class="text-center opacity-40">
+            <q-icon name="biometric_setup" size="40px" class="q-mb-sm" />
+            <div class="text-caption">Monitoreando transacciones...</div>
+          </div>
+        </div>
+      </div>
     </div>
   </q-page>
 </template>
@@ -397,9 +417,18 @@ onMounted(() => {
 .home-page {
   background: #f1f5f9;
   overflow-x: hidden;
-  padding: 16px;
+  padding: 0px;
   padding-bottom: 96px;
+  max-width: 1400px;
+  margin: 0 auto;
   font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+}
+
+@media (min-width: 1024px) {
+  .home-page {
+    padding: 10px;
+    padding-bottom: 48px;
+  }
 }
 
 body.body--dark .home-page {
@@ -529,6 +558,7 @@ body.body--dark .bento-item {
 
 .span-full { grid-column: 1 / -1; }
 .span-full-mobile { grid-column: 1 / -1; }
+.span-small-mobile { grid-column: span 1; }
 
 @media (min-width: 1024px) {
   .span-2-desktop { grid-column: span 2; }
@@ -605,44 +635,66 @@ body.body--dark .action-pill__label {
  */
 .stat-hero {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  min-height: auto;
+}
+
+@media (min-width: 1024px) {
+  .actions-bento, .activity-bento {
+    height: 100%;
+  }
+}
+
+.actions-bento {
+  display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 100px;
 }
 
 .stat-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.stat-hero:hover .stat-icon-wrap {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .bg-soft-primary { background: rgba(var(--q-primary-rgb), 0.1); }
 .bg-soft-positive { background: rgba(var(--q-positive-rgb), 0.1); }
+.bg-soft-warning { background: rgba(var(--q-warning-rgb), 0.1); }
+.bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
 
 .stat-val {
   font-size: 20px;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -0.5px;
+  line-height: 1.1;
 }
 
 .stat-lab {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
   margin-top: 2px;
+  white-space: nowrap;
 }
 
 .stat-trend {
   font-size: 10px;
   font-weight: 800;
-  padding: 2px 6px;
+  padding: 1px 4px;
   border-radius: 4px;
-  margin-top: 8px;
+  margin-top: 2px;
   width: fit-content;
 }
 
