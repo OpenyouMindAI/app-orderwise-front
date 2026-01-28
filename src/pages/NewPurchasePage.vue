@@ -103,9 +103,10 @@
                   autofocus
                   label="Código"
                   style="width: 100% !important; max-width: none !important;"
-                  @keypress.enter="getOneProduct"
+                  @keypress.enter="processBarcode(barcode)"
                 >
                     <template v-slot:append>
+                        <q-btn v-if="$q.platform.is.nativeMobile" round color="teal" icon="qr_code_scanner" size="sm" @click="startScanner" class="q-mr-sm"/>
                         <q-btn round color="teal" icon="add_circle" size="sm" @click="openAddProduct = true"/>
                     </template>
                 </q-input>
@@ -181,6 +182,19 @@
                        </q-card-actions>
                      </q-card>
                    </q-popup-proxy>
+                 </q-btn>
+               </div>
+               <div class="flex">
+                 <q-btn
+                   color="info"
+                   icon="qr_code_scanner"
+                   style="height: 100%"
+                   @click.stop="startScanner"
+                   v-if="$q.platform.is.nativeMobile"
+                 >
+                   <q-tooltip class="text-body2" anchor="bottom middle">
+                     Escanear código
+                   </q-tooltip>
                  </q-btn>
                </div>
 
@@ -1236,9 +1250,16 @@
 import { Notify } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatDate, formatNumber, notify } from 'src/const/mixins'
+import { formatDate, formatNumber, notify, BALANZA_PREFIXES } from 'src/const/mixins'
 import WaitByPaymentMp from 'src/components/Billing/WaitByPaymentMp.vue'
 import FileComponent from 'src/components/FileComponent.vue'
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerAndroidScanningLibrary,
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint
+} from '@capacitor/barcode-scanner'
 export default {
   name: 'NewPurchasePage',
   components: {
@@ -1424,6 +1445,16 @@ export default {
        * @type {String}
        */
       barcode: null,
+      /**
+       * Balance code
+       * @type {String}
+       */
+      balanceCode: null,
+      /**
+       * Scanning mode
+       * @type {Boolean}
+       */
+      scanningMode: false,
       /**
        * Without payment
        * @type {Array}
@@ -1788,6 +1819,130 @@ export default {
       }
       this.pagination = data.pagination
       this.getAllProducts(params)
+    },
+    /**
+     * Start scanner
+     */
+    async startScanner () {
+      try {
+        this.scanningMode = true
+        const result = await CapacitorBarcodeScanner.scanBarcode({
+          hint: CapacitorBarcodeScannerTypeHint.ALL,
+          scanInstructions: 'Escanear código',
+          scanButton: false,
+          scanText: 'Scan',
+          cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+          scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE,
+          android: {
+            scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.ZXING
+          }
+        })
+        await this.processBarcode(result.ScanResult)
+      } catch (error) {
+        this.scanningMode = false
+        if (error instanceof Error) {
+          // notify(error.message, 'negative', 'warning')
+        } else {
+          notify('Error al escanear el código', 'negative', 'warning')
+        }
+      }
+    },
+    async processBarcode (barcode) {
+      try {
+        if (!barcode || typeof barcode !== 'string' || barcode.length < 13) {
+          this.getOneProduct(barcode)
+          return
+        }
+
+        const balancePrefix = (typeof this.balanceCode === 'string' && this.balanceCode.length > 0)
+          ? this.balanceCode
+          : null
+
+        let prefixLength = 2
+        let prefixes = []
+
+        if (balancePrefix) {
+          prefixLength = balancePrefix.length
+          prefixes.push(balancePrefix)
+        } else {
+          prefixes = BALANZA_PREFIXES
+        }
+
+        const prefix = barcode.substring(0, prefixLength)
+
+        if (prefixes.includes(prefix)) {
+          const pluStart = prefixLength
+          const pluEnd = pluStart + 4
+          const variableStart = pluEnd
+
+          const pluRaw = barcode.substring(pluStart, pluEnd)
+          const variablePart = barcode.substring(variableStart, 12)
+
+          const plu = parseInt(pluRaw, 10).toString()
+
+          if (!/^\d+$/.test(variablePart)) {
+            notify('Formato inválido en importe/peso', 'negative', 'warning')
+            this.getOneProduct(barcode)
+            return
+          }
+
+          const product = await this.getProduct(plu)
+          if (!product) {
+            notify('Producto no encontrado', 'negative', 'warning')
+            this.getOneProduct(barcode)
+            return
+          }
+
+          const importe = parseInt(variablePart, 10) / 1000
+
+          if (isNaN(importe) || importe <= 0) {
+            notify('Importe inválido', 'negative', 'warning')
+            this.getOneProduct(barcode)
+            return
+          }
+
+          this.quantity = importe
+          this.validateProduct(product, false)
+          this.barcode = null
+          return
+        }
+
+        this.getOneProduct(barcode)
+      } catch (error) {
+        console.error('Error procesando código de balanza:', error)
+        notify('Error procesando producto', 'negative', 'warning')
+        this.getOneProduct(barcode)
+      }
+    },
+    async getProduct (barcode) {
+      try {
+        const { data } = await this.$api.get('products', {
+          params: {
+            dataEqualFilter: { barcode },
+            branch_office_id: this.branchOffice?.id,
+            stock: true
+          }
+        })
+        return data[0]
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    async getOneProduct (barcodeParam) {
+      const barcodeToSearch = barcodeParam || this.barcode
+      const product = await this.getProduct(barcodeToSearch)
+
+      if (product) {
+        this.validateProduct(product, true)
+        this.barcode = null
+        this.modelScan = false
+      } else {
+        this.$q.notify({
+          message: 'Producto no encontrado',
+          icon: 'warning',
+          color: 'negative'
+        })
+      }
     },
     /**
      * Save providers
@@ -2422,6 +2577,7 @@ export default {
       this.invoiceType = companySession?.company_config?.invoice_type
       this.typeOfService = companySession?.company_config?.type_of_service
       this.coin = companySession?.company_config?.coin
+      this.balanceCode = companySession?.company_config?.other?.balance_code
       this.calculateTotal()
       this.getUnitOfMeasures()
     },
@@ -2535,6 +2691,30 @@ export default {
       this.currentAmount = 0
       this.quantityDialog = false
       this.selectedUom = null
+
+      // Preguntar si desea escanear otro producto si está en modo escaneo
+      if (this.scanningMode) {
+        this.$q.dialog({
+          title: 'Escaneo exitoso',
+          message: '¿Desea escanear otro producto?',
+          cancel: {
+            label: 'No, finalizar',
+            color: 'negative',
+            flat: true
+          },
+          ok: {
+            label: 'Sí, escanear',
+            color: 'primary'
+          },
+          persistent: true
+        }).onOk(() => {
+          this.startScanner()
+        }).onCancel(() => {
+          this.scanningMode = false
+        }).onDismiss(() => {
+          // Asegurar que salimos del modo si se cierra de otra forma
+        })
+      }
     },
     closeModal () {
       this.openAddProduct = false
@@ -2691,40 +2871,7 @@ export default {
     setCategory (data) {
       this.product.aliquot_type = data.aliquot_type
     },
-    /**
-     * Get one product
-     * @param {Number} barcode barcode product
-     */
-    async getOneProduct () {
-      this.$api.get('products', {
-        params: {
-          dataEqualFilter: {
-            barcode: this.barcode
-          }
-        }
-      })
-        .then(({ data }) => {
-          const product = data[0]
-          if (product) {
-            this.validateProduct(product, true)
-            this.barcode = null
-            this.modelScan = false
-          } else {
-            this.$q.notify({
-              message: 'Producto no encontrado',
-              icon: 'warning',
-              color: 'negative'
-            })
-          }
-        })
-        .catch((error) => {
-          this.$q.notify({
-            message: error.message,
-            icon: 'warning',
-            color: 'negative'
-          })
-        })
-    },
+
     /**
      * Open file dialog safely
      */
