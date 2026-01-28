@@ -114,18 +114,21 @@
               class="create-btn-v0"
               @click="showCreateCompanyDialog = true"
             >
-              <q-icon name="rocket_launch" size="16px" class="q-mr-xs rocket-icon" />
-              <span>Mi Empresa</span>
+              <q-icon
+                name="rocket_launch"
+                size="16px"
+                :class="[$q.screen.xs ? '' : 'q-mr-xs', 'rocket-icon']"
+              />
+              <span v-if="!$q.screen.xs">Mi Empresa</span>
 
               <q-tooltip class="bg-grey-9">
                 Crea tu empresa y comienza gratis
               </q-tooltip>
             </q-btn>
           </transition>
-
-          <!-- Botón de Tour -->
+          <!-- Botón de Tour (Visible en Desktop y Tablet) -->
           <q-btn
-            v-if="currentPageHasTour"
+            v-if="currentPageHasTour && !$q.screen.xs"
             flat
             dense
             icon="help_outline"
@@ -135,7 +138,6 @@
           >
             <q-tooltip>Ver tutorial de esta página</q-tooltip>
           </q-btn>
-
           <q-btn
             v-if="showRenewButton"
             flat
@@ -162,7 +164,7 @@
             icon="cast_connected"
             round
             @click="screen"
-            v-if="hasMultipleScreens && $q.platform.is.nativeMobile"
+            v-if="hasMultipleScreens && $q.platform.is.nativeMobile && !$q.screen.xs"
           >
             <q-tooltip>Segunda pantalla</q-tooltip>
           </q-btn>
@@ -177,7 +179,7 @@
           >
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
-
+          <!-- Chat IA (Visible en Desktop y Tablet) -->
           <q-btn
             flat
             dense
@@ -185,12 +187,11 @@
             round
             color="primary"
             @click="changeRoute('AiChat', 'Chat con IA')"
-            v-if="userSession?.is_root"
+            v-if="userSession?.is_root && !$q.screen.xs"
             class="ai-chat-btn"
           >
             <q-tooltip>Chat con IA - Asistente Virtual</q-tooltip>
           </q-btn>
-
           <!-- Herramientas -->
           <q-btn flat dense icon="apps" round @click="loadIntegrations">
             <q-tooltip class="text-body2">
@@ -214,6 +215,27 @@
                   >
                     <q-icon name="sync_alt" size="24px" />
                     <span class="tool-label">Empresa</span>
+                  </div>
+
+                  <!-- Chat IA (Solo Mobile XS) -->
+                  <div
+                    v-if="userSession?.is_root && $q.screen.xs"
+                    class="tool-item"
+                    :class="{ 'tool-active': $route.name === 'AiChat' }"
+                    @click="changeRoute('AiChat', 'Chat con IA')"
+                  >
+                    <q-icon name="smart_toy" size="24px" color="primary" />
+                    <span class="tool-label">Chat IA</span>
+                  </div>
+
+                  <!-- Tour de Página (Solo Mobile XS) -->
+                  <div
+                    v-if="currentPageHasTour && $q.screen.xs"
+                    class="tool-item"
+                    @click="activateCurrentPageTour"
+                  >
+                    <q-icon name="help_outline" size="24px" />
+                    <span class="tool-label">Tutorial</span>
                   </div>
 
                   <!-- Sucursal -->
@@ -247,9 +269,20 @@
                     <span class="tool-label">Tema</span>
                   </div>
 
+                  <!-- Otros Items Existentes -->
                   <div class="tool-item" @click="copyCatalog">
                     <q-icon name="share" size="24px" />
                     <span class="tool-label">Compartir</span>
+                  </div>
+
+                  <!-- Segunda Pantalla (Solo Mobile XS) -->
+                  <div
+                    v-if="hasMultipleScreens && $q.platform.is.nativeMobile && $q.screen.xs"
+                    class="tool-item"
+                    @click="screen"
+                  >
+                    <q-icon name="cast_connected" size="24px" />
+                    <span class="tool-label">Segunda Pantalla</span>
                   </div>
 
                   <div class="tool-item" @click="update">
