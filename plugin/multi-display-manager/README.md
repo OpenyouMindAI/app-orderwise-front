@@ -23,14 +23,12 @@ npx cap sync
 ### showOnSecondScreen(...)
 
 ```typescript
-showOnSecondScreen(options: { url: string; }) => any
+showOnSecondScreen(options: { url: string; }) => Promise<void>
 ```
 
 | Param         | Type                          |
 | ------------- | ----------------------------- |
 | **`options`** | <code>{ url: string; }</code> |
-
-**Returns:** <code>any</code>
 
 --------------------
 

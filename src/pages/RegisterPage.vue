@@ -730,7 +730,7 @@ const showPassword = ref(false)
 const showPasswordConfirm = ref(false)
 const loading = ref(false)
 const loadingGoogle = ref(false)
-const showCompanySetup = ref(true)
+const showCompanySetup = ref(false)
 
 // OTP Verification
 const currentTab = ref('register')

@@ -107,24 +107,31 @@
             enter-active-class="animated fadeIn"
             leave-active-class="animated fadeOut"
           >
-            <q-btn
+            <div
               v-if="store.isDemo"
-              outline
-              dense
-              class="create-btn-v0"
-              @click="showCreateCompanyDialog = true"
+              :class="[$q.screen.xs ? 'float-create-btn-mobile' : '']"
             >
-              <q-icon
-                name="rocket_launch"
-                size="16px"
-                :class="[$q.screen.xs ? '' : 'q-mr-xs', 'rocket-icon']"
-              />
-              <span v-if="!$q.screen.xs">Mi Empresa</span>
-
-              <q-tooltip class="bg-grey-9">
+              <div v-if="$q.screen.xs && showDemoMessage" class="demo-info-message">
                 Crea tu empresa y comienza gratis
-              </q-tooltip>
-            </q-btn>
+              </div>
+              <q-btn
+                outline
+                dense
+                class="create-btn-v0"
+                @click="showCreateCompanyDialog = true"
+              >
+                <q-icon
+                  name="rocket_launch"
+                  size="16px"
+                  :class="[$q.screen.xs ? '' : 'q-mr-xs', 'rocket-icon']"
+                />
+                <span v-if="!$q.screen.xs">Mi Empresa</span>
+
+                <q-tooltip v-if="!$q.screen.xs" class="bg-grey-9">
+                  Crea tu empresa y comienza gratis
+                </q-tooltip>
+              </q-btn>
+            </div>
           </transition>
           <!-- Botón de Tour (Visible en Desktop y Tablet) -->
           <q-btn
@@ -651,7 +658,7 @@
     </q-page-container>
 
     <!-- Bottom Navigation (Mobile Only) -->
-    <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
+    <!-- <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" /> -->
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
@@ -751,7 +758,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
-import BottomNav from 'src/components/Navigation/BottomNav.vue'
+// import BottomNav from 'src/components/Navigation/BottomNav.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -772,7 +779,7 @@ export default {
     CompanySetupModal,
     PremiumBadge,
     IntegrationDynamic,
-    BottomNav
+    // BottomNav
   },
   data () {
     return {
@@ -884,6 +891,7 @@ export default {
        */
       showOnboardingFab: false,
       onboardingProgress: 0,
+      showDemoMessage: false,
       tasks: {
         formattedAddress: '',
         placeId: '',
@@ -1080,6 +1088,13 @@ export default {
     eventBus.on('open-create-company', () => {
       this.showCreateCompanyDialog = true
     })
+
+    if (this.store.isDemo) {
+      this.showDemoMessage = true
+      setTimeout(() => {
+        this.showDemoMessage = false
+      }, 10000)
+    }
 
     this.startDemoReminder()
   },
@@ -2998,6 +3013,99 @@ export default {
   font-weight: 600;
   padding: 10px 24px;
   transition: all 0.3s ease;
+}
+
+/* Floating Create Button Mobile */
+.float-create-btn-mobile {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Demo Info Message */
+.demo-info-message {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both, fadeOutMessage 0.4s ease-in 2.6s forwards;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes fadeOutMessage {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.float-create-btn-mobile .create-btn-v0 {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #667eea 100%) !important;
+  color: white !important;
+  width: 52px;
+  height: 52px;
+  border-radius: 50% !important;
+  box-shadow: 0 6px 20px rgba(var(--q-primary-rgb), 0.5);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.float-create-btn-mobile .create-btn-v0:active {
+  transform: scale(0.9);
+}
+
+.float-create-btn-mobile .create-btn-v0 .q-icon {
+  font-size: 26px !important;
+}
+
+/* Pantallas muy pequeñas */
+@media (max-width: 360px) {
+  .float-create-btn-mobile {
+    right: 16px;
+    bottom: 74px;
+    gap: 8px;
+  }
+
+  .float-create-btn-mobile .create-btn-v0 {
+    width: 44px;
+    height: 44px;
+  }
+
+  .float-create-btn-mobile .create-btn-v0 .q-icon {
+    font-size: 22px !important;
+  }
+
+  .demo-info-message {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
 }
 
 .create-btn:hover {
