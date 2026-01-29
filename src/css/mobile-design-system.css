@@ -22,10 +22,10 @@
 :root {
   /* Minimum touch target size (WCAG AAA) */
   --touch-min: 44px;
-  
+
   /* Comfortable touch target */
   --touch-comfortable: 48px;
-  
+
   /* Large touch target (primary actions) */
   --touch-large: 56px;
 }
@@ -51,7 +51,7 @@
   --transition-fast: 150ms;
   --transition-normal: 250ms;
   --transition-slow: 350ms;
-  
+
   /* Easing functions */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
@@ -194,7 +194,7 @@ body.body--dark .list-item-mobile:active {
   font-size: 14px;
   font-weight: 400;
   line-height: 1.4;
-  color: #666;
+  color: #fff;
 }
 
 body.body--dark .text-caption {
@@ -239,19 +239,19 @@ body.body--dark .text-label {
   .safe-area-top {
     padding-top: max(0px, env(safe-area-inset-top));
   }
-  
+
   .safe-area-bottom {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
-  
+
   .safe-area-left {
     padding-left: max(0px, env(safe-area-inset-left));
   }
-  
+
   .safe-area-right {
     padding-right: max(0px, env(safe-area-inset-right));
   }
-  
+
   .safe-area-all {
     padding-top: max(0px, env(safe-area-inset-top));
     padding-bottom: max(0px, env(safe-area-inset-bottom));
@@ -307,30 +307,27 @@ body.body--dark .text-label {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 25%,
-    #e0e0e0 50%,
-    #f0f0f0 75%
-  );
+  background: linear-gradient(90deg,
+      #f0f0f0 25%,
+      #e0e0e0 50%,
+      #f0f0f0 75%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s ease-in-out infinite;
   border-radius: var(--radius-sm);
 }
 
 body.body--dark .skeleton {
-  background: linear-gradient(
-    90deg,
-    #2a2a2a 25%,
-    #3a3a3a 50%,
-    #2a2a2a 75%
-  );
+  background: linear-gradient(90deg,
+      #2a2a2a 25%,
+      #3a3a3a 50%,
+      #2a2a2a 75%);
 }
 
 /* ============================================
