@@ -481,6 +481,7 @@
       </q-card>
     </q-dialog>
     </div>
+    <DemoPersuasionModal v-model="showDemoModal" />
   </q-page>
 </template>
 
@@ -491,7 +492,14 @@ import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import eventBus from 'src/utils/eventBus'
 import { api } from 'boot/axios'
+import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
+import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
 export default {
+  components: { DemoPersuasionModal },
+  setup () {
+    const { showDemoModal, trackDemoAction } = useDemoPersuasion()
+    return { showDemoModal, trackDemoAction }
+  },
   data () {
     return {
       categories: [],
@@ -883,6 +891,8 @@ export default {
             icon: 'check_circle',
             color: 'positive'
           })
+
+          this.trackDemoAction()
 
           this.checkContinueConfiguration()
         })

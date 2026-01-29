@@ -1748,6 +1748,8 @@
       v-model="showSubscriptionDialog"
       @subscription-updated="loadSubscriptionInfo"
     />
+
+    <DemoPersuasionModal v-model="showDemoModal" />
   </q-page>
 </template>
 
@@ -1784,6 +1786,8 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
+import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
+import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
 
 export default {
   name: 'BillingPage',
@@ -1801,14 +1805,16 @@ export default {
     CashflowModal,
     FileComponent,
     OnboardingValidationModal,
-    SearchPendingInvoicesDialog
+    SearchPendingInvoicesDialog,
+    DemoPersuasionModal
+  },
+  setup () {
+    const { showDemoModal, trackDemoAction } = useDemoPersuasion()
+    const tourStore = useTourStore()
+    return { showDemoModal, trackDemoAction, tourStore }
   },
   data () {
-    const tourStore = useTourStore()
-    tourStore.initFromLocalStorage()
-
     return {
-      tourStore,
       LOCAL,
       ORDER,
       DELIVERY,
@@ -4384,6 +4390,8 @@ export default {
 
         await this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
+
+        this.trackDemoAction()
 
         this.dialogPayment = false
         if (!this.tableClose) {
