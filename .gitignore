@@ -28,9 +28,11 @@ yarn-error.log*
 *.njsproj
 *.sln
 
+.env
 .env.local
 .env.production
 .env.main
 .env.development
 .env.deploy
+.env.staging
 .prettierrc
