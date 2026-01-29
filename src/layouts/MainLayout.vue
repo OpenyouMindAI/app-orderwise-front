@@ -651,7 +651,7 @@
     </q-page-container>
 
     <!-- Bottom Navigation (Mobile Only) -->
-    <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
+    <!-- <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" /> -->
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
@@ -751,7 +751,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
-import BottomNav from 'src/components/Navigation/BottomNav.vue'
+// import BottomNav from 'src/components/Navigation/BottomNav.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -772,7 +772,7 @@ export default {
     CompanySetupModal,
     PremiumBadge,
     IntegrationDynamic,
-    BottomNav
+    // BottomNav
   },
   data () {
     return {

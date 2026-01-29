@@ -345,7 +345,7 @@
             <div class="row items-center full-width">
               <q-icon name="category" size="sm" class="q-mr-sm"/>
               <div class="col">
-                <div class="text-subtitle1 text-weight-bold">🏪 Ventas por Departamento</div>
+                <div class="text-subtitle1 text-weight-bold">🏪 Ventas por categorías</div>
               </div>
               <div class="col-auto flex justify-center items-center q-gutter-x-md">
                 <div class="text-body1 text-bold">Total: {{ formatNumber(categoryTotalsTotals.category_total || 0) }}</div>
@@ -572,7 +572,7 @@
           </template>
 
           <q-card flat>
-            <q-card-section class="dense-content" style="padding: 12px;">
+            <q-card-section class="dense-content scroll" style="padding: 12px;">
               <!-- Summary Cards -->
               <div class="row q-col-gutter-md q-mb-md">
                 <div class="col-12 col-md-4">
@@ -804,7 +804,7 @@
                   </q-item-section>
                   <q-item-section side>
                     <q-item-label>
-                      {{ formatNumber(taxeTotals?.summary?.total_base) }}
+                      {{ formatNumber(taxeTotals?.summary?.total_base || 0) }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -882,7 +882,7 @@
                   </q-item-section>
                   <q-item-section side>
                     <q-item-label>
-                      {{ formatNumber(taxeTotals?.summary?.total_tax) }}
+                      {{ formatNumber(taxeTotals?.summary?.total_tax || 0) }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -899,7 +899,7 @@
                 </q-item-section>
                 <q-item-section side>
                   <q-item-label>
-                    {{ formatNumber(taxeTotals?.summary?.total_invoiced) }}
+                    {{ formatNumber(taxeTotals?.summary?.total_invoiced || 0) }}
                   </q-item-label>
                 </q-item-section>
               </q-item>
@@ -1343,6 +1343,10 @@ export default {
     }
   },
 
+  /**
+   * Initialize component, load branch offices and current shift
+   * @return {Promise<void>}
+   */
   async created () {
     this.setPermissions()
     await this.getBranchOffices()
@@ -1350,15 +1354,13 @@ export default {
       this.branchOfficeSelect = [this.branchOffice]
       this.appliedBranchOfficeSelect = [this.branchOffice]
 
-      // Cargar turno actual sin aplicar filtro todavía
-      const shiftLoaded = await this.loadCurrentShift(false)
+      // Load current shift without applying filter yet
+      await this.loadCurrentShift(false)
 
-      // Ahora aplicar el filtro una sola vez con el turno ya cargado
-      if (shiftLoaded) {
-        this.filterDate()
-      }
+      // Always apply the filter once to bring data (all day if no shift is active)
+      this.filterDate()
 
-      // Desactivar bandera de carga inicial
+      // Deactivate initial load flag
       this.isInitialLoad = false
     }
   },
@@ -1609,16 +1611,20 @@ export default {
     },
 
     /**
-     * Load current shift (turno en curso) - without applying filter
+     * Load current shift (open shift) - without applying filter by default
+     * @params {boolean} applyFilter Whether to apply the filter after loading
+     * @return {Promise<boolean>} True if shift was loaded, false otherwise
      */
     async loadCurrentShift (applyFilter = true) {
+      this.cashBoxUser = null
+      this.cashBoxUsers = []
       try {
         const today = formatDate(Date.now(), 'YYYY-MM-DD')
 
-        // Verificar si la fecha seleccionada es hoy
+        // Verify if selected date is today
         const isToday = this.panel === 'day' && this.day === today
 
-        // Si no es hoy, no cargar turno y mostrar mensaje
+        // If not today, do not load shift and show message
         if (!isToday && applyFilter) {
           this.$q.notify({
             message: 'El turno solo está disponible para el día actual',
@@ -1631,10 +1637,10 @@ export default {
         const params = {
           status: 'open',
           branch_office_id: this.branchOffice?.id,
-          day: today // Solo turnos de hoy
+          day: today // Only shifts from today
         }
 
-        // Si NO es root o super admin, filtrar solo por sus turnos
+        // If NOT root or super admin, filter only by their shifts
         if (!this.userSession?.is_root && !this.validate) {
           params.cashier_id = this.userSession?.id
         }
@@ -1642,17 +1648,17 @@ export default {
         const { data } = await this.$api.get('cashier-boxes', { params })
 
         if (data && data.length > 0) {
-          // Si es vendedor, tomar el primero (su turno)
-          // Si es admin, mostrar todos los turnos del día
+          // If seller, take the first one (their shift)
+          // If admin, show all open shifts for the day
           if (!this.userSession?.is_root && !this.validate) {
             this.cashBoxUser = data[0]
             this.cashBoxUsers = [data[0]]
           } else {
-            // Para admins, mostrar lista de turnos abiertos hoy
+            // For admins, show list of shifts open today
             this.cashBoxUsers = data
-            this.cashBoxUser = data[0] // Seleccionar el primero por defecto
+            this.cashBoxUser = data[0] // Select the first one by default
           }
-          // Aplicar el filtro con el turno cargado solo si se solicita
+          // Apply the filter with the loaded shift only if requested
           if (applyFilter) {
             this.filterDate()
           }
@@ -1719,6 +1725,10 @@ export default {
       return params
     },
 
+    /**
+     * Filter report by date and current shift params
+     * @return {Promise<void>}
+     */
     async filterDate () {
       if (!this.branchOffice?.id) return
       this.appliedBranchOfficeSelect = [...this.branchOfficeSelect]
