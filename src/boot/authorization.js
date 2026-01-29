@@ -171,7 +171,44 @@ export default boot(async ({ router, store }) => {
           return next('/login')
         }
 
-        // Validar acceso a módulos
+        const isPremiumMode = process.env.PREMIUM_MODE === 'true' || process.env.PREMIUM_MODE === true
+
+        const user = $store.userSession
+        const isSuperUser = user?.is_root
+        const excludedPremiumRoutes = [
+          'SubscriptionPlan',
+          'Login',
+          'ChangeCompany',
+          'VerifySession',
+          'Profile',
+          'SubscriptionSuccess',
+          'SubscriptionFailure',
+          'SubscriptionPending'
+        ]
+
+        if (isPremiumMode && !isSuperUser) {
+          // Ensure subscription info is loaded
+          if (!$store.currentSubscription) {
+            await $store.loadSubscriptionInfo()
+          }
+
+          const hasPremium = $store.hasPremiumPlan
+          const isExcludedRoute = excludedPremiumRoutes.includes(to.name)
+
+          if (!hasPremium) {
+            $store.mustSelectPlan = true
+
+            if (!isExcludedRoute) {
+              notifyError('Debes tener un plan Pro o Pro Team para usar el sistema')
+              return next({ name: 'Profile' })
+            }
+          } else {
+            $store.mustSelectPlan = false
+          }
+        } else {
+          $store.mustSelectPlan = false
+        }
+
         const redirectRoute = validateModuleAccess($store, to)
         if (redirectRoute) {
           return next(redirectRoute)

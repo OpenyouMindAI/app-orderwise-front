@@ -778,7 +778,7 @@ export default {
     OtpVerificationDialog,
     CompanySetupModal,
     PremiumBadge,
-    IntegrationDynamic,
+    IntegrationDynamic
     // BottomNav
   },
   data () {
@@ -927,7 +927,8 @@ export default {
       'access_token',
       'refresh_token',
       'expires_In',
-      'token_type'
+      'token_type',
+      'mustSelectPlan'
     ]),
     ...mapState(darkModeStore, ['darkMode']),
     /**
@@ -1061,6 +1062,16 @@ export default {
     },
     $route (to, from) {
       this.loadingTasks()
+    },
+    mustSelectPlan: {
+      handler (val) {
+        if (val) {
+          this.showSubscriptionDialog = true
+        } else {
+          this.showSubscriptionDialog = false
+        }
+      },
+      immediate: true
     }
   },
   setup () {

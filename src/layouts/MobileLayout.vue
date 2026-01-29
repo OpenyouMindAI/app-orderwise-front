@@ -312,7 +312,8 @@ export default {
       'access_token',
       'refresh_token',
       'expires_In',
-      'token_type'
+      'token_type',
+      'mustSelectPlan'
     ]),
 
     /**
@@ -410,6 +411,18 @@ export default {
       this.showProfileMenu = false
       this.router.push({ name: 'Login' })
       this.logout()
+    }
+  },
+  watch: {
+    mustSelectPlan: {
+      handler (val) {
+        if (val) {
+          this.showSubscriptionDialog = true
+        } else {
+          this.showSubscriptionDialog = false
+        }
+      },
+      immediate: true
     }
   }
 }

@@ -150,7 +150,21 @@
               </div>
 
               <!-- Fila 1: Tipo de documento y Número -->
-              <div class="col-12 col-sm-6">
+              <div class="col-12 col-sm-6" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
+                  tooltip-text="PREMIUM"
+                />
                 <q-select
                   filled
                   use-input
@@ -161,6 +175,7 @@
                   v-model="client.document_type"
                   :options="documentTypes"
                   @filter="getDocumentTypes"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
@@ -191,34 +206,50 @@
                   dense
                 />
               </div>
-            <!-- Fila 3: Usuario y Contraseña -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.username"
-                label="Usuario"
-                autocomplete="off"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.password"
-                :type="showPassword ? 'text' : 'password'"
-                label="Contraseña"
-                autocomplete="new-password"
-              >
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPassword ? 'visibility_off' : 'visibility'"
-                    class="cursor-pointer"
-                    @click="showPassword = !showPassword"
-                  />
-                </template>
-              </q-input>
-            </div>
+              <!-- Fila 3: Usuario y Contraseña -->
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                <q-input
+                  filled
+                  v-model="client.username"
+                  label="Usuario"
+                  autocomplete="off"
+                  dense
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                <q-input
+                  filled
+                  v-model="client.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  label="Contraseña"
+                  autocomplete="new-password"
+                  dense
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="showPassword ? 'visibility_off' : 'visibility'"
+                      class="cursor-pointer"
+                      @click="showPassword = !showPassword"
+                    />
+                  </template>
+                </q-input>
+              </div>
               <!-- Condición de IVA -->
-              <div class="col-12">
+              <div class="col-12" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
+                  tooltip-text="PREMIUM"
+                />
                 <q-select
                   filled
                   use-input
@@ -229,10 +260,32 @@
                   v-model="client.condition_iva_receptor"
                   :options="conditionIvaReceptors"
                   @filter="getConditionIvaReceptor"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
+
               <!-- Affiliate Configuration -->
+              <div class="col-4 flex q-gutter-x-lg q-pt-md">
+                <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" />
+              </div>
+              <div class="col-8" v-if="!client.is_partner">
+                <q-select
+                  filled
+                  v-model="client.partner"
+                  label="Afiliado"
+                  :options="partners"
+                  @filter="getPartners"
+                  use-input
+                  option-label="name"
+                  option-value="id"
+                  dense
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="group" />
+                  </template>
+                </q-select>
+              </div>
               <div class="col-12 flex q-gutter-x-lg q-pt-md">
                 <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
               </div>
@@ -312,7 +365,21 @@
               </div>
 
               <!-- Fila 1: Tipo de documento y Número -->
-              <div class="col-12 col-sm-6">
+              <div class="col-12 col-sm-6" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
+                  tooltip-text="PREMIUM"
+                />
                 <q-select
                   filled
                   use-input
@@ -323,6 +390,7 @@
                   v-model="client.document_type"
                   :options="documentTypes"
                   @filter="getDocumentTypes"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
@@ -354,35 +422,51 @@
                 />
               </div>
 
-            <!-- Fila 3: Usuario y Contraseña -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.username"
-                label="Usuario"
-                autocomplete="off"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.password"
-                :type="showPassword ? 'text' : 'password'"
-                label="Contraseña"
-                autocomplete="new-password"
-              >
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPassword ? 'visibility_off' : 'visibility'"
-                    class="cursor-pointer"
-                    @click="showPassword = !showPassword"
-                  />
-                </template>
-              </q-input>
-            </div>
+              <!-- Fila 3: Usuario y Contraseña -->
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                <q-input
+                  filled
+                  v-model="client.username"
+                  label="Usuario"
+                  autocomplete="off"
+                  dense
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+                <q-input
+                  filled
+                  v-model="client.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  label="Contraseña"
+                  autocomplete="new-password"
+                  dense
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="showPassword ? 'visibility_off' : 'visibility'"
+                      class="cursor-pointer"
+                      @click="showPassword = !showPassword"
+                    />
+                  </template>
+                </q-input>
+              </div>
 
               <!-- Condición de IVA -->
-              <div class="col-12">
+              <div class="col-12" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
+                  tooltip-text="PREMIUM"
+                />
                 <q-select
                   filled
                   use-input
@@ -393,11 +477,32 @@
                   v-model="client.condition_iva_receptor"
                   :options="conditionIvaReceptors"
                   @filter="getConditionIvaReceptor"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
 
               <!-- Affiliate Configuration -->
+              <div class="col-4 flex q-gutter-x-lg q-pt-md">
+                <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" />
+              </div>
+              <div class="col-8" v-if="!client.is_partner">
+                <q-select
+                  filled
+                  v-model="client.partner"
+                  label="Afiliado"
+                  :options="partners"
+                  @filter="getPartners"
+                  use-input
+                  option-label="name"
+                  option-value="id"
+                  dense
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="group" />
+                  </template>
+                </q-select>
+              </div>
               <div class="col-12 flex q-gutter-x-lg q-pt-md">
                 <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
               </div>
@@ -631,6 +736,11 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <subscription-plans-dialog
+      v-model="showSubscriptionDialog"
+      @subscription-updated="loadSubscriptionInfo"
+    />
   </div>
 </template>
 
@@ -641,10 +751,15 @@ import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import PremiumBadge from 'src/components/PremiumBadge.vue'
+import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import * as XLSX from 'xlsx'
+import eventBus from 'src/utils/eventBus'
 export default {
   components: {
-    AddressComponent
+    AddressComponent,
+    PremiumBadge,
+    SubscriptionPlansDialog
   },
   data () {
     return {
@@ -665,6 +780,8 @@ export default {
         skipped: 0,
         errors: []
       },
+      showSubscriptionDialog: false,
+      partners: [],
       /**
        * Address component key for resetting
        * @type {Number}
@@ -752,7 +869,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession', 'subscriptionPlan', 'isDemo']),
     /**
      * Checks if the current user is an administrator
      * @returns {Boolean} True if user is root or super admin
@@ -805,6 +922,8 @@ export default {
         condition_iva_receptor: null,
         document_type: null,
         is_credit: true,
+        is_partner: true,
+        partner: null,
         username: '',
         password: ''
       }
@@ -827,6 +946,22 @@ export default {
       }
       this.params.page = 1
       this.getClients(this.params)
+    },
+    /**
+     * Handle restricted feature click
+     */
+    handleRestrictedClick () {
+      if (this.isDemo) {
+        eventBus.emit('open-create-company')
+      } else {
+        this.showSubscriptionDialog = true
+      }
+    },
+    /**
+     * Load subscription info
+     */
+    async loadSubscriptionInfo () {
+      await this.store.loadSubscriptionInfo()
     },
     /**
      * Get all clients
@@ -898,7 +1033,12 @@ export default {
      * @param {String} value Value filter
      * @param {Callback} update update options
      */
-    /* async getPartners (value, update) {
+    /**
+     * Get partners
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getPartners (value, update) {
       try {
         const { data } = await this.$api.get('partners', {
           params: {
@@ -919,7 +1059,7 @@ export default {
       } catch (err) {
         notify('Error en la conexión', 'negative', 'warning')
       }
-    }, */
+    },
     /**
      * Set data pagination emit event
      * @param  {Object} data value pagination
@@ -950,9 +1090,11 @@ export default {
         clientData.document_type = JSON.stringify(clientData.document_type)
       }
 
-      /* if (clientData?.partner?.id) {
-        clientData.partner_id = clientData.partner.id
-      } */
+      if (clientData.is_partner === false || clientData.is_partner === 0) {
+        if (clientData?.partner?.id) {
+          clientData.partner_id = clientData.partner.id
+        }
+      }
 
       clientData.address = this.address || this.client.address || null
 
@@ -998,8 +1140,10 @@ export default {
       this.openEditClient = true
       this.client = row
       this.role = row.role
-      this.client.condition_iva_receptor = JSON.parse(row.condition_iva_receptor)
-      this.client.document_type = JSON.parse(row.document_type)
+      this.client.condition_iva_receptor = row.condition_iva_receptor ? JSON.parse(row.condition_iva_receptor) : null
+      this.client.document_type = row.document_type ? JSON.parse(row.document_type) : null
+      this.client.is_partner = Boolean(row.is_partner)
+      this.client.partner = row.partner
       this.address = row.address
       // Incrementar la clave para forzar re-renderización del AddressComponent
       this.addressComponentKey += 1
@@ -1012,11 +1156,13 @@ export default {
 
       const clientData = { ...this.client }
 
-      clientData.address = this.address || this.client.address || null
+      if (clientData.is_partner === false || clientData.is_partner === 0) {
+        if (clientData?.partner?.id) {
+          clientData.partner_id = clientData.partner.id
+        }
+      }
 
-      /* if (clientData?.partner?.id) {
-        clientData.partner_id = clientData.partner.id
-      } */
+      clientData.address = this.address || this.client.address || null
 
       this.$api.put(`clients/${this.client.id}`, clientData)
         .then(({ data }) => {
