@@ -11,6 +11,7 @@
     "dev": "cross-env NODE_ENV=local quasar dev",
     "build": "quasar build",
     "build-pwa": "cross-env NODE_ENV=production quasar build",
+    "build-main-premium": "cross-env NODE_ENV=premium quasar build",
     "build-main": "cross-env NODE_ENV=main quasar build",
     "build-pwa-dev": "cross-env NODE_ENV=development quasar build",
     "build-pwa-dixcont": "cross-env NODE_ENV=staging quasar build",
@@ -19,6 +20,7 @@
     "deploy:qbits:develop": "node scripts/deploy.js qbitsinc develop",
     "deploy:qbits:main": "node scripts/deploy.js qbitsinc main",
     "deploy:qbits:master": "node scripts/deploy.js qbitsinc master",
+    "deploy:qbits:main-premium": "node scripts/deploy.js qbitsinc main-premium",
     "deploy:dixcont:staging": "node scripts/deploy.js dixcont staging"
   },
   "dependencies": {

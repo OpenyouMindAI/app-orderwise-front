@@ -23,6 +23,13 @@ const configs = {
       user: process.env.FTP_USER_QBITS,
       pass: process.env.FTP_PASS_QBITS
     },
+    'main-premium': {
+      buildCommand: 'npm run build-main-premium',
+      remotePath: './main-premium/',
+      host: process.env.FTP_HOST_QBITS,
+      user: process.env.FTP_USER_QBITS,
+      pass: process.env.FTP_PASS_QBITS
+    },
     main: {
       buildCommand: 'npm run build-main',
       remotePath: './main/',
