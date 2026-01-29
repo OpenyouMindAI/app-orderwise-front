@@ -612,6 +612,13 @@
                 <template v-slot:prepend>
                   <q-icon name="public" color="primary" size="20px"/>
                 </template>
+                <template v-slot:no-option>
+                  <q-item>
+                    <q-item-section class="text-grey">
+                      No hay resultados
+                    </q-item-section>
+                  </q-item>
+                </template>
               </q-select>
             </div>
 
@@ -770,7 +777,6 @@ const companyForm = ref({
 
 const businessTypes = ref([])
 const countries = ref([])
-const countriesOriginal = ref([])
 const loadingCompanySetup = ref(false)
 const isGoogleRegister = ref(false)
 const showCompanyOptions = ref(false)
@@ -824,37 +830,24 @@ const companyAddressData = ref({
 })
 
 /**
- * Get countries from API
- */
-const getCountries = async () => {
-  try {
-    const { data } = await api.get('countries')
-    countriesOriginal.value = data.data || data
-    countries.value = [...countriesOriginal.value]
-  } catch (error) {
-    console.error('Error loading countries:', error)
-  }
-}
-
-/**
- * Filter countries locally
+ * Filter countries from API
  * @param {string} val - The search value
  * @param {function} update - The update function
  */
-const filterCountries = (val, update) => {
-  if (val === '') {
-    update(() => {
-      countries.value = [...countriesOriginal.value]
+const filterCountries = async (val, update) => {
+  try {
+    const { data } = await api.get('countries', {
+      params: { search: val }
     })
-    return
+    update(() => {
+      countries.value = data.data || data
+    })
+  } catch (error) {
+    console.error('Error loading countries:', error)
+    update(() => {
+      countries.value = []
+    })
   }
-
-  update(() => {
-    const needle = val.toLowerCase()
-    countries.value = countriesOriginal.value.filter(v =>
-      v.name.toLowerCase().includes(needle)
-    )
-  })
 }
 
 const businessTypeSearch = ref('')
@@ -1520,8 +1513,6 @@ onMounted(async () => {
     // Solo verificar estado OTP si no se restauró una sesión completa
     await checkOtpStatus()
   }
-
-  getCountries()
 })
 
 onBeforeUnmount(() => {
