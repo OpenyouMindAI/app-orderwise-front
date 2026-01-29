@@ -1,73 +1,62 @@
 <template>
-  <q-dialog v-model="internalValue" persistent transition-show="scale" transition-hide="scale">
-    <q-card class="persuasion-card shadow-24">
-      <q-card-section class="persuasion-header q-pa-lg text-center bg-gradient-premium text-white">
-        <q-btn icon="close" flat round dense v-close-popup class="absolute-top-right q-ma-sm" />
-        <q-icon name="rocket_launch" size="84px" class="q-mb-md animate-bounce" />
-        <div class="text-h4 text-weight-bold">¡Lleva tu negocio al siguiente nivel!</div>
-        <div class="text-subtitle1 q-mt-sm opacity-80">
-          Has completado acciones clave con éxito. Imagina lo que podrías lograr con tu empresa real configurada.
+  <q-dialog
+    v-model="internalValue"
+    persistent
+    transition-show="fade"
+    transition-hide="fade"
+  >
+    <q-card class="minimal-persuasion-card q-pa-md">
+      <!-- Botón de cierre discreto -->
+      <q-btn
+        icon="close"
+        flat
+        round
+        dense
+        v-close-popup
+        class="absolute-top-right text-grey-5 q-ma-sm"
+      />
+
+      <q-card-section class="text-center q-pt-lg">
+        <div class="icon-container q-mb-md">
+          <q-icon
+            name="business"
+            size="48px"
+            class="fade-in-sutil"
+            style="color: var(--primary)"
+          />
         </div>
+
+        <div class="text-h6 text-weight-bold q-mt-none q-mb-xs" style="color: var(--text)">
+          Haz que tu empresa empiece a crecer hoy
+        </div>
+        <p class="text-body2 q-mb-lg" style="color: var(--text-light)">
+          La demo es solo el comienzo. Configura tu empresa real y desbloquea
+          todas las herramientas que necesitas para gestionar tu negocio sin límites.
+        </p>
       </q-card-section>
 
-      <q-card-section class="q-pa-xl">
-        <div class="row q-col-gutter-lg items-center">
-          <div class="col-12 col-sm-6">
-            <q-list dense padding>
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="check_circle" color="positive" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">Gestión Profesional</q-item-label>
-                  <q-item-label caption>Categorías y productos personalizados.</q-item-label>
-                </q-item-section>
-              </q-item>
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="check_circle" color="positive" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">Facturación Real</q-item-label>
-                  <q-item-label caption>Genera comprobantes válidos para tu país.</q-item-label>
-                </q-item-section>
-              </q-item>
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="check_circle" color="positive" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">Control Inventario</q-item-label>
-                  <q-item-label caption>Mantén todo bajo control en tiempo real.</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
-          <div class="col-12 col-sm-6 text-center">
-            <q-img
-              src="https://img.freepik.com/free-vector/business-success-concept-illustration_114360-10118.jpg"
-              spinner-color="primary"
-              style="max-width: 200px"
-              class="rounded-borders"
-            />
+      <q-card-section class="benefits-section q-px-lg">
+        <div class="row q-col-gutter-sm">
+          <div v-for="(benefit, index) in benefits" :key="index" class="col-12">
+            <div class="benefit-item flex items-center no-wrap">
+              <q-icon name="check" size="20px" class="q-mr-sm" style="color: var(--primary)" />
+              <div class="text-body2" style="color: var(--text)">{{ benefit }}</div>
+            </div>
           </div>
         </div>
       </q-card-section>
 
-      <q-card-actions align="center" class="q-pb-xl q-px-xl">
+      <q-card-actions class="column items-center q-pt-xl q-pb-md">
         <q-btn
-          label="Crear mi empresa ahora"
-          color="primary"
-          size="lg"
+          label="Empezar ahora"
           unelevated
-          class="full-width q-mb-md gradient-btn"
+          class="action-btn-main q-mb-sm"
           @click="goToRegister"
         />
         <q-btn
-          label="Continuar explorando el demo"
+          label="Continuar en modo demo"
           flat
-          color="grey-7"
-          class="full-width text-weight-regular"
+          class="action-btn-sub text-none"
           v-close-popup
         />
       </q-card-actions>
@@ -77,7 +66,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import eventBus from 'src/utils/eventBus'
 
 const props = defineProps({
   modelValue: {
@@ -88,49 +77,89 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const router = useRouter()
-
 const internalValue = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
 
+const benefits = [
+  'Inventario organizado y automatizado',
+  'Facturación personalizada y lista para operar',
+  'Reportes claros para entender y mejorar tu negocio'
+]
+
 const goToRegister = () => {
-  router.push('/register-company')
+  eventBus.emit('open-create-company')
   emit('update:modelValue', false)
 }
 </script>
 
 <style scoped>
-.persuasion-card {
-  width: 600px;
-  max-width: 95vw;
-  border-radius: 24px;
-  overflow: hidden;
+.minimal-persuasion-card {
+  width: 100%;
+  max-width: 500px;
+  border-radius: var(--border-radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
 }
 
-.bg-gradient-premium {
-  background: linear-gradient(135deg, #1976d2 0%, #673ab7 100%);
+.icon-container {
+  display: inline-flex;
+  padding: 16px;
+  border-radius: 50%;
+  background: var(--background);
 }
 
-.gradient-btn {
-  background: linear-gradient(135deg, #1976d2 0%, #1e88e5 100%);
-  border-radius: 12px;
-  font-weight: bold;
-  letter-spacing: 0.5px;
+.benefit-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
 }
 
-.animate-vertical {
-  animation: float 3s ease-in-out infinite;
+.benefits-section div:last-child .benefit-item {
+  border-bottom: none;
 }
 
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+.action-btn-main {
+  width: 100%;
+  height: 48px;
+  border-radius: var(--border-radius-md);
+  font-weight: 500;
+  text-transform: none;
+  font-size: 1rem;
+  background: var(--primary) !important;
+  color: white !important;
 }
 
-.opacity-80 {
-  opacity: 0.8;
+.action-btn-sub {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--border-radius-md);
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--text-light) !important;
+}
+
+/* Animaciones suaves */
+.fade-in-sutil {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsividad extra */
+@media (max-width: 480px) {
+  .minimal-persuasion-card {
+    margin: 16px;
+    max-width: calc(100vw - 32px);
+  }
 }
 </style>

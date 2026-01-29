@@ -18,14 +18,18 @@ export function useDemoPersuasion () {
     if (!isDemo.value) return
 
     // Obtener y actualizar contador persistente
-    const currentCounter = parseInt(localStorage.getItem('demo_actions_counter') || '0')
-    const nextCounter = currentCounter + 1
-    localStorage.setItem('demo_actions_counter', nextCounter.toString())
+    let currentCounter = parseInt(localStorage.getItem('demo_actions_counter') || '0')
+    currentCounter++
 
-    // Lógica para mostrar el modal: primera vez y cada 5 acciones
-    if (nextCounter === 1 || (nextCounter > 1 && (nextCounter - 1) % 5 === 0)) {
+    // Lógica para mostrar el modal:
+    // - Primera vez (acción 1)
+    // - Cada 5 acciones adicionales (acción 6, 11, 16...)
+    // Se muestra cuando (currentCounter - 1) es múltiplo de 5, o simplemente en la primera acción.
+    if (currentCounter === 1 || (currentCounter > 1 && (currentCounter - 1) % 5 === 0)) {
       showDemoModal.value = true
     }
+
+    localStorage.setItem('demo_actions_counter', currentCounter.toString())
   }
 
   return {
