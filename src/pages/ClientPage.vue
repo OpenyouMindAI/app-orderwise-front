@@ -1078,10 +1078,8 @@ export default {
     saveClient () {
       this.visible = true
 
-      // Preparar datos del cliente con dirección formateada
       const clientData = { ...this.client }
 
-      // Validar y formatear campos requeridos
       if (clientData.condition_iva_receptor && typeof clientData.condition_iva_receptor === 'object') {
         clientData.condition_iva_receptor = JSON.stringify(clientData.condition_iva_receptor)
       }
@@ -1105,7 +1103,6 @@ export default {
           this.visible = false
           this.client = {}
           this.role = null
-          // Limpiar las variables de dirección
           this.address = null
           this.formattedAddress = ''
           this.addressComponentKey += 1
@@ -1117,9 +1114,6 @@ export default {
         })
         .catch(err => {
           this.visible = false
-          console.error('❌ Error al crear cliente:', err)
-          console.error('📊 Response data:', err.response?.data)
-          console.error('📈 Status:', err.response?.status)
 
           let errorMessage = err.message
           if (err.response?.data?.message) {
