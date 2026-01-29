@@ -1,158 +1,186 @@
 import { boot } from 'quasar/wrappers'
 import { authentication } from 'src/stores/module-authentication'
 import { api } from './axios'
-import { notify, notifyValidationErrors } from 'src/const/mixins'
+import { notifySession, notifyError, notifyValidationErrors } from 'src/const/mixins'
 
-/**
- * Validate if session token is expired or inactive
- * @param {Object} $store - Authentication store
- * @returns {Boolean} true if token is invalid/expired, false if valid
- */
-const isTokenExpired = ($store) => {
-  // Check if token exists
-  if (!$store.access_token || $store.access_token === 'null') {
-    return true
-  }
-
-  // Check if user session exists and is active
-  if (!$store.userSession) {
-    return true
-  }
-
-  // Check if user session has company_session (excepto para super admin recién registrado)
-  if (!$store.userSession.company_session_id && !$store.userSession.is_root && !$store.userSession.is_super_admin) {
-    return true
-  }
-
-  // Check if expires_In is set and token is expired
-  if ($store.expires_In) {
-    const tokenExpirationTime = $store.setTimeOut || 0
-    const currentTime = Date.now()
-    if (tokenExpirationTime > 0 && currentTime > tokenExpirationTime) {
-      return true
-    }
-  }
-
-  return false
-}
-
-const validModule = ($store, to, next) => {
-  const user = $store.userSession
-
-  if (user?.is_root || user?.is_super_admin) return next()
-
-  if (!user?.roles || user.roles.length === 0) return next()
-
-  const modules = user.roles[0]?.modules
-
-  if (!modules || modules.length === 0) return next()
-
-  if (user?.company_session_id) {
-    const moduleFind = modules.find((module) => module.link === to.name)
-    if (!moduleFind && modules[0]?.link) {
-      return next({ name: modules[0].link })
-    }
-  }
-
-  return next()
-}
-
-const modeleExcept = ['Profile', 'ChangeCompany', 'VerifySession']
-
-let isHandling401 = false
-
-export default boot(async ({ router, store }) => {
-  const excludedUrls = [
+// Configuración centralizada
+const CONFIG = {
+  EXCLUDED_URLS: [
     'session/company',
     'register',
     'login',
     'change-password',
     'otp/verify',
     'otp/send',
-    'otp/resend'
-  ]
+    'otp/resend',
+    'otp/status',
+    'countries',
+    'business-types'
+  ],
+  ROUTES_WITHOUT_MODULE_CHECK: ['Profile', 'ChangeCompany', 'VerifySession'],
+  DEBOUNCE_TIME: 2000
+}
 
+/**
+ * Valida si el token de sesión es válido
+ * @param {Object} store - Store de autenticación
+ * @returns {Boolean} true si el token es válido
+ */
+const hasValidToken = (store) => {
+  if (!store.access_token || store.access_token === 'null') {
+    return false
+  }
+
+  if (!store.userSession) {
+    return false
+  }
+
+  const user = store.userSession
+  const needsCompanySession = !user.is_root && !user.is_super_admin
+
+  return !needsCompanySession || Boolean(user.company_session_id)
+}
+
+/**
+ * Obtiene la ruta de redirección por defecto para un usuario autenticado
+ * @param {Object} user - Usuario de la sesión
+ * @returns {String} Nombre de la ruta
+ */
+const getDefaultRoute = (user) => {
+  if (user?.is_root) {
+    return 'Billing'
+  }
+
+  const firstModule = user?.roles?.[0]?.modules?.[0]
+  if (firstModule?.link) {
+    return firstModule.link
+  }
+
+  return 'Tutorial'
+}
+
+/**
+ * Valida si el usuario tiene acceso al módulo solicitado
+ * @param {Object} store - Store de autenticación
+ * @param {Object} to - Ruta destino
+ * @returns {Object|null} Objeto de redirección o null si tiene acceso
+ */
+const validateModuleAccess = (store, to) => {
+  const user = store.userSession
+
+  // Super usuarios tienen acceso total
+  if (user?.is_root || user?.is_super_admin) {
+    return null
+  }
+
+  // Rutas exceptuadas de validación de módulos
+  if (CONFIG.ROUTES_WITHOUT_MODULE_CHECK.includes(to.name)) {
+    return null
+  }
+
+  const modules = user?.roles?.[0]?.modules
+
+  // Sin módulos asignados, permitir acceso
+  if (!modules || modules.length === 0) {
+    return null
+  }
+
+  // Validar acceso al módulo específico
+  if (user?.company_session_id) {
+    const hasModuleAccess = modules.some(module => module.link === to.name)
+
+    if (!hasModuleAccess && modules[0]?.link) {
+      return { name: modules[0].link }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Maneja el cierre de sesión por expiración
+ */
+const handleSessionExpiration = async (store, router) => {
+  notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
+
+  try {
+    await store.forceLogout()
+  } catch (error) {
+    console.error('Error durante logout:', error)
+  }
+
+  router.push('/login')
+}
+
+export default boot(async ({ router, store }) => {
+  let pendingSessionExpiration = null
+
+  // Interceptor de respuestas API
   api.interceptors.response.use(null, async (error) => {
     const $store = authentication()
-    if (error.response?.status === 401 && !isHandling401) {
-      const isExcludedUrl = excludedUrls.some(url =>
-        error.config?.url?.includes(url)
-      )
+    const status = error.response?.status
 
-      if (isExcludedUrl) {
-        return Promise.reject(error?.response?.data)
+    // Validar si la URL está excluida del manejo de 401
+    const isExcludedUrl = CONFIG.EXCLUDED_URLS.some(url =>
+      error.config?.url?.includes(url)
+    )
+
+    if (status === 401 && !isExcludedUrl) {
+      // Prevenir múltiples logouts simultáneos usando debounce
+      if (!pendingSessionExpiration) {
+        pendingSessionExpiration = handleSessionExpiration($store, router)
+
+        setTimeout(() => {
+          pendingSessionExpiration = null
+        }, CONFIG.DEBOUNCE_TIME)
       }
 
-      isHandling401 = true
-
-      notify(
-        'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
-        'warning',
-        'warning'
-      )
-
-      await $store.forceLogout()
-
-      router.push('/login')
-
-      setTimeout(() => {
-        isHandling401 = false
-      }, 2000)
-    } else if (error.response?.status === 403) {
-      notify('No tienes permisos para acceder a este recurso', 'negative', 'warning')
-    } else if (error.response?.status === 422) {
+      await pendingSessionExpiration
+    } else if (status === 403) {
+      notifyError('No tienes permisos para acceder a este recurso')
+    } else if (status === 422) {
       notifyValidationErrors(error, 'Error de validación')
     }
+
     return Promise.reject(error?.response)
   })
 
+  // Guard de navegación
   router.beforeEach(async (to, from, next) => {
     const $store = authentication()
+
     try {
-      const requiresAuth = to.matched.some(
-        (record) => record.meta.requiresAuth
-      )
+      const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
 
-      const validation = await $store.initStore()
-      const isAuthenticated = !validation && !isTokenExpired($store)
+      // Inicializar store y validar autenticación
+      const storeInitFailed = await $store.initStore()
+      const isAuthenticated = !storeInitFailed && hasValidToken($store)
 
+      // Redirigir usuarios autenticados que intentan acceder a login
       if (isAuthenticated && to.name === 'Login') {
-        const user = $store.userSession
-
-        if (user?.is_root) {
-          return next({ name: 'Billing' })
-        }
-
-        if (user?.roles && user.roles.length > 0 && user.roles[0]?.modules?.length > 0) {
-          const firstModule = user.roles[0].modules[0]
-          if (firstModule?.link) {
-            return next({ name: firstModule.link })
-          }
-        }
-
-        return next({ name: 'Tutorial' })
+        return next({ name: getDefaultRoute($store.userSession) })
       }
 
-      if (requiresAuth && !validation) {
-        const tokenExpired = isTokenExpired($store)
-        if (tokenExpired) {
-          notify('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.', 'warning', 'warning')
-          await $store.forceLogout()
+      // Validar rutas protegidas
+      if (requiresAuth) {
+        if (!isAuthenticated) {
+          if (storeInitFailed || !hasValidToken($store)) {
+            notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
+            await $store.forceLogout()
+          }
           return next('/login')
         }
-      }
 
-      // Validar permisos de módulos para rutas que requieren autenticación
-      if (requiresAuth) {
-        if (validation) return next('/login')
-        if ($store?.userSession?.is_root) return next()
-        if (modeleExcept.includes(to.name)) return next()
-        validModule($store, to, next)
+        // Validar acceso a módulos
+        const redirectRoute = validateModuleAccess($store, to)
+        if (redirectRoute) {
+          return next(redirectRoute)
+        }
       }
 
       next()
     } catch (error) {
-      console.error(error)
+      console.error('Error en navegación:', error)
       next('/login')
     }
   })

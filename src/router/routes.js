@@ -6,6 +6,12 @@ const routes = [
       {
         path: '',
         meta: { requiresAuth: true },
+        name: 'Home',
+        component: () => import('pages/HomePage.vue')
+      },
+      {
+        path: 'billing',
+        meta: { requiresAuth: true },
         name: 'Billing',
         component: () => import('pages/BillingPage.vue')
       },
@@ -118,6 +124,12 @@ const routes = [
         component: () => import('pages/TaxePage.vue')
       },
       {
+        path: 'uom',
+        meta: { requiresAuth: true },
+        name: 'Uom',
+        component: () => import('pages/UomPage.vue')
+      },
+      {
         path: 'profile',
         name: 'Profile',
         meta: { requiresAuth: true },
@@ -226,6 +238,18 @@ const routes = [
         component: () => import('pages/CashboxPage.vue')
       },
       {
+        path: 'finances/cashboxes',
+        name: 'FinanceCashbox',
+        meta: { requiresAuth: true },
+        component: () => import('pages/FinanceCashboxPage.vue')
+      },
+      {
+        path: 'finances/payments-by-method',
+        name: 'FinancePaymentsByMethod',
+        meta: { requiresAuth: true },
+        component: () => import('pages/FinancePaymentsByMethodPage.vue')
+      },
+      {
         path: 'transfer-products',
         name: 'TransferProduct',
         meta: { requiresAuth: true },
@@ -241,25 +265,25 @@ const routes = [
       {
         path: 'courier/transport/:id',
         name: 'ActiveTransport',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/ActiveTransportPage.vue')
       },
       {
         path: 'delivery/tray',
         name: 'InvoiceDeliveryTray',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/InvoiceDeliveryTrayPage.vue')
       },
       {
         path: 'delivery/active/:id',
         name: 'ActiveInvoiceDelivery',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/ActiveInvoiceDeliveryPage.vue')
       },
       {
         path: 'delivery/monitor',
         name: 'AdminDeliveryMonitor',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/AdminDeliveryMonitorPage.vue')
       },
       {
@@ -284,7 +308,7 @@ const routes = [
       {
         path: 'delivery-routes/active/:id',
         name: 'ActiveDeliveryRoute',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/ActiveDeliveryRoutePage.vue')
       },
       {
@@ -390,10 +414,28 @@ const routes = [
         component: () => import('src/pages/IntegrationsPage.vue')
       },
       {
+        path: 'production-orders',
+        name: 'ProductionOrder',
+        meta: { requiresAuth: true },
+        component: () => import('pages/ProductionOrderPage.vue')
+      },
+      {
         path: 'welcome',
         name: 'Welcome',
         meta: { requiresAuth: true },
         component: () => import('pages/WelcomePage.vue')
+      },
+      {
+        path: 'support',
+        name: 'Support',
+        meta: { requiresAuth: true },
+        component: () => import('pages/SupportChatPage.vue')
+      },
+      {
+        path: 'admin/support',
+        name: 'AdminSupport',
+        meta: { requiresAuth: true },
+        component: () => import('pages/AdminSupportPage.vue')
       }
     ]
   },

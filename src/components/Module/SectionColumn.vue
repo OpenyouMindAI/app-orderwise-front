@@ -104,20 +104,20 @@ import ItemCard from './ItemCard.vue'
 const props = defineProps({
   section: {
     type: Object,
-    required: true,
+    required: true
   },
   items: {
     type: Array,
-    default: () => [],
+    default: () => []
   },
   isFirstSection: {
     type: Boolean,
-    default: false,
+    default: false
   },
   isLastSection: {
     type: Boolean,
-    default: false,
-  },
+    default: false
+  }
 })
 
 defineEmits([
@@ -129,7 +129,7 @@ defineEmits([
   'move-item-up',
   'move-item-down',
   'move-section-left',
-  'move-section-right',
+  'move-section-right'
 ])
 
 // Computed properties for section positioning

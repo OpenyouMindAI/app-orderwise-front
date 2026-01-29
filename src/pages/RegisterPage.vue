@@ -29,7 +29,7 @@
             <div class="input-container">
               <q-input
                 v-model="form.name"
-                placeholder="Nombre completo"
+                placeholder="Nombre"
                 dark
                 class="custom-input"
                 hide-bottom-space
@@ -37,6 +37,22 @@
               >
                 <template v-slot:prepend>
                   <q-icon name="person" color="primary" size="20px"/>
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Input Apellido -->
+            <div class="input-container">
+              <q-input
+                v-model="form.last_name"
+                placeholder="Apellido"
+                dark
+                class="custom-input"
+                hide-bottom-space
+                :rules="[val => !!val || 'El apellido es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="person_outline" color="primary" size="20px"/>
                 </template>
               </q-input>
             </div>
@@ -574,6 +590,31 @@
               </q-input>
             </div>
 
+            <!-- País -->
+            <div class="input-container">
+              <q-select
+                v-model="companyForm.country_id"
+                :options="countries"
+                option-label="name"
+                option-value="id"
+                placeholder="Seleccione el País *"
+                class="custom-input"
+                use-input
+                input-debounce="300"
+                @filter="filterCountries"
+                hide-bottom-space
+                behavior="menu"
+                borderless
+                emit-value
+                map-options
+                :rules="[val => !!val || 'El país es requerido']"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="public" color="primary" size="20px"/>
+                </template>
+              </q-select>
+            </div>
+
             <!-- Rubro -->
             <div class="input-container">
               <q-select
@@ -667,14 +708,17 @@ import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import { usePixel } from 'src/composables/usePixel'
 
 const router = useRouter()
 const store = authentication()
 const $q = useQuasar()
+const fbq = usePixel()
 
 // Form data
 const form = ref({
   name: '',
+  last_name: '',
   email: '',
   phone_number: '',
   password: '',
@@ -686,7 +730,7 @@ const showPassword = ref(false)
 const showPasswordConfirm = ref(false)
 const loading = ref(false)
 const loadingGoogle = ref(false)
-const showCompanySetup = ref(false)
+const showCompanySetup = ref(true)
 
 // OTP Verification
 const currentTab = ref('register')
@@ -720,10 +764,13 @@ const companyForm = ref({
   company_phone: '',
   company_address: '',
   business_type: null,
+  country_id: null,
   copy_test_products: false
 })
 
 const businessTypes = ref([])
+const countries = ref([])
+const countriesOriginal = ref([])
 const loadingCompanySetup = ref(false)
 const isGoogleRegister = ref(false)
 const showCompanyOptions = ref(false)
@@ -775,6 +822,40 @@ const companyAddressData = ref({
   placeId: '',
   types: []
 })
+
+/**
+ * Get countries from API
+ */
+const getCountries = async () => {
+  try {
+    const { data } = await api.get('countries')
+    countriesOriginal.value = data.data || data
+    countries.value = [...countriesOriginal.value]
+  } catch (error) {
+    console.error('Error loading countries:', error)
+  }
+}
+
+/**
+ * Filter countries locally
+ * @param {string} val - The search value
+ * @param {function} update - The update function
+ */
+const filterCountries = (val, update) => {
+  if (val === '') {
+    update(() => {
+      countries.value = [...countriesOriginal.value]
+    })
+    return
+  }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    countries.value = countriesOriginal.value.filter(v =>
+      v.name.toLowerCase().includes(needle)
+    )
+  })
+}
 
 const businessTypeSearch = ref('')
 
@@ -910,6 +991,7 @@ const setupCompany = async () => {
     const payload = {
       ...companyForm.value,
       business_type_id: companyForm.value.business_type?.id,
+      country_id: companyForm.value.country_id,
       company_phone: companyForm.value.company_phone
         ? `${selectedCountry.value?.code || ''}${companyForm.value.company_phone}`.trim()
         : ''
@@ -930,6 +1012,16 @@ const setupCompany = async () => {
 
     localStorage.removeItem(REGISTER_SESSION_KEY)
     localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+
+    // Pixel Event: CrearEmpresa
+    if (fbq?.event) {
+      const companyData = {
+        business_type: payload.business_type?.label,
+        country: selectedCountry.value?.label,
+        company_name: payload.name
+      }
+      fbq.event('CrearEmpresa', companyData)
+    }
 
     showCompanySetup.value = false
 
@@ -982,6 +1074,22 @@ const register = async () => {
     // Actualizar store de Pinia con los datos de sesión
     store.setSessionData(data)
 
+    // Actualizar Facebook Pixel con los datos del usuario
+    if (window.fbq && data.user) {
+      const pixelUserData = {}
+      if (data.user.email) pixelUserData.em = data.user.email
+      if (data.user.id) pixelUserData.external_id = data.user.id
+      if (data.user.name) pixelUserData.fn = data.user.name
+      if (data.user.last_name) pixelUserData.ln = data.user.last_name
+
+      const rawPhone = data.user.phone_number || data.user.phone
+      if (rawPhone) {
+        pixelUserData.ph = rawPhone.toString().replace(/^\+/, '')
+      }
+
+      window.fbq('init', import.meta.env.VITE_FACEBOOK_PIXEL_ID, pixelUserData)
+    }
+
     notify('Registro exitoso', 'positive', 'check_circle')
 
     isGoogleRegister.value = false
@@ -1032,6 +1140,11 @@ const verifyOtp = async () => {
 
     // Limpiar estado OTP de localStorage tras verificación exitosa
     clearOtpPendingState()
+
+    // Pixel Event: Complete Registration (Email)
+    if (fbq?.event) {
+      fbq.event('CompleteRegistration')
+    }
 
     // Marcar OTP como verificado en la sesión de registro
     const registerSession = localStorage.getItem(REGISTER_SESSION_KEY)
@@ -1407,6 +1520,8 @@ onMounted(async () => {
     // Solo verificar estado OTP si no se restauró una sesión completa
     await checkOtpStatus()
   }
+
+  getCountries()
 })
 
 onBeforeUnmount(() => {
@@ -1489,7 +1604,6 @@ const assignDemo = async () => {
  */
 const initializeGoogleAuthMobile = async () => {
   try {
-
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
@@ -1550,6 +1664,11 @@ const registerWithGoogleMobile = async () => {
       store.setSessionData(data)
 
       notify('Registro exitoso con Google', 'positive', 'check_circle')
+
+      // Pixel Event: Complete Registration (Google Mobile)
+      if (fbq?.event) {
+        fbq.event('CompleteRegistration')
+      }
 
       // Mostrar modal de setup de empresa
       if (data.needs_company_setup) {
@@ -1634,6 +1753,11 @@ const registerWithGoogle = async () => {
             store.setSessionData(data)
 
             notify('Registro exitoso con Google', 'positive', 'check_circle')
+
+            // Pixel Event: Complete Registration (Google Web)
+            if (fbq?.event) {
+              fbq.event('CompleteRegistration')
+            }
 
             // Mostrar modal de setup de empresa
             if (data.needs_company_setup) {
@@ -1938,8 +2062,10 @@ onMounted(async () => {
   line-height: 1; /* Para evitar que el texto afecte la altura */
 }
 
-.custom-input :deep(.q-field__native)::placeholder {
-  color: #9ca3af;
+.custom-input :deep(.q-field__native)::placeholder,
+.custom-input :deep(.q-field__input)::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
 }
 
 .custom-input :deep(.q-field__control):hover {

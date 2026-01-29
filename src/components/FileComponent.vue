@@ -68,6 +68,7 @@
     </div>
     <q-img
       ref="fullRef"
+      v-if="indexZoomed !== void 0"
       v-touch-pan.prevent.mouse="moveFab"
       class="image-gallery__image image-gallery__image-full fixed-center"
       :class="indexZoomed !== void 0 ? 'image-gallery__image-full--active' : void 0"

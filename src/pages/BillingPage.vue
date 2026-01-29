@@ -36,24 +36,24 @@
       </q-card>
     </div>
 
-    <div v-if="$route.query.id" class="invoice-header-compact q-mb-sm">
-      <q-chip
-        square
-        color="primary"
-        text-color="white"
-        icon="receipt_long"
-        class="invoice-chip"
-      >
-        <span class="text-weight-medium">{{ invoice?.code }}</span>
-      </q-chip>
-    </div>
-    <q-form ref="saveBill" @submit="saveBill" style="min-height: calc(100vh - 104px);">
+    <q-form ref="saveBill" @submit="saveBill">
       <div class="billing-panel-container">
         <div style="min-width: 0;">
           <!-- Panel de facturación -->
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales - Solo desktop -->
             <div v-if="$q.screen.gt.sm" class="billing-selects-desktop col-12">
+              <div v-if="$route.query.id">
+                <q-chip
+                  square
+                  color="primary"
+                  text-color="white"
+                  icon="receipt_long"
+                  class="invoice-chip"
+                >
+                  <span>{{ invoice?.code }}</span>
+                </q-chip>
+              </div>
               <!-- Select cliente -->
               <div id="select-client" class="billing-select-item">
                 <q-select
@@ -172,13 +172,26 @@
               </div>
             </div>
             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
+              <div v-if="$route.query.id">
+                <q-chip
+                  square
+                  color="primary"
+                  text-color="white"
+                  icon="receipt_long"
+                  dense
+                  class="invoice-chip"
+                >
+                  <span>{{ invoice?.code }}</span>
+                </q-chip>
+              </div>
               <div>
                 <q-btn
                   id="tour-cliente-mobile"
                   color="secondary"
                   icon="person"
                   :label="client?.name || 'Cliente'"
-                  label-position="left"
+                   label-position="left"
+                  style="height: 100% !important;"
                 >
                   <q-popup-proxy @before-show="loadClientsData()" v-model="clientMenuOpen">
                     <q-card class="fab-popup-card">
@@ -283,6 +296,7 @@
                             clickable
                             v-ripple
                             :active="invoiceType?.id === type.id"
+                            :class="{ 'bg-grey-3': (subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B' }"
                             @click="selectInvoiceType(type)"
                           >
                             <q-item-section>
@@ -290,6 +304,14 @@
                             </q-item-section>
                             <q-item-section side v-if="invoiceType?.id === type.id">
                               <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                            <q-item-section side v-if="(subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B'">
+                              <premium-badge
+                                :show="true"
+                                :size="15"
+                                padding="4px"
+                                tooltip-text="Disponible en plan Premium"
+                              />
                             </q-item-section>
                           </q-item>
                         </q-list>
@@ -658,10 +680,6 @@
                           </div>
                         </div>
 
-                        <div v-else-if="props.row.is_bundle">
-                          <div class="text-grey-6">Producto promocional sin detalles específicos</div>
-                        </div>
-
                         <div v-else>
                           <div class="text-grey-6">No hay detalles adicionales para este producto</div>
                         </div>
@@ -780,17 +798,17 @@
               </div>
             </div>
             <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
-              <div class="col-12" v-if="isDelivery">
+              <div class="col-12" v-if="isDelivery || isOrder">
                 <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
               </div>
-              <div class="col-12" v-if="isDelivery">
+              <div class="col-12" v-if="isDelivery || isOrder">
                 <AddressComponent
                   :key="addressComponentKey"
                   :initial-address="address"
                   @address-selected="handleAddressSelected"
                 />
               </div>
-              <div class="col-12" id="tour-descripcion" v-if="isDelivery">
+              <div class="col-12" id="tour-descripcion" v-if="isDelivery || isOrder">
                 <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
               </div>
 
@@ -1431,20 +1449,34 @@
       @confirm="handlePartialPaymentConfirm"
     />
 
-    <q-dialog v-model="dialogTable">
-      <drawer-table
-        ref="drawerTable"
-        :tablesSelected="tableSelected"
-        @update:tableSelected="setTableSelected"
-        @update:invoice="selectInvoice"
-        @update:freeTable="freeTable"
-      >
-        <template v-slot:header>
+    <q-dialog v-model="dialogTable" :maximized="$q.screen.lt.md">
+      <q-card class="tables-modal-size column">
+        <!-- Dialog Header -->
+        <q-card-section class="row items-center q-py-sm bg-primary text-white col-auto">
+          <div class="text-h6">Gestión de Mesas</div>
           <q-space />
-          <q-btn rounded color="negative" label="Cerrar" @click="dialogTable = false"/>
-          <q-btn rounded color="primary" label="Aceptar" @click="dialogTable = false"/>
-        </template>
-      </drawer-table>
+          <q-btn icon="close" flat round dense @click="dialogTable = false" />
+        </q-card-section>
+
+        <!-- Dialog Content (DrawerTable) -->
+        <q-card-section class="full-width col relative-position" style="padding: 0 !important;">
+          <drawer-table
+            ref="drawerTable"
+            :tablesSelected="tableSelected"
+            @update:tableSelected="setTableSelected"
+            @update:invoice="selectInvoice"
+            @update:freeTable="freeTable"
+            style="width: 100%; height: 100%; max-width: none;"
+          />
+        </q-card-section>
+
+        <!-- Dialog Footer -->
+        <q-separator />
+        <q-card-actions align="right" class="col-auto q-py-md bg-white">
+          <q-btn flat label="Cancelar" color="negative" @click="dialogTable = false" />
+          <q-btn label="Aceptar" color="primary" @click="dialogTable = false" />
+        </q-card-actions>
+      </q-card>
     </q-dialog>
 
     <search-pending-invoices-dialog
@@ -1457,11 +1489,9 @@
       v-model="showCashBoxDialog"
       :cashier-id="userSession?.id"
       :is-box-already-open="isUserBoxOpen"
-      :available-cash-boxes="availableCashBoxes"
       :branch-office="branchOffice"
       @box-opened="handleBoxOpened"
       @box-closed="handleBoxClosed"
-      @box-created="loadAvailableCashBoxes"
     />
 
     <!-- Cashflow Modal Component -->
@@ -1587,6 +1617,27 @@
                 @filter="getConditionIvaReceptor"
                 :disable="(subscriptionPlan || 'Free') === 'Free'"
               />
+            </div>
+
+            <!-- Affiliate Configuration -->
+            <div class="col-4 flex q-gutter-x-lg q-pt-md">
+              <q-checkbox v-model="clientAdded.is_partner" label="¿Es Afiliado?" dense color="primary" />
+            </div>
+            <div class="col-8" v-if="!clientAdded.is_partner">
+              <q-select
+                filled
+                v-model="clientAdded.partner"
+                label="Afiliado"
+                :options="partners"
+                @filter="getPartners"
+                use-input
+                option-label="name"
+                option-value="id"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="group" />
+                </template>
+              </q-select>
             </div>
 
             <!-- Sección de Dirección - MANTENER IGUAL -->
@@ -1725,7 +1776,7 @@ import CashflowModal from 'src/components/CashflowModal.vue'
 import FileComponent from 'src/components/FileComponent.vue'
 import OnboardingValidationModal from 'src/components/Onboarding/OnboardingValidationModal.vue'
 import SearchPendingInvoicesDialog from 'src/components/SearchPendingInvoicesDialog.vue'
-import { LOCAL, DELIVERY } from 'src/const/typeOfServices.js'
+import { LOCAL, DELIVERY, ORDER } from 'src/const/typeOfServices.js'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -1759,6 +1810,7 @@ export default {
     return {
       tourStore,
       LOCAL,
+      ORDER,
       DELIVERY,
       activeMobileMenu: null,
       showTour: false,
@@ -1766,6 +1818,7 @@ export default {
       // tourSteps moved to computed for dynamic filtering
       spotlightStyle: {},
       tourCardStyle: {},
+      partners: [],
 
       currentCashierSession: null,
 
@@ -1774,7 +1827,6 @@ export default {
       // Cash Box System
       showCashBoxDialog: false,
       isUserBoxOpen: false,
-      availableCashBoxes: [],
       cashBoxState: null,
       /**
        * Show payment details modal
@@ -1960,7 +2012,9 @@ export default {
        * @type {Object}
        */
       clientAdded: {
-        is_credit: false
+        is_credit: true,
+        is_partner: false,
+        partner: null
       },
       /**
        * Invoice data
@@ -2116,6 +2170,10 @@ export default {
        * @type {Array}
        */
       tables: [],
+      /**
+       * Partners
+       * @type {Array}
+       */
       /**
        * Pagination option
        * @type {Object}
@@ -2285,6 +2343,9 @@ export default {
     }
   },
   computed: {
+    ...mapState(authentication, ['userSession', 'branchOffice', 'subscriptionPlan', 'isDemo']),
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    ...mapState(useCommandStore, ['setInvoice']),
     tourSteps () {
       const isMobile = this.$q.screen.lt.md
 
@@ -2497,7 +2558,6 @@ export default {
       // Filtrar pasos basado en condiciones
       return allSteps.filter(step => !step.condition || step.condition())
     },
-    ...mapState(authentication, ['userSession', 'branchOffice', 'subscriptionPlan', 'isDemo']),
     branchOfficeCharged () {
       return this.branchOffice
     },
@@ -2521,6 +2581,9 @@ export default {
     },
     isDelivery () {
       return Number(this.typeOfService.code) === this.DELIVERY
+    },
+    isOrder () {
+      return Number(this.typeOfService.code) === this.ORDER
     },
     currentGroup () {
       return this.currentPromo?.promotion_details?.[this.currentGroupIndex]
@@ -2555,8 +2618,6 @@ export default {
       // Si emptySpaces es igual a productsPerRow, significa que la última fila está completa
       return emptySpaces === productsPerRow ? productsPerRow : emptySpaces
     },
-    ...mapState(authentication, ['userSession', 'branchOffice']),
-    ...mapState(useCommandStore, ['setInvoice']),
     clientMenuOpen: {
       get () {
         return this.activeMobileMenu === 'client'
@@ -2934,6 +2995,17 @@ export default {
      * @param {Object} type - Invoice type selected
      */
     async selectInvoiceType (type) {
+      // Validar si es una opción premium y el plan es Free
+      if ((this.subscriptionPlan || 'Free') === 'Free' && type?.acronym_serie === 'B') {
+        this.handleRestrictedClick()
+        // Revertir a tipo T si existe
+        this.$nextTick(() => {
+          const typeT = this.invoiceTypes.find(t => t.acronym_serie === 'T')
+          this.invoiceType = typeT || null
+        })
+        return
+      }
+
       this.invoiceType = type
       // Si el tipo de factura requiere Arca (bill: true)
       if (type.bill) {
@@ -3454,6 +3526,33 @@ export default {
       }
     },
     /**
+     * Select category
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getPartners (value, update) {
+      try {
+        const { data } = await this.$api.get('partners', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            },
+            paginate: true,
+            page: 1,
+            perPage: 20,
+            sortBy: 'id',
+            sortOrder: 'desc'
+          }
+        })
+        update(() => {
+          this.partners = data.data
+        })
+      } catch (err) {
+        notify('A ocurrido un error al cargar los afiliados', 'negative', 'warning')
+      }
+    },
+    /**
      * Update values
      * @param {String} inputName input name
      */
@@ -3589,7 +3688,22 @@ export default {
      */
     saveClient () {
       this.loadingClient = true
-      this.$api.post('clients', this.clientAdded)
+
+      const clientData = { ...this.clientAdded }
+
+      if (clientData.condition_iva_receptor && typeof clientData.condition_iva_receptor === 'object') {
+        clientData.condition_iva_receptor = JSON.stringify(clientData.condition_iva_receptor)
+      }
+
+      if (clientData.document_type && typeof clientData.document_type === 'object') {
+        clientData.document_type = JSON.stringify(clientData.document_type)
+      }
+
+      if (clientData?.partner?.id) {
+        clientData.partner_id = clientData.partner.id
+      }
+
+      this.$api.post('clients', clientData)
         .then(({ data }) => {
           this.closeAddClientModal()
           this.client = data
@@ -4247,16 +4361,22 @@ export default {
         this.loadingBilling = true
         const params = this.setParamsBill()
         let res = null
+
+        if (this.openCashBox) {
+          if (!this.isUserBoxOpen) {
+            this.showCashBoxDialog = true
+            return
+          }
+        }
+
         if (!params) return
 
-        // Paso 1: Guardar factura con datos JSON
         if (this.$route.query.id) {
           res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
         } else {
           res = await this.$api.post('invoices', params)
         }
 
-        // Paso 2: Si hay archivos adjuntos y es tipo pedido (code === 5), enviarlos
         const invoiceId = res.data.data?.id
         if (invoiceId && this.invoiceFiles.length > 0 && this.typeOfService?.code === 5) {
           await this.uploadInvoiceFiles(invoiceId)
@@ -4265,13 +4385,10 @@ export default {
         await this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
 
-        // Cerrar modal y limpiar después de guardar exitoso
         this.dialogPayment = false
         if (!this.tableClose) {
-          // Limpiar siempre después de facturar exitosamente, excepto si viene de mesa
           setTimeout(() => this.clear(), 500)
         }
-        // Recargar productos para actualizar stock después de la venta
         this.reloadProducts()
       } catch (error) {
         notify(error.message, 'negative', 'warning')
@@ -4612,10 +4729,6 @@ export default {
      * Checks the current cash box status for the user
      * using the new API structure
      */
-    /**
-     * Simplified method that just calls loadAvailableCashBoxes
-     * All cashbox logic is now handled in loadAvailableCashBoxes
-     */
     async checkCashBoxStatus () {
       if (!this.openCashBox) return
       try {
@@ -4637,23 +4750,21 @@ export default {
             end_balance: data.end_balance,
             user_close_id: data.user_close_id
           }
-          this.availableCashBoxes = []
         } else {
           // Respuesta exitosa pero sin sesión activa
           await this.handleNoActiveSession()
         }
       } catch (error) {
-        if (error.response?.status === 404 ||
-            error.message?.includes('No query results for model') ||
-            error.message?.includes('CashboxUser')) {
+        if (error?.status === 404 ||
+            error?.data?.message?.includes('No query results for model') ||
+            error?.data?.message?.includes('CashboxUser')) {
           // 404 o sin datos es comportamiento normal - no hay sesión activa
-          await this.handleNoActiveSession()
+          this.handleNoActiveSession()
         } else {
           // Error real del servidor
           console.error('Error al verificar estado de caja:', error)
           this.isUserBoxOpen = false
           this.cashBoxState = null
-          this.availableCashBoxes = []
         }
       }
     },
@@ -4664,7 +4775,6 @@ export default {
     async handleNoActiveSession () {
       this.isUserBoxOpen = false
       this.cashBoxState = null
-      await this.loadAvailableCashBoxes()
 
       // No mostrar el modal si el tour está activo o va a comenzar
       if (this.tourStore.isTourActiveOrPending) {
@@ -4680,43 +4790,7 @@ export default {
      * Handle cash box button click - load boxes before showing modal
      */
     async handleCashBoxButtonClick () {
-      if (!this.isUserBoxOpen) {
-        await this.loadAvailableCashBoxes()
-      }
-
       this.showCashBoxDialog = true
-    },
-
-    /**
-     * Loads available cash boxes from API with open/closed status
-     */
-    async loadAvailableCashBoxes () {
-      if (!this.branchOffice?.id) {
-        console.error('Error: branchOffice.id no está disponible')
-        this.availableCashBoxes = []
-        return
-      }
-
-      try {
-        const response = await this.$api.get('cashboxes', {
-          params: {
-            dataEqualFilter: {
-              branch_office_id: this.branchOffice?.id
-            }
-          }
-        })
-
-        const allBoxes = response.data || []
-
-        this.availableCashBoxes = allBoxes
-          .filter(box => box.branch_office_id === this.branchOffice?.id && !box.deleted_at)
-          .map(box => ({
-            ...box,
-            open: box.current_session ? box.current_session.open : false
-          }))
-      } catch (error) {
-        this.availableCashBoxes = []
-      }
     },
 
     /**
@@ -4731,7 +4805,6 @@ export default {
         init_balance: boxData.initialBalance,
         open: true
       }
-      this.availableCashBoxes = []
     },
 
     /**
@@ -4740,16 +4813,6 @@ export default {
     handleBoxClosed (closeData) {
       this.isUserBoxOpen = false
       this.cashBoxState = null
-      // Reload available boxes after closing
-      this.loadAvailableCashBoxes()
-    },
-
-    /**
-     * Handle when a new cash box is created
-     */
-    handleBoxCreated (newBox) {
-      // Reload available boxes to include the new one
-      this.loadAvailableCashBoxes()
     },
 
     /*
@@ -5084,7 +5147,9 @@ export default {
     closeAddClientModal () {
       this.openAddClient = false
       this.clientAdded = {
-        is_credit: false
+        is_credit: true,
+        is_partner: false,
+        partner: null
       }
       this.address = null
       // Resetear el componente AddressComponent incrementando su key
@@ -6396,7 +6461,7 @@ export default {
 .products-section {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 104px);
+  height: calc(100dvh - 76px);
 }
 
 .products-section-fullscreen {
@@ -6511,16 +6576,34 @@ export default {
 }
 
 .invoice-chip {
-  font-size: 13px;
-  padding: 4px 12px;
-  border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  justify-content: center;
+  margin: 0;
+  width: 100%;
+  min-width: 3rem;
+  height: 100%;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2), 0 2px 2px rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.12);
+  @media (max-width: 1023px) {
+    :deep(.col) {
+      flex: none !important;
+    }
+  }
 }
 
-.invoice-chip:hover {
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+</style>
+
+<style>
+.tables-modal-size {
+  width: 95vw !important;
+  max-width: 98vw !important;
+  height: 90vh !important;
 }
 
+@media (max-width: 1023px) {
+  .tables-modal-size {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+  }
+}
 </style>

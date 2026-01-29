@@ -43,8 +43,12 @@ const movementTypes = [
   { label: 'Venta', value: 'Venta' },
   { label: 'Ajuste Positivo', value: 'Ajuste Positivo' },
   { label: 'Ajuste Negativo', value: 'Ajuste Negativo' },
-  { label: 'Transferencia Entrada', value: 'Transferencia Entrada', inactive: true, description: 'Próximamente' },
-  { label: 'Transferencia Salida', value: 'Transferencia Salida', inactive: true, description: 'Próximamente' }
+  { label: 'Transferencia Entrada', value: 'Transferencia Entrada' },
+  { label: 'Transferencia Salida', value: 'Transferencia Salida' },
+  { label: 'Conteo Positivo', value: 'Conteo Positivo' },
+  { label: 'Conteo Negativo', value: 'Conteo Negativo' },
+  { label: 'Producción Entrada', value: 'Producción Entrada' },
+  { label: 'Producción Salida', value: 'Producción Salida' }
 ]
 
 /**
@@ -83,7 +87,11 @@ function getMovementColor (type) {
     'Ajuste Positivo': 'teal',
     'Ajuste Negativo': 'orange',
     'Transferencia Entrada': 'blue',
-    'Transferencia Salida': 'purple'
+    'Transferencia Salida': 'purple',
+    'Conteo Positivo': 'cyan',
+    'Conteo Negativo': 'deep-orange',
+    'Producción Entrada': 'light-green',
+    'Producción Salida': 'amber'
   }
   return colors[type] || 'grey'
 }
@@ -91,8 +99,55 @@ function getMovementColor (type) {
 /**
  * Export to excel
  */
-function exportToExcel () {
-  console.log('Exportar a Excel...')
+async function exportToExcel () {
+  try {
+    loading(true)
+    const response = await api.get(`kardex/${selectedProduct.value?.id}/export-excel`, {
+      params: params.value,
+      responseType: 'blob'
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `kardex-${selectedProduct.value?.name}-${new Date().toISOString().split('T')[0]}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    notify('Kardex exportado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message || 'Error al exportar', 'negative', 'warning')
+  } finally {
+    loading(false)
+  }
+}
+
+/**
+ * Export to PDF
+ */
+async function exportToPdf () {
+  try {
+    loading(true)
+    const response = await api.get(`kardex/${selectedProduct.value?.id}/export-pdf`, {
+      params: params.value,
+      responseType: 'blob'
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `kardex-${selectedProduct.value?.name}-${new Date().toISOString().split('T')[0]}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    notify('Kardex exportado exitosamente', 'positive', 'check_circle')
+  } catch (error) {
+    notify(error.message || 'Error al exportar', 'negative', 'warning')
+  } finally {
+    loading(false)
+  }
 }
 
 /**
@@ -169,6 +224,7 @@ const getMovements = async (product, params) => {
         :movementTypes="movementTypes"
         @goBack="selectedProduct = null"
         @exportExcel="exportToExcel"
+        @exportPdf="exportToPdf"
         @update:movementType="($event) => filterData('movementType', $event)"
         @update:dateRange="($event) => filterData('dateRange', $event)"
       >

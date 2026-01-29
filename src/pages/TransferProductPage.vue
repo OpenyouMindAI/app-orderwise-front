@@ -584,7 +584,7 @@
                 </q-select>
                 <q-input
                   v-model="currentTransfer.observations"
-                  label="Observaciones"
+                  label="Descripción"
                   type="textarea"
                   outlined
                   dense
@@ -706,7 +706,7 @@
                   <q-separator class="q-mb-md" />
 
                   <!-- Costo y Subtotal lado a lado -->
-                  <div class="financial-row">
+                  <div class="financial-row" v-if="isSuperAdmin">
                     <div class="financial-item">
                       <div class="financial-label">
                         <q-icon name="attach_money" size="xs" class="q-mr-xs" />
@@ -750,10 +750,10 @@
                         use-input
                         hide-selected
                         fill-input
-                        option-label="name"
                         option-value="id"
                         input-debounce="500"
                         @filter="getProducts"
+                        :option-label="(opt) => `${opt.name} - ${opt?.unit_of_measure?.name}`"
                         :rules="[val => !!val || 'Requerido']"
                         @update:model-value="(value) => setProducts(value, product)"
                       >
@@ -783,10 +783,9 @@
                       <q-input
                         v-model.number="product.quantity"
                         type="number"
-                        label="Cant."
                         outlined
                         dense
-                        min="1"
+                        :step="0.001"
                         :rules="[val => val > 0 || 'Requerido']"
                         @update:model-value="updateTotals"
                       >
@@ -815,20 +814,20 @@
                         </template>
                       </q-input>
                     </div>
-                    <div class="col-12 col-sm-4">
+                    <div class="col-12 col-sm-4" v-if="isSuperAdmin">
                       <q-input
                         v-model.number="product.cost"
                         type="number"
                         label="Costo"
                         outlined
                         dense
-                        min="0"
+                        step="0.01"
                         prefix="$"
                         :rules="[val => val >= 0 || 'Requerido']"
                         @update:model-value="updateTotals"
                       />
                     </div>
-                    <div class="col-12 col-sm-4">
+                    <div class="col-12 col-sm-4" v-if="isSuperAdmin">
                       <q-input
                         :model-value="formatCurrency(product.quantity * product.cost)"
                         label="Subtotal"
@@ -839,7 +838,7 @@
                       />
                     </div>
                   </div>
-                  <div v-if="product.stock !== undefined" class="text-caption text-grey-7 q-mt-xs">
+                  <div v-if="product.stock !== undefined && isSuperAdmin" class="text-caption text-grey-7 q-mt-xs">
                     Stock: {{ product.stock || '-' }}
                   </div>
                 </q-card-section>
@@ -870,7 +869,7 @@
                         use-input
                         hide-selected
                         fill-input
-                        option-label="name"
+                        :option-label="(opt) => `${opt.name} - ${opt?.unit_of_measure?.name}`"
                         option-value="id"
                         input-debounce="500"
                         @filter="getProducts"
@@ -892,8 +891,7 @@
                         type="number"
                         outlined
                         dense
-                        min="1"
-                        step="1"
+                        :step="0.001"
                         :rules="[val => val > 0 || 'Requerido']"
                         @update:model-value="updateTotals"
                       >
@@ -922,24 +920,24 @@
                         </template>
                       </q-input>
                     </q-td>
-                    <q-td key="cost" :props="props">
+                    <q-td key="cost" :props="props" v-if="isSuperAdmin">
                       <q-input
                         v-model.number="props.row.cost"
                         type="number"
                         outlined
                         dense
-                        min="0"
                         prefix="$"
+                        step="0.01"
                         :rules="[
                           val => val >= 0 || 'El costo no puede ser negativo'
                         ]"
                         @update:model-value="updateTotals"
                       />
                     </q-td>
-                    <q-td key="stock" :props="props">
+                    <q-td key="stock" :props="props" v-if="isSuperAdmin">
                       {{ props.row.stock || '-' }}
                     </q-td>
-                    <q-td key="subtotal" :props="props">
+                    <q-td key="subtotal" :props="props" v-if="isSuperAdmin">
                       {{ formatCurrency(props.row.quantity * props.row.cost) }}
                     </q-td>
                     <q-td key="actions" :props="props">
@@ -1035,7 +1033,7 @@
                         @update:model-value="updateTotals"
                       />
                     </q-td>
-                    <q-td key="cost" :props="props">
+                    <q-td key="cost" :props="props" v-if="isSuperAdmin">
                       <div v-if="isTransferVerified">
                         {{ formatCurrency(props.row.cost) }}
                       </div>
@@ -1045,18 +1043,18 @@
                         type="number"
                         outlined
                         dense
-                        min="0"
                         prefix="$"
+                        step="0.01"
                         :rules="[
                           val => val >= 0 || 'El costo no puede ser negativo'
                         ]"
                         @update:model-value="updateTotals"
                       />
                     </q-td>
-                    <q-td key="stock" :props="props">
+                    <q-td key="stock" :props="props" v-if="isSuperAdmin">
                       {{ props.row.stock || '-' }}
                     </q-td>
-                    <q-td key="subtotal" :props="props">
+                    <q-td key="subtotal" :props="props" v-if="isSuperAdmin">
                       {{ formatCurrency(props.row.quantity * props.row.cost) }}
                     </q-td>
                     <q-td v-if="!isTransferVerified" key="actions" :props="props">
@@ -1092,7 +1090,7 @@
                 <q-card-section class="q-pa-sm">
                   <div class="row justify-between text-caption">
                     <div><strong>Productos:</strong> {{ getTotalProducts() }}</div>
-                    <div><strong>Total:</strong> {{ formatCurrency(getTotalValue()) }}</div>
+                    <div v-if="isSuperAdmin"><strong>Total:</strong> {{ formatCurrency(getTotalValue()) }}</div>
                   </div>
                 </q-card-section>
               </q-card>
@@ -1115,7 +1113,7 @@
                   <div>
                     <strong>Total productos:</strong> {{ getTotalProducts() }}
                   </div>
-                  <div>
+                  <div v-if="isSuperAdmin">
                     <strong>Valor total:</strong> {{ formatCurrency(getTotalValue()) }}
                   </div>
                 </div>
@@ -1125,7 +1123,7 @@
 
           <q-card-actions v-if="!isTransferVerified" align="right" class="q-pa-md">
             <q-btn
-              label="Editar"
+              label="Guardar"
               color="primary"
               type="submit"
               :disable="currentTransfer.products.length === 0 || (editMode && !canEditTransfer)"
@@ -2225,10 +2223,14 @@ export default {
      * @returns {Array}
      */
     displayProductColumns () {
+      let columns = this.productColumns
       if (this.isTransferVerified) {
-        return this.productColumns.filter(col => col.name !== 'actions')
+        columns = columns.filter(col => col.name !== 'actions')
       }
-      return this.productColumns
+      if (!this.isSuperAdmin) {
+        columns = columns.filter(col => col.name !== 'cost' && col.name !== 'subtotal' && col.name !== 'stock')
+      }
+      return columns
     },
     /**
      * Check if there are quantity discrepancies
@@ -2924,9 +2926,15 @@ export default {
       if (!this.manualSearchQuery) return
       try {
         loading(true)
-        const { data } = await api.get(`transfer-stocks/${this.manualSearchQuery}`)
+        const response = await api.get('transfer-stocks', {
+          params: {
+            dataSearch: {
+              transfer_number: this.manualSearchQuery
+            }
+          }
+        })
         this.showQrScanner = false
-
+        const data = response.data[0]
         // Verificar si la transferencia ya está entregada
         if (data.status === 'delivered' || data.verified_at !== null) {
           // Si está entregada, mostrar el detalle (solo lectura)
@@ -3324,7 +3332,7 @@ export default {
         return `Verificar #${this.currentTransfer.transfer_number || ''}`
       } else if (this.currentView === 'form') {
         if (this.editMode) {
-          return `Editar #${this.currentTransfer.id || ''}`
+          return `Editar #${this.currentTransfer.transfer_number || ''}`
         }
         return 'Nueva Transferencia'
       } else if (this.currentView === 'detail') {

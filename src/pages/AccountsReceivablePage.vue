@@ -27,6 +27,17 @@
               </q-tooltip>
             </q-btn>
             <q-btn
+              label="Modo afiliado"
+              :icon="store.partnerMode ? 'check_box' : 'check_box_outline_blank'"
+              @click="togglePartnerMode"
+              class="modern-btn-secondary"
+              v-if="isAdmin"
+            >
+              <q-tooltip>
+                {{ store.partnerMode ? 'Modo afiliado activado' : 'Modo afiliado desactivado' }}
+              </q-tooltip>
+            </q-btn>
+            <q-btn
               icon="filter_alt"
               label="Filtros"
               unelevated
@@ -132,7 +143,81 @@
             @row-click="viewClientStatement"
             class="cursor-pointer"
             binary-state-sort
+            :grid="$q.screen.lt.md"
           >
+            <template v-slot:item="props">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+                <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="viewClientStatement(null, props.row)">
+                  <span class="q-focus-helper"></span>
+
+                  <q-card-section class="row justify-between items-start compact-card-header">
+                    <div class="column">
+                       <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">{{ props.row.name }}</div>
+                       <div class="text-caption text-grey-6 text-weight-medium">{{ props.row.document_number }}</div>
+                    </div>
+                    <div class="column items-end">
+                       <q-badge
+                         color="primary"
+                         :label="`${props.row.invoice_count} Facturas`"
+                         class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                         rounded
+                         style="font-size: 10px; letter-spacing: 0.5px"
+                       />
+                    </div>
+                  </q-card-section>
+
+                  <q-separator color="grey-2" inset />
+
+                  <q-card-section class="compact-card-body">
+                    <div class="row q-col-gutter-y-sm">
+                      <div class="col-6">
+                         <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Facturado</div>
+                         <div class="text-body2 text-negative text-weight-bold ellipsis">{{ formatCurrency(props.row.total_owed) }}</div>
+                      </div>
+                      <div class="col-6 text-right">
+                         <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Pagado</div>
+                         <div class="text-body2 text-positive text-weight-bold">{{ formatCurrency(props.row.total_paid) }}</div>
+                      </div>
+                    </div>
+                  </q-card-section>
+
+                  <q-card-section class="compact-card-footer">
+                    <div class="row items-center justify-between bg-grey-1 compact-total-container" style="border-radius: 12px">
+                        <div>
+                          <div class="text-caption text-grey-6 text-weight-medium">Saldo Pendiente</div>
+                          <div class="text-h6 text-primary text-weight-bolder lh-100" style="letter-spacing: -0.5px">
+                            {{ store.hideAmounts ? '********' : formatCurrency(props.row.balance) }}
+                          </div>
+                        </div>
+                        <div class="row q-gutter-x-sm">
+                          <q-btn
+                            round
+                            unelevated
+                            color="primary"
+                            icon="visibility"
+                            size="md"
+                            class="shadow-1"
+                            @click.stop="viewClientStatement(null, props.row)"
+                          >
+                            <q-tooltip>Ver estado</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            round
+                            unelevated
+                            color="positive"
+                            icon="payment"
+                            size="md"
+                            class="shadow-1"
+                            @click.stop="openGlobalPaymentDialog(props.row)"
+                          >
+                            <q-tooltip>Pagar</q-tooltip>
+                          </q-btn>
+                        </div>
+                     </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </template>
             <template #body-cell-total_owed="props">
               <q-td :props="props" class="text-right">
                 <div class="text-weight-bold text-negative" style="font-size: 15px;">
@@ -392,7 +477,151 @@
             bordered
             class="shadow-2 statement-table"
             :rows-per-page-options="[25, 50, 100]"
+            :grid="$q.screen.lt.md"
           >
+            <template v-slot:item="props">
+              <div class="q-pa-xs col-xs-12 col-sm-6">
+                <q-card class="no-shadow transition-all" :class="props.row.type === 'invoice' ? 'bg-red-1' : 'bg-green-1'" style="border-radius: 16px; border: 1px solid #eef0f3">
+                  <q-card-section class="row justify-between items-start compact-card-header">
+                    <div class="column">
+                       <div class="row items-center no-wrap">
+                         <q-icon
+                           :name="props.row.type === 'invoice' ? 'receipt' : 'payments'"
+                           :color="props.row.type === 'invoice' ? 'negative' : 'positive'"
+                           size="sm"
+                           class="q-mr-sm"
+                         />
+                         <div class="text-weight-bold text-body1" :class="props.row.type === 'invoice' ? 'text-negative' : 'text-positive'" style="letter-spacing: -0.5px">
+                           {{ props.row.description }}
+                         </div>
+                       </div>
+                       <div class="text-caption text-grey-6 text-weight-medium">
+                         {{ formatDate(props.row.date) }} {{ formatTime(props.row.date) }}
+                       </div>
+                    </div>
+                    <div class="column items-end">
+                       <q-badge
+                         :color="props.row.type === 'invoice' ? 'negative' : 'positive'"
+                         :label="props.row.type === 'invoice' ? 'Factura' : 'Pago'"
+                         class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                         rounded
+                         style="font-size: 10px; letter-spacing: 0.5px"
+                       />
+                       <div class="text-caption text-grey-7 q-mt-xs" v-if="props.row.type === 'payment' && props.row.payment?.reference">
+                         Ref: {{ props.row.payment.reference }}
+                       </div>
+                    </div>
+                  </q-card-section>
+
+                  <q-separator color="grey-2" inset />
+
+                  <q-card-section class="compact-card-body">
+                    <div class="row q-col-gutter-y-sm">
+                      <div class="col-6">
+                         <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">
+                           {{ props.row.type === 'invoice' ? 'Cargo' : 'Abono' }}
+                         </div>
+                         <div class="text-body1 text-weight-bold" :class="props.row.type === 'invoice' ? 'text-negative' : 'text-positive'">
+                           {{ formatCurrency(props.row.debit || props.row.credit) }}
+                         </div>
+                      </div>
+                      <div class="col-6 text-right" v-if="props.row.delivery_date">
+                         <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Vencimiento</div>
+                         <div class="text-body2 text-grey-8">{{ formatDate(props.row.delivery_date) }}</div>
+                      </div>
+                    </div>
+                  </q-card-section>
+
+                  <q-card-section class="compact-card-footer q-pt-none">
+                    <div class="row items-center justify-between bg-white q-pa-sm" style="border-radius: 12px; border: 1px solid #eef0f3">
+                        <div>
+                          <div class="text-caption text-grey-6 text-weight-medium">Saldo</div>
+                          <div class="text-h6 text-primary text-weight-bolder lh-100" style="letter-spacing: -0.5px">
+                            {{ formatCurrency(props.row.running_balance) }}
+                          </div>
+                        </div>
+                        <div class="row q-gutter-x-xs">
+                          <q-btn
+                            v-if="props.row.type === 'invoice'"
+                            icon="visibility"
+                            size="sm"
+                            round
+                            unelevated
+                            color="primary"
+                            @click="viewInvoiceDetail(props.row.invoice)"
+                          />
+                          <q-btn
+                            v-if="props.row.type === 'invoice' && props.row.balance > 0"
+                            icon="payment"
+                            size="sm"
+                            round
+                            unelevated
+                            color="positive"
+                            @click="openInvoicePaymentDialog(props.row.invoice)"
+                          />
+                          <q-btn
+                            v-if="props.row.type === 'payment'"
+                            icon="receipt_long"
+                            size="sm"
+                            round
+                            unelevated
+                            color="positive"
+                            @click="viewPaymentDetail(props.row.payment_id)"
+                          />
+                          <q-btn
+                            v-if="props.row.type === 'payment'"
+                            icon="download"
+                            size="sm"
+                            round
+                            unelevated
+                            color="primary"
+                            @click="downloadPaymentReceiptFromRow(props.row)"
+                          />
+                          <q-btn
+                            v-if="props.row.type === 'payment' && isAdmin"
+                            icon="delete"
+                            size="sm"
+                            round
+                            unelevated
+                            color="negative"
+                            @click="confirmDeletePayment(props.row.payment)"
+                          />
+                          <!-- Expand Details Button -->
+                          <q-btn
+                            v-if="(props.row.type === 'invoice' && props.row.invoice.invoice_payments?.length > 0) || (props.row.type === 'payment' && props.row.affected_invoices?.length > 0)"
+                            size="sm"
+                            unelevated
+                            round
+                            color="grey-7"
+                            :icon="props.row.expanded ? 'expand_less' : 'expand_more'"
+                            @click="toggleExpand(props.row)"
+                          />
+                        </div>
+                     </div>
+
+                     <!-- Expanded content for card -->
+                     <div v-if="props.row.expanded" class="q-mt-sm fadeIn">
+                        <!-- Invoice payments -->
+                        <div v-if="props.row.type === 'invoice'" class="bg-white q-pa-sm rounded-borders shadow-1 border-primary">
+                           <div class="text-caption text-weight-bold text-positive q-mb-xs">Pagos aplicados:</div>
+                           <div v-for="pay in props.row.invoice.invoice_payments" :key="pay.id" class="row justify-between items-center q-py-xs border-bottom-light">
+                              <span class="text-caption">{{ pay.payment_method?.name }}</span>
+                              <span class="text-caption text-weight-bold text-positive">{{ formatCurrency(pay.amount) }}</span>
+                           </div>
+                        </div>
+                        <!-- Affected invoices by payment -->
+                        <div v-if="props.row.type === 'payment'" class="bg-white q-pa-sm rounded-borders shadow-1 border-negative">
+                           <div class="text-caption text-weight-bold text-negative q-mb-xs">Facturas afectadas:</div>
+                           <div v-for="inv in props.row.affected_invoices" :key="inv.invoice_id" class="row justify-between items-center q-py-xs border-bottom-light">
+                              <span class="text-caption">Factura #{{ inv.invoice_id }}</span>
+                              <span class="text-caption text-weight-bold text-negative">{{ formatCurrency(inv.amount_applied) }}</span>
+                           </div>
+                        </div>
+                     </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </template>
             <template #header="props">
               <q-tr :props="props" class="bg-primary text-white">
                 <q-th v-for="col in props.cols" :key="col.name" :props="props" class="text-weight-bold">
@@ -781,14 +1010,18 @@
     <!-- ============================================ -->
     <!-- DIALOG: REGISTER GLOBAL PAYMENT -->
     <!-- ============================================ -->
-    <q-dialog v-model="paymentDialog" persistent>
-      <q-card style="width: 500px; max-width: 90vw;">
-        <q-card-section class="bg-primary text-white">
+    <q-dialog v-model="paymentDialog" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 90vw;'}`"
+      >
+        <q-card-section class="row items-center bg-primary text-white q-py-sm">
           <div class="text-h6">Registrar Pago</div>
-          <div class="text-caption">{{ paymentClient?.name }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closePaymentDialog" />
         </q-card-section>
 
-        <q-card-section>
+        <q-card-section class="scroll col q-pa-md">
           <div class="text-subtitle2 q-mb-md">
             Saldo pendiente: <strong class="text-negative">{{ formatNumber(paymentClient?.balance || 0) }}</strong>
           </div>
@@ -799,6 +1032,7 @@
             type="number"
             step="0.01"
             filled
+            dense
             :rules="[val => val > 0 || 'Debe ser mayor a 0', val => val <= (paymentClient?.balance || 0) || 'Excede el saldo']"
           />
 
@@ -811,6 +1045,7 @@
             map-options
             label="Método de pago"
             filled
+            dense
             class="q-mt-md"
           />
 
@@ -819,6 +1054,7 @@
             label="Fecha del pago"
             type="date"
             filled
+            dense
             class="q-mt-md"
           />
 
@@ -826,10 +1062,11 @@
             v-model="paymentForm.reference"
             label="Referencia (opcional)"
             filled
+            dense
             class="q-mt-md"
           />
 
-          <q-banner class="bg-info text-white q-mt-md">
+          <q-banner class="bg-info text-white q-mt-md rounded-borders">
             <template #avatar>
               <q-icon name="info" />
             </template>
@@ -837,11 +1074,12 @@
           </q-banner>
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="text-primary bg-grey-1">
           <q-btn label="Cancelar" flat @click="closePaymentDialog" />
           <q-btn
             label="Registrar Pago"
             color="primary"
+            unelevated
             :loading="savingPayment"
             :disable="!canRegisterPayment"
             @click="registerGlobalPayment"
@@ -853,21 +1091,23 @@
     <!-- ============================================ -->
     <!-- DIALOG: PAYMENT RECEIPT -->
     <!-- ============================================ -->
-    <q-dialog v-model="paymentReceiptDialog" persistent>
-      <q-card class="payment-receipt-card">
-        <q-card-section class="receipt-header">
-          <div class="receipt-title">
-            <q-icon name="check_circle" size="32px" color="positive" />
-            <div>
-              <div class="receipt-title-text">Pago Registrado</div>
-              <div class="receipt-subtitle">Comprobante de Pago</div>
-            </div>
+    <q-dialog v-model="paymentReceiptDialog" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': 'payment-receipt-card'"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : ''"
+      >
+        <q-card-section class="row items-center bg-grey-2 q-py-sm">
+          <div class="text-h6 text-positive">
+            <q-icon name="check_circle" size="24px" class="q-mr-sm" />
+            Pago Registrado
           </div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section class="receipt-content">
+        <q-card-section class="receipt-content scroll col">
           <!-- Client Information -->
           <div class="receipt-section">
             <div class="receipt-section-title">Cliente</div>
@@ -931,9 +1171,9 @@
 
         <q-separator />
 
-        <q-card-actions class="receipt-actions">
+        <q-card-actions align="right" class="text-primary bg-grey-1">
           <q-btn
-            label="Descargar Comprobante"
+            label="Descargar"
             icon="download"
             color="primary"
             unelevated
@@ -955,174 +1195,167 @@
     <!-- DIALOG: INVOICE DETAIL -->
     <!-- ============================================ -->
     <q-dialog v-model="invoiceDetailDialog" :maximized="$q.screen.lt.sm">
-      <q-card class="invoice-detail-card">
-        <!-- Header -->
-        <q-card-section class="invoice-detail-header bg-primary text-white">
-          <div class="invoice-detail-title">
-            <q-icon name="receipt_long" size="28px" />
-            <div>
-              <div class="invoice-detail-title-text">Factura #{{ selectedInvoice?.id }}</div>
-              <div class="invoice-detail-subtitle">Detalle completo</div>
-            </div>
-          </div>
-          <q-btn
-            icon="close"
-            flat
-            round
-            dense
-            v-close-popup
-            color="white"
-          />
-        </q-card-section>
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': 'invoice-detail-card'"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : ''"
+      >
+        <div class="column full-height">
+          <!-- Header -->
+          <q-card-section class="row items-center bg-primary text-white q-py-sm">
+            <div class="text-h6">Factura #{{ selectedInvoice?.id }}</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup color="white" />
+          </q-card-section>
 
-        <q-separator />
+          <q-separator />
 
-        <q-card-section class="invoice-detail-content" v-if="selectedInvoice">
-          <!-- General Information and Totals -->
-          <div class="row q-col-gutter-md q-mb-md">
-            <!-- Client and Dates -->
-            <div class="col-12 col-md-6">
-              <div class="detail-card">
-                <div class="detail-card-title">
-                  <q-icon name="person" size="18px" />
-                  Información General
+          <q-card-section class="scroll col q-pa-md" v-if="selectedInvoice">
+            <!-- General Information and Totals -->
+            <div class="row q-col-gutter-md q-mb-md">
+              <!-- Client and Dates -->
+              <div class="col-12 col-md-6">
+                <div class="detail-card">
+                  <div class="detail-card-title">
+                    <q-icon name="person" size="18px" />
+                    Información General
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Cliente:</span>
+                    <span class="detail-value text-weight-bold">{{ selectedInvoice.client?.name }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Fecha:</span>
+                    <span class="detail-value">{{ formatDateTime(selectedInvoice.created_at) }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Vencimiento:</span>
+                    <span class="detail-value">{{ formatDateTime(selectedInvoice.delivery_date) }}</span>
+                  </div>
                 </div>
-                <div class="detail-row">
-                  <span class="detail-label">Cliente:</span>
-                  <span class="detail-value">{{ selectedInvoice.client?.name }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Fecha:</span>
-                  <span class="detail-value">{{ formatDateTime(selectedInvoice.created_at) }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Vencimiento:</span>
-                  <span class="detail-value">{{ formatDateTime(selectedInvoice.delivery_date) }}</span>
+              </div>
+
+              <!-- Totals -->
+              <div class="col-12 col-md-6">
+                <div class="detail-card totals-card">
+                  <div class="detail-card-title">
+                    <q-icon name="calculate" size="18px" />
+                    Totales
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Total:</span>
+                    <span class="detail-value text-weight-bold">{{ formatCurrency(invoiceDetail?.totals?.total || 0) }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Pagado:</span>
+                    <span class="detail-value text-positive text-weight-bold">{{ formatCurrency(invoiceDetail?.totals?.paid || 0) }}</span>
+                  </div>
+                  <div class="detail-row balance-row">
+                    <span class="detail-label">Saldo:</span>
+                    <span class="detail-value text-negative text-weight-bold" style="font-size: 18px;">{{ formatCurrency(invoiceDetail?.totals?.balance || 0) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Totals -->
-            <div class="col-12 col-md-6">
-              <div class="detail-card totals-card">
-                <div class="detail-card-title">
-                  <q-icon name="calculate" size="18px" />
-                  Totales
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Total:</span>
-                  <span class="detail-value text-weight-bold">{{ formatCurrency(invoiceDetail?.totals?.total || 0) }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Pagado:</span>
-                  <span class="detail-value text-positive text-weight-bold">{{ formatCurrency(invoiceDetail?.totals?.paid || 0) }}</span>
-                </div>
-                <div class="detail-row balance-row">
-                  <span class="detail-label">Saldo:</span>
-                  <span class="detail-value text-negative text-weight-bold" style="font-size: 18px;">{{ formatCurrency(invoiceDetail?.totals?.balance || 0) }}</span>
+            <!-- Products -->
+            <div class="detail-section">
+              <div class="detail-section-title">
+                <q-icon name="inventory_2" size="20px" />
+                Productos
+                <q-badge color="primary" :label="selectedInvoice.products?.length || 0" />
+              </div>
+              <div class="products-table overflow-auto">
+                <!-- Desktop/Tablet view -->
+                <table class="modern-table gt-xs full-width">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th class="text-center">Cant.</th>
+                      <th class="text-right">Precio</th>
+                      <th class="text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="product in (selectedInvoice.products || [])" :key="product.id">
+                      <td>{{ product.name }}</td>
+                      <td class="text-center">{{ formatNumber(product.pivot.amount) }}</td>
+                      <td class="text-right">{{ formatCurrency(product.pivot.price) }}</td>
+                      <td class="text-right text-weight-bold">{{ formatCurrency(product.pivot.amount * product.pivot.price) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- Mobile view -->
+                <div class="lt-sm q-gutter-y-sm">
+                  <div v-for="product in (selectedInvoice.products || [])" :key="product.id" class="q-pa-sm bg-grey-1 rounded-borders">
+                    <div class="text-weight-bold text-body2">{{ product.name }}</div>
+                    <div class="row justify-between items-center q-mt-xs">
+                      <span class="text-caption text-grey-7">{{ formatNumber(product.pivot.amount) }} x {{ formatCurrency(product.pivot.price) }}</span>
+                      <span class="text-weight-bold text-primary">{{ formatCurrency(product.pivot.amount * product.pivot.price) }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Products -->
-          <div class="detail-section">
-            <div class="detail-section-title">
-              <q-icon name="inventory_2" size="20px" />
-              Productos
-              <q-badge color="primary" :label="selectedInvoice.products?.length || 0" />
+            <!-- Applied Payments -->
+            <div class="detail-section q-mt-lg" v-if="selectedInvoice.invoice_payments?.length > 0">
+              <div class="detail-section-title">
+                <q-icon name="payments" size="20px" />
+                Pagos Aplicados
+                <q-badge color="positive" :label="selectedInvoice.invoice_payments?.length || 0" />
+              </div>
+              <div class="products-table">
+                <table class="modern-table full-width">
+                  <thead>
+                    <tr>
+                      <th>Método</th>
+                      <th class="gt-xs">Fecha</th>
+                      <th class="text-right">Monto</th>
+                      <th class="text-center">Acc.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="payment in selectedInvoice.invoice_payments" :key="payment.id">
+                      <td>
+                        <div class="row items-center no-wrap">
+                          <q-icon name="check_circle" color="positive" size="18px" class="q-mr-sm gt-xs" />
+                          <span class="text-caption text-weight-medium">{{ payment.payment_method?.name }}</span>
+                        </div>
+                        <div class="lt-sm text-caption text-grey-6">{{ formatDate(payment.created_at) }}</div>
+                      </td>
+                      <td class="gt-xs text-caption">{{ formatDateTime(payment.created_at) }}</td>
+                      <td class="text-right text-weight-bold text-positive text-caption">{{ formatCurrency(payment.amount) }}</td>
+                      <td class="text-center">
+                        <q-btn
+                          icon="delete"
+                          size="xs"
+                          round
+                          unelevated
+                          color="negative"
+                          @click="confirmDeletePayment(payment)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="products-table">
-              <table class="modern-table">
-                <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th class="text-center">Cantidad</th>
-                    <th class="text-right">Precio</th>
-                    <th class="text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="product in (selectedInvoice.products || [])" :key="product.id">
-                    <td>{{ product.name }}</td>
-                    <td class="text-center">{{ formatNumber(product.pivot.amount) }}</td>
-                    <td class="text-right">{{ formatCurrency(product.pivot.price) }}</td>
-                    <td class="text-right text-weight-bold">{{ formatCurrency(product.pivot.amount * product.pivot.price) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </q-card-section>
 
-          <!-- Applied Payments -->
-          <div class="detail-section" v-if="selectedInvoice.invoice_payments?.length > 0">
-            <div class="detail-section-title">
-              <q-icon name="payments" size="20px" />
-              Pagos Aplicados
-              <q-badge color="positive" :label="selectedInvoice.invoice_payments?.length || 0" />
-            </div>
-            <div class="products-table">
-              <table class="modern-table">
-                <thead>
-                  <tr>
-                    <th>Método de Pago</th>
-                    <th>Fecha</th>
-                    <th>Referencia</th>
-                    <th class="text-right">Monto</th>
-                    <th class="text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="payment in selectedInvoice.invoice_payments" :key="payment.id">
-                    <td>
-                      <div class="row items-center no-wrap">
-                        <q-icon name="check_circle" color="positive" size="18px" class="q-mr-sm" />
-                        <span>{{ payment.payment_method?.name }}</span>
-                      </div>
-                    </td>
-                    <td>{{ formatDateTime(payment.created_at) }}</td>
-                    <td>{{ payment.reference || '-' }}</td>
-                    <td class="text-right text-weight-bold text-positive">{{ formatCurrency(payment.amount) }}</td>
-                    <td class="text-center">
-                      <q-btn
-                        icon="delete_forever"
-                        size="sm"
-                        round
-                        flat
-                        color="negative"
-                        @click="confirmDeletePayment(payment)"
-                      >
-                        <q-tooltip>Eliminar pago</q-tooltip>
-                      </q-btn>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </q-card-section>
+          <q-separator />
 
-        <q-separator />
-
-        <!-- Actions -->
-        <q-card-actions class="invoice-detail-actions" align="right">
-          <!-- <q-btn
-            v-if="(invoiceDetail?.totals?.balance || 0) > 0"
-            label="Registrar Pago"
-            icon="payment"
-            color="positive"
-            unelevated
-            @click="openInvoicePaymentDialog(selectedInvoice)"
-            no-caps
-          />
-          <q-space /> -->
-          <q-btn
-            label="Cerrar"
-            color="negative"
-            v-close-popup
-            no-caps
-          />
-        </q-card-actions>
+          <!-- Actions -->
+          <q-card-actions align="right" class="text-primary bg-grey-1">
+            <q-btn
+              label="Cerrar"
+              color="negative"
+              flat
+              v-close-popup
+              no-caps
+            />
+          </q-card-actions>
+        </div>
       </q-card>
     </q-dialog>
 
@@ -1130,60 +1363,59 @@
     <!-- DIALOG: DETALLE DE PAGO -->
     <!-- ============================================ -->
     <q-dialog v-model="paymentDetailDialog" :maximized="$q.screen.lt.sm">
-      <q-card class="payment-detail-card" style="min-width: 500px; max-width: 700px;">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': 'payment-detail-card'"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'min-width: 500px; max-width: 700px;'"
+      >
         <!-- Header -->
-        <q-card-section class="bg-positive text-white">
-          <div class="row items-center justify-between">
-            <div class="text-h6">
-              <q-icon name="receipt_long" size="28px" class="q-mr-sm" />
-              Detalle del Pago
-            </div>
-            <q-btn icon="close" flat round dense v-close-popup />
-          </div>
+        <q-card-section class="row items-center bg-positive text-white q-py-sm">
+          <div class="text-h6">Detalle del Pago</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section v-if="paymentDetail">
+        <q-card-section class="scroll col q-pa-md" v-if="paymentDetail">
           <!-- Payment Info -->
-          <div class="q-mb-md">
-            <div class="text-h6 text-positive q-mb-sm">
+          <div class="bg-green-1 q-pa-md rounded-borders border-positive q-mb-md">
+            <div class="text-h5 text-positive text-weight-bolder q-mb-xs">
               {{ formatCurrency(paymentDetail.total_amount) }}
             </div>
-            <div class="text-caption text-grey-7">
-              <q-icon name="event" size="16px" />
-              {{ formatDateTime(paymentDetail.payment.date) }}
-            </div>
-            <div class="text-caption text-grey-7" v-if="paymentDetail.payment.reference">
-              <q-icon name="tag" size="16px" />
-              Ref: {{ paymentDetail.payment.reference }}
-            </div>
-            <div class="text-caption text-grey-7">
-              <q-icon name="payment" size="16px" />
-              {{ paymentDetail.payment.payment_method?.name }}
+            <div class="row q-col-gutter-sm text-caption text-grey-8">
+              <div class="col-12 col-sm-6">
+                <q-icon name="event" size="16px" class="q-mr-xs" />
+                {{ formatDateTime(paymentDetail.payment.date) }}
+              </div>
+              <div class="col-12 col-sm-6" v-if="paymentDetail.payment.reference">
+                <q-icon name="tag" size="16px" class="q-mr-xs" />
+                Ref: {{ paymentDetail.payment.reference }}
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-icon name="payment" size="16px" class="q-mr-xs" />
+                {{ paymentDetail.payment.payment_method?.name }}
+              </div>
             </div>
             <q-badge v-if="paymentDetail.is_global_payment" color="info" class="q-mt-sm">
               Pago Global ({{ paymentDetail.affected_invoices.length }} facturas)
             </q-badge>
           </div>
 
-          <q-separator class="q-my-md" />
-
           <!-- Affected Invoices -->
-          <div class="text-subtitle2 q-mb-sm">Facturas Pagadas:</div>
-          <q-list bordered separator>
-            <q-item v-for="invoice in paymentDetail.affected_invoices" :key="invoice.invoice_id">
+          <div class="text-subtitle2 q-mb-sm text-grey-8">Facturas Pagadas:</div>
+          <q-list bordered separator class="rounded-borders overflow-hidden shadow-1">
+            <q-item v-for="invoice in paymentDetail.affected_invoices" :key="invoice.invoice_id" class="bg-white">
               <q-item-section avatar>
                 <q-icon name="receipt" color="negative" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>Factura #{{ invoice.invoice_id }}</q-item-label>
+                <q-item-label class="text-weight-bold">Factura #{{ invoice.invoice_id }}</q-item-label>
                 <q-item-label caption>
                   Total: {{ formatCurrency(invoice.invoice_total) }}
                 </q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-item-label class="text-positive text-weight-bold">
+                <q-item-label class="text-positive text-weight-bold" style="font-size: 1rem">
                   {{ formatCurrency(invoice.amount_applied) }}
                 </q-item-label>
                 <q-item-label caption>
@@ -1196,7 +1428,7 @@
 
         <q-separator />
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="text-primary bg-grey-1">
           <q-btn label="Cerrar" color="primary" flat v-close-popup />
         </q-card-actions>
       </q-card>
@@ -1205,26 +1437,20 @@
     <!-- ============================================ -->
     <!-- DIALOG: FILTROS -->
     <!-- ============================================ -->
-    <q-dialog v-model="filterDialog">
-      <q-card class="filter-dialog">
-        <q-card-section class="filter-header bg-primary text-white">
-          <div class="filter-title">
-            <q-icon name="tune" size="24px" />
-            <span>Filtros</span>
-          </div>
-          <q-btn
-            icon="close"
-            flat
-            round
-            dense
-            v-close-popup
-            class="close-btn"
-          />
+    <q-dialog v-model="filterDialog" :maximized="$q.screen.lt.sm" :position="$q.screen.lt.sm ? 'standard' : 'right'">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': 'filter-dialog'"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : ''"
+      >
+        <q-card-section class="row items-center bg-primary text-white q-py-sm">
+          <div class="text-h6">Filtros</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section class="filter-content">
+        <q-card-section class="filter-content scroll col q-pa-md">
           <!-- Branch Office -->
           <div class="filter-group">
             <label class="filter-label">
@@ -1332,7 +1558,7 @@
           </div>
 
           <!-- Minimum Balance -->
-          <div class="filter-group">
+          <div class="filter-group q-mb-none">
             <label class="filter-label">
               <q-icon name="attach_money" size="18px" />
               Saldo Mínimo
@@ -1351,7 +1577,7 @@
 
         <q-separator />
 
-        <q-card-actions class="filter-actions">
+        <q-card-actions align="right" class="text-primary bg-grey-1">
           <q-btn
             label="Limpiar"
             flat
@@ -1374,13 +1600,18 @@
     <!-- ============================================ -->
     <!-- DIALOG: SPECIFIC INVOICE PAYMENT -->
     <!-- ============================================ -->
-    <q-dialog v-model="invoicePaymentDialog" persistent>
-      <q-card style="width: 500px; max-width: 90vw;">
-        <q-card-section class="bg-primary text-white">
+    <q-dialog v-model="invoicePaymentDialog" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 90vw;'}`"
+      >
+        <q-card-section class="row items-center bg-primary text-white q-py-sm">
           <div class="text-h6">Pagar Factura #{{ invoicePaymentData?.id }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeInvoicePaymentDialog" />
         </q-card-section>
 
-        <q-card-section>
+        <q-card-section class="scroll col q-pa-md">
           <div class="text-subtitle2 q-mb-md">
             Saldo pendiente: <strong class="text-negative">{{ formatNumber(invoicePaymentData?.balance || 0) }}</strong>
           </div>
@@ -1391,6 +1622,7 @@
             type="number"
             step="0.01"
             filled
+            dense
             :rules="[
               val => val > 0 || 'Debe ser mayor a 0',
               val => val <= (invoicePaymentData?.balance || 0) || 'Excede el saldo'
@@ -1406,6 +1638,7 @@
             map-options
             label="Método de pago"
             filled
+            dense
             class="q-mt-md"
           />
 
@@ -1414,6 +1647,7 @@
             label="Fecha del pago"
             type="date"
             filled
+            dense
             class="q-mt-md"
           />
 
@@ -1421,15 +1655,17 @@
             v-model="invoicePaymentForm.reference"
             label="Referencia (opcional)"
             filled
+            dense
             class="q-mt-md"
           />
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="text-primary bg-grey-1">
           <q-btn label="Cancelar" flat @click="closeInvoicePaymentDialog" />
           <q-btn
             label="Registrar Pago"
             color="primary"
+            unelevated
             :loading="savingInvoicePayment"
             :disable="!canRegisterInvoicePayment"
             @click="registerInvoicePayment"
@@ -1824,6 +2060,11 @@ export default {
       return `${year}-${month}-${day}`
     },
 
+    async togglePartnerMode () {
+      await this.store.togglePartnerMode()
+      this.loadClients()
+    },
+
     /**
      * Loads available branch offices based on userSession role
      * If root/superadmin: shows all branch offices
@@ -1839,8 +2080,6 @@ export default {
             'branchOfficeUsers.user_id': this.userSession.id
           }
         }
-
-        console.log(this.userSession)
 
         const { data } = await this.$api.get('branch-offices', { params })
 
@@ -1892,6 +2131,7 @@ export default {
           perPage: rowsPerPage,
           sortBy: sortBy || 'balance',
           sortOrder: descending ? 'desc' : 'asc',
+          onlyClients: Boolean(!this.store.partnerMode),
           branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
           search: this.search,
           ...this.filters
@@ -1932,6 +2172,9 @@ export default {
      * Wrapper method for initial load and filter changes
      */
     async loadClients () {
+      if (this.userSession?.is_partner) {
+        this.store.partnerMode = true
+      }
       await this.onRequest({ pagination: this.pagination })
     },
 
@@ -3956,6 +4199,61 @@ body.body--dark .filter-actions {
 
   .filter-group {
     margin-bottom: 16px;
+  }
+}
+
+/* Clases para tarjetas compactas (Consistencia con InvoicePage) */
+.compact-card-header {
+  padding: 0.75rem 1rem !important;
+}
+
+.compact-card-body {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-footer {
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  padding-top: 0 !important;
+}
+
+.compact-total-container {
+  padding: 0.75rem !important;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.border-bottom-light {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.border-bottom-light:last-child {
+  border-bottom: none;
+}
+
+.fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1023px) {
+  :deep(.q-table__top) {
+    padding: 8px 0 !important;
+  }
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  :deep(.q-table__top .q-input) {
+    flex: 1;
   }
 }
 </style>

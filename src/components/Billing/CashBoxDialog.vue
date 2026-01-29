@@ -76,6 +76,7 @@
               :rules="boxSelectionRules"
               class="q-mb-md"
               :disable="availableCashBoxes.length === 1"
+              @filter="filterAvailableCashBoxes"
             >
               <template v-slot:option="scope">
                 <q-item v-bind="scope.itemProps">
@@ -148,10 +149,6 @@ export default {
       type: Boolean,
       default: false
     },
-    availableCashBoxes: {
-      type: Array,
-      default: () => []
-    },
     branchOffice: {
       type: Object,
       required: false,
@@ -171,6 +168,7 @@ export default {
       isSubmitting: false,
       loadingOpenBox: false,
       loadingCloseBox: false,
+      availableCashBoxes: [],
 
       // Form data
       selectedCashBox: null,
@@ -244,8 +242,9 @@ export default {
   // ==========================================
   // LIFECYCLE HOOKS
   // ==========================================
-  mounted () {
-    // The watcher for modelValue will handle initialization on open
+  async beforeMount () {
+    await this.filterAvailableCashBoxes(null, null, false)
+    this.isReady = true
   },
 
   // ==========================================
@@ -303,7 +302,39 @@ export default {
     // ------------------------------------------
     // Form Submission Handlers
     // ------------------------------------------
+    /**
+     * Loads available cash boxes from API with open/closed status
+     */
+    async filterAvailableCashBoxes (value, update, filter = true) {
+      if (!this.branchOffice?.id) {
+        console.error('Error: branchOffice.id no está disponible')
+        this.availableCashBoxes = []
+        return
+      }
 
+      try {
+        const { data } = await this.$api.get('cashboxes', {
+          params: {
+            dataSearch: {
+              name: value
+            },
+            dataEqualFilter: {
+              branch_office_id: this.branchOffice?.id
+            }
+          }
+        })
+
+        if (filter) {
+          update(() => {
+            this.availableCashBoxes = data || []
+          })
+        } else {
+          this.availableCashBoxes = data || []
+        }
+      } catch (error) {
+        this.availableCashBoxes = []
+      }
+    },
     /**
      * Open cash box session with new API
      */

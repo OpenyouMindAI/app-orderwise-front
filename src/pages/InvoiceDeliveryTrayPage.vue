@@ -7,157 +7,165 @@
 
     <!-- Content -->
     <div v-else>
-      <!-- Compact Header -->
-      <div v-if="sortedInvoices.length > 0" class="header-bar">
-        <div class="header-content">
-          <div class="header-info">
-            <span class="header-count">{{ sortedInvoices.length }}</span>
-            <span class="header-label">órdenes</span>
+      <!-- Modern Header -->
+      <div v-if="sortedInvoices.length > 0" class="premium-header-bar q-pa-md">
+        <div class="row items-center justify-between no-wrap">
+          <div class="row items-center no-wrap">
+            <q-checkbox
+              :model-value="isAllSelected"
+              @update:model-value="toggleSelectAll"
+              color="indigo-7"
+              dense
+              class="q-mr-sm"
+            />
+            <div class="column">
+              <span class="header-main-title">
+                {{ selectedInvoices.length === 0 ? 'Seleccionar todo' : `${selectedInvoices.length} seleccionadas` }}
+              </span>
+              <span class="header-sub-title">{{ sortedInvoices.length }} disponibles</span>
+            </div>
           </div>
-          <div class="header-actions">
+          <div class="row items-center q-gutter-x-sm no-wrap">
+            <q-btn
+              flat
+              round
+              color="indigo-7"
+              icon="map"
+              @click="showMapDialog = true"
+              size="sm"
+            >
+              <q-tooltip>Ver mapa</q-tooltip>
+            </q-btn>
+            <transition name="scale">
+              <q-btn
+                v-if="selectedInvoices.length > 0"
+                unelevated
+                rounded
+                no-caps
+                color="indigo-7"
+                class="action-pill-btn"
+                @click="startMultipleDeliveries"
+                :loading="optimizingRoute"
+              >
+                <q-icon name="local_shipping" size="18px" class="q-mr-xs" />
+                <span class="text-weight-bold">Iniciar</span>
+              </q-btn>
+            </transition>
+          </div>
+        </div>
+      </div>
+      <q-separator v-if="sortedInvoices.length > 0" class="q-mx-md opacity-20" />
+
+      <!-- Modern Orders List -->
+      <div v-if="sortedInvoices.length > 0" class="modern-orders-list q-pa-md">
+        <div
+          v-for="invoice in sortedInvoices"
+          :key="invoice.id"
+          class="modern-order-card"
+          :class="{ 'is-active': isSelected(invoice.id) }"
+          @click="toggleSelection(invoice)"
+        >
+          <div class="card-glow"></div>
+          
+          <!-- Card Header Unit -->
+          <div class="order-card-main-row">
+            <div class="row items-center no-wrap flex-1 q-mr-sm">
+              <div class="selection-indicator q-mr-md">
+                <div class="indicator-ring" :class="{ 'is-checked': isSelected(invoice.id) }">
+                  <q-icon v-if="isSelected(invoice.id)" name="check" color="white" size="12px" />
+                </div>
+              </div>
+              <div class="column min-width-0">
+                <span class="order-id-label">#{{ invoice.code }}</span>
+                <span class="order-client-name ellipsis">{{ invoice.client?.name || 'Cliente' }}</span>
+              </div>
+            </div>
+            <div class="order-total-value">
+              {{ formatCurrency(invoice.total) }}
+            </div>
+          </div>
+
+          <!-- Card Content Grid -->
+          <div class="order-card-details-grid q-mt-sm">
+            <div class="detail-item">
+              <q-icon name="near_me" size="14px" class="q-mr-xs opacity-60" />
+              <span>{{ invoice.distance_km }}km</span>
+            </div>
+            <div class="detail-item">
+              <q-icon name="schedule" size="14px" class="q-mr-xs opacity-60" />
+              <span>{{ invoice.estimated_time_min }}min</span>
+            </div>
+            <div class="detail-item">
+              <q-icon name="inventory_2" size="14px" class="q-mr-xs opacity-60" />
+              <span>{{ invoice.products?.length || 0 }} productos</span>
+            </div>
+          </div>
+
+          <!-- Address Block -->
+          <div class="order-card-address q-mt-xs">
+            <q-icon name="place" size="14px" class="q-mr-xs" />
+            <span class="ellipsis-2-lines">{{ getFormattedAddress(invoice.client?.address) }}</span>
+          </div>
+
+          <!-- Status Indicator -->
+          <div class="order-card-footer q-mt-sm row items-center justify-between">
+            <q-badge
+              :color="getStatusColor(invoice.status)"
+              :label="getStatusLabel(invoice.status)"
+              class="modern-status-badge"
+              outline
+            />
             <q-btn
               flat
               dense
               round
-              color="primary"
-              icon="map"
-              @click="showMapDialog = true"
+              color="grey-6"
+              icon="expand_more"
+              size="xs"
+              class="expansion-trigger"
+              @click.stop
             >
-              <q-tooltip>Ver mapa de rutas</q-tooltip>
-            </q-btn>
-            <q-btn
-              v-if="selectedInvoices.length > 0"
-              flat
-              dense
-              no-caps
-              color="primary"
-              class="action-btn"
-              @click="startMultipleDeliveries"
-              :loading="optimizingRoute"
-            >
-              <q-icon name="local_shipping" size="18px" class="q-mr-xs" />
-              {{ selectedInvoices.length }}
+              <q-menu fit anchor="bottom right" self="top right" class="products-mini-menu">
+                <q-list dense style="min-width: 200px">
+                  <q-item v-for="product in invoice.products" :key="product.id" class="q-py-sm">
+                    <q-item-section>
+                      <q-item-label class="text-caption text-weight-bold">{{ product.name }}</q-item-label>
+                      <q-item-label caption>Ordenado: {{ Number(product.pivot?.amount).toFixed(2) }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-input
+                        v-model.number="product.quantity_to_load"
+                        type="number"
+                        dense
+                        outlined
+                        style="width: 60px"
+                        class="compact-qty-input"
+                        input-class="text-center"
+                        @click.stop
+                      />
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
             </q-btn>
           </div>
         </div>
       </div>
 
-      <!-- Compact List -->
-      <div v-if="sortedInvoices.length > 0" class="orders-list">
-        <div
-          v-for="invoice in sortedInvoices"
-          :key="invoice.id"
-          class="order-card"
-          :class="{ 'is-selected': isSelected(invoice.id) }"
-          @click="toggleSelection(invoice)"
-        >
-          <div class="order-main">
-            <!-- Left: Checkbox + Info -->
-            <div class="order-left">
-              <q-checkbox
-                :model-value="isSelected(invoice.id)"
-                color="primary"
-                size="xs"
-                dense
-                @click.stop
-              />
-              <div class="order-info">
-                <div class="order-code">#{{ invoice.code }}</div>
-                <div class="order-client">{{ invoice.client?.name || 'Cliente' }}</div>
-              </div>
-            </div>
-
-            <!-- Right: Price -->
-            <div class="order-price">${{ invoice.total?.toFixed(0) }}</div>
-          </div>
-
-          <!-- Meta Info -->
-          <div class="order-meta">
-            <q-badge
-              :color="getStatusColor(invoice.status)"
-              :label="getStatusLabel(invoice.status)"
-              class="status-badge"
-            />
-            <span class="meta-divider">•</span>
-            <span class="meta-item">
-              <q-icon name="near_me" size="14px" />
-              {{ invoice.distance_km }}km
-            </span>
-            <span class="meta-divider">•</span>
-            <span class="meta-item">
-              <q-icon name="schedule" size="14px" />
-              {{ invoice.estimated_time_min }}min
-            </span>
-            <span class="meta-divider">•</span>
-            <span class="meta-item">
-              <q-icon name="inventory_2" size="14px" />
-              {{ invoice.products?.length || 0 }}
-            </span>
-          </div>
-
-          <!-- Address -->
-          <div class="order-address">
-            <q-icon name="place" size="14px" />
-            {{ getFormattedAddress(invoice.client?.address) }}
-          </div>
-
-          <!-- Products Expansion -->
-          <q-expansion-item
-            dense
-            dense-toggle
-            expand-separator
-            icon="inventory_2"
-            :label="`${invoice.products?.length || 0} producto(s)`"
-            header-class="products-header"
-            class="products-expansion"
-          >
-            <div class="products-list">
-              <div
-                v-for="product in invoice.products"
-                :key="product.id"
-                class="product-item"
-              >
-                <div class="product-info">
-                  <div class="product-name">{{ product.name }}</div>
-                  <div class="product-qty">x{{ Number(product.pivot?.amount).toFixed(2) || 0 }}</div>
-                </div>
-                <q-input
-                  :model-value="formatQuantity(product.quantity_to_load)"
-                  @update:model-value="(val) => updateQuantity(product, val)"
-                  type="number"
-                  dense
-                  outlined
-                  :max="Number(product.pivot?.amount)"
-                  min="0"
-                  step="0.01"
-                  class="qty-input"
-                  placeholder="0.00"
-                  :rules="[
-                    val => val >= 0 || 'Debe ser mayor o igual a 0',
-                    val => val <= Number(product.pivot?.amount) || `Máximo: ${formatQuantity(product.pivot?.amount)}`
-                  ]"
-                  lazy-rules
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="local_shipping" size="14px" />
-                  </template>
-                </q-input>
-              </div>
-            </div>
-          </q-expansion-item>
+      <!-- Empty State Modernized -->
+      <div v-if="sortedInvoices.length === 0" class="modern-empty-state">
+        <div class="empty-icon-wrapper">
+          <q-icon name="auto_awesome_motion" size="64px" class="gradient-text" />
         </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="sortedInvoices.length === 0" class="empty-state">
-        <q-icon name="inbox" size="48px" color="grey-4" />
-        <div class="empty-title">Sin órdenes</div>
+        <div class="text-h6 text-weight-bold text-grey-9 q-mt-lg">Sin órdenes pendientes</div>
+        <div class="text-body2 text-grey-6 q-px-xl">Parece que ya terminaste con todas las entregas para hoy.</div>
         <q-btn
-          flat
-          dense
-          color="primary"
-          label="Actualizar"
+          unelevated
+          rounded
+          color="indigo-7"
+          label="Actualizar bandeja"
           icon="refresh"
+          class="q-mt-xl q-px-lg"
           @click="fetchPredefinedRoutes"
         />
       </div>
@@ -238,7 +246,7 @@
             class="close-btn-floating"
             @click="handleCloseMap"
           />
-          
+
           <!-- Info when all delivered - can't close map -->
           <div v-else class="map-info-badge">
             <q-icon name="info" size="16px" />
@@ -320,7 +328,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
@@ -492,13 +500,13 @@ async function checkActiveRun () {
     if (response.data.delivery_run && response.data.delivery_run.id) {
       hasActiveRun.value = true
       console.log('Active delivery run found:', response.data.delivery_run.id)
-      
+
       $q.notify({
         type: 'info',
         message: 'Tienes una entrega activa',
         position: 'top'
       })
-      
+
       // Only redirect if we have a valid ID
       if (response.data.delivery_run.id) {
         router.push({
@@ -535,6 +543,26 @@ function toggleSelection (invoice) {
     selectedInvoices.value.splice(index, 1)
   } else {
     selectedInvoices.value.push(invoice)
+  }
+}
+
+/**
+ * Check if all invoices currently displayed are selected
+ * @type {import('vue').ComputedRef<boolean>}
+ */
+const isAllSelected = computed(() => {
+  return sortedInvoices.value.length > 0 && selectedInvoices.value.length === sortedInvoices.value.length
+})
+
+/**
+ * Toggles the selection state of all invoices
+ * @returns {void}
+ */
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedInvoices.value = []
+  } else {
+    selectedInvoices.value = [...sortedInvoices.value]
   }
 }
 
@@ -617,7 +645,7 @@ async function startMultipleDeliveries () {
 /**
  * FUNCIÓN DESHABILITADA - Ya no se optimiza la ruta
  * Se respeta el orden establecido en DeliveryRoute (stop_order)
- * 
+ *
  * Optimizes the delivery route order using backend algorithm
  * @async
  * @param {Array<Object>} invoices - Array of invoice objects to optimize
@@ -773,6 +801,18 @@ async function fetchPredefinedRoutes () {
 function formatQuantity (value) {
   if (value === null || value === undefined || value === '') return '0.00'
   return parseFloat(value).toFixed(2)
+}
+
+/**
+ * Formats a monetary value to currency format
+ * @param {number|null} amount - The amount to format
+ * @returns {string} Formatted currency string
+ */
+function formatCurrency (amount) {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency: store.userSession?.company_session?.coin?.symbol || 'USD'
+  }).format(amount || 0)
 }
 
 /**
@@ -1003,7 +1043,7 @@ async function renderCompleteRoute () {
 
     stops.forEach((stop) => {
       const clientAddress = stop?.client?.address
-      
+
       if (clientAddress?.latitude && clientAddress?.longitude) {
         const marker = new window.google.maps.Marker({
           position: { lat: parseFloat(clientAddress.latitude), lng: parseFloat(clientAddress.longitude) },
@@ -1367,9 +1407,9 @@ function startLocationTracking () {
         lat: position.coords.latitude,
         lng: position.coords.longitude
       }
-      
+
       currentLocation.value = currentPos
-      
+
       // Calculate distance to origin
       const distance = calculateDistance(
         currentPos.lat,
@@ -1377,15 +1417,15 @@ function startLocationTracking () {
         originBranch.value.lat,
         originBranch.value.lng
       )
-      
+
       distanceToOrigin.value = distance
       isNearOrigin.value = distance <= ORIGIN_RADIUS
-      
+
       // Update map route if map is open
       if (showMapDialog.value && map.value) {
         showReturnRouteOnMap()
       }
-      
+
       console.log(`Distance to origin: ${distance.toFixed(0)}m, Near: ${isNearOrigin.value}`)
     },
     (error) => {
@@ -2042,247 +2082,357 @@ async function showReturnRouteOnMap () {
   color: #6b7280;
 }
 
-/* Orders List */
-.orders-list {
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Modern Styles for Invoice Delivery Tray */
+.page-container {
+  background-color: #f8fafc;
+  min-height: 100vh;
 }
 
-/* Order Card - Ultra Compact */
-.order-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Premium Header Bar */
+.premium-header-bar {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.order-card:active {
-  transform: scale(0.99);
-}
-
-.order-card.is-selected {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  box-shadow: 0 0 0 1px #3b82f6;
-}
-
-/* Main Row */
-.order-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.order-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.order-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.order-code {
+.header-main-title {
   font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-  line-height: 1.2;
-}
-
-.order-client {
-  font-size: 12px;
-  color: #6b7280;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.order-price {
-  font-size: 16px;
   font-weight: 700;
-  color: #3b82f6;
-  white-space: nowrap;
+  color: #1e293b;
+  line-height: 1.2;
 }
 
-/* Meta Info */
-.order-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.header-sub-title {
   font-size: 11px;
-  color: #6b7280;
-  padding-left: 32px;
-}
-
-.status-badge {
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+  color: #64748b;
   font-weight: 500;
 }
 
-.meta-divider {
-  color: #d1d5db;
-}
-
-/* Address */
-.order-address {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  font-size: 11px;
-  color: #9ca3af;
-  line-height: 1.4;
-  padding-left: 32px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-/* Products Expansion */
-.products-expansion {
-  margin-top: 6px;
-  border-top: 1px solid #f3f4f6;
-  padding-top: 6px;
-}
-
-.products-expansion :deep(.q-item) {
-  min-height: 32px;
-  padding: 4px 0;
-}
-
-.products-header {
-  font-size: 11px;
-  color: #6b7280;
-  font-weight: 500;
-  padding: 0;
-  min-height: 28px;
-}
-
-.products-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 0 4px 0;
-}
-
-.product-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 8px;
-  background: #f9fafb;
-  border-radius: 6px;
-}
-
-.product-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.product-name {
-  font-size: 12px;
-  font-weight: 500;
-  color: #111827;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.product-qty {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.qty-input {
-  width: 90px;
-  flex-shrink: 0;
-}
-
-.qty-input :deep(.q-field__control) {
+.action-pill-btn {
+  padding: 0 16px;
   height: 32px;
   min-height: 32px;
-}
-
-.qty-input :deep(.q-field__native) {
   font-size: 12px;
+  box-shadow: 0 4px 12px rgba(63, 81, 181, 0.2);
+}
+
+/* Modern Orders List */
+.modern-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 80px; /* Space for bottom tabs */
+}
+
+/* Modern Order Card */
+.modern-order-card {
+  position: relative;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.modern-order-card:active {
+  transform: scale(0.98);
+}
+
+.modern-order-card.is-active {
+  border-color: #6366f1;
+  background: #f5f3ff;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+}
+
+.card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.modern-order-card.is-active .card-glow {
+  background: #6366f1;
+}
+
+/* Card Content Structure */
+.order-card-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selection-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.indicator-ring {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.indicator-ring.is-checked {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.order-id-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6366f1;
+  letter-spacing: 0.5px;
+}
+
+.order-client-name {
+  font-size: 15px;
   font-weight: 600;
-  color: #3b82f6;
-  text-align: right;
-  padding-right: 8px;
+  color: #1e293b;
+  max-width: 180px;
 }
 
-.qty-input :deep(.q-field__prepend) {
-  padding-right: 4px;
+.order-total-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
 }
 
-.qty-input :deep(.q-icon) {
-  color: #9ca3af;
+/* Detail Grid */
+.order-card-details-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
 }
 
-/* Empty State */
-.empty-state {
+.detail-item {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Address & Footer */
+.order-card-address {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+}
+
+.modern-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.expansion-trigger {
+  opacity: 0.6;
+  transition: opacity 0.25s;
+}
+
+.modern-order-card:hover .expansion-trigger {
+  opacity: 1;
+}
+
+/* Products Menu */
+.products-mini-menu {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f1f5f9;
+}
+
+.compact-qty-input :deep(.q-field__control) {
+  height: 28px;
+  min-height: 28px;
+  background: #f8fafc;
+}
+
+.compact-qty-input :deep(.q-field__native) {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366f1;
+}
+
+/* Empty State Modernized */
+.modern-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 80px 40px;
+  text-align: center;
+}
+
+.empty-icon-wrapper {
+  width: 120px;
+  height: 120px;
+  background: white;
+  border-radius: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Status Tabs Fixed Bottom */
+.status-tabs-container-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 100;
+  /* Safe area for iPhone */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.status-tabs {
+  height: 56px;
+}
+
+.status-tab {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Finish Route Container (Floating) */
+.finish-route-container {
+  position: fixed;
+  bottom: 80px;
+  left: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 200;
+  border: 1px solid #f1f5f9;
+  animation: slideUp 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.finish-route-info {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.empty-title {
+.info-text {
+  flex: 1;
+}
+
+.info-title {
   font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.info-subtitle {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.finish-route-btn {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(100px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.scale-enter-active, .scale-leave-active {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.scale-enter-from, .scale-leave-to {
+  transform: scale(0.8);
+  opacity: 0;
+}
+
+/* Responsive Overrides */
+@media (max-width: 380px) {
+  .order-client-name { max-width: 140px; }
+  .order-total-value { font-size: 14px; }
+  .header-main-title { font-size: 12px; }
+}
+
+/* Map Dialog Enhancements */
+.map-dialog-card {
+  background: white !important;
+}
+
+.map-tabs-modern {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.map-tab-modern {
+  padding: 8px 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
   font-weight: 600;
-  color: #9ca3af;
+  transition: all 0.2s;
 }
 
-/* Loading Skeleton */
-.skeleton-card {
-  border-radius: 8px;
+.map-tab-modern.active {
+  background: #6366f1;
+  color: white;
 }
 
-/* Mobile Optimizations */
-@media (max-width: 600px) {
-  .order-card {
-    padding: 9px 10px;
-  }
-
-  .order-code {
-    font-size: 13px;
-  }
-
-  .order-price {
-    font-size: 15px;
-  }
+.close-btn-floating {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 1000;
 }
 </style>

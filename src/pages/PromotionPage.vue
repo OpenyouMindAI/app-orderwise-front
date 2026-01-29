@@ -1,76 +1,133 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right q-gutter-sm">
-        <!-- <q-btn
-          color="blue"
-          @click="multipleSelected = !multipleSelected"
-          :icon="multipleSelected ? 'check_box' : 'check_box_outline_blank'"
-          label="Seleccionar múltiples"
-        /> -->
-        <!-- <q-btn
-          color="negative"
-          @click="deleteMassive"
-          icon="delete"
-          v-if="selection.length"
-          label="Eliminar masivo"
-        /> -->
-        <!-- <q-btn
-          color="secondary"
-          @click="download"
-          icon="download"
-          label="Exportar excel"
-        /> -->
-        <q-btn
-          color="positive"
-          @click="openCreateModal"
-          icon="add"
-          label="Agregar Promoción"
-        />
-        <!-- <q-btn
-          color="primary"
-          @click="dialogFilter = true"
-          icon="filter_alt"
-          label="Filtrar Promociones"
-        /> -->
+  <q-page padding>
+    <div class="q-gutter-y-sm">
+      <div class="row justify-between items-center q-gutter-x-sm q-mb-sm">
+        <span class="text-h6">
+          Promociones
+        </span>
+        <div class="text-right q-gutter-x-sm">
+          <q-btn
+            color="primary"
+            @click="openCreateModal"
+            icon="add_circle"
+            round
+          >
+            <q-tooltip>Agregar</q-tooltip>
+          </q-btn>
+        </div>
       </div>
-      <div class="col-12">
-        <q-table
-          title="Promociones"
-          row-key="id"
-          :columns="columns"
-          :rows="promotions"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          :selection="multipleSelected ? 'multiple' : 'none'"
-          v-model:selected="selection"
-          v-model:pagination="paginationConfig"
-          @row-click="editPromotion"
-          @request="setPagination"
-          no-data-label="Registro no encontrado"
-        >
-          <template v-slot:loading>
-            <q-inner-loading showing color="primary" />
-          </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
-          <template v-slot:body-cell-status="props">
-            <q-td :props="props">
-              <q-chip
-                :color="getStatusColor(props.row.status)"
-                text-color="white"
-                :label="getStatusLabel(props.row.status)"
-                size="sm"
-              />
-            </q-td>
-          </template>
-        </q-table>
+
+      <div class="row q-col-gutter-sm">
+        <div class="col-12">
+          <q-table
+            title="Promociones"
+            row-key="id"
+            :columns="columns"
+            :rows="promotions"
+            :loading="visible"
+            :filter="filter"
+            :visible-columns="visibleColumns"
+            binary-state-sort
+            :selection="multipleSelected ? 'multiple' : 'none'"
+            v-model:selected="selection"
+            v-model:pagination="paginationConfig"
+            @row-click="editPromotion"
+            @request="setPagination"
+            no-data-label="Registro no encontrado"
+            :grid="$q.screen.lt.md"
+          >
+            <template v-slot:loading>
+              <q-inner-loading showing color="primary" />
+            </template>
+
+            <template v-slot:top>
+              <div class="flex justify-end items-center full-width">
+                <q-input
+                  filled
+                  dense
+                  debounce="500"
+                  v-model="filter"
+                  placeholder="Buscar"
+                  :class="{ 'full-width': $q.screen.lt.md }"
+                >
+                  <template v-slot:append>
+                    <q-icon name="search" />
+                  </template>
+                </q-input>
+              </div>
+            </template>
+
+            <template v-slot:item="props">
+              <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+                <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editPromotion(null, props.row)">
+                  <span class="q-focus-helper"></span>
+
+                  <q-card-section class="row justify-between items-start compact-card-header">
+                    <div class="column">
+                      <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">{{ props.row.code }}</div>
+                      <div class="text-caption text-grey-6 text-weight-medium">{{ props.row.name }}</div>
+                    </div>
+                    <div class="column items-end">
+                      <q-chip
+                        :color="getStatusColor(props.row.status)"
+                        text-color="white"
+                        :label="getStatusLabel(props.row.status)"
+                        size="sm"
+                        class="q-py-xs q-px-sm text-weight-bold shadow-1"
+                        style="font-size: 10px; letter-spacing: 0.5px"
+                      />
+                    </div>
+                  </q-card-section>
+
+                  <q-separator color="grey-2" inset />
+
+                  <q-card-section class="compact-card-body">
+                    <div class="row q-col-gutter-y-sm">
+                      <div class="col-12">
+                        <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Canales</div>
+                        <div class="text-body2 text-grey-9 text-weight-bold ellipsis">{{ Array.isArray(props.row.channels) ? props.row.channels.join(', ') : props.row.channels || '-' }}</div>
+                      </div>
+                      <div class="col-12">
+                         <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Grupos</div>
+                         <div class="text-body2 text-grey-8">{{ Array.isArray(props.row.promotion_details) ? props.row.promotion_details.length : 0 }}</div>
+                      </div>
+                    </div>
+                  </q-card-section>
+
+                  <q-card-section class="compact-card-footer">
+                    <div class="row items-center justify-between bg-grey-1 compact-total-container" style="border-radius: 12px">
+                        <div>
+                          <div class="text-caption text-grey-6 text-weight-medium">Precio Final</div>
+                          <div class="text-h6 text-primary text-weight-bolder lh-100" style="letter-spacing: -0.5px">{{ formatNumber(props.row.final_price) }}</div>
+                        </div>
+                        <div>
+                          <q-btn
+                            round
+                            unelevated
+                            color="primary"
+                            icon="edit"
+                            size="md"
+                            class="shadow-1"
+                          />
+                        </div>
+                     </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </template>
+
+            <template v-slot:body-cell-status="props">
+              <q-td :props="props">
+                <q-chip
+                  :color="getStatusColor(props.row.status)"
+                  text-color="white"
+                  :label="getStatusLabel(props.row.status)"
+                  size="sm"
+                />
+              </q-td>
+            </template>
+          </q-table>
+        </div>
       </div>
     </div>
 
@@ -83,11 +140,11 @@
       @promotion-updated="handlePromotionUpdated"
       @promotion-deleted="handlePromotionDeleted"
     />
-  </div>
+  </q-page>
 </template>
 
 <script>
-import { notify } from 'src/const/mixins'
+import { notify, formatNumber } from 'src/const/mixins'
 import { Notify } from 'quasar'
 import { authentication } from 'src/stores/module-authentication'
 import ModalComponent from 'src/components/Promotion/ModalComponent.vue'
@@ -135,6 +192,16 @@ export default {
       editMode: false,
       selectedPromotion: null,
       dialogFilter: false,
+      formatNumber,
+      visibleColumns: [
+        'id',
+        'code',
+        'name',
+        'final_price',
+        'channels',
+        'promotion_details',
+        'status'
+      ],
       columns: [
         {
           name: 'id',
@@ -162,7 +229,7 @@ export default {
           align: 'right',
           label: 'Precio Final',
           field: 'final_price',
-          format: (val) => val ? `$${val}` : '-',
+          format: (val) => formatNumber(val),
           sortable: true
         },
         {
@@ -611,3 +678,45 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Clases para tarjetas compactas */
+.compact-card-header {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-body {
+  padding: 0.5rem 1rem !important;
+}
+
+.compact-card-footer {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-top: 0 !important;
+}
+
+.compact-total-container {
+  padding: 0.5rem !important;
+}
+
+@media (max-width: 1023px) {
+  /* Reducir padding del top de la tabla - usando deep selector para sobrescribir Quasar */
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  :deep(.q-table__top .q-select) {
+    max-width: 200px;
+  }
+
+  :deep(.q-table__top .q-input) {
+    flex: 1;
+  }
+}
+</style>

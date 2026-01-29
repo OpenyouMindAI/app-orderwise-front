@@ -317,32 +317,6 @@
       <div class="orders-header q-mb-md">
         <div class="text-h5 text-white">Órdenes de Hoy</div>
         <div class="text-caption text-grey-5">{{ formatDate(new Date()) }} - {{ userSession?.name }}</div>
-        <!-- Resumen del día -->
-        <div class="day-summary q-mt-md">
-          <div class="summary-card">
-            <div class="summary-icon">
-              <q-icon name="receipt_long" size="24px" color="orange" />
-            </div>
-            <div class="summary-info">
-              <div class="summary-number">{{ orders.length }}</div>
-              <div class="summary-label">Órdenes</div>
-            </div>
-          </div>
-          <div class="summary-card">
-            <div class="summary-icon">
-              <q-icon name="attach_money" size="24px" color="green" />
-            </div>
-            <div class="summary-info">
-              <div
-                class="summary-number"
-                :class="{ 'large-amount': todayTotal.toString().length > 8 }"
-              >
-                ${{ formatNumber(todayTotal) }}
-              </div>
-              <div class="summary-label">Total</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <q-card

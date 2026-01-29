@@ -12,9 +12,9 @@ export const api = {
       throw error?.response?.data || error
     }
   },
-  post: async (url, data) => {
+  post: async (url, data, config = {}) => {
     try {
-      return await axiosCreate.post(url, data)
+      return await axiosCreate.post(url, data, config)
     } catch (error) {
       throw error?.response?.data || error
     }

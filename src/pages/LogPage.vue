@@ -172,11 +172,11 @@
                 <q-space />
                 <span class="text-caption text-grey-7">#{{ props.row.id }}</span>
               </div>
-              
+
               <div class="text-body2 q-mb-xs">
                 <strong>Endpoint:</strong> {{ props.row.endpoint }}
               </div>
-              
+
               <div v-if="props.row.user" class="text-caption q-mb-xs">
                 <q-icon name="person" size="xs" />
                 {{ props.row.user.name }}
@@ -185,12 +185,12 @@
                   {{ props.row.user.company_session.name }}
                 </span>
               </div>
-              
+
               <div v-if="props.row.error_message" class="text-caption text-negative q-mb-xs">
                 <q-icon name="error" size="xs" />
                 {{ props.row.error_message.substring(0, 50) }}...
               </div>
-              
+
               <div class="row items-center justify-between q-mt-sm">
                 <span class="text-caption text-grey-6">{{ formatDate(props.row.created_at) }}</span>
                 <div>
@@ -257,7 +257,7 @@
                 </div>
                 <div class="info-row"><b>Endpoint:</b> <code>{{ selected?.endpoint }}</code></div>
                 <div class="info-row"><b>IP:</b> {{ selected?.ip_address }} | <b>Usuario:</b> {{ selected?.user?.name ?? 'guest' }}</div>
-                <div class="info-row" v-if="selected?.user?.company_session"><b>Empresa:</b> 
+                <div class="info-row" v-if="selected?.user?.company_session"><b>Empresa:</b>
                   <q-chip dense color="primary" text-color="white">
                     <q-icon name="business" size="xs" class="q-mr-xs" />
                     {{ selected.user.company_session.name }}
@@ -312,20 +312,20 @@
             <q-card-section>
               <div class="error-details">
                 <div class="error-row">
-                  <b>Mensaje:</b> 
+                  <b>Mensaje:</b>
                   <span class="text-negative">{{ selected?.error_message }}</span>
                 </div>
                 <template v-if="parseResponseBody(selected?.response_body)">
                   <div class="error-row" v-if="parseResponseBody(selected?.response_body).error">
-                    <b>Tipo:</b> 
+                    <b>Tipo:</b>
                     <code>{{ parseResponseBody(selected?.response_body).error }}</code>
                   </div>
                   <div class="error-row" v-if="parseResponseBody(selected?.response_body).file">
-                    <b>Archivo:</b> 
+                    <b>Archivo:</b>
                     <code>{{ parseResponseBody(selected?.response_body).file }}:{{ parseResponseBody(selected?.response_body).line }}</code>
                   </div>
                   <div class="error-row" v-if="parseResponseBody(selected?.response_body).user_data">
-                    <b>Usuario afectado:</b> 
+                    <b>Usuario afectado:</b>
                     <span>{{ parseResponseBody(selected?.response_body).user_data.name }} ({{ parseResponseBody(selected?.response_body).user_data.email }})</span>
                   </div>
                 </template>

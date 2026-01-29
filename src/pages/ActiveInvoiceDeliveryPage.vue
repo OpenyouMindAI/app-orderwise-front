@@ -112,9 +112,9 @@
             <q-separator dark />
             <q-card-section class="q-pa-sm">
               <!-- Dirección Compacta -->
-              <div class="row items-start q-mb-sm bg-grey-8 q-pa-xs" style="border-radius: 6px;">
+              <div class="row items-start q-mb-sm q-pa-xs" style="border-radius: 6px;">
                 <q-icon name="location_on" color="red" size="16px" class="q-mr-xs" />
-                <div class="col text-caption" style="font-size: 11px;">{{ currentAddress }}</div>
+                <div class="col" style="font-size: 12px;">{{ currentAddress }}</div>
               </div>
 
               <!-- Action Button Compacto -->
@@ -1554,9 +1554,9 @@ async function attemptFinishRoute () {
   // Determine dialog content based on proximity
   const isNear = isNearOrigin.value
   const branchName = originBranch.value?.name || 'la sucursal de origen'
-  
+
   let title, message, dialogType
-  
+
   if (isNear) {
     // Near origin - positive confirmation
     title = '¡Has llegado al origen!'
@@ -1572,8 +1572,8 @@ async function attemptFinishRoute () {
 
   // Show confirmation dialog
   $q.dialog({
-    title: title,
-    message: message,
+    title,
+    message,
     cancel: {
       label: 'Cancelar',
       flat: true,

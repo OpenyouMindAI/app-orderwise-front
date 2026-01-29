@@ -1,6 +1,6 @@
 <template>
-  <div class="q-pa-md">
-    <div class="column q-gutter-sm">
+  <q-page padding>
+    <div class="q-gutter-sm">
       <!-- <div class="full-width text-right q-gutter-sm">
         <q-btn
           class="text-right"
@@ -44,6 +44,11 @@
           @click="dialogFilter = true"
         />
       </div> -->
+      <div class="row justify-between items-center">
+        <span class="text-h6">
+          Lista de compras
+        </span>
+      </div>
       <q-table
         title="Lista de compras"
         row-key="name"
@@ -57,32 +62,74 @@
         @row-click="editPurchase"
         @request="setPagination"
         no-data-label="Registro no encontrado"
+        :grid="$q.screen.lt.md"
       >
         <template v-slot:loading>
           <q-inner-loading showing color="primary" />
         </template>
-        <template v-slot:top-left>
-          <q-select
-            v-model="visibleColumns"
-            multiple
-            outlined
-            dense
-            options-dense
-            :display-value="$q.lang.table.columns"
-            emit-value
-            map-options
-            :options="columns"
-            option-value="name"
-            options-cover
-            style="min-width: 150px"
-          />
+        <template v-slot:top>
+          <div class="flex justify-between items-center full-width">
+            <q-select
+              v-model="visibleColumns"
+              multiple
+              outlined
+              dense
+              options-dense
+              :display-value="$q.lang.table.columns"
+              emit-value
+              map-options
+              :options="columns"
+              option-value="name"
+              options-cover
+            />
+            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
         </template>
-        <template v-slot:top-right>
-          <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+            <q-card
+              class="cursor-pointer q-hoverable no-shadow transition-all purchase-card"
+              style="border-radius: 16px; border: 1px solid #eef0f3"
+              @click="editPurchase(null, props.row)"
+            >
+              <span class="q-focus-helper"></span>
+
+              <q-card-section class="compact-card-section">
+                <!-- Fila 1: Código y Fecha -->
+                <div class="row justify-between items-start q-mb-sm">
+                  <div class="col">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">{{ props.row.invoice_type?.name || 'Sin tipo' }}</div>
+                    <div class="text-h6 text-indigo-10 text-weight-bold" style="letter-spacing: -0.5px">
+                      {{ props.row.purchase_code || '—' }}
+                    </div>
+                  </div>
+                  <div class="col-auto text-right">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 4px">Fecha</div>
+                    <div class="text-body1 text-grey-8 text-weight-medium">{{ props.row.created_at?.split('T')[0] || '—' }}</div>
+                  </div>
+                </div>
+
+                <q-separator color="grey-3" class="q-my-sm" />
+
+                <!-- Fila 3: Proveedor y Total -->
+                <div class="row justify-between ">
+                  <div class="col">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 0.7rem">Proveedor</div>
+                    <div class="text-body2 text-grey-9 text-weight-bold ellipsis">{{ props.row.provider?.name || '—' }}</div>
+                  </div>
+                  <div class="col-auto text-right">
+                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 4px">Total</div>
+                    <div class="text-h6 text-primary text-weight-bolder" style="letter-spacing: -0.5px">{{ formatNumber(props.row.total) }}</div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
         </template>
       </q-table>
     </div>
@@ -209,6 +256,48 @@
               </div>
             </div>
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
+            <div class="col-12" v-if="purchase.images && purchase.images.length > 0">
+                <q-card class="q-mb-sm">
+                  <q-card-section class="q-pa-xs">
+                    <div class="text-subtitle2 text-weight-bold q-mb-xs">Archivos Adjuntos</div>
+                    <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 200px;">
+                      <div
+                        v-for="(file, index) in purchase.images"
+                        :key="index"
+                        class="col-6 col-sm-4 col-md-4"
+                      >
+                        <!-- PDF View -->
+                        <q-card
+                          v-if="file.url && file.url.toLowerCase().endsWith('.pdf')"
+                          flat
+                          bordered
+                          class="cursor-pointer text-center q-pa-sm fit flex flex-center column"
+                          style="aspect-ratio: 1;"
+                          @click="openFile(file.url)"
+                        >
+                          <q-icon name="picture_as_pdf" size="3rem" color="red" />
+                          <div class="text-caption ellipsis full-width q-mt-xs">{{ file.path ? file.path.split('/').pop() : 'Documento PDF' }}</div>
+                          <q-tooltip>Ver PDF</q-tooltip>
+                        </q-card>
+                        <!-- Image View -->
+                        <q-card
+                          v-else
+                          flat
+                          class="image-preview-card cursor-pointer"
+                          @click="openFile(file.url)"
+                        >
+                          <q-img
+                            :src="file.url"
+                            :ratio="1"
+                            class="rounded-borders"
+                          />
+                          <q-tooltip>Ver Imagen</q-tooltip>
+                        </q-card>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
               <div class="col-12">
                 <q-expansion-item
                   label="Pagos"
@@ -248,6 +337,14 @@
               <div class="q-gutter-y-xs">
                 <q-btn
                   class="full-width"
+                  icon="block"
+                  color="negative"
+                  label="Anular"
+                  :loading="cancelLoading"
+                  @click="cancelPurchase"
+                />
+                <q-btn
+                  class="full-width"
                   icon="check_circle"
                   color="primary"
                   label="Pagar"
@@ -272,14 +369,14 @@
         class="text-lime q-ma-md"
       />
     </q-inner-loading>
-  </div>
+  </q-page>
 </template>
 
 <script>
 import { Notify, date, is } from 'quasar'
 import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
-import { formatNumber, formatDate } from 'src/const/mixins'
+import { formatNumber, formatDate, notify } from 'src/const/mixins'
 import { getDownload } from 'src/const/services'
 export default {
   data () {
@@ -661,7 +758,10 @@ export default {
      */
     editPurchase (event, row, index) {
       this.openEditPurchase = true
-      this.purchase = row
+      this.purchase = {
+        ...row,
+        images: row.files || []
+      }
     },
     /**
      * Model product
@@ -729,7 +829,77 @@ export default {
             color: 'negative'
           })
         })
+    },
+    // File Handling Methods
+    openFile (url) {
+      if (url) {
+        window.open(url, '_blank')
+      }
+    },
+    /**
+     * Change status
+     * @param {Object} data purchase
+     * @param {Number} index index status
+     */
+    async cancelPurchase () {
+      try {
+        this.cancelLoading = true
+        await this.$api.put(`purchase-status-command/${this.purchase.id}`, { status: 'cancelled' })
+        this.getPurchases()
+        notify('Factura anulada exitosamente', 'positive', 'check_circle')
+        this.openEditPurchase = false
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.cancelLoading = false
+      }
     }
   }
 }
 </script>
+
+<style scoped>
+.image-preview-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.image-preview-card:hover {
+  transform: scale(1.05);
+}
+
+/* Tarjetas de compras */
+.purchase-card {
+  transition: all 0.2s ease;
+}
+
+.purchase-card:hover {
+  border-color: #d0d5dd !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Padding compacto consistente con InvoicePage */
+.compact-card-section {
+  padding: 0.5rem 1rem !important;
+}
+
+/* Media query para optimizar header en mobile */
+@media (max-width: 1023px) {
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  :deep(.q-table__top .q-select) {
+    max-width: 200px;
+  }
+  :deep(.q-table__top .q-input) {
+    flex: 1;
+  }
+}
+</style>

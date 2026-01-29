@@ -1,6 +1,8 @@
 /* Importación de fuentes elegantes - Optimizado */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Cormorant:wght@400&family=Lato:wght@400&display=swap');
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+// app global css in SCSS form
+@import './mobile-design-system.css';
 
 :root {
   /* Paleta de colores moderna - Gradiente Púrpura (valores por defecto) */
@@ -502,8 +504,7 @@ p {
 }
 
 .q-item__label--header {
-  font-family: var(--font-secondary) !important;
-  font-weight: 500 !important;
+  font-weight: 700 !important;
   color: var(--primary) !important;
   letter-spacing: -0.01em;
 }
@@ -794,7 +795,6 @@ p {
 
 .product-name-overlay {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
-  backdrop-filter: blur(2px);
 }
 
 /* Botones de navegación modernos */
@@ -1069,4 +1069,197 @@ p {
     font-size: 13px;
     padding: 8px 12px;
   }
+}
+
+/* ============================================ */
+/* SISTEMA MEJORADO DE NOTIFICACIONES - ESTILOS CSS */
+/* ============================================ */
+
+/* Variables CSS para notificaciones */
+:root {
+  --notify-success-bg: #10b981;
+  --notify-error-bg: #ef4444;
+  --notify-warning-bg: #f59e0b;
+  --notify-info-bg: #3b82f6;
+  --notify-session-bg: #f97316;
+  --notify-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --notify-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilos base comunes para todas las notificaciones */
+.q-notification.notify-modern {
+  border-radius: 12px !important;
+  box-shadow: var(--notify-shadow) !important;
+  backdrop-filter: blur(10px);
+  min-width: 300px;
+  padding: 12px 16px;
+  font-family: var(--font-primary);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Animaciones específicas por tipo */
+@keyframes slideInBounce {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInShake {
+  0% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Notificación de éxito */
+.q-notification.notify-success {
+  background: var(--notify-success-bg) !important;
+  animation: slideInBounce 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.q-notification.notify-success:hover {
+  box-shadow: var(--notify-shadow-hover) !important;
+  transform: translateY(-2px);
+}
+
+/* Notificación de error */
+.q-notification.notify-error {
+  background: var(--notify-error-bg) !important;
+  animation: slideInShake 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.q-notification.notify-error:hover {
+  box-shadow: var(--notify-shadow-hover) !important;
+}
+
+/* Notificación de advertencia */
+.q-notification.notify-warning {
+  background: var(--notify-warning-bg) !important;
+  animation: pulse 0.5s ease-in-out, fadeIn 0.3s ease-in;
+}
+
+.q-notification.notify-warning:hover {
+  box-shadow: var(--notify-shadow-hover) !important;
+}
+
+/* Notificación informativa */
+.q-notification.notify-info {
+  background: var(--notify-info-bg) !important;
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Notificación de sesión */
+.q-notification.notify-session {
+  background: var(--notify-session-bg) !important;
+  animation: slideInShake 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.q-notification.notify-session:hover {
+  box-shadow: var(--notify-shadow-hover) !important;
+}
+
+/* Notificación de errores de validación */
+.q-notification.notify-validation-error {
+  background: var(--notify-error-bg) !important;
+  min-width: 320px;
+  max-width: 500px;
+  padding: 16px 20px;
+  animation: slideInShake 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.q-notification.notify-validation-error ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  list-style-type: disc;
+  line-height: 1.6;
+}
+
+.q-notification.notify-validation-error li {
+  margin-bottom: 6px;
+}
+
+.q-notification.notify-validation-error strong {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* Mejoras de accesibilidad */
+.q-notification.notify-modern[role="alert"],
+.q-notification.notify-modern[role="status"] {
+  position: relative;
+}
+
+/* Estilos responsive para notificaciones */
+@media (max-width: 768px) {
+  .q-notification.notify-modern {
+    min-width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    margin: 8px 16px;
+  }
+
+  .q-notification.notify-validation-error {
+    min-width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    padding: 14px 16px;
+  }
+
+  /* Ajustar posición en móvil para mejor UX */
+  .q-notification.notify-modern {
+    border-radius: 10px !important;
+  }
+}
+
+/* Modo oscuro (si se implementa en el futuro) */
+@media (prefers-color-scheme: dark) {
+  .q-notification.notify-modern {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  }
+}
+
+/* Mejoras de performance - usar will-change solo durante animaciones */
+.q-notification.notify-modern {
+  will-change: transform, opacity;
+}
+
+.q-notification.notify-modern.q-notification--standard {
+  will-change: auto;
 }

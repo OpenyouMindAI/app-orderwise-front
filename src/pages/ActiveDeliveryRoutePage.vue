@@ -139,7 +139,7 @@
 
         <q-card-section>
           <div class="text-subtitle2 q-mb-sm">Cliente: {{ currentStop?.client?.name }}</div>
-          
+
           <!-- Products List with Quantity Adjustment -->
           <div class="text-body2 q-mb-sm q-mt-md">Productos a Entregar:</div>
           <q-list bordered separator class="rounded-borders" style="max-height: 400px; overflow-y: auto;">
@@ -256,7 +256,7 @@
 
         <q-card-section>
           <div class="text-subtitle2 q-mb-md">Estado de Productos</div>
-          
+
           <q-list bordered separator class="rounded-borders">
             <q-item v-for="product in summary.products" :key="product.product_id">
               <q-item-section>
@@ -407,7 +407,7 @@ onUnmounted(() => {
   stopListening()
 })
 
-async function loadRoute() {
+async function loadRoute () {
   try {
     const response = await api.get(`/delivery-routes/${routeParams.params.id}`)
     deliveryRoute.value = response.data.route
@@ -423,7 +423,6 @@ async function loadRoute() {
 
     // Load summary
     await loadSummary()
-
   } catch (error) {
     console.error('Error loading route:', error)
     $q.notify({
@@ -433,7 +432,7 @@ async function loadRoute() {
   }
 }
 
-async function loadSummary() {
+async function loadSummary () {
   try {
     const response = await api.get(`/delivery-routes/${routeParams.params.id}/summary`)
     summary.value = response.data.summary
@@ -442,7 +441,7 @@ async function loadSummary() {
   }
 }
 
-async function initializeMap() {
+async function initializeMap () {
   await loadGoogleMaps()
 
   map.value = new google.maps.Map(mapContainer.value, {
@@ -458,7 +457,7 @@ async function initializeMap() {
   await drawRoute()
 }
 
-function addMapMarkers() {
+function addMapMarkers () {
   const stops = deliveryRoute.value?.stops || []
 
   stops.forEach((stop, index) => {
@@ -525,12 +524,12 @@ function addMapMarkers() {
   }
 }
 
-async function drawRoute() {
+async function drawRoute () {
   // Similar to ActiveTransportPage - draw route between stops
   // Implementation omitted for brevity - reuse logic from ActiveTransportPage
 }
 
-async function startLocationTracking() {
+async function startLocationTracking () {
   try {
     const isNativePlatform = $q.platform.is.capacitor || $q.platform.is.cordova
 
@@ -562,7 +561,7 @@ async function startLocationTracking() {
   }
 }
 
-function updateCourierPosition(position) {
+function updateCourierPosition (position) {
   const coords = position.coords
 
   currentPosition.value = {
@@ -579,7 +578,7 @@ function updateCourierPosition(position) {
   }
 }
 
-function stopLocationTracking() {
+function stopLocationTracking () {
   if (watchId.value) {
     const isNativePlatform = $q.platform.is.capacitor || $q.platform.is.cordova
 
@@ -595,7 +594,7 @@ function stopLocationTracking() {
   }
 }
 
-async function markArrived() {
+async function markArrived () {
   marking.value = true
 
   try {
@@ -608,7 +607,6 @@ async function markArrived() {
       type: 'positive',
       message: 'Llegada registrada'
     })
-
   } catch (error) {
     console.error('Error marking arrived:', error)
     $q.notify({
@@ -620,14 +618,14 @@ async function markArrived() {
   }
 }
 
-function prepareDeliveryProducts() {
+function prepareDeliveryProducts () {
   deliveryProducts.value = (currentStop.value?.products || []).map(p => ({
     ...p,
     quantity_delivered: p.quantity_loaded // Default to full delivery
   }))
 }
 
-async function completeDelivery() {
+async function completeDelivery () {
   completing.value = true
 
   try {
@@ -673,7 +671,6 @@ async function completeDelivery() {
       arrived.value = false
       resetDeliveryForm()
     }
-
   } catch (error) {
     console.error('Error completing delivery:', error)
     $q.notify({
@@ -685,7 +682,7 @@ async function completeDelivery() {
   }
 }
 
-function resetDeliveryForm() {
+function resetDeliveryForm () {
   deliveryForm.value = {
     recipient_name: '',
     recipient_document: '',
@@ -698,12 +695,12 @@ function resetDeliveryForm() {
 }
 
 // Signature functions
-function startDrawing(event) {
+function startDrawing (event) {
   isDrawing.value = true
   const canvas = signatureCanvas.value
   const ctx = canvas.getContext('2d')
   const rect = canvas.getBoundingClientRect()
-  
+
   const x = (event.clientX || event.touches[0].clientX) - rect.left
   const y = (event.clientY || event.touches[0].clientY) - rect.top
 
@@ -711,13 +708,13 @@ function startDrawing(event) {
   ctx.moveTo(x, y)
 }
 
-function draw(event) {
+function draw (event) {
   if (!isDrawing.value) return
 
   const canvas = signatureCanvas.value
   const ctx = canvas.getContext('2d')
   const rect = canvas.getBoundingClientRect()
-  
+
   const x = (event.clientX || event.touches[0].clientX) - rect.left
   const y = (event.clientY || event.touches[0].clientY) - rect.top
 
@@ -727,44 +724,44 @@ function draw(event) {
   ctx.stroke()
 }
 
-function stopDrawing() {
+function stopDrawing () {
   if (isDrawing.value) {
     isDrawing.value = false
     signatureData.value = signatureCanvas.value.toDataURL()
   }
 }
 
-function clearSignature() {
+function clearSignature () {
   const canvas = signatureCanvas.value
   if (!canvas) return
-  
+
   const ctx = canvas.getContext('2d')
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   signatureData.value = null
 }
 
-function getClientAddress(client) {
+function getClientAddress (client) {
   if (!client?.address) return 'Sin dirección'
-  
-  const addr = typeof client.address === 'string' 
-    ? JSON.parse(client.address) 
+
+  const addr = typeof client.address === 'string'
+    ? JSON.parse(client.address)
     : client.address
 
   return addr.formattedAddress || addr.street || 'Sin dirección'
 }
 
-function getOpeningHoursText(openingHours) {
+function getOpeningHoursText (openingHours) {
   if (!openingHours) return ''
-  
+
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' }).toLowerCase()
   const todayHours = openingHours[today]
 
   if (!todayHours) return 'Cerrado hoy'
-  
+
   return `${todayHours.open} - ${todayHours.close}`
 }
 
-function listenForUpdates() {
+function listenForUpdates () {
   const channel = echo.channel(`delivery-route.${deliveryRoute.value.id}`)
 
   channel.listen('.route.updated', async () => {
@@ -772,13 +769,13 @@ function listenForUpdates() {
   })
 }
 
-function stopListening() {
+function stopListening () {
   if (deliveryRoute.value) {
     echo.leave(`delivery-route.${deliveryRoute.value.id}`)
   }
 }
 
-function confirmExit() {
+function confirmExit () {
   $q.dialog({
     title: 'Confirmar',
     message: '¿Salir de la ruta activa?',

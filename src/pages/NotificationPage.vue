@@ -440,7 +440,7 @@ export default defineComponent({
     const loading = ref(false)
     const route = useRoute()
     const router = useRouter()
-    
+
     const pagination = ref({
       current_page: 1,
       last_page: 1,
@@ -562,7 +562,7 @@ export default defineComponent({
       loading.value = true
       try {
         const params = {
-          page: page,
+          page,
           per_page: pagination.value.per_page,
           search: search.value || null,
           type: typeFilter.value || null
@@ -677,7 +677,7 @@ export default defineComponent({
       // Intentar obtener el trace del response_body primero (nuevo formato)
       const responseBody = parseResponseBody(selected.value?.data?.api_activity_log?.response_body)
       if (responseBody?.trace && Array.isArray(responseBody.trace)) {
-        return responseBody.trace.map((t, i) => 
+        return responseBody.trace.map((t, i) =>
           `#${i} ${t.file}:${t.line}\n    ${t.class ? t.class + '::' : ''}${t.function}`
         ).join('\n\n')
       }

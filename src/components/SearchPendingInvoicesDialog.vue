@@ -80,14 +80,6 @@
                   <q-tooltip>{{ expanded.includes(props.row.id) ? 'Ocultar' : 'Ver' }} productos</q-tooltip>
                 </q-btn>
                 <div class="text-weight-bold text-primary">{{ props.row.code }}</div>
-                <q-badge
-                  v-if="props.row.products?.length"
-                  color="grey-5"
-                  text-color="dark"
-                  :label="props.row.products.length"
-                  rounded
-                  class="products-count-badge"
-                />
               </div>
             </q-td>
           </template>
@@ -97,17 +89,22 @@
               <div class="text-weight-medium">{{ props.row.client?.name || '-' }}</div>
             </q-td>
           </template>
+          <template v-slot:body-cell-seller="props">
+            <q-td :props="props">
+              <div class="text-weight-medium">{{ props.row.seller?.name || props.row.seller?.email || '-' }}</div>
+            </q-td>
+          </template>
 
           <template v-slot:body-cell-created_at="props">
             <q-td :props="props">
-              <div class="text-body2">{{ formatDateTime(props.row.created_at) }}</div>
+              <div class="text-body2">{{ formatDate(props.row.created_at) }}</div>
             </q-td>
           </template>
 
           <template v-slot:body-cell-delivery_date="props">
             <q-td :props="props">
               <div class="text-body2">
-                {{ props.row.delivery_date ? formatDateTime(props.row.delivery_date) : '-' }}
+                {{ props.row.delivery_date ? formatDate(props.row.delivery_date) : '-' }}
               </div>
             </q-td>
           </template>
@@ -159,25 +156,20 @@
                         <q-tooltip>{{ expanded.includes(props.row.id) ? 'Ocultar' : 'Ver' }} productos</q-tooltip>
                       </q-btn>
                       <div class="text-weight-bold text-primary" v-html="highlightText(props.row.code)"></div>
-                      <q-badge
-                        v-if="props.row.products?.length"
-                        color="grey-5"
-                        text-color="dark"
-                        :label="props.row.products.length"
-                        rounded
-                        class="products-count-badge"
-                      />
                     </div>
                   </template>
                   <template v-else-if="col.name === 'client'">
                     <div class="text-weight-medium" v-html="highlightText(props.row.client?.name || '-')"></div>
                   </template>
+                  <template v-else-if="col.name === 'seller'">
+                    <div class="text-weight-medium" v-html="highlightText(props.row.seller?.name || '-')"></div>
+                  </template>
                   <template v-else-if="col.name === 'created_at'">
-                    <div class="text-body2">{{ formatDateTime(props.row.created_at) }}</div>
+                    <div class="text-body2">{{ formatDate(props.row.created_at) }}</div>
                   </template>
                   <template v-else-if="col.name === 'delivery_date'">
                     <div class="text-body2">
-                      {{ props.row.delivery_date ? formatDateTime(props.row.delivery_date) : '-' }}
+                      {{ props.row.delivery_date ? formatDate(props.row.delivery_date) : '-' }}
                     </div>
                   </template>
                   <template v-else-if="col.name === 'total'">
@@ -312,7 +304,7 @@
               <div class="row items-center q-mb-xs">
                 <q-icon name="event" size="16px" color="grey-7" class="q-mr-xs" />
                 <div class="text-caption text-grey-7">
-                  Creada: {{ formatDateTime(invoice.created_at) }}
+                  Creada: {{ formatDate(invoice.created_at) }}
                 </div>
               </div>
 
@@ -320,7 +312,7 @@
               <div v-if="invoice.delivery_date" class="row items-center q-mb-sm">
                 <q-icon name="local_shipping" size="16px" color="grey-7" class="q-mr-xs" />
                 <div class="text-caption text-grey-7">
-                  Entrega: {{ formatDateTime(invoice.delivery_date) }}
+                  Entrega: {{ formatDate(invoice.delivery_date) }}
                 </div>
               </div>
 
@@ -390,8 +382,10 @@
 
 <script>
 import { ref, computed, watch } from 'vue'
-import { useQuasar, date } from 'quasar'
+import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import { authentication } from 'src/stores/module-authentication'
+import { formatDate } from 'src/const/mixins'
 
 export default {
   name: 'SearchPendingInvoicesDialog',
@@ -409,6 +403,8 @@ export default {
     const loading = ref(false)
     const expanded = ref([])
     const expandedMobile = ref([])
+    const store = authentication()
+    const branchOffice = computed(() => store.branchOffice)
 
     const showDialog = computed({
       get: () => props.modelValue,
@@ -427,6 +423,13 @@ export default {
         name: 'client',
         label: 'Cliente',
         field: row => row.client?.name || '-',
+        align: 'left',
+        sortable: true
+      },
+      {
+        name: 'seller',
+        label: 'Vendedor',
+        field: row => row.seller?.name || row.seller?.email || '-',
         align: 'left',
         sortable: true
       },
@@ -493,14 +496,13 @@ export default {
           params: {
             whereIn: {
               status: ['pending', 'on_process', 'finished']
+            },
+            dataEqualFilter: {
+              branch_office_id: branchOffice.value?.id
             }
           }
         })
         invoices.value = data.data || data
-
-        // Abrir todos los expands por defecto
-        expanded.value = invoices.value.map(inv => inv.id)
-        expandedMobile.value = invoices.value.map(inv => inv.id)
       } catch (error) {
         console.error('Error fetching pending invoices:', error)
         $q.notify({
@@ -525,16 +527,6 @@ export default {
         currency: 'ARS',
         minimumFractionDigits: 2
       }).format(value)
-    }
-
-    const formatDateTime = (dateString) => {
-      if (!dateString) return '-'
-      try {
-        const parsedDate = date.extractDate(dateString, 'YYYY-MM-DD HH:mm:ss')
-        return date.formatDate(parsedDate, 'DD/MM/YYYY HH:mm')
-      } catch (error) {
-        return dateString
-      }
     }
 
     const filterInvoices = () => {
@@ -680,7 +672,7 @@ export default {
       filteredInvoices,
       selectInvoice,
       formatCurrency,
-      formatDateTime,
+      formatDate,
       filterInvoices,
       expanded,
       expandedMobile,

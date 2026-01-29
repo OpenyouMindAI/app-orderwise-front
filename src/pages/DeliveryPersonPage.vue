@@ -1,171 +1,265 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row q-col-gutter-sm">
-      <div class="col-12 text-right">
-        <q-btn color="primary" @click="openAddDeliveryPerson = true" icon="add_circle"/>
+  <q-page padding>
+    <div class="q-gutter-y-sm">
+      <div class="row justify-between items-center q-gutter-x-sm">
+        <span class="text-h6">
+          Repartidores
+        </span>
+        <div class="text-right q-gutter-x-sm">
+          <q-btn
+            round
+            color="primary"
+            @click="openAddDeliveryPerson = true"
+            icon="add_circle"
+          />
+        </div>
       </div>
-      <div class="col-12">
-        <q-table
-          title="Repartidores"
-          row-key="id"
-          :columns="columns"
-          :rows="deliveryPersons"
-          :loading="visible"
-          :filter="filter"
-          binary-state-sort
-          v-model:pagination="paginationConfig"
-          @row-click="editDeliveryPerson"
-          @request="setPagination"
-          no-data-label="Registro no encontrado"
-        >
-          <template v-slot:loading>
-            <q-inner-loading showing color="primary" />
-          </template>
-          <template v-slot:top-right>
-            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar">
+      <q-table
+        title="Repartidores"
+        row-key="id"
+        :columns="columns"
+        :rows="deliveryPersons"
+        :loading="visible"
+        :filter="filter"
+        binary-state-sort
+        v-model:pagination="paginationConfig"
+        @row-click="editDeliveryPerson"
+        @request="setPagination"
+        no-data-label="Registro no encontrado"
+        :grid="$q.screen.lt.md"
+        :visible-columns="visibleColumns"
+      >
+        <template v-slot:loading>
+          <q-inner-loading showing color="primary" />
+        </template>
+        <template v-slot:top>
+          <div class="flex justify-end items-center full-width">
+            <q-input filled dense debounce="500" v-model="filter" placeholder="Buscar" style="min-width: 250px;">
               <template v-slot:append>
                 <q-icon name="search" />
               </template>
             </q-input>
-          </template>
-        </q-table>
-      </div>
+          </div>
+        </template>
+
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
+            <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editDeliveryPerson(null, props.row)">
+              <span class="q-focus-helper"></span>
+
+              <q-card-section class="row justify-between items-start compact-card-header">
+                <div class="column">
+                   <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">{{ props.row.name }}</div>
+                   <div class="text-caption text-grey-6 text-weight-medium">ID: {{ props.row.id }}</div>
+                </div>
+                <div class="column items-end">
+                   <q-badge
+                     color="blue-1"
+                     text-color="primary"
+                     class="q-py-xs q-px-sm text-weight-bold"
+                     rounded
+                     style="font-size: 11px; border: 1px solid #e3f2fd"
+                   >
+                     {{ props.row.document_number || '-' }}
+                   </q-badge>
+                </div>
+              </q-card-section>
+
+              <q-separator color="grey-2" inset />
+
+              <q-card-section class="compact-card-body">
+                <div class="row q-col-gutter-y-sm">
+                  <div class="col-8">
+                     <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Correo</div>
+                     <div class="text-body2 text-grey-8 ellipsis">{{ props.row.email || '-' }}</div>
+                  </div>
+                  <div class="col-4 text-right">
+                     <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Teléfono</div>
+                     <div class="text-body2 text-grey-8 text-weight-bold">{{ props.row.phone_number || '-' }}</div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </template>
+      </q-table>
     </div>
-    <q-dialog v-model="openEditDeliveryPerson" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveEdit">
-          <q-card-section class="row items-center q-py-sm text-white bg-primary">
-            <div class="text-h6">Modificar Repartidor</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
+
+    <q-dialog v-model="openEditDeliveryPerson" persistent :maximized="$q.screen.lt.sm">
+      <q-card :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? '' : 'width: 800px; max-width: 90vw;'}`">
+        <q-card-section class="row items-center q-py-sm text-white bg-primary col-auto">
+          <div class="text-h6">Modificar Repartidor</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeModal" />
+        </q-card-section>
+        <q-form
+          @submit="saveEdit"
+          :class="$q.screen.lt.sm ? 'col column' : ''"
+        >
+          <q-card-section class="scroll col q-pa-md">
+            <div class="row q-col-gutter-md">
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.document_number"
+                  autofocus
+                  label="Número de documento"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.name"
+                  label="Nombre"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.email"
+                  type="email"
+                  label="Correo"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  filled
+                  v-model="deliveryPerson.phone_number"
+                  label="Número de teléfono"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.username"
+                  type="text"
+                  label="Usuario"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  filled
+                  v-model="deliveryPerson.password"
+                  type="password"
+                  label="Contraseña"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+            </div>
           </q-card-section>
-          <q-card-section class="row">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.document_number"
-                autofocus
-                label="Número de documento"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.name"
-                autofocus
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-1">
-              <q-input
-                filled
-                v-model="deliveryPerson.phone_number"
-                label="Número de teléfono"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12  q-mt-md">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.username"
-                type="text"
-                label="Usuario"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="deliveryPerson.password"
-                type="password"
-                label="Contraseña"
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn icon="delete" color="negative" label="Eliminar" @click="deleteDeliveryPerson" :loading="visible" />
-            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="visible"/>
+          <q-separator />
+          <q-card-actions align="right" class="col-auto q-pa-md">
+            <q-btn outline color="primary" label="Cancelar" @click="closeModal" />
+            <q-btn color="negative" label="Eliminar" @click="deleteDeliveryPerson" :loading="visible" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddDeliveryPerson" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
-        <q-form @submit="saveDeliveryPerson">
-          <q-card-section class="row items-center q-py-sm text-white bg-primary">
-            <div class="text-h6">Agregar Repartidor</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
+
+    <q-dialog v-model="openAddDeliveryPerson" persistent :maximized="$q.screen.lt.sm">
+      <q-card :class="$q.screen.lt.sm ? 'full-height column': ''"
+        :style="`${$q.screen.lt.sm ? '' : 'width: 800px; max-width: 90vw;'}`">
+        <q-card-section class="row items-center q-py-sm text-white bg-primary col-auto">
+          <div class="text-h6">Agregar Repartidor</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeModal" />
+        </q-card-section>
+        <q-form
+          @submit="saveDeliveryPerson"
+          :class="$q.screen.lt.sm ? 'col column' : ''"
+        >
+          <q-card-section class="scroll col q-pa-md">
+            <div class="row q-col-gutter-md">
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.document_number"
+                  autofocus
+                  label="Número de documento"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.name"
+                  label="Nombre"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.email"
+                  type="email"
+                  label="Correo"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  filled
+                  v-model="deliveryPerson.phone_number"
+                  label="Número de teléfono"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  filled
+                  v-model="deliveryPerson.username"
+                  type="text"
+                  label="Usuario"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+              <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                <q-input
+                  filled
+                  v-model="deliveryPerson.password"
+                  type="password"
+                  label="Contraseña"
+                  dense
+                  hide-bottom-space
+                />
+              </div>
+            </div>
           </q-card-section>
-          <q-card-section class="row">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.document_number"
-                autofocus
-                label="Número de documento"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.name"
-                label="Nombre"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.email"
-                type="email"
-                label="Correo"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="deliveryPerson.phone_number"
-                label="Número de teléfono"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12 q-mt-sm">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="deliveryPerson.username"
-                type="text"
-                label="Usuario"
-              />
-            </div>
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="deliveryPerson.password"
-                type="password"
-                label="Contraseña"
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn icon="save" color="primary" label="Guardar" type="submit" :loading="visible"/>
+          <q-separator />
+          <q-card-actions align="right" class="col-auto q-pa-md">
+            <q-btn outline color="primary" label="Cancelar" @click="closeModal" />
+            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
-  </div>
+  </q-page>
 </template>
 
 <script>
@@ -176,6 +270,7 @@ export default {
       deliveryPersons: [],
       deliveryPerson: {},
       filter: '',
+      visibleColumns: ['id', 'document_number', 'name', 'phone_number', 'email'],
       /**
        * Params search
        * @type {Object}
@@ -338,7 +433,7 @@ export default {
      */
     editDeliveryPerson (event, row, index) {
       this.openEditDeliveryPerson = true
-      this.deliveryPerson = row
+      this.deliveryPerson = { ...row }
       this.role = row.role
     },
     /**
@@ -397,3 +492,38 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Clases para tarjetas compactas */
+.compact-card-header {
+  padding: 0.8rem 1rem !important;
+}
+
+.compact-card-body {
+  padding: 0.8rem 1rem !important;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 1023px) {
+  /* Reducir padding del top de la tabla - usando deep selector para sobrescribir Quasar */
+  :deep(.q-table__top) {
+    padding: 0 !important;
+  }
+  :deep(.q-table__top .flex) {
+    flex-direction: row !important;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  :deep(.q-table__top .q-select) {
+    max-width: 150px;
+  }
+
+  :deep(.q-table__top .q-input) {
+    flex: 1;
+  }
+}
+</style>
