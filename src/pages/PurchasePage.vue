@@ -70,6 +70,7 @@
         <template v-slot:top>
           <div class="flex justify-between items-center full-width">
             <q-select
+              class="gt-sm"
               v-model="visibleColumns"
               multiple
               outlined
