@@ -14,6 +14,7 @@
     "build-main": "cross-env NODE_ENV=main quasar build",
     "build-pwa-dev": "cross-env NODE_ENV=development quasar build",
     "build-pwa-dixcont": "cross-env NODE_ENV=staging quasar build",
+    "android": "cross-env NODE_ENV=main quasar build -m capacitor -T android -d",
     "icons": "icongenie generate -i logo.png --skip-trim --padding 50 50",
     "deploy:qbits:develop": "node scripts/deploy.js qbitsinc develop",
     "deploy:qbits:main": "node scripts/deploy.js qbitsinc main",
