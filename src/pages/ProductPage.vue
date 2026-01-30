@@ -636,7 +636,8 @@
                             dense
                             hide-bottom-space
                             class="profit-percentage-input"
-                            @keydown="handleProfitPercentageKeydown"
+                            inputmode="numeric"
+                            @update:model-value="handleProfitPercentageInput"
                             @focus="initializeProfitPercentage"
                           />
                         </div>
@@ -708,7 +709,8 @@
                                 filled
                                 dense
                                 class="profit-percentage-input"
-                                @keydown="event => handlePriceListMarginKeydown(event, priceList)"
+                                inputmode="numeric"
+                                @update:model-value="val => handlePriceListMarginInput(val, priceList)"
                                 @focus="initializePriceListMargin(priceList)"
                                 />
                               </div>
@@ -1122,7 +1124,8 @@
                           dense
                           hide-bottom-space
                           class="profit-percentage-input"
-                          @keydown="handleProfitPercentageKeydown"
+                          inputmode="numeric"
+                          @update:model-value="handleProfitPercentageInput"
                           @focus="initializeProfitPercentage"
                         />
                       </div>
@@ -1194,7 +1197,8 @@
                                 filled
                                 dense
                                 class="profit-percentage-input"
-                                @keydown="event => handlePriceListMarginKeydown(event, priceList)"
+                                inputmode="numeric"
+                                @update:model-value="val => handlePriceListMarginInput(val, priceList)"
                                 @focus="initializePriceListMargin(priceList)"
                               />
                               </div>
@@ -2306,6 +2310,10 @@ export default {
       // Decimal input formatting for profit percentage
       profitPercentageValue: 0, // Internal value in centésimas (0.01 = 1)
       profitPercentageDisplay: '0',
+      // Flags para evitar cálculos cíclicos
+      isUpdatingFromMargin: false,
+      isUpdatingFromPrice: false,
+      isUpdatingFromCost: false,
       categories: [],
       imageUrl: null,
       aliquotTypes: [],
@@ -2481,6 +2489,7 @@ export default {
     },
     openAddProduct (data) {
       this.tab = 'basicData'
+      this.profitPercentageDisplay = 0
     },
     openEditProduct (data) {
       this.tab = 'basicData'
@@ -2752,16 +2761,25 @@ export default {
 
       // Solo calcular precio si hay un costo válido
       if (this.product.cost > 0) {
-        this.product.price = parseFloat((this.product.cost * (1 + this.product.profit_percentage / 100)).toFixed(2))
+        this.isUpdatingFromMargin = true
+        if (this.product.profit_percentage === 0) {
+          // Si el margen es 0, el precio es igual al costo
+          this.product.price = parseFloat(this.product.cost)
+        } else {
+          // Calcular precio con el margen
+          this.product.price = parseFloat((this.product.cost * (1 + this.product.profit_percentage / 100)).toFixed(2))
+        }
+        this.$nextTick(() => {
+          this.isUpdatingFromMargin = false
+        })
       }
     },
-    handleProfitPercentageKeydown (e) {
-      e.preventDefault()
-      if (e.key >= '0' && e.key <= '9') {
-        this.profitPercentageValue = this.profitPercentageValue * 10 + parseInt(e.key)
-      } else if (e.key === 'Backspace') {
-        this.profitPercentageValue = Math.max(0, Math.floor(this.profitPercentageValue / 10))
-      }
+    handleProfitPercentageInput (val) {
+      if (this.isUpdatingFromPrice) return
+      
+      // Extraer solo dígitos de la cadena recibida
+      const digits = val.replace(/\D/g, '')
+      this.profitPercentageValue = digits ? parseInt(digits) : 0
       this.formatProfitPercentage()
     },
     initializeProfitPercentage () {
@@ -2776,15 +2794,11 @@ export default {
       this.formatPriceListMargin(priceList)
     },
 
-    handlePriceListMarginKeydown (e, priceList) {
-      e.preventDefault()
-      if (e.key >= '0' && e.key <= '9') {
-        priceList.profitPercentageValue = (priceList.profitPercentageValue || 0) * 10 + parseInt(e.key)
-      } else if (e.key === 'Backspace') {
-        priceList.profitPercentageValue = Math.max(0, Math.floor((priceList.profitPercentageValue || 0) / 10))
-      }
-
-      // Solo calcular precio cuando el usuario escriba en el margen
+    handlePriceListMarginInput (val, priceList) {
+      // Extraer solo dígitos
+      const digits = val.replace(/\D/g, '')
+      priceList.profitPercentageValue = digits ? parseInt(digits) : 0
+      
       this.formatPriceListMargin(priceList)
     },
 
@@ -2801,37 +2815,72 @@ export default {
       }
     },
     updatePrice (newVal) {
+      // Evitar recalcular si el precio está siendo actualizado desde margen o costo
+      if (this.isUpdatingFromMargin || this.isUpdatingFromCost) {
+        return
+      }
+
       // Solo calcular margen si el usuario cambió el precio manualmente
       if (newVal && this.product.cost > 0) {
+        this.isUpdatingFromPrice = true
         const margin = ((newVal - this.product.cost) / this.product.cost) * 100
         this.product.profit_percentage = Number(margin.toFixed(4))
         // Actualizar display del margen
         this.profitPercentageValue = Math.round(this.product.profit_percentage * 100)
         this.profitPercentageDisplay = parseFloat(this.product.profit_percentage || 0).toFixed(2)
+        this.$nextTick(() => {
+          this.isUpdatingFromPrice = false
+        })
       }
     },
     updateCost (newVal) {
+      // Evitar recalcular si el costo está siendo actualizado desde precio
+      if (this.isUpdatingFromPrice) {
+        return
+      }
+
       // Mantener el margen constante y recalcular el precio basado en el nuevo costo
       if (newVal && newVal > 0) {
+        this.isUpdatingFromCost = true
         // Usar el margen existente para calcular el nuevo precio principal
         const currentMargin = parseFloat(this.product.profit_percentage || 0)
-        this.product.price = parseFloat((newVal * (1 + currentMargin / 100)).toFixed(2))
+
+        if (currentMargin === 0) {
+          // Si el margen es 0, el precio es igual al costo
+          this.product.price = parseFloat(newVal)
+        } else {
+          // Calcular precio con el margen existente
+          this.product.price = parseFloat((newVal * (1 + currentMargin / 100)).toFixed(2))
+        }
 
         // También actualizar los precios de las listas de precios manteniendo sus márgenes
         this.priceLists.forEach(priceList => {
           if (priceList.profit_percentage != null) {
             const listMargin = parseFloat(priceList.profit_percentage || 0)
-            priceList.price = parseFloat((newVal * (1 + listMargin / 100)).toFixed(2))
+            if (listMargin === 0) {
+              priceList.price = parseFloat(newVal)
+            } else {
+              priceList.price = parseFloat((newVal * (1 + listMargin / 100)).toFixed(2))
+            }
           }
+        })
+
+        this.$nextTick(() => {
+          this.isUpdatingFromCost = false
         })
       } else {
         // Si costo es 0, mantener el margen pero resetear solo el precio
         // El margen se preserva para no perder la configuración
+        this.isUpdatingFromCost = true
         this.product.price = 0
 
         // También resetear solo los precios de las listas, manteniendo sus márgenes
         this.priceLists.forEach(priceList => {
           priceList.price = 0
+        })
+
+        this.$nextTick(() => {
+          this.isUpdatingFromCost = false
         })
       }
     },
@@ -3260,6 +3309,10 @@ export default {
 
       if (data.aliquot_type) {
         formData.append('aliquot_type', JSON.stringify(data.aliquot_type))
+      }
+
+      if (this.unitOfMeasure) {
+        formData.append('unit_of_measure_id', this.unitOfMeasure.id)
       }
 
       data.images.forEach((element, index) => {
