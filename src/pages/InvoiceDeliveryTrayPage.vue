@@ -115,13 +115,13 @@
 
           <!-- Expansion Content -->
           <div v-if="isExpanded(invoice.id)" class="order-expansion-content q-mt-md" @click.stop>
-            <!-- Order Observation -->
-            <div v-if="invoice.observation" class="order-description-box q-mb-md">
+            <!-- Order description -->
+            <div v-if="invoice.description" class="order-description-box q-mb-md">
               <div class="row items-center q-mb-xs">
                 <q-icon name="o_description" size="14px" color="primary" class="q-mr-xs" />
                 <span class="text-caption text-weight-bolder text-grey-9">OBSERVACIÓN DE ORDEN</span>
               </div>
-              <div class="text-body2 text-grey-8">{{ invoice.observation }}</div>
+              <div class="text-body2 text-grey-8">{{ invoice.description }}</div>
             </div>
 
             <!-- Products List -->
