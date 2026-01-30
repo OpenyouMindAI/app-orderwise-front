@@ -413,6 +413,7 @@
                 :class="{ 'selected-card': isProductSelected(props.row) }"
                 style="border-radius: 16px; border: 1px solid #eef0f3"
                 @click="handleCardClick(props.row)"
+                :id="props.rowIndex === 0 ? 'tour-first-product-card' : ''"
               >
                 <span class="q-focus-helper"></span>
 
@@ -1987,40 +1988,48 @@
     </q-dialog>
 
     <!-- Tour Overlay -->
-    <div v-if="showTour" class="tour-overlay">
-      <div class="tour-spotlight" :style="spotlightStyle"></div>
-      <q-card class="tour-card" :style="tourCardStyle">
-        <q-card-section class="tour-header">
-          <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ currentTourSteps.length }}</div>
-          <q-btn flat round dense icon="close" @click="skipTour" color="white" size="sm" />
-        </q-card-section>
-        <q-card-section>
-          <div class="tour-title">{{ currentTourSteps[currentTourStep]?.title }}</div>
-          <div class="tour-description">{{ currentTourSteps[currentTourStep]?.description }}</div>
-        </q-card-section>
-        <q-card-actions align="right" class="q-px-md q-pb-md">
-          <q-btn
-            flat
-            label="Anterior"
-            @click="previousTourStep"
-            :disable="currentTourStep === 0"
-            color="grey-7"
-          />
-          <q-btn
-            flat
-            label="Saltar tour"
-            @click="skipTour"
-            color="grey-7"
-          />
-          <q-btn
-            unelevated
-            :label="currentTourStep === currentTourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
-            @click="nextTourStep"
-            color="primary"
-          />
-        </q-card-actions>
-      </q-card>
-    </div>
+    <!-- Tour System (Teleported to body for Z-Index supremacy) -->
+    <teleport to="body">
+      <template v-if="showTour">
+        <!-- Layer 1: Dark Overlay & Spotlight (Z-Index ~2B) -->
+        <div class="tour-overlay">
+          <div class="tour-spotlight" :style="spotlightStyle"></div>
+        </div>
+
+        <!-- Layer 3: Tour Card (Z-Index MAX ~2.14B) - Separated from overlay to beat highlighted element -->
+        <q-card class="tour-card" :style="tourCardStyle">
+          <q-card-section class="tour-header">
+            <div class="tour-step-indicator">Paso {{ currentTourStep + 1 }} de {{ currentTourSteps.length }}</div>
+            <q-btn flat round dense icon="close" @click="skipTour" color="white" size="sm" />
+          </q-card-section>
+          <q-card-section>
+            <div class="tour-title">{{ currentTourSteps[currentTourStep]?.title }}</div>
+            <div class="tour-description">{{ currentTourSteps[currentTourStep]?.description }}</div>
+          </q-card-section>
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn
+              flat
+              label="Anterior"
+              @click="previousTourStep"
+              :disable="currentTourStep === 0"
+              color="grey-7"
+            />
+            <q-btn
+              flat
+              label="Saltar tour"
+              @click="skipTour"
+              color="grey-7"
+            />
+            <q-btn
+              unelevated
+              :label="currentTourStep === currentTourSteps.length - 1 ? 'Finalizar' : 'Siguiente'"
+              @click="nextTourStep"
+              color="primary"
+            />
+          </q-card-actions>
+        </q-card>
+      </template>
+    </teleport>
 
     <!-- Notificación flotante de descarga -->
     <transition name="slide-up">
@@ -2405,7 +2414,10 @@ export default {
       showTour: false,
       currentTourStep: 0,
       currentTourType: 'main',
-      mainTourSteps: [
+      activeTourSteps: [],
+      // Definición maestra de todos los pasos posibles con sus condiciones ideales
+      allTourStepsDefinition: [
+        // Pasos Desktop
         {
           target: '#tour-btn-agregar-desktop',
           title: '➕ Agregar Producto',
@@ -2419,17 +2431,43 @@ export default {
         {
           target: '#tour-btn-mas-opciones-desktop',
           title: '⚙️ Más Opciones',
-          description: 'Este menú contiene opciones adicionales:\n\n• Seleccionar múltiples: Activa el modo de selección masiva\n• Códigos QR: Genera códigos QR para tus productos\n• Modificar lista de precios: Actualiza precios de forma masiva\n• Exportar Excel: Descarga todos tus productos\n• Mostrar/Ocultar columnas: Personaliza las columnas de la tabla\n• Copiar a empresas: Duplica productos entre empresas (solo administradores)'
+          description: 'Descubre opciones avanzadas como importación masiva, códigos QR y gestión de columnas.'
         },
+
+        // Pasos Mobile
+        {
+          target: '#tour-btn-agregar',
+          title: '➕ Agregar Producto',
+          description: 'Toca aquí para agregar un nuevo producto de forma rápida.'
+        },
+        {
+          target: '#tour-btn-filtrar',
+          title: '🔍 Filtrar Productos',
+          description: 'Filtra tus productos para encontrarlos más rápido.'
+        },
+        {
+          target: '#tour-btn-mas-opciones',
+          title: '⚙️ Más Opciones',
+          description: 'Accede a herramientas adicionales como exportar datos o generar QRs.'
+        },
+
+        // Pasos Comunes / Condicionales
         {
           target: '#tour-tabla-productos',
           title: '📋 Tabla de Productos',
-          description: 'Aquí se muestran todos tus productos con información clave: nombre, categoría, precio, stock y más.'
+          description: 'Aquí se muestran todos tus productos con información clave.',
+          excludeOnMobileTablet: true // Flag personalizado para excluir en tablet/mobile
         },
         {
-          target: '#tour-tabla-productos tbody tr:first-child',
+          target: '#tour-tabla-productos tbody tr:first-child', // Desktop edit
           title: '✏️ Editar Producto',
-          description: 'Para editar un producto, simplemente haz clic en cualquier fila de la tabla. Se abrirá el formulario de edición.'
+          description: 'Haz clic en una fila para editar el producto.',
+          excludeOnMobileTablet: true
+        },
+        {
+          target: '#tour-first-product-card', // Mobile edit
+          title: '✏️ Editar o Seleccionar',
+          description: 'Toca una tarjeta para editar. Usa pulsación larga para más opciones.'
         }
       ],
       spotlightStyle: {},
@@ -2460,7 +2498,7 @@ export default {
      * Get current tour steps
      */
     currentTourSteps () {
-      return this.mainTourSteps
+      return this.activeTourSteps
     },
     /**
      * Get visible columns based on user selection
@@ -3975,6 +4013,24 @@ export default {
      * Start main page tour
      */
     startMainTour () {
+      // 1. Calcular pasos válidos dinámicamente
+      this.activeTourSteps = this.allTourStepsDefinition.filter(step => {
+        // Regla explícita: Excluir tabla de productos en Mobile/Tablet
+        if (step.excludeOnMobileTablet && this.$q.screen.lt.md) {
+          return false
+        }
+
+        const element = document.querySelector(step.target)
+        // 2. Verificar existencia y visibilidad real
+        // offsetParent es null si el elemento (o ancestro) tiene display: none
+        return element && element.offsetParent !== null
+      })
+
+      if (this.activeTourSteps.length === 0) {
+        notify('No hay elementos visibles para mostrar en el tour en esta vista.', 'warning')
+        return
+      }
+
       this.currentTourType = 'main'
       this.currentTourStep = 0
       this.showTour = true
@@ -4129,6 +4185,11 @@ export default {
         const step = this.currentTourSteps[this.currentTourStep]
         if (!step) return
 
+        // Execute step action if defined
+        if (typeof step.action === 'function') {
+          step.action()
+        }
+
         // Remove highlight class from previous element
         const previousHighlighted = document.querySelector('.tour-element-highlighted')
         if (previousHighlighted) {
@@ -4136,16 +4197,24 @@ export default {
         }
 
         const element = document.querySelector(step.target)
-        if (!element) {
+        // Check if element exists and is visible (logic from BillingPage)
+        if (!element || element.offsetParent === null) {
           // Retry up to 5 times with increasing delay
           if (retryCount < 5) {
-            console.warn(`Tour element not found: ${step.target}, retrying... (${retryCount + 1}/5)`)
+            console.warn(`Tour element not found or hidden: ${step.target}, retrying... (${retryCount + 1}/5)`)
             setTimeout(() => {
               this.updateTourPosition(retryCount + 1)
             }, 200 * (retryCount + 1))
             return
           } else {
-            console.error('Tour element not found after retries:', step.target)
+            console.error('Tour element not found after retries or is hidden:', step.target)
+            // Skip to next step if element not found/visible
+            if (this.currentTourStep < this.currentTourSteps.length - 1) {
+              this.currentTourStep++
+              this.updateTourPosition()
+            } else {
+              this.finishTour()
+            }
             return
           }
         }
@@ -4153,75 +4222,111 @@ export default {
         // Add highlight class to current element
         element.classList.add('tour-element-highlighted')
 
-        // Scroll to element first
-        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+        // Scroll to element first (except for products table/list)
+        if (step.target !== '#tour-tabla-productos') {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+        }
 
         // Wait for scroll to finish before calculating positions
         setTimeout(() => {
           const rect = element.getBoundingClientRect()
-          const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-
-          // Update spotlight position
-          this.spotlightStyle = {
-            top: `${rect.top - 10}px`,
-            left: `${rect.left - 10}px`,
-            width: `${rect.width + 20}px`,
-            height: `${rect.height + 20}px`
-          }
-
-          // Position tour card with better logic
-          const cardWidth = 400
-          const cardHeight = 280
-          const padding = 20
+          const isMobile = this.$q.screen.lt.md
           const viewportHeight = window.innerHeight
           const viewportWidth = window.innerWidth
 
-          let cardTop = rect.bottom + padding
-          let cardLeft = rect.left
+          // En la nueva estructura con Teleport, el overlay puede no ser el padre directo para posicionamiento
+          // pero calculamos offsets si fuera necesario. Como usamos position: absolute/fixed en body,
+          // rect.top/left (viewport coordinates) son lo que necesitamos mayormente.
 
-          // Special positioning for table - place card at bottom of viewport
-          if (step.target === '#tour-tabla-productos' || step.target === '#tour-tabla-productos tbody tr:first-child') {
-            cardTop = viewportHeight - cardHeight - padding
-            cardLeft = (viewportWidth - cardWidth) / 2
+          // Update spotlight position directly based on rect (since it's in a fixed overlay or body)
+          // Nota: Si el spotlight está dentro de un div fixed, usaremos coordenadas del viewport.
+          this.spotlightStyle = {
+            top: `${rect.top - 6}px`,
+            left: `${rect.left - 6}px`,
+            width: `${rect.width + 12}px`,
+            height: `${rect.height + 12}px`
+          }
+
+          // En móvil: posicionar tarjeta fija en la parte inferior
+          if (isMobile) {
+            this.tourCardStyle = {
+              position: 'fixed',
+              bottom: '100px',
+              left: '16px',
+              right: '16px',
+              top: 'auto',
+              width: 'auto'
+            }
+            return
+          }
+
+          // Posicionar tarjeta (Desktop)
+          const cardWidth = 400
+          const cardHeight = 250 // Estimado, puede variar según contenido
+          const padding = 20
+
+          // Coordenadas base (viewport)
+          const elTop = rect.top
+          const elBottom = rect.bottom
+          const elLeft = rect.left
+          const elRight = rect.right
+          const elCenterX = elLeft + (rect.width / 2)
+
+          let cardTop, cardLeft
+
+          // Estrategia de posicionamiento inteligente:
+          // 1. Intentar ponerlo a la derecha si hay espacio
+          // 2. Intentar ponerlo a la izquierda si no
+          // 3. Ponerlo abajo o arriba según espacio vertical
+
+          // Zona derecha disponible vs Zona izquierda disponible
+          const spaceRight = viewportWidth - elRight
+          const spaceLeft = elLeft
+
+          // Si el elemento está muy a la derecha (ej: botones de acción), preferir izquierda
+          if (spaceRight < (cardWidth + padding) && spaceLeft > (cardWidth + padding)) {
+            // Posicionar a la izquierda
+            cardLeft = elLeft - cardWidth - padding
+            // Alinear verticalmente al centro del elemento o top
+            cardTop = elTop
+          } else if (spaceLeft < (cardWidth + padding) && spaceRight > (cardWidth + padding)) {
+            // Si el elemento está muy a la izquierda, preferir derecha
+            // Posicionar a la derecha
+            cardLeft = elRight + padding
+            cardTop = elTop
           } else {
-            // Calculate available space below and above
-            const spaceBelow = viewportHeight - rect.bottom
-            const spaceAbove = rect.top
+            // Si no cabe a los lados o está centrado, poner abajo o arriba
+            // Centrar horizontalmente respecto al elemento
+            cardLeft = elCenterX - (cardWidth / 2)
 
-            // If not enough space below, try to position above
-            if (spaceBelow < cardHeight + padding && spaceAbove > cardHeight + padding) {
-              cardTop = rect.top - cardHeight - padding
-            } else if (spaceBelow < cardHeight + padding && spaceAbove < cardHeight + padding) {
-              // If not enough space in either direction, center in viewport
-              cardTop = (viewportHeight - cardHeight) / 2
-            }
-
-            // Ensure card doesn't go above viewport
-            if (cardTop < padding) {
-              cardTop = padding
-            }
-
-            // Ensure card doesn't go below viewport
-            if (cardTop + cardHeight > viewportHeight - padding) {
-              cardTop = viewportHeight - cardHeight - padding
-            }
-
-            // Adjust horizontal position to center on element if possible
-            cardLeft = rect.left + (rect.width / 2) - (cardWidth / 2)
-
-            // Ensure card stays within viewport horizontally
-            if (cardLeft + cardWidth > viewportWidth - padding) {
-              cardLeft = viewportWidth - cardWidth - padding
-            }
-            if (cardLeft < padding) {
-              cardLeft = padding
+            // Preferir abajo
+            if ((viewportHeight - elBottom) > (cardHeight + padding)) {
+              cardTop = elBottom + padding
+            } else {
+              // Si no cabe abajo, poner arriba
+              cardTop = elTop - cardHeight - padding
             }
           }
 
+          // Correcciones finales para asegurar que no se salga del viewport
+          // Horizontal overflow check
+          if (cardLeft < padding) cardLeft = padding
+          if (cardLeft + cardWidth > viewportWidth - padding) {
+            cardLeft = viewportWidth - cardWidth - padding
+          }
+
+          // Vertical overflow check
+          if (cardTop < padding) cardTop = padding
+          if (cardTop + cardHeight > viewportHeight - padding) {
+            // Si se sale por abajo y ya intentamos ponerlo arriba, lo pegamos al borde inferior
+            cardTop = viewportHeight - cardHeight - padding
+          }
+
           this.tourCardStyle = {
+            position: 'fixed', // Usar fixed para evitar líos con scroll parents
             top: `${cardTop}px`,
-            left: `${cardLeft}px`
+            left: `${cardLeft}px`,
+            width: `${cardWidth}px`
           }
         }, 300)
       })
@@ -4816,6 +4921,163 @@ export default {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tour-element-highlighted {
+  position: relative;
+  z-index: 2000000020 !important;
+  pointer-events: auto;
+  background-color: white; /* Opcional: para asegurar opacidad si es necesario */
+  border-radius: 4px; /* Opcional: para suavizar bordes si no tiene */
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.2);
+}
+
+/* Tour Styles - Replicated from BillingPage */
+.tour-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 2000000000;
+  pointer-events: auto;
+}
+
+.tour-spotlight {
+  position: absolute;
+  background: transparent;
+  border: 4px solid var(--q-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.75),
+    0 0 0 8px rgba(255, 255, 255, 0.1),
+    0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  transition: all 0.3s ease;
+  z-index: 2000000010;
+  pointer-events: none;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.1),
+      0 0 40px 4px rgba(var(--q-primary-rgb, 25, 118, 210), 0.6);
+  }
+  50% {
+    border-color: var(--q-primary);
+    box-shadow:
+      0 0 0 9999px rgba(0, 0, 0, 0.75),
+      0 0 0 8px rgba(255, 255, 255, 0.15),
+      0 0 50px 6px rgba(var(--q-primary-rgb, 25, 118, 210), 0.8);
+  }
+}
+
+.tour-card {
+  position: absolute;
+  z-index: 2147483647 !important;
+  min-width: 350px;
+  max-width: 450px;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: tour-card-appear 0.3s ease-out;
+}
+
+@keyframes tour-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tour-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark, var(--q-primary)) 100%);
+  color: white;
+  border-radius: 16px 16px 0 0;
+}
+
+.tour-step-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.tour-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--q-primary);
+  line-height: 1.3;
+}
+
+.body--dark .tour-title {
+  color: var(--q-primary);
+}
+
+.tour-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.body--dark .tour-description {
+  color: #b0b0b0;
+}
+
+/* Responsive tour */
+@media (max-width: 768px) {
+  .tour-card {
+    position: fixed !important;
+    bottom: 100px !important;
+    left: 16px !important;
+    right: 16px !important;
+    top: auto !important;
+    min-width: auto;
+    max-width: none;
+    z-index: 2147483647 !important;
+  }
+
+  .tour-header {
+    padding: 10px 14px;
+  }
+
+  .tour-title {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .tour-description {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .tour-card .q-card-actions {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .tour-card .q-card-actions .q-btn {
+    min-height: 44px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .tour-spotlight {
+    border-width: 3px;
+  }
 }
 
 .body--dark .download-card {
