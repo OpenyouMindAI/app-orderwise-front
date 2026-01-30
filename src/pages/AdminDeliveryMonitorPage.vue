@@ -412,7 +412,7 @@
     <q-dialog v-model="showCloneDialog" persistent transition-show="scale" transition-hide="scale" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 1000px; max-width: 95vw;'" :class="$q.screen.lt.sm ? 'column full-height' : ''" class="rounded-borders-20 overflow-hidden shadow-24">
         <!-- Compact Header -->
-        <q-card-section class="q-px-lg q-pt-lg q-pb-sm bg-white border-bottom-subtle">
+        <q-card-section class="bg-white border-bottom-subtle">
           <div class="row items-center justify-between no-wrap">
             <div class="column">
               <div class="text-h6 text-weight-bolder text-grey-9">Clonar Recorrido</div>
@@ -423,7 +423,7 @@
         </q-card-section>
 
         <!-- Compact Search & Selection Area -->
-        <q-card-section class="q-px-lg q-py-sm bg-grey-1">
+        <q-card-section class="q-pa-none bg-grey-1">
           <div class="row items-center justify-between no-wrap q-gutter-md">
             <div class="row items-center q-gutter-sm">
               <q-badge color="primary" rounded class="q-px-sm q-py-xs shadow-1">
@@ -454,7 +454,7 @@
         </q-card-section>
 
         <!-- Content Area -->
-        <q-card-section :class="$q.screen.lt.sm ? 'col scroll' : 'scroll q-pa-lg half-height-scroll'" style="max-height: 60vh;">
+        <q-card-section :class="$q.screen.lt.sm ? 'col scroll' : 'scroll q-pa-lg half-height-scroll'" style="height: calc(100vh - 320px);">
           <div class="row q-col-gutter-md">
             <div v-for="(item, index) in cloneItems" :key="index" class="col-12 col-sm-6">
               <div
@@ -470,6 +470,9 @@
                   </div>
                   <q-checkbox v-model="item.selected" color="primary" dense @click.stop />
                 </div>
+
+                <!-- Invoice Description -->
+
 
                 <!-- Products Mini-list -->
                 <div class="bg-grey-1 rounded-borders-12 q-pa-sm q-mb-sm border-subtle">
@@ -510,6 +513,20 @@
                     </div>
                   </div>
                 </div>
+
+                <q-input
+                  v-model="item.invoice.description"
+                  dense
+                  outlined
+                  label="Observación / Descripción"
+                  bg-color="white"
+                  class="q-mb-sm rounded-borders-12 overflow-hidden"
+                  style="font-size: 0.8rem;"
+                  rows="1"
+                  type="textarea"
+                  autogrow
+                  @click.stop
+                />
 
                 <!-- Card Footer Info -->
                 <div class="row items-center justify-between mt-auto">
@@ -2655,6 +2672,7 @@ async function confirmCloning () {
       .map(item => ({
         id: item.invoice.id,
         delivery_date: cloneDeliveryDate.value,
+        description: item.invoice.description,
         products: item.invoice.products.map(p => ({
           id: p.id,
           pivot: {
