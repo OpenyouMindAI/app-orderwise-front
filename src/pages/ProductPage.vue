@@ -2776,7 +2776,6 @@ export default {
     },
     handleProfitPercentageInput (val) {
       if (this.isUpdatingFromPrice) return
-      
       // Extraer solo dígitos de la cadena recibida
       const digits = val.replace(/\D/g, '')
       this.profitPercentageValue = digits ? parseInt(digits) : 0

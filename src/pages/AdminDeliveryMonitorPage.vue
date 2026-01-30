@@ -408,89 +408,120 @@
       </q-btn-group>
     </div>
     <!-- Cloning Preview Dialog -->
-    <q-dialog v-model="showCloneDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="clone-dialog-card blur-bg-strong">
-        <q-card-section class="row items-center q-pb-none glass-header">
-          <div class="column">
-            <div class="text-h6 text-weight-bolder text-white">Clonar Recorrido</div>
-            <div class="text-caption text-indigo-1">Ruta #{{ runToClone?.id }} • {{ runToClone?.items?.length }} facturas</div>
+    <!-- Cloning Preview Dialog -->
+    <q-dialog v-model="showCloneDialog" persistent transition-show="scale" transition-hide="scale" :maximized="$q.screen.lt.sm">
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 1000px; max-width: 95vw;'" :class="$q.screen.lt.sm ? 'column full-height' : ''" class="rounded-borders-20 overflow-hidden shadow-24">
+        <!-- Compact Header -->
+        <q-card-section class="q-px-lg q-pt-lg q-pb-sm bg-white border-bottom-subtle">
+          <div class="row items-center justify-between no-wrap">
+            <div class="column">
+              <div class="text-h6 text-weight-bolder text-grey-9">Clonar Recorrido</div>
+              <div class="text-caption text-grey-6">Selecciona las facturas de la ruta #{{ runToClone?.id }}</div>
+            </div>
+            <q-btn flat round dense icon="close" color="grey-7" v-close-popup class="bg-grey-1" />
           </div>
-          <q-space />
-          <q-btn flat round dense icon="close" color="white" v-close-popup />
         </q-card-section>
 
-        <q-card-section class="q-pa-md scroll dialog-content-area">
+        <!-- Compact Search & Selection Area -->
+        <q-card-section class="q-px-lg q-py-sm bg-grey-1">
+          <div class="row items-center justify-between">
+            <q-badge color="primary" rounded class="q-px-sm q-py-xs shadow-1">
+              {{ selectedCloneCount }} seleccionadas
+            </q-badge>
+            <q-btn flat rounded dense size="sm" color="primary" :label="selectedCloneCount === cloneItems.length ? 'Deseleccionar todo' : 'Seleccionar todo'"
+              @click="cloneItems.forEach(i => i.selected = selectedCloneCount !== cloneItems.length)" class="text-weight-bold" />
+          </div>
+        </q-card-section>
+
+        <!-- Content Area -->
+        <q-card-section :class="$q.screen.lt.sm ? 'col scroll' : 'scroll q-pa-lg half-height-scroll'" style="max-height: 60vh;">
           <div class="row q-col-gutter-md">
-            <div v-for="(item, index) in cloneItems" :key="index" class="col-12 col-sm-6 col-md-4">
-              <q-card flat bordered class="invoice-clone-card rounded-borders-16 transition-all shadow-hover">
-                <q-card-section class="q-pa-sm row items-center no-wrap">
-                  <q-checkbox v-model="item.selected" color="primary" class="q-mr-sm" />
-                  <div class="col overflow-hidden">
-                    <div class="text-weight-bold text-subtitle2 ellipsis">{{ item.invoice?.client?.name }}</div>
-                    <div class="text-caption text-grey-7">Factura #{{ item.invoice?.id }}</div>
+            <div v-for="(item, index) in cloneItems" :key="index" class="col-12 col-sm-6">
+              <div
+                class="minimal-invoice-card"
+                :class="{ 'is-selected': item.selected }"
+                @click="item.selected = !item.selected"
+              >
+                <!-- Card Header -->
+                <div class="row items-start justify-between q-mb-sm">
+                  <div class="column col">
+                    <span class="text-caption text-weight-bold text-primary text-uppercase letter-spacing-1" style="font-size: 0.65rem;">Factura #{{ item.invoice?.id }}</span>
+                    <span class="text-subtitle2 text-weight-bold text-grey-9 ellipsis">{{ item.invoice?.client?.name }}</span>
                   </div>
-                  <div class="text-weight-bolder text-positive">
+                  <q-checkbox v-model="item.selected" color="primary" dense @click.stop />
+                </div>
+
+                <!-- Products Mini-list -->
+                <div class="bg-grey-1 rounded-borders-12 q-pa-sm q-mb-sm border-subtle">
+                  <div v-for="product in item.invoice?.products || []" :key="product.id" class="row items-center q-py-xs q-px-sm border-bottom-subtle last-no-border">
+                    <div class="col text-caption text-grey-7 ellipsis">{{ product.name }}</div>
+                    <div class="col-auto row items-center no-wrap bg-white rounded-borders-20 q-px-xs border-subtle">
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        icon="remove"
+                        size="xs"
+                        color="grey-6"
+                        @click.stop="product.pivot.amount = Math.max(0, (product.pivot.amount || 0) - 1)"
+                        class="q-mr-xs"
+                      />
+                      <q-input
+                        v-model.number="product.pivot.amount"
+                        type="number"
+                        step="1"
+                        dense
+                        borderless
+                        input-class="text-center text-weight-bolder text-grey-9 q-pa-none"
+                        style="width: 32px; font-size: 0.85rem;"
+                        @click.stop
+                      />
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        icon="add"
+                        size="xs"
+                        color="grey-6"
+                        @click.stop="product.pivot.amount = (product.pivot.amount || 0) + 1"
+                        class="q-ml-xs"
+                      />
+                      <span class="text-caption text-grey-4 q-ml-xs" style="font-size: 0.7rem;">ud.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card Footer Info -->
+                <div class="row items-center justify-between mt-auto">
+                  <span class="text-caption text-grey-5">Total</span>
+                  <span class="text-subtitle2 text-weight-bolder text-grey-9">
                     {{ formatCurrency(calculateInvoiceTotal(item.invoice)) }}
-                  </div>
-                </q-card-section>
-
-                <q-separator inset />
-
-                <q-card-section class="q-pa-sm">
-                  <div class="text-overline text-grey-6 q-mb-xs">Productos</div>
-                  <q-list dense class="clone-products-list">
-                    <q-item v-for="product in item.invoice?.products || []" :key="product.id" class="q-px-none min-height-32">
-                      <q-item-section>
-                        <q-item-label class="text-caption text-grey-9 text-weight-medium ellipsis">
-                          {{ product.name }}
-                        </q-item-label>
-                      </q-item-section>
-                      <q-item-section side>
-                        <div class="row items-center no-wrap">
-                          <q-input
-                            v-model.number="product.pivot.amount"
-                            type="number"
-                            dense
-                            borderless
-                            input-class="text-right text-weight-bold text-primary"
-                            style="width: 50px"
-                            :readonly="!item.selected"
-                          />
-                          <span class="text-caption text-grey-5 q-ml-xs">und</span>
-                        </div>
-                      </q-item-section>
-                    </q-item>
-                  </q-list>
-                </q-card-section>
-              </q-card>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </q-card-section>
 
-        <q-card-section class="q-pa-md glass-footer">
-          <div class="row items-center justify-between">
+        <!-- Action Footer -->
+        <q-card-section class="q-px-lg q-py-md bg-white border-top-subtle">
+          <div class="row items-center justify-between bg-grey-1 q-pa-md rounded-borders-20 border-subtle">
             <div class="column">
-              <span class="text-caption text-indigo-1">Total a Clonar</span>
-              <span class="text-h5 text-weight-bolder text-white">
+              <span class="text-caption text-grey-6">Total a clonar</span>
+              <span class="text-h6 text-weight-bolder text-primary">
                 {{ formatCurrency(calculateSelectedCloneTotal) }}
               </span>
             </div>
             <q-btn
               unelevated
               rounded
-              padding="12px 32px"
-              color="white"
-              text-color="primary"
-              label="Confirmar Clonación"
-              class="text-weight-bolder shadow-15 transition-all hover-scale"
+              color="primary"
+              label="Clonar"
+              class="text-weight-bold text-uppercase letter-spacing-1 shadow-2 q-px-xl"
               :loading="cloningInProgress"
               :disable="selectedCloneCount === 0"
               @click="confirmCloning"
-            >
-              <template v-slot:loading>
-                <q-spinner-dots />
-              </template>
-            </q-btn>
+            />
           </div>
         </q-card-section>
       </q-card>
@@ -682,26 +713,26 @@ const deliveryPersonOptions = ref([])
 const showFilterDialog = ref(false)
 
 /**
- * Clone dialog visibility
- * @type {Ref<boolean>}
+ * Descripction
+ * @type {boolean} description var
  */
 const showCloneDialog = ref(false)
 
 /**
- * Delivery run to clone
- * @type {Ref<Object|null>}
+ * Descripction
+ * @type {Object} description var
  */
 const runToClone = ref(null)
 
 /**
- * Items to clone in the preview
- * @type {Ref<Array<Object>>}
+ * Descripction
+ * @type {Array} description var
  */
 const cloneItems = ref([])
 
 /**
- * Cloning process state
- * @type {Ref<boolean>}
+ * Descripction
+ * @type {boolean} description var
  */
 const cloningInProgress = ref(false)
 
@@ -2489,7 +2520,6 @@ async function drawHistoryRunOnMap (run) {
   }
 }
 
-
 /**
  * Formats date to readable string
  */
@@ -2520,21 +2550,37 @@ function calculateCompletedDuration (startTime, endTime) {
 }
 
 /**
- * Opens the clone preview dialog
- * @param {Object} run
+ * Descripction
+ * @params {Object} run run to clone
+ * @return {void} description return
  */
 function openClonePreview (run) {
   runToClone.value = run
   // Deep clone items to allow local editing without affecting the original run
-  cloneItems.value = JSON.parse(JSON.stringify(run.items || [])).map(item => ({
-    ...item,
-    selected: true // Default all selected
-  }))
+  const clonedItems = JSON.parse(JSON.stringify(run.items || []))
+
+  // Format items: select by default and round amounts to avoid excess decimals
+  cloneItems.value = clonedItems.map(item => {
+    if (item.invoice && item.invoice.products) {
+      item.invoice.products = item.invoice.products.map(p => {
+        if (p.pivot && p.pivot.amount) {
+          p.pivot.amount = parseFloat(parseFloat(p.pivot.amount).toFixed(2))
+        }
+        return p
+      })
+    }
+    return {
+      ...item,
+      selected: true
+    }
+  })
+
   showCloneDialog.value = true
 }
 
 /**
- * Calculates selected clone total amount
+ * Descripction
+ * @type {number} description var
  */
 const calculateSelectedCloneTotal = computed(() => {
   return cloneItems.value
@@ -2543,14 +2589,17 @@ const calculateSelectedCloneTotal = computed(() => {
 })
 
 /**
- * Selected clone count
+ * Descripction
+ * @type {number} description var
  */
 const selectedCloneCount = computed(() => {
   return cloneItems.value.filter(item => item.selected).length
 })
 
 /**
- * Calculates total for a single invoice
+ * Descripction
+ * @params {Object} invoice invoice to calculate
+ * @return {number} description return
  */
 function calculateInvoiceTotal (invoice) {
   if (!invoice) return 0
@@ -2562,7 +2611,8 @@ function calculateInvoiceTotal (invoice) {
 }
 
 /**
- * Confirms and executes the cloning process
+ * Descripction
+ * @return {Promise} description return
  */
 async function confirmCloning () {
   if (selectedCloneCount.value === 0) return
@@ -2579,6 +2629,7 @@ async function confirmCloning () {
             amount: p.pivot.amount,
             price: p.pivot.price,
             taxe: p.pivot.taxe,
+            cost: p.pivot.cost,
             observation: p.pivot.observation
           }
         }))
@@ -2980,62 +3031,67 @@ async function confirmCloning () {
 }
 
 /* Clone Dialog Styles */
-.blur-bg-strong {
-  background: rgba(15, 23, 42, 0.75) !important;
-  backdrop-filter: blur(25px) saturate(200%);
-  -webkit-backdrop-filter: blur(25px) saturate(200%);
+.minimal-invoice-card {
+  background: white;
+  border: 1px solid #f1f5f9;
+  border-radius: 20px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
 }
 
-.glass-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 24px;
+.minimal-invoice-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
-.glass-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(15, 23, 42, 0.5);
+.minimal-invoice-card.is-selected {
+  border-color: var(--q-primary);
+  background: #f8fafc;
 }
 
-.invoice-clone-card {
-  height: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0,0,0,0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.border-bottom-subtle {
+  border-bottom: 1px solid rgba(0,0,0,0.03);
 }
 
-.body--dark .invoice-clone-card {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
+.last-no-border:last-child {
+  border-bottom: none;
 }
 
-.shadow-hover:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.letter-spacing-1 {
+  letter-spacing: 1px;
 }
 
-.rounded-borders-16 { border-radius: 16px; }
-
-.min-height-32 { min-height: 32px; }
-
-.shadow-15 {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 30px rgba(79, 70, 229, 0.4);
+.rounded-borders-20 {
+  border-radius: 20px;
 }
 
-.hover-scale {
-  transition: all 0.3s;
-}
-
-.hover-scale:hover {
-  transform: scale(1.03);
-}
-
-.premium-toast {
+.rounded-borders-12 {
   border-radius: 12px;
-  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%) !important;
-  font-weight: 500;
 }
 
-.dialog-content-area {
-  min-height: 300px;
+.body--dark .minimal-invoice-card {
+  background: #1e293b;
+  border-color: #334155;
 }
+
+.body--dark .minimal-invoice-card:hover {
+  border-color: #475569;
+}
+
+.body--dark .minimal-invoice-card.is-selected {
+  border-color: var(--q-primary);
+  background: #1e293b;
+}
+
+.body--dark .bg-grey-1 {
+  background: #0f172a !important;
+}
+
+.body--dark .text-grey-9 { color: #f1f5f9 !important; }
+.body--dark .text-grey-6 { color: #94a3b8 !important; }
+.body--dark .text-grey-7 { color: #cbd5e1 !important; }
 </style>
