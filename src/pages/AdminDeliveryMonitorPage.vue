@@ -424,12 +424,32 @@
 
         <!-- Compact Search & Selection Area -->
         <q-card-section class="q-px-lg q-py-sm bg-grey-1">
-          <div class="row items-center justify-between">
-            <q-badge color="primary" rounded class="q-px-sm q-py-xs shadow-1">
-              {{ selectedCloneCount }} seleccionadas
-            </q-badge>
-            <q-btn flat rounded dense size="sm" color="primary" :label="selectedCloneCount === cloneItems.length ? 'Deseleccionar todo' : 'Seleccionar todo'"
-              @click="cloneItems.forEach(i => i.selected = selectedCloneCount !== cloneItems.length)" class="text-weight-bold" />
+          <div class="row items-center justify-between no-wrap q-gutter-md">
+            <div class="row items-center q-gutter-sm">
+              <q-badge color="primary" rounded class="q-px-sm q-py-xs shadow-1">
+                {{ selectedCloneCount }} seleccionadas
+              </q-badge>
+              <q-btn flat rounded dense size="sm" color="primary" :label="selectedCloneCount === cloneItems.length ? 'Deseleccionar todo' : 'Seleccionar todo'"
+                @click="cloneItems.forEach(i => i.selected = selectedCloneCount !== cloneItems.length)" class="text-weight-bold" />
+            </div>
+
+            <!-- Date Picker for Clone -->
+            <div class="row items-center q-gutter-sm">
+              <span class="text-caption text-grey-7 text-weight-bold">FECHA DE ENTREGA:</span>
+              <q-input v-model="cloneDeliveryDate" dense outlined rounded bg-color="white" mask="####-##-##" class="q-ml-sm" style="width: 150px;">
+                <template v-slot:append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="cloneDeliveryDate" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
           </div>
         </q-card-section>
 
@@ -735,6 +755,12 @@ const cloneItems = ref([])
  * @type {boolean} description var
  */
 const cloningInProgress = ref(false)
+
+/**
+ * Descripction
+ * @type {string} description var
+ */
+const cloneDeliveryDate = ref(new Date().toISOString().split('T')[0])
 
 /**
  * Label for the current active range
@@ -2556,6 +2582,11 @@ function calculateCompletedDuration (startTime, endTime) {
  */
 function openClonePreview (run) {
   runToClone.value = run
+  // Set default delivery date to tomorrow
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  cloneDeliveryDate.value = tomorrow.toISOString().split('T')[0]
+
   // Deep clone items to allow local editing without affecting the original run
   const clonedItems = JSON.parse(JSON.stringify(run.items || []))
 
@@ -2623,6 +2654,7 @@ async function confirmCloning () {
       .filter(item => item.selected)
       .map(item => ({
         id: item.invoice.id,
+        delivery_date: cloneDeliveryDate.value,
         products: item.invoice.products.map(p => ({
           id: p.id,
           pivot: {
@@ -2923,6 +2955,27 @@ async function confirmCloning () {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.half-height-scroll {
+  overflow-y: auto;
+}
+
+.half-height-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.half-height-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.half-height-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.body--dark .half-height-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Utilities */
