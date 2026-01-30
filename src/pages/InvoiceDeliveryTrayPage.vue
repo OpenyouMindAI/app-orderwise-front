@@ -355,6 +355,7 @@ import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { loadGoogleMaps } from 'src/boot/google-maps'
 import { authentication } from 'src/stores/module-authentication'
+import eventBus from 'src/utils/eventBus'
 
 // Router and UI utilities
 const router = useRouter()
@@ -543,7 +544,6 @@ async function checkActiveRun () {
     hasActiveRun.value = false
   }
 }
-
 const expandedInvoices = ref([])
 
 /**
@@ -2244,7 +2244,7 @@ async function showReturnRouteOnMap () {
   font-size: 14px;
   font-weight: 800;
   color: #1e293b;
-  background: white;
+  background: teal;
   padding: 2px 10px;
   border-radius: 8px;
   border: 1px solid #f1f5f9;
@@ -2500,5 +2500,166 @@ async function showReturnRouteOnMap () {
   background: white;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   z-index: 1000;
+}
+/* Dark Mode Adaptations */
+.body--dark .page-container {
+  background-color: dark;
+}
+
+.body--dark .premium-header-bar {
+  background: rgba(15, 23, 42, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.body--dark .header-main-title {
+  color: #f1f5f9;
+}
+
+.body--dark .header-sub-title {
+  color: #94a3b8;
+}
+
+.body--dark .modern-order-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+}
+
+.body--dark .modern-order-card.is-active {
+  background: #1e1b4b;
+  border-color: #6366f1;
+}
+
+.body--dark .order-id-label {
+  background: #312e81;
+  color: #a5b4fc;
+}
+
+.body--dark .order-total-value-pill {
+  background: dark;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.body--dark .modern-order-card.is-active .order-total-value-pill {
+  border-color: #6366f1;
+  color: #818cf8;
+}
+
+.body--dark .order-client-name {
+  color: #f1f5f9;
+}
+
+.body--dark .detail-item {
+  color: #94a3b8;
+}
+
+.body--dark .order-card-address {
+  color: #64748b;
+}
+
+.body--dark .expansion-trigger-btn {
+  background: #312e81;
+}
+
+.body--dark .expansion-trigger-btn.is-expanded {
+  background: #6366f1;
+}
+
+.body--dark .order-expansion-content {
+  border-top-color: rgba(255, 255, 255, 0.05);
+}
+
+.body--dark .order-description-box {
+  background: dark;
+}
+
+.body--dark .order-description-box .text-grey-8 {
+  color: #cbd5e1 !important;
+}
+
+.body--dark .product-item-row {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.body--dark .product-item-row .text-grey-9 {
+  color: #f1f5f9 !important;
+}
+
+.body--dark .qty-control-pill {
+  background: dark;
+}
+
+.body--dark .qty-control-pill .text-grey-9 {
+  color: #818cf8 !important;
+}
+
+.body--dark .status-tabs-container-bottom {
+  background: rgba(15, 23, 42, 0.9);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.body--dark .finish-route-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.body--dark .finish-route-info {
+  background: #064e3b;
+  border-color: #065f46;
+}
+
+.body--dark .info-title {
+  color: #ecfdf5;
+}
+
+.body--dark .info-subtitle {
+  color: #a7f3d0;
+}
+
+.body--dark .modern-empty-state .text-grey-9 {
+  color: #f1f5f9 !important;
+}
+
+.body--dark .empty-icon-wrapper {
+  background: #1e293b;
+}
+
+.body--dark .map-dialog-card {
+  background: dark !important;
+}
+
+.body--dark .map-tabs-modern {
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.body--dark .map-tab-modern {
+  color: #94a3b8;
+}
+
+.body--dark .close-btn-floating {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.body--dark .map-loading {
+  background: rgba(15, 23, 42, 0.9);
+}
+.body--dark .status-tabs {
+  background: transparent !important;
+}
+
+.body--dark .status-tab {
+  color: #94a3b8;
+}
+
+.body--dark .status-tab.q-tab--active {
+  color: #818cf8;
+}
+
+.body--dark .status-tabs-container-bottom {
+  background: rgba(15, 23, 42, 0.95);
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 </style>
