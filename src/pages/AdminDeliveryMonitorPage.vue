@@ -779,24 +779,6 @@ const cloningInProgress = ref(false)
  */
 const cloneDeliveryDate = ref(new Date().toISOString().split('T')[0])
 
-/**
- * Label for the current active range
- */
-const currentRangeLabel = computed(() => {
-  const activeRange = quickDateRanges.find(r => isRangeActive(r))
-  if (activeRange) return activeRange.label
-  return 'Personalizado'
-})
-
-/**
- * Label for the selected delivery person
- */
-const selectedDeliveryPersonLabel = computed(() => {
-  if (!historyFilters.value.deliveryPerson) return 'Todos'
-  const person = deliveryPersonOptions.value.find(p => p.id === historyFilters.value.deliveryPerson)
-  return person ? person.name : 'Todos'
-})
-
 // Computed properties
 /**
  * Total number of deliveries across all runs
@@ -2357,16 +2339,10 @@ function calculateDistance (lat1, lng1, lat2, lng2) {
 async function loadDeliveryPersons () {
   try {
     // Obtener todos los usuarios y filtrar por rol de repartidor
-    const response = await api.get('/users')
-    const users = response.data.users || response.data.data || response.data || []
+    const { data } = await api.get('delivery-persons')
 
     // Filtrar usuarios que sean repartidores (puedes ajustar según tu estructura)
-    deliveryPersonOptions.value = users.filter(user =>
-      user.role === 'delivery' ||
-      user.roles?.some(role => role.name === 'delivery' || role.name === 'repartidor')
-    )
-
-    console.log('Delivery persons loaded:', deliveryPersonOptions.value.length)
+    deliveryPersonOptions.value = data
   } catch (error) {
     console.error('Error loading delivery persons:', error)
 
