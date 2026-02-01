@@ -6,15 +6,13 @@
       <div class="row items-center justify-between no-wrap">
         <div class="cockpit-welcome">
           <div class="greeting-row">
-            <span class="text-h5 text-weight-bolder">Estado de Caja</span>
-          </div>
-          <div class="welcome-subtitle">
-            <span class="text-caption opacity-60">Reporte en tiempo real de saldos por método de pago</span>
+            <q-icon name="history" color="primary" size="32px" class="q-mr-sm" />
+            <span class="text-subtitle1 text-weight-bolder">Historial de Arqueos y Balance</span>
           </div>
         </div>
 
         <div class="cockpit-meta">
-          <div class="date-chip-modern">
+          <div class="date-chip-modern text-uppercase">
             <q-icon name="event" size="14px" class="q-mr-xs" />
             <span>{{ currentDate }}</span>
           </div>
@@ -22,47 +20,53 @@
       </div>
     </div>
 
-    <!-- Filters Bento -->
+    <!-- Main Filters Bento -->
     <div class="bento-grid q-mb-md">
       <div class="bento-item span-full filters-bento">
         <div class="row q-col-gutter-sm items-center">
-          <div class="col-5 col-sm-auto">
+          <div class="col-12 col-sm-auto">
             <q-input
               v-model="dateFrom"
               type="date"
               dense
               outlined
               label="Desde"
-              @update:model-value="debouncedLoad"
+              class="filter-input"
+              @update:model-value="loadAllData"
             />
           </div>
-          <div class="col-5 col-sm-auto">
+          <div class="col-12 col-sm-auto">
             <q-input
               v-model="dateTo"
               type="date"
               dense
               outlined
               label="Hasta"
-              @update:model-value="debouncedLoad"
+              class="filter-input"
+              @update:model-value="loadAllData"
             />
           </div>
-          <q-space />
           <div class="col-12 col-sm-auto">
             <q-select
-              v-model="selectedBranch"
-              :options="branches"
+              v-model="selectedMainCashbox"
+              :options="mainCashboxes"
               option-label="name"
               option-value="id"
-              label="Sucursal"
+              label="Filtrar por Caja Principal"
               dense
               outlined
               emit-value
               map-options
               clearable
-              style="min-width: 200px"
-              @update:model-value="loadData"
-            />
+              style="min-width: 220px"
+              @update:model-value="loadAllData"
+            >
+              <template v-slot:prepend>
+                <q-icon name="account_balance" />
+              </template>
+            </q-select>
           </div>
+          <q-space />
           <div class="col-auto">
             <q-btn
               flat
@@ -70,177 +74,212 @@
               round
               icon="refresh"
               color="primary"
-              @click="loadData"
+              @click="loadAllData"
               :loading="loading"
             >
-              <q-tooltip>Actualizar</q-tooltip>
+              <q-tooltip>Sincronizar todo</q-tooltip>
             </q-btn>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="text-center q-py-xl">
-      <q-spinner-dots size="40px" color="primary" />
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="!hasData" class="empty-glitch flex flex-center q-py-xl">
-      <div class="text-center opacity-40">
-        <q-icon name="summarize" size="64px" class="q-mb-sm" />
-        <div class="text-subtitle1">Sin datos</div>
-        <div class="text-caption">No se encontraron movimientos en el período seleccionado</div>
-      </div>
-    </div>
-
-    <template v-else>
-      <!-- Global Stats -->
-      <div class="bento-grid q-mb-md">
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop">
-          <div class="stat-icon-wrap bg-soft-primary">
-            <q-icon name="trending_up" size="28px" color="primary" />
-          </div>
-          <div class="stat-data">
-            <div class="stat-val">{{ formatMoney(summary.total_sales) }}</div>
-            <div class="stat-lab">Total Ventas</div>
+    <!-- Main Content: Two Columns -->
+    <div class="two-column-layout">
+      <!-- Left Column: Global Withdrawals List -->
+      <q-card class="left-column bento-item no-border q-pa-none">
+        <div class="column-header-modern">
+          <div class="row items-center justify-between full-width">
+            <div class="text-subtitle2 text-weight-bolder">LISTA DE ARQUEOS</div>
+            <q-badge color="primary" rounded :label="globalWithdrawals.length" />
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop">
-          <div class="stat-icon-wrap bg-soft-positive">
-            <q-icon name="account_balance_wallet" size="28px" color="positive" />
+        <q-separator />
+
+        <q-scroll-area style="height: calc(100vh - 260px);">
+          <div v-if="loadingHistory" class="flex flex-center q-pa-xs">
+            <q-spinner-ios color="primary" size="40px" />
           </div>
-          <div class="stat-data">
-            <div class="stat-val text-positive">{{ formatMoney(summary.total_cash_in - summary.total_cash_out) }}</div>
-            <div class="stat-lab">Flujo Neto (+/-)</div>
+
+          <q-list v-else separator padding>
+            <q-item
+              v-for="gw in globalWithdrawals"
+              :key="gw.id"
+              clickable
+              :active="selectedGlobalWithdrawal?.id === gw.id"
+              class="history-item"
+              active-class="history-item--active"
+              @click="selectGlobalWithdrawal(gw)"
+            >
+              <q-item-section avatar>
+                <q-avatar size="40px" :color="selectedGlobalWithdrawal?.id === gw.id ? 'white' : 'blue-5'" :text-color="selectedGlobalWithdrawal?.id === gw.id ? 'primary' : 'white'">
+                  <q-icon name="receipt" size="20px" />
+                </q-avatar>
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-bold">Arqueo #{{ gw.id }}</q-item-label>
+                <q-item-label caption :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : ''">
+                  {{ formatDate(gw.date_from) }} • {{ formatTime(gw.created_at) }}
+                </q-item-label>
+              </q-item-section>
+
+              <q-item-section side>
+                <div class="text-right">
+                  <div class="row items-center justify-end q-gutter-x-xs no-wrap q-mb-xs">
+                    <q-icon name="account_balance_wallet" size="14px" :color="selectedGlobalWithdrawal?.id === gw.id ? 'white' : 'grey-7'" />
+                    <span class="text-caption" :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : 'text-grey-7'">
+                      {{ gw.cashflows_count || 0 }} arqueos
+                    </span>
+                  </div>
+                  <div class="text-weight-bold" :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : 'text-primary'">
+                    {{ formatMoney(gw.total_counted) }}
+                  </div>
+                  <q-badge
+                    :color="gw.difference >= 0 ? 'positive' : 'negative'"
+                    size="xs"
+                    :label="formatMoney(gw.difference)"
+                  />
+                </div>
+              </q-item-section>
+            </q-item>
+
+            <div v-if="globalWithdrawals.length === 0" class="flex flex-center q-pa-xl text-grey opacity-60">
+              <q-icon name="inbox" size="48px" />
+              <div class="full-width text-center">Sin arqueos en este período</div>
+            </div>
+          </q-list>
+        </q-scroll-area>
+      </q-card>
+
+      <!-- Right Column: Detail Area -->
+      <q-card class="right-column bento-item no-border q-pa-none">
+        <div class="column-header-modern">
+          <div class="row items-center justify-between full-width">
+            <div class="text-subtitle2 text-weight-bolder">DETALLE DEL CONTEO</div>
+            <q-btn v-if="selectedGlobalWithdrawal" flat round dense icon="print" color="white" size="sm" />
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop">
-          <div class="stat-icon-wrap bg-soft-warning">
-            <q-icon name="payments" size="28px" color="warning" />
-          </div>
-          <div class="stat-data">
-            <div class="stat-val">{{ formatMoney(summary.total_withdrawals) }}</div>
-            <div class="stat-lab">Retiros</div>
+        <q-separator />
+
+        <!-- Empty State for Detail -->
+        <div v-if="!selectedGlobalWithdrawal" class="empty-detail flex flex-center">
+          <div class="text-center opacity-40">
+            <q-icon name="mouse" size="64px" />
+            <div class="text-h6 q-mt-md">Selecciona un arqueo</div>
+            <div class="text-caption">Haz clic en un arqueo de la izquierda para ver su detalle</div>
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop">
-          <div class="stat-icon-wrap bg-soft-info">
-            <q-icon name="savings" size="28px" color="info" />
+        <!-- Detail Listing -->
+        <q-scroll-area v-else style="height: calc(100vh - 260px);">
+          <div v-if="loadingCounts" class="flex flex-center q-pa-xl">
+            <q-spinner-dots color="primary" size="40px" />
           </div>
-          <div class="stat-data">
-            <div class="stat-val text-info">{{ formatMoney(summary.total_theoretical) }}</div>
-            <div class="stat-lab">Total en Caja</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Payment Methods Section -->
-      <div class="bento-item q-mb-md">
-        <div class="bento-header">
-          <q-icon name="payment" class="q-mr-xs" />
-          <span>Desglose por Método de Pago</span>
-        </div>
-
-        <div class="payment-methods-grid">
-          <div
-            v-for="pm in paymentMethods"
-            :key="pm.payment_method_id"
-            class="payment-method-card"
-          >
-            <div class="method-header">
-              <q-avatar size="44px" :color="getColor(pm.payment_method_id)" text-color="white" class="shadow-2">
-                <q-icon :name="getIcon(pm.payment_method_name)" size="24px" />
-              </q-avatar>
-              <div class="method-title">
-                <div class="method-name">{{ pm.payment_method_name }}</div>
-                <div class="method-balance">{{ formatMoney(pm.total) }}</div>
+          <div v-else class="q-pa-md">
+            <!-- Summary of the specific Global Withdrawal -->
+            <div class="detail-summary-grid q-mb-lg">
+              <div class="detail-stat">
+                <div class="label">Ventas en Periodo</div>
+                <div class="value">{{ formatMoney(globalWithdrawalDetails?.total_sales) }}</div>
+              </div>
+              <div class="detail-stat">
+                <div class="label">Total Esperado</div>
+                <div class="value">{{ formatMoney(globalWithdrawalDetails?.total_expected) }}</div>
+              </div>
+              <div class="detail-stat highlight">
+                <div class="label">Total Contado</div>
+                <div class="value text-positive">{{ formatMoney(globalWithdrawalDetails?.total_counted) }}</div>
               </div>
             </div>
 
-            <div class="method-details">
-              <div class="detail-row">
-                <span class="detail-label">Ventas:</span>
-                <span class="detail-value text-positive">+ {{ formatMoney(pm.sales) }}</span>
-              </div>
-              <div v-if="pm.init_cashbox > 0" class="detail-row">
-                <span class="detail-label">Fondo Inicial:</span>
-                <span class="detail-value">+ {{ formatMoney(pm.init_cashbox) }}</span>
-              </div>
-              <div v-if="pm.cash_in > 0" class="detail-row">
-                <span class="detail-label">Entradas:</span>
-                <span class="detail-value text-positive">+ {{ formatMoney(pm.cash_in) }}</span>
-              </div>
-              <div v-if="pm.cash_out > 0" class="detail-row">
-                <span class="detail-label">Salidas:</span>
-                <span class="detail-value text-negative">- {{ formatMoney(pm.cash_out) }}</span>
-              </div>
-              <div v-if="pm.withdrawal > 0" class="detail-row">
-                <span class="detail-label">Retiros:</span>
-                <span class="detail-value text-negative">- {{ formatMoney(pm.withdrawal) }}</span>
-              </div>
-
-              <q-separator class="q-my-sm" />
-
-              <div class="detail-row detail-row--total">
-                <span class="detail-label">Saldo Teórico:</span>
-                <span class="detail-value" :class="pm.total >= 0 ? 'text-primary' : 'text-negative'">
-                  {{ formatMoney(pm.total) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cashboxes Summary Section -->
-      <div class="bento-item">
-        <div class="bento-header">
-          <q-icon name="point_of_sale" class="q-mr-xs" />
-          <span>Saldo por Caja Física</span>
-        </div>
-
-        <div class="cashboxes-grid">
-          <div
-            v-for="cb in cashboxes"
-            :key="cb.cashbox_id"
-            class="cashbox-card"
-          >
-            <div class="cashbox-header">
-              <q-avatar size="44px" color="blue-grey-7" text-color="white" class="shadow-2">
-                <q-icon name="account_balance" size="24px" />
-              </q-avatar>
-              <div class="cashbox-title">
-                <div class="cashbox-name">{{ cb.cashbox_name }}</div>
-                <div class="cashbox-balance">{{ formatMoney(cb.total) }}</div>
-              </div>
+            <!-- Detalle por Caja (Asociados al Arqueo Global) -->
+            <div class="detail-section-title q-mb-md">
+              <q-icon name="list_alt" size="20px" class="q-mr-sm" />
+              ARQUEOS ASOCIADOS EN ESTE REGISTRO
             </div>
 
-            <div class="cashbox-details">
-              <div class="detail-caption">Desglose de montos recibidos:</div>
-              <div
-                v-for="method in cb.methods"
-                :key="method.name"
-                class="detail-row"
+            <div v-if="cashboxesCounts?.length" class="q-gutter-y-sm">
+              <q-expansion-item
+                v-for="cashbox in cashboxesCounts"
+                :key="cashbox.cashbox_id"
+                header-class="cashbox-expansion-header"
+                class="cashbox-expansion-card overflow-hidden bento-item q-pa-none"
+                default-opened
               >
-                <span class="detail-label">{{ method.name }}:</span>
-                <span class="detail-value">{{ formatMoney(method.total) }}</span>
-              </div>
+                <template v-slot:header>
+                  <q-item-section avatar>
+                    <q-avatar color="primary" text-color="white" size="38px">
+                      <q-icon name="account_balance" size="20px" />
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">{{ cashbox.cashbox_name }}</q-item-label>
+                    <q-item-label caption>{{ cashbox.withdrawals?.length || 0 }} arqueos contados</q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <div class="text-right">
+                      <div class="text-subtitle2 text-weight-bold">{{ formatMoney(cashbox.total_counted) }}</div>
+                      <q-badge
+                        :color="cashbox.total_difference >= 0 ? 'positive' : 'negative'"
+                        :label="(cashbox.total_difference >= 0 ? '+' : '') + formatMoney(cashbox.total_difference)"
+                        class="diff-badge"
+                      />
+                    </div>
+                  </q-item-section>
+                </template>
 
-              <q-separator class="q-my-sm" v-if="cb.methods && cb.methods.length > 0" />
+                <q-card flat class="inner-withdrawal-list">
+                  <q-list separator>
+                    <q-item class="q-pa-none" v-for="w in cashbox.withdrawals" :key="w.id">
+                      <q-item-section avatar>
+                        <q-avatar
+                          :color="getPMColor(w.payment_method_id)"
+                          text-color="white"
+                          size="32px"
+                        >
+                          <q-icon :name="getPMIcon(w.payment_method_name)" size="16px" />
+                        </q-avatar>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-weight-medium">{{ w.payment_method_name }}</q-item-label>
+                        <q-item-label caption lines="1">
+                          📅 {{ w.date }}  |  🕒 {{ w.time }}
+                        </q-item-label>
+                        <q-item-label caption class="text-grey-7">
+                          👤 {{ w.user_name }}
+                        </q-item-label>
+                      </q-item-section>
+                      <q-item-section side>
+                        <div class="column items-end">
+                          <div class="text-caption text-grey-6">Esperado: {{ formatMoney(w.expected_amount) }}</div>
+                          <div class="text-subtitle2 text-weight-bold text-orange">Contado: {{ formatMoney(w.counted_amount) }}</div>
+                          <q-badge
+                            :color="w.difference >= 0 ? 'positive' : 'negative'"
+                            :label="(w.difference >= 0 ? '+' : '') + formatMoney(w.difference)"
+                            rounded
+                            class="q-mt-xs"
+                          />
+                        </div>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-card>
+              </q-expansion-item>
+            </div>
 
-              <div class="detail-row detail-row--total">
-                <span class="detail-label">Total Neto Recibido:</span>
-                <span class="detail-value text-primary">{{ formatMoney(cb.total) }}</span>
-              </div>
+            <!-- Empty Detailed List -->
+            <div v-else class="flex flex-center q-pa-xl opacity-40">
+              <q-icon name="list" size="48px" />
+              <div class="full-width text-center">No hay desgloses para este arqueo</div>
             </div>
           </div>
-        </div>
-      </div>
-    </template>
+        </q-scroll-area>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -248,211 +287,159 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
+import { formatDate } from 'src/const/mixins'
 
 const $q = useQuasar()
 
-/**
- * Loading state
- * @type {import('vue').Ref<boolean>}
- */
+// --- State ---
 const loading = ref(false)
+const loadingHistory = ref(false)
+const loadingCounts = ref(false)
 
-/**
- * Date from filter
- * @type {import('vue').Ref<string>}
- */
 const dateFrom = ref('')
-
-/**
- * Date to filter
- * @type {import('vue').Ref<string>}
- */
 const dateTo = ref('')
+const selectedMainCashbox = ref(null)
 
-/**
- * Selected Branch
- * @type {import('vue').Ref<number|null>}
- */
-const selectedBranch = ref(null)
-
-/**
- * Available branches
- * @type {import('vue').Ref<Array>}
- */
 const branches = ref([])
+const mainCashboxes = ref([])
 
-/**
- * Summary data
- * @type {import('vue').Ref<Object>}
- */
+// Balance Summary
 const summary = ref({
   total_sales: 0,
   total_cash_in: 0,
   total_cash_out: 0,
-  total_withdrawals: 0,
   total_theoretical: 0,
-  total_init_cashbox: 0
+  total_counted_withdrawals: 0,
+  difference: 0
 })
 
-/**
- * Payment methods data
- * @type {import('vue').Ref<Array>}
- */
-const paymentMethods = ref([])
+// History State
+const globalWithdrawals = ref([])
+const selectedGlobalWithdrawal = ref(null)
+const globalWithdrawalDetails = ref(null)
+const cashboxesCounts = ref([])
 
-/**
- * Cashboxes data
- * @type {import('vue').Ref<Array>}
- */
-const cashboxes = ref([])
-
-/**
- * Check if has data
- * @type {import('vue').ComputedRef<boolean>}
- */
-const hasData = computed(() => paymentMethods.value.length > 0 || cashboxes.value.length > 0)
-
-/**
- * Get current date formatted
- * @type {import('vue').ComputedRef<string>}
- */
+// --- Computeds ---
 const currentDate = computed(() => {
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
   return new Date().toLocaleDateString('es-ES', options)
 })
 
-/**
- * Timer for search debounce
- * @type {ReturnType<typeof setTimeout> | null}
- */
-let debounceTimer = null
+// --- Methods ---
 
 /**
- * Debounced load
- * @returns {void}
+ * Loads all contextual data (Balance + Arqueos List)
  */
-const debouncedLoad = () => {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(loadData, 300)
-}
-
-/**
- * Load data from API
- * @async
- * @returns {Promise<void>}
- */
-const loadData = async () => {
+const loadAllData = async () => {
   loading.value = true
+  loadingHistory.value = true
   try {
-    const params = {}
-    if (dateFrom.value) params.from = dateFrom.value
-    if (dateTo.value) params.to = dateTo.value
-    if (selectedBranch.value) params.branch_office_id = selectedBranch.value
+    const params = {
+      from: dateFrom.value,
+      to: dateTo.value,
+      date_from: dateFrom.value,
+      date_to: dateTo.value,
+      cashbox_id: selectedMainCashbox.value
+    }
 
-    const { data } = await api.get('/reports/cashbox-balance-report', { params })
+    // 1. Load Balance Report (Theoretical and Expenses)
+    const balanceRes = await api.get('/reports/cashbox-balance-report', { params })
+    const bData = balanceRes.data
 
-    summary.value = data.summary || {}
-    paymentMethods.value = data.by_payment_method || []
-    cashboxes.value = data.by_cashbox || []
+    // 2. Load Global Withdrawals List
+    const historyRes = await api.get('/reports/global-withdrawals', { params })
+    globalWithdrawals.value = historyRes.data.data || []
+
+    const hSummary = historyRes.data.summary || {}
+
+    // 3. Sync Summary
+    summary.value = bData.summary || {}
+    summary.value.total_counted_withdrawals = parseFloat(hSummary.total_counted || 0)
+    summary.value.difference = summary.value.total_counted_withdrawals - (summary.value.total_theoretical - (summary.value.total_cash_out || 0))
+
+    // Reset details if no longer in list
+    if (selectedGlobalWithdrawal.value && !globalWithdrawals.value.find(g => g.id === selectedGlobalWithdrawal.value.id)) {
+      selectedGlobalWithdrawal.value = null
+    }
   } catch (error) {
-    console.error('Error:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al cargar datos',
-      caption: error.message || 'Error desconocido'
-    })
+    console.error('Error loadAllData:', error)
+    $q.notify({ type: 'negative', message: 'Error cargando datos financieros' })
   } finally {
     loading.value = false
+    loadingHistory.value = false
   }
 }
 
 /**
- * Load branches
- * @async
- * @returns {Promise<void>}
+ * Select and load specific counts for an arqueo
  */
+const selectGlobalWithdrawal = async (gw) => {
+  selectedGlobalWithdrawal.value = gw
+  loadingCounts.value = true
+  try {
+    const { data } = await api.get(`/reports/global-withdrawals/${gw.id}/counts`)
+    globalWithdrawalDetails.value = data.global_withdrawal
+    cashboxesCounts.value = data.cashboxes || []
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al cargar detalle del conteo' })
+  } finally {
+    loadingCounts.value = false
+  }
+}
+
+const loadMainCashboxes = async () => {
+  try {
+    const { data } = await api.get('cashboxes', { params: { dataEqualFilter: { is_main: 1 } } })
+    mainCashboxes.value = data
+  } catch (err) {}
+}
+
 const loadBranches = async () => {
   try {
     const { data } = await api.get('branch-offices')
     branches.value = data
-  } catch (error) {
-    console.error('Error loading branches:', error)
-  }
+  } catch (err) {}
 }
 
-/**
- * Get color for payment method
- * @param {number} id - Payment method ID
- * @returns {string}
- */
-const getColor = (id) => {
-  const colors = ['primary', 'positive', 'orange', 'cyan', 'purple', 'teal', 'pink', 'indigo']
-  return colors[id % colors.length]
-}
-
-/**
- * Get icon for payment method
- * @param {string} name - Payment method name
- * @returns {string}
- */
-const getIcon = (name) => {
-  const n = (name || '').toLowerCase()
-  if (n.includes('efectivo')) return 'payments'
-  if (n.includes('tarjeta') || n.includes('débito') || n.includes('crédito')) return 'credit_card'
-  if (n.includes('transferencia')) return 'swap_horiz'
-  if (n.includes('mercado') || n.includes('mp')) return 'account_balance_wallet'
-  if (n.includes('qr')) return 'qr_code'
-  return 'payment'
-}
-
-/**
- * Format money
- * @param {number} amount - Amount
- * @returns {string}
- */
-const formatMoney = (amount) => {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS'
-  }).format(amount || 0)
-}
-
-onMounted(() => {
+const setDefaultDates = () => {
   const now = new Date()
   dateFrom.value = now.toISOString().split('T')[0]
   dateTo.value = now.toISOString().split('T')[0]
+}
 
+// --- Formatters ---
+const formatMoney = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0)
+const formatTime = (ts) => ts ? new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''
+
+const getPMColor = (id) => ['primary', 'positive', 'orange', 'cyan', 'purple', 'teal'][id % 6]
+const getPMIcon = (name) => {
+  const n = (name || '').toLowerCase()
+  if (n.includes('efectivo')) return 'payments'
+  if (n.includes('tarjeta')) return 'credit_card'
+  if (n.includes('transf')) return 'swap_horiz'
+  return 'payment'
+}
+
+onMounted(() => {
+  setDefaultDates()
   loadBranches()
-  loadData()
+  loadMainCashboxes()
+  loadAllData()
 })
 </script>
 
 <style scoped>
-/**
- * Finance Page Layout - Bento Grid System (matching HomePage)
- */
 .finance-page {
-  overflow-x: hidden;
   padding: 0px;
-  padding-bottom: 96px;
-  max-width: 1400px;
+  width: 1400px;
+  max-width: 95vw;
   margin: 0 auto;
-  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  font-family: 'Outfit', sans-serif;
 }
 
-@media (min-width: 1024px) {
-  .finance-page {
-    padding: 10px;
-    padding-bottom: 48px;
-  }
-}
-
-/**
- * Header Cockpit
- */
+/* Header */
 .header-cockpit {
-  padding: 24px 8px;
-  margin-bottom: 8px;
+  padding: 10px 16px;
   position: relative;
 }
 
@@ -463,371 +450,103 @@ onMounted(() => {
   width: 100px;
   height: 100px;
   background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.1) 0%, transparent 70%);
-  filter: blur(20px);
-  pointer-events: none;
-}
-
-.welcome-subtitle {
-  margin-top: 4px;
-  font-weight: 500;
 }
 
 .date-chip-modern {
-  display: flex;
-  align-items: center;
   background: white;
   padding: 8px 16px;
-  border-radius: 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
   font-size: 12px;
   font-weight: 700;
   color: #64748b;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 body.body--dark .date-chip-modern {
   background: #1e293b;
   border-color: #334155;
-  color: #94a3b8;
 }
 
-/**
- * Bento Grid Central
- */
+/* Bento & Grid */
 .bento-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 0 16px;
 }
 
-@media (min-width: 1024px) {
-  .bento-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
-}
+@media (max-width: 1024px) { .bento-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .bento-grid { grid-template-columns: 1fr; } }
 
 .bento-item {
   background: white;
-  border-radius: 20px;
-  padding: 16px;
-  border: 1px solid rgba(255,255,255,0.8);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px;
+  padding: 7px;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
-body.body--dark .bento-item {
-  background: #161d2b;
-  border: 1px solid rgba(255,255,255,0.03);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
-
-.bento-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.1);
-}
+body.body--dark .bento-item { background: #1e293b; border-color: #334155; }
 
 .span-full { grid-column: 1 / -1; }
-.span-full-mobile { grid-column: 1 / -1; }
-.span-small-mobile { grid-column: span 1; }
 
-@media (min-width: 1024px) {
-  .span-2-desktop { grid-column: span 2; }
-  .span-1-desktop { grid-column: span 1; }
-}
-
-/**
- * Bento Header
- */
-.bento-header {
-  font-size: 12px;
-  font-weight: 900;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-/**
- * Stats Tiles
- */
-.stat-hero {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  min-height: auto;
-}
-
-.stat-icon-wrap {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0;
-  flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.stat-hero:hover .stat-icon-wrap {
-  transform: scale(1.1) rotate(5deg);
-}
-
+/* Stats Tiles */
+.stat-hero { display: flex; align-items: center; gap: 16px; }
+.stat-icon-wrap { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
 .bg-soft-primary { background: rgba(var(--q-primary-rgb), 0.1); }
-.bg-soft-positive { background: rgba(var(--q-positive-rgb), 0.1); }
-.bg-soft-warning { background: rgba(var(--q-warning-rgb), 0.1); }
 .bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
+.bg-soft-negative { background: rgba(var(--q-negative-rgb), 0.1); }
+.bg-soft-positive { background: rgba(var(--q-positive-rgb), 0.1); }
 
-.stat-val {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
+.stat-val { font-size: 20px; font-weight: 800; }
+.stat-lab { font-size: 11px; font-weight: 600; color: #64748b; }
+
+/* Two Column Layout */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 16px;
+  padding: 0 16px;
 }
 
-.stat-lab {
-  font-size: 11px;
-  font-weight: 600;
-  color: #64748b;
-  margin-top: 2px;
-  white-space: nowrap;
-}
+@media (max-width: 900px) { .two-column-layout { grid-template-columns: 1fr; } }
 
-/**
- * Filters Bento
- */
-.filters-bento {
+.column-header-modern {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
   padding: 12px 16px;
+  border-radius: 16px 16px 0 0;
 }
 
-/**
- * Payment Methods Grid
- */
-.payment-methods-grid {
+.history-item { border-radius: 8px; margin: 4px 8px; transition: all 0.2s; }
+.history-item--active { background: var(--q-primary); color: white; transform: translateX(4px); }
+
+.empty-detail { height: 400px; }
+
+/* Detail Specifics */
+.detail-summary-grid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
-@media (min-width: 600px) {
-  .payment-methods-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .payment-methods-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.payment-method-card {
+.detail-stat {
+  padding: 12px;
   background: #f8fafc;
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+  text-align: center;
 }
+body.body--dark .detail-stat { background: #0f172a; }
 
-body.body--dark .payment-method-card {
-  background: #1e293b;
-  border-color: #334155;
-}
+.detail-stat.highlight { background: rgba(var(--q-positive-rgb), 0.05); }
+.detail-stat .label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+.detail-stat .value { font-size: 16px; font-weight: 900; }
 
-.payment-method-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-}
+.cashbox-group { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+body.body--dark .cashbox-group { border-color: #334155; }
 
-.method-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
+.cashbox-header-item { background: white; }
+body.body--dark .cashbox-header-item { background: #1e293b; }
 
-.method-title {
-  flex: 1;
-}
-
-.method-name {
-  font-size: 14px;
-  font-weight: 800;
-  color: #1e293b;
-  line-height: 1.2;
-}
-
-body.body--dark .method-name {
-  color: #f1f5f9;
-}
-
-.method-balance {
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--q-primary);
-  margin-top: 2px;
-}
-
-.method-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/**
- * Cashboxes Grid
- */
-.cashboxes-grid {
-  display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 12px;
-}
-
-@media (min-width: 600px) {
-  .cashboxes-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .cashboxes-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.cashbox-card {
-  background: #f8fafc;
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-body.body--dark .cashbox-card {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-.cashbox-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-}
-
-.cashbox-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.cashbox-title {
-  flex: 1;
-}
-
-.cashbox-name {
-  font-size: 14px;
-  font-weight: 800;
-  color: #1e293b;
-  line-height: 1.2;
-}
-
-body.body--dark .cashbox-name {
-  color: #f1f5f9;
-}
-
-.cashbox-balance {
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--q-primary);
-  margin-top: 2px;
-}
-
-.cashbox-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.detail-caption {
-  font-size: 10px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-/**
- * Detail Rows (universal)
- */
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-}
-
-.detail-row--total {
-  font-weight: 800;
-  font-size: 13px;
-  margin-top: 4px;
-}
-
-.detail-label {
-  color: #64748b;
-  font-weight: 600;
-}
-
-.detail-value {
-  font-weight: 700;
-  color: #1e293b;
-}
-
-body.body--dark .detail-value {
-  color: #f1f5f9;
-}
-
-/**
- * Empty glitch
- */
-.empty-glitch {
-  min-height: 200px;
-}
-
-/**
- * Utilities
- */
-.opacity-60 { opacity: 0.6; }
-.opacity-40 { opacity: 0.4; }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.section-fade-in {
-  animation: fadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-/**
- * Responsive
- */
-@media (max-width: 599px) {
-  .finance-page {
-    padding: 16px;
-  }
-
-  .stat-val {
-    font-size: 16px;
-  }
-
-  .header-cockpit {
-    padding: 16px 8px;
-  }
-}
+.counts-inner-card { border: none !important; }
 </style>

@@ -410,7 +410,6 @@ onMounted(() => {
  * Home page layout - Main Bento Grid System
  */
 .home-page {
-  background: #f1f5f9;
   overflow-x: hidden;
   padding: 0px;
   padding-bottom: 96px;
@@ -425,11 +424,6 @@ onMounted(() => {
     padding-bottom: 48px;
   }
 }
-
-body.body--dark .home-page {
-  background: #0b0f1a;
-}
-
 /**
  * Header Cockpit
  */

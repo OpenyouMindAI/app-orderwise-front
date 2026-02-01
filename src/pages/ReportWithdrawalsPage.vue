@@ -39,6 +39,18 @@
               <q-btn
                 unelevated
                 rounded
+                color="primary"
+                text-color="white"
+                icon="history"
+                label="Ver Historial"
+                @click="$router.push({ name: 'FinancePaymentsByMethod' })"
+                class="history-btn"
+              >
+                <q-tooltip>Ver historial de arqueos globales consolidados</q-tooltip>
+              </q-btn>
+              <q-btn
+                unelevated
+                rounded
                 color="white"
                 text-color="primary"
                 icon="help_outline"
@@ -943,10 +955,12 @@
       title="¡Arqueo Global Creado!"
       :subtitle="`Arqueo Global <span class='text-primary text-weight-bold'>#${createdGlobalWithdrawal?.id || ''}</span><br>Período: ${formatDate(`${dateFrom} 00:00:00`)} - ${formatDate(`${dateTo} 23:59:59`)} `"
       icon="summarize"
-      :show-view="false"
+      :show-view="true"
+      view-label="Ver Historial"
       :show-download="false"
       :show-share="false"
       close-label="Cerrar"
+      @view="$router.push({ name: 'GlobalWithdrawalsHistory' })"
       @close="closeGlobalModals"
     />
   </q-page>
