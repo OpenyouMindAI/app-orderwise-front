@@ -886,7 +886,7 @@
           </div>
 
           <q-list bordered separator class="rounded-borders">
-            <q-item v-for="pm in globalSummary" :key="pm.payment_method_id" class="q-py-md">
+            <q-item v-for="pm in activeGlobalSummary" :key="pm.payment_method_id" class="q-py-md">
               <q-item-section>
                 <q-item-label class="text-weight-medium">
                   {{ pm.payment_method_name }}
@@ -960,7 +960,7 @@
       :show-download="false"
       :show-share="false"
       close-label="Cerrar"
-      @view="$router.push({ name: 'GlobalWithdrawalsHistory' })"
+      @view="$router.push({ name: 'FinancePaymentsByMethod' })"
       @close="closeGlobalModals"
     />
   </q-page>
@@ -1225,6 +1225,14 @@ export default {
      * @type {import('vue').Ref<boolean>}
      */
     const loadingGlobalSummary = ref(false)
+
+    /**
+     * Filtered list of payment methods with a balance > 0
+     * @type {import('vue').ComputedRef<Array>}
+     */
+    const activeGlobalSummary = computed(() => {
+      return globalSummary.value.filter(pm => parseFloat(pm.total_counted || 0) > 0)
+    })
 
     /**
      * Computed property that calculates the total amount of all withdrawals
@@ -1953,12 +1961,12 @@ export default {
         }
 
         if (filters.value.payment_method_ids?.length) {
-          params.payment_method_ids = filters.value.payment_method_ids
+          params.payment_method_ids = filters.value.payment_method_ids.map(data => data?.id)
         }
 
-        const response = await api.get('/reports/withdrawals/summary-for-global', { params })
-        const data = response.data
+        const { data } = await api.get('/reports/withdrawals/summary-for-global', { params })
 
+        console.log(data)
         globalSummary.value = data.summary || []
         uncountedWithdrawals.value = data.uncounted_withdrawals || []
         cashboxOptions.value = data.cashboxes || []
@@ -1997,12 +2005,24 @@ export default {
      * @returns {Promise<void>}
      */
     const saveGlobalWithdrawal = async () => {
-      // Validate all payment methods have destination cashbox selected
-      const invalidMethods = globalSummary.value.filter(pm => !pm.destination_cashbox_id)
+      // Filter out payment methods with 0 amount
+      const activeMethods = globalSummary.value.filter(pm => parseFloat(pm.total_counted || 0) > 0)
+
+      if (activeMethods.length === 0) {
+        $q.notify({
+          type: 'warning',
+          message: 'No hay montos contados para guardar',
+          icon: 'money_off'
+        })
+        return
+      }
+
+      // Validate all active payment methods have destination cashbox selected
+      const invalidMethods = activeMethods.filter(pm => !pm.destination_cashbox_id)
       if (invalidMethods.length > 0) {
         $q.notify({
           type: 'warning',
-          message: 'Selecciona una caja destino para cada método de pago',
+          message: 'Selecciona una caja destino para cada método de pago con saldo',
           icon: 'warning'
         })
         return
@@ -2014,7 +2034,7 @@ export default {
           date_from: dateFrom.value,
           date_to: dateTo.value,
           branch_office_id: filters.value.branch_office_ids?.[0]?.id || null,
-          payment_methods: globalSummary.value.map(pm => ({
+          payment_methods: activeMethods.map(pm => ({
             payment_method_id: pm.payment_method_id,
             destination_cashbox_id: pm.destination_cashbox_id,
             cashflow_ids: pm.cashflow_ids
@@ -2189,6 +2209,7 @@ export default {
       isCurrentMonth,
       isPreviousMonth,
       isToday,
+      activeGlobalSummary,
 
       // Date Methods
       setCurrentMonth,
