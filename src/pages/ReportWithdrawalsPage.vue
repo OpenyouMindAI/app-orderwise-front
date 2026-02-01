@@ -732,13 +732,13 @@
 
         <q-card-section class="q-pa-lg">
           <div class="text-body1 q-mb-md">
-            Se encontraron <strong class="text-warning">{{ filteredUncountedWithdrawals.length }}</strong> arqueo(s) que no han sido contados (sin monto real ingresado).
+            Se encontraron <strong class="text-warning">{{ uncountedWithdrawals.length }}</strong> arqueo(s) que no han sido contados (sin monto real ingresado).
           </div>
 
           <!-- Scrollable list for uncounted withdrawals -->
-          <q-scroll-area style="height: 300px;" class="q-mb-md" v-if="filteredUncountedWithdrawals.length > 0">
+          <q-scroll-area style="height: 300px;" class="q-mb-md" v-if="uncountedWithdrawals.length > 0">
             <q-list bordered separator class="rounded-borders">
-              <q-item v-for="unc in filteredUncountedWithdrawals" :key="unc.id" dense>
+              <q-item v-for="unc in uncountedWithdrawals" :key="unc.id" dense>
                 <q-item-section avatar>
                   <q-avatar color="warning" text-color="dark" size="40px">
                     <q-icon name="account_balance" size="20px" />
@@ -1236,18 +1236,6 @@ export default {
       return daysData.value.length > 0
     })
 
-    /**
-     * Computed property that filters uncounted withdrawals by selected payment methods
-     * @type {import('vue').ComputedRef<Array>}
-     */
-    const filteredUncountedWithdrawals = computed(() => {
-      if (filters.value.payment_method_ids.length === 0) {
-        return uncountedWithdrawals.value
-      }
-      return uncountedWithdrawals.value.filter(unc =>
-        filters.value.payment_method_ids.includes(unc.payment_method_id)
-      )
-    })
 
     const dayColumns = [
       {
@@ -1950,6 +1938,10 @@ export default {
           params.branch_office_ids = filters.value.branch_office_ids.map(data => data?.id)
         }
 
+        if (filters.value.payment_method_ids?.length) {
+          params.payment_method_ids = filters.value.payment_method_ids
+        }
+
         const response = await api.get('/reports/withdrawals/summary-for-global', { params })
         const data = response.data
 
@@ -2253,8 +2245,7 @@ export default {
       openGlobalWithdrawalModal,
       continueToSummary,
       saveGlobalWithdrawal,
-      closeGlobalModals,
-      filteredUncountedWithdrawals
+      closeGlobalModals
     }
   }
 }
