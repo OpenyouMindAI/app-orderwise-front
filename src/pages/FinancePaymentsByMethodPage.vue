@@ -373,7 +373,7 @@ const loadData = async () => {
  */
 const loadBranches = async () => {
   try {
-    const { data } = await api.get('/branch-offices')
+    const { data } = await api.get('branch-offices')
     branches.value = data
   } catch (error) {
     console.error('Error loading branches:', error)
@@ -445,10 +445,6 @@ onMounted(() => {
     padding: 10px;
     padding-bottom: 48px;
   }
-}
-
-body.body--dark .finance-page {
-  background: #0b0f1a;
 }
 
 /**

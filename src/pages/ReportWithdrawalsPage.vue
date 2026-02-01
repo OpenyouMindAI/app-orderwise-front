@@ -720,7 +720,7 @@
 
     <!-- Global Withdrawal Warning Modal (Uncounted Withdrawals) -->
     <q-dialog v-model="showGlobalWarningModal" persistent>
-      <q-card class="global-modal-card" style="min-width: 400px; max-width: 550px;">
+      <q-card class="global-modal-card" style="min-width: 500px; max-width: 700px;">
         <q-card-section class="bg-warning text-white">
           <div class="row items-center q-gutter-sm">
             <q-icon name="warning" size="28px" />
@@ -732,28 +732,60 @@
 
         <q-card-section class="q-pa-lg">
           <div class="text-body1 q-mb-md">
-            Se encontraron <strong class="text-warning">{{ uncountedWithdrawals.length }}</strong> arqueo(s) que no han sido contados (sin monto real ingresado).
+            Se encontraron <strong class="text-warning">{{ filteredUncountedWithdrawals.length }}</strong> arqueo(s) que no han sido contados (sin monto real ingresado).
           </div>
 
-          <q-list v-if="uncountedWithdrawals.length <= 5" bordered separator class="rounded-borders q-mb-md">
-            <q-item v-for="unc in uncountedWithdrawals" :key="unc.id" dense>
-              <q-item-section>
-                <q-item-label>Arqueo #{{ unc.id }}</q-item-label>
-                <q-item-label caption>
-                  {{ unc.payment_method_name || 'Sin método' }} • {{ formatCurrency(unc.amount) }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-badge color="warning" text-color="dark" label="Sin contar" />
-              </q-item-section>
-            </q-item>
-          </q-list>
+          <!-- Scrollable list for uncounted withdrawals -->
+          <q-scroll-area style="height: 300px;" class="q-mb-md" v-if="filteredUncountedWithdrawals.length > 0">
+            <q-list bordered separator class="rounded-borders">
+              <q-item v-for="unc in filteredUncountedWithdrawals" :key="unc.id" dense>
+                <q-item-section avatar>
+                  <q-avatar color="warning" text-color="dark" size="40px">
+                    <q-icon name="account_balance" size="20px" />
+                  </q-avatar>
+                </q-item-section>
+
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">
+                    {{ unc.cashbox_name || 'Sin caja' }}
+                  </q-item-label>
+                  <q-item-label caption>
+                    <span class="text-grey-8">👤 {{ unc.user_name || 'Sin usuario' }}</span>
+                  </q-item-label>
+                  <q-item-label caption lines="2">
+                    <div class="row q-gutter-xs items-center">
+                      <q-icon name="event" size="14px" />
+                      <span>{{ unc.date || 'Sin fecha' }}</span>
+                      <q-icon name="schedule" size="14px" class="q-ml-xs" />
+                      <span>{{ unc.time || '--:--' }}</span>
+                    </div>
+                    <div class="row q-gutter-xs items-center q-mt-xs">
+                      <q-icon name="credit_card" size="14px" />
+                      <span>{{ unc.payment_method_name || 'Sin método' }}</span>
+                      <q-separator vertical class="q-mx-xs" />
+                      <span class="text-weight-medium">{{ formatCurrency(unc.amount) }}</span>
+                    </div>
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section side>
+                  <div class="column items-end q-gutter-xs">
+                    <q-badge
+                      :color="unc.shift_status === 'open' ? 'positive' : 'grey'"
+                      :label="unc.shift_status === 'open' ? 'Turno Abierto' : 'Turno Cerrado'"
+                    />
+                    <q-badge color="warning" text-color="dark" label="Sin contar" />
+                  </div>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-scroll-area>
 
           <q-banner v-else class="bg-blue-1 text-blue-9 rounded-borders">
             <template v-slot:avatar>
               <q-icon name="info" color="blue" />
             </template>
-            Hay muchos arqueos sin contar. Se recomienda completarlos antes de generar el reporte global.
+            No hay arqueos sin contar para los métodos de pago seleccionados.
           </q-banner>
 
           <div class="text-caption text-grey-7 q-mt-md">
@@ -1202,6 +1234,19 @@ export default {
      */
     const hasData = computed(() => {
       return daysData.value.length > 0
+    })
+
+    /**
+     * Computed property that filters uncounted withdrawals by selected payment methods
+     * @type {import('vue').ComputedRef<Array>}
+     */
+    const filteredUncountedWithdrawals = computed(() => {
+      if (filters.value.payment_method_ids.length === 0) {
+        return uncountedWithdrawals.value
+      }
+      return uncountedWithdrawals.value.filter(unc =>
+        filters.value.payment_method_ids.includes(unc.payment_method_id)
+      )
     })
 
     const dayColumns = [
@@ -2208,7 +2253,8 @@ export default {
       openGlobalWithdrawalModal,
       continueToSummary,
       saveGlobalWithdrawal,
-      closeGlobalModals
+      closeGlobalModals,
+      filteredUncountedWithdrawals
     }
   }
 }
