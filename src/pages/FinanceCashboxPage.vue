@@ -1159,22 +1159,6 @@ const formatCurrency = (val) => {
 }
 
 /**
- * Formats a date string into a local readable format
- * @params {string} dateStr ISO date string
- * @return {string} formatted local date string
- */
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-/**
  * Formats a date string into a short readable format for bank statement
  * @params {string} dateStr ISO date string
  * @return {string} formatted short date string
@@ -1195,15 +1179,6 @@ const formatDateShort = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit'
   })
-}
-
-/**
- * Checks if a movement type is considered a positive flow (debit)
- * @params {string} type movement type slug
- * @return {boolean} true if positive flow
- */
-const isPositive = (type) => {
-  return ['debit', 'init_cashbox', 'transfer_in', 'global_withdrawal'].includes(type)
 }
 
 /**
