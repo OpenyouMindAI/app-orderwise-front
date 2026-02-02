@@ -64,7 +64,7 @@
           </q-item-section>
           <q-item-section>
             <q-item-label>{{ scope.opt.main_text }}</q-item-label>
-            <q-item-label caption>{{ scope.opt.secondary_text }}</q-item-label>
+            <q-item-label>{{ scope.opt.secondary_text }}</q-item-label>
           </q-item-section>
         </q-item>
       </template>

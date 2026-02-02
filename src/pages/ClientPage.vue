@@ -116,54 +116,104 @@
         </q-table>
       </div>
     </div>
+    <!-- Dialog: Modificar Cliente -->
     <q-dialog v-model="openEditClient" persistent :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column' : ''"
-        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 80vw;'"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 90vw; border-radius: 16px;'"
       >
         <q-form @submit="saveEdit" class="column full-height">
-          <!-- Header con estilo naranja -->
-          <q-card-section class="row items-center text-white bg-primary q-py-sm">
-            <div class="text-h6">Modificar cliente</div>
+          <q-card-section class="row items-center text-white bg-primary q-py-md">
+            <q-icon name="edit" size="24px" class="q-mr-sm" />
+            <div class="text-h6 text-weight-bold">Modificar Cliente</div>
             <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
+            <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <!-- Body con tema oscuro -->
           <q-card-section class="scroll col q-pa-md">
             <div class="row q-col-gutter-md">
-              <!-- Nombre - Campo principal con asterisco rojo -->
+              <!-- SECCIÓN: INFORMACIÓN BÁSICA -->
+              <div class="col-12 q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="person" size="20px" />
+                  <span>Información Básica</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
               <div class="col-12">
                 <q-input
                   filled
                   v-model="client.name"
-                  label="Nombre *"
+                  label="Nombre Completo *"
                   :rules="[val => !!val || 'El campo es requerido.']"
                   autofocus
                   dense
-                />
+                >
+                  <template v-slot:prepend><q-icon name="account_circle" /></template>
+                </q-input>
               </div>
 
-              <!-- Información adicional -->
-              <div class="col-12 text-grey-7 q-mt-sm">
-                Información adicional (opcional)
-              </div>
-
-              <!-- Fila 1: Tipo de documento y Número -->
               <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.email"
+                  type="email"
+                  label="Correo Electrónico"
+                  dense
+                >
+                  <template v-slot:prepend><q-icon name="email" /></template>
+                </q-input>
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.phone_number"
+                  label="Teléfono / WhatsApp"
+                  dense
+                >
+                  <template v-slot:prepend><q-icon name="phone" /></template>
+                </q-input>
+              </div>
+
+              <!-- SECCIÓN: IDENTIFICACIÓN Y FISCAL -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="badge" size="20px" />
+                  <span>Identificación y Datos Fiscales</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
+              <div class="col-12 col-sm-6" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
+                />
                 <q-select
                   filled
                   use-input
                   label="Tipo de documento"
-                  input-debounce="0"
                   option-label="Desc"
                   option-value="id"
                   v-model="client.document_type"
                   :options="documentTypes"
                   @filter="getDocumentTypes"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
+
               <div class="col-12 col-sm-6">
                 <q-input
                   filled
@@ -173,71 +223,79 @@
                 />
               </div>
 
-              <!-- Fila 2: Correo y Teléfono -->
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="client.email"
-                  type="email"
-                  label="Correo"
-                  dense
+              <div class="col-12" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
                 />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="client.phone_number"
-                  label="Teléfono"
-                  dense
-                />
-              </div>
-            <!-- Fila 3: Usuario y Contraseña -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.username"
-                label="Usuario"
-                autocomplete="off"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.password"
-                :type="showPassword ? 'text' : 'password'"
-                label="Contraseña"
-                autocomplete="new-password"
-              >
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPassword ? 'visibility_off' : 'visibility'"
-                    class="cursor-pointer"
-                    @click="showPassword = !showPassword"
-                  />
-                </template>
-              </q-input>
-            </div>
-              <!-- Condición de IVA -->
-              <div class="col-12">
                 <q-select
                   filled
                   use-input
                   label="Condición de IVA"
-                  input-debounce="0"
                   option-label="name"
                   option-value="code"
                   v-model="client.condition_iva_receptor"
                   :options="conditionIvaReceptors"
                   @filter="getConditionIvaReceptor"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
-              <!-- Affiliate Configuration -->
-              <div class="col-12 flex q-gutter-x-lg q-pt-md">
-                <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
+
+              <!-- SECCIÓN: ACCESO Y SEGURIDAD -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="lock" size="20px" />
+                  <span>Acceso al Sistema</span>
+                </div>
+                <q-separator class="q-mt-xs" />
               </div>
 
-              <!-- Sección de Dirección -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.username"
+                  label="Usuario"
+                  dense
+                />
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  label="Contraseña"
+                  dense
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="showPassword ? 'visibility_off' : 'visibility'"
+                      class="cursor-pointer"
+                      @click="showPassword = !showPassword"
+                    />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- SECCIÓN: UBICACIÓN Y CONTACTO -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="location_on" size="20px" />
+                  <span>Ubicación y Referencias</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
               <div class="col-12">
                 <AddressComponent
                   :key="addressComponentKey"
@@ -245,87 +303,176 @@
                   @address-selected="handleAddressSelected"
                 />
               </div>
+
               <div class="col-12">
                 <q-input
                   filled
                   v-model="client.reference"
-                  label="Referencia"
+                  label="Referencia / Observaciones"
                   dense
+                  type="textarea"
+                  rows="2"
                 />
+              </div>
+
+              <!-- SECCIÓN: CONFIGURACIÓN ADICIONAL -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="settings" size="20px" />
+                  <span>Configuración Adicional</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
+              <div class="col-12 row items-center q-col-gutter-sm">
+                <div class="col-12 col-sm-6">
+                  <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" class="full-width" />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <q-checkbox v-model="client.is_credit" label="Habilitar Cuenta Corriente" dense color="primary" class="full-width" />
+                </div>
+              </div>
+
+              <div class="col-12" v-if="!client.is_partner">
+                <q-select
+                  filled
+                  v-model="client.partner"
+                  label="Seleccionar Afiliado Asignado"
+                  :options="partners"
+                  @filter="getPartners"
+                  use-input
+                  option-label="name"
+                  option-value="id"
+                  dense
+                >
+                  <template v-slot:prepend><q-icon name="group" /></template>
+                </q-select>
               </div>
             </div>
           </q-card-section>
 
-          <!-- Botones de acción -->
-          <q-card-actions align="right" class="text-primary bg-grey-1">
+          <q-card-actions align="right" class="q-pa-md bg-grey-1">
             <q-btn
               flat
               icon="delete"
               color="negative"
-              label="ELIMINAR"
+              label="Eliminar Cliente"
               @click="deleteClient"
               :loading="visible"
+              class="q-px-md"
             />
             <q-btn
               unelevated
               icon="save"
               color="primary"
-              label="GUARDAR"
+              label="Guardar Cambios"
               type="submit"
               :loading="visible"
+              class="q-px-lg"
             />
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
+
+    <!-- Dialog: Agregar Cliente -->
     <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.sm">
       <q-card
         :class="$q.screen.lt.sm ? 'full-height column' : ''"
-        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 80vw;'"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 700px; max-width: 90vw; border-radius: 16px;'"
       >
         <q-form @submit="saveClient" class="column full-height">
-          <!-- Header con estilo naranja -->
-          <q-card-section class="row items-center text-white bg-primary q-py-sm">
-            <div class="text-h6">Agregar cliente</div>
+          <q-card-section class="row items-center text-white bg-primary q-py-md">
+            <q-icon name="person_add" size="24px" class="q-mr-sm" />
+            <div class="text-h6 text-weight-bold">Agregar Cliente</div>
             <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
+            <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <!-- Body con tema oscuro -->
           <q-card-section class="scroll col q-pa-md">
             <div class="row q-col-gutter-md">
-              <!-- Nombre - Campo principal con asterisco rojo -->
+              <!-- SECCIÓN: INFORMACIÓN BÁSICA -->
+              <div class="col-12 q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="person" size="20px" />
+                  <span>Información Básica</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
               <div class="col-12">
                 <q-input
                   filled
                   v-model="client.name"
-                  label="Nombre *"
+                  label="Nombre Completo *"
                   :rules="[val => !!val || 'El campo es requerido.']"
                   autofocus
                   dense
-                />
+                >
+                  <template v-slot:prepend><q-icon name="account_circle" /></template>
+                </q-input>
               </div>
 
-              <!-- Información adicional -->
-              <div class="col-12 text-grey-7 q-mt-sm">
-                Información adicional (opcional)
-              </div>
-
-              <!-- Fila 1: Tipo de documento y Número -->
               <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.email"
+                  type="email"
+                  label="Correo Electrónico"
+                  dense
+                >
+                  <template v-slot:prepend><q-icon name="email" /></template>
+                </q-input>
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.phone_number"
+                  label="Teléfono / WhatsApp"
+                  dense
+                >
+                  <template v-slot:prepend><q-icon name="phone" /></template>
+                </q-input>
+              </div>
+
+              <!-- SECCIÓN: IDENTIFICACIÓN Y FISCAL -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="badge" size="20px" />
+                  <span>Identificación y Datos Fiscales</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
+              <div class="col-12 col-sm-6" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
+                />
                 <q-select
                   filled
                   use-input
                   label="Tipo de documento"
-                  input-debounce="0"
                   option-label="Desc"
                   option-value="id"
                   v-model="client.document_type"
                   :options="documentTypes"
                   @filter="getDocumentTypes"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
+
               <div class="col-12 col-sm-6">
                 <q-input
                   filled
@@ -335,74 +482,79 @@
                 />
               </div>
 
-              <!-- Fila 2: Correo y Teléfono -->
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="client.email"
-                  type="email"
-                  label="Correo"
-                  dense
+              <div class="col-12" style="position: relative;">
+                <div
+                  v-if="(subscriptionPlan || 'Free') === 'Free'"
+                  class="absolute-full"
+                  style="z-index: 10; cursor: pointer;"
+                  @click.stop="handleRestrictedClick"
+                ></div>
+                <premium-badge
+                  :show="(subscriptionPlan || 'Free') === 'Free'"
+                  :size="15"
+                  top="0px"
+                  right="4px"
+                  padding="4px"
                 />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input
-                  filled
-                  v-model="client.phone_number"
-                  label="Teléfono"
-                  dense
-                />
-              </div>
-
-            <!-- Fila 3: Usuario y Contraseña -->
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.username"
-                label="Usuario"
-                autocomplete="off"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                filled
-                v-model="client.password"
-                :type="showPassword ? 'text' : 'password'"
-                label="Contraseña"
-                autocomplete="new-password"
-              >
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPassword ? 'visibility_off' : 'visibility'"
-                    class="cursor-pointer"
-                    @click="showPassword = !showPassword"
-                  />
-                </template>
-              </q-input>
-            </div>
-
-              <!-- Condición de IVA -->
-              <div class="col-12">
                 <q-select
                   filled
                   use-input
                   label="Condición de IVA"
-                  input-debounce="0"
                   option-label="name"
                   option-value="code"
                   v-model="client.condition_iva_receptor"
                   :options="conditionIvaReceptors"
                   @filter="getConditionIvaReceptor"
+                  :disable="(subscriptionPlan || 'Free') === 'Free'"
                   dense
                 />
               </div>
 
-              <!-- Affiliate Configuration -->
-              <div class="col-12 flex q-gutter-x-lg q-pt-md">
-                <q-checkbox v-model="client.is_credit" label="Cuenta corriente" dense color="primary" />
+              <!-- SECCIÓN: ACCESO Y SEGURIDAD -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="lock" size="20px" />
+                  <span>Acceso al Sistema</span>
+                </div>
+                <q-separator class="q-mt-xs" />
               </div>
 
-              <!-- Sección de Dirección -->
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.username"
+                  label="Usuario"
+                  dense
+                />
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  filled
+                  v-model="client.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  label="Contraseña"
+                  dense
+                >
+                  <template v-slot:append>
+                    <q-icon
+                      :name="showPassword ? 'visibility_off' : 'visibility'"
+                      class="cursor-pointer"
+                      @click="showPassword = !showPassword"
+                    />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- SECCIÓN: UBICACIÓN Y CONTACTO -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="location_on" size="20px" />
+                  <span>Ubicación y Referencias</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
               <div class="col-12">
                 <AddressComponent
                   :key="addressComponentKey"
@@ -410,26 +562,63 @@
                   @address-selected="handleAddressSelected"
                 />
               </div>
+
               <div class="col-12">
                 <q-input
                   filled
                   v-model="client.reference"
-                  label="Referencia"
+                  label="Referencia / Observaciones"
                   dense
+                  type="textarea"
+                  rows="2"
                 />
+              </div>
+
+              <!-- SECCIÓN: CONFIGURACIÓN ADICIONAL -->
+              <div class="col-12 q-mt-sm q-mb-xs">
+                <div class="text-subtitle2 text-primary row items-center q-gutter-x-xs">
+                  <q-icon name="settings" size="20px" />
+                  <span>Configuración Adicional</span>
+                </div>
+                <q-separator class="q-mt-xs" />
+              </div>
+
+              <div class="col-12 row items-center q-col-gutter-sm">
+                <div class="col-12 col-sm-6">
+                  <q-checkbox v-model="client.is_partner" label="¿Es Afiliado?" dense color="primary" class="full-width" />
+                </div>
+                <div class="col-12 col-sm-6">
+                  <q-checkbox v-model="client.is_credit" label="Habilitar Cuenta Corriente" dense color="primary" class="full-width" />
+                </div>
+              </div>
+
+              <div class="col-12" v-if="!client.is_partner">
+                <q-select
+                  filled
+                  v-model="client.partner"
+                  label="Seleccionar Afiliado Asignado"
+                  :options="partners"
+                  @filter="getPartners"
+                  use-input
+                  option-label="name"
+                  option-value="id"
+                  dense
+                >
+                  <template v-slot:prepend><q-icon name="group" /></template>
+                </q-select>
               </div>
             </div>
           </q-card-section>
 
-          <!-- Botón guardar mejorado -->
-          <q-card-actions align="right" class="text-primary bg-grey-1">
+          <q-card-actions align="right" class="q-pa-md bg-grey-1">
             <q-btn
               unelevated
               icon="save"
               color="primary"
-              label="GUARDAR"
+              label="Crear Cliente"
               type="submit"
               :loading="visible"
+              class="q-px-lg"
             />
           </q-card-actions>
         </q-form>
@@ -631,6 +820,11 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <subscription-plans-dialog
+      v-model="showSubscriptionDialog"
+      @subscription-updated="loadSubscriptionInfo"
+    />
   </div>
 </template>
 
@@ -641,10 +835,15 @@ import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import { mapState } from 'pinia'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import PremiumBadge from 'src/components/PremiumBadge.vue'
+import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import * as XLSX from 'xlsx'
+import eventBus from 'src/utils/eventBus'
 export default {
   components: {
-    AddressComponent
+    AddressComponent,
+    PremiumBadge,
+    SubscriptionPlansDialog
   },
   data () {
     return {
@@ -665,6 +864,8 @@ export default {
         skipped: 0,
         errors: []
       },
+      showSubscriptionDialog: false,
+      partners: [],
       /**
        * Address component key for resetting
        * @type {Number}
@@ -700,7 +901,6 @@ export default {
       openAddClient: false,
       openEditClient: null,
       conditionIvaReceptors: [],
-      partners: [],
       columns: [
         {
           name: 'name',
@@ -752,7 +952,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(authentication, ['userSession'])
+    ...mapState(authentication, ['userSession', 'subscriptionPlan', 'isDemo']),
     /**
      * Checks if the current user is an administrator
      * @returns {Boolean} True if user is root or super admin
@@ -805,6 +1005,8 @@ export default {
         condition_iva_receptor: null,
         document_type: null,
         is_credit: true,
+        is_partner: true,
+        partner: null,
         username: '',
         password: ''
       }
@@ -827,6 +1029,22 @@ export default {
       }
       this.params.page = 1
       this.getClients(this.params)
+    },
+    /**
+     * Handle restricted feature click
+     */
+    handleRestrictedClick () {
+      if (this.isDemo) {
+        eventBus.emit('open-create-company')
+      } else {
+        this.showSubscriptionDialog = true
+      }
+    },
+    /**
+     * Load subscription info
+     */
+    async loadSubscriptionInfo () {
+      await this.store.loadSubscriptionInfo()
     },
     /**
      * Get all clients
@@ -898,7 +1116,12 @@ export default {
      * @param {String} value Value filter
      * @param {Callback} update update options
      */
-    /* async getPartners (value, update) {
+    /**
+     * Get partners
+     * @param {String} value Value filter
+     * @param {Callback} update update options
+     */
+    async getPartners (value, update) {
       try {
         const { data } = await this.$api.get('partners', {
           params: {
@@ -919,7 +1142,7 @@ export default {
       } catch (err) {
         notify('Error en la conexión', 'negative', 'warning')
       }
-    }, */
+    },
     /**
      * Set data pagination emit event
      * @param  {Object} data value pagination
@@ -938,10 +1161,8 @@ export default {
     saveClient () {
       this.visible = true
 
-      // Preparar datos del cliente con dirección formateada
       const clientData = { ...this.client }
 
-      // Validar y formatear campos requeridos
       if (clientData.condition_iva_receptor && typeof clientData.condition_iva_receptor === 'object') {
         clientData.condition_iva_receptor = JSON.stringify(clientData.condition_iva_receptor)
       }
@@ -950,9 +1171,11 @@ export default {
         clientData.document_type = JSON.stringify(clientData.document_type)
       }
 
-      /* if (clientData?.partner?.id) {
-        clientData.partner_id = clientData.partner.id
-      } */
+      if (clientData.is_partner === false || clientData.is_partner === 0) {
+        if (clientData?.partner?.id) {
+          clientData.partner_id = clientData.partner.id
+        }
+      }
 
       clientData.address = this.address || this.client.address || null
 
@@ -963,7 +1186,6 @@ export default {
           this.visible = false
           this.client = {}
           this.role = null
-          // Limpiar las variables de dirección
           this.address = null
           this.formattedAddress = ''
           this.addressComponentKey += 1
@@ -975,9 +1197,6 @@ export default {
         })
         .catch(err => {
           this.visible = false
-          console.error('❌ Error al crear cliente:', err)
-          console.error('📊 Response data:', err.response?.data)
-          console.error('📈 Status:', err.response?.status)
 
           let errorMessage = err.message
           if (err.response?.data?.message) {
@@ -998,8 +1217,10 @@ export default {
       this.openEditClient = true
       this.client = row
       this.role = row.role
-      this.client.condition_iva_receptor = JSON.parse(row.condition_iva_receptor)
-      this.client.document_type = JSON.parse(row.document_type)
+      this.client.condition_iva_receptor = row.condition_iva_receptor ? JSON.parse(row.condition_iva_receptor) : null
+      this.client.document_type = row.document_type ? JSON.parse(row.document_type) : null
+      this.client.is_partner = Boolean(row.is_partner)
+      this.client.partner = row.partner
       this.address = row.address
       // Incrementar la clave para forzar re-renderización del AddressComponent
       this.addressComponentKey += 1
@@ -1012,11 +1233,13 @@ export default {
 
       const clientData = { ...this.client }
 
-      clientData.address = this.address || this.client.address || null
+      if (clientData.is_partner === false || clientData.is_partner === 0) {
+        if (clientData?.partner?.id) {
+          clientData.partner_id = clientData.partner.id
+        }
+      }
 
-      /* if (clientData?.partner?.id) {
-        clientData.partner_id = clientData.partner.id
-      } */
+      clientData.address = this.address || this.client.address || null
 
       this.$api.put(`clients/${this.client.id}`, clientData)
         .then(({ data }) => {

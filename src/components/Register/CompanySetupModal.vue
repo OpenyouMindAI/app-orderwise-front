@@ -9,12 +9,12 @@
     <q-card class="modern-company-setup-dialog">
       <!-- Header moderno -->
       <q-card-section class="company-setup-header">
-        <div class="header-content text-white">
+        <div class="header-content">
           <div class="setup-icon-wrapper">
             <q-icon name="business_center" size="28px" class="setup-icon" />
           </div>
           <div class="text-h6 text-weight-bold q-mt-xs">Configura tu Empresa</div>
-          <div class="text-caption">Completa la información para comenzar</div>
+          <div class="text-caption text-grey-7">Completa la información para comenzar</div>
         </div>
       </q-card-section>
 
@@ -131,7 +131,32 @@
             </q-input>
           </div>
 
-          <!-- Rubro -->
+          <!-- País (API) -->
+          <div class="input-container">
+            <q-select
+              v-model="form.country_id"
+              :options="countries"
+              option-label="name"
+              option-value="id"
+              placeholder="Seleccione el País *"
+              class="custom-input"
+              use-input
+              input-debounce="300"
+              @filter="filterCountries"
+              hide-bottom-space
+              behavior="menu"
+              borderless
+              emit-value
+              map-options
+              :rules="[val => !!val || 'El país es requerido']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="public" color="primary" size="20px"/>
+              </template>
+            </q-select>
+          </div>
+
+          <!-- Rubro (API) -->
           <div class="input-container">
             <q-select
               v-model="form.business_type"
@@ -141,13 +166,12 @@
               placeholder="Rubro / Tipo de Negocio *"
               class="custom-input"
               use-input
-              input-debounce="500"
-              @filter="loadBusinessTypes"
+              input-debounce="300"
+              @filter="filterBusinessTypes"
               :rules="[val => !!val || 'El rubro es requerido']"
               hide-bottom-space
               behavior="menu"
               borderless
-              lazy-rules
             >
               <template v-slot:prepend>
                 <q-icon name="category" color="primary" size="20px"/>
@@ -191,6 +215,15 @@
 
       <!-- Footer con botones -->
       <q-card-actions class="q-pa-md">
+        <q-btn
+          flat
+          label="Volver"
+          color="grey-7"
+          icon="arrow_back"
+          @click="$emit('back')"
+          :disable="loading"
+          no-caps
+        />
         <q-space />
         <q-btn
           label="Crear Empresa"
@@ -200,6 +233,7 @@
           :loading="loading"
           unelevated
           no-caps
+          class="setup-submit-btn"
         />
       </q-card-actions>
     </q-card>
@@ -224,11 +258,13 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'success'])
+const emit = defineEmits(['update:modelValue', 'success', 'back'])
 const fbq = usePixel()
 
 // State
 const loading = ref(false)
+const countries = ref([])
+const businessTypes = ref([])
 
 // Form data
 const form = ref({
@@ -238,10 +274,11 @@ const form = ref({
   company_phone: '',
   company_address: '',
   business_type: null,
+  country_id: null,
   copy_test_products: false
 })
 
-// Country selector
+// Country code selector
 const selectedCountry = ref(null)
 const countryOptions = [
   { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
@@ -255,7 +292,6 @@ const countryOptions = [
   { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
 ]
 
-// Set default country
 selectedCountry.value = countryOptions[0]
 
 // Phone validation rule
@@ -269,10 +305,7 @@ const phoneRule = computed(() => {
   ]
 })
 
-// Business types
-const businessTypes = ref([])
-
-// Address data
+// Address data for AddressComponent
 const companyAddressData = ref({
   name: '',
   street: '',
@@ -288,27 +321,7 @@ const companyAddressData = ref({
 })
 
 /**
- * Load business types
- */
-const loadBusinessTypes = async (val, update, abort) => {
-  try {
-    const { data } = await api.get('business-types', {
-      params: {
-        dataSearch: {
-          name: val
-        }
-      }
-    })
-    update(() => {
-      businessTypes.value = data
-    })
-  } catch (error) {
-    console.error('Error loading business types:', error)
-    abort()
-  }
-}
-/**
- * Handle company address selected
+ * Handle company address selected from AddressComponent
  */
 const handleCompanyAddressSelected = (addressDetails) => {
   if (addressDetails) {
@@ -333,13 +346,46 @@ const handleCompanyAddressSelected = (addressDetails) => {
 }
 
 /**
- * Setup company
+ * Filter countries from API on demand
+ */
+const filterCountries = async (val, update, abort) => {
+  try {
+    const { data } = await api.get('countries', {
+      params: { dataSearch: { name: val } }
+    })
+    update(() => {
+      countries.value = data.data || data
+    })
+  } catch (error) {
+    console.error('Error loading countries:', error)
+    abort()
+  }
+}
+
+/**
+ * Filter business types from API
+ */
+const filterBusinessTypes = async (val, update, abort) => {
+  try {
+    const { data } = await api.get('business-types', {
+      params: { dataSearch: { name: val } }
+    })
+    update(() => {
+      businessTypes.value = data
+    })
+  } catch (error) {
+    console.error('Error loading business types:', error)
+    abort()
+  }
+}
+
+/**
+ * Setup company on backend
  */
 const setupCompany = async () => {
   try {
     loading.value = true
 
-    // Preparar payload con business_type_id
     const payload = {
       ...form.value,
       business_type_id: form.value.business_type?.id,
@@ -351,22 +397,17 @@ const setupCompany = async () => {
     const { data } = await api.post('authentication/setup-company', payload)
 
     notify('Empresa configurada exitosamente', 'positive', 'check_circle')
-
-    // Emitir evento de éxito con los datos de la respuesta
     emit('success', data)
+    emit('update:modelValue', false)
 
-    // Pixel Event: CrearEmpresa
+    // Pixel Event
     if (fbq?.event) {
-      const companyData = {
+      fbq.event('CrearEmpresa', {
         business_type: form.value.business_type?.name,
         country: selectedCountry.value?.label,
         company_name: form.value.company_name
-      }
-      fbq.event('CrearEmpresa', companyData)
+      })
     }
-
-    // Cerrar modal
-    emit('update:modelValue', false)
   } catch (error) {
     notifyValidationErrors(error, 'Error al configurar empresa')
   } finally {
@@ -374,125 +415,165 @@ const setupCompany = async () => {
   }
 }
 
-// Watch para limpiar estado cuando el modal se cierra
-watch(() => props.modelValue, (newVal) => {
-  if (!newVal) {
-    // Limpiar business types cuando se cierra para evitar problemas de rendimiento
-    businessTypes.value = []
-  } else {
-    // Pre-llenar email cuando se abre
-    if (props.userEmail) {
-      form.value.company_email = props.userEmail
-    }
-  }
+// Sync userEmail prop
+watch(() => props.userEmail, (newVal) => {
+  if (newVal) form.value.company_email = newVal
 })
 
 onMounted(() => {
-  if (props.userEmail) {
-    form.value.company_email = props.userEmail
-  }
+  // No longer pre-loading countries to avoid auth issues on registration
 })
 </script>
 
 <style scoped>
-/* Dialog Card */
 .modern-company-setup-dialog {
-  width: 90%;
-  max-width: 600px;
-  border-radius: 16px;
+  min-width: 600px;
+  max-width: 650px;
+  border-radius: 20px;
   overflow: hidden;
-  background: white;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-  transform: translateZ(0);
-  will-change: transform, opacity;
+  animation: dialogEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Header */
+@keyframes dialogEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .company-setup-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 5px 3px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 24px 20px 20px;
   text-align: center;
+}
+
+.body--dark .company-setup-header {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%);
 }
 
 .header-content {
   display: flex;
   flex-direction: column;
   align-items: center;
+  animation: fadeInDown 0.6s ease-out 0.2s backwards;
+}
+
+@keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .setup-icon-wrapper {
-  width: 64px;
-  height: 64px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 50%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  margin-bottom: 8px;
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+  }
 }
 
 .setup-icon {
   color: white;
 }
 
-/* Input Container */
 .input-container {
-  margin-bottom: 12px;
+  margin-bottom: 1rem;
 }
 
-/* Custom Input */
-.custom-input :deep(.q-field__control) {
-  background: #f3f4f6 !important;
-  border: none !important;
-  border-radius: 8px;
-  height: 48px;
-  min-height: 48px;
-  padding: 0 12px;
-  transition: background 0.2s ease;
-  box-shadow: none !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.custom-input :deep(.q-field__control):before,
-.custom-input :deep(.q-field__control):after {
-  display: none !important;
-}
-
+/* Estilos unificados para inputs */
+.custom-input :deep(.q-field__control),
 .custom-input :deep(.q-field__native) {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  color: #1f2937;
-  font-size: 14px;
-  line-height: 1;
+  min-height: 44px !important;
+  height: 44px !important;
+  max-height: 44px !important;
 }
 
-.custom-input :deep(.q-field__native)::placeholder {
-  color: #9ca3af;
-  opacity: 0.7;
+.custom-input :deep(.q-field__control) {
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0 12px;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.body--dark .custom-input :deep(.q-field__control) {
+  background: #1f2937;
+  border-color: #374151;
 }
 
 .custom-input :deep(.q-field__control):hover {
-  background: #e5e7eb !important;
+  background: #ffffff;
+  border-color: #10b981;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.body--dark .custom-input :deep(.q-field__control):hover {
+  background: #1f2937;
 }
 
 .custom-input :deep(.q-field__control):focus-within {
-  background: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15) !important;
+  background: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  transform: translateY(-1px);
 }
 
-.custom-input :deep(.q-field__prepend),
-.custom-input :deep(.q-field__append) {
-  height: 48px !important;
-  min-height: 48px !important;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
+.body--dark .custom-input :deep(.q-field__control):focus-within {
+  background: #1f2937;
 }
 
-/* Phone input container */
+.custom-input :deep(.q-field__native) {
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.body--dark .custom-input :deep(.q-field__native) {
+  color: #f3f4f6;
+}
+
+.setup-submit-btn {
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.setup-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(var(--q-primary-rgb, 16, 185, 129), 0.3);
+}
+
+/* Phone input adjustments */
 .phone-input-container .country-select :deep(.q-field__control) {
   padding-left: 12px;
   padding-right: 4px;
@@ -502,86 +583,25 @@ onMounted(() => {
   margin: 0;
 }
 
-/* Country Flag */
+/* Country Flag Styling */
 .country-flag {
   font-size: 20px;
   color: rgba(0, 0, 0, 1) !important;
 }
 
-/* Submit Button */
-.setup-submit-btn {
-  height: 48px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: none !important;
-  text-transform: none !important;
-}
-
-.setup-submit-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
-}
-
-.setup-submit-btn:active {
-  transform: translateY(0);
-}
-
-/* Dark mode support */
-.body--dark .modern-company-setup-dialog {
-  background: #1e1e1e;
-}
-
-.body--dark .custom-input :deep(.q-field__control) {
-  background: #374151 !important;
-}
-
-.body--dark .custom-input :deep(.q-field__control):hover {
-  background: #4b5563 !important;
-}
-
-.body--dark .custom-input :deep(.q-field__control):focus-within {
-  background: #1f2937 !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
-}
-
-.body--dark .custom-input :deep(.q-field__native) {
-  color: #f3f4f6;
-}
-
-.body--dark .custom-input :deep(.q-field__native)::placeholder {
-  color: #9ca3af;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .modern-company-setup-dialog {
-    max-width: 95%;
+    min-width: 95vw;
+    max-width: 95vw;
   }
 
   .company-setup-header {
-    padding: 20px 16px;
+    padding: 20px 16px 16px;
   }
 
   .setup-icon-wrapper {
-    width: 56px;
-    height: 56px;
-  }
-
-  .input-container {
-    margin-bottom: 8px;
-  }
-
-  .custom-input :deep(.q-field__control) {
-    height: 42px;
-  }
-
-  .setup-submit-btn {
-    height: 42px;
+    width: 48px;
+    height: 48px;
   }
 }
 </style>

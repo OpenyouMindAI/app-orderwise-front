@@ -78,7 +78,12 @@ export const authentication = defineStore('authentication', {
        * Has API access
        * @type {Boolean}
        */
-      hasApiAccess: false
+      hasApiAccess: false,
+      /**
+       * Force user to select a plan
+       * @type {Boolean}
+       */
+      mustSelectPlan: false
     }
   },
   actions: {
@@ -345,6 +350,16 @@ export const authentication = defineStore('authentication', {
      */
     isSubscriptionTrial (state) {
       return state.currentSubscription?.status === 'trial'
+    },
+    /**
+     * Check if the current plan is premium (Pro or Pro Team)
+     * @param {*} state
+     * @returns {Boolean}
+     */
+    hasPremiumPlan (state) {
+      const allowedPlans = ['pro', 'pro_team']
+      const currentPlan = state.currentSubscription?.plan?.slug?.toLowerCase() || 'free'
+      return allowedPlans.includes(currentPlan)
     }
   },
   persist: true
