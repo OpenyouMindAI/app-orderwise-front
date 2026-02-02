@@ -31,7 +31,6 @@
               outlined
               label="Desde"
               class="filter-input"
-              @update:model-value="loadAllData"
             />
           </div>
           <div class="col-6 col-sm-auto">
@@ -42,10 +41,9 @@
               outlined
               label="Hasta"
               class="filter-input"
-              @update:model-value="loadAllData"
             />
           </div>
-          <div class="col-12 col-sm-auto">
+          <div class="col-12 col-sm-auto row no-wrap items-center q-gutter-x-xs">
             <q-select
               v-model="selectedMainCashbox"
               :options="mainCashboxes"
@@ -57,37 +55,37 @@
               emit-value
               map-options
               clearable
+              class="col col-sm-auto"
               style="min-width: 150px"
-              @update:model-value="loadAllData"
             >
               <template v-slot:prepend>
                 <q-icon name="account_balance" size="20px" />
               </template>
             </q-select>
+            <q-btn
+              unelevated
+              dense
+              icon="search"
+              color="primary"
+              @click="loadAllData"
+              :loading="loading"
+              class="col-auto rounded-borders"
+              style="width: 40px; height: 40px"
+            >
+              <q-tooltip>Buscar / Sincronizar</q-tooltip>
+            </q-btn>
           </div>
           <q-space v-if="!$q.screen.lt.sm" />
-          <div class="col-12 col-sm-auto row q-gutter-x-sm no-wrap q-mt-xs q-mt-sm-none">
+          <div class="col-12 col-sm-auto q-mt-xs q-mt-sm-none">
             <q-btn
               unelevated
               color="negative"
               icon="add_circle"
               label="Registrar Gasto"
               @click="openExpenseModal"
-              class="rounded-borders col"
+              class="rounded-borders full-width"
               dense
             />
-            <q-btn
-              flat
-              dense
-              round
-              icon="refresh"
-              color="primary"
-              @click="loadAllData"
-              :loading="loading"
-              class="col-auto"
-            >
-              <q-tooltip>Sincronizar todo</q-tooltip>
-            </q-btn>
           </div>
         </div>
       </div>

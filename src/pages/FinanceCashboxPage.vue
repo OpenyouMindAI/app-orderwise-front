@@ -1,668 +1,698 @@
 <template>
-  <q-page class="finance-cashbox-page">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <q-icon name="history" size="48px" class="header-icon" />
-          <div>
-            <h1 class="page-title">Historial de Arqueos Globales</h1>
-            <p class="page-subtitle">Consulta de arqueos contados por caja</p>
-          </div>
+  <q-page class="finance-cashbox-page q-pa-md">
+    <!-- Header Section -->
+    <div class="header-section q-mb-md">
+      <div class="row items-center justify-between">
+        <div class="col-12 col-md-auto q-mb-sm q-mb-md-none">
+          <span class="text-h5 text-weight-bold q-ma-none text-gradient">Gestión de Cajas</span>
+          <p class="text-caption text-grey-7 q-mt-xs">Control de saldos y transferencias entre cajas</p>
+        </div>
+        <div class="col-12 col-md-auto">
+          <q-btn
+            unelevated
+            rounded
+            color="primary"
+            icon="add_circle"
+            label="Nueva Transferencia"
+            class="pulse-button q-px-md"
+            dense
+            @click="openTransferDialog()"
+          />
         </div>
       </div>
     </div>
 
-    <!-- Filters -->
-    <q-card class="filters-card q-mb-md">
-      <q-card-section>
-        <div class="filters-grid">
-          <q-input
-            v-model="dateFrom"
-            type="date"
-            label="Desde"
+    <!-- Filters Section -->
+    <div class="filters-section q-mb-md">
+      <div class="row q-col-gutter-sm items-center">
+        <div class="col-12 col-sm-3 col-md-2">
+          <q-select
+            v-model="filterBranchOffice"
+            :options="branchOfficeOptions"
+            label="Sucursal"
             outlined
             dense
+            clearable
+            emit-value
+            map-options
+            style="min-width: 200px;"
+            @update:model-value="loadCashboxes"
           >
             <template v-slot:prepend>
-              <q-icon name="event" />
+              <q-icon name="storefront" color="primary" size="xs" />
             </template>
-          </q-input>
-
-          <q-input
-            v-model="dateTo"
-            type="date"
-            label="Hasta"
-            outlined
-            dense
-          >
-            <template v-slot:prepend>
-              <q-icon name="event" />
-            </template>
-          </q-input>
-
-          <q-btn
-            unelevated
-            color="primary"
-            label="Buscar"
-            icon="search"
-            @click="loadGlobalWithdrawals"
-            :loading="loading"
+          </q-select>
+        </div>
+        <div class="col-12 col-sm-auto">
+          <q-btn-toggle
+            v-model="filterIsMain"
+            toggle-color="primary"
+            rounded
+            :options="[
+              { label: 'Todas', value: null },
+              { label: 'Principales', value: 'true' },
+              { label: 'Usuario', value: 'false' }
+            ]"
+            @update:model-value="loadCashboxes"
           />
         </div>
-      </q-card-section>
-    </q-card>
-
-    <!-- Two Column Layout -->
-    <div class="two-column-layout">
-      <!-- Left Column: Global Withdrawals List (Compact) -->
-      <q-card class="left-column">
-        <q-card-section class="column-header">
-          <div class="column-title">
-            <q-icon name="receipt_long" class="q-mr-xs" />
-            <span>Arqueos Globales</span>
-          </div>
-          <q-badge :label="`${globalWithdrawals.length}`" color="white" text-color="primary" />
-        </q-card-section>
-
-        <q-separator />
-
-        <q-scroll-area style="height: calc(100vh - 320px);">
-          <q-list separator dense>
-            <q-item
-              v-for="gw in globalWithdrawals"
-              :key="gw.id"
-              clickable
-              :active="selectedGlobalWithdrawal?.id === gw.id"
-              active-class="bg-primary text-white"
-              @click="selectGlobalWithdrawal(gw)"
-              class="global-withdrawal-item"
-            >
-              <q-item-section avatar>
-                <q-avatar size="36px" :color="selectedGlobalWithdrawal?.id === gw.id ? 'white' : 'primary'" :text-color="selectedGlobalWithdrawal?.id === gw.id ? 'primary' : 'white'">
-                  <q-icon name="receipt" size="20px" />
-                </q-avatar>
-              </q-item-section>
-
-              <q-item-section>
-                <q-item-label class="text-weight-bold" style="font-size: 13px;">
-                  Arqueo #{{ gw.id }}
-                </q-item-label>
-                <q-item-label caption :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : ''" style="font-size: 11px;">
-                  {{ formatDate(gw.date_from) }}
-                </q-item-label>
-                <q-item-label caption :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : ''" style="font-size: 10px;">
-                  {{ formatDateTime(gw.created_at) }}
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side class="text-right">
-                <q-item-label class="text-weight-bold" style="font-size: 13px;">
-                  {{ formatCurrency(gw.total_counted) }}
-                </q-item-label>
-                <q-item-label caption>
-                  <q-badge
-                    :color="getDifferenceColor(gw.difference)"
-                    :label="formatCurrency(gw.difference)"
-                    style="font-size: 10px;"
-                  />
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-
-            <q-item v-if="globalWithdrawals.length === 0 && !loading">
-              <q-item-section class="text-center text-grey-6">
-                <q-icon name="inbox" size="48px" class="q-mb-md" />
-                <div>No hay arqueos globales</div>
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <div v-if="loading" class="text-center q-pa-lg">
-            <q-spinner-dots size="50px" color="primary" />
-          </div>
-        </q-scroll-area>
-      </q-card>
-
-      <!-- Right Column: Counted Withdrawals Details -->
-      <q-card class="right-column">
-        <q-card-section class="column-header">
-          <div class="column-title">
-            <q-icon name="fact_check" class="q-mr-xs" />
-            <span>Arqueos Contados por Caja</span>
-          </div>
+        <q-space />
+        <div class="col-auto">
           <q-btn
-            v-if="selectedGlobalWithdrawal"
             flat
-            dense
             round
+            color="primary"
             icon="refresh"
-            color="white"
-            @click="loadCounts"
-            :loading="loadingCounts"
+            dense
+            size="sm"
+            :loading="loading"
+            @click="loadCashboxes"
           >
             <q-tooltip>Actualizar</q-tooltip>
           </q-btn>
-        </q-card-section>
-
-        <q-separator />
-
-        <!-- Empty State -->
-        <div v-if="!selectedGlobalWithdrawal" class="empty-state">
-          <q-icon name="touch_app" size="64px" color="grey-5" />
-          <div class="text-h6 text-grey-6 q-mt-md">Selecciona un arqueo global</div>
-          <div class="text-caption text-grey-5">Haz clic en un arqueo de la lista para ver los detalles</div>
         </div>
+      </div>
+    </div>
 
-        <!-- Global Withdrawal Summary -->
-        <div v-else-if="globalWithdrawalDetails" class="details-content">
-          <q-card-section>
-            <div class="summary-grid">
-              <div class="summary-item">
-                <div class="summary-label">Total Esperado</div>
-                <div class="summary-value text-info">{{ formatCurrency(globalWithdrawalDetails.total_expected) }}</div>
+    <!-- Cashboxes Grid -->
+    <div v-if="loading" class="row q-col-gutter-md">
+      <div v-for="n in 8" :key="n" class="col-12 col-sm-4 col-md-3 col-lg-2">
+        <q-card flat bordered class="cashbox-card-skeleton">
+          <q-card-section class="q-pa-sm">
+            <q-skeleton type="QAvatar" size="32px" class="q-mb-sm" />
+            <q-skeleton type="text" width="80%" class="q-mb-xs" />
+            <q-skeleton type="text" width="50%" class="q-mb-md" />
+            <q-skeleton type="rect" height="30px" />
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <div v-else-if="cashboxes.length > 0" class="row q-col-gutter-md">
+      <div v-for="cashbox in cashboxes" :key="cashbox.id" class="col-12 col-sm-4 col-md-3 col-lg-2">
+        <q-card flat class="cashbox-card-compact" :class="{ 'is-main': cashbox.is_main }">
+          <div class="card-glow"></div>
+          <q-card-section class="q-pa-sm">
+            <div class="row items-center no-wrap q-gutter-x-sm q-mb-xs">
+              <div class="cashbox-icon-mini" :class="cashbox.is_main ? 'bg-amber-1' : 'bg-blue-1'">
+                <q-icon :name="cashbox.is_main ? 'account_balance' : 'person'" size="16px" :color="cashbox.is_main ? 'amber-9' : 'blue-8'" />
               </div>
-              <div class="summary-item">
-                <div class="summary-label">Total Contado</div>
-                <div class="summary-value text-positive">{{ formatCurrency(globalWithdrawalDetails.total_counted) }}</div>
+              <div class="col overflow-hidden">
+                <div class="text-subtitle2 text-weight-bold ellipsis">{{ cashbox.name }}</div>
               </div>
-              <div class="summary-item">
-                <div class="summary-label">Diferencia</div>
-                <div class="summary-value" :class="getDifferenceTextClass(globalWithdrawalDetails.difference)">
-                  {{ formatCurrency(globalWithdrawalDetails.difference) }}
+              <div class="col-auto">
+                <q-btn
+                  v-if="cashbox.is_main"
+                  flat
+                  round
+                  dense
+                  color="primary"
+                  icon="swap_horiz"
+                  @click="openTransferDialog(cashbox)"
+                >
+                  <q-tooltip>Transferir desde aquí</q-tooltip>
+                </q-btn>
+                <q-badge
+                  v-else
+                  color="blue-6"
+                  class="compact-badge"
+                >
+                  Usuario
+                </q-badge>
+              </div>
+            </div>
+
+            <div class="q-mt-xs">
+              <div class="text-caption text-grey-6 ellipsis">
+                {{ cashbox.branch_office_name }}
+              </div>
+              <div class="row items-center justify-between q-mt-xs">
+                <div class="text-overline text-grey-7 line-height-1">Saldo</div>
+                <div class="text-subtitle2 text-weight-bolder" :class="cashbox.balance >= 0 ? 'text-positive' : 'text-negative'">
+                  {{ formatCurrency(cashbox.balance) }}
                 </div>
               </div>
             </div>
           </q-card-section>
+        </q-card>
+      </div>
+    </div>
 
-          <q-separator />
+    <div v-else class="empty-state text-center q-pa-xl">
+      <q-icon name="inbox" size="100px" color="grey-4" />
+      <h3 class="text-h5 text-grey-6 text-weight-bold q-mt-md">No se encontraron cajas</h3>
+      <p class="text-grey-5">Prueba ajustando los filtros de búsqueda</p>
+    </div>
 
-          <!-- Cashboxes with Withdrawals -->
-          <q-scroll-area style="height: calc(100vh - 480px);">
-            <q-expansion-item
-              v-for="cashbox in cashboxes"
-              :key="cashbox.cashbox_id"
-              :label="cashbox.cashbox_name"
-              :caption="`${cashbox.withdrawals.length} arqueos`"
-              expand-separator
-              default-opened
-              class="cashbox-expansion"
-            >
-              <template v-slot:header>
-                <q-item-section avatar>
-                  <q-avatar color="blue-grey-7" text-color="white" size="40px">
-                    <q-icon name="account_balance" />
-                  </q-avatar>
-                </q-item-section>
+    <!-- Transfer Dialog -->
+    <q-dialog v-model="transferDialog" persistent :maximized="$q.screen.lt.md" transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="transfer-dialog-card" :style="!$q.screen.lt.md ? 'width: 550px; border-radius: 20px;' : ''">
+        <q-card-section class="dialog-header q-px-lg" :class="{ 'rounded-top': !$q.screen.lt.md }">
+          <div class="row items-center justify-between">
+            <span class="text-h5 text-weight-bold q-ma-none text-white">Nueva Transferencia</span>
+            <q-btn icon="close" flat round dense v-close-popup color="white" />
+          </div>
+        </q-card-section>
 
-                <q-item-section>
-                  <q-item-label class="text-weight-bold">{{ cashbox.cashbox_name }}</q-item-label>
-                  <q-item-label caption>{{ cashbox.withdrawals.length }} arqueos</q-item-label>
-                </q-item-section>
+        <q-card-section class="q-pa-lg scroll">
+          <div class="max-width-container">
+            <q-form @submit="handleTransfer" class="q-gutter-y-md">
+              <!-- Source Cashbox -->
+              <div class="form-group">
+                <q-select
+                  v-model="transferForm.source_cashbox_id"
+                  :options="mainCashboxOptions"
+                  filled
+                  label="Caja Origen (Principales)"
+                  placeholder="Selecciona la caja de origen"
+                  emit-value
+                  map-options
+                  :rules="[val => !!val || 'Requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="account_balance" color="primary" />
+                  </template>
+                </q-select>
+              </div>
 
-                <q-item-section side>
-                  <div class="text-right">
-                    <div class="text-weight-bold">{{ formatCurrency(cashbox.total_counted) }}</div>
-                    <q-badge
-                      :color="getDifferenceColor(cashbox.total_difference)"
-                      :label="formatCurrency(cashbox.total_difference)"
+              <!-- Destination Cashbox -->
+              <div class="form-group">
+                <q-select
+                  v-model="transferForm.destination_cashbox_id"
+                  :options="allCashboxOptions"
+                  filled
+                  label="Caja Destino"
+                  placeholder="Selecciona la caja de destino"
+                  emit-value
+                  map-options
+                  :rules="[
+                    val => !!val || 'Requerido',
+                    val => val !== transferForm.source_cashbox_id || 'Debe ser diferente a la origen'
+                  ]"
+                  class="custom-input"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="login" color="primary" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Amount -->
+              <div class="form-group">
+                <q-input
+                  v-model.number="transferForm.amount"
+                  type="number"
+                  filled
+                  label="Monto"
+                  placeholder="0.00"
+                  :rules="[val => val > 0 || 'Monto inválido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="attach_money" color="primary" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Description -->
+              <div class="form-group">
+                <q-input
+                  v-model="transferForm.description"
+                  type="textarea"
+                  filled
+                  label="Descripción"
+                  placeholder="Motivo de la transferencia..."
+                  rows="3"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="description" color="primary" />
+                  </template>
+                </q-input>
+              </div>
+
+              <!-- Image Upload -->
+              <div class="form-group">
+                <label class="form-label">Adjuntar / Tomar Foto</label>
+                <div
+                  class="upload-zone"
+                  @click="triggerFileInput"
+                  @dragover.prevent="isDragging = true"
+                  @dragleave.prevent="isDragging = false"
+                  @drop.prevent="handleDrop"
+                  :class="{ 'dragging': isDragging, 'has-preview': photoPreview }"
+                >
+                  <div v-if="!photoPreview" class="upload-content text-center">
+                    <q-icon name="cloud_upload" size="48px" color="primary" class="q-mb-sm" />
+                    <p class="text-weight-medium q-mb-none">Haz clic o arrastra una imagen</p>
+                    <p class="text-caption text-grey-5">Soporta JPG, PNG (Máx 10MB)</p>
+                  </div>
+                  <div v-else class="preview-content">
+                    <q-img :src="photoPreview" class="preview-image" @click.stop="openGallery">
+                      <div class="absolute-bottom text-center text-caption q-pa-xs">
+                        Toca para ampliar
+                      </div>
+                    </q-img>
+                    <q-btn
+                      icon="close"
+                      round
+                      dense
+                      color="negative"
+                      class="remove-photo-btn"
+                      @click.stop="clearPhoto"
                     />
                   </div>
-                </q-item-section>
-              </template>
+                  <input
+                    type="file"
+                    ref="fileInput"
+                    style="display: none"
+                    accept="image/*"
+                    @change="onFileSelected"
+                  />
+                </div>
+              </div>
 
-              <q-card flat bordered>
-                <q-list separator>
-                  <q-item v-for="withdrawal in cashbox.withdrawals" :key="withdrawal.id" dense>
-                    <q-item-section avatar>
-                      <q-avatar size="32px" :color="getPaymentMethodColor(withdrawal.payment_method_id)" text-color="white">
-                        <q-icon name="payment" size="18px" />
-                      </q-avatar>
-                    </q-item-section>
-
-                    <q-item-section>
-                      <q-item-label class="text-weight-medium">
-                        {{ withdrawal.payment_method_name }}
-                      </q-item-label>
-                      <q-item-label caption>
-                        <div class="row q-gutter-xs items-center">
-                          <q-icon name="event" size="14px" />
-                          <span>{{ withdrawal.date }}</span>
-                          <q-icon name="schedule" size="14px" class="q-ml-xs" />
-                          <span>{{ withdrawal.time }}</span>
-                        </div>
-                      </q-item-label>
-                      <q-item-label caption>
-                        <span class="text-grey-8">👤 {{ withdrawal.user_name }}</span>
-                      </q-item-label>
-                    </q-item-section>
-
-                    <q-item-section side class="text-right">
-                      <q-item-label class="text-weight-bold">
-                        {{ formatCurrency(withdrawal.counted_amount) }}
-                      </q-item-label>
-                      <q-item-label caption>
-                        <span class="text-grey-7">Esperado: {{ formatCurrency(withdrawal.expected_amount) }}</span>
-                      </q-item-label>
-                      <q-item-label caption>
-                        <q-badge
-                          :color="getDifferenceColor(withdrawal.difference)"
-                          :label="formatCurrency(withdrawal.difference)"
-                        />
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-card>
-            </q-expansion-item>
-
-            <div v-if="loadingCounts" class="text-center q-pa-lg">
-              <q-spinner-dots size="50px" color="primary" />
-            </div>
-          </q-scroll-area>
-        </div>
+              <div class="q-pt-lg">
+                <q-btn
+                  type="submit"
+                  color="primary"
+                  label="Confirmar Transferencia"
+                  class="full-width text-weight-bold"
+                  rounded
+                  unelevated
+                  :loading="submitting"
+                />
+              </div>
+            </q-form>
+          </div>
+        </q-card-section>
       </q-card>
-    </div>
+    </q-dialog>
+
+    <!-- Image Gallery -->
+    <ImageGalleryComponent
+      v-model="galleryOpen"
+      :images="galleryImages"
+      :initial-index="0"
+    />
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import ImageGalleryComponent from 'src/components/ImageGalleryComponent.vue'
 
 /**
  * Quasar instance
- * @type {import('quasar').QVueGlobals}
  */
 const $q = useQuasar()
 
 /**
- * Date from filter
- * @type {import('vue').Ref<string>}
- */
-const dateFrom = ref('')
-
-/**
- * Date to filter
- * @type {import('vue').Ref<string>}
- */
-const dateTo = ref('')
-
-/**
- * Loading state
- * @type {import('vue').Ref<boolean>}
+ * State
  */
 const loading = ref(false)
-
-/**
- * Loading counts state
- * @type {import('vue').Ref<boolean>}
- */
-const loadingCounts = ref(false)
-
-/**
- * Global withdrawals list
- * @type {import('vue').Ref<Array>}
- */
-const globalWithdrawals = ref([])
-
-/**
- * Selected global withdrawal
- * @type {import('vue').Ref<Object|null>}
- */
-const selectedGlobalWithdrawal = ref(null)
-
-/**
- * Global withdrawal details
- * @type {import('vue').Ref<Object|null>}
- */
-const globalWithdrawalDetails = ref(null)
-
-/**
- * Cashboxes with withdrawals
- * @type {import('vue').Ref<Array>}
- */
+const submitting = ref(false)
 const cashboxes = ref([])
+const allMainCashboxes = ref([])
+const branchOffices = ref([])
+const transferDialog = ref(false)
+const filterBranchOffice = ref(null)
+const filterIsMain = ref('true') // Default view main cashboxes
+
+const transferForm = reactive({
+  source_cashbox_id: null,
+  destination_cashbox_id: null,
+  amount: null,
+  description: '',
+  photo: null
+})
+
+const isDragging = ref(false)
+const photoPreview = ref(null)
+const fileInput = ref(null)
+
+// Gallery
+const galleryOpen = ref(false)
+const galleryImages = computed(() => {
+  return photoPreview.value ? [{ url: photoPreview.value }] : []
+})
 
 /**
- * Set default dates
- * @returns {void}
+ * Options for selects
  */
-const setDefaultDates = () => {
-  const now = new Date()
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+const branchOfficeOptions = computed(() => {
+  return branchOffices.value.map(bo => ({ label: bo.name, value: bo.id }))
+})
 
-  dateFrom.value = firstDay.toISOString().split('T')[0]
-  dateTo.value = lastDay.toISOString().split('T')[0]
+const mainCashboxOptions = computed(() => {
+  return allMainCashboxes.value
+    .map(c => ({
+      label: `${c.name} (${formatCurrency(c.balance)})`,
+      value: c.id
+    }))
+})
+
+const allCashboxOptions = computed(() => {
+  return cashboxes.value.map(c => ({
+    label: `${c.name} - ${c.branch_office_name}`,
+    value: c.id
+  }))
+})
+
+/**
+ * Methods
+ */
+const loadBranchOffices = async () => {
+  try {
+    const { data } = await api.get('/branch-offices')
+    branchOffices.value = data.data || data
+  } catch (error) {
+    console.error('Error loading branch offices:', error)
+  }
 }
 
-/**
- * Load global withdrawals
- * @async
- * @returns {Promise<void>}
- */
-const loadGlobalWithdrawals = async () => {
+const loadCashboxes = async () => {
   loading.value = true
   try {
     const params = {
-      date_from: dateFrom.value,
-      date_to: dateTo.value
+      branch_office_id: filterBranchOffice.value,
+      is_main: filterIsMain.value,
+      paginate: 'false'
     }
-
-    const { data } = await api.get('/reports/global-withdrawals', { params })
-    globalWithdrawals.value = data.data || []
+    const { data } = await api.get('/cashboxes/balances', { params })
+    cashboxes.value = data
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: 'Error al cargar arqueos globales',
-      caption: error.message
+      message: 'Error al cargar cajas',
+      position: 'bottom-right'
     })
   } finally {
     loading.value = false
   }
 }
 
-/**
- * Select global withdrawal
- * @param {Object} gw - Global withdrawal object
- * @returns {void}
- */
-const selectGlobalWithdrawal = (gw) => {
-  selectedGlobalWithdrawal.value = gw
-  loadCounts()
+const loadMainCashboxes = async () => {
+  try {
+    const { data } = await api.get('/cashboxes/balances', {
+      params: { is_main: 'true', paginate: 'false' }
+    })
+    allMainCashboxes.value = data
+  } catch (error) {
+    console.error('Error loading main cashboxes:', error)
+  }
 }
 
-/**
- * Load counts for selected global withdrawal
- * @async
- * @returns {Promise<void>}
- */
-const loadCounts = async () => {
-  if (!selectedGlobalWithdrawal.value) return
+const openTransferDialog = (cashbox = null) => {
+  Object.assign(transferForm, {
+    source_cashbox_id: cashbox && cashbox.is_main ? cashbox.id : null,
+    destination_cashbox_id: cashbox && !cashbox.is_main ? cashbox.id : null,
+    amount: null,
+    description: '',
+    photo: null
+  })
+  photoPreview.value = null
+  transferDialog.value = true
+}
 
-  loadingCounts.value = true
+const triggerFileInput = () => {
+  fileInput.value.click()
+}
+
+const onFileSelected = (event) => {
+  const file = event.target.files[0]
+  if (file) processFile(file)
+}
+
+const handleDrop = (event) => {
+  isDragging.value = false
+  const file = event.dataTransfer.files[0]
+  if (file) processFile(file)
+}
+
+const processFile = (file) => {
+  if (!file.type.startsWith('image/')) {
+    $q.notify({ type: 'negative', message: 'Por favor selecciona una imagen' })
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    $q.notify({ type: 'negative', message: 'La imagen excede los 10MB' })
+    return
+  }
+
+  transferForm.photo = file
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    photoPreview.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+const clearPhoto = () => {
+  transferForm.photo = null
+  photoPreview.value = null
+}
+
+const openGallery = () => {
+  if (photoPreview.value) {
+    galleryOpen.value = true
+  }
+}
+
+const handleTransfer = async () => {
+  submitting.value = true
   try {
-    const { data } = await api.get(`/reports/global-withdrawals/${selectedGlobalWithdrawal.value.id}/counts`)
-    globalWithdrawalDetails.value = data.global_withdrawal
-    cashboxes.value = data.cashboxes || []
+    const formData = new FormData()
+    formData.append('source_cashbox_id', transferForm.source_cashbox_id)
+    formData.append('destination_cashbox_id', transferForm.destination_cashbox_id)
+    formData.append('amount', transferForm.amount)
+    formData.append('description', transferForm.description)
+    if (transferForm.photo) {
+      formData.append('photo', transferForm.photo)
+    }
+
+    await api.post('/cashboxes/transfer', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    $q.notify({
+      type: 'positive',
+      message: 'Transferencia completada',
+      icon: 'check_circle'
+    })
+    transferDialog.value = false
+    loadCashboxes()
+    loadMainCashboxes()
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: 'Error al cargar detalles',
-      caption: error.message
+      message: error.response?.data?.message || 'Error en la transferencia'
     })
   } finally {
-    loadingCounts.value = false
+    submitting.value = false
   }
 }
 
-/**
- * Get difference color
- * @param {number} difference - Difference amount
- * @returns {string}
- */
-const getDifferenceColor = (difference) => {
-  if (difference > 0) return 'positive'
-  if (difference < 0) return 'negative'
-  return 'grey'
-}
-
-/**
- * Get difference text class
- * @param {number} difference - Difference amount
- * @returns {string}
- */
-const getDifferenceTextClass = (difference) => {
-  if (difference > 0) return 'text-positive'
-  if (difference < 0) return 'text-negative'
-  return 'text-grey-7'
-}
-
-/**
- * Get payment method color
- * @param {number} id - Payment method ID
- * @returns {string}
- */
-const getPaymentMethodColor = (id) => {
-  const colors = ['primary', 'positive', 'orange', 'cyan', 'purple', 'teal', 'pink', 'indigo']
-  return colors[id % colors.length]
-}
-
-/**
- * Format currency
- * @param {number} amount - Amount to format
- * @returns {string}
- */
-const formatCurrency = (amount) => {
+const formatCurrency = (val) => {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS'
-  }).format(amount || 0)
+  }).format(val || 0)
 }
 
-/**
- * Format date
- * @param {string} dateString - Date string
- * @returns {string}
- */
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
-}
-
-/**
- * Format date time
- * @param {string} dateString - Date string
- * @returns {string}
- */
-const formatDateTime = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
-onMounted(() => {
-  setDefaultDates()
-  loadGlobalWithdrawals()
+onMounted(async () => {
+  await Promise.all([
+    loadBranchOffices(),
+    loadCashboxes(),
+    loadMainCashboxes()
+  ])
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .finance-cashbox-page {
-  padding: 24px;
-  max-width: 1600px;
+  min-height: 100vh;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pulse-button {
+  box-shadow: 0 4px 15px rgba(var(--q-primary-rgb), 0.3);
+  transition: all 0.3s ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--q-primary-rgb), 0.4);
+  }
+}
+
+// Cashbox Cards - Compact
+.cashbox-card-compact {
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  transition: all 0.3s ease;
+  height: 100%;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+    border-color: var(--q-primary);
+  }
+
+  &.is-main {
+    border-color: rgba(255, 193, 7, 0.4);
+    &:hover {
+        border-color: #ff9800;
+    }
+  }
+
+  .cashbox-icon-mini {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .compact-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+}
+
+.toggle-filter-compact {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 0px 10px;
+  :deep(.q-btn) {
+    font-size: 12px;
+    min-height: 32px;
+  }
+}
+
+.compact-select {
+  :deep(.q-field__control) {
+    height: 36px;
+    border-radius: 8px;
+  }
+  :deep(.q-field__marginal) {
+    height: 36px;
+  }
+}
+
+.line-height-1 {
+  line-height: 1;
+}
+
+.balance-container {
+  padding-top: 4px;
+}
+
+.letter-spacing-1 {
+  letter-spacing: 1px;
+}
+
+// Dialog Styles
+.transfer-dialog-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #1976d2 100%);
+  padding-top: 20px;
+  padding-bottom: 20px;
+  &.rounded-top {
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+.max-width-container {
+  max-width: 600px;
   margin: 0 auto;
 }
 
-/* Header */
-.page-header {
-  margin-bottom: 24px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-icon {
-  color: var(--q-primary);
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--q-dark);
-}
-
-.body--dark .page-title {
-  color: #f1f5f9;
-}
-
-.page-subtitle {
+.form-label {
+  display: block;
   font-size: 14px;
-  color: #64748b;
-  margin: 4px 0 0 0;
-}
-
-/* Filters */
-.filters-card {
-  border-radius: 12px;
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  align-items: end;
-}
-
-/* Two Column Layout */
-.two-column-layout {
-  display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 16px;
-  height: calc(100vh - 280px);
-}
-
-@media (max-width: 1024px) {
-  .two-column-layout {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-
-  .left-column {
-    max-height: 400px;
-  }
-}
-
-.left-column,
-.right-column {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.column-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, var(--q-primary) 0%, #1976d2 100%);
-  color: white;
-  padding: 12px 16px;
-}
-
-.column-title {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* Global Withdrawal Item */
-.global-withdrawal-item {
-  transition: all 0.2s ease;
-  padding: 8px 12px;
-}
-
-.global-withdrawal-item:hover {
-  background: rgba(var(--q-primary-rgb), 0.05);
-}
-
-/* Empty State */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: calc(100vh - 400px);
-  padding: 48px;
-  text-align: center;
-}
-
-/* Details Content */
-.details-content {
-  height: 100%;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.summary-item {
-  text-align: center;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.body--dark .summary-item {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: #64748b;
   font-weight: 600;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.summary-value {
-  font-size: 22px;
-  font-weight: 800;
+.custom-input {
+  :deep(.q-field__control) {
+    border-radius: 12px;
+  }
 }
 
-/* Cashbox Expansion */
-.cashbox-expansion {
-  border-bottom: 1px solid #e2e8f0;
+// Upload Area
+.upload-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 40px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+
+  &:hover, &.dragging {
+    border-color: var(--q-primary);
+    background-color: rgba(var(--q-primary-rgb), 0.02);
+  }
+
+  &.has-preview {
+    padding: 0;
+    border-style: solid;
+    height: 250px;
+  }
 }
 
-.body--dark .cashbox-expansion {
-  border-bottom-color: #334155;
+.preview-content {
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-/* Responsive */
-@media (max-width: 599px) {
-  .finance-cashbox-page {
-    padding: 16px;
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.remove-photo-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+
+.rounded-pill {
+  border-radius: 50px;
+}
+
+.opacity-20 {
+  opacity: 0.2;
+}
+
+@media (max-width: 600px) {
+  .header-section {
+    text-align: center;
+    .row {
+      flex-direction: column;
+      gap: 20px;
+    }
   }
 
-  .page-title {
-    font-size: 24px;
-  }
-
-  .filters-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .two-column-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .summary-value {
-    font-size: 18px;
+  .transfer-dialog-card {
+    border-radius: 0;
   }
 }
 </style>
