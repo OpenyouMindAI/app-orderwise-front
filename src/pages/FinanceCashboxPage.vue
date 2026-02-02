@@ -1,23 +1,35 @@
 <template>
   <q-page class="finance-cashbox-page q-pa-md">
     <!-- Header Section -->
-    <div class="header-section q-mb-md">
+    <div class="header-section">
       <div class="row items-center justify-between">
         <div class="col-12 col-md-auto q-mb-sm q-mb-md-none">
-          <span class="text-h5 text-weight-bold q-ma-none text-gradient">Gestión de Cajas</span>
-          <p class="text-caption text-grey-7 q-mt-xs">Control de saldos y transferencias entre cajas</p>
+          <span class="text-h5 text-weight-bold q-ma-none">Gestión de Cajas</span>
+          <p class="text-caption q-mt-xs">Control de saldos y transferencias entre cajas</p>
         </div>
         <div class="col-12 col-md-auto">
-          <q-btn
-            unelevated
-            rounded
-            color="primary"
-            icon="add_circle"
-            label="Nueva Transferencia"
-            class="pulse-button q-px-md"
-            dense
-            @click="openTransferDialog()"
-          />
+          <div class="row q-gutter-sm">
+            <q-btn
+              outline
+              rounded
+              color="primary"
+              icon="add_circle_outline"
+              label="Nuevo Movimiento"
+              class="q-px-md"
+              dense
+              @click="openMovementDialog()"
+            />
+            <q-btn
+              unelevated
+              rounded
+              color="primary"
+              icon="swap_horiz"
+              label="Nueva Transferencia"
+              class="pulse-button q-px-md"
+              dense
+              @click="openTransferDialog()"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -90,7 +102,7 @@
 
     <div v-else-if="cashboxes.length > 0" class="row q-col-gutter-md">
       <div v-for="cashbox in cashboxes" :key="cashbox.id" class="col-12 col-sm-4 col-md-3 col-lg-2">
-        <q-card flat class="cashbox-card-compact" :class="{ 'is-main': cashbox.is_main }">
+        <q-card flat class="cashbox-card-compact cursor-pointer" :class="{ 'is-main': cashbox.is_main }" @click="openMovementsDialog(cashbox)">
           <div class="card-glow"></div>
           <q-card-section class="q-pa-sm">
             <div class="row items-center no-wrap q-gutter-x-sm q-mb-xs">
@@ -108,7 +120,7 @@
                   dense
                   color="primary"
                   icon="swap_horiz"
-                  @click="openTransferDialog(cashbox)"
+                  @click.stop="openTransferDialog(cashbox)"
                 >
                   <q-tooltip>Transferir desde aquí</q-tooltip>
                 </q-btn>
@@ -229,44 +241,48 @@
                 </q-input>
               </div>
 
-              <!-- Image Upload -->
+              <!-- Image Upload (Multiple) -->
               <div class="form-group">
-                <label class="form-label">Adjuntar / Tomar Foto</label>
+                <label class="form-label q-mb-xs">Comprobantes / Imágenes</label>
                 <div
-                  class="upload-zone"
+                  class="upload-zone-multiple"
                   @click="triggerFileInput"
                   @dragover.prevent="isDragging = true"
                   @dragleave.prevent="isDragging = false"
                   @drop.prevent="handleDrop"
-                  :class="{ 'dragging': isDragging, 'has-preview': photoPreview }"
+                  :class="{ 'dragging': isDragging }"
                 >
-                  <div v-if="!photoPreview" class="upload-content text-center">
-                    <q-icon name="cloud_upload" size="48px" color="primary" class="q-mb-sm" />
-                    <p class="text-weight-medium q-mb-none">Haz clic o arrastra una imagen</p>
-                    <p class="text-caption text-grey-5">Soporta JPG, PNG (Máx 10MB)</p>
-                  </div>
-                  <div v-else class="preview-content">
-                    <q-img :src="photoPreview" class="preview-image" @click.stop="openGallery">
-                      <div class="absolute-bottom text-center text-caption q-pa-xs">
-                        Toca para ampliar
-                      </div>
-                    </q-img>
-                    <q-btn
-                      icon="close"
-                      round
-                      dense
-                      color="negative"
-                      class="remove-photo-btn"
-                      @click.stop="clearPhoto"
-                    />
+                  <div class="upload-content text-center q-pa-md">
+                    <q-icon name="add_a_photo" size="32px" color="primary" class="q-mb-xs" />
+                    <p class="text-caption text-weight-medium q-mb-none">Añadir imágenes</p>
                   </div>
                   <input
                     type="file"
                     ref="fileInput"
                     style="display: none"
                     accept="image/*"
-                    @change="onFileSelected"
+                    multiple
+                    @change="onFilesSelected"
                   />
+                </div>
+
+                <!-- Previews Grid -->
+                <div v-if="photoPreviews.length > 0" class="row q-col-gutter-sm q-mt-xs">
+                  <div v-for="(preview, index) in photoPreviews" :key="index" class="col-4 col-sm-3">
+                    <q-card flat bordered class="preview-card-compact relative-position">
+                      <q-img :src="preview" class="preview-img-compact" @click="openUploadGallery(index)">
+                        <q-btn
+                          icon="close"
+                          round
+                          dense
+                          color="negative"
+                          size="xs"
+                          class="absolute-top-right q-ma-xs z-top"
+                          @click.stop="removeImage(index)"
+                        />
+                      </q-img>
+                    </q-card>
+                  </div>
                 </div>
               </div>
 
@@ -275,7 +291,7 @@
                   type="submit"
                   color="primary"
                   label="Confirmar Transferencia"
-                  class="full-width text-weight-bold"
+                  class="full-width text-weight-bold pulse-button"
                   rounded
                   unelevated
                   :loading="submitting"
@@ -291,8 +307,328 @@
     <ImageGalleryComponent
       v-model="galleryOpen"
       :images="galleryImages"
-      :initial-index="0"
+      :initial-index="currentGalleryIndex"
     />
+
+    <!-- Image Gallery -->
+    <ImageGalleryComponent
+      v-model="galleryOpen"
+      :images="galleryImages"
+      :initial-index="currentGalleryIndex"
+    />
+
+    <!-- Movement Dialog -->
+    <q-dialog v-model="movementDialog" persistent :maximized="$q.screen.lt.md" transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="transfer-dialog-card" :style="!$q.screen.lt.md ? 'width: 500px; border-radius: 20px;' : ''">
+        <q-card-section class="dialog-header q-px-lg" :class="{ 'rounded-top': !$q.screen.lt.md }">
+          <div class="row items-center justify-between">
+            <span class="text-h5 text-weight-bold q-ma-none text-white">Registrar Movimiento</span>
+            <q-btn icon="close" flat round dense v-close-popup color="white" />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pa-lg scroll">
+          <q-form @submit="handleMovement" class="q-gutter-y-md">
+            <!-- Cashbox -->
+            <q-select
+              v-model="movementForm.cashbox_id"
+              :options="allCashboxOptions"
+              filled
+              label="Caja"
+              emit-value
+              map-options
+              :rules="[val => !!val || 'Requerido']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="account_balance" color="primary" />
+              </template>
+            </q-select>
+
+            <!-- Type -->
+            <q-select
+              v-model="movementForm.type_cashflow"
+              :options="[
+                { label: 'Entrada (Venta/Cobro)', value: 'debit', icon: 'add_circle', color: 'positive' },
+                { label: 'Gasto', value: 'expense', icon: 'remove_circle', color: 'negative' },
+                { label: 'Retiro / Vale', value: 'withdrawal', icon: 'payments', color: 'orange' },
+                { label: 'Inicio de Caja', value: 'init_cashbox', icon: 'start', color: 'blue' }
+              ]"
+              filled
+              label="Tipo de Movimiento"
+              emit-value
+              map-options
+              :rules="[val => !!val || 'Requerido']"
+            >
+              <template v-slot:prepend>
+                <q-icon 
+                  :name="movementForm.type_cashflow ? movementTypeMap[movementForm.type_cashflow]?.icon : 'list'" 
+                  :color="movementForm.type_cashflow ? movementTypeMap[movementForm.type_cashflow]?.color : 'primary'" 
+                />
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon :name="scope.opt.icon" :color="scope.opt.color" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.label }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <div class="row q-col-gutter-sm">
+              <!-- Amount -->
+              <div class="col-12">
+                <q-input
+                  v-model.number="movementForm.amount"
+                  type="number"
+                  filled
+                  label="Monto"
+                  placeholder="0.00"
+                  :rules="[val => val > 0 || 'Monto inválido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="attach_money" color="primary" />
+                  </template>
+                </q-input>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <q-input
+              v-model="movementForm.description"
+              type="textarea"
+              filled
+              label="Descripción / Motivo"
+              placeholder="Escribe el motivo del movimiento..."
+              rows="2"
+              :rules="[val => !!val || 'Requerido']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="description" color="primary" />
+              </template>
+            </q-input>
+
+            <!-- Image Upload -->
+            <div class="form-group">
+              <label class="form-label q-mb-xs">Comprobantes / Imágenes</label>
+              <div
+                class="upload-zone-multiple"
+                @click="triggerMovementFileInput"
+                @dragover.prevent="isDragging = true"
+                @dragleave.prevent="isDragging = false"
+                @drop.prevent="handleMovementDrop"
+                :class="{ 'dragging': isDragging }"
+              >
+                <div class="upload-content text-center q-pa-md">
+                  <q-icon name="add_a_photo" size="32px" color="primary" class="q-mb-xs" />
+                  <p class="text-caption text-weight-medium q-mb-none">Añadir imágenes</p>
+                </div>
+                <input
+                  type="file"
+                  ref="movementFileInput"
+                  style="display: none"
+                  accept="image/*"
+                  multiple
+                  @change="onMovementFilesSelected"
+                />
+              </div>
+
+              <!-- Previews Grid -->
+              <div v-if="movementPhotoPreviews.length > 0" class="row q-col-gutter-sm q-mt-xs">
+                <div v-for="(preview, index) in movementPhotoPreviews" :key="index" class="col-4 col-sm-3">
+                  <q-card flat bordered class="preview-card-compact relative-position">
+                    <q-img :src="preview" class="preview-img-compact" @click="openMovementUploadGallery(index)">
+                      <q-btn
+                        icon="close"
+                        round
+                        dense
+                        color="negative"
+                        size="xs"
+                        class="absolute-top-right q-ma-xs z-top"
+                        @click.stop="removeMovementImage(index)"
+                      />
+                    </q-img>
+                  </q-card>
+                </div>
+              </div>
+            </div>
+
+            <div class="q-pt-md">
+              <q-btn
+                type="submit"
+                color="primary"
+                label="Registrar Movimiento"
+                class="full-width text-weight-bold"
+                rounded
+                unelevated
+                :loading="submitting"
+              />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Movements Dialog -->
+    <q-dialog v-model="movementsDialog" position="right" full-height :maximized="$q.screen.lt.sm">
+      <q-card style="width: 400px; max-width: 100vw;" class="column no-border-radius shadow-2">
+        <q-card-section class="q-pa-md bg-primary text-white sticky-top z-top header-blur border-bottom bg-">
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="column">
+              <div class="text-subtitle2 text-weight-bold">{{ selectedCashbox?.name }}</div>
+              <div>Historial de movimientos</div>
+            </div>
+            <q-btn icon="close" flat round dense v-close-popup size="sm" />
+          </div>
+
+          <div class="row q-col-gutter-sm">
+            <div class="col-12">
+              <q-select
+                v-model="filterMovementType"
+                :options="movementTypeOptions"
+                label="Tipo de movimiento"
+                outlined
+                clearable
+                dense
+                emit-value
+                map-options
+                @update:model-value="loadMovements"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="filter_list" size="xs" color="grey-6" />
+                </template>
+              </q-select>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="col q-pa-none scroll">
+          <q-list v-if="movements.length > 0" class="movements-list">
+            <q-item
+              v-for="mov in movements"
+              :key="mov.id"
+              class="movement-item"
+              v-ripple
+              style="padding: 8px 16px;"
+            >
+              <q-item-section avatar style="min-width: 40px;">
+                <q-icon
+                  :name="isPositive(mov.type_cashflow) ? 'add_circle' : 'remove_circle'"
+                  :color="isPositive(mov.type_cashflow) ? 'green-5' : 'red-5'"
+                  size="22px"
+                />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-medium text-body2">
+                  {{ mov.description || getTypeName(mov.type_cashflow) }}
+                </q-item-label>
+                <q-item-label caption class="row items-center q-gutter-x-sm no-wrap ellipsis">
+                  <span>{{ formatDate(mov.created_at) }}</span>
+                  <span v-if="mov.payment_method" class="text-grey-5">• {{ mov.payment_method.name }}</span>
+                </q-item-label>
+                <div v-if="mov.images && mov.images.length > 0" class="row q-gutter-xs q-mt-xs">
+                  <q-avatar
+                    v-for="(img, idx) in mov.images.slice(0, 3)"
+                    :key="img.id"
+                    size="20px"
+                    square
+                    class="cursor-pointer shadow-1 rounded-sm"
+                    @click.stop="openMovementGallery(mov, idx)"
+                  >
+                    <q-img :src="img.url" ratio="1" />
+                  </q-avatar>
+                  <div
+                    v-if="mov.images.length > 3"
+                    class="text-caption text-grey-6 flex items-center q-ml-xs"
+                    style="font-size: 10px;"
+                  >
+                    +{{ mov.images.length - 3 }}
+                  </div>
+                </div>
+              </q-item-section>
+
+              <q-item-section side>
+                <div
+                  class="text-weight-bold"
+                  :class="isPositive(mov.type_cashflow) ? 'text-green-7' : 'text-red-7'"
+                  style="font-size: 0.9rem;"
+                >
+                  {{ isPositive(mov.type_cashflow) ? '+' : '-' }} {{ formatCurrency(mov.amount) }}
+                </div>
+              </q-item-section>
+              <q-separator inset spaced v-if="false" /> <!-- Use manual separator if needed -->
+            </q-item>
+
+            <div v-if="hasMore" class="q-pa-md text-center">
+              <q-btn
+                flat
+                label="Cargar más"
+                color="primary"
+                size="xs"
+                rounded
+                :loading="loadingMore"
+                @click="loadMoreMovements"
+              />
+            </div>
+          </q-list>
+
+          <div v-else-if="!loadingMovements" class="empty-state-mini column items-center justify-center q-pa-xl text-grey-5">
+            <q-icon name="history" size="32px" opacity="0.5" />
+            <div class="text-caption q-mt-sm">Sin movimientos</div>
+          </div>
+
+          <div v-if="loadingMovements && movements.length === 0" class="q-pa-md">
+            <q-item v-for="n in 8" :key="n" style="padding: 8px 16px;">
+              <q-item-section avatar style="min-width: 40px;">
+                <q-skeleton type="QAvatar" size="22px" />
+              </q-item-section>
+              <q-item-section>
+                <q-skeleton type="text" width="70%" />
+                <q-skeleton type="text" width="40%" />
+              </q-item-section>
+            </q-item>
+          </div>
+        </q-card-section>
+
+        <q-separator />
+        <q-card-section v-if="selectedCashbox" class="q-pa-md">
+          <div class="row justify-between items-center q-mb-md">
+            <span class="text-caption text-grey-7 text-uppercase letter-spacing-1">Saldo Final</span>
+            <span class="text-subtitle1 text-weight-bolder" :class="selectedCashbox.balance >= 0 ? 'text-positive' : 'text-negative'">
+              {{ formatCurrency(selectedCashbox.balance) }}
+            </span>
+          </div>
+          
+          <div class="row q-col-gutter-sm">
+            <div class="col-6">
+              <q-btn 
+                outline 
+                color="positive" 
+                icon="add" 
+                label="Entrada" 
+                class="full-width" 
+                rounded
+                @click="openQuickMovement('debit')"
+              />
+            </div>
+            <div class="col-6">
+              <q-btn 
+                outline 
+                color="negative" 
+                icon="remove" 
+                label="Salida" 
+                class="full-width" 
+                rounded
+                @click="openQuickMovement('expense')"
+              />
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -316,30 +652,54 @@ const cashboxes = ref([])
 const allMainCashboxes = ref([])
 const branchOffices = ref([])
 const transferDialog = ref(false)
+const movementDialog = ref(false)
+const movementsDialog = ref(false)
 const filterBranchOffice = ref(null)
 const filterIsMain = ref('true') // Default view main cashboxes
+const filterMovementType = ref(null)
+
+const paymentMethods = ref([])
+const selectedCashbox = ref(null)
+const movements = ref([])
+const loadingMovements = ref(false)
+const loadingMore = ref(false)
+const currentPage = ref(1)
+const hasMore = ref(false)
 
 const transferForm = reactive({
   source_cashbox_id: null,
   destination_cashbox_id: null,
   amount: null,
   description: '',
-  photo: null
+  images: []
+})
+
+const movementForm = reactive({
+  cashbox_id: null,
+  type_cashflow: 'debit',
+  amount: null,
+  description: '',
+  images: []
 })
 
 const isDragging = ref(false)
-const photoPreview = ref(null)
+const photoPreviews = ref([])
+const movementPhotoPreviews = ref([])
 const fileInput = ref(null)
+const movementFileInput = ref(null)
+
+const movementTypeMap = {
+  debit: { icon: 'add_circle', color: 'positive' },
+  expense: { icon: 'remove_circle', color: 'negative' },
+  withdrawal: { icon: 'payments', color: 'orange' },
+  init_cashbox: { icon: 'start', color: 'blue' }
+}
 
 // Gallery
 const galleryOpen = ref(false)
-const galleryImages = computed(() => {
-  return photoPreview.value ? [{ url: photoPreview.value }] : []
-})
+const currentGalleryIndex = ref(0)
+const galleryImages = ref([])
 
-/**
- * Options for selects
- */
 const branchOfficeOptions = computed(() => {
   return branchOffices.value.map(bo => ({ label: bo.name, value: bo.id }))
 })
@@ -358,6 +718,17 @@ const allCashboxOptions = computed(() => {
     value: c.id
   }))
 })
+
+const movementTypeOptions = [
+  { label: 'Entradas (Ventas)', value: 'debit' },
+  { label: 'Inicio de Caja', value: 'init_cashbox' },
+  { label: 'Transferencia (Entrada)', value: 'transfer_in' },
+  { label: 'Salidas (Créditos)', value: 'credit' },
+  { label: 'Gastos', value: 'expense' },
+  { label: 'Retiros', value: 'withdrawal' },
+  { label: 'Cierre de Caja', value: 'close_cashbox' },
+  { label: 'Transferencia (Salida)', value: 'transfer_out' }
+]
 
 /**
  * Methods
@@ -409,52 +780,126 @@ const openTransferDialog = (cashbox = null) => {
     destination_cashbox_id: cashbox && !cashbox.is_main ? cashbox.id : null,
     amount: null,
     description: '',
-    photo: null
+    images: []
   })
-  photoPreview.value = null
+  photoPreviews.value = []
   transferDialog.value = true
+}
+
+const openMovementDialog = (cashbox = null, type = 'debit') => {
+  Object.assign(movementForm, {
+    cashbox_id: cashbox ? cashbox.id : null,
+    type_cashflow: type,
+    amount: null,
+    description: '',
+    images: []
+  })
+  movementPhotoPreviews.value = []
+  movementDialog.value = true
+}
+
+const openQuickMovement = (type) => {
+  if (selectedCashbox.value) {
+    openMovementDialog(selectedCashbox.value, type)
+  }
 }
 
 const triggerFileInput = () => {
   fileInput.value.click()
 }
 
-const onFileSelected = (event) => {
-  const file = event.target.files[0]
-  if (file) processFile(file)
+const triggerMovementFileInput = () => {
+  movementFileInput.value.click()
+}
+
+const onFilesSelected = (event) => {
+  const files = Array.from(event.target.files)
+  if (files.length > 0) processFiles(files)
+}
+
+const onMovementFilesSelected = (event) => {
+  const files = Array.from(event.target.files)
+  if (files.length > 0) processMovementFiles(files)
 }
 
 const handleDrop = (event) => {
   isDragging.value = false
-  const file = event.dataTransfer.files[0]
-  if (file) processFile(file)
+  const files = Array.from(event.dataTransfer.files)
+  if (files.length > 0) processFiles(files)
 }
 
-const processFile = (file) => {
-  if (!file.type.startsWith('image/')) {
-    $q.notify({ type: 'negative', message: 'Por favor selecciona una imagen' })
-    return
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    $q.notify({ type: 'negative', message: 'La imagen excede los 10MB' })
-    return
-  }
-
-  transferForm.photo = file
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    photoPreview.value = e.target.result
-  }
-  reader.readAsDataURL(file)
+const handleMovementDrop = (event) => {
+  isDragging.value = false
+  const files = Array.from(event.dataTransfer.files)
+  if (files.length > 0) processMovementFiles(files)
 }
 
-const clearPhoto = () => {
-  transferForm.photo = null
-  photoPreview.value = null
+const processFiles = (files) => {
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) {
+      $q.notify({ type: 'negative', message: `El archivo ${file.name} no es una imagen` })
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      $q.notify({ type: 'negative', message: `La imagen ${file.name} excede los 10MB` })
+      return
+    }
+
+    transferForm.images.push(file)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      photoPreviews.value.push(e.target.result)
+    }
+    reader.readAsDataURL(file)
+  })
 }
 
-const openGallery = () => {
-  if (photoPreview.value) {
+const processMovementFiles = (files) => {
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) {
+      $q.notify({ type: 'negative', message: `El archivo ${file.name} no es una imagen` })
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      $q.notify({ type: 'negative', message: `La imagen ${file.name} excede los 10MB` })
+      return
+    }
+
+    movementForm.images.push(file)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      movementPhotoPreviews.value.push(e.target.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+const removeImage = (index) => {
+  transferForm.images.splice(index, 1)
+  photoPreviews.value.splice(index, 1)
+}
+
+const removeMovementImage = (index) => {
+  movementForm.images.splice(index, 1)
+  movementPhotoPreviews.value.splice(index, 1)
+}
+
+const openUploadGallery = (index) => {
+  galleryImages.value = photoPreviews.value.map(url => ({ url }))
+  currentGalleryIndex.value = index
+  galleryOpen.value = true
+}
+
+const openMovementUploadGallery = (index) => {
+  galleryImages.value = movementPhotoPreviews.value.map(url => ({ url }))
+  currentGalleryIndex.value = index
+  galleryOpen.value = true
+}
+
+const openMovementGallery = (mov, index) => {
+  if (mov.images && mov.images.length > 0) {
+    galleryImages.value = mov.images
+    currentGalleryIndex.value = index
     galleryOpen.value = true
   }
 }
@@ -467,8 +912,10 @@ const handleTransfer = async () => {
     formData.append('destination_cashbox_id', transferForm.destination_cashbox_id)
     formData.append('amount', transferForm.amount)
     formData.append('description', transferForm.description)
-    if (transferForm.photo) {
-      formData.append('photo', transferForm.photo)
+    if (transferForm.images && transferForm.images.length > 0) {
+      transferForm.images.forEach(img => {
+        formData.append('images[]', img)
+      })
     }
 
     await api.post('/cashboxes/transfer', formData, {
@@ -493,11 +940,123 @@ const handleTransfer = async () => {
   }
 }
 
+const handleMovement = async () => {
+  submitting.value = true
+  try {
+    const formData = new FormData()
+    formData.append('cashbox_id', movementForm.cashbox_id)
+    formData.append('type_cashflow', movementForm.type_cashflow)
+    formData.append('amount', movementForm.amount)
+    formData.append('description', movementForm.description)
+    
+    if (movementForm.images && movementForm.images.length > 0) {
+      movementForm.images.forEach(img => {
+        formData.append('images[]', img)
+      })
+    }
+
+    await api.post('/cashboxes/movements', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    $q.notify({
+      type: 'positive',
+      message: 'Movimiento registrado con éxito',
+      icon: 'check_circle'
+    })
+    
+    movementDialog.value = false
+    loadCashboxes()
+    loadMainCashboxes()
+    
+    // If we are viewing the movements list for this box, reload it
+    if (movementsDialog.value && selectedCashbox.value && selectedCashbox.value.id === movementForm.cashbox_id) {
+       loadMovements()
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Error al registrar movimiento'
+    })
+  } finally {
+    submitting.value = false
+  }
+}
+
 const formatCurrency = (val) => {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS'
   }).format(val || 0)
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const isPositive = (type) => {
+  return ['debit', 'init_cashbox', 'transfer_in'].includes(type)
+}
+
+const getTypeName = (type) => {
+  const found = movementTypeOptions.find(o => o.value === type)
+  return found ? found.label : type
+}
+
+const openMovementsDialog = (cashbox) => {
+  selectedCashbox.value = cashbox
+  movements.value = []
+  currentPage.value = 1
+  filterMovementType.value = null
+  movementsDialog.value = true
+  loadMovements()
+}
+
+const loadMovements = async () => {
+  if (!selectedCashbox.value) return
+  loadingMovements.value = true
+  try {
+    const params = {
+      type: filterMovementType.value,
+      page: 1,
+      perPage: 20
+    }
+    const { data } = await api.get(`/cashboxes/${selectedCashbox.value.id}/movements`, { params })
+    movements.value = data.data
+    hasMore.value = data.current_page < data.last_page
+    currentPage.value = data.current_page
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al cargar movimientos' })
+  } finally {
+    loadingMovements.value = false
+  }
+}
+
+const loadMoreMovements = async () => {
+  if (loadingMore.value || !hasMore.value) return
+  loadingMore.value = true
+  try {
+    const params = {
+      type: filterMovementType.value,
+      page: currentPage.value + 1,
+      perPage: 20
+    }
+    const { data } = await api.get(`/cashboxes/${selectedCashbox.value.id}/movements`, { params })
+    movements.value = [...movements.value, ...data.data]
+    hasMore.value = data.current_page < data.last_page
+    currentPage.value = data.current_page
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al cargar más movimientos' })
+  } finally {
+    loadingMore.value = false
+  }
 }
 
 onMounted(async () => {
@@ -633,44 +1192,46 @@ onMounted(async () => {
   }
 }
 
-// Upload Area
-.upload-zone {
-  border: 2px dashed #cbd5e1;
-  border-radius: 16px;
-  padding: 40px;
+// Upload Area Multiple
+.upload-zone-multiple {
+  border: 2px dashed rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  background: rgba(0, 0, 0, 0.01);
 
   &:hover, &.dragging {
     border-color: var(--q-primary);
     background-color: rgba(var(--q-primary-rgb), 0.02);
   }
-
-  &.has-preview {
-    padding: 0;
-    border-style: solid;
-    height: 250px;
-  }
 }
 
-.preview-content {
+.body--dark .upload-zone-multiple {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.preview-card-compact {
+  border-radius: 8px;
+  overflow: hidden;
+  height: 80px;
+}
+
+.preview-img-compact {
   width: 100%;
   height: 100%;
-  position: relative;
+  object-fit: cover;
+  cursor: pointer;
 }
 
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.rounded-sm {
+  border-radius: 4px;
 }
 
-.remove-photo-btn {
+.remove-images-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 5px;
+  right: 5px;
   z-index: 10;
 }
 
@@ -680,6 +1241,76 @@ onMounted(async () => {
 
 .opacity-20 {
   opacity: 0.2;
+}
+
+.border-bottom {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .border-bottom {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.border-bottom-light {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.body--dark .border-bottom-light {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.header-blur {
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.body--dark .header-blur {
+  background: rgba(29, 29, 29, 0.8);
+}
+
+.compact-select-mini {
+  :deep(.q-field__control) {
+    min-height: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+  :deep(.q-field__marginal) {
+    height: 32px;
+  }
+  :deep(.q-field__label) {
+    top: 6px;
+  }
+}
+
+.movement-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.body--dark .movement-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.z-top {
+  z-index: 100;
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+}
+
+.movement-item {
+  transition: background-color 0.2s;
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+}
+
+.body--dark .movement-item:hover {
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 @media (max-width: 600px) {
