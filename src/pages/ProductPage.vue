@@ -2218,6 +2218,8 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <DemoPersuasionModal v-model="showDemoModal" />
   </div>
 </template>
 
@@ -2234,6 +2236,8 @@ import { formatNumber, loading, notify } from 'src/const/mixins'
 import BulkPriceDialog from 'src/components/Product/BulkPriceDialog.vue'
 import eventBus from 'src/utils/eventBus'
 import { api } from 'boot/axios'
+import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
+import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -2242,7 +2246,11 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 export default {
-  components: { StockProduct, BulkPriceDialog, OnboardingValidationModal, RecipeProduct, PackProduct },
+  components: { StockProduct, BulkPriceDialog, OnboardingValidationModal, RecipeProduct, PackProduct, DemoPersuasionModal },
+  setup () {
+    const { showDemoModal, trackDemoAction } = useDemoPersuasion()
+    return { showDemoModal, trackDemoAction }
+  },
   data () {
     return {
       qrDialog: false,
@@ -3540,6 +3548,8 @@ export default {
             icon: 'check_circle',
             color: 'positive'
           })
+
+          this.trackDemoAction(true)
 
           // Verificar si viene desde WelcomePage para preguntar si continuar
           this.checkContinueConfiguration()
