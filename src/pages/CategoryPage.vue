@@ -587,6 +587,7 @@ export default {
       currentTourStep: 0,
       currentTourType: 'main',
       activeTourSteps: [],
+      fakeCategoryForTour: null, // Track fake category created for tour
       // Definición maestra de todos los pasos posibles con sus condiciones ideales
       allTourStepsDefinition: [
         // Pasos Desktop
@@ -604,18 +605,21 @@ export default {
           target: '#tour-tabla-categorias',
           title: '📋 Tabla de Categorías',
           description: 'Aquí se muestran todas tus categorías con información clave.',
-          excludeOnMobileTablet: true // Flag personalizado para excluir en tablet/mobile
+          excludeOnMobileTablet: true, // Flag personalizado para excluir en tablet/mobile
+          action: () => this.ensureFakeCategoryExists() // Ensure at least one category exists
         },
         {
           target: '#tour-tabla-categorias tbody tr:first-child', // Desktop edit
           title: '✏️ Editar Categoría',
           description: 'Haz clic en una fila para editar la categoría.',
-          excludeOnMobileTablet: true
+          excludeOnMobileTablet: true,
+          action: () => this.ensureFakeCategoryExists()
         },
         {
           target: '#tour-first-category-card', // Mobile edit
           title: '✏️ Editar Categoría',
-          description: 'Toca una tarjeta para editar la categoría.'
+          description: 'Toca una tarjeta para editar la categoría.',
+          action: () => this.ensureFakeCategoryExists()
         }
       ],
       spotlightStyle: {},
@@ -1207,6 +1211,8 @@ export default {
      * Skip tour
      */
     skipTour () {
+      // Remove fake category before finishing
+      this.removeFakeCategoryIfExists()
       this.finishTour()
     },
     /**
@@ -1216,7 +1222,64 @@ export default {
       this.showTour = false
       this.currentTourStep = 0
       localStorage.setItem('has_seen_category_main_tour', 'true')
+
+      // Remove fake category if it was created for the tour
+      this.removeFakeCategoryIfExists()
+
       notify('¡Tour completado! Ya conoces cómo gestionar categorías.', 'positive', 'check_circle')
+    },
+    /**
+     * Ensure at least one category exists for tour demonstration
+     * Creates a fake category if the list is empty
+     */
+    ensureFakeCategoryExists () {
+      // Si ya hay categorías, no hacer nada
+      if (this.categories.length > 0) {
+        return
+      }
+
+      // Si ya creamos una categoría fake, no crear otra
+      if (this.fakeCategoryForTour) {
+        return
+      }
+
+      // Crear categoría temporal para demostración del tour
+      const fakeCategory = {
+        id: 'fake-tour-category-' + Date.now(),
+        name: 'Categoría de Ejemplo',
+        sort_order: 1,
+        show_catalog: 1,
+        aliquot_type: {
+          Desc: 'IVA 16%',
+          id: 1
+        },
+        printer: null,
+        branch_offices: [],
+        _isFake: true // Marcar como fake para identificarla
+      }
+
+      // Agregar a la lista de categorías
+      this.categories.push(fakeCategory)
+      this.fakeCategoryForTour = fakeCategory
+
+      console.log('✨ Categoría temporal creada para el tour')
+    },
+    /**
+     * Remove fake category if it exists
+     */
+    removeFakeCategoryIfExists () {
+      if (!this.fakeCategoryForTour) {
+        return
+      }
+
+      // Buscar y eliminar la categoría fake
+      const index = this.categories.findIndex(c => c._isFake || c.id === this.fakeCategoryForTour.id)
+      if (index !== -1) {
+        this.categories.splice(index, 1)
+        console.log('🗑️ Categoría temporal eliminada')
+      }
+
+      this.fakeCategoryForTour = null
     },
     /**
      * Check if should continue configuration
