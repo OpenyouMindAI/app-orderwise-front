@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf'
+import { jsPDF as JsPdf } from 'jspdf'
 import { formatDate, formatNumber } from '../../mixins'
 import { cutWords, header, setQrImage } from '../common'
 import qbitsLogo from '../../logo'
@@ -8,7 +8,7 @@ const addressFormat = (address) => {
   if (typeof address === 'string') {
     return address?.toUpperCase()
   }
-  return address?.formattedAddress?.toUpperCase()
+  return address?.formattedAddress?.toUpperCase() || ''
 }
 /**
  * Print invoice
@@ -25,50 +25,51 @@ export const previewTicket = async (data, userSession) => {
   const { doc, pageWidth } = header(data, companySession, 95)
 
   const centrarTexto = (texto, valid = false) => {
-    const textWidth = doc.getTextWidth(texto)
+    const textWidth = doc.getTextWidth(texto || '')
     return valid ? (pageWidth - textWidth) / 2 : 5
   }
 
-  y = cutWords(`Razón social: ${companySession?.name?.toUpperCase()}`, 65, doc, y, false, 95)
+  y = cutWords(`Razón social: ${companySession?.name?.toUpperCase() || ''}`, 65, doc, y, false, 95)
   y = cutWords(`Dirección: ${addressFormat(companySession?.address)}`, 65, doc, y, false, 95)
-  y = cutWords(`C.U.I.T: ${companySession?.document_number}`, 65, doc, y, false, 95)
-  if (data.billing) {
-    y = cutWords(`IIBB: ${fields?.income_brut}`, 70, doc, y, false, 95)
+  y = cutWords(`C.U.I.T: ${companySession?.document_number || ''}`, 65, doc, y, false, 95)
+  if (data.billing && fields) {
+    y = cutWords(`IIBB: ${fields?.income_brut || ''}`, 70, doc, y, false, 95)
     y = cutWords(`Inicio de actividad: ${formatDate(fields?.activity_start_date, 'DD/MM/YYYY')}`, 70, doc, y, false, 95)
   }
-  y += 1
+  y += 2
   doc.text('----------------------------------------', 5, y)
   y += 7
-  if (data.billing) {
+  if (data.billing && fields?.voucher_type) {
     doc.setFontSize(20)
-    doc.text(fields?.voucher_type?.Desc, centrarTexto(fields?.voucher_type?.Desc?.toUpperCase(), true), y)
+    const desc = fields.voucher_type.Desc || ''
+    doc.text(desc, centrarTexto(desc.toUpperCase(), true), y)
     doc.setFontSize(10)
     y += 5
-    doc.text(`Código: ${fields.voucher_type.Id}`, centrarTexto(`Código: ${fields?.voucher_type?.Id}`, true), y)
+    doc.text(`Código: ${fields.voucher_type.Id || ''}`, centrarTexto(`Código: ${fields.voucher_type.Id || ''}`, true), y)
     y += 7
   }
   if (data.billing) {
-    doc.text(`NRO: 000${data.electronic_invoice?.fields?.point_of_sale}-000${data?.electronic_invoice?.fields?.cbte_hasta}`, 5, y)
+    doc.text(`NRO: 000${fields?.point_of_sale || ''}-000${fields?.cbte_hasta || ''}`, 5, y)
   } else {
-    doc.text(`NRO: ${data.code}`, 5, y)
+    doc.text(`NRO: ${data.code || ''}`, 5, y)
   }
   y += 4
-  doc.text(`CLIENTE: ${data?.client?.name} ${data?.client?.last_name || ''}`, 5, y)
+  doc.text(`CLIENTE: ${data?.client?.name || ''} ${data?.client?.last_name || ''}`, 5, y)
   y += 4
   doc.text(`FECHA: ${formatDate(data.created_at, 'DD/MM/YYYY')}`, 5, y)
   y += 4
   doc.text(`HORA: ${formatDate(data.created_at, 'HH:mm:ss')}`, 5, y)
   y += 4
-  doc.text(`TIPO: ${data?.invoice_type?.name}`, 5, y)
+  doc.text(`TIPO: ${data?.invoice_type?.name || ''}`, 5, y)
   y += 4
-  if (data.billing) {
-    doc.text(`Concepto: ${fields?.concept_type?.Desc}`, 5, y)
+  if (data.billing && fields?.concept_type) {
+    doc.text(`Concepto: ${fields.concept_type.Desc || ''}`, 5, y)
     y += 4
   }
 
   if (data?.tables?.length > 0) {
     data?.tables?.forEach((table) => {
-      doc.text(`MESA: ${table?.name} Sala ${table.living_room?.name || ''}`, 5, y)
+      doc.text(`MESA: ${table?.name || ''} Sala ${table.living_room?.name || ''}`, 5, y)
       y += 4
     })
   }
@@ -86,18 +87,18 @@ export const previewTicket = async (data, userSession) => {
 
   y += 4
   data.products.forEach((product) => {
-    const cantidadPrecio = `${formatNumber(product.pivot.amount)} X ${product.pivot.price}`
-    const subtotal = (product.pivot.amount * product.pivot.price).toFixed(2)
+    const cantidadPrecio = `${formatNumber(product.pivot?.amount || 0)} X ${product.pivot?.price || 0}`
+    const subtotal = ((product.pivot?.amount || 0) * (product.pivot?.price || 0)).toFixed(2)
 
     doc.text(cantidadPrecio, 5, y)
     if (data.billing) {
-      doc.text(`${product.pivot.taxe}%`, 50, y, { align: 'center' })
+      doc.text(`${product.pivot?.taxe || 0}%`, 50, y, { align: 'center' })
     }
     doc.text(subtotal, 90, y, { align: 'right' })
     y += 4
 
     const maxWidth = 60
-    const description = doc.splitTextToSize(product.name, maxWidth)
+    const description = doc.splitTextToSize(product.name || '', maxWidth)
     description.forEach((linea) => {
       doc.text(linea, 5, y)
       y += 4
@@ -107,18 +108,18 @@ export const previewTicket = async (data, userSession) => {
   // Validar que promotions existe y es un array antes de iterar
   if (data.promotions && Array.isArray(data.promotions)) {
     data.promotions.forEach((product) => {
-      const cantidadPrecio = `${formatNumber(product.pivot.quantity)} X ${product.pivot.price}`
-      const subtotal = (product.pivot.quantity * product.pivot.price).toFixed(2)
+      const cantidadPrecio = `${formatNumber(product.pivot?.quantity || 0)} X ${product.pivot?.price || 0}`
+      const subtotal = ((product.pivot?.quantity || 0) * (product.pivot?.price || 0)).toFixed(2)
 
       doc.text(cantidadPrecio, 5, y)
       if (data.billing) {
-        doc.text(`${product.pivot.taxe}%`, 50, y, { align: 'center' })
+        doc.text(`${product.pivot?.taxe || 0}%`, 50, y, { align: 'center' })
       }
       doc.text(subtotal, 90, y, { align: 'right' })
       y += 4
 
       const maxWidth = 60
-      const description = doc.splitTextToSize(product.name, maxWidth)
+      const description = doc.splitTextToSize(product.name || '', maxWidth)
       description.forEach((linea) => {
         doc.text(linea, 5, y)
         y += 4
@@ -130,15 +131,15 @@ export const previewTicket = async (data, userSession) => {
   y += 4
 
   doc.text('TOTAL', 5, y)
-  doc.text(data.total.toFixed(2), 90, y, { align: 'right' })
+  doc.text((data.total || 0).toFixed(2), 90, y, { align: 'right' })
   y += 4
 
   doc.text('----------------------------------------', 5, y)
   y += 4
 
-  if (data.billing) {
+  if (data.billing && fields) {
     const qrDataURL = await setQrImage(data, fields, companySession)
-    doc.text(`CAE: ${fields?.cae}`, 5, y)
+    doc.text(`CAE: ${fields?.cae || ''}`, 5, y)
     y += 4
     doc.text(`Vto: ${formatDate(fields?.caef_ch_vto, 'DD/MM/YYYY')}`, 5, y)
     y += 7
@@ -149,8 +150,6 @@ export const previewTicket = async (data, userSession) => {
 }
 
 export async function previewInvoice (invoice, userSession) {
-  const JsPdf = jsPDF
-
   const doc = new JsPdf()
   const { company_session: companySession } = userSession
   const voucherType = invoice.electronic_invoice?.fields?.voucher_type
@@ -175,7 +174,7 @@ export async function previewInvoice (invoice, userSession) {
   }
   doc.setFontSize(10)
   doc.text(`Razón social: ${companySession.name}`, 10, 33, { maxWidth: 70 })
-  doc.text(`Domicilio Comercial: ${companySession.address}`, 10, 43, { maxWidth: 70 })
+  doc.text(`Domicilio Comercial: ${addressFormat(companySession?.address)}`, 10, 43, { maxWidth: 70 })
   doc.text('Condición Frente al IVA: Responsable inscrito', 10, 57)
 
   const pageWidth = doc.internal.pageSize.getWidth()

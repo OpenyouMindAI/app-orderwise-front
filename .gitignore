@@ -35,4 +35,5 @@ yarn-error.log*
 .env.development
 .env.deploy
 .env.staging
+.env.premium
 .prettierrc

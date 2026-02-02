@@ -306,7 +306,9 @@ export default {
      * Loads available cash boxes from API with open/closed status
      */
     async filterAvailableCashBoxes (value, update, filter = true) {
-      if (!this.branchOffice?.id) {
+      const branchOfficeId = this.branchOffice?.id || this.authStore.branchOffice?.id
+
+      if (!branchOfficeId) {
         console.error('Error: branchOffice.id no está disponible')
         this.availableCashBoxes = []
         return
@@ -319,7 +321,7 @@ export default {
               name: value
             },
             dataEqualFilter: {
-              branch_office_id: this.branchOffice?.id
+              branch_office_id: branchOfficeId
             }
           }
         })
@@ -349,7 +351,7 @@ export default {
           init_date: new Date().toISOString().split('T')[0], // Fecha actual YYYY-MM-DD
           init_time: new Date().toTimeString().split(' ')[0], // Hora actual HH:MM:SS
           status: 'open',
-          branch_office_id: this.branchOffice.id
+          branch_office_id: this.branchOffice?.id || this.authStore.branchOffice?.id
         }
 
         const response = await this.$api.post('cashier-open', payload)
@@ -388,7 +390,7 @@ export default {
         const payload = {
           name: this.newBoxName.trim(),
           status: 'active',
-          branch_office_id: this.branchOffice.id
+          branch_office_id: this.branchOffice?.id || this.authStore.branchOffice?.id
         }
 
         const response = await this.$api.post('cashboxes', payload)
@@ -428,7 +430,7 @@ export default {
         // Get current session to ensure we have the correct ID
         const sessionResponse = await this.$api.get('cashier-init', {
           params: {
-            branch_office_id: this.branchOffice.id
+            branch_office_id: this.branchOffice?.id || this.authStore.branchOffice?.id
           }
         })
         const cashierSession = sessionResponse.data
