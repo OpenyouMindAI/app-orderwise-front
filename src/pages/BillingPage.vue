@@ -4391,7 +4391,7 @@ export default {
         await this.printBill(res.data.data)
         notify('Factura guardada exitosamente', 'positive', 'check_circle')
 
-        this.trackDemoAction()
+        this.trackDemoAction(true)
 
         this.dialogPayment = false
         if (!this.tableClose) {

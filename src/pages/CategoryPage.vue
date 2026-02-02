@@ -892,7 +892,7 @@ export default {
             color: 'positive'
           })
 
-          this.trackDemoAction()
+          this.trackDemoAction(true)
 
           this.checkContinueConfiguration()
         })

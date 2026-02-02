@@ -3459,7 +3459,7 @@ export default {
             color: 'positive'
           })
 
-          this.trackDemoAction()
+          this.trackDemoAction(true)
 
           // Verificar si viene desde WelcomePage para preguntar si continuar
           this.checkContinueConfiguration()
