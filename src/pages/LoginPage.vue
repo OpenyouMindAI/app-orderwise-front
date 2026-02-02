@@ -1009,22 +1009,29 @@ export default {
     /**
      * Handle when company setup is completed successfully
      */
-    async handleCompanySetupSuccess () {
+    async handleCompanySetupSuccess (data) {
       try {
         this.showCompanySetup = false
 
-        const { data } = await this.$api.get('user/session')
-        await this.setSessionData(data)
+        // Si el modal no devuelve los datos completos, los buscamos
+        let sessionData = data
+        if (!data || !data.user) {
+          const response = await this.$api.get('user/session')
+          sessionData = response.data
+        }
+
+        // Actualizar sesión con la misma estructura que Registro
+        await this.setSessionData({
+          user: sessionData.user,
+          access_token: sessionData.access_token || localStorage.getItem('access_token'),
+          token_type: sessionData.token_type || 'Bearer',
+          expires_in: sessionData.expires_in
+        })
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
 
-        if (data.user.is_root) {
-          this.$router.push({ name: 'Billing' })
-        } else if (data.user?.roles?.length === 0) {
-          notify('Usuario no tiene permisos', 'negative', 'warning')
-        } else {
-          this.$router.push({ name: this.redirect || 'Tutorial' })
-        }
+        // Siempre redirigir al Wizard de configuración para asegurar inicialización correcta
+        this.$router.push({ name: 'CompanyConfig' })
       } catch (error) {
         console.error('Error al configurar empresa:', error)
         notify('Error al configurar la empresa', 'negative', 'warning')

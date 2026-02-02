@@ -464,246 +464,12 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="showCompanySetup" persistent transition-show="scale" transition-hide="scale">
-      <q-card class="modern-company-setup-dialog">
-        <!-- Header moderno -->
-        <q-card-section class="company-setup-header">
-          <div class="header-content">
-            <div class="setup-icon-wrapper">
-              <q-icon name="business_center" size="28px" class="setup-icon" />
-            </div>
-            <div class="text-h6 text-weight-bold q-mt-xs">Configura tu Empresa</div>
-            <div class="text-caption text-grey-7">Completa la información para comenzar</div>
-          </div>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-section class="q-pa-md" style="max-height: 60vh; overflow-y: auto;">
-          <q-form @submit="setupCompany">
-            <!-- Nombre de la empresa -->
-            <div class="input-container">
-              <q-input
-                v-model="companyForm.company_name"
-                placeholder="Nombre de la Empresa *"
-                borderless
-                class="custom-input"
-                hide-bottom-space
-                :rules="[val => !!val || 'El nombre es requerido']"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="business" color="primary" size="20px"/>
-                </template>
-              </q-input>
-            </div>
-
-            <!-- Documento -->
-            <div class="input-container">
-              <q-input
-                v-model="companyForm.company_document"
-                placeholder="Documento (Ej: 20-12345678-9) *"
-                borderless
-                class="custom-input"
-                hide-bottom-space
-                :rules="[val => !!val || 'El documento es requerido']"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="badge" color="primary" size="20px"/>
-                </template>
-              </q-input>
-            </div>
-
-            <!-- Teléfono con Selector de País -->
-            <div class="input-container phone-input-container">
-              <div class="row">
-                <!-- País -->
-                <div class="col-4">
-                  <q-select
-                    v-model="selectedCountry"
-                    :options="countryOptions"
-                    option-label="label"
-                    class="custom-input country-select"
-                    hide-bottom-space
-                    emit-value
-                    map-options
-                    behavior="menu"
-                    popup-content-class="country-dropdown"
-                    dense
-                    borderless
-                  >
-                    <template v-slot:selected>
-                      <div class="row items-center no-wrap">
-                        <span class="country-flag q-mr-xs">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
-                        <span class="text-caption ellipsis">{{ selectedCountry ? selectedCountry.code : '' }}</span>
-                      </div>
-                    </template>
-                    <template v-slot:option="scope">
-                      <q-item v-bind="scope.itemProps">
-                        <q-item-section avatar>
-                          <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
-                        </q-item-section>
-                        <q-item-section>
-                          <q-item-label>{{ scope.opt.label }}</q-item-label>
-                          <q-item-label caption>{{ scope.opt.code }}</q-item-label>
-                        </q-item-section>
-                      </q-item>
-                    </template>
-                  </q-select>
-                </div>
-
-                <!-- Input Teléfono -->
-                <div class="col-8 q-pl-sm">
-                  <q-input
-                    v-model="companyForm.company_phone"
-                    placeholder="Teléfono (Ej: 11 1234 5678) *"
-                    borderless
-                    class="custom-input"
-                    :rules="phoneRule"
-                    type="tel"
-                    hide-bottom-space
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="phone" color="primary" size="20px"/>
-                    </template>
-                  </q-input>
-                </div>
-              </div>
-            </div>
-
-            <!-- Email -->
-            <div class="input-container">
-              <q-input
-                v-model="companyForm.company_email"
-                placeholder="Email de la Empresa *"
-                type="email"
-                borderless
-                class="custom-input"
-                hide-bottom-space
-                :rules="[
-                  val => !!val || 'El email es requerido',
-                  val => /.+@.+\..+/.test(val) || 'Email inválido'
-                ]"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="email" color="primary" size="20px"/>
-                </template>
-              </q-input>
-            </div>
-
-            <!-- País -->
-            <div class="input-container">
-              <q-select
-                v-model="companyForm.country_id"
-                :options="countries"
-                option-label="name"
-                option-value="id"
-                placeholder="Seleccione el País *"
-                class="custom-input"
-                use-input
-                input-debounce="300"
-                @filter="filterCountries"
-                hide-bottom-space
-                behavior="menu"
-                borderless
-                emit-value
-                map-options
-                :rules="[val => !!val || 'El país es requerido']"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="public" color="primary" size="20px"/>
-                </template>
-                <template v-slot:no-option>
-                  <q-item>
-                    <q-item-section class="text-grey">
-                      No hay resultados
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </q-select>
-            </div>
-
-            <!-- Rubro -->
-            <div class="input-container">
-              <q-select
-                v-model="companyForm.business_type"
-                :options="businessTypes"
-                option-label="name"
-                option-value="id"
-                placeholder="Rubro / Tipo de Negocio *"
-                class="custom-input"
-                use-input
-                input-debounce="300"
-                @filter="filterBusinessTypes"
-                :rules="[val => !!val || 'El rubro es requerido']"
-                hide-bottom-space
-                behavior="menu"
-                borderless
-              >
-                <template v-slot:prepend>
-                  <q-icon name="category" color="primary" size="20px"/>
-                </template>
-                <template v-slot:no-option>
-                  <q-item>
-                    <q-item-section class="text-grey">
-                      No hay resultados
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </q-select>
-            </div>
-
-            <!-- Checkbox de copiar productos -->
-            <div class="input-container">
-              <q-checkbox
-                v-model="companyForm.copy_test_products"
-                label="Copiar productos y categorías de ejemplo"
-                color="primary"
-              >
-                <q-tooltip class="bg-grey-8">
-                  Te ayudará a empezar más rápido con datos de prueba del mismo rubro
-                </q-tooltip>
-              </q-checkbox>
-            </div>
-
-            <!-- Dirección con AddressComponent -->
-            <div class="input-container">
-              <AddressComponent
-                :initial-address="companyAddressData"
-                @address-selected="handleCompanyAddressSelected"
-                label="Dirección fiscal"
-                is-custom-styled
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-
-        <q-separator />
-
-        <!-- Footer con botones -->
-        <q-card-actions class="q-pa-md">
-          <q-btn
-            flat
-            label="Volver"
-            color="grey-7"
-            icon="arrow_back"
-            @click="backToOptions"
-            :disable="loadingCompanySetup"
-            no-caps
-          />
-          <q-space />
-          <q-btn
-            label="Crear Empresa"
-            color="primary"
-            icon-right="rocket_launch"
-            @click="setupCompany"
-            :loading="loadingCompanySetup"
-            unelevated
-            no-caps
-            class="setup-submit-btn"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <CompanySetupModal
+      v-model="showCompanySetup"
+      :user-email="companyForm.company_email"
+      @success="handleCompanySetupSuccess"
+      @back="backToOptions"
+    />
   </div>
 </template>
 
@@ -714,7 +480,7 @@ import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { qBitsLogo, notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
-import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import { usePixel } from 'src/composables/usePixel'
 
 const router = useRouter()
@@ -776,8 +542,6 @@ const companyForm = ref({
 })
 
 const businessTypes = ref([])
-const countries = ref([])
-const loadingCompanySetup = ref(false)
 const isGoogleRegister = ref(false)
 const showCompanyOptions = ref(false)
 const showDemoBusinessTypeSelection = ref(false)
@@ -815,39 +579,24 @@ const phoneRule = computed(() => {
   ]
 })
 
-const companyAddressData = ref({
-  name: '',
-  street: '',
-  city: '',
-  state: '',
-  country: '',
-  zipCode: '',
-  latitude: null,
-  longitude: null,
-  formattedAddress: '',
-  placeId: '',
-  types: []
-})
-
 /**
- * Filter countries from API
- * @param {string} val - The search value
- * @param {function} update - The update function
+ * Handle company setup success
  */
-const filterCountries = async (val, update) => {
-  try {
-    const { data } = await api.get('countries', {
-      params: { search: val }
-    })
-    update(() => {
-      countries.value = data.data || data
-    })
-  } catch (error) {
-    console.error('Error loading countries:', error)
-    update(() => {
-      countries.value = []
+const handleCompanySetupSuccess = (data) => {
+  if (data.user) {
+    store.setSessionData({
+      user: data.user,
+      access_token: data.access_token || localStorage.getItem('access_token'),
+      token_type: data.token_type || 'Bearer',
+      expires_in: data.expires_in
     })
   }
+
+  localStorage.removeItem(REGISTER_SESSION_KEY)
+  localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+
+  showCompanySetup.value = false
+  router.push({ name: 'CompanyConfig' })
 }
 
 const businessTypeSearch = ref('')
@@ -863,32 +612,22 @@ const filteredBusinessTypes = computed(() => {
 })
 
 /**
- * Filter business types
- * @param {string} value - The search value
- * @param {function} update - The update function
+ * Filter business types - Handled by searchBusinessTypes for demo
  */
-const filterBusinessTypes = async (value, update) => {
-  try {
-    const { data } = await api.get('business-types', {
-      params: { search: value }
-    })
-    update(() => {
-      businessTypes.value = data.data || data
-    })
-  } catch (error) {
-    console.error('Error loading business types:', error)
-    update(() => {
-      businessTypes.value = []
-    })
-  }
-}
 
 /**
  * Search business types
  * @param {string} value - The search value
  */
-const searchBusinessTypes = (value) => {
-  // El filtrado se hace automáticamente con el computed
+const searchBusinessTypes = async (value) => {
+  try {
+    const { data } = await api.get('business-types', {
+      params: { dataSearch: { name: value } }
+    })
+    businessTypes.value = data.data || data
+  } catch (error) {
+    console.error('Error loading business types:', error)
+  }
 }
 
 /**
@@ -952,80 +691,6 @@ const getBusinessIcon = (name) => {
  * Handle company address selected
  * @param {object} addressDetails - The address details
  */
-const handleCompanyAddressSelected = (addressDetails) => {
-  if (addressDetails) {
-    companyAddressData.value = { ...addressDetails }
-    companyForm.value.company_address = addressDetails
-  } else {
-    companyAddressData.value = {
-      name: '',
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      latitude: null,
-      longitude: null,
-      formattedAddress: '',
-      placeId: '',
-      types: []
-    }
-    companyForm.value.company_address = ''
-  }
-}
-
-/**
- * Setup company with form data
- */
-const setupCompany = async () => {
-  try {
-    loadingCompanySetup.value = true
-
-    const payload = {
-      ...companyForm.value,
-      business_type_id: companyForm.value.business_type?.id,
-      country_id: companyForm.value.country_id,
-      company_phone: companyForm.value.company_phone
-        ? `${selectedCountry.value?.code || ''}${companyForm.value.company_phone}`.trim()
-        : ''
-    }
-
-    const { data } = await api.post('authentication/setup-company', payload)
-
-    notify('Empresa configurada exitosamente', 'positive', 'check_circle')
-
-    if (data.user) {
-      store.setSessionData({
-        user: data.user,
-        access_token: data.access_token || localStorage.getItem('access_token'),
-        token_type: data.token_type || 'Bearer',
-        expires_in: data.expires_in
-      })
-    }
-
-    localStorage.removeItem(REGISTER_SESSION_KEY)
-    localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
-
-    // Pixel Event: CrearEmpresa
-    if (fbq?.event) {
-      const companyData = {
-        business_type: payload.business_type?.label,
-        country: selectedCountry.value?.label,
-        company_name: payload.name
-      }
-      fbq.event('CrearEmpresa', companyData)
-    }
-
-    showCompanySetup.value = false
-
-    router.push({ name: 'CompanyConfig' })
-  } catch (error) {
-    const message = error.response?.data?.message || 'Error al configurar empresa'
-    notify(message, 'negative', 'warning')
-  } finally {
-    loadingCompanySetup.value = false
-  }
-}
 
 /**
  * Register with email and password
@@ -1513,6 +1178,9 @@ onMounted(async () => {
     // Solo verificar estado OTP si no se restauró una sesión completa
     await checkOtpStatus()
   }
+
+  // Cargar rubros para la demo
+  searchBusinessTypes('')
 })
 
 onBeforeUnmount(() => {
