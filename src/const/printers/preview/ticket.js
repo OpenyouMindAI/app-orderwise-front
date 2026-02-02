@@ -222,7 +222,7 @@ export async function previewInvoice (invoice, userSession) {
   doc.text(`CUIL/CUIT: ${invoice.client.document_number}`, 10, 84)
   doc.text(`Apellido y Nombre / Razón social: ${invoice.client.name}`, 90, 84)
   doc.text('Condición Frente al IVA: Consumidor final', 10, 90)
-  doc.text(`Domicilio: ${invoice.client.address}`, 90, 90)
+  doc.text(`Domicilio: ${addressFormat(invoice.client.address)}`, 90, 90)
   doc.text('Condición de venta: Efectivo', 10, 96)
   const body = []
   const head = [
