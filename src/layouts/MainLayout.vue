@@ -736,6 +736,7 @@
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
 
+    <DemoPersuasionModal v-model="showDemoModal" />
   </q-layout>
 </template>
 
@@ -768,6 +769,8 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
+import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
+import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
 
 export default {
   name: 'MainLayout',
@@ -780,8 +783,9 @@ export default {
     OtpVerificationDialog,
     CompanySetupModal,
     PremiumBadge,
-    IntegrationDynamic
+    IntegrationDynamic,
     // BottomNav
+    DemoPersuasionModal
   },
   data () {
     return {
@@ -1081,8 +1085,11 @@ export default {
   },
   setup () {
     const router = useRouter()
+    const { showDemoModal, trackDemoAction } = useDemoPersuasion()
     return {
-      router
+      router,
+      showDemoModal,
+      trackDemoAction
     }
   },
 
@@ -2004,6 +2011,7 @@ export default {
       this.$router.push({ name: data })
       this.menuRoute = data
       this.titleApp = listName
+      this.trackDemoAction()
     },
     /**
      * Change branch office
