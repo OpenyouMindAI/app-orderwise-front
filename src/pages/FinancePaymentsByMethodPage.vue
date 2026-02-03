@@ -1,257 +1,462 @@
 <template>
   <q-page class="finance-page">
-    <!-- Compact Header -->
-    <div class="page-header q-mb-md">
-      <div class="row items-center justify-between">
-        <div class="col">
-          <div class="text-h5 text-weight-bold">Resumen de Arqueos</div>
-          <div class="text-caption text-grey-6">Totales consolidados por método de pago y caja</div>
+    <div class="header-cockpit section-fade-in q-pb-none">
+      <div class="cockpit-glow"></div>
+      <div class="row items-center justify-between no-wrap">
+        <div class="cockpit-welcome">
+          <div class="greeting-row">
+            <q-icon name="history" color="primary" size="24px" class="q-mr-sm" />
+            <span class="text-subtitle2 text-weight-bolder">Historial y Balance</span>
+          </div>
         </div>
-        <div class="col-auto">
-          <q-btn
-            flat
-            dense
-            round
-            icon="refresh"
-            color="primary"
-            @click="loadData"
-            :loading="loading"
-          >
-            <q-tooltip>Actualizar</q-tooltip>
-          </q-btn>
+
+        <div class="cockpit-meta" v-if="!$q.screen.lt.sm">
+          <div class="date-chip-modern text-uppercase">
+            <q-icon name="event" size="14px" class="q-mr-xs" />
+            <span>{{ currentDate }}</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Compact Date Filter -->
-    <q-card flat class="filter-card q-mb-md">
-      <q-card-section class="q-pa-sm">
-        <div class="row q-col-gutter-sm items-center">
-          <div class="col-5 col-sm-auto">
+    <!-- Main Filters Bento -->
+    <div class="bento-grid q-mb-md">
+      <div class="bento-item span-full">
+        <div class="row q-col-gutter-xs items-center">
+          <div class="col-6 col-sm-auto">
             <q-input
               v-model="dateFrom"
               type="date"
               dense
               outlined
               label="Desde"
-              @update:model-value="debouncedLoad"
+              class="filter-input"
             />
           </div>
-          <div class="col-5 col-sm-auto">
+          <div class="col-6 col-sm-auto">
             <q-input
               v-model="dateTo"
               type="date"
               dense
               outlined
               label="Hasta"
-              @update:model-value="debouncedLoad"
+              class="filter-input"
+            />
+          </div>
+          <div class="col-12 col-sm-auto row no-wrap items-center q-gutter-x-xs">
+            <q-select
+              v-model="selectedMainCashbox"
+              :options="mainCashboxes"
+              option-label="name"
+              option-value="id"
+              label="Caja"
+              dense
+              outlined
+              emit-value
+              map-options
+              clearable
+              class="col col-sm-auto"
+              style="min-width: 150px"
+            >
+              <template v-slot:prepend>
+                <q-icon name="account_balance" size="20px" />
+              </template>
+            </q-select>
+            <q-btn
+              unelevated
+              dense
+              icon="search"
+              color="primary"
+              @click="loadAllData"
+              :loading="loading"
+              class="col-auto rounded-borders"
+              style="width: 40px; height: 40px"
+            >
+              <q-tooltip>Buscar / Sincronizar</q-tooltip>
+            </q-btn>
+          </div>
+          <q-space v-if="!$q.screen.lt.sm" />
+          <div class="col-12 col-sm-auto q-mt-xs q-mt-sm-none">
+            <q-btn
+              unelevated
+              color="negative"
+              icon="add_circle"
+              label="Registrar Gasto"
+              @click="openExpenseModal"
+              class="rounded-borders full-width"
+              dense
             />
           </div>
         </div>
-      </q-card-section>
-    </q-card>
-
-    <!-- Loading -->
-    <div v-if="loading" class="text-center q-py-xl">
-      <q-spinner-dots size="40px" color="primary" />
+      </div>
     </div>
 
-    <!-- Empty State -->
-    <div v-else-if="!hasData" class="text-center q-py-xl">
-      <q-icon name="summarize" size="64px" color="grey-4" />
-      <div class="text-subtitle1 text-grey-6 q-mt-md">Sin datos</div>
-      <div class="text-caption text-grey-5">No hay arqueos en el período seleccionado</div>
-    </div>
+    <!-- Main Content: Two Columns -->
+    <div class="two-column-layout">
+      <q-card class="left-column bento-item no-border q-pa-none" v-if="!$q.screen.lt.sm || !selectedGlobalWithdrawal">
+        <div class="column-header-modern">
+          <div class="row items-center justify-between full-width">
+            <div class="text-subtitle2 text-weight-bolder">LISTA DE ARQUEOS</div>
+            <q-badge color="primary" rounded :label="globalWithdrawals.length" />
+          </div>
+        </div>
 
-    <template v-else>
-      <!-- Global Cards -->
-      <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-6 col-sm-3">
-          <q-card flat class="stat-card stat-card--ventas q-pa-none">
-            <q-card-section class="q-pa-none flex">
-              <div class="stat-icon">
-                <q-icon name="trending_up" size="20px" />
-              </div>
-              <div class="column">
-                <div class="stat-label">Total Ventas</div>
-                <div class="stat-value">{{ formatCompact(summary.total_sales) }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-6 col-sm-3">
-          <q-card flat class="stat-card stat-card--arqueos">
-            <q-card-section class="q-pa-none flex">
-              <div class="stat-icon">
-                <q-icon name="receipt_long" size="20px" />
-              </div>
-              <div>
-                <div class="stat-label">Total Arqueos</div>
-                <div class="stat-value">{{ summary.total_count }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-6 col-sm-3">
-          <q-card flat class="stat-card stat-card--contado">
-            <q-card-section class="q-pa-sm flex">
-              <div class="stat-icon">
-                <q-icon name="account_balance_wallet" size="20px" />
-              </div>
-              <div>
-                <div class="stat-label">Total Contado</div>
-                <div class="stat-value">{{ formatCompact(summary.total_counted) }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-6 col-sm-3">
-          <q-card flat class="stat-card" :class="summary.total_difference >= 0 ? 'stat-card--ok' : 'stat-card--error'">
-            <q-card-section class="q-pa-none flex">
-              <div class="stat-icon">
-                <q-icon name="compare_arrows" size="20px" />
-              </div>
-              <div>
-                <div class="stat-label">Diferencia</div>
-                <div class="stat-value">{{ formatNumber(summary.total_difference) }}</div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
+        <q-separator />
 
-      <!-- Payment Methods -->
-      <div class="section-header q-mb-sm">
-        <q-icon name="payment" size="18px" class="q-mr-xs" />
-        <span>Por Método de Pago</span>
-      </div>
+        <q-scroll-area :style="{ height: $q.screen.lt.sm ? 'calc(100vh - 350px)' : 'calc(100vh - 260px)' }">
+          <div v-if="loadingHistory" class="flex flex-center q-pa-xs">
+            <q-spinner-ios color="primary" size="40px" />
+          </div>
 
-      <div class="row q-col-gutter-sm q-mb-md">
-        <div
-          v-for="pm in paymentMethods"
-          :key="pm.payment_method_id"
-          class="col-12 col-sm-6 col-md-4"
-        >
-          <q-card flat class="method-card">
-            <q-card-section class="q-pa-sm">
-              <div class="method-header">
-                <q-avatar size="32px" :color="getColor(pm.payment_method_id)" text-color="white">
-                  <q-icon :name="getIcon(pm.payment_method_name)" size="18px" />
+          <q-list v-else separator padding>
+            <q-item
+              v-for="gw in globalWithdrawals"
+              :key="gw.id"
+              clickable
+              :active="selectedGlobalWithdrawal?.id === gw.id"
+              class="history-item"
+              active-class="history-item--active"
+              @click="selectGlobalWithdrawal(gw)"
+            >
+              <q-item-section avatar>
+                <q-avatar size="40px" :color="selectedGlobalWithdrawal?.id === gw.id ? 'white' : 'blue-5'" :text-color="selectedGlobalWithdrawal?.id === gw.id ? 'primary' : 'white'">
+                  <q-icon name="receipt" size="20px" />
                 </q-avatar>
-                <div class="method-title">
-                  <div class="method-name">{{ pm.payment_method_name }}</div>
-                  <div class="method-count">{{ pm.count }} arqueo(s)</div>
-                </div>
-              </div>
-              <div class="method-amounts">
-                <div class="amount-row">
-                  <span>Esperado:</span>
-                  <span class="text-blue text-weight-medium">{{ formatMoney(pm.total_expected) }}</span>
-                </div>
-                <div class="amount-row">
-                  <span>Contado:</span>
-                  <span class="text-positive text-weight-medium">{{ formatMoney(pm.total_counted) }}</span>
-                </div>
-                <div class="amount-row amount-row--diff">
-                  <span>Diferencia:</span>
-                  <span :class="pm.difference >= 0 ? 'text-positive' : 'text-negative'" class="text-weight-bold">
-                    {{ pm.difference >= 0 ? '+' : '' }}{{ formatMoney(pm.difference) }}
-                  </span>
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
+              </q-item-section>
 
-      <!-- Cashboxes -->
-      <div class="section-header q-mb-sm">
-        <q-icon name="account_balance" size="18px" class="q-mr-xs" />
-        <span>Por Caja Destino</span>
-      </div>
+              <q-item-section>
+                <q-item-label class="text-weight-bold">Arqueo #{{ gw.id }}</q-item-label>
+                <q-item-label caption :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : ''">
+                  {{ formatDate(gw.date_from) }} • {{ formatTime(gw.created_at) }}
+                </q-item-label>
+              </q-item-section>
 
-      <div class="row q-col-gutter-sm q-mb-md">
-        <div
-          v-for="cb in cashboxes"
-          :key="cb.cashbox_id"
-          class="col-12 col-sm-6 col-md-4"
-        >
-          <q-card flat class="cashbox-card">
-            <q-card-section class="q-pa-sm">
-              <div class="cashbox-header">
-                <q-avatar size="36px" color="deep-purple" text-color="white">
-                  <q-icon name="savings" size="20px" />
-                </q-avatar>
-                <div class="cashbox-title">
-                  <div class="cashbox-name">{{ cb.cashbox_name }}</div>
-                  <div class="cashbox-methods">{{ cb.payment_methods.length }} método(s)</div>
-                </div>
-              </div>
-              <div class="cashbox-total">
-                <div class="total-label">Total a Depositar</div>
-                <div class="total-value">{{ formatMoney(cb.total_to_deposit) }}</div>
-              </div>
-              <q-expansion-item
-                dense
-                dense-toggle
-                label="Ver desglose"
-                header-class="text-caption text-primary"
-              >
-                <div class="breakdown">
-                  <div
-                    v-for="method in cb.payment_methods"
-                    :key="method.payment_method_id"
-                    class="breakdown-row"
-                  >
-                    <span class="breakdown-method">{{ method.payment_method_name }}</span>
-                    <span class="breakdown-amount text-positive">{{ formatMoney(method.total_counted) }}</span>
+              <q-item-section side>
+                <div class="text-right">
+                  <div class="row items-center justify-end q-gutter-x-xs no-wrap q-mb-xs">
+                    <q-icon name="account_balance_wallet" size="14px" :color="selectedGlobalWithdrawal?.id === gw.id ? 'white' : 'grey-7'" />
+                    <span class="text-caption" :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : 'text-grey-7'">
+                      {{ gw.cashflows_count || 0 }} arqueos
+                    </span>
                   </div>
+                  <div class="text-weight-bold" :class="selectedGlobalWithdrawal?.id === gw.id ? 'text-white' : 'text-primary'">
+                    {{ formatMoney(gw.total_counted) }}
+                  </div>
+                  <q-badge
+                    :color="gw.difference >= 0 ? 'positive' : 'negative'"
+                    size="xs"
+                    :label="formatMoney(gw.difference)"
+                  />
                 </div>
-              </q-expansion-item>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
+              </q-item-section>
+            </q-item>
 
-      <!-- Recent Withdrawals List -->
-      <div class="section-header q-mb-sm">
-        <q-icon name="history" size="18px" class="q-mr-xs" />
-        <span>Arqueos Recientes</span>
-      </div>
-
-      <q-card flat class="list-card">
-        <q-list separator>
-          <q-item
-            v-for="gw in recent"
-            :key="gw.id"
-            dense
-          >
-            <q-item-section avatar>
-              <q-avatar size="32px" color="primary" text-color="white">
-                #{{ gw.id }}
-              </q-avatar>
-            </q-item-section>
-            <q-item-section>
-              <q-item-label class="text-weight-medium">
-                {{ formatDateShort(gw.date_from) }} - {{ formatDateShort(gw.date_to) }}
-              </q-item-label>
-              <q-item-label caption>{{ gw.user?.name || 'Sin usuario' }}</q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <q-item-label class="text-weight-bold text-positive">
-                {{ formatMoney(gw.total_counted) }}
-              </q-item-label>
-              <q-item-label caption>
-                <q-badge
-                  :color="gw.difference >= 0 ? 'positive' : 'negative'"
-                  :label="(gw.difference >= 0 ? '+' : '') + formatCompact(gw.difference)"
-                />
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
+            <div v-if="globalWithdrawals.length === 0" class="flex flex-center q-pa-xl text-grey opacity-60">
+              <q-icon name="inbox" size="48px" />
+              <div class="full-width text-center">Sin arqueos en este período</div>
+            </div>
+          </q-list>
+        </q-scroll-area>
       </q-card>
-    </template>
+
+      <!-- Right Column: Detail Area -->
+      <div v-if="!$q.screen.lt.sm || selectedGlobalWithdrawal" class="column q-gutter-y-md col">
+        <!-- Detail Listing -->
+        <q-card class="right-column bento-item no-border q-pa-none">
+          <div class="column-header-modern">
+            <div class="row items-center justify-between full-width">
+              <div class="row items-center q-gutter-x-sm">
+                <q-btn v-if="$q.screen.lt.sm" flat round dense icon="arrow_back" color="white" @click="selectedGlobalWithdrawal = null" />
+                <div class="text-subtitle2 text-weight-bolder">DETALLE DEL CONTEO</div>
+              </div>
+              <q-btn v-if="selectedGlobalWithdrawal" flat round dense icon="print" color="white" size="sm" />
+            </div>
+          </div>
+
+          <q-separator />
+
+          <!-- Empty State for Detail (Only desktop) -->
+          <div v-if="!selectedGlobalWithdrawal && !$q.screen.lt.sm" class="empty-detail flex flex-center">
+            <div class="text-center opacity-40">
+              <q-icon name="mouse" size="64px" />
+              <div class="text-h6 q-mt-md">Selecciona un arqueo</div>
+              <div class="text-caption">Haz clic en un arqueo de la izquierda para ver su detalle</div>
+            </div>
+          </div>
+
+          <!-- Detail Scroll Area -->
+          <q-scroll-area v-if="selectedGlobalWithdrawal" :style="{ height: $q.screen.lt.sm ? 'calc(100vh - 550px)' : 'calc(100vh - 610px)', minHeight: '300px' }">
+            <div v-if="loadingCounts" class="flex flex-center q-pa-xl">
+              <q-spinner-dots color="primary" size="40px" />
+            </div>
+
+            <div v-else class="q-pa-md">
+              <!-- Detalle por Caja (Asociados al Arqueo Global) -->
+              <div class="detail-section-title q-mb-md">
+                <q-icon name="list_alt" size="20px" class="q-mr-sm" />
+                ARQUEOS ASOCIADOS EN ESTE REGISTRO
+              </div>
+
+              <div v-if="cashboxesCounts?.length" class="q-gutter-y-sm">
+                <q-expansion-item
+                  v-for="cashbox in cashboxesCounts"
+                  :key="cashbox.cashbox_id"
+                  header-class="cashbox-expansion-header"
+                  class="bento-item"
+                  default-opened
+                >
+                  <template v-slot:header>
+                    <q-item-section avatar>
+                      <q-avatar color="primary" text-color="white" size="38px">
+                        <q-icon name="account_balance" size="20px" />
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-weight-bold">{{ cashbox.cashbox_name }}</q-item-label>
+                      <q-item-label caption>{{ cashbox.withdrawals?.length || 0 }} arqueos contados</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <div class="text-right">
+                        <div class="text-subtitle2 text-weight-bold">{{ formatMoney(cashbox.total_counted) }}</div>
+                      </div>
+                    </q-item-section>
+                  </template>
+
+                  <q-card flat class="inner-withdrawal-list">
+                    <q-list separator>
+                      <q-item class="q-pa-none" v-for="w in cashbox.withdrawals" :key="w.id">
+                        <q-item-section avatar>
+                          <q-avatar
+                            :color="getPMColor(w.payment_method_id)"
+                            text-color="white"
+                            size="32px"
+                          >
+                            <q-icon :name="getPMIcon(w.payment_method_name)" size="16px" />
+                          </q-avatar>
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-weight-medium">{{ w.payment_method_name }}</q-item-label>
+                          <q-item-label caption lines="1">
+                            📅 {{ w.date }}  |  🕒 {{ w.time }}
+                          </q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <div class="column items-end">
+                            <div class="text-subtitle2 text-weight-bold text-orange">{{ formatMoney(w.counted_amount) }}</div>
+                          </div>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-card>
+                </q-expansion-item>
+              </div>
+
+              <!-- Empty Detailed List -->
+              <div v-else class="flex flex-center q-pa-xl opacity-40">
+                <q-icon name="list" size="48px" />
+                <div class="full-width text-center">No hay desgloses para este arqueo</div>
+              </div>
+            </div>
+          </q-scroll-area>
+        </q-card>
+
+        <!-- Expenses List (New Bento Item) -->
+        <q-card class="bento-item no-border q-pa-none overflow-hidden" v-if="!$q.screen.lt.sm || expenses.length > 0">
+          <div class="column-header-modern bg-negative">
+            <div class="row items-center justify-between full-width">
+              <div class="text-subtitle2 text-weight-bolder">LISTA DE GASTOS</div>
+              <q-badge color="white" text-color="negative" rounded :label="expenses.length" />
+            </div>
+          </div>
+
+          <q-separator />
+
+          <q-scroll-area :style="{ height: $q.screen.lt.sm ? '200px' : '300px' }">
+            <div v-if="loadingExpenses" class="flex flex-center q-pa-xl">
+              <q-spinner-dots color="negative" size="40px" />
+            </div>
+
+            <q-list v-else separator padding>
+              <q-item v-for="expense in expenses" :key="expense.id" class="q-py-md">
+                <q-item-section avatar>
+                  <q-avatar color="red-1" text-color="negative" size="42px">
+                    <q-icon name="trending_down" />
+                  </q-avatar>
+                </q-item-section>
+
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">{{ expense.description?.replace('[expense] ', '') }}</q-item-label>
+                  <q-item-label caption class="row items-center q-gutter-x-sm">
+                    <span class="text-weight-medium text-grey-9">{{ expense.cashbox_name }}</span>
+                    <span>•</span>
+                    <span>{{ expense.date }}</span>
+                  </q-item-label>
+                  <q-item-label v-if="expense.notes" caption lines="1" class="text-italic q-mt-xs">
+                    "{{ expense.notes }}"
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section side>
+                  <div class="column items-end">
+                    <div class="text-subtitle1 text-weight-bolder text-negative">{{ formatMoney(expense.amount) }}</div>
+                    <q-btn v-if="expense.image" size="xs" color="grey-7" flat label="Ver adjunto" icon="image" dense />
+                  </div>
+                </q-item-section>
+              </q-item>
+
+              <div v-if="expenses.length === 0" class="flex flex-center q-pa-xl text-grey opacity-40">
+                <q-icon name="money_off" size="48px" />
+                <div class="full-width text-center">No hay gastos registrados</div>
+              </div>
+            </q-list>
+          </q-scroll-area>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Expense Registration Modal -->
+    <q-dialog v-model="showExpenseModal" persistent position="bottom" :maximized="$q.screen.lt.sm">
+      <q-card class="expense-modal-card">
+        <q-card-section class="q-py-md row items-center bg-negative text-white">
+          <div class="text-h6 text-weight-bolder">REGISTRAR GASTO</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-form @submit="saveExpense">
+          <q-card-section class="q-pa-md">
+            <!-- Amount Input -->
+            <div class="q-mb-xs">
+              <q-input
+                v-model.number="expenseForm.amount"
+                type="number"
+                outlined
+                prefix="$"
+                placeholder="0.00"
+                class="amount-input-big"
+                input-class="text-weight-black text-h4 text-center"
+                :rules="[val => !!val && val > 0 || 'El monto debe ser mayor a 0']"
+                autofocus
+                dense
+              />
+            </div>
+
+            <div class="row">
+              <!-- Concept Selection -->
+              <div class="col-12 col-sm-12">
+                <q-select
+                  v-model="expenseForm.concept"
+                  :options="expenseConcepts"
+                  outlined
+                  dense
+                  placeholder="Selecciona..."
+                  :rules="[val => !!val || 'Requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="label" size="20px" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Cashbox Selection -->
+              <div class="col-12 col-sm-12">
+                <q-select
+                  v-model="expenseForm.cashbox_id"
+                  :options="mainCashboxes"
+                  option-label="name"
+                  option-value="id"
+                  emit-value
+                  map-options
+                  outlined
+                  dense
+                  :rules="[val => !!val || 'Requerida']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="account_balance" size="20px" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Payment Method Selection -->
+              <div class="col-12 col-sm-12">
+                <q-select
+                  v-model="expenseForm.payment_method_id"
+                  :options="paymentMethods"
+                  option-label="name"
+                  option-value="id"
+                  emit-value
+                  map-options
+                  outlined
+                  dense
+                  placeholder="Método de pago..."
+                  :rules="[val => !!val || 'Requerido']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon :name="getPMIcon(paymentMethods.find(pm => pm.id === expenseForm.payment_method_id)?.name)" size="20px" />
+                  </template>
+                </q-select>
+              </div>
+            </div>
+
+            <!-- Image/Photo Button -->
+            <div class="column q-gutter-y-xs">
+              <div class="row q-col-gutter-sm items-center">
+                <div class="col">
+                  <q-btn
+                    outline
+                    color="primary"
+                    icon="add_a_photo"
+                    label="Subir Imagen / Foto"
+                    class="full-width q-py-sm"
+                    @click="openImagePicker"
+                    rounded
+                    dense
+                  />
+                  <!-- Hidden input for desktop fallback if needed -->
+                  <input
+                    type="file"
+                    id="expense-image-file"
+                    style="display: none"
+                    accept="image/*"
+                    @change="(e) => handleImageUpload(e.target.files[0])"
+                  />
+                </div>
+
+                <div v-if="expenseForm.imageUrl" class="col-auto">
+                  <q-avatar rounded size="60px" class="shadow-2 bordered">
+                    <q-img :src="expenseForm.imageUrl">
+                      <div class="absolute-top-right bg-transparent q-pa-xs">
+                        <q-btn
+                          round
+                          dense
+                          color="negative"
+                          icon="close"
+                          size="xs"
+                          @click="expenseForm.imageUrl = null; expenseForm.image = null"
+                        />
+                      </div>
+                    </q-img>
+                  </q-avatar>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="center" class="q-pb-lg">
+            <q-btn
+              label="GUARDAR GASTO"
+              color="negative"
+              icon="save"
+              class="full-width"
+              rounded
+              unelevated
+              type="submit"
+              :loading="savingExpense"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -259,446 +464,475 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
 import { useQuasar } from 'quasar'
-import { formatNumber } from 'src/const/mixins'
+import { formatDate } from 'src/const/mixins'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 
 const $q = useQuasar()
 
-/**
- * Loading state
- * @type {import('vue').Ref<boolean>}
- */
+// --- State ---
 const loading = ref(false)
+const loadingHistory = ref(false)
+const loadingCounts = ref(false)
+const loadingExpenses = ref(false)
 
-/**
- * Date from filter
- * @type {import('vue').Ref<string>}
- */
 const dateFrom = ref('')
-
-/**
- * Date to filter
- * @type {import('vue').Ref<string>}
- */
 const dateTo = ref('')
+const selectedMainCashbox = ref(null)
 
-/**
- * Summary data
- * @type {import('vue').Ref<Object>}
- */
-const summary = ref({
-  total_count: 0,
-  total_sales: 0,
-  total_expected: 0,
-  total_counted: 0,
-  total_difference: 0
+const branches = ref([])
+const mainCashboxes = ref([])
+
+// Expense State
+const expenses = ref([])
+const showExpenseModal = ref(false)
+const savingExpense = ref(false)
+const expenseForm = ref({
+  amount: null,
+  concept: null,
+  cashbox_id: null,
+  date: new Date().toISOString().split('T')[0],
+  notes: '',
+  payment_method_id: null,
+  image: null,
+  imageUrl: null
 })
 
-/**
- * Payment methods data
- * @type {import('vue').Ref<Array>}
- */
 const paymentMethods = ref([])
 
-/**
- * Cashboxes data
- * @type {import('vue').Ref<Array>}
- */
-const cashboxes = ref([])
+const expenseConcepts = [
+  'Sueldos',
+  'Limpieza',
+  'Insumos / Materia Prima',
+  'Servicios (Luz, Agua, Gas, Internet)',
+  'Impuestos / Tasas',
+  'Alquiler',
+  'Mantenimiento',
+  'Gastos Varios'
+]
+
+// Balance Summary
+const summary = ref({
+  total_sales: 0,
+  total_cash_in: 0,
+  total_cash_out: 0,
+  total_theoretical: 0,
+  total_counted_withdrawals: 0,
+  difference: 0
+})
+
+// History State
+const globalWithdrawals = ref([])
+const selectedGlobalWithdrawal = ref(null)
+const globalWithdrawalDetails = ref(null)
+const cashboxesCounts = ref([])
+
+// --- Computeds ---
+const currentDate = computed(() => {
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+  return new Date().toLocaleDateString('es-ES', options)
+})
+
+// --- Methods ---
 
 /**
- * Recent withdrawals
- * @type {import('vue').Ref<Array>}
+ * Loads all contextual data (Balance + Arqueos List + Expenses)
  */
-const recent = ref([])
-
-/**
- * Check if has data
- * @type {import('vue').ComputedRef<boolean>}
- */
-const hasData = computed(() => summary.value.total_count > 0)
-
-let debounceTimer = null
-
-/**
- * Debounced load
- * @returns {void}
- */
-const debouncedLoad = () => {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(loadData, 300)
-}
-
-/**
- * Load data from API
- * @async
- * @returns {Promise<void>}
- */
-const loadData = async () => {
+const loadAllData = async () => {
   loading.value = true
+  loadingHistory.value = true
   try {
-    const params = {}
-    if (dateFrom.value) params.date_from = dateFrom.value
-    if (dateTo.value) params.date_to = dateTo.value
+    const params = {
+      from: dateFrom.value,
+      to: dateTo.value,
+      date_from: dateFrom.value,
+      date_to: dateTo.value,
+      cashbox_id: selectedMainCashbox.value
+    }
 
-    const { data } = await api.get('/reports/global-withdrawals/summary', { params })
+    // 1. Load Balance Report (Theoretical and Expenses)
+    const balanceRes = await api.get('/reports/cashbox-balance-report', { params })
+    const bData = balanceRes.data
 
-    summary.value = data.general || {}
-    paymentMethods.value = data.by_payment_method || []
-    cashboxes.value = data.by_cashbox || []
-    recent.value = data.recent || []
+    // 2. Load Global Withdrawals List
+    const historyRes = await api.get('/reports/global-withdrawals', { params })
+    globalWithdrawals.value = historyRes.data.data || []
+
+    const hSummary = historyRes.data.summary || {}
+
+    // 3. Load Expenses
+    loadExpenses()
+
+    // 4. Sync Summary
+    summary.value = bData.summary || {}
+    summary.value.total_counted_withdrawals = parseFloat(hSummary.total_counted || 0)
+    summary.value.difference = summary.value.total_counted_withdrawals - (summary.value.total_theoretical - (summary.value.total_cash_out || 0))
+
+    // Reset details if no longer in list
+    if (selectedGlobalWithdrawal.value && !globalWithdrawals.value.find(g => g.id === selectedGlobalWithdrawal.value.id)) {
+      selectedGlobalWithdrawal.value = null
+    }
   } catch (error) {
-    console.error('Error:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al cargar datos',
-      caption: error.response?.data?.message || error.message
-    })
+    console.error('Error loadAllData:', error)
+    $q.notify({ type: 'negative', message: 'Error cargando datos financieros' })
   } finally {
     loading.value = false
+    loadingHistory.value = false
   }
 }
 
 /**
- * Get color for payment method
- * @param {number} id - Payment method ID
- * @returns {string}
+ * Loads expenses for the selected period and cashbox
  */
-const getColor = (id) => {
-  const colors = ['primary', 'positive', 'orange', 'cyan', 'purple', 'teal', 'pink', 'indigo']
-  return colors[id % colors.length]
+const loadExpenses = async () => {
+  loadingExpenses.value = true
+  try {
+    const params = {
+      date_from: dateFrom.value,
+      date_to: dateTo.value,
+      cashbox_id: selectedMainCashbox.value
+    }
+    const { data } = await api.get('cashboxes/main-expenses', { params })
+    expenses.value = data || []
+  } catch (error) {
+    console.error('Error loading expenses:', error)
+  } finally {
+    loadingExpenses.value = false
+  }
 }
 
 /**
- * Get icon for payment method
- * @param {string} name - Payment method name
- * @returns {string}
+ * Opens expense modal and resets form
  */
-const getIcon = (name) => {
+const openExpenseModal = () => {
+  expenseForm.value = {
+    amount: null,
+    concept: null,
+    cashbox_id: selectedMainCashbox.value || (mainCashboxes.value.length ? mainCashboxes.value[0].id : null),
+    date: new Date().toISOString().split('T')[0],
+    notes: '',
+    payment_method_id: null,
+    image: null,
+    imageUrl: null
+  }
+
+  // Pre-select "Efectivo"
+  if (paymentMethods.value.length) {
+    const cashMethod = paymentMethods.value.find(pm => pm.name.toLowerCase().includes('efectivo'))
+    if (cashMethod) {
+      expenseForm.value.payment_method_id = cashMethod.id
+    } else {
+      expenseForm.value.payment_method_id = paymentMethods.value[0].id
+    }
+  }
+
+  showExpenseModal.value = true
+}
+
+/**
+ * Handles image selection from file input
+ */
+const handleImageUpload = (file) => {
+  if (file) {
+    expenseForm.value.image = file
+    expenseForm.value.imageUrl = URL.createObjectURL(file)
+  }
+}
+
+/**
+ * Open image picker with options (Camera or Gallery)
+ */
+const openImagePicker = () => {
+  // En dispositivos móviles usamos el diálogo de Quasar para elegir fuente
+  if ($q.platform.is.capacitor || $q.platform.is.nativeMobile) {
+    $q.dialog({
+      title: 'Agregar Comprobante',
+      message: '¿Cómo deseas agregar la imagen?',
+      options: {
+        type: 'radio',
+        model: 'camera',
+        items: [
+          { label: 'Tomar Foto', value: 'camera', icon: 'photo_camera' },
+          { label: 'Seleccionar de Galería', value: 'gallery', icon: 'photo_library' }
+        ]
+      },
+      cancel: true,
+      persistent: true
+    }).onOk(async (source) => {
+      await captureImage(source)
+    })
+  } else {
+    // En web usamos el input file escondido o el q-file
+    document.getElementById('expense-image-file')?.click()
+  }
+}
+
+/**
+ * Captures image using Capacitor Camera
+ */
+const captureImage = async (source) => {
+  try {
+    const cameraSource = source === 'camera' ? CameraSource.Camera : CameraSource.Photos
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.DataUrl,
+      source: cameraSource
+    })
+
+    if (image.dataUrl) {
+      expenseForm.value.imageUrl = image.dataUrl
+
+      // Convert DataURL to File object for FormData
+      const response = await fetch(image.dataUrl)
+      const blob = await response.blob()
+      expenseForm.value.image = new File([blob], `expense_${Date.now()}.${image.format}`, { type: blob.type })
+    }
+  } catch (error) {
+    console.error('Error capturing image:', error)
+  }
+}
+
+/**
+ * Saves the expense record
+ */
+const saveExpense = async () => {
+  savingExpense.value = true
+  try {
+    const formData = new FormData()
+    formData.append('amount', expenseForm.value.amount)
+    formData.append('description', `[expense] ${expenseForm.value.concept}`)
+    formData.append('cashbox_id', expenseForm.value.cashbox_id)
+    formData.append('payment_method_id', expenseForm.value.payment_method_id)
+    formData.append('date', expenseForm.value.date)
+    formData.append('notes', expenseForm.value.notes)
+    formData.append('type', 'expense')
+
+    if (expenseForm.value.image) {
+      formData.append('image', expenseForm.value.image)
+    }
+
+    await api.post('cashboxes/main-expenses', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    $q.notify({ type: 'positive', message: 'Gasto registrado correctamente', icon: 'check' })
+    showExpenseModal.value = false
+    loadAllData()
+  } catch (error) {
+    console.error('Error saving expense:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al registrar el gasto',
+      caption: error.response?.data?.message || error.message
+    })
+  } finally {
+    savingExpense.value = false
+  }
+}
+
+/**
+ * Select and load specific counts for an arqueo
+ */
+const selectGlobalWithdrawal = async (gw) => {
+  selectedGlobalWithdrawal.value = gw
+  loadingCounts.value = true
+  try {
+    const { data } = await api.get(`/reports/global-withdrawals/${gw.id}/counts`)
+    globalWithdrawalDetails.value = data.global_withdrawal
+    cashboxesCounts.value = data.cashboxes || []
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al cargar detalle del conteo' })
+  } finally {
+    loadingCounts.value = false
+  }
+}
+
+const loadMainCashboxes = async () => {
+  try {
+    const { data } = await api.get('cashboxes', { params: { dataEqualFilter: { is_main: 1 } } })
+    mainCashboxes.value = data
+  } catch (err) {}
+}
+
+const loadBranches = async () => {
+  try {
+    const { data } = await api.get('branch-offices')
+    branches.value = data
+  } catch (err) {}
+}
+
+const loadPaymentMethods = async () => {
+  try {
+    const { data } = await api.get('payment-methods')
+    paymentMethods.value = data
+  } catch (err) {}
+}
+
+const setDefaultDates = () => {
+  const now = new Date()
+  dateFrom.value = now.toISOString().split('T')[0]
+  dateTo.value = now.toISOString().split('T')[0]
+}
+
+// --- Formatters ---
+const formatMoney = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0)
+const formatTime = (ts) => ts ? new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : ''
+
+const getPMColor = (id) => ['primary', 'positive', 'orange', 'cyan', 'purple', 'teal'][id % 6]
+const getPMIcon = (name) => {
   const n = (name || '').toLowerCase()
   if (n.includes('efectivo')) return 'payments'
-  if (n.includes('tarjeta') || n.includes('débito') || n.includes('crédito')) return 'credit_card'
-  if (n.includes('transferencia')) return 'swap_horiz'
-  if (n.includes('mercado') || n.includes('mp')) return 'account_balance_wallet'
-  if (n.includes('qr')) return 'qr_code'
+  if (n.includes('tarjeta')) return 'credit_card'
+  if (n.includes('transf')) return 'swap_horiz'
   return 'payment'
 }
 
-/**
- * Format money
- * @param {number} amount - Amount
- * @returns {string}
- */
-const formatMoney = (amount) => {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS'
-  }).format(amount || 0)
-}
-
-/**
- * Format compact
- * @param {number} amount - Amount
- * @returns {string}
- */
-const formatCompact = (amount) => {
-  const num = Math.abs(amount || 0)
-  const sign = amount < 0 ? '-' : ''
-  if (num >= 1000000) return `${sign}$${(num / 1000000).toFixed(1)}M`
-  if (num >= 1000) return `${sign}$${(num / 1000).toFixed(0)}K`
-  return `${sign}$${num.toFixed(0)}`
-}
-
-/**
- * Format date short
- * @param {string} dateStr - Date string
- * @returns {string}
- */
-const formatDateShort = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
-}
-
 onMounted(() => {
-  const now = new Date()
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-
-  dateFrom.value = firstDay.toISOString().split('T')[0]
-  dateTo.value = lastDay.toISOString().split('T')[0]
-
-  loadData()
+  setDefaultDates()
+  loadBranches()
+  loadMainCashboxes()
+  loadPaymentMethods()
+  loadAllData()
 })
 </script>
 
 <style scoped>
 .finance-page {
-  padding: 16px;
+  padding: 0px;
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  font-family: 'Outfit', sans-serif;
 }
 
 /* Header */
-.page-header {
-  padding: 12px 0;
+.header-cockpit {
+  padding: 10px 16px;
+  position: relative;
 }
 
-/* Filter Card */
-.filter-card {
+.cockpit-glow {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.1) 0%, transparent 70%);
+}
+
+.date-chip-modern {
+  background: white;
+  padding: 8px 16px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-}
-
-.body--dark .filter-card {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-/* Section Header */
-.section-header {
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  color: #475569;
-}
-
-.body--dark .section-header {
-  color: #94a3b8;
-}
-
-/* Stat Cards */
-.stat-card {
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  transition: transform 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-}
-
-.stat-card--ventas {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border: none;
-  padding: 0px;
-}
-
-.stat-card--arqueos {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 0px;
-}
-
-.stat-card--contado {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-  padding: 0px;
-}
-
-.stat-card--ok {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border: none;
-  padding: 0px;
-}
-
-.stat-card--error {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  border: none;
-  padding: 0px;
-}
-
-.body--dark .stat-card {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-.stat-icon {
-  margin-bottom: 10px;
-}
-
-.stat-label {
-  font-weight: 200;
-}
-
-.stat-value {
+  font-size: 12px;
   font-weight: 700;
-  color: white;
-}
-
-/* Method Card */
-.method-card {
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  transition: box-shadow 0.2s;
-}
-
-.method-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.body--dark .method-card {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-.method-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.method-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.method-count {
-  font-size: 0.7rem;
   color: #64748b;
 }
 
-.method-amounts {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.amount-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
-}
-
-.amount-row--diff {
-  padding-top: 4px;
-  border-top: 1px dashed #e2e8f0;
-  margin-top: 2px;
-}
-
-.body--dark .amount-row--diff {
-  border-color: #475569;
-}
-
-/* Cashbox Card */
-.cashbox-card {
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  transition: box-shadow 0.2s;
-}
-
-.cashbox-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.body--dark .cashbox-card {
+body.body--dark .date-chip-modern {
   background: #1e293b;
   border-color: #334155;
 }
 
-.cashbox-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+/* Bento & Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 0 16px;
 }
 
-.cashbox-name {
-  font-weight: 600;
-  font-size: 0.95rem;
+@media (max-width: 1024px) { .bento-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .bento-grid { grid-template-columns: 1fr; } }
+
+.bento-item {
+  background: white;
+  border-radius: 16px;
+  padding: 5px;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
-.cashbox-methods {
-  font-size: 0.7rem;
-  color: #64748b;
+body.body--dark .bento-item { background: #1e293b; border-color: #334155; }
+
+.span-full { grid-column: 1 / -1; }
+
+/* Stats Tiles */
+.stat-hero { display: flex; align-items: center; gap: 16px; }
+.stat-icon-wrap { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+.bg-soft-primary { background: rgba(var(--q-primary-rgb), 0.1); }
+.bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
+.bg-soft-negative { background: rgba(var(--q-negative-rgb), 0.1); }
+.bg-soft-positive { background: rgba(var(--q-positive-rgb), 0.1); }
+
+.stat-val { font-size: 20px; font-weight: 800; }
+.stat-lab { font-size: 11px; font-weight: 600; color: #64748b; }
+
+/* Two Column Layout */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 16px;
+  padding: 0 16px;
 }
 
-.cashbox-total {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-radius: 8px;
-  padding: 10px;
-  text-align: center;
-  margin-bottom: 8px;
+@media (max-width: 900px) { .two-column-layout { grid-template-columns: 1fr; } }
+
+.column-header-modern {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 16px 16px 0 0;
 }
 
-.body--dark .cashbox-total {
-  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+.history-item { border-radius: 8px; margin: 4px 8px; transition: all 0.2s; }
+.history-item--active { background: var(--q-primary); color: white; transform: translateX(4px); }
+
+.empty-detail { height: 400px; }
+
+/* Detail Specifics */
+.detail-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
 }
 
-.total-label {
-  font-size: 0.7rem;
-  color: #059669;
-  margin-bottom: 2px;
-}
-
-.body--dark .total-label {
-  color: #6ee7b7;
-}
-
-.total-value {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #047857;
-}
-
-.body--dark .total-value {
-  color: #a7f3d0;
-}
-
-.breakdown {
+.detail-stat {
+  padding: 12px;
   background: #f8fafc;
-  border-radius: 6px;
-  padding: 6px;
-  margin-top: 6px;
-}
-
-.body--dark .breakdown {
-  background: #334155;
-}
-
-.breakdown-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  font-size: 0.75rem;
-}
-
-.breakdown-method {
-  color: #64748b;
-}
-
-.breakdown-amount {
-  font-weight: 600;
-}
-
-/* List Card */
-.list-card {
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+body.body--dark .detail-stat { background: #0f172a; }
+
+.detail-stat.highlight { background: rgba(var(--q-positive-rgb), 0.05); }
+.detail-stat .label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+.detail-stat .value { font-size: 16px; font-weight: 900; }
+
+.cashbox-group { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+body.body--dark .cashbox-group { border-color: #334155; }
+
+.cashbox-header-item { background: white; }
+body.body--dark .cashbox-header-item { background: #1e293b; }
+
+.counts-inner-card { border: none !important; }
+
+/* Expense Modal Styles */
+.expense-modal-card {
+  border-radius: 24px 24px 0 0 !important;
+  max-width: 600px !important;
+  margin: 0 auto;
 }
 
-.body--dark .list-card {
-  background: #1e293b;
-  border-color: #334155;
+.amount-input-big :deep(input) {
+  padding: 8px 0 !important;
+  letter-spacing: -1px;
 }
 
-/* Responsive */
-@media (max-width: 599px) {
-  .finance-page {
-    padding: 12px;
-  }
-
-  .stat-value {
-    font-size: 1.1rem;
-  }
-
-  .total-value {
-    font-size: 1.2rem;
-  }
+.detail-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 1px;
 }
 </style>

@@ -412,7 +412,7 @@
     <q-dialog v-model="showCloneDialog" persistent transition-show="scale" transition-hide="scale" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 1000px; max-width: 95vw;'" :class="$q.screen.lt.sm ? 'column full-height' : ''" class="rounded-borders-20 overflow-hidden shadow-24">
         <!-- Compact Header -->
-        <q-card-section class="q-px-lg q-pt-lg q-pb-sm bg-white border-bottom-subtle">
+        <q-card-section class="bg-white border-bottom-subtle">
           <div class="row items-center justify-between no-wrap">
             <div class="column">
               <div class="text-h6 text-weight-bolder text-grey-9">Clonar Recorrido</div>
@@ -423,18 +423,38 @@
         </q-card-section>
 
         <!-- Compact Search & Selection Area -->
-        <q-card-section class="q-px-lg q-py-sm bg-grey-1">
-          <div class="row items-center justify-between">
-            <q-badge color="primary" rounded class="q-px-sm q-py-xs shadow-1">
-              {{ selectedCloneCount }} seleccionadas
-            </q-badge>
-            <q-btn flat rounded dense size="sm" color="primary" :label="selectedCloneCount === cloneItems.length ? 'Deseleccionar todo' : 'Seleccionar todo'"
-              @click="cloneItems.forEach(i => i.selected = selectedCloneCount !== cloneItems.length)" class="text-weight-bold" />
+        <q-card-section class="q-pa-none bg-grey-1">
+          <div class="row items-center justify-between no-wrap q-gutter-md">
+            <div class="row items-center q-gutter-sm">
+              <q-badge color="primary" rounded class="q-px-sm q-py-xs shadow-1">
+                {{ selectedCloneCount }} seleccionadas
+              </q-badge>
+              <q-btn flat rounded dense size="sm" color="primary" :label="selectedCloneCount === cloneItems.length ? 'Deseleccionar todo' : 'Seleccionar todo'"
+                @click="cloneItems.forEach(i => i.selected = selectedCloneCount !== cloneItems.length)" class="text-weight-bold" />
+            </div>
+
+            <!-- Date Picker for Clone -->
+            <div class="row items-center q-gutter-sm">
+              <span class="text-caption text-grey-7 text-weight-bold">FECHA DE ENTREGA:</span>
+              <q-input v-model="cloneDeliveryDate" dense outlined rounded bg-color="white" mask="####-##-##" class="q-ml-sm" style="width: 150px;">
+                <template v-slot:append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="cloneDeliveryDate" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
           </div>
         </q-card-section>
 
         <!-- Content Area -->
-        <q-card-section :class="$q.screen.lt.sm ? 'col scroll' : 'scroll q-pa-lg half-height-scroll'" style="max-height: 60vh;">
+        <q-card-section :class="$q.screen.lt.sm ? 'col scroll' : 'scroll q-pa-lg half-height-scroll'" style="height: calc(100vh - 320px);">
           <div class="row q-col-gutter-md">
             <div v-for="(item, index) in cloneItems" :key="index" class="col-12 col-sm-6">
               <div
@@ -450,6 +470,9 @@
                   </div>
                   <q-checkbox v-model="item.selected" color="primary" dense @click.stop />
                 </div>
+
+                <!-- Invoice Description -->
+
 
                 <!-- Products Mini-list -->
                 <div class="bg-grey-1 rounded-borders-12 q-pa-sm q-mb-sm border-subtle">
@@ -490,6 +513,20 @@
                     </div>
                   </div>
                 </div>
+
+                <q-input
+                  v-model="item.invoice.description"
+                  dense
+                  outlined
+                  label="Observación / Descripción"
+                  bg-color="white"
+                  class="q-mb-sm rounded-borders-12 overflow-hidden"
+                  style="font-size: 0.8rem;"
+                  rows="1"
+                  type="textarea"
+                  autogrow
+                  @click.stop
+                />
 
                 <!-- Card Footer Info -->
                 <div class="row items-center justify-between mt-auto">
@@ -737,22 +774,10 @@ const cloneItems = ref([])
 const cloningInProgress = ref(false)
 
 /**
- * Label for the current active range
+ * Descripction
+ * @type {string} description var
  */
-const currentRangeLabel = computed(() => {
-  const activeRange = quickDateRanges.find(r => isRangeActive(r))
-  if (activeRange) return activeRange.label
-  return 'Personalizado'
-})
-
-/**
- * Label for the selected delivery person
- */
-const selectedDeliveryPersonLabel = computed(() => {
-  if (!historyFilters.value.deliveryPerson) return 'Todos'
-  const person = deliveryPersonOptions.value.find(p => p.id === historyFilters.value.deliveryPerson)
-  return person ? person.name : 'Todos'
-})
+const cloneDeliveryDate = ref(new Date().toISOString().split('T')[0])
 
 // Computed properties
 /**
@@ -2314,16 +2339,10 @@ function calculateDistance (lat1, lng1, lat2, lng2) {
 async function loadDeliveryPersons () {
   try {
     // Obtener todos los usuarios y filtrar por rol de repartidor
-    const response = await api.get('/users')
-    const users = response.data.users || response.data.data || response.data || []
+    const { data } = await api.get('delivery-persons')
 
     // Filtrar usuarios que sean repartidores (puedes ajustar según tu estructura)
-    deliveryPersonOptions.value = users.filter(user =>
-      user.role === 'delivery' ||
-      user.roles?.some(role => role.name === 'delivery' || role.name === 'repartidor')
-    )
-
-    console.log('Delivery persons loaded:', deliveryPersonOptions.value.length)
+    deliveryPersonOptions.value = data
   } catch (error) {
     console.error('Error loading delivery persons:', error)
 
@@ -2556,6 +2575,11 @@ function calculateCompletedDuration (startTime, endTime) {
  */
 function openClonePreview (run) {
   runToClone.value = run
+  // Set default delivery date to tomorrow
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  cloneDeliveryDate.value = tomorrow.toISOString().split('T')[0]
+
   // Deep clone items to allow local editing without affecting the original run
   const clonedItems = JSON.parse(JSON.stringify(run.items || []))
 
@@ -2623,6 +2647,8 @@ async function confirmCloning () {
       .filter(item => item.selected)
       .map(item => ({
         id: item.invoice.id,
+        delivery_date: cloneDeliveryDate.value,
+        description: item.invoice.description,
         products: item.invoice.products.map(p => ({
           id: p.id,
           pivot: {
@@ -2923,6 +2949,27 @@ async function confirmCloning () {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.half-height-scroll {
+  overflow-y: auto;
+}
+
+.half-height-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.half-height-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.half-height-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.body--dark .half-height-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Utilities */

@@ -50,34 +50,49 @@
               <div class="text-h6" v-if="$q.screen.gt.xs">Clientes</div>
               <div class="row items-center no-wrap" :class="$q.screen.lt.md ? 'full-width' : ''">
                 <q-input
-                  filled
-                  dense
-                  debounce="500"
-                  v-model="filter"
-                  placeholder="Buscar"
-                  class="col"
-                >
-                  <template v-slot:append>
-                    <q-icon name="search" />
-                  </template>
-                </q-input>
-              </div>
-            </div>
-          </template>
+                   filled
+                   dense
+                   debounce="500"
+                   v-model="filter"
+                   placeholder="Buscar por nombre o documento..."
+                   class="col"
+                 >
+                   <template v-slot:append>
+                     <q-icon name="search" />
+                   </template>
+                 </q-input>
+                 <q-btn
+                   flat
+                   round
+                   color="grey-7"
+                   icon="filter_list"
+                   class="q-ml-sm"
+                   @click="showDrawerFilters = true"
+                 >
+                   <q-badge v-if="activeFiltersCount > 0" color="primary" floating>{{ activeFiltersCount }}</q-badge>
+                 </q-btn>
+               </div>
+             </div>
+           </template>
 
           <template v-slot:item="props">
             <div class="q-pa-xs col-xs-12 col-sm-6">
-              <q-card class="cursor-pointer q-hoverable no-shadow transition-all" style="border-radius: 16px; border: 1px solid #eef0f3" @click="editClient(null, props.row)">
+              <q-card
+                class="cursor-pointer q-hoverable no-shadow transition-all"
+                style="border-radius: 16px; border: 1px solid #eef0f3"
+                :class="$q.dark.isActive ? 'bg-dark border-dark' : 'bg-white border-light'"
+                @click="editClient(null, props.row)"
+              >
                 <span class="q-focus-helper"></span>
 
                 <q-card-section class="row justify-between items-start compact-card-header">
                   <div class="column">
-                     <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">
+                     <div class="text-weight-bold text-body1" :class="$q.dark.isActive ? 'text-indigo-2' : 'text-indigo-10'" style="font-size: 1.1rem; letter-spacing: -0.5px">
                        {{ props.row.name }}
                      </div>
-                     <div class="text-caption text-grey-6 text-weight-medium">
-                       {{ props.row.document_number || 'Sin documento' }}
-                     </div>
+                      <div class="text-caption text-weight-medium" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-6'">
+                        {{ props.row.document_number || 'Sin documento' }}
+                      </div>
                   </div>
                 </q-card-section>
 
@@ -87,16 +102,16 @@
                   <div class="row q-col-gutter-y-sm">
                     <div class="col-12">
                        <div class="text-caption text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px">Contacto</div>
-                       <div class="row items-center q-gutter-x-sm">
-                         <div class="text-body2 text-grey-9 text-weight-bold ellipsis">
-                           <q-icon name="phone" size="14px" color="grey-6" class="q-mr-xs" />
-                           {{ props.row.phone_number || '-' }}
-                         </div>
-                         <div class="text-body2 text-grey-8 ellipsis">
-                           <q-icon name="email" size="14px" color="grey-6" class="q-mr-xs" />
-                           {{ props.row.email || '-' }}
-                         </div>
-                       </div>
+                        <div class="row items-center q-gutter-x-sm">
+                          <div class="text-body2 text-weight-bold ellipsis" :class="$q.dark.isActive ? 'text-grey-2' : 'text-grey-9'">
+                            <q-icon name="phone" size="14px" color="grey-6" class="q-mr-xs" />
+                            {{ props.row.phone_number || '-' }}
+                          </div>
+                          <div class="text-body2 ellipsis" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-8'">
+                            <q-icon name="email" size="14px" color="grey-6" class="q-mr-xs" />
+                            {{ props.row.email || '-' }}
+                          </div>
+                        </div>
                     </div>
                   </div>
                 </q-card-section>
@@ -351,7 +366,7 @@
             </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-card-actions align="right" class="q-pa-md">
             <q-btn
               flat
               icon="delete"
@@ -610,7 +625,7 @@
             </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="q-pa-md bg-grey-1">
+          <q-card-actions align="right" class="q-pa-md">
             <q-btn
               unelevated
               icon="save"
@@ -825,6 +840,115 @@
       v-model="showSubscriptionDialog"
       @subscription-updated="loadSubscriptionInfo"
     />
+
+    <!-- Filter Dialog -->
+    <q-dialog v-model="showDrawerFilters" position="right" full-height>
+      <q-card style="width: 450px; max-width: 90vw;">
+        <q-card-section class="row items-center q-pb-md text-white bg-primary">
+          <div class="text-h6">Filtros Avanzados</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-separator />
+
+        <q-scroll-area style="height: calc(100% - 130px);">
+          <q-card-section class="q-gutter-y-md">
+            <!-- Search by Name -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Nombre</div>
+              <q-input
+                filled
+                dense
+                v-model="params.dataSearch.name"
+                placeholder="Ej: Juan Perez"
+                @update:model-value="applyFilters"
+              >
+                <template v-slot:prepend><q-icon name="person" size="xs" /></template>
+              </q-input>
+            </div>
+
+            <!-- Search by Email -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Correo Electrónico</div>
+              <q-input
+                filled
+                dense
+                v-model="params.dataSearch.email"
+                placeholder="Ej: cliente@correo.com"
+                @update:model-value="applyFilters"
+              >
+                <template v-slot:prepend><q-icon name="email" size="xs" /></template>
+              </q-input>
+            </div>
+
+            <!-- Client Type / Mode -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Tipo de Cliente</div>
+              <q-btn-toggle
+                v-model="params.onlyClients"
+                toggle-color="primary"
+                flat
+                stretch
+                class="full-width no-shadow border-grey"
+                @update:model-value="handlePartnerModeChange"
+                :options="[
+                  { label: 'Empresa', value: true },
+                  { label: 'Afiliados', value: false }
+                ]"
+              />
+              <div class="text-caption text-grey-6 q-mt-xs">
+                {{ params.onlyClients ? 'Mostrando clientes directos y socios.' : 'Mostrando exclusivamente clientes de socios.' }}
+              </div>
+            </div>
+
+            <!-- Specific Partner Filter -->
+            <div class="filter-item" v-if="userSession.is_root">
+              <div class="text-subtitle2 q-mb-xs">Filtrar por Afiliado</div>
+              <q-select
+                filled
+                dense
+                v-model="selectedPartnerFilter"
+                label="Seleccionar Afiliado"
+                :options="partners"
+                @filter="getPartners"
+                @update:model-value="applyPartnerFilter"
+                use-input
+                option-label="name"
+                option-value="id"
+                clearable
+              >
+                <template v-slot:prepend><q-icon name="group" size="xs" /></template>
+              </q-select>
+            </div>
+
+            <!-- Is Partner Toggle -->
+            <div class="filter-item">
+              <q-item tag="label" class="q-pa-none" v-ripple>
+                <q-item-section>
+                  <q-item-label>Mostrar solo Socios/Afiliados</q-item-label>
+                  <q-item-label caption>Filtra registros que son prestadores.</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-toggle
+                    v-model="filterIsPartner"
+                    color="primary"
+                    @update:model-value="applyFilters"
+                  />
+                </q-item-section>
+              </q-item>
+            </div>
+          </q-card-section>
+        </q-scroll-area>
+
+        <q-separator />
+
+        <q-card-actions align="between" class="q-pa-md">
+          <q-btn flat label="Limpiar Filtros" color="negative" @click="clearFilters" />
+          <q-btn unelevated label="Aplicar" color="primary" v-close-popup @click="applyFilters" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -881,22 +1005,27 @@ export default {
        * @type {String}
        */
       formattedAddress: '',
-      /**
-       * Params search
-       * @type {Object}
-       */
+      showDrawerFilters: false,
+      filterPartnerMode: null, // 'clients', 'partners', 'partner_clients'
+      selectedPartnerFilter: null,
       params: {
         paginate: true,
         sortBy: 'id',
         sortOrder: 'desc',
         perPage: 20,
+        onlyClients: true,
+        partner_id: null,
         dataSearch: {
           name: '',
           email: '',
           phone_number: '',
           document_number: ''
+        },
+        dataEqualFilter: {
+          is_partner: null
         }
       },
+      filterIsPartner: false,
       visible: false,
       openAddClient: false,
       openEditClient: null,
@@ -960,6 +1089,15 @@ export default {
     /* isAdmin () {
       return this.userSession?.is_root || this.userSession?.is_super_admin
     } */
+    activeFiltersCount () {
+      let count = 0
+      if (this.params.dataSearch.name) count++
+      if (this.params.dataSearch.email) count++
+      if (this.params.partner_id) count++
+      if (this.filterIsPartner) count++
+      if (this.params.onlyClients === false) count++
+      return count
+    }
   },
   methods: {
     /**
@@ -1511,13 +1649,63 @@ export default {
      * Initial load and state handling
      */
     async loadClients () {
-      /* if (this.userSession?.is_partner) {
-        this.store.partnerMode = true
-      } */
+      if (this.userSession?.is_partner) {
+        this.params.onlyClients = false
+      }
       this.setPagination({
         pagination: this.paginationConfig,
         filter: undefined
       })
+    },
+    /**
+     * Apply all current filters
+     */
+    applyFilters () {
+      this.params.page = 1
+      this.params.is_partner = this.filterIsPartner ? 1 : null
+      this.getClients()
+    },
+    /**
+     * Handle change in partner mode (Empresa vs Clientes de Afiliados)
+     */
+    handlePartnerModeChange (val) {
+      if (val) {
+        // Mode Empresa: clear partner filter to show all company clients/partners
+        this.params.partner_id = null
+        this.selectedPartnerFilter = null
+      }
+      this.applyFilters()
+    },
+    /**
+     * Apply specific partner filter
+     */
+    applyPartnerFilter (val) {
+      if (val) {
+        this.params.partner_id = val.id
+        // When filtering by a specific partner, we usually want to see THEIR clients
+        this.params.onlyClients = false
+      } else {
+        this.params.partner_id = null
+      }
+      this.applyFilters()
+    },
+    /**
+     * Reset all filters to default
+     */
+    clearFilters () {
+      this.filter = ''
+      this.params.dataSearch = {
+        name: '',
+        email: '',
+        phone_number: '',
+        document_number: ''
+      }
+      this.params.is_partner = null
+      this.filterIsPartner = false
+      this.params.onlyClients = true
+      this.params.partner_id = null
+      this.selectedPartnerFilter = null
+      this.applyFilters()
     }
     /**
      * Toggle partner mode
@@ -1544,6 +1732,28 @@ export default {
   color: var(--q-primary);
 }
 
+.filter-item {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #edf2f7;
+  transition: all 0.3s ease;
+}
+
+.body--dark .filter-item {
+  background: #1d1d1d;
+  border-color: #333;
+}
+
+.border-grey {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.body--dark .border-grey {
+  border-color: #444;
+}
+
 /* Clases para tarjetas compactas (Consistencia con InvoicePage) */
 .compact-card-header {
   padding: 0.5rem 1rem !important;
@@ -1558,6 +1768,14 @@ export default {
   :deep(.q-table__top) {
     padding: 0.5rem !important;
   }
+}
+
+.border-light {
+  border-color: #eef0f3 !important;
+}
+
+.border-dark {
+  border-color: #333 !important;
 }
 
 /* Import Dialog Styles */

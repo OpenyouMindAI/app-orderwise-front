@@ -68,6 +68,8 @@
 
         <q-space />
 
+        
+
         <!-- Branch Office Indicator -->
         <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
           <q-chip

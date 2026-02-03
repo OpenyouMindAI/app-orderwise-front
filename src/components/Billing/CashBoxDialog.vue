@@ -321,7 +321,8 @@ export default {
               name: value
             },
             dataEqualFilter: {
-              branch_office_id: branchOfficeId
+              branch_office_id: branchOfficeId,
+              is_main: false
             }
           }
         })

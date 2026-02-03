@@ -39,6 +39,18 @@
               <q-btn
                 unelevated
                 rounded
+                color="primary"
+                text-color="white"
+                icon="history"
+                label="Ver Historial"
+                @click="$router.push({ name: 'FinancePaymentsByMethod' })"
+                class="history-btn"
+              >
+                <q-tooltip>Ver historial de arqueos globales consolidados</q-tooltip>
+              </q-btn>
+              <q-btn
+                unelevated
+                rounded
                 color="white"
                 text-color="primary"
                 icon="help_outline"
@@ -720,7 +732,7 @@
 
     <!-- Global Withdrawal Warning Modal (Uncounted Withdrawals) -->
     <q-dialog v-model="showGlobalWarningModal" persistent>
-      <q-card class="global-modal-card" style="min-width: 400px; max-width: 550px;">
+      <q-card class="global-modal-card" style="min-width: 500px; max-width: 700px;">
         <q-card-section class="bg-warning text-white">
           <div class="row items-center q-gutter-sm">
             <q-icon name="warning" size="28px" />
@@ -735,25 +747,57 @@
             Se encontraron <strong class="text-warning">{{ uncountedWithdrawals.length }}</strong> arqueo(s) que no han sido contados (sin monto real ingresado).
           </div>
 
-          <q-list v-if="uncountedWithdrawals.length <= 5" bordered separator class="rounded-borders q-mb-md">
-            <q-item v-for="unc in uncountedWithdrawals" :key="unc.id" dense>
-              <q-item-section>
-                <q-item-label>Arqueo #{{ unc.id }}</q-item-label>
-                <q-item-label caption>
-                  {{ unc.payment_method_name || 'Sin método' }} • {{ formatCurrency(unc.amount) }}
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-badge color="warning" text-color="dark" label="Sin contar" />
-              </q-item-section>
-            </q-item>
-          </q-list>
+          <!-- Scrollable list for uncounted withdrawals -->
+          <q-scroll-area style="height: 300px;" class="q-mb-md" v-if="uncountedWithdrawals.length > 0">
+            <q-list bordered separator class="rounded-borders">
+              <q-item v-for="unc in uncountedWithdrawals" :key="unc.id" dense>
+                <q-item-section avatar>
+                  <q-avatar color="warning" text-color="dark" size="40px">
+                    <q-icon name="account_balance" size="20px" />
+                  </q-avatar>
+                </q-item-section>
+
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">
+                    {{ unc.cashbox_name || 'Sin caja' }}
+                  </q-item-label>
+                  <q-item-label caption>
+                    <span class="text-grey-8">👤 {{ unc.user_name || 'Sin usuario' }}</span>
+                  </q-item-label>
+                  <q-item-label caption lines="2">
+                    <div class="row q-gutter-xs items-center">
+                      <q-icon name="event" size="14px" />
+                      <span>{{ unc.date || 'Sin fecha' }}</span>
+                      <q-icon name="schedule" size="14px" class="q-ml-xs" />
+                      <span>{{ unc.time || '--:--' }}</span>
+                    </div>
+                    <div class="row q-gutter-xs items-center q-mt-xs">
+                      <q-icon name="credit_card" size="14px" />
+                      <span>{{ unc.payment_method_name || 'Sin método' }}</span>
+                      <q-separator vertical class="q-mx-xs" />
+                      <span class="text-weight-medium">{{ formatCurrency(unc.amount) }}</span>
+                    </div>
+                  </q-item-label>
+                </q-item-section>
+
+                <q-item-section side>
+                  <div class="column items-end q-gutter-xs">
+                    <q-badge
+                      :color="unc.shift_status === 'open' ? 'positive' : 'grey'"
+                      :label="unc.shift_status === 'open' ? 'Turno Abierto' : 'Turno Cerrado'"
+                    />
+                    <q-badge color="warning" text-color="dark" label="Sin contar" />
+                  </div>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-scroll-area>
 
           <q-banner v-else class="bg-blue-1 text-blue-9 rounded-borders">
             <template v-slot:avatar>
               <q-icon name="info" color="blue" />
             </template>
-            Hay muchos arqueos sin contar. Se recomienda completarlos antes de generar el reporte global.
+            No hay arqueos sin contar para los métodos de pago seleccionados.
           </q-banner>
 
           <div class="text-caption text-grey-7 q-mt-md">
@@ -842,7 +886,7 @@
           </div>
 
           <q-list bordered separator class="rounded-borders">
-            <q-item v-for="pm in globalSummary" :key="pm.payment_method_id" class="q-py-md">
+            <q-item v-for="pm in activeGlobalSummary" :key="pm.payment_method_id" class="q-py-md">
               <q-item-section>
                 <q-item-label class="text-weight-medium">
                   {{ pm.payment_method_name }}
@@ -911,10 +955,12 @@
       title="¡Arqueo Global Creado!"
       :subtitle="`Arqueo Global <span class='text-primary text-weight-bold'>#${createdGlobalWithdrawal?.id || ''}</span><br>Período: ${formatDate(`${dateFrom} 00:00:00`)} - ${formatDate(`${dateTo} 23:59:59`)} `"
       icon="summarize"
-      :show-view="false"
+      :show-view="true"
+      view-label="Ver Historial"
       :show-download="false"
       :show-share="false"
       close-label="Cerrar"
+      @view="$router.push({ name: 'FinancePaymentsByMethod' })"
       @close="closeGlobalModals"
     />
   </q-page>
@@ -1181,6 +1227,14 @@ export default {
     const loadingGlobalSummary = ref(false)
 
     /**
+     * Filtered list of payment methods with a balance > 0
+     * @type {import('vue').ComputedRef<Array>}
+     */
+    const activeGlobalSummary = computed(() => {
+      return globalSummary.value.filter(pm => parseFloat(pm.total_counted || 0) > 0)
+    })
+
+    /**
      * Computed property that calculates the total amount of all withdrawals
      * @type {import('vue').ComputedRef<number>}
      */
@@ -1203,6 +1257,7 @@ export default {
     const hasData = computed(() => {
       return daysData.value.length > 0
     })
+
 
     const dayColumns = [
       {
@@ -1905,9 +1960,13 @@ export default {
           params.branch_office_ids = filters.value.branch_office_ids.map(data => data?.id)
         }
 
-        const response = await api.get('/reports/withdrawals/summary-for-global', { params })
-        const data = response.data
+        if (filters.value.payment_method_ids?.length) {
+          params.payment_method_ids = filters.value.payment_method_ids.map(data => data?.id)
+        }
 
+        const { data } = await api.get('/reports/withdrawals/summary-for-global', { params })
+
+        console.log(data)
         globalSummary.value = data.summary || []
         uncountedWithdrawals.value = data.uncounted_withdrawals || []
         cashboxOptions.value = data.cashboxes || []
@@ -1946,12 +2005,24 @@ export default {
      * @returns {Promise<void>}
      */
     const saveGlobalWithdrawal = async () => {
-      // Validate all payment methods have destination cashbox selected
-      const invalidMethods = globalSummary.value.filter(pm => !pm.destination_cashbox_id)
+      // Filter out payment methods with 0 amount
+      const activeMethods = globalSummary.value.filter(pm => parseFloat(pm.total_counted || 0) > 0)
+
+      if (activeMethods.length === 0) {
+        $q.notify({
+          type: 'warning',
+          message: 'No hay montos contados para guardar',
+          icon: 'money_off'
+        })
+        return
+      }
+
+      // Validate all active payment methods have destination cashbox selected
+      const invalidMethods = activeMethods.filter(pm => !pm.destination_cashbox_id)
       if (invalidMethods.length > 0) {
         $q.notify({
           type: 'warning',
-          message: 'Selecciona una caja destino para cada método de pago',
+          message: 'Selecciona una caja destino para cada método de pago con saldo',
           icon: 'warning'
         })
         return
@@ -1963,7 +2034,7 @@ export default {
           date_from: dateFrom.value,
           date_to: dateTo.value,
           branch_office_id: filters.value.branch_office_ids?.[0]?.id || null,
-          payment_methods: globalSummary.value.map(pm => ({
+          payment_methods: activeMethods.map(pm => ({
             payment_method_id: pm.payment_method_id,
             destination_cashbox_id: pm.destination_cashbox_id,
             cashflow_ids: pm.cashflow_ids
@@ -2138,6 +2209,7 @@ export default {
       isCurrentMonth,
       isPreviousMonth,
       isToday,
+      activeGlobalSummary,
 
       // Date Methods
       setCurrentMonth,

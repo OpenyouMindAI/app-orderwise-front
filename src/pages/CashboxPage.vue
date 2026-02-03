@@ -54,7 +54,10 @@
 
               <q-card-section class="row justify-between items-center compact-card-header">
                 <div class="column">
-                  <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">{{ props.row.name }}</div>
+                  <div class="text-indigo-10 text-weight-bold text-body1" style="font-size: 1.1rem; letter-spacing: -0.5px">
+                    {{ props.row.name }}
+                    <q-badge v-if="props.row.is_main" color="amber-10" class="q-ml-sm" label="Principal" />
+                  </div>
                   <div class="text-caption text-grey-6 text-weight-medium">ID: {{ props.row.id }}</div>
                 </div>
                 <div class="column items-end">
@@ -69,6 +72,18 @@
               </q-card-section>
             </q-card>
           </div>
+        </template>
+
+        <template v-slot:body-cell-is_main="props">
+          <q-td :props="props">
+            <q-chip
+              dense
+              :color="props.row.is_main ? 'amber-2' : 'grey-3'"
+              :text-color="props.row.is_main ? 'amber-9' : 'grey-7'"
+              :icon="props.row.is_main ? 'star' : 'person'"
+              :label="props.row.is_main ? 'Sí' : 'No'"
+            />
+          </q-td>
         </template>
 
         <template v-slot:body-cell-status="props">
@@ -106,7 +121,7 @@
                   />
                 </div>
 
-                <div class="col-12">
+                <div class="col-12 col-sm-6">
                   <q-select
                     v-model="formData.status"
                     label="Estado *"
@@ -117,6 +132,16 @@
                     emit-value
                     map-options
                     :rules="[val => !!val || 'Seleccione un estado']"
+                  />
+                </div>
+
+                <div class="col-12 col-sm-6 flex items-center">
+                  <q-toggle
+                    v-model="formData.is_main"
+                    label="¿Es Caja Principal?"
+                    color="amber-9"
+                    keep-color
+                    icon="star"
                   />
                 </div>
               </div>
@@ -187,11 +212,12 @@ export default {
     const submitting = ref(false)
     const filter = ref('')
     const boxes = ref([])
-    const visibleColumns = ref(['id', 'name', 'status'])
+    const visibleColumns = ref(['id', 'name', 'is_main', 'status'])
     const formData = ref({
       id: null,
       name: '',
-      status: 'active'
+      status: 'active',
+      is_main: false
     })
 
     const dialog = ref({
@@ -247,6 +273,13 @@ export default {
         label: 'Nombre',
         align: 'left',
         field: 'name',
+        sortable: true
+      },
+      {
+        name: 'is_main',
+        label: 'Principal',
+        align: 'center',
+        field: 'is_main',
         sortable: true
       },
       {
@@ -315,7 +348,8 @@ export default {
       formData.value = {
         id: null,
         name: '',
-        status: 'active'
+        status: 'active',
+        is_main: false
       }
     }
 

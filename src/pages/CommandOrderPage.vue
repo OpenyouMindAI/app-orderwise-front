@@ -1011,7 +1011,7 @@
               @click="openPaymentDialog"
             />
             <q-btn color="secondary" label="Ticket" icon="print" @click="print(invoice)" />
-            <q-btn color="primary" icon="check_circle" label="Guardar" :loading="loadingEdit" @click="saveEdit()" />
+            <q-btn color="primary" icon="check_circle" label="Guardar" :loading="loadingEdit" @click="saveEdit" />
           </div>
         </q-card-actions>
       </q-card>
@@ -1040,6 +1040,55 @@
         <q-card-section class="col q-pt-md filters-content">
           <q-scroll-area class="full-height">
             <div class="q-gutter-md q-pr-md">
+              <!-- Filtro por Fecha de Entrega -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="event" size="18px" color="grey-7" />
+                  <span>Filtrar por Fecha</span>
+                </div>
+                <div class="q-gutter-sm q-mb-xs">
+                  <div class="text-caption text-grey-7">Campo de fecha:</div>
+                  <q-option-group
+                    v-model="dateField"
+                    inline
+                    dense
+                    class="q-mb-xs text-caption"
+                    :options="[
+                      { label: 'Entrega (Delivery)', value: 'delivery_date' },
+                      { label: 'Registro (Creado)', value: 'created_at' }
+                    ]"
+                  />
+                </div>
+                <div class="text-caption text-grey-7">Modo:</div>
+                <q-option-group
+                  v-model="panel"
+                  inline
+                  dense
+                  class="q-mb-sm"
+                  :options="[
+                    { label: 'Día', value: 'day' },
+                    { label: 'Rango', value: 'between' }
+                  ]"
+                />
+                <q-tab-panels v-model="panel" animated class="q-pa-none bg-transparent">
+                  <q-tab-panel name="between" class="q-gutter-y-sm q-pa-none">
+                    <q-input filled dense v-model="dateFilters.from" hint="Desde" type="date" @update:model-value="applyFilters" />
+                    <q-input filled dense v-model="dateFilters.to" hint="Hasta" type="date" @update:model-value="applyFilters" />
+                  </q-tab-panel>
+                  <q-tab-panel name="day" class="q-gutter-y-sm q-pa-none">
+                    <q-input filled dense v-model="dateFilters.day" hint="Fecha" type="date" @update:model-value="applyFilters" />
+                    <div class="row q-col-gutter-sm">
+                      <div class="col-6">
+                        <q-input filled dense v-model="dateFilters.fromHours" hint="Desde" type="time" @update:model-value="applyFilters" />
+                      </div>
+                      <div class="col-6">
+                        <q-input filled dense v-model="dateFilters.toHours" hint="Hasta" type="time" @update:model-value="applyFilters" />
+                      </div>
+                    </div>
+                  </q-tab-panel>
+                </q-tab-panels>
+              </div>
+
               <!-- Código -->
               <div class="filter-group">
                 <div class="filter-label">
@@ -1059,7 +1108,37 @@
                   </template>
                 </q-input>
               </div>
-
+              <!-- Afiliado/Socio -->
+              <div class="filter-group">
+                <div class="filter-label">
+                  <q-icon name="handshake" size="18px" color="grey-7" />
+                  <span>Afiliado (Partner)</span>
+                </div>
+                <q-select
+                  v-model="partner"
+                  :options="partners"
+                  use-input
+                  outlined
+                  dense
+                  clearable
+                  input-debounce="300"
+                  placeholder="Seleccionar afiliado..."
+                  option-value="id"
+                  :option-label="row => `${row.document_number ?? ''} | ${row.name}`"
+                  @filter="filterPartners"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="handshake" size="18px" />
+                  </template>
+                  <template v-slot:no-option>
+                    <q-item>
+                      <q-item-section class="text-grey">
+                        No se encontraron afiliados
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
               <!-- Cliente -->
               <div class="filter-group">
                 <div class="filter-label">
@@ -1436,7 +1515,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { useRoute, useRouter } from 'vue-router'
 import FileComponent from 'src/components/FileComponent.vue'
 import { commandPrint } from 'src/const/printers'
-import { useQuasar } from 'quasar'
+import { useQuasar, date } from 'quasar'
 import ImageGalleryPreview from 'src/components/ImageGalleryComponent.vue'
 import draggable from 'vuedraggable'
 import DropdownMenu from 'src/components/DropdownMenu.vue'
@@ -1447,6 +1526,15 @@ const store = authentication()
 const userSession = store.userSession
 
 const dialogFilter = ref(false)
+const panel = ref('day')
+const dateField = ref('delivery_date')
+const dateFilters = ref({
+  day: date.formatDate(new Date(), 'YYYY-MM-DD'),
+  from: '',
+  to: '',
+  fromHours: '00:00',
+  toHours: '23:59'
+})
 // const files = ref([])
 const route = useRoute()
 const router = useRouter()
@@ -1609,6 +1697,16 @@ const sellers = ref([])
  */
 const seller = ref(null)
 /**
+ * Partners
+ * @type {Array}
+ */
+const partners = ref([])
+/**
+ * Selected partner
+ * @type {Object}
+ */
+const partner = ref(null)
+/**
  * Delivery Persons
  * @type {Array}
  */
@@ -1751,6 +1849,11 @@ const params = ref({
     'products.category_id': categoryCommand.map(item => item.id),
     invoice_type_id: invoiceTypeCommand.map(item => item.id),
     branch_office_id: branchOffice.value
+  },
+  dateFilter: {
+    field: 'delivery_date',
+    from: `${date.formatDate(new Date(), 'YYYY-MM-DD')} 00:00:00`,
+    to: `${date.formatDate(new Date(), 'YYYY-MM-DD')} 23:59:59`
   }
 })
 
@@ -1769,6 +1872,7 @@ watch(openEditInvoice, (data) => {
     router.push({ name: 'CommandOrder' })
   }
 })
+
 const setStatusValue = (sts, field) => {
   const st = statuses.value.find((status) => status.value === sts)
   return st ? st[field] : {}
@@ -1865,6 +1969,11 @@ watch(deliveryPerson, async (data) => {
   filters('delivery_person_id', ids, 'whereIn')
 })
 
+watch(partner, async (partnerValue) => {
+  const ids = partnerValue?.id ? [partnerValue?.id] : []
+  filters('client.partner_id', ids, 'whereIn')
+})
+
 watch(validate, async (data) => {
   if (!data) {
     // Removido el filtro automático por vendedor - los vendedores ven todas las comandas
@@ -1890,6 +1999,38 @@ const filters = (field, value, filterParams) => {
   }
   getInvoices(params.value)
 }
+
+/**
+ * Apply filters for date
+ */
+const applyFilters = () => {
+  if (panel.value === 'day') {
+    if (dateFilters.value.day) {
+      params.value.dateFilter = {
+        field: dateField.value,
+        from: `${dateFilters.value.day} ${dateFilters.value.fromHours || '00:00'}`,
+        to: `${dateFilters.value.day} ${dateFilters.value.toHours || '23:59'}`
+      }
+    }
+  } else {
+    if (dateFilters.value.from && dateFilters.value.to) {
+      params.value.dateFilter = {
+        field: dateField.value,
+        from: dateFilters.value.from,
+        to: dateFilters.value.to
+      }
+    }
+  }
+  getInvoices(params.value)
+}
+
+watch(dateField, () => {
+  applyFilters()
+})
+
+watch(panel, () => {
+  applyFilters()
+})
 
 const setPermissions = () => {
   validate.value = userSession.is_root || userSession.roles.some(role => permissions.includes(role.acronym))
@@ -1986,11 +2127,35 @@ const filterClients = async (value, update) => {
         dataSearch: {
           name: value,
           document_number: value
+        },
+        dataEqualFilter: {
+          partner_id: partner.value?.id
         }
       }
     })
     update(() => {
       clients.value = data
+    })
+  } catch (error) {
+    notify(error.message, 'negative', 'warning')
+  }
+}
+
+/**
+ * Filter partners
+ */
+const filterPartners = async (value, update) => {
+  try {
+    const { data } = await api.get('partners', {
+      params: {
+        dataSearch: {
+          name: value,
+          document_number: value
+        }
+      }
+    })
+    update(() => {
+      partners.value = data
     })
   } catch (error) {
     notify(error.message, 'negative', 'warning')
@@ -2056,13 +2221,33 @@ const filterDeliveryPersons = async (value, update) => {
 const clearFilters = () => {
   code.value = null
   client.value = null
+  partner.value = null
   seller.value = null
   deliveryPerson.value = null
   category.value = []
   typeOfService.value = []
   invoiceType.value = []
   branchOfficeSelect.value = []
+  
+  // Clear date filters
+  dateFilters.value = {
+    day: date.formatDate(new Date(), 'YYYY-MM-DD'),
+    from: '',
+    to: '',
+    fromHours: '00:00',
+    toHours: '23:59'
+  }
+  dateField.value = 'delivery_date'
+  panel.value = 'day'
+  
+  params.value.dateFilter = {
+    field: dateField.value,
+    from: `${date.formatDate(new Date(), 'YYYY-MM-DD')} 00:00:00`,
+    to: `${date.formatDate(new Date(), 'YYYY-MM-DD')} 23:59:59`
+  }
+  
   notify('Filtros limpiados', 'info', 'info')
+  getInvoices(params.value)
 }
 /**
  * Get all invoices
@@ -2332,15 +2517,70 @@ const loadMore = async (status) => {
   await loadInvoices(status)
 }
 /**
+ * Model data for API save
+ * @param {Object} data data to model
+ * @return {Object} modeled data
+ */
+const modelData = (data) => {
+  const result = { ...data }
+  for (const key in result) {
+    if (Object.prototype.hasOwnProperty.call(result, key)) {
+      const element = result[key]
+      if (element && typeof element === 'object' && element.id && !Array.isArray(element)) {
+        result[`${key}_id`] = element.id
+      }
+    }
+  }
+  return result
+}
+
+/**
+ * Save invoice edits
+ */
+const saveEdit = async () => {
+  if (!invoice.value) return
+
+  try {
+    loadingEdit.value = true
+    const payload = modelData(invoice.value)
+
+    await api.put(`invoices/${invoice.value.id}`, payload)
+
+    notify('Cambios guardados exitosamente', 'positive', 'check_circle')
+    openEditInvoice.value = false
+
+    // Reload only the affected column
+    const statusObj = statuses.value.find(s => s.value === invoice.value.status)
+    if (statusObj) {
+      loadInvoices(statusObj)
+    }
+  } catch (error) {
+    console.error('Error saving invoice:', error)
+    notify(error.response?.data?.message || 'Error al guardar los cambios', 'negative', 'warning')
+  } finally {
+    loadingEdit.value = false
+  }
+}
+
+/**
  * Change status invoice
  * @param {Object} data invoice
  * @param {Number} index index status
  */
 const cancelInvoice = async () => {
+  if (!invoice.value) return
+
   try {
     cancelLoading.value = true
+    const originalStatus = invoice.value.status
     await api.put(`invoice-status-command/${invoice.value.id}`, { status: 'cancelled' })
-    getInvoices(params.value)
+
+    // Reload only the affected column
+    const statusObj = statuses.value.find(s => s.value === originalStatus)
+    if (statusObj) {
+      loadInvoices(statusObj)
+    }
+
     notify('Factura anulada exitosamente', 'positive', 'check_circle')
     openEditInvoice.value = false
   } catch (error) {
