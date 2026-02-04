@@ -66,22 +66,28 @@
           @click="toggleSelection(invoice)"
         >
           <div class="card-glow"></div>
-          
+
+          <!-- Floating Selection Indicator -->
+          <div class="selection-badge-floating">
+            <q-checkbox
+              :model-value="isSelected(invoice.id)"
+              @update:model-value="toggleSelection(invoice)"
+              color="indigo-7"
+              dense
+              size="32px"
+            />
+          </div>
+
           <!-- Card Header Unit -->
           <div class="order-card-main-row">
-            <div class="row items-center no-wrap flex-1 q-mr-sm">
-              <div class="selection-indicator q-mr-md">
-                <div class="indicator-ring" :class="{ 'is-checked': isSelected(invoice.id) }">
-                  <q-icon v-if="isSelected(invoice.id)" name="check" color="white" size="12px" />
+            <div class="column flex-1 min-width-0 q-pr-xl">
+              <div class="row items-center no-wrap q-gutter-x-sm q-mb-xs">
+                <span class="order-id-label">#{{ invoice.code }}</span>
+                <div class="order-total-value-pill">
+                  {{ formatCurrency(invoice.total) }}
                 </div>
               </div>
-              <div class="column min-width-0">
-                <span class="order-id-label">#{{ invoice.code }}</span>
-                <span class="order-client-name ellipsis">{{ invoice.client?.name || 'Cliente' }}</span>
-              </div>
-            </div>
-            <div class="order-total-value">
-              {{ formatCurrency(invoice.total) }}
+              <span class="order-client-name ellipsis">{{ invoice.client?.name || 'Cliente' }}</span>
             </div>
           </div>
 
@@ -107,47 +113,62 @@
             <span class="ellipsis-2-lines">{{ getFormattedAddress(invoice.client?.address) }}</span>
           </div>
 
-          <!-- Status Indicator -->
+          <!-- Expansion Content -->
+          <div v-if="isExpanded(invoice.id)" class="order-expansion-content q-mt-md" @click.stop>
+            <!-- Order description -->
+            <div v-if="invoice.description" class="order-description-box q-mb-md">
+              <div class="row items-center q-mb-xs">
+                <q-icon name="o_description" size="14px" color="primary" class="q-mr-xs" />
+                <span class="text-caption text-weight-bolder text-grey-9">OBSERVACIÓN DE ORDEN</span>
+              </div>
+              <div class="text-body2 text-grey-8">{{ invoice.description }}</div>
+            </div>
+
+            <!-- Products List -->
+            <div class="products-list-integrated">
+              <div v-for="product in invoice.products" :key="product.id" class="product-item-row q-mb-sm">
+                <div class="row items-center justify-between no-wrap">
+                  <div class="column col">
+                    <span class="text-caption text-weight-bold text-grey-9">{{ product.name }}</span>
+                    <span class="text-caption text-grey-5">Ordenado: {{ Number(product.pivot?.amount).toFixed(2) }}</span>
+                  </div>
+                  <div class="col-auto row items-center no-wrap qty-control-pill border-subtle">
+                    <!-- <q-btn flat round dense icon="remove" size="xs" color="grey-6" @click.stop="product.quantity_to_load = Math.max(0, (product.quantity_to_load || 0) - 1)" /> -->
+                    <q-input
+                      v-model.number="product.quantity_to_load"
+                      type="number"
+                      dense
+                      readonly
+                      borderless
+                      input-class="text-center text-weight-bolder text-grey-9 q-pa-none"
+                      style="width: 35px; font-size: 0.85rem;"
+                      @click.stop
+                    />
+                    <!-- <q-btn flat round dense icon="add" size="xs" color="grey-6" @click.stop="product.quantity_to_load = (product.quantity_to_load || 0) + 1" /> -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Indicator & Expansion Trigger -->
           <div class="order-card-footer q-mt-sm row items-center justify-between">
             <q-badge
               :color="getStatusColor(invoice.status)"
               :label="getStatusLabel(invoice.status)"
-              class="modern-status-badge"
               outline
             />
             <q-btn
               flat
               dense
               round
-              color="grey-6"
-              icon="expand_more"
-              size="xs"
-              class="expansion-trigger"
-              @click.stop
-            >
-              <q-menu fit anchor="bottom right" self="top right" class="products-mini-menu">
-                <q-list dense style="min-width: 200px">
-                  <q-item v-for="product in invoice.products" :key="product.id" class="q-py-sm">
-                    <q-item-section>
-                      <q-item-label class="text-caption text-weight-bold">{{ product.name }}</q-item-label>
-                      <q-item-label caption>Ordenado: {{ Number(product.pivot?.amount).toFixed(2) }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-input
-                        v-model.number="product.quantity_to_load"
-                        type="number"
-                        dense
-                        outlined
-                        style="width: 60px"
-                        class="compact-qty-input"
-                        input-class="text-center"
-                        @click.stop
-                      />
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-menu>
-            </q-btn>
+              color="primary"
+              :icon="isExpanded(invoice.id) ? 'expand_less' : 'expand_more'"
+              size="sm"
+              class="expansion-trigger-btn"
+              :class="{ 'is-expanded': isExpanded(invoice.id) }"
+              @click.stop="toggleExpand(invoice.id)"
+            />
           </div>
         </div>
       </div>
@@ -334,6 +355,7 @@ import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { loadGoogleMaps } from 'src/boot/google-maps'
 import { authentication } from 'src/stores/module-authentication'
+import eventBus from 'src/utils/eventBus'
 
 // Router and UI utilities
 const router = useRouter()
@@ -521,6 +543,29 @@ async function checkActiveRun () {
     console.error('Error checking active run:', error)
     hasActiveRun.value = false
   }
+}
+const expandedInvoices = ref([])
+
+/**
+ * Toggles the expansion state of an invoice card
+ * @param {number} invoiceId - The ID of the invoice to toggle
+ */
+function toggleExpand (invoiceId) {
+  const index = expandedInvoices.value.indexOf(invoiceId)
+  if (index > -1) {
+    expandedInvoices.value.splice(index, 1)
+  } else {
+    expandedInvoices.value.push(invoiceId)
+  }
+}
+
+/**
+ * Checks if an invoice card is currently expanded
+ * @param {number} invoiceId - The ID of the invoice to check
+ * @returns {boolean} True if expanded
+ */
+function isExpanded (invoiceId) {
+  return expandedInvoices.value.includes(invoiceId)
 }
 
 /**
@@ -2178,39 +2223,42 @@ async function showReturnRouteOnMap () {
   justify-content: center;
 }
 
-.indicator-ring {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #cbd5e1;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.indicator-ring.is-checked {
-  background: #6366f1;
-  border-color: #6366f1;
+.selection-badge-floating {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
 }
 
 .order-id-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #6366f1;
   letter-spacing: 0.5px;
+  background: #f5f3ff;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.order-total-value-pill {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1e293b;
+  background: teal;
+  padding: 2px 10px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.modern-order-card.is-active .order-total-value-pill {
+  border-color: #6366f1;
+  color: #6366f1;
 }
 
 .order-client-name {
   font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
-  max-width: 180px;
-}
-
-.order-total-value {
-  font-size: 16px;
-  font-weight: 800;
   color: #1e293b;
 }
 
@@ -2248,32 +2296,50 @@ async function showReturnRouteOnMap () {
   letter-spacing: 0.5px;
 }
 
-.expansion-trigger {
-  opacity: 0.6;
-  transition: opacity 0.25s;
+.expansion-trigger-btn {
+  background: #f5f3ff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.modern-order-card:hover .expansion-trigger {
-  opacity: 1;
+.expansion-trigger-btn.is-expanded {
+  background: #6366f1;
+  color: white !important;
+  transform: rotate(180deg);
 }
 
-/* Products Menu */
-.products-mini-menu {
+/* Products Integrated Expansion */
+.order-expansion-content {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.order-description-box {
+  background: #f8fafc;
+  padding: 12px;
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #6366f1;
+}
+
+.product-item-row {
+  background: white;
+  padding: 8px 12px;
+  border-radius: 12px;
   border: 1px solid #f1f5f9;
 }
 
-.compact-qty-input :deep(.q-field__control) {
-  height: 28px;
-  min-height: 28px;
+.qty-control-pill {
   background: #f8fafc;
-}
-
-.compact-qty-input :deep(.q-field__native) {
-  font-size: 12px;
-  font-weight: 700;
-  color: #6366f1;
+  border-radius: 100px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Empty State Modernized */
@@ -2434,5 +2500,166 @@ async function showReturnRouteOnMap () {
   background: white;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   z-index: 1000;
+}
+/* Dark Mode Adaptations */
+.body--dark .page-container {
+  background-color: dark;
+}
+
+.body--dark .premium-header-bar {
+  background: rgba(15, 23, 42, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.body--dark .header-main-title {
+  color: #f1f5f9;
+}
+
+.body--dark .header-sub-title {
+  color: #94a3b8;
+}
+
+.body--dark .modern-order-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+}
+
+.body--dark .modern-order-card.is-active {
+  background: #1e1b4b;
+  border-color: #6366f1;
+}
+
+.body--dark .order-id-label {
+  background: #312e81;
+  color: #a5b4fc;
+}
+
+.body--dark .order-total-value-pill {
+  background: dark;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.body--dark .modern-order-card.is-active .order-total-value-pill {
+  border-color: #6366f1;
+  color: #818cf8;
+}
+
+.body--dark .order-client-name {
+  color: #f1f5f9;
+}
+
+.body--dark .detail-item {
+  color: #94a3b8;
+}
+
+.body--dark .order-card-address {
+  color: #64748b;
+}
+
+.body--dark .expansion-trigger-btn {
+  background: #312e81;
+}
+
+.body--dark .expansion-trigger-btn.is-expanded {
+  background: #6366f1;
+}
+
+.body--dark .order-expansion-content {
+  border-top-color: rgba(255, 255, 255, 0.05);
+}
+
+.body--dark .order-description-box {
+  background: dark;
+}
+
+.body--dark .order-description-box .text-grey-8 {
+  color: #cbd5e1 !important;
+}
+
+.body--dark .product-item-row {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.body--dark .product-item-row .text-grey-9 {
+  color: #f1f5f9 !important;
+}
+
+.body--dark .qty-control-pill {
+  background: dark;
+}
+
+.body--dark .qty-control-pill .text-grey-9 {
+  color: #818cf8 !important;
+}
+
+.body--dark .status-tabs-container-bottom {
+  background: rgba(15, 23, 42, 0.9);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.body--dark .finish-route-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.body--dark .finish-route-info {
+  background: #064e3b;
+  border-color: #065f46;
+}
+
+.body--dark .info-title {
+  color: #ecfdf5;
+}
+
+.body--dark .info-subtitle {
+  color: #a7f3d0;
+}
+
+.body--dark .modern-empty-state .text-grey-9 {
+  color: #f1f5f9 !important;
+}
+
+.body--dark .empty-icon-wrapper {
+  background: #1e293b;
+}
+
+.body--dark .map-dialog-card {
+  background: dark !important;
+}
+
+.body--dark .map-tabs-modern {
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.body--dark .map-tab-modern {
+  color: #94a3b8;
+}
+
+.body--dark .close-btn-floating {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.body--dark .map-loading {
+  background: rgba(15, 23, 42, 0.9);
+}
+.body--dark .status-tabs {
+  background: transparent !important;
+}
+
+.body--dark .status-tab {
+  color: #94a3b8;
+}
+
+.body--dark .status-tab.q-tab--active {
+  color: #818cf8;
+}
+
+.body--dark .status-tabs-container-bottom {
+  background: rgba(15, 23, 42, 0.95);
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 </style>

@@ -68,6 +68,8 @@
 
         <q-space />
 
+        
+
         <!-- Branch Office Indicator -->
         <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
           <q-chip
@@ -204,7 +206,7 @@
             <q-tooltip class="text-body2">
               Herramientas
             </q-tooltip>
-            <q-popup-proxy class="tools-popup">
+            <q-popup-proxy class="tools-popup" ref="toolsPopup">
               <q-card flat class="tools-card">
                 <!-- Header -->
                 <div class="tools-header">
@@ -759,6 +761,8 @@ import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
 // import BottomNav from 'src/components/Navigation/BottomNav.vue'
+import { useTourStore } from 'src/stores/tourStore.js'
+
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerAndroidScanningLibrary,
@@ -778,7 +782,7 @@ export default {
     OtpVerificationDialog,
     CompanySetupModal,
     PremiumBadge,
-    IntegrationDynamic,
+    IntegrationDynamic
     // BottomNav
   },
   data () {
@@ -927,8 +931,12 @@ export default {
       'access_token',
       'refresh_token',
       'expires_In',
-      'token_type'
+      'token_type',
+      'mustSelectPlan'
     ]),
+    ...mapState(useTourStore, {
+      tourActive: 'isActive'
+    }),
     ...mapState(darkModeStore, ['darkMode']),
     /**
      * Check if current page has tour available
@@ -1061,6 +1069,16 @@ export default {
     },
     $route (to, from) {
       this.loadingTasks()
+    },
+    mustSelectPlan: {
+      handler (val) {
+        if (val) {
+          this.showSubscriptionDialog = true
+        } else {
+          this.showSubscriptionDialog = false
+        }
+      },
+      immediate: true
     }
   },
   setup () {
@@ -1138,6 +1156,10 @@ export default {
      * Activate tour for current page
      */
     activateCurrentPageTour () {
+      // Cerrar el modal de herramientas si está abierto
+      if (this.$refs.toolsPopup) {
+        this.$refs.toolsPopup.hide()
+      }
       // Emitir evento global para que la página actual active su tour
       eventBus.emit('activate-page-tour', this.$route.name)
     },

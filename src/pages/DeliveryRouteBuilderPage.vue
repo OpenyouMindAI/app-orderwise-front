@@ -250,9 +250,43 @@
                         color="grey-6"
                       />
 
-                      <!-- Stop Number -->
-                      <div class="stop-number q-mr-sm">
-                        {{ index + 1 }}
+                      <!-- Stop Reorder Controls -->
+                      <div class="column items-center q-mr-sm stop-controls">
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="keyboard_arrow_up"
+                          color="primary"
+                          :disable="index === 0"
+                          @click.stop="moveStopUp(index)"
+                        >
+                          <q-tooltip>Mover arriba</q-tooltip>
+                        </q-btn>
+
+                        <div class="stop-position-wrapper">
+                          <input
+                            type="number"
+                            :value="index + 1"
+                            class="stop-position-input"
+                            @change="e => updateStopPosition(element, e.target.value)"
+                            @click.stop
+                          />
+                        </div>
+
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="keyboard_arrow_down"
+                          color="primary"
+                          :disable="index === stops.length - 1"
+                          @click.stop="moveStopDown(index)"
+                        >
+                          <q-tooltip>Mover abajo</q-tooltip>
+                        </q-btn>
                       </div>
 
                       <!-- Client Info -->
@@ -313,6 +347,9 @@
                       </div>
                     </div>
                   </q-card-section>
+                  <q-inner-loading :showing="reorderingStopId === element.id">
+                    <q-spinner-dots color="primary" />
+                  </q-inner-loading>
                 </q-card>
               </template>
             </draggable>
@@ -470,6 +507,12 @@ const currentClientIndex = ref(0)
  */
 const processingPartnerClients = ref(false)
 
+/**
+ * ID of the stop currently being reordered
+ * @type {number|null}
+ */
+const reorderingStopId = ref(null)
+
 // Form
 const routeForm = ref({
   name: '',
@@ -521,7 +564,7 @@ onMounted(async () => {
   try {
     // Load initial data while showing skeleton
     await loadInitialData()
-    
+
     if (routeParams.params.id) {
       await loadRoute()
     }
@@ -1831,10 +1874,17 @@ async function optimizeRoute () {
   }
 }
 
-async function onStopReorder () {
+/**
+ * Updates the reorder on the server and shows loading
+ * @params {number|null} stopId ID of the stop that was moved
+ * @return {Promise<void>}
+ */
+async function triggerReorder (stopId = null) {
   if (!deliveryRoute.value) return
 
-  // Update stop orders
+  reorderingStopId.value = stopId
+
+  // Update stop orders for the API
   const reorderedStops = stops.value.map((stop, index) => ({
     id: stop.id,
     stop_order: index + 1
@@ -1844,15 +1894,70 @@ async function onStopReorder () {
     await api.post(`/delivery-routes/${deliveryRoute.value.id}/stops/reorder`, {
       stops: reorderedStops
     })
-
-    // Map will update automatically via watch
   } catch (error) {
     console.error('Error reordering stops:', error)
     $q.notify({
       type: 'negative',
       message: 'Error al reordenar paradas'
     })
+  } finally {
+    reorderingStopId.value = null
   }
+}
+
+/**
+ * Moves a stop up in the list
+ * @params {number} index Current index of the stop
+ * @return {void}
+ */
+const moveStopUp = (index) => {
+  if (index <= 0) return
+  const item = stops.value.splice(index, 1)[0]
+  stops.value.splice(index - 1, 0, item)
+  triggerReorder(item.id)
+}
+
+/**
+ * Moves a stop down in the list
+ * @params {number} index Current index of the stop
+ * @return {void}
+ */
+const moveStopDown = (index) => {
+  if (index >= stops.value.length - 1) return
+  const item = stops.value.splice(index, 1)[0]
+  stops.value.splice(index + 1, 0, item)
+  triggerReorder(item.id)
+}
+
+/**
+ * Updates a stop position to a specific number
+ * @params {object} stop The stop object
+ * @params {string|number} newPos The new position (1-based)
+ * @return {void}
+ */
+const updateStopPosition = (stop, newPos) => {
+  const index = stops.value.findIndex(s => s.id === stop.id)
+  if (index === -1) return
+
+  let targetIndex = parseInt(newPos) - 1
+  if (isNaN(targetIndex)) return
+
+  // Clamp targetIndex
+  targetIndex = Math.max(0, Math.min(targetIndex, stops.value.length - 1))
+
+  if (targetIndex === index) return
+
+  const item = stops.value.splice(index, 1)[0]
+  stops.value.splice(targetIndex, 0, item)
+  triggerReorder(item.id)
+}
+
+/**
+ * Handles reorder event from draggable component
+ * @return {Promise<void>}
+ */
+async function onStopReorder () {
+  await triggerReorder()
 }
 
 async function removeStop (stop) {
@@ -1946,6 +2051,42 @@ function stopListening () {
   justify-content: center;
   font-weight: bold;
   font-size: 14px;
+}
+
+.stop-controls {
+  width: 36px;
+}
+
+.stop-position-wrapper {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--q-primary);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stop-position-input {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield; /* Firefox */
+  appearance: none;
+}
+
+.stop-position-input::-webkit-outer-spin-button,
+.stop-position-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .drag-handle {

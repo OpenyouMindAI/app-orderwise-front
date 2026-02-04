@@ -27,24 +27,13 @@
               </q-tooltip>
             </q-btn>
             <q-btn
-              label="Modo afiliado"
-              :icon="store.partnerMode ? 'check_box' : 'check_box_outline_blank'"
-              @click="togglePartnerMode"
-              class="modern-btn-secondary"
-              v-if="isAdmin"
-            >
-              <q-tooltip>
-                {{ store.partnerMode ? 'Modo afiliado activado' : 'Modo afiliado desactivado' }}
-              </q-tooltip>
-            </q-btn>
-            <q-btn
               icon="filter_alt"
               label="Filtros"
               unelevated
               class="modern-btn-secondary"
               @click="filterDialog = true"
             >
-              <q-badge color="red" floating v-if="Object.values(filters).some(v => v)">!</q-badge>
+              <q-badge color="primary" floating v-if="activeFiltersCount > 0">{{ activeFiltersCount }}</q-badge>
             </q-btn>
             <div class="branch-badge">
               <q-icon name="store" size="18px" class="q-mr-xs" />
@@ -630,157 +619,13 @@
               </q-tr>
             </template>
 
-            <!-- Skeleton Loading for Statement -->
-            <template v-if="loadingStatement" #body>
-              <q-tr v-for="i in 10" :key="'skeleton-statement-' + i">
-                <q-td>
-                  <q-skeleton type="text" width="80px" />
-                  <q-skeleton type="text" width="60px" class="q-mt-xs" />
-                </q-td>
-                <q-td>
-                  <div class="row items-center">
-                    <q-skeleton type="QAvatar" size="24px" class="q-mr-sm" />
-                    <q-skeleton type="text" width="150px" />
-                  </div>
-                </q-td>
-                <q-td class="text-right">
-                  <q-skeleton type="text" width="80px" style="margin-left: auto;" />
-                </q-td>
-                <q-td class="text-right">
-                  <q-skeleton type="text" width="80px" style="margin-left: auto;" />
-                </q-td>
-                <q-td class="text-right">
-                  <q-skeleton type="text" width="90px" style="margin-left: auto;" />
-                </q-td>
-                <q-td class="text-center">
-                  <q-skeleton type="QBtn" />
-                </q-td>
-              </q-tr>
-            </template>
-
-            <!-- Template unificado para todas las celdas -->
-            <template v-else #body-cell="props">
-              <q-td :props="props" :class="props.row.type === 'invoice' ? 'bg-red-1' : 'bg-green-1'">
-                <template v-if="props.col.name === 'description'">
-                  <div class="row items-center no-wrap">
-                    <q-icon
-                      :name="props.row.type === 'invoice' ? 'receipt' : 'payments'"
-                      :color="props.row.type === 'invoice' ? 'negative' : 'positive'"
-                      size="md"
-                      class="q-mr-sm"
-                    />
-                    <q-btn
-                      v-if="props.row.type === 'invoice' && props.row.invoice.invoice_payments?.length > 0"
-                      size="sm"
-                      flat
-                      dense
-                      round
-                      color="primary"
-                      :icon="props.row.expanded ? 'expand_less' : 'expand_more'"
-                      @click="toggleExpand(props.row)"
-                    >
-                      <q-tooltip>Ver pagos de esta factura</q-tooltip>
-                    </q-btn>
-                    <div class="q-ml-xs">
-                      <strong :class="props.row.type === 'invoice' ? 'text-negative' : 'text-positive'" style="font-size: 15px;">
-                        {{ props.value }}
-                      </strong>
-                      <div class="text-caption text-grey-7" v-if="props.row.type === 'payment' && props.row.payment?.reference">
-                        Ref: {{ props.row.payment.reference }}
-                      </div>
-                    </div>
-                  </div>
-                </template>
-                <template v-else-if="props.col.name === 'date'">
-                  <div class="text-weight-medium">{{ formatDate(props.row.date) }}</div>
-                  <div class="text-caption text-grey-7">{{ formatTime(props.row.date) }}</div>
-                </template>
-                <template v-else-if="props.col.name === 'delivery_date'">
-                  <div class="text-weight-medium">{{ formatDate(props.row.delivery_date) }}</div>
-                  <div class="text-caption text-grey-7">{{ formatTime(props.row.delivery_date) }}</div>
-                </template>
-                <template v-else-if="props.col.name === 'debit'">
-                  <span v-if="props.row.debit > 0" class="text-negative text-weight-bold" style="font-size: 16px;">
-                    {{ formatCurrency(props.row.debit) }}
-                  </span>
-                  <span v-else class="text-grey-5">-</span>
-                </template>
-                <template v-else-if="props.col.name === 'credit'">
-                  <span v-if="props.row.credit > 0" class="text-positive text-weight-bold" style="font-size: 16px;">
-                    {{ formatCurrency(props.row.credit) }}
-                  </span>
-                  <span v-else class="text-grey-5">-</span>
-                </template>
-                <template v-else-if="props.col.name === 'running_balance'">
-                  <div class="text-weight-bold text-primary" style="font-size: 17px;">
-                    {{ formatCurrency(props.row.running_balance) }}
-                  </div>
-                  <div class="text-caption text-grey-7">Saldo</div>
-                </template>
-                <template v-else-if="props.col.name === 'actions'">
-                  <div class="row q-gutter-xs no-wrap">
-                    <!-- Botones para Facturas -->
-                    <q-btn
-                      v-if="props.row.type === 'invoice'"
-                      icon="visibility"
-                      size="sm"
-                      round
-                      flat
-                      color="primary"
-                      @click="viewInvoiceDetail(props.row.invoice)"
-                    >
-                      <q-tooltip>Ver detalle</q-tooltip>
-                    </q-btn>
-                    <q-btn
-                      v-if="props.row.type === 'invoice' && props.row.balance > 0"
-                      icon="payment"
-                      size="sm"
-                      round
-                      flat
-                      color="positive"
-                      @click="openInvoicePaymentDialog(props.row.invoice)"
-                    >
-                      <q-tooltip>Pagar esta factura</q-tooltip>
-                    </q-btn>
-                    <!-- Botón para Pagos -->
-                    <q-btn
-                      v-if="props.row.type === 'payment'"
-                      icon="receipt_long"
-                      size="sm"
-                      round
-                      flat
-                      color="positive"
-                      @click="viewPaymentDetail(props.row.payment_id)"
-                    >
-                      <q-tooltip>Ver detalle del pago</q-tooltip>
-                    </q-btn>
-                    <q-btn
-                      v-if="props.row.type === 'payment' && isAdmin"
-                      icon="delete_forever"
-                      size="sm"
-                      round
-                      flat
-                      color="negative"
-                      @click="confirmDeletePayment(props.row.payment)"
-                    >
-                      <q-tooltip>Eliminar pago</q-tooltip>
-                    </q-btn>
-                  </div>
-                </template>
-                <template v-else>
-                  {{ props.value }}
-                </template>
-              </q-td>
-            </template>
-
-            <!-- Expanded row to show invoice payments -->
+            <!-- Row Data Template -->
             <template #body="props">
-              <q-tr :props="props">
+              <q-tr :props="props" :class="props.row.type === 'invoice' ? 'bg-red-1' : 'bg-green-1'">
                 <q-td
                   v-for="col in props.cols"
                   :key="col.name"
                   :props="props"
-                  :class="props.row.type === 'invoice' ? 'bg-red-1' : 'bg-green-1'"
                 >
                   <template v-if="col.name === 'description'">
                     <div class="row items-center no-wrap">
@@ -1074,7 +919,7 @@
           </q-banner>
         </q-card-section>
 
-        <q-card-actions align="right" class="text-primary bg-grey-1">
+        <q-card-actions align="right" class="text-primary">
           <q-btn label="Cancelar" flat @click="closePaymentDialog" />
           <q-btn
             label="Registrar Pago"
@@ -1435,164 +1280,175 @@
     </q-dialog>
 
     <!-- ============================================ -->
-    <!-- DIALOG: FILTROS -->
+    <!-- DIALOG: FILTROS (MODERN DRAWER) -->
     <!-- ============================================ -->
-    <q-dialog v-model="filterDialog" :maximized="$q.screen.lt.sm" :position="$q.screen.lt.sm ? 'standard' : 'right'">
-      <q-card
-        :class="$q.screen.lt.sm ? 'full-height column': 'filter-dialog'"
-        :style="$q.screen.lt.sm ? 'width: 100%;' : ''"
-      >
-        <q-card-section class="row items-center bg-primary text-white q-py-sm">
-          <div class="text-h6">Filtros</div>
+    <q-dialog v-model="filterDialog" position="right" full-height>
+      <q-card style="width: 450px; max-width: 90vw;" class="column full-height">
+        <q-card-section class="row items-center q-pb-md text-white bg-primary">
+          <div class="text-h6">Filtros Avanzados</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section class="filter-content scroll col q-pa-md">
-          <!-- Branch Office -->
-          <div class="filter-group">
-            <label class="filter-label">
-              <q-icon name="store" size="18px" />
-              Sucursal
-            </label>
-            <q-select
-              v-model="selectedBranchOffice"
-              :options="availableBranchOffices"
-              option-value="id"
-              option-label="name"
-              outlined
-              dense
-              clearable
-              emit-value
-              map-options
-              class="filter-input"
-            />
-          </div>
-
-          <!-- Account Status -->
-          <div class="filter-group">
-            <label class="filter-label">
-              <q-icon name="account_balance" size="18px" />
-              Estado de Cuenta
-            </label>
-            <div class="status-buttons">
-              <q-btn
-                :unelevated="filters.balance_status === 'all'"
-                :outline="filters.balance_status !== 'all'"
-                :color="filters.balance_status === 'all' ? 'primary' : 'grey-5'"
-                label="Todos"
-                size="sm"
-                no-caps
-                @click="filters.balance_status = 'all'"
-                class="status-btn"
-              />
-              <q-btn
-                :unelevated="filters.balance_status === 'with_debt'"
-                :outline="filters.balance_status !== 'with_debt'"
-                :color="filters.balance_status === 'with_debt' ? 'negative' : 'grey-5'"
-                label="Con saldo"
-                size="sm"
-                no-caps
-                @click="filters.balance_status = 'with_debt'"
-                class="status-btn"
-              />
-              <q-btn
-                :unelevated="filters.balance_status === 'no_debt'"
-                :outline="filters.balance_status !== 'no_debt'"
-                :color="filters.balance_status === 'no_debt' ? 'positive' : 'grey-5'"
-                label="En cero"
-                size="sm"
-                no-caps
-                @click="filters.balance_status = 'no_debt'"
-                class="status-btn"
-              />
+        <q-scroll-area class="col">
+          <q-card-section class="q-gutter-y-md">
+            <!-- Section: Search Info -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Información del Cliente</div>
+              <q-input
+                v-model="filters.client_search"
+                placeholder="Nombre o documento..."
+                filled
+                dense
+                clearable
+              >
+                <template v-slot:prepend><q-icon name="search" size="xs" /></template>
+              </q-input>
             </div>
-          </div>
 
-          <!-- Search Client -->
-          <div class="filter-group">
-            <label class="filter-label">
-              <q-icon name="search" size="18px" />
-              Buscar Cliente
-            </label>
-            <q-input
-              v-model="filters.client_search"
-              placeholder="Nombre o documento..."
-              outlined
-              dense
-              clearable
-              class="filter-input"
-            />
-          </div>
-
-          <!-- Date Range -->
-          <div class="filter-group">
-            <label class="filter-label">
-              <q-icon name="event" size="18px" />
-              Rango de Fechas
-            </label>
-            <div class="row q-col-gutter-sm">
-              <div class="col-6">
-                <q-input
-                  v-model="filters.date_from"
-                  type="date"
-                  outlined
+            <!-- Section: Branch & Status -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Sucursal y Estado</div>
+              <div class="column q-gutter-y-sm">
+                <q-select
+                  v-model="selectedBranchOffice"
+                  :options="availableBranchOffices"
+                  option-value="id"
+                  option-label="name"
+                  filled
                   dense
                   clearable
-                  class="filter-input"
-                />
+                  emit-value
+                  map-options
+                  label="Seleccionar Sucursal"
+                >
+                  <template v-slot:prepend><q-icon name="store" size="xs" /></template>
+                </q-select>
+
+                <div class="status-buttons row no-wrap q-gutter-x-xs">
+                  <q-btn
+                    :unelevated="filters.balance_status === 'all'"
+                    :outline="filters.balance_status !== 'all'"
+                    :color="filters.balance_status === 'all' ? 'primary' : 'grey-7'"
+                    label="Todos"
+                    size="sm"
+                    class="col"
+                    @click="filters.balance_status = 'all'"
+                  />
+                  <q-btn
+                    :unelevated="filters.balance_status === 'with_debt'"
+                    :outline="filters.balance_status !== 'with_debt'"
+                    :color="filters.balance_status === 'with_debt' ? 'negative' : 'grey-7'"
+                    label="Con saldo"
+                    size="sm"
+                    class="col"
+                    @click="filters.balance_status = 'with_debt'"
+                  />
+                  <q-btn
+                    :unelevated="filters.balance_status === 'no_debt'"
+                    :outline="filters.balance_status !== 'no_debt'"
+                    :color="filters.balance_status === 'no_debt' ? 'positive' : 'grey-7'"
+                    label="En cero"
+                    size="sm"
+                    class="col"
+                    @click="filters.balance_status = 'no_debt'"
+                  />
+                </div>
               </div>
-              <div class="col-6">
-                <q-input
-                  v-model="filters.date_to"
-                  type="date"
-                  outlined
+            </div>
+
+            <!-- Section: Partner Mode & Specific Partner -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Modo y Afiliados</div>
+              <div class="column q-gutter-y-sm">
+                <q-btn-toggle
+                  v-model="filters.onlyClients"
+                  toggle-color="primary"
+                  flat
+                  stretch
+                  class="full-width no-shadow border-grey"
+                  :options="[
+                    { label: 'Empresa', value: true },
+                    { label: 'Afiliados', value: false }
+                  ]"
+                />
+                <q-select
+                  v-model="selectedPartnerFilter"
+                  :options="partners"
+                  option-value="id"
+                  option-label="name"
+                  filled
                   dense
                   clearable
-                  class="filter-input"
+                  use-input
+                  label="Filtrar por Afiliado"
+                  @filter="getPartners"
+                  @update:model-value="applyPartnerFilter"
+                >
+                  <template v-slot:prepend><q-icon name="group" size="xs" /></template>
+                </q-select>
+
+                <q-toggle
+                  v-model="filters.is_partner"
+                  label="Mostrar solo Socios/Afiliados"
+                  color="primary"
+                  class="full-width q-px-sm border-grey"
+                  :true-value="1"
+                  :false-value="null"
+                  @update:model-value="applyFilters"
                 />
               </div>
             </div>
-          </div>
 
-          <!-- Minimum Balance -->
-          <div class="filter-group q-mb-none">
-            <label class="filter-label">
-              <q-icon name="attach_money" size="18px" />
-              Saldo Mínimo
-            </label>
-            <q-input
-              v-model.number="filters.min_balance"
-              type="number"
-              placeholder="0.00"
-              outlined
-              dense
-              clearable
-              class="filter-input"
-            />
-          </div>
-        </q-card-section>
+            <!-- Section: Date Range -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Rango de Fechas</div>
+              <div class="row q-col-gutter-sm">
+                <div class="col-6">
+                  <q-input
+                    v-model="filters.date_from"
+                    type="date"
+                    filled
+                    dense
+                    label="Desde"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-input
+                    v-model="filters.date_to"
+                    type="date"
+                    filled
+                    dense
+                    label="Hasta"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Section: Minimum Balance -->
+            <div class="filter-item">
+              <div class="text-subtitle2 q-mb-xs">Saldo Mínimo</div>
+              <q-input
+                v-model.number="filters.min_balance"
+                type="number"
+                placeholder="0.00"
+                filled
+                dense
+                clearable
+              >
+                <template v-slot:prepend><q-icon name="attach_money" size="xs" /></template>
+              </q-input>
+            </div>
+          </q-card-section>
+        </q-scroll-area>
 
         <q-separator />
 
-        <q-card-actions align="right" class="text-primary bg-grey-1">
-          <q-btn
-            label="Limpiar"
-            flat
-            color="grey-7"
-            @click="clearFilters"
-            no-caps
-          />
-          <q-btn
-            label="Aplicar Filtros"
-            unelevated
-            color="primary"
-            @click="applyFilters"
-            no-caps
-            icon-right="check"
-          />
+        <q-card-actions align="between" class="q-pa-md">
+          <q-btn flat label="Limpiar Filtros" color="negative" @click="clearFilters" />
+          <q-btn unelevated label="Aplicar Filtros" color="primary" @click="applyFilters" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -1807,6 +1663,18 @@ export default {
       availableBranchOffices: [],
 
       /**
+       * List of partners available for filtering
+       * @type {Array<Object>}
+       */
+      partners: [],
+
+      /**
+       * Selected partner object from the filter
+       * @type {Object|null}
+       */
+      selectedPartnerFilter: null,
+
+      /**
        * Filters applied to client search
        * @type {Object}
        */
@@ -1815,7 +1683,10 @@ export default {
         date_from: '',
         date_to: '',
         min_balance: null,
-        balance_status: 'all' // all, with_debt, no_debt
+        balance_status: 'all', // all, with_debt, no_debt
+        onlyClients: true,
+        partner_id: null,
+        is_partner: null
       },
 
       /**
@@ -2032,6 +1903,23 @@ export default {
      */
     isAdmin () {
       return this.userSession?.is_root || this.userSession?.is_super_admin
+    },
+
+    /**
+     * Calculates the number of active filters
+     * @returns {Number} Count of active filters
+     */
+    activeFiltersCount () {
+      let count = 0
+      if (this.filters.client_search) count++
+      if (this.filters.date_from) count++
+      if (this.filters.date_to) count++
+      if (this.filters.min_balance) count++
+      if (this.filters.balance_status !== 'all') count++
+      if (this.filters.onlyClients === false) count++
+      if (this.filters.partner_id) count++
+      if (this.filters.is_partner) count++
+      return count
     }
   },
 
@@ -2062,6 +1950,7 @@ export default {
 
     async togglePartnerMode () {
       await this.store.togglePartnerMode()
+      this.filters.onlyClients = !this.store.partnerMode
       this.loadClients()
     },
 
@@ -2131,7 +2020,6 @@ export default {
           perPage: rowsPerPage,
           sortBy: sortBy || 'balance',
           sortOrder: descending ? 'desc' : 'asc',
-          onlyClients: Boolean(!this.store.partnerMode),
           branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
           search: this.search,
           ...this.filters
@@ -2174,13 +2062,95 @@ export default {
     async loadClients () {
       if (this.userSession?.is_partner) {
         this.store.partnerMode = true
+        this.filters.onlyClients = false
+      } else if (this.store.partnerMode) {
+        this.filters.onlyClients = false
+      } else {
+        this.filters.onlyClients = true
       }
       await this.onRequest({ pagination: this.pagination })
     },
 
+    /**
+     * Resets pagination and reloads clients
+     */
     searchClients () {
       this.pagination.page = 1
-      this.onRequest({ pagination: this.pagination })
+      this.loadClients()
+    },
+
+    /**
+     * Resets all filters to their default values
+     */
+    clearFilters () {
+      this.filters = {
+        client_search: '',
+        date_from: '',
+        date_to: '',
+        min_balance: null,
+        balance_status: 'all',
+        onlyClients: true,
+        partner_id: null,
+        is_partner: null
+      }
+      this.selectedPartnerFilter = null
+      this.search = ''
+      this.pagination.page = 1
+      this.loadClients()
+      this.filterDialog = false
+    },
+
+    /**
+     * Applies the current filters and reloads the client list
+     */
+    applyFilters () {
+      this.filterDialog = false
+      this.pagination.page = 1
+      this.loadClients()
+    },
+
+    /**
+     * Fetches partners list from the API with optional search filtering
+     * @param {String} value - Search value for name or document
+     * @param {Function} update - Callback to update the options in q-select
+     */
+    async getPartners (value, update) {
+      try {
+        const { data } = await this.$api.get('partners', {
+          params: {
+            dataSearch: {
+              name: value,
+              document_number: value
+            },
+            paginate: true,
+            page: 1,
+            perPage: 20,
+            sortBy: 'id',
+            sortOrder: 'desc'
+          }
+        })
+        update(() => {
+          this.partners = data.data
+        })
+      } catch (err) {
+        notify('Error en la conexión con afiliados', 'negative', 'warning')
+      }
+    },
+
+    /**
+     * Handles specific partner selection in the filter
+     * Automatically sets mode to partner clients if a partner is chosen
+     * @param {Object|null} val - Selected partner object
+     */
+    applyPartnerFilter (val) {
+      if (val) {
+        this.filters.partner_id = val.id
+        // When filtering by a specific partner, we want to see THEIR clients
+        this.filters.onlyClients = false
+      } else {
+        this.filters.partner_id = null
+      }
+      this.applyFilters()
     },
 
     /**
@@ -2670,32 +2640,9 @@ export default {
           // Reload clients list
           this.loadClients()
         }
-
-        // Stop loading immediately to give faster feedback
-        loading(false)
       } catch (error) {
         console.error('Error completo al eliminar pago:', error)
-        console.error('Respuesta del servidor:', error.response)
-
-        let errorMessage = 'Error al eliminar el pago'
-
-        if (error.response) {
-          // El servidor respondió con un código de error
-          if (error.response.status === 404) {
-            errorMessage = 'El pago no existe o ya fue eliminado'
-          } else if (error.response.status === 403) {
-            errorMessage = 'No tienes permisos para eliminar este pago'
-          } else if (error?.message) {
-            errorMessage = error.message
-          } else if (error?.error) {
-            errorMessage = error.error
-          }
-        } else if (error.request) {
-          // La petición se hizo pero no hubo respuesta
-          errorMessage = 'No se pudo conectar con el servidor'
-        }
-
-        notify(errorMessage, 'negative', 'warning')
+      } finally {
         loading(false)
       }
     },
@@ -2705,8 +2652,6 @@ export default {
      * Opens the browser's print dialog
      */
     printInvoice () {
-      // Here you can implement invoice printing
-      // For now, we open the browser's print view
       window.print()
     },
 
@@ -2834,33 +2779,6 @@ export default {
       this.onStatementRequest({ pagination: this.statementPagination })
     },
 
-    /**
-     * Applies selected filters to clients list
-     * Closes filters dialog and reloads data
-     */
-    applyFilters () {
-      this.filterDialog = false
-      this.pagination.page = 1
-      this.loadClients()
-    },
-
-    /**
-     * Clears all applied filters
-     * Resets values to initial states
-     */
-    clearFilters () {
-      this.filters = {
-        client_search: '',
-        date_from: '',
-        date_to: '',
-        min_balance: null,
-        balance_status: 'all'
-      }
-      this.selectedBranchOffice = this.branchOffice?.id || null
-      this.pagination.page = 1
-      this.loadClients()
-      this.filterDialog = false
-    },
 
     /**
      * Opens the dialog to register a payment for a specific invoice
@@ -4138,6 +4056,29 @@ body.body--dark .filter-actions {
   min-width: 120px;
   border-radius: 8px;
   font-weight: 600;
+}
+
+/* Modern Filter Item styles */
+.filter-item {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #edf2f7;
+  transition: all 0.3s ease;
+}
+
+body.body--dark .filter-item {
+  background: #1d1d1d;
+  border-color: #333;
+}
+
+.border-grey {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+body.body--dark .border-grey {
+  border-color: #444;
 }
 
 /* Responsive */

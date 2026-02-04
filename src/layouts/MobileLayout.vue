@@ -113,11 +113,27 @@ export default {
       ]
     }
   },
-  watch: {
-    tab (data) {
-      this.setQueryParams({
-        tab: data
-      })
+  computed: {
+    ...mapState(authentication, [
+      'userSession',
+      'branchOffice',
+      'isDemo',
+      'access_token',
+      'refresh_token',
+      'expires_In',
+      'token_type',
+      'mustSelectPlan'
+    ]),
+
+    /**
+     * Obtiene el rol del usuario en formato legible
+     * @returns {string} Nombre del rol del usuario
+     */
+    userRole () {
+      if (this.userSession?.is_root) return 'Propietario'
+      if (this.userSession?.is_super_admin) return 'Super Admin'
+      const role = this.userSession?.roles?.[0]
+      return role?.name || 'Usuario'
     }
   },
   created () {
@@ -182,7 +198,27 @@ export default {
         ]
       }
     },
-    ...mapActions(authentication, ['logout'])
+
+    /**
+     * Cierra la sesión del usuario
+     */
+    logoutUser () {
+      this.showProfileMenu = false
+      this.router.push({ name: 'Login' })
+      this.logout()
+    }
+  },
+  watch: {
+    mustSelectPlan: {
+      handler (val) {
+        if (val) {
+          this.showSubscriptionDialog = true
+        } else {
+          this.showSubscriptionDialog = false
+        }
+      },
+      immediate: true
+    }
   }
 }
 </script>

@@ -4,6 +4,7 @@
       <q-card flat class="futuristic-pricing">
         <!-- Close Button -->
         <q-btn
+          v-if="!mustSelectPlan"
           icon="close"
           flat
           round
@@ -51,7 +52,7 @@
               :class="[
                 'plan-card',
                 {
-                  'plan-featured': plan.slug?.toLowerCase()?.toLowerCase() === 'pro',
+                  'plan-featured': plan.slug?.toLowerCase() === 'pro',
                   'plan-current': isCurrentPlan(plan)
                 }
               ]"
@@ -211,6 +212,7 @@ import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
 import { usePixel } from 'src/composables/usePixel'
+import { authentication } from 'src/stores/module-authentication'
 
 export default {
   name: 'SubscriptionPlansDialog',
@@ -222,6 +224,7 @@ export default {
   },
   emits: ['update:modelValue', 'subscription-updated'],
   setup (props, { emit }) {
+    const store = authentication()
     const $q = useQuasar()
     const fbq = usePixel()
     const plans = ref([])
@@ -514,6 +517,8 @@ export default {
       }
     }
 
+    const mustSelectPlan = computed(() => store.mustSelectPlan)
+
     onMounted(() => {
       loadPlans()
       loadCurrentSubscription()
@@ -546,7 +551,8 @@ export default {
       getExchangeRate,
       getLocalCurrencyCode,
       selectPlan,
-      cancelSubscription
+      cancelSubscription,
+      mustSelectPlan
     }
   }
 }
