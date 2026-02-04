@@ -29,7 +29,6 @@ export default configure(function (/* ctx */) {
     boot: [
       'i18n',
       'axios',
-      'pinia',
       'authorization',
       'session-tracking',
       'VueHtmlToPaper',
