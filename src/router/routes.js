@@ -507,6 +507,12 @@ const routes = [
     meta: { requiresAuth: false },
     component: () => import('pages/InvoiceDetailsPage.vue')
   },
+  {
+    path: '/sync-company/:company_id',
+    name: 'SyncCompany',
+    meta: { requiresAuth: false },
+    component: () => import('pages/SyncCompanyPage.vue')
+  },
   // Always leave this as last one,
   // but you can also remove it
   {
