@@ -596,7 +596,13 @@ const handleCompanySetupSuccess = (data) => {
   localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
 
   showCompanySetup.value = false
-  router.push({ name: 'CompanyConfig' })
+  
+  // Check for pending plan subscription
+  if (localStorage.getItem('pending_plan_subscription')) {
+    router.push('/') // Redirect to home so MainLayout triggers the subscription dialog
+  } else {
+    router.push({ name: 'CompanyConfig' })
+  }
 }
 
 const businessTypeSearch = ref('')
