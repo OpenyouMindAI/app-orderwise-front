@@ -551,6 +551,7 @@
           </q-btn>
         </div>
       </q-toolbar>
+      <ProPlanPromoBanner @open-subscription="showSubscriptionDialog = true" />
     </q-header>
     <q-drawer
       v-model="leftDrawerOpen"
@@ -771,6 +772,7 @@ import {
 } from '@capacitor/barcode-scanner'
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
+import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
 
 export default {
   name: 'MainLayout',
@@ -785,7 +787,8 @@ export default {
     PremiumBadge,
     IntegrationDynamic,
     // BottomNav
-    DemoPersuasionModal
+    DemoPersuasionModal,
+    ProPlanPromoBanner
   },
   data () {
     return {
