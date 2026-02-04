@@ -142,7 +142,7 @@ export default boot(async ({ router, store }) => {
       notifyValidationErrors(error, 'Error de validación')
     }
 
-    return Promise.reject(error?.response)
+    return Promise.reject(error)
   })
 
   // Guard de navegación
