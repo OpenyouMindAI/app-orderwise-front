@@ -553,6 +553,7 @@
           </q-btn>
         </div>
       </q-toolbar>
+      <ProPlanPromoBanner @open-subscription="showSubscriptionDialog = true" />
     </q-header>
     <q-drawer
       v-model="leftDrawerOpen"
@@ -709,6 +710,7 @@
       v-if="showSubscriptionDialog"
       v-model="showSubscriptionDialog"
       @subscription-updated="onSubscriptionUpdated"
+      @open-register="showCreateCompanyDialog = true"
     />
 
     <!-- Register Dialog -->
@@ -773,6 +775,7 @@ import {
 } from '@capacitor/barcode-scanner'
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
+import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
 
 export default {
   name: 'MainLayout',
@@ -787,7 +790,8 @@ export default {
     PremiumBadge,
     IntegrationDynamic,
     // BottomNav
-    DemoPersuasionModal
+    DemoPersuasionModal,
+    ProPlanPromoBanner
   },
   data () {
     return {
@@ -1122,6 +1126,10 @@ export default {
     }
 
     this.startDemoReminder()
+
+    if (localStorage.getItem('pending_plan_subscription')) {
+      this.showSubscriptionDialog = true
+    }
   },
   beforeUnmount () {
     this.stopDemoReminder()
@@ -1324,6 +1332,11 @@ export default {
         }
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+
+        // Chequear pending subscription y procesar inmediatamente
+        const handledPending = await this.processPendingSubscription()
+        if (handledPending) return
+
         this.$router.push({ name: 'Welcome' })
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
@@ -1403,6 +1416,10 @@ export default {
         // Notificación de éxito con animación
         notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
 
+        // Chequear pending subscription y procesar inmediatamente
+        const handledPending = await this.processPendingSubscription()
+        if (handledPending) return
+
         // Marcar que necesita tour de facturación
         localStorage.setItem('needs_billing_tour', 'true')
 
@@ -1441,6 +1458,39 @@ export default {
       } finally {
         this.loadingCreateCompany = false
       }
+    },
+    /**
+     * Process pending subscription from localStorage
+     */
+    async processPendingSubscription () {
+      const pendingPlan = localStorage.getItem('pending_plan_subscription')
+      if (pendingPlan) {
+        try {
+          const { planId, branchCount } = JSON.parse(pendingPlan)
+          localStorage.removeItem('pending_plan_subscription')
+
+          loading(true)
+          notify('Procesando tu suscripción...', 'info', 'hourglass_empty')
+
+          // Crear link de pago
+          const response = await api.post('mercadopago/create-payment', {
+            subscription_plan_id: planId,
+            branch_offices_count: branchCount || 1,
+            months: 1
+          })
+
+          if (response.data && response.data.init_point) {
+            window.location.href = response.data.init_point
+            return true
+          }
+        } catch (error) {
+          console.error('Error processing pending subscription:', error)
+          notify('Error al procesar la suscripción pendiente', 'negative', 'warning')
+        } finally {
+          loading(false)
+        }
+      }
+      return false
     },
     /**
      * Load subscription information
