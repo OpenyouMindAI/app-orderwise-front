@@ -208,6 +208,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
@@ -224,6 +225,7 @@ export default {
   },
   emits: ['update:modelValue', 'subscription-updated'],
   setup (props, { emit }) {
+    const router = useRouter()
     const store = authentication()
     const $q = useQuasar()
     const fbq = usePixel()
@@ -418,6 +420,20 @@ export default {
      * @param {Object} plan - Plan de suscripción seleccionado
      */
     const selectPlan = async (plan) => {
+      // Logic for Demo Users
+      if (store.isDemo) {
+        localStorage.setItem('pending_plan_subscription', JSON.stringify({
+          planId: plan.id,
+          branchCount: plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1
+        }))
+        notify('Completa tu registro para suscribirte', 'info', 'person_add')
+
+        // Close dialog and open register dialog
+        emit('update:modelValue', false)
+        emit('open-register')
+        return
+      }
+
       // Si el plan es Free, no requiere pago
       if (plan.slug?.toLowerCase() === 'free') {
         notify('El plan Free no requiere pago', 'info', 'info')
@@ -519,8 +535,8 @@ export default {
 
     const mustSelectPlan = computed(() => store.mustSelectPlan)
 
-    onMounted(() => {
-      loadPlans()
+    onMounted(async () => {
+      await loadPlans()
       loadCurrentSubscription()
     })
 
