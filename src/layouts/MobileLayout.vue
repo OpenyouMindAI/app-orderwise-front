@@ -206,7 +206,9 @@ export default {
       this.showProfileMenu = false
       this.router.push({ name: 'Login' })
       this.logout()
-    }
+    },
+    
+    ...mapActions(authentication, ['logout'])
   },
   watch: {
     mustSelectPlan: {
