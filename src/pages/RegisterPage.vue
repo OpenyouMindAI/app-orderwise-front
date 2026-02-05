@@ -600,6 +600,9 @@ const handleCompanySetupSuccess = (data) => {
   // Check for pending plan subscription
   if (localStorage.getItem('pending_plan_subscription')) {
     router.push('/') // Redirect to home so MainLayout triggers the subscription dialog
+  } else if (localStorage.getItem('pending_contact_advisor')) {
+    localStorage.removeItem('pending_contact_advisor')
+    router.push({ name: 'Support' })
   } else {
     router.push({ name: 'CompanyConfig' })
   }

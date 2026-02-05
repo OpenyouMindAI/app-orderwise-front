@@ -1337,6 +1337,14 @@ export default {
         const handledPending = await this.processPendingSubscription()
         if (handledPending) return
 
+        // Chequear pending contact advisor
+        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
+        if (pendingAdvisor) {
+          localStorage.removeItem('pending_contact_advisor')
+          this.$router.push({ name: 'Support' })
+          return
+        }
+
         this.$router.push({ name: 'Welcome' })
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
@@ -1419,6 +1427,14 @@ export default {
         // Chequear pending subscription y procesar inmediatamente
         const handledPending = await this.processPendingSubscription()
         if (handledPending) return
+
+        // Chequear pending contact advisor
+        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
+        if (pendingAdvisor) {
+          localStorage.removeItem('pending_contact_advisor')
+          this.$router.push({ name: 'Support' })
+          return
+        }
 
         // Marcar que necesita tour de facturación
         localStorage.setItem('needs_billing_tour', 'true')

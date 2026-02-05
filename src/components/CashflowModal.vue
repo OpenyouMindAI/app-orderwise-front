@@ -471,7 +471,7 @@ export default {
        * Date cashflow
        * @type {String}
        */
-      date: null,
+      date: formatDate(new Date(), 'YYYY/MM/DD'),
       /**
        * Panel
        * @type {String}
