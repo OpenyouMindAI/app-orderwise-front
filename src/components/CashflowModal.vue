@@ -585,7 +585,7 @@ export default {
     },
     createdAt: {
       handler (newCreatedAt) {
-        this.date = formatDate(newCreatedAt, 'YYYY-MM-DD')
+        this.date = formatDate(newCreatedAt || new Date(), 'YYYY-MM-DD')
       },
       immediate: true
     },

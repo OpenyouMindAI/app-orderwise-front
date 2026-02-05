@@ -22,7 +22,13 @@
         <!-- Título principal -->
         <div class="header-section">
           <div class="top-icon-container">
-            <q-icon name="auto_awesome" class="top-icon" />
+            <q-btn
+              unelevated
+              class="cta-button"
+              @click="goToRegister"
+            >
+              <span class="cta-text">Crear mi cuenta gratis</span>
+          </q-btn>
           </div>
           <div class="text-h6 text-weight-bold main-title">
             Ya probaste la demo — ahora desbloqueá tu cuenta completa
@@ -52,13 +58,6 @@
 
         <!-- CTA Section -->
         <div class="cta-section">
-          <q-btn
-            unelevated
-            class="cta-button"
-            @click="goToRegister"
-          >
-            <span class="cta-text">Crear mi cuenta gratis</span>
-          </q-btn>
           <div class="text-caption cta-subtext q-mb-sm">
             No requiere tarjeta • 60 segundos
           </div>
