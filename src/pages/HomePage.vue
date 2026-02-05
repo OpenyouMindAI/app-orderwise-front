@@ -45,77 +45,145 @@
         </div>
       </div>
 
-      <!-- ROW 1: Stats Ribbon (Desktop 4-cols) -->
+      <!-- ROW 1: Stats Ribbon (Desktop 4-cols) - Today's Financial KPIs -->
       <template v-if="isAdmin">
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop sale-tile">
-          <div class="stat-icon-wrap bg-soft-primary">
-            <q-icon name="receipt_long" size="28px" color="primary" />
+        <!-- Today's Profit -->
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop profit-tile">
+          <div class="stat-icon-wrap bg-soft-positive">
+            <q-icon name="trending_up" size="28px" color="positive" />
           </div>
           <div class="stat-data">
-            <div class="stat-val">{{ todayStats.invoices }}</div>
-            <div class="stat-lab">Ventas de Hoy</div>
-            <div class="stat-trend grow">
-              <q-icon name="trending_up" size="10px" /> 12%
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val" :class="todayStats.profit >= 0 ? 'text-positive' : 'text-negative'">
+              {{ formatCurrency(todayStats.profit) }}
             </div>
+            <div class="stat-lab">Ganancia de Hoy</div>
           </div>
         </div>
 
+        <!-- Today's Net Income -->
         <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
-          <div class="stat-icon-wrap bg-soft-positive">
-            <q-icon name="payments" size="28px" color="positive" />
+          <div class="stat-icon-wrap bg-soft-primary">
+            <q-icon name="payments" size="28px" color="primary" />
           </div>
           <div class="stat-data">
-            <div class="stat-val text-positive">{{ formatCurrency(todayStats.revenue) }}</div>
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val text-primary">{{ formatCurrency(todayStats.netIncome) }}</div>
             <div class="stat-lab">Ingresos Netos</div>
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop product-tile">
-          <div class="stat-icon-wrap bg-soft-warning">
-            <q-icon name="inventory_2" size="28px" color="warning" />
+        <!-- Today's Cash Out -->
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop expense-tile">
+          <div class="stat-icon-wrap bg-soft-negative">
+            <q-icon name="money_off" size="28px" color="negative" />
           </div>
           <div class="stat-data">
-            <div class="stat-val">{{ todayStats.products }}</div>
-            <div class="stat-lab">Productos</div>
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val text-negative">{{ formatCurrency(todayStats.cashOut) }}</div>
+            <div class="stat-lab">Salida de Dinero</div>
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop client-tile">
-          <div class="stat-icon-wrap bg-soft-info">
-            <q-icon name="people" size="28px" color="info" />
+        <!-- Accounts Receivable -->
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop receivable-tile clickable" @click="navigateTo('AccountsReceivable')">
+          <div class="stat-icon-wrap bg-soft-warning">
+            <q-icon name="account_balance_wallet" size="28px" color="warning" />
           </div>
           <div class="stat-data">
-            <div class="stat-val text-info">{{ todayStats.clients }}</div>
-            <div class="stat-lab">Clientes Hoy</div>
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val text-warning">{{ formatCurrency(todayStats.receivable) }}</div>
+            <div class="stat-lab">Por Cobrar</div>
           </div>
         </div>
       </template>
 
-      <!-- ROW 2: Actions and Activity Side-by-Side -->
+      <!-- ROW 2: Quick Access and Recent Access Side-by-Side -->
       <div class="bento-item actions-bento span-full-mobile span-2-desktop">
         <div class="bento-header">
           <q-icon name="apps" class="q-mr-xs" />
           <span>Accesos Rápidos</span>
+          <q-space />
+          <q-btn
+            flat
+            dense
+            round
+            icon="settings"
+            size="sm"
+            color="grey-6"
+            @click="showQuickAccessConfig = true"
+          >
+            <q-tooltip>Configurar accesos rápidos</q-tooltip>
+          </q-btn>
         </div>
         <div class="actions-grid-modern">
           <div
-            v-for="action in quickActions"
+            v-for="action in configuredQuickActions"
             :key="action.name"
             class="action-pill clickable"
-            @click="navigateTo(action.route)"
+            @click="handleQuickActionClick(action)"
           >
-            <div class="action-pill__icon" :style="{ color: action.color.match(/#[A-Fa-f0-9]{6}/)?.[0] || 'var(--q-primary)' }">
+            <div class="action-pill__icon" :style="{ color: action.color?.match(/#[A-Fa-f0-9]{6}/)?.[0] || 'var(--q-primary)' }">
               <q-icon :name="action.icon" size="18px" />
             </div>
             <div class="action-pill__label">{{ action.label }}</div>
           </div>
+          <!-- Add shortcut button -->
+          <div
+            v-if="configuredQuickActions.length < 6"
+            class="action-pill action-pill--add clickable"
+            @click="showQuickAccessConfig = true"
+          >
+            <div class="action-pill__icon" style="color: var(--q-grey-5)">
+              <q-icon name="add" size="18px" />
+            </div>
+            <div class="action-pill__label text-grey-5">Agregar</div>
+          </div>
         </div>
       </div>
 
-      <div v-if="isAdmin" class="bento-item activity-bento span-full-mobile span-2-desktop section-fade-in">
+      <!-- Recent Access Section -->
+      <div class="bento-item recent-bento span-full-mobile span-2-desktop section-fade-in">
+        <div class="bento-header">
+          <q-icon name="history" class="q-mr-xs" />
+          <span>Accesos Recientes</span>
+          <q-space />
+          <q-btn
+            v-if="recentAccess.length > 0"
+            flat
+            dense
+            no-caps
+            label="Limpiar"
+            color="grey-6"
+            size="11px"
+            @click="clearRecentAccess"
+          />
+        </div>
+        <div v-if="recentAccess.length > 0" class="recent-grid">
+          <div
+            v-for="(recent, index) in recentAccess"
+            :key="index"
+            class="recent-pill clickable"
+            @click="navigateToRecent(recent)"
+          >
+            <q-icon :name="recent.icon || 'link'" size="16px" class="q-mr-sm" />
+            <span class="recent-pill__label">{{ recent.label }}</span>
+            <span class="recent-pill__time">{{ formatRecentTime(recent.timestamp) }}</span>
+          </div>
+        </div>
+        <div v-else class="empty-state flex flex-center q-pa-md">
+          <div class="text-center opacity-40">
+            <q-icon name="history" size="32px" class="q-mb-sm" />
+            <div class="text-caption">Sin accesos recientes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Section (for Admin) -->
+      <div v-if="isAdmin" class="bento-item activity-bento span-full section-fade-in">
         <div class="row items-center justify-between q-mb-md">
           <div class="bento-header no-margin">
-            <q-icon name="history" class="q-mr-xs" />
+            <q-icon name="receipt_long" class="q-mr-xs" />
             <span>Actividad Reciente</span>
           </div>
           <q-btn
@@ -156,95 +224,243 @@
         </div>
       </div>
     </div>
+
+    <!-- Quick Access Configuration Dialog -->
+    <q-dialog v-model="showQuickAccessConfig" persistent>
+      <q-card style="min-width: 400px; max-width: 600px;">
+        <q-card-section class="row items-center bg-primary text-white">
+          <q-icon name="settings" size="24px" class="q-mr-sm" />
+          <div class="text-h6">Configurar Accesos Rápidos</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="showQuickAccessConfig = false" />
+        </q-card-section>
+
+        <q-card-section class="q-pa-md">
+          <div class="text-subtitle2 q-mb-md text-grey-7">
+            Arrastra para reordenar o marca los módulos que deseas ver como accesos rápidos (máximo 6)
+          </div>
+
+          <!-- Selected Quick Actions -->
+          <div class="q-mb-lg">
+            <div class="text-caption text-weight-bold q-mb-sm text-grey-8">
+              <q-icon name="star" size="16px" class="q-mr-xs" />
+              Accesos seleccionados ({{ selectedQuickActions.length }}/6)
+            </div>
+            <q-list bordered separator class="rounded-borders">
+              <q-item
+                v-for="(action, index) in selectedQuickActions"
+                :key="action.name"
+                class="bg-blue-1"
+              >
+                <q-item-section side>
+                  <div class="row q-gutter-xs">
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="arrow_upward"
+                      size="sm"
+                      :disable="index === 0"
+                      @click="moveQuickAction(index, -1)"
+                    />
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="arrow_downward"
+                      size="sm"
+                      :disable="index === selectedQuickActions.length - 1"
+                      @click="moveQuickAction(index, 1)"
+                    />
+                  </div>
+                </q-item-section>
+                <q-item-section avatar>
+                  <q-icon :name="action.icon" :color="getIconColor(action.color)" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ action.label }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="remove_circle"
+                    color="negative"
+                    size="sm"
+                    @click="removeQuickAction(action)"
+                  />
+                </q-item-section>
+              </q-item>
+              <q-item v-if="selectedQuickActions.length === 0">
+                <q-item-section class="text-center text-grey-5 q-pa-md">
+                  No hay accesos rápidos seleccionados
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+
+          <!-- Available Modules -->
+          <div>
+            <div class="text-caption text-weight-bold q-mb-sm text-grey-8">
+              <q-icon name="apps" size="16px" class="q-mr-xs" />
+              Módulos disponibles
+            </div>
+            <q-skeleton v-if="loadingModules" type="rect" height="200px" />
+            <q-list v-else bordered separator class="rounded-borders" style="max-height: 300px; overflow-y: auto;">
+              <q-item
+                v-for="item in flattenedModulesList.filter(i => i.type === 'module')"
+                :key="item.id"
+                clickable
+                :disable="selectedQuickActions.length >= 6 && !isModuleSelected(item)"
+                @click="toggleQuickAction(item)"
+              >
+                <q-item-section avatar>
+                  <q-icon :name="item.icon || 'link'" color="grey-7" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ item.title }}</q-item-label>
+                  <q-item-label caption>{{ item.sectionName }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-icon
+                    :name="isModuleSelected(item) ? 'check_circle' : 'radio_button_unchecked'"
+                    :color="isModuleSelected(item) ? 'positive' : 'grey-5'"
+                  />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="bg-grey-1">
+          <q-btn flat label="Cancelar" color="grey-7" @click="cancelQuickAccessConfig" />
+          <q-btn unelevated label="Guardar" color="primary" @click="saveQuickAccessConfig" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from 'boot/axios'
 import { authentication } from 'src/stores/module-authentication'
 import { storeToRefs } from 'pinia'
+import { date } from 'quasar'
 
 const router = useRouter()
 const store = authentication()
-const { userSession } = storeToRefs(store)
+const { userSession, branchOffice } = storeToRefs(store)
+
+// ============================================
+// CONSTANTS
+// ============================================
 
 /**
- * Onboarding progress
+ * LocalStorage keys for persisting user preferences
+ * @type {Object}
+ */
+const STORAGE_KEYS = {
+  QUICK_ACCESS: 'orderwise_quick_access',
+  RECENT_ACCESS: 'orderwise_recent_access'
+}
+
+/**
+ * Maximum number of recent access items to store
  * @type {number}
+ */
+const MAX_RECENT_ACCESS = 6
+
+// ============================================
+// ONBOARDING STATE
+// ============================================
+
+/**
+ * Onboarding progress percentage
+ * @type {Ref<number>}
  */
 const onboardingProgress = ref(0)
 
 /**
- * Completed tasks count
- * @type {number}
+ * Number of completed onboarding tasks
+ * @type {Ref<number>}
  */
 const completedTasks = ref(0)
 
 /**
- * Total tasks count
- * @type {number}
+ * Total number of onboarding tasks
+ * @type {Ref<number>}
  */
 const totalTasks = ref(5)
 
+// ============================================
+// STATISTICS STATE
+// ============================================
+
 /**
- * Today's statistics
- * @type {object}
+ * Loading state for statistics
+ * @type {Ref<boolean>}
+ */
+const loadingStats = ref(true)
+
+/**
+ * Today's financial statistics
+ * @type {Ref<Object>}
  */
 const todayStats = ref({
-  invoices: 0,
-  revenue: 0,
-  products: 0,
-  clients: 0
+  profit: 0,
+  netIncome: 0,
+  cashOut: 0,
+  receivable: 0
 })
 
 /**
- * Recent invoices
- * @type {Array}
+ * Recent invoices list
+ * @type {Ref<Array>}
  */
 const recentInvoices = ref([])
 
-const userName = computed(() => {
-  if (!userSession.value) return 'Usuario'
-  const name = userSession.value.name || ''
-  return name.split(' ')[0] || 'Usuario'
-})
+// ============================================
+// QUICK ACCESS STATE
+// ============================================
 
 /**
- * Check if user is admin or root
- * @type {ComputedRef<boolean>}
+ * Controls quick access configuration dialog visibility
+ * @type {Ref<boolean>}
  */
-const isAdmin = computed(() => {
-  if (!userSession.value) return false
-  return userSession.value.is_root || userSession.value.is_super_admin
-})
+const showQuickAccessConfig = ref(false)
 
 /**
- * Get greeting based on time
- * @return {string}
+ * Loading state for modules
+ * @type {Ref<boolean>}
  */
-const greeting = computed(() => {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Buenos días'
-  if (hour < 18) return 'Buenas tardes'
-  return 'Buenas noches'
-})
+const loadingModules = ref(false)
 
 /**
- * Get current date formatted
- * @return {string}
+ * Available sections with modules from API
+ * @type {Ref<Array>}
  */
-const currentDate = computed(() => {
-  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-  return new Date().toLocaleDateString('es-ES', options)
-})
+const availableSections = ref([])
 
 /**
- * Quick actions configuration
+ * Quick actions selected by user (stored configuration)
+ * @type {Ref<Array>}
+ */
+const selectedQuickActions = ref([])
+
+/**
+ * Backup of quick actions for cancel operation
+ * @type {Ref<Array>}
+ */
+const quickActionsBackup = ref([])
+
+/**
+ * Default quick actions configuration
  * @type {Array}
  */
-const quickActions = ref([
+const defaultQuickActions = [
   {
     name: 'new-sale',
     label: 'Nueva Venta',
@@ -272,25 +488,101 @@ const quickActions = ref([
     icon: 'analytics',
     route: 'Dashboard',
     color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-  },
-  {
-    name: 'cashbox',
-    label: 'Caja',
-    icon: 'account_balance_wallet',
-    route: 'Cashbox',
-    color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-  },
-  {
-    name: 'settings',
-    label: 'Configuración',
-    icon: 'settings',
-    route: 'CompanyConfig',
-    color: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
   }
-])
+]
+
+// ============================================
+// RECENT ACCESS STATE
+// ============================================
 
 /**
- * Navigate to route
+ * Recent access history
+ * @type {Ref<Array>}
+ */
+const recentAccess = ref([])
+
+// ============================================
+// COMPUTED PROPERTIES
+// ============================================
+
+/**
+ * Get user's first name
+ * @returns {string}
+ */
+const userName = computed(() => {
+  if (!userSession.value) return 'Usuario'
+  const name = userSession.value.name || ''
+  return name.split(' ')[0] || 'Usuario'
+})
+
+/**
+ * Check if user is admin or root
+ * @returns {boolean}
+ */
+const isAdmin = computed(() => {
+  if (!userSession.value) return false
+  return userSession.value.is_root || userSession.value.is_super_admin
+})
+
+/**
+ * Get greeting based on time of day
+ * @returns {string}
+ */
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Buenos días'
+  if (hour < 18) return 'Buenas tardes'
+  return 'Buenas noches'
+})
+
+/**
+ * Get current date formatted
+ * @returns {string}
+ */
+const currentDate = computed(() => {
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+  return new Date().toLocaleDateString('es-ES', options)
+})
+
+/**
+ * Get configured quick actions (from localStorage or defaults)
+ * @returns {Array}
+ */
+const configuredQuickActions = computed(() => {
+  return selectedQuickActions.value.length > 0 ? selectedQuickActions.value : defaultQuickActions
+})
+
+/**
+ * Flattened list of sections and modules for rendering
+ * @returns {Array}
+ */
+const flattenedModulesList = computed(() => {
+  const items = []
+  availableSections.value.forEach(section => {
+    items.push({
+      type: 'header',
+      id: `header-${section.id}`,
+      name: section.name,
+      icon: section.icon
+    })
+    section.modules.forEach(module => {
+      items.push({
+        type: 'module',
+        id: `module-${module.id}`,
+        sectionName: section.name,
+        ...module
+      })
+    })
+  })
+  return items
+})
+
+// ============================================
+// NAVIGATION METHODS
+// ============================================
+
+/**
+ * Navigate to a named route
  * @param {string} routeName - Route name
  */
 const navigateTo = (routeName) => {
@@ -298,7 +590,7 @@ const navigateTo = (routeName) => {
 }
 
 /**
- * Go to welcome page
+ * Navigate to welcome page
  */
 const goToWelcome = () => {
   router.push({ name: 'Welcome' })
@@ -306,44 +598,112 @@ const goToWelcome = () => {
 
 /**
  * View invoice details
- * @param {object} invoice - Invoice object
+ * @param {Object} invoice - Invoice object
  */
 const viewInvoice = (invoice) => {
-  // Navigate to invoice details or open modal
-  router.push({ name: 'Invoice', params: { id: invoice.id } })
+  addToRecentAccess({
+    label: `Factura #${invoice.invoice_id}`,
+    route: 'Invoice',
+    params: { id: invoice.id },
+    icon: 'receipt'
+  })
+  router.push({ name: 'Invoice', params: { id: invoice.invoice_id } })
 }
 
 /**
- * Format currency
+ * Handle quick action click (navigate and track)
+ * @param {Object} action - Quick action object
+ */
+const handleQuickActionClick = (action) => {
+  addToRecentAccess({
+    label: action.label,
+    route: action.route || action.link,
+    icon: action.icon
+  })
+  if (action.route) {
+    router.push({ name: action.route })
+  } else if (action.link) {
+    router.push({ name: action.link })
+  }
+}
+
+/**
+ * Navigate to a recent access item
+ * @param {Object} recent - Recent access object
+ */
+const navigateToRecent = (recent) => {
+  if (recent.params) {
+    router.push({ name: recent.route, params: recent.params })
+  } else {
+    router.push({ name: recent.route })
+  }
+}
+
+// ============================================
+// FORMATTING METHODS
+// ============================================
+
+/**
+ * Get the currency symbol configured in the system
+ * @returns {string}
+ */
+const coinSymbol = computed(() => {
+  return userSession.value?.company_session?.company_config?.coin?.symbol || '$'
+})
+
+/**
+ * Format currency amount with system coin symbol
  * @param {number} amount - Amount to format
- * @return {string} Formatted currency
+ * @returns {string}
  */
 const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: userSession.value?.company_session?.coin?.symbol || 'USD'
-  }).format(amount || 0)
+  const num = Number(amount) || 0
+  const formatted = new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num)
+  return `${coinSymbol.value} ${formatted}`
 }
 
 /**
- * Format time relative
+ * Format relative time
  * @param {string} datetime - Datetime string
- * @return {string} Formatted time
+ * @returns {string}
  */
 const formatTime = (datetime) => {
-  const date = new Date(datetime)
+  const dateObj = new Date(datetime)
   const now = new Date()
-  const diff = now - date
+  const diff = now - dateObj
   const minutes = Math.floor(diff / 60000)
 
   if (minutes < 1) return 'Ahora'
   if (minutes < 60) return `Hace ${minutes}m`
   if (minutes < 1440) return `Hace ${Math.floor(minutes / 60)}h`
-  return date.toLocaleDateString('es-ES')
+  return dateObj.toLocaleDateString('es-ES')
 }
 
 /**
- * Load onboarding status
+ * Format recent access timestamp
+ * @param {number} timestamp - Unix timestamp
+ * @returns {string}
+ */
+const formatRecentTime = (timestamp) => {
+  const dateObj = new Date(timestamp)
+  const now = new Date()
+  const diff = now - dateObj
+  const minutes = Math.floor(diff / 60000)
+
+  if (minutes < 60) return 'Hace poco'
+  if (minutes < 1440) return `Hace ${Math.floor(minutes / 60)}h`
+  return date.formatDate(dateObj, 'DD/MM')
+}
+
+// ============================================
+// DATA LOADING METHODS
+// ============================================
+
+/**
+ * Load onboarding status from API
  */
 const loadOnboardingStatus = async () => {
   try {
@@ -359,22 +719,60 @@ const loadOnboardingStatus = async () => {
 }
 
 /**
- * Load today's statistics
+ * Load today's financial statistics
  */
 const loadTodayStats = async () => {
+  if (!branchOffice.value?.id) return
+
+  loadingStats.value = true
+  const today = date.formatDate(new Date(), 'YYYY-MM-DD')
+
+  const params = {
+    day: today,
+    branch_office_id: [branchOffice.value.id]
+  }
+
   try {
-    // You'll need to create these endpoints or adjust based on your API
-    const { data } = await api.get('dashboard/today-stats')
-    todayStats.value = data
+    // Load all stats in parallel
+    const [categoryData, cashflowData, receivableData] = await Promise.all([
+      api.get('reports/category-totals', { params }).catch(() => ({ data: {} })),
+      api.get('reports/cashflow-totals', { params }).catch(() => ({ data: {} })),
+      api.get('client-statement/kpis', {
+        params: {
+          branch_office_id: branchOffice.value.id
+        }
+      }).catch(() => ({ data: {} }))
+    ])
+
+    // Calculate profit (sales - costs)
+    const sales = categoryData.data?.category_total || 0
+    const costs = categoryData.data?.cost_total || 0
+    const profit = sales - costs
+
+    // Net income from sales
+    const netIncome = sales
+
+    // Cash out (credit type cashflows = money going out)
+    let cashOut = 0
+    if (cashflowData.data?.cashflow_total) {
+      cashOut = cashflowData.data.cashflow_total
+        .filter(cf => cf.type_cashflow === 'credit' || cf.type_cashflow === 'expense')
+        .reduce((sum, cf) => sum + (cf.totals || 0), 0)
+    }
+
+    // Accounts receivable balance (global total from all clients)
+    const receivable = receivableData.data?.balance || 0
+
+    todayStats.value = {
+      profit,
+      netIncome,
+      cashOut,
+      receivable
+    }
   } catch (error) {
     console.error('Error loading today stats:', error)
-    // Set mock data for now
-    todayStats.value = {
-      invoices: 12,
-      revenue: 4500.50,
-      products: 156,
-      clients: 45
-    }
+  } finally {
+    loadingStats.value = false
   }
 }
 
@@ -398,10 +796,231 @@ const loadRecentInvoices = async () => {
   }
 }
 
+/**
+ * Load available modules from sections API
+ */
+const loadAvailableModules = async () => {
+  loadingModules.value = true
+  try {
+    const { data } = await api.get('sections')
+    const sections = Array.isArray(data) ? data : (data.data || [])
+
+    availableSections.value = sections
+      .filter(section => !section.deleted_at && section.modules?.length > 0)
+      .map(section => ({
+        ...section,
+        modules: section.modules
+          .filter(module => !module.deleted_at)
+          .sort((a, b) => a.position - b.position)
+      }))
+      .sort((a, b) => a.index - b.index)
+  } catch (error) {
+    console.error('Error loading modules:', error)
+  } finally {
+    loadingModules.value = false
+  }
+}
+
+// ============================================
+// QUICK ACCESS CONFIGURATION METHODS
+// ============================================
+
+/**
+ * Load quick access configuration from localStorage
+ */
+const loadQuickAccessConfig = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.QUICK_ACCESS)
+    if (stored) {
+      selectedQuickActions.value = JSON.parse(stored)
+    }
+  } catch (error) {
+    console.error('Error loading quick access config:', error)
+  }
+}
+
+/**
+ * Save quick access configuration to localStorage
+ */
+const saveQuickAccessConfig = () => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.QUICK_ACCESS, JSON.stringify(selectedQuickActions.value))
+    showQuickAccessConfig.value = false
+  } catch (error) {
+    console.error('Error saving quick access config:', error)
+  }
+}
+
+/**
+ * Cancel quick access configuration changes
+ */
+const cancelQuickAccessConfig = () => {
+  selectedQuickActions.value = [...quickActionsBackup.value]
+  showQuickAccessConfig.value = false
+}
+
+/**
+ * Check if a module is already selected
+ * @param {Object} module - Module object
+ * @returns {boolean}
+ */
+const isModuleSelected = (module) => {
+  return selectedQuickActions.value.some(
+    a => a.name === module.link || a.route === module.link
+  )
+}
+
+/**
+ * Toggle a module in quick actions
+ * @param {Object} module - Module object
+ */
+const toggleQuickAction = (module) => {
+  const index = selectedQuickActions.value.findIndex(
+    a => a.name === module.link || a.route === module.link
+  )
+
+  if (index >= 0) {
+    selectedQuickActions.value.splice(index, 1)
+  } else if (selectedQuickActions.value.length < 6) {
+    selectedQuickActions.value.push({
+      name: module.link,
+      label: module.title,
+      icon: module.icon || 'link',
+      route: module.link,
+      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    })
+  }
+}
+
+/**
+ * Remove a quick action
+ * @param {Object} action - Action to remove
+ */
+const removeQuickAction = (action) => {
+  const index = selectedQuickActions.value.findIndex(a => a.name === action.name)
+  if (index >= 0) {
+    selectedQuickActions.value.splice(index, 1)
+  }
+}
+
+/**
+ * Move quick action up or down
+ * @param {number} index - Current index
+ * @param {number} direction - -1 for up, 1 for down
+ */
+const moveQuickAction = (index, direction) => {
+  const newIndex = index + direction
+  if (newIndex >= 0 && newIndex < selectedQuickActions.value.length) {
+    const temp = selectedQuickActions.value[index]
+    selectedQuickActions.value[index] = selectedQuickActions.value[newIndex]
+    selectedQuickActions.value[newIndex] = temp
+  }
+}
+
+/**
+ * Get icon color from gradient string
+ * @param {string} colorStr - Color gradient string
+ * @returns {string}
+ */
+const getIconColor = (colorStr) => {
+  if (!colorStr) return 'primary'
+  const match = colorStr.match(/#[A-Fa-f0-9]{6}/)
+  return match ? match[0] : 'primary'
+}
+
+// ============================================
+// RECENT ACCESS METHODS
+// ============================================
+
+/**
+ * Load recent access from localStorage
+ */
+const loadRecentAccess = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.RECENT_ACCESS)
+    if (stored) {
+      recentAccess.value = JSON.parse(stored)
+    }
+  } catch (error) {
+    console.error('Error loading recent access:', error)
+  }
+}
+
+/**
+ * Add item to recent access
+ * @param {Object} item - Recent access item
+ */
+const addToRecentAccess = (item) => {
+  const newItem = {
+    ...item,
+    timestamp: Date.now()
+  }
+
+  // Remove duplicate if exists
+  const existingIndex = recentAccess.value.findIndex(
+    r => r.route === item.route && JSON.stringify(r.params) === JSON.stringify(item.params)
+  )
+  if (existingIndex >= 0) {
+    recentAccess.value.splice(existingIndex, 1)
+  }
+
+  // Add to beginning
+  recentAccess.value.unshift(newItem)
+
+  // Limit to max items
+  if (recentAccess.value.length > MAX_RECENT_ACCESS) {
+    recentAccess.value = recentAccess.value.slice(0, MAX_RECENT_ACCESS)
+  }
+
+  // Save to localStorage
+  try {
+    localStorage.setItem(STORAGE_KEYS.RECENT_ACCESS, JSON.stringify(recentAccess.value))
+  } catch (error) {
+    console.error('Error saving recent access:', error)
+  }
+}
+
+/**
+ * Clear all recent access history
+ */
+const clearRecentAccess = () => {
+  recentAccess.value = []
+  localStorage.removeItem(STORAGE_KEYS.RECENT_ACCESS)
+}
+
+// ============================================
+// WATCHERS
+// ============================================
+
+/**
+ * Watch for dialog open to backup current config
+ */
+watch(showQuickAccessConfig, (newVal) => {
+  if (newVal) {
+    quickActionsBackup.value = [...selectedQuickActions.value]
+    if (availableSections.value.length === 0) {
+      loadAvailableModules()
+    }
+  }
+})
+
+/**
+ * Watch for branch office changes to reload stats
+ */
+watch(branchOffice, () => {
+  loadTodayStats()
+})
+
+// ============================================
+// LIFECYCLE HOOKS
+// ============================================
+
 onMounted(() => {
   loadOnboardingStatus()
   loadTodayStats()
   loadRecentInvoices()
+  loadQuickAccessConfig()
+  loadRecentAccess()
 })
 </script>
 
@@ -554,6 +1173,15 @@ body.body--dark .action-pill {
 
 .action-pill:active { transform: scale(0.96); }
 
+.action-pill--add {
+  border: 2px dashed #e2e8f0;
+  background: transparent;
+}
+
+body.body--dark .action-pill--add {
+  border-color: #334155;
+}
+
 .action-pill__icon {
   width: 32px;
   height: 32px;
@@ -580,6 +1208,52 @@ body.body--dark .action-pill__label {
 }
 
 /**
+ * Recent Access Grid
+ */
+.recent-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recent-pill {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+body.body--dark .recent-pill {
+  background: #1e293b;
+}
+
+.recent-pill:hover {
+  background: #f1f5f9;
+}
+
+body.body--dark .recent-pill:hover {
+  background: #334155;
+}
+
+.recent-pill__label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+body.body--dark .recent-pill__label {
+  color: #f1f5f9;
+}
+
+.recent-pill__time {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/**
  * Stats Tiles
  */
 .stat-hero {
@@ -592,12 +1266,12 @@ body.body--dark .action-pill__label {
 }
 
 @media (min-width: 1024px) {
-  .actions-bento, .activity-bento {
+  .actions-bento, .activity-bento, .recent-bento {
     height: 100%;
   }
 }
 
-.actions-bento {
+.actions-bento, .recent-bento {
   display: flex;
   flex-direction: column;
 }
@@ -622,6 +1296,7 @@ body.body--dark .action-pill__label {
 .bg-soft-positive { background: rgba(var(--q-positive-rgb), 0.1); }
 .bg-soft-warning { background: rgba(var(--q-warning-rgb), 0.1); }
 .bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
+.bg-soft-negative { background: rgba(var(--q-negative-rgb), 0.1); }
 
 .stat-val {
   font-size: 20px;
@@ -727,6 +1402,13 @@ body.body--dark .node-line::after {
   font-size: 11px;
   color: #64748b;
   margin-top: 2px;
+}
+
+/**
+ * Empty States
+ */
+.empty-state {
+  min-height: 100px;
 }
 
 .rounded-button { border-radius: 8px; }
