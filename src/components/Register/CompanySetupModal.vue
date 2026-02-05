@@ -68,6 +68,7 @@
                   popup-content-class="country-dropdown"
                   dense
                   borderless
+                  hide-dropdown-icon
                 >
                   <template v-slot:selected>
                     <div class="row items-center no-wrap">

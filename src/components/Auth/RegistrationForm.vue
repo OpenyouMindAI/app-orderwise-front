@@ -85,6 +85,7 @@
               map-options
               behavior="menu"
               popup-content-class="country-dropdown"
+              hide-dropdown-icon
             >
               <template v-slot:selected>
                 <div class="row items-center no-wrap">
