@@ -128,14 +128,20 @@ export const authentication = defineStore('authentication', {
 
         const savedTheme = localStorage.getItem('app-theme')
         const showThemeSelector = localStorage.getItem('show-theme-selector')
+        const hasSeenBillingTour = localStorage.getItem('has_seen_billing_tour')
 
         localStorage.clear()
 
         if (savedTheme) {
           localStorage.setItem('app-theme', savedTheme)
         }
+
         if (showThemeSelector) {
           localStorage.setItem('show-theme-selector', showThemeSelector)
+        }
+
+        if (hasSeenBillingTour) {
+          localStorage.setItem('has_seen_billing_tour', hasSeenBillingTour)
         }
 
         return true
