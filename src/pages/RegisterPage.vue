@@ -9,232 +9,19 @@
 
     <!-- Card principal -->
     <div class="register-card">
-      <!-- Logo -->
-      <div class="logo-section">
-        <q-img :src="qBitsLogo.black" class="logo-img"/>
-      </div>
-
       <q-tab-panels v-model="currentTab" animated class="bg-transparent">
         <!-- Panel Registro -->
         <q-tab-panel name="register" class="q-pa-none">
-          <!-- Título -->
-          <div class="header-section">
-            <span class="welcome-title">Crear cuenta</span>
-            <p class="welcome-subtitle">Regístrate para comenzar</p>
-          </div>
-
-          <!-- Formulario -->
-          <q-form @submit="register" class="register-form">
-            <!-- Input Nombre -->
-            <div class="input-container">
-              <q-input
-                v-model="form.name"
-                placeholder="Nombre"
-                dark
-                class="custom-input"
-                hide-bottom-space
-                :rules="[val => !!val || 'El nombre es requerido']"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="person" color="primary" size="20px"/>
-                </template>
-              </q-input>
-            </div>
-
-            <!-- Input Apellido -->
-            <div class="input-container">
-              <q-input
-                v-model="form.last_name"
-                placeholder="Apellido"
-                dark
-                class="custom-input"
-                hide-bottom-space
-                :rules="[val => !!val || 'El apellido es requerido']"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="person_outline" color="primary" size="20px"/>
-                </template>
-              </q-input>
-            </div>
-
-            <!-- Input Email -->
-            <div class="input-container">
-              <q-input
-                v-model="form.email"
-                type="email"
-                placeholder="Correo electrónico"
-                dark
-                class="custom-input"
-                hide-bottom-space
-                :rules="[
-                  val => !!val || 'El correo es requerido',
-                  val => /.+@.+\..+/.test(val) || 'Correo inválido'
-                ]"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="email" color="primary" size="20px"/>
-                </template>
-              </q-input>
-            </div>
-
-            <!-- Input Teléfono -->
-            <div class="input-container phone-input-container">
-              <div class="row">
-                <!-- País -->
-                <div class="col-4">
-                  <q-select
-                    v-model="selectedCountry"
-                    :options="countryOptions"
-                    option-label="label"
-                    dark
-                    class="custom-input country-select"
-                    hide-bottom-space
-                    emit-value
-                    map-options
-                    behavior="menu"
-                    popup-content-class="country-dropdown"
-                    dense
-                    borderless
-                  >
-                    <template v-slot:selected>
-                      <div class="row items-center no-wrap">
-                        <span class="country-flag q-mr-xs">{{ selectedCountry ? selectedCountry.flag : '🌍' }}</span>
-                        <span class="text-caption ellipsis">{{ selectedCountry ? selectedCountry.code : '' }}</span>
-                      </div>
-                    </template>
-                    <template v-slot:option="scope">
-                      <q-item v-bind="scope.itemProps">
-                        <q-item-section avatar>
-                          <q-item-label style="font-size: 20px">{{ scope.opt.flag }}</q-item-label>
-                        </q-item-section>
-                        <q-item-section>
-                          <q-item-label>{{ scope.opt.label }}</q-item-label>
-                          <q-item-label caption>{{ scope.opt.code }}</q-item-label>
-                        </q-item-section>
-                      </q-item>
-                    </template>
-                  </q-select>
-                </div>
-
-                <!-- Teléfono -->
-                <div class="col-8 q-pl-sm">
-                  <q-input
-                    v-model="form.phone_number"
-                    placeholder="Teléfono"
-                    dark
-                    class="custom-input"
-                    hide-bottom-space
-                    type="tel"
-                    :rules="phoneRule"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="phone" color="primary" size="20px"/>
-                    </template>
-                  </q-input>
-                </div>
-              </div>
-            </div>
-
-            <!-- Input Contraseña -->
-            <div class="input-container">
-              <q-input
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="Contraseña"
-                dark
-                class="custom-input"
-                hide-bottom-space
-                :rules="[
-                  val => !!val || 'La contraseña es requerida',
-                  val => val.length >= 8 || 'Mínimo 8 caracteres'
-                ]"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="lock" color="primary" size="20px"/>
-                </template>
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPassword ? 'visibility' : 'visibility_off'"
-                    color="grey-5"
-                    size="20px"
-                    class="cursor-pointer"
-                    @click="showPassword = !showPassword"
-                  />
-                </template>
-              </q-input>
-            </div>
-
-            <!-- Input Confirmar Contraseña -->
-            <div class="input-container">
-              <q-input
-                v-model="form.password_confirmation"
-                :type="showPasswordConfirm ? 'text' : 'password'"
-                placeholder="Confirmar contraseña"
-                dark
-                class="custom-input"
-                hide-bottom-space
-                :rules="[
-                  val => !!val || 'Confirma tu contraseña',
-                  val => val === form.password || 'Las contraseñas no coinciden'
-                ]"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="lock" color="primary" size="20px"/>
-                </template>
-                <template v-slot:append>
-                  <q-icon
-                    :name="showPasswordConfirm ? 'visibility' : 'visibility_off'"
-                    color="grey-5"
-                    size="20px"
-                    class="cursor-pointer"
-                    @click="showPasswordConfirm = !showPasswordConfirm"
-                  />
-                </template>
-              </q-input>
-            </div>
-
-            <!-- Botón Registrarse -->
-            <q-btn
-              type="submit"
-              color="primary"
-              class="register-btn"
-              :loading="loading"
-              :disable="loading"
-              unelevated
-              no-caps
-              size="lg"
-            >
-              <q-icon name="person_add" size="20px" class="q-mr-sm"/>
-              Registrarse
-            </q-btn>
-
-            <!-- Divider -->
-            <div class="divider-container">
-              <div class="divider-line"></div>
-              <span class="divider-text">O regístrate con</span>
-              <div class="divider-line"></div>
-            </div>
-
-            <!-- Botón Google -->
-            <button type="button" class="social-btn google-btn" @click="registerWithGoogle" :disabled="loadingGoogle || loading">
-              <q-spinner v-if="loadingGoogle" color="grey-8" size="18px"/>
-              <template v-else>
-                <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                <span>Google</span>
-              </template>
-            </button>
-
-            <!-- Link a Login -->
-            <div class="register-link-container">
-              <span class="register-text">¿Ya tienes cuenta? </span>
-              <router-link to="/login" class="register-link">Inicia sesión</router-link>
-            </div>
-          </q-form>
+          <!-- Formulario Reutilizable -->
+          <RegistrationForm
+            :showLogo="true"
+            :showHeader="true"
+            :showLoginLink="true"
+            :loading="loading"
+            :loadingGoogle="loadingGoogle"
+            @submit="handleRegisterSubmit"
+            @google-register="handleGoogleRegister"
+          />
         </q-tab-panel>
 
         <!-- Panel OTP -->
@@ -478,9 +265,11 @@ import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
-import { qBitsLogo, notify } from 'src/const/mixins'
+import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import RegistrationForm from 'src/components/Auth/RegistrationForm.vue'
+import { useRegistration } from 'src/composables/useRegistration'
 import { usePixel } from 'src/composables/usePixel'
 
 const router = useRouter()
@@ -488,21 +277,17 @@ const store = authentication()
 const $q = useQuasar()
 const fbq = usePixel()
 
-// Form data
-const form = ref({
-  name: '',
-  last_name: '',
-  email: '',
-  phone_number: '',
-  password: '',
-  password_confirmation: ''
-})
+// Usar composable de registro
+const {
+  form,
+  loading,
+  loadingGoogle,
+  register: registerUser,
+  registerWithGoogle: registerWithGoogleUser,
+  initializeGoogleAuthMobile
+} = useRegistration()
 
-// UI state
-const showPassword = ref(false)
-const showPasswordConfirm = ref(false)
-const loading = ref(false)
-const loadingGoogle = ref(false)
+// UI state específico de la página
 const showCompanySetup = ref(false)
 
 // OTP Verification
@@ -552,33 +337,6 @@ const registeredCredentials = ref({
   password: ''
 })
 
-const selectedCountry = ref(null)
-
-const countryOptions = [
-  { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
-  { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
-  { label: 'México', code: '+52', mask: '## #### ####', regex: /^(\+?52)?\s?1?\s?(\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}$/, flag: '🇲🇽' },
-  { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
-  { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
-  { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
-  { label: 'Venezuela', code: '+58', mask: '### ### ####', regex: /^(\+?58)?\s?4[\d]{9}$/, flag: '🇻🇪' },
-  { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
-  { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
-]
-
-selectedCountry.value = countryOptions[0]
-
-const phoneRule = computed(() => {
-  return [
-    val => !!val || 'El teléfono es requerido',
-    val => {
-      if (!val) return true // Permitir vacío si no es obligatorio (aunque arriba dice required)
-      if (!selectedCountry.value || !selectedCountry.value.regex) return true
-      return selectedCountry.value.regex.test(val) || `Formato inválido (Ej: ${selectedCountry.value.mask.replace(/#/g, '0')})`
-    }
-  ]
-})
-
 /**
  * Handle company setup success
  */
@@ -596,7 +354,7 @@ const handleCompanySetupSuccess = (data) => {
   localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
 
   showCompanySetup.value = false
-  
+
   // Check for pending plan subscription
   if (localStorage.getItem('pending_plan_subscription')) {
     router.push('/') // Redirect to home so MainLayout triggers the subscription dialog
@@ -699,86 +457,72 @@ const getBusinessIcon = (name) => {
  */
 
 /**
- * Register with email and password
+ * Maneja el submit del formulario de registro
  */
-const register = async () => {
-  try {
-    loading.value = true
+const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
+  await registerUser({
+    onSuccess: async (data) => {
+      // Guardar token en localStorage INMEDIATAMENTE
+      localStorage.setItem('access_token', data.access_token)
+      api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
 
-    // Preparar payload concatenando el código del país al número de teléfono
-    const payload = {
-      ...form.value,
-      phone_number: form.value.phone_number
-        ? `${selectedCountry.value?.code || ''}${form.value.phone_number}`.trim()
-        : ''
-    }
+      // Guardar datos de sesión de registro en localStorage
+      localStorage.setItem(REGISTER_SESSION_KEY, JSON.stringify({
+        user: data.user,
+        access_token: data.access_token,
+        token_type: data.token_type,
+        expires_in: data.expires_in,
+        timestamp: Date.now()
+      }))
 
-    const { data } = await api.post('authentication/register', payload)
+      // Guardar credenciales para login posterior
+      registeredCredentials.value = {
+        email: formData.email,
+        password: formData.password
+      }
+      localStorage.setItem(REGISTER_CREDENTIALS_KEY, JSON.stringify(registeredCredentials.value))
 
-    // Guardar token en localStorage INMEDIATAMENTE
-    localStorage.setItem('access_token', data.access_token)
-    api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
+      // Actualizar store de Pinia con los datos de sesión
+      store.setSessionData(data)
 
-    // Guardar datos de sesión de registro en localStorage
-    localStorage.setItem(REGISTER_SESSION_KEY, JSON.stringify({
-      user: data.user,
-      access_token: data.access_token,
-      token_type: data.token_type,
-      expires_in: data.expires_in,
-      timestamp: Date.now()
-    }))
+      // Actualizar Facebook Pixel con los datos del usuario
+      if (window.fbq && data.user) {
+        const pixelUserData = {}
+        if (data.user.email) pixelUserData.em = data.user.email
+        if (data.user.id) pixelUserData.external_id = data.user.id
+        if (data.user.name) pixelUserData.fn = data.user.name
+        if (data.user.last_name) pixelUserData.ln = data.user.last_name
 
-    // Guardar credenciales para login posterior
-    registeredCredentials.value = {
-      email: form.value.email,
-      password: form.value.password
-    }
-    localStorage.setItem(REGISTER_CREDENTIALS_KEY, JSON.stringify(registeredCredentials.value))
+        const rawPhone = data.user.phone_number || data.user.phone
+        if (rawPhone) {
+          pixelUserData.ph = rawPhone.toString().replace(/^\+/, '')
+        }
 
-    // Actualizar store de Pinia con los datos de sesión
-    store.setSessionData(data)
-
-    // Actualizar Facebook Pixel con los datos del usuario
-    if (window.fbq && data.user) {
-      const pixelUserData = {}
-      if (data.user.email) pixelUserData.em = data.user.email
-      if (data.user.id) pixelUserData.external_id = data.user.id
-      if (data.user.name) pixelUserData.fn = data.user.name
-      if (data.user.last_name) pixelUserData.ln = data.user.last_name
-
-      const rawPhone = data.user.phone_number || data.user.phone
-      if (rawPhone) {
-        pixelUserData.ph = rawPhone.toString().replace(/^\+/, '')
+        window.fbq('init', import.meta.env.VITE_FACEBOOK_PIXEL_ID, pixelUserData)
       }
 
-      window.fbq('init', import.meta.env.VITE_FACEBOOK_PIXEL_ID, pixelUserData)
+      notify('Registro exitoso', 'positive', 'check_circle')
+
+      isGoogleRegister.value = false
+
+      companyForm.value.company_email = formData.email
+      companyForm.value.company_phone = phoneNumber || ''
+
+      otpDigits.value = ['', '', '', '', '', '']
+
+      currentTab.value = 'otp'
+
+      // Guardar estado OTP en localStorage para persistencia entre recargas
+      localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({
+        email: formData.email,
+        timestamp: Date.now()
+      }))
+
+      startResendTimer()
+
+      notify('Código de verificación enviado a tu correo', 'positive', 'chat')
     }
-
-    notify('Registro exitoso', 'positive', 'check_circle')
-
-    isGoogleRegister.value = false
-
-    companyForm.value.company_email = form.value.email
-    companyForm.value.company_phone = form.value.phone_number || ''
-
-    otpDigits.value = ['', '', '', '', '', '']
-
-    currentTab.value = 'otp'
-
-    // Guardar estado OTP en localStorage para persistencia entre recargas
-    localStorage.setItem(OTP_STORAGE_KEY, JSON.stringify({
-      email: form.value.email,
-      timestamp: Date.now()
-    }))
-
-    startResendTimer()
-
-    notify('Código de verificación enviado a tu correo', 'positive', 'chat')
-  } catch (error) {
-    console.log(error)
-  } finally {
-    loading.value = false
-  }
+  })
 }
 
 /**
@@ -1265,72 +1009,17 @@ const assignDemo = async () => {
 }
 
 /**
- * Inicializar Google Auth para móvil
+ * Maneja el registro con Google
  */
-const initializeGoogleAuthMobile = async () => {
-  try {
-    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '241900278304-roncn79359cb608lgg5fflfrgca544mk.apps.googleusercontent.com'
-    console.log('Client ID:', clientId)
-
-    await GoogleAuth.initialize({
-      clientId,
-      scopes: ['profile', 'email'],
-      grantOfflineAccess: true
-    })
-
-    console.log('Google Auth initialized successfully on mount')
-  } catch (error) {
-    console.error('Error initializing Google Auth on mount:', error)
-    console.error('Init error details:', error.message)
-  }
-}
-
-/**
- * Register with Google - Mobile
- */
-const registerWithGoogleMobile = async () => {
-  try {
-    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-
-    console.log('GoogleAuth plugin loaded')
-    console.log('Attempting Google sign in...')
-
-    const result = await GoogleAuth.signIn()
-    console.log('Google sign in result:', result)
-
-    if (result && result.email) {
-      const userInfo = {
-        email: result.email,
-        name: result.name || result.displayName,
-        sub: result.id,
-        picture: result.imageUrl
-      }
-
-      console.log('User info:', userInfo)
-
-      // Codificar datos en base64
-      const credential = btoa(JSON.stringify({
-        email: userInfo.email,
-        name: userInfo.name,
-        google_id: userInfo.sub,
-        picture: userInfo.picture
-      }))
-
-      // Registrar con backend
-      const { data } = await api.post('authentication/register/google', {
-        credential,
-        name: userInfo.name,
-        email: userInfo.email
-      })
-
+const handleGoogleRegister = async () => {
+  await registerWithGoogleUser({
+    onSuccess: (data, userInfo) => {
       // Guardar sesión completa en el store
       store.setSessionData(data)
 
       notify('Registro exitoso con Google', 'positive', 'check_circle')
 
-      // Pixel Event: Complete Registration (Google Mobile)
+      // Pixel Event: Complete Registration
       if (fbq?.event) {
         fbq.event('CompleteRegistration')
       }
@@ -1343,115 +1032,8 @@ const registerWithGoogleMobile = async () => {
       } else {
         router.push('/')
       }
-    } else {
-      loadingGoogle.value = false
-      console.error('Invalid result from Google:', result)
-      notify('No se pudo obtener información de Google', 'negative', 'warning')
     }
-  } catch (error) {
-    loadingGoogle.value = false
-    console.error('Mobile Google register error:', error)
-    console.error('Error message:', error.message)
-
-    // Si el usuario canceló, no mostrar error
-    if (error.message && (
-      error.message.toLowerCase().includes('cancel') ||
-      error.message.toLowerCase().includes('user_cancelled') ||
-      error.code === 12501
-    )) {
-      console.log('User cancelled register')
-      return
-    }
-
-    notify('Error al registrar con Google: ' + (error.message || 'Error desconocido'), 'negative', 'warning')
-  }
-}
-
-/**
- * Register with Google
- */
-const registerWithGoogle = async () => {
-  try {
-    loadingGoogle.value = true
-
-    // Detectar si es móvil nativo (Capacitor)
-    if ($q.platform.is.nativeMobile && window.Capacitor) {
-      await registerWithGoogleMobile()
-      return
-    }
-
-    // Web: Inicializar Google Sign-In
-    if (!window.google) {
-      notify('Error al cargar Google Sign-In', 'negative', 'warning')
-      loadingGoogle.value = false
-      return
-    }
-
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      scope: 'email profile',
-      callback: async (response) => {
-        try {
-          if (response.access_token) {
-            // Obtener información del usuario
-            const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: { Authorization: `Bearer ${response.access_token}` }
-            })
-            const userInfo = await userInfoResponse.json()
-
-            // Codificar datos en base64
-            const credential = btoa(JSON.stringify({
-              email: userInfo.email,
-              name: userInfo.name,
-              google_id: userInfo.sub,
-              picture: userInfo.picture
-            }))
-
-            // Registrar con backend
-            const { data } = await api.post('authentication/register/google', {
-              credential,
-              name: userInfo.name,
-              email: userInfo.email
-            })
-
-            // Guardar sesión completa en el store (igual que LoginPage)
-            store.setSessionData(data)
-
-            notify('Registro exitoso con Google', 'positive', 'check_circle')
-
-            // Pixel Event: Complete Registration (Google Web)
-            if (fbq?.event) {
-              fbq.event('CompleteRegistration')
-            }
-
-            // Mostrar modal de setup de empresa
-            if (data.needs_company_setup) {
-              // Marcar que fue registro con Google
-              isGoogleRegister.value = true
-
-              // Pre-llenar email de empresa con el email de Google
-              companyForm.value.company_email = userInfo.email
-
-              // Mostrar modal de opciones (Demo o Registrar)
-              showCompanyOptions.value = true
-            } else {
-              router.push('/')
-            }
-          }
-        } catch (error) {
-          const message = error.response?.data?.message || 'Error al registrar con Google'
-          notify(message, 'negative', 'warning')
-        } finally {
-          loadingGoogle.value = false
-        }
-      }
-    })
-
-    client.requestAccessToken()
-  } catch (error) {
-    notify('Error al iniciar registro con Google', 'negative', 'warning')
-    loadingGoogle.value = false
-  }
+  })
 }
 
 /**
