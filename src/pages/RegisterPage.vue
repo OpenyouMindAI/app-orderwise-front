@@ -7,95 +7,29 @@
       <div class="bg-shape shape-3"></div>
     </div>
 
-    <!-- Card principal -->
-    <div class="register-card">
-      <q-tab-panels v-model="currentTab" animated class="bg-transparent">
-        <!-- Panel Registro -->
-        <q-tab-panel name="register" class="q-pa-none">
-          <!-- Formulario Reutilizable -->
-          <RegistrationForm
-            :showLogo="true"
-            :showHeader="true"
-            :showLoginLink="true"
-            :loading="loading"
-            :loadingGoogle="loadingGoogle"
-            @submit="handleRegisterSubmit"
-            @google-register="handleGoogleRegister"
-          />
-        </q-tab-panel>
+    <!-- Card de Registro -->
+    <RegistrationForm
+      v-if="currentTab === 'register'"
+      :showLogo="true"
+      :showHeader="true"
+      :showLoginLink="true"
+      :loading="loading"
+      :loadingGoogle="loadingGoogle"
+      @submit="handleRegisterSubmit"
+      @google-register="handleGoogleRegister"
+    />
 
-        <!-- Panel OTP -->
-        <q-tab-panel name="otp" class="q-pa-none">
-          <div class="header-section">
-            <span class="welcome-title">Verificación</span>
-          </div>
-
-          <q-form @submit.prevent="verifyOtp" class="register-form">
-             <div class="text-center q-mb-lg">
-               <q-icon name="email" size="64px" color="primary"/>
-               <p class="text-grey-7" style="font-size: 15px; margin: 0;">
-                 Hemos enviado un código de verificación a tu correo
-               </p>
-               <p class="text-primary text-weight-bold" style="font-size: 16px; margin-top: 4px;">
-                 {{ form.email }}
-               </p>
-             </div>
-
-             <!-- Input OTP Custom (6 dígitos) -->
-             <div class="row justify-center no-wrap q-gutter-x-sm q-mb-xl">
-               <q-input
-                 v-for="(digit, index) in 6"
-                 :key="index"
-                 v-model="otpDigits[index]"
-                 dense
-                 outlined
-                 class="otp-digit-input"
-                 input-class="text-center text-weight-bold text-h6 text-uppercase"
-                 :ref="el => otpInputs[index] = el"
-                 @update:model-value="val => handleDigitInput(index, val)"
-                 @keydown.delete="e => handleDigitDelete(index, e)"
-                 @paste="handlePaste"
-                 maxlength="1"
-                 :autofocus="index === 0"
-               />
-             </div>
-
-             <!-- Botón Verificar -->
-             <q-btn
-               type="submit"
-               color="primary"
-               class="register-btn q-mb-md"
-               :loading="loadingOtp"
-               :disable="loadingOtp || otpCode.length < 6"
-               unelevated
-               no-caps
-               size="lg"
-             >
-               Verificar Código
-             </q-btn>
-
-             <!-- Botón Reenviar Código -->
-             <div class="text-center q-mb-md">
-               <q-btn
-                 flat
-                 dense
-                 no-caps
-                 color="primary"
-                 :disable="!canResend"
-                 @click="resendOtp"
-                 :label="canResend ? 'Reenviar código' : `Reenviar en ${resendTimer}s`"
-               />
-             </div>
-
-             <!-- Volver (por si se equivocó de número) -->
-             <div class="register-link-container">
-               <span class="register-text">¿Número incorrecto? </span>
-               <a href="#" class="register-link" @click.prevent="currentTab = 'register'">Volver al registro</a>
-             </div>
-          </q-form>
-        </q-tab-panel>
-      </q-tab-panels>
-    </div>
+    <!-- Card de Verificación OTP -->
+    <OtpVerificationCard
+      v-if="currentTab === 'otp'"
+      :email="form.email"
+      :loading="loadingOtp"
+      :resendTimer="resendTimer"
+      :showBackLink="true"
+      @submit="verifyOtp"
+      @resend="resendOtp"
+      @back="currentTab = 'register'"
+    />
 
     <q-dialog v-model="showCompanyOptions" persistent transition-show="scale" transition-hide="scale">
       <q-card class="modern-options-dialog">
@@ -269,6 +203,7 @@ import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import RegistrationForm from 'src/components/Auth/RegistrationForm.vue'
+import OtpVerificationCard from 'src/components/Auth/OtpVerificationCard.vue'
 import { useRegistration } from 'src/composables/useRegistration'
 import { usePixel } from 'src/composables/usePixel'
 
@@ -292,9 +227,6 @@ const showCompanySetup = ref(false)
 
 // OTP Verification
 const currentTab = ref('register')
-const otpDigits = ref(['', '', '', '', '', ''])
-const otpInputs = ref([])
-const otpCode = computed(() => otpDigits.value.join(''))
 const loadingOtp = ref(false)
 
 // OTP Session
@@ -312,7 +244,6 @@ const otpExpiresIn = ref(0)
 // Resend OTP
 const resendTimer = ref(0)
 let resendInterval = null
-const canResend = computed(() => resendTimer.value === 0)
 
 // Company setup form
 const companyForm = ref({
@@ -508,8 +439,6 @@ const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
       companyForm.value.company_email = formData.email
       companyForm.value.company_phone = phoneNumber || ''
 
-      otpDigits.value = ['', '', '', '', '', '']
-
       currentTab.value = 'otp'
 
       // Guardar estado OTP en localStorage para persistencia entre recargas
@@ -528,8 +457,8 @@ const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
 /**
  * Verify OTP code
  */
-const verifyOtp = async () => {
-  if (otpCode.value.length < 6) {
+const verifyOtp = async (code) => {
+  if (code.length < 6) {
     notify('Por favor ingresa el código completo de 6 dígitos', 'negative', 'warning')
     return
   }
@@ -539,7 +468,7 @@ const verifyOtp = async () => {
 
     await api.post('otp/verify', {
       identifier: form.value.email,
-      code: otpCode.value,
+      code,
       purpose: 'verify_email',
       session_token: otpSessionToken.value
     })
@@ -595,56 +524,6 @@ const verifyOtp = async () => {
     }
   } finally {
     loadingOtp.value = false
-  }
-}
-
-/**
- * Handle digit input
- * @param {number} index - The index of the input
- * @param {string} value - The value of the input
- */
-const handleDigitInput = (index, value) => {
-  if (!value) return
-
-  // Allow alphanumeric, remove special chars
-  const char = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
-
-  // Update current index
-  otpDigits.value[index] = char.slice(-1)
-
-  // Move to next input if value exists
-  if (char && index < 5) {
-    otpInputs.value[index + 1].focus()
-  }
-}
-
-/**
- * Handle digit delete / backspace
- * @param {number} index - The index of the input
- * @param {Event} event - The event object
- */
-const handleDigitDelete = (index, event) => {
-  if (!otpDigits.value[index] && index > 0) {
-    otpInputs.value[index - 1].focus()
-  }
-}
-
-/**
- * Handle paste event
- * @param {Event} event - The event object
- */
-const handlePaste = (event) => {
-  event.preventDefault()
-  const pastedData = event.clipboardData.getData('text').replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
-
-  if (pastedData) {
-    const chars = pastedData.split('').slice(0, 6)
-    chars.forEach((char, i) => {
-      otpDigits.value[i] = char
-    })
-    // Focus last filled input or the last input if full
-    const focusIndex = Math.min(chars.length, 5)
-    otpInputs.value[focusIndex].focus()
   }
 }
 
@@ -1092,25 +971,6 @@ onMounted(async () => {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
-/* OTP Input Styles */
-.otp-digit-input {
-  width: 45px;
-  height: 50px;
-}
-
-.otp-digit-input :deep(.q-field__control) {
-  height: 50px;
-  padding: 0;
-  border-radius: 8px;
-  background: white;
-}
-
-.otp-digit-input :deep(.q-field__native) {
-  font-size: 24px;
-  padding: 0;
-  line-height: 56px;
-}
-
 /* Formas decorativas del fondo */
 .bg-shape {
   position: absolute;
@@ -1158,303 +1018,6 @@ onMounted(async () => {
   66% {
     transform: translate(-20px, 20px) scale(0.9);
   }
-}
-
-/* Card principal */
-.register-card {
-  position: relative;
-  z-index: 10;
-  width: 90%;
-  max-width: 420px;
-  padding: 20px 24px 16px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow:
-    0 20px 60px rgba(102, 126, 234, 0.3),
-    0 8px 32px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-  animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  margin: auto;
-}
-
-@keyframes cardEnter {
-  0% {
-    opacity: 0;
-    transform: translateY(50px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Logo */
-.logo-section {
-  text-align: center;
-  margin-bottom: 8px;
-  animation: fadeInDown 0.6s ease-out 0.2s backwards;
-}
-
-.logo-img {
-  width: 140px;
-  max-width: 70%;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
-}
-
-@keyframes fadeInDown {
-  0% {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Header */
-.header-section {
-  text-align: center;
-  margin-bottom: 16px;
-  animation: fadeIn 0.6s ease-out 0.3s backwards;
-}
-
-.welcome-title {
-  font-size: 24px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 0 0 6px 0;
-  letter-spacing: 0.5px;
-  font-family: 'Roboto', sans-serif;
-}
-
-.welcome-subtitle {
-  font-size: 13px;
-  color: #6b7280;
-  margin: 0;
-  font-weight: 400;
-  letter-spacing: 0.3px;
-}
-
-@keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-/* Formulario */
-.register-form {
-  animation: fadeIn 0.6s ease-out 0.4s backwards;
-}
-
-/* Inputs */
-.input-container {
-  margin-bottom: 1rem;
-  animation: slideUp 0.5s ease-out backwards;
-}
-
-.input-container:nth-child(1) { animation-delay: 0.5s; }
-.input-container:nth-child(2) { animation-delay: 0.6s; }
-.input-container:nth-child(3) { animation-delay: 0.7s; }
-.input-container:nth-child(4) { animation-delay: 0.8s; }
-.input-container:nth-child(5) { animation-delay: 0.9s; }
-
-@keyframes slideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Estilos unificados para inputs */
-.custom-input :deep(.q-field__control),
-.custom-input :deep(.q-field__native) {
-  min-height: 44px !important;
-  height: 44px !important;
-  max-height: 44px !important;
-}
-
-.custom-input :deep(.q-field__control) {
-  border-radius: 12px;
-  background: #f9fafb;
-  border: 1.5px solid #e5e7eb;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 12px; /* Ajustado padding horizontal */
-  display: flex !important;
-  align-items: center !important;
-}
-
-.custom-input :deep(.q-field__control-container) {
-  height: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.custom-input :deep(.q-field__native) {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  color: #1f2937;
-  font-size: 14px;
-  line-height: 1; /* Para evitar que el texto afecte la altura */
-}
-
-.custom-input :deep(.q-field__native)::placeholder,
-.custom-input :deep(.q-field__input)::placeholder {
-  color: #9ca3af !important;
-  opacity: 1 !important;
-}
-
-.custom-input :deep(.q-field__control):hover {
-  background: #ffffff;
-  border-color: #667eea;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
-}
-
-.custom-input :deep(.q-field__control):focus-within {
-  background: #ffffff;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-  transform: translateY(-1px);
-}
-
-.custom-input :deep(.q-field__prepend),
-.custom-input :deep(.q-field__append) {
-  height: 44px !important;
-  min-height: 44px !important;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-}
-
-/* Botón Registrarse */
-.register-btn {
-  width: 100%;
-  height: 44px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 1s backwards;
-  transition: all 0.3s ease;
-  border: none !important;
-}
-
-.register-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
-}
-
-.register-btn:active {
-  transform: translateY(0);
-}
-
-@keyframes scaleIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Divider */
-.divider-container {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-  animation: fadeIn 0.5s ease-out 1.1s backwards;
-}
-
-.divider-line {
-  flex: 1;
-  height: 1px;
-  background: #e5e7eb;
-}
-
-.divider-text {
-  padding: 0 16px;
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 400;
-}
-
-/* Botón Google */
-.social-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  height: 46px;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 20px;
-  letter-spacing: 0.3px;
-  margin-bottom: 12px;
-  animation: fadeInUp 0.5s ease-out 1.2s backwards;
-}
-
-@keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.social-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.google-btn {
-  background: #ffffff;
-  border: 1.5px solid #e5e7eb;
-  color: #374151;
-}
-
-.google-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
-}
-
-.google-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.social-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
 }
 
 /* Modern Options Dialog */
@@ -1935,79 +1498,12 @@ onMounted(async () => {
 }
 
 /* Link a Login */
-.register-link-container {
-  text-align: center;
-  animation: fadeIn 0.5s ease-out 1.3s backwards;
-}
-
-.register-text {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.register-link {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s ease;
-}
-
-.register-link:hover {
-  color: #764ba2;
-  text-decoration: underline;
-}
 
 /* Country Flag Styling */
-.country-flag {
-  font-size: 20px;
-  color: rgba(0, 0, 0, 1) !important;
-}
 
 /* Phone input container specific adjustments */
-.phone-input-container .country-select :deep(.q-field__control) {
-  padding-left: 12px;
-  padding-right: 4px;
-}
-
-.phone-input-container .row {
-  margin: 0;
-}
-
-.phone-input-container .q-col-gutter-sm {
-  margin-left: -4px;
-  margin-right: -4px;
-}
-
-.phone-input-container .q-col-gutter-sm > div {
-  padding-left: 4px;
-  padding-right: 4px;
-}
 
 /* Responsive */
 @media (max-width: 600px) {
-  .register-card {
-    padding: 20px 20px;
-    max-width: 95%;
-  }
-
-  .welcome-title {
-    font-size: 22px;
-  }
-
-  .logo-img {
-    width: 120px;
-  }
-
-  .input-container {
-    margin-bottom: 8px;
-  }
-
-  .custom-input :deep(.q-field__control) {
-    height: 42px;
-  }
-
-  .register-btn {
-    height: 42px;
-  }
 }
 </style>

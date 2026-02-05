@@ -7,30 +7,29 @@
     transition-hide="scale"
     class="custom-dialog-wrapper"
   >
-    <div class="register-card">
-      <!-- Close Button -->
-      <q-btn
-        flat
-        round
-        dense
-        icon="close"
-        color="grey-7"
-        @click="closeDialog"
-        class="absolute-top-right q-ma-md"
-        style="z-index: 10;"
-      />
-
-      <!-- Contenido -->
-      <RegistrationForm
-        :showLogo="true"
-        :showHeader="true"
-        :showLoginLink="true"
-        :loading="loading"
-        :loadingGoogle="loadingGoogle"
-        @submit="handleRegisterSubmit"
-        @google-register="handleGoogleRegister"
-      />
-    </div>
+    <RegistrationForm
+      :showLogo="true"
+      :showHeader="true"
+      :showLoginLink="false"
+      :loading="loading"
+      :loadingGoogle="loadingGoogle"
+      @submit="handleRegisterSubmit"
+      @google-register="handleGoogleRegister"
+    >
+      <template #actions>
+        <!-- Botón de cerrar posicionado absolutamente sobre la card -->
+        <q-btn
+          flat
+          round
+          dense
+          icon="close"
+          color="grey-7"
+          @click="closeDialog"
+          class="absolute-top-right q-ma-md"
+          style="z-index: 10;"
+        />
+      </template>
+    </RegistrationForm>
   </q-dialog>
 </template>
 
@@ -112,33 +111,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Card principal */
-.register-card {
-  position: relative;
-  z-index: 10;
-  width: 90%;
-  max-width: 420px;
-  padding: 20px 24px 16px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow:
-    0 20px 60px rgba(102, 126, 234, 0.3),
-    0 8px 32px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-  animation: cardEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  margin: auto;
-}
-
-@media (max-width: 600px) {
-  .register-card {
-    padding: 20px 20px;
-    max-width: 95%;
-  }
-}
-
 </style>
 
 <style>
