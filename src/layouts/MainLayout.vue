@@ -1103,6 +1103,11 @@ export default {
         this.setNotification(notification)
       })
 
+    this.$echo.private(`support.user.${this.userSession.id}`)
+      .listen('.message.sent', (data) => {
+        this.handleGlobalSupportMessage(data)
+      })
+
     // Listen for subscription updates
     window.addEventListener('subscription-updated', () => {
       this.loadSubscriptionInfo()
@@ -1742,6 +1747,26 @@ export default {
             return new Notification(title, options)
           }
         }
+      })
+    },
+    /**
+     * Maneja un mensaje de soporte entrante globalmente
+     * @param {Object} data data del evento
+     */
+    handleGlobalSupportMessage (data) {
+      // Si el mensaje es mío, no notificar
+      if (data.message.sender_id === this.userSession.id) return
+
+      // Actualizar la campanita
+      this.getDataNotification()
+
+      this.setNotification({
+        data: {
+          error_type: 'SUPPORT_MESSAGE',
+          description: `${data.message.sender_name}: ${data.message.content}`,
+          name: 'SUPPORT_MESSAGE'
+        },
+        id: data.chat_id
       })
     },
     async getDataNotification () {
