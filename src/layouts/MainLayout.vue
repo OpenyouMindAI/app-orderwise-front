@@ -68,8 +68,6 @@
 
         <q-space />
 
-        
-
         <!-- Branch Office Indicator -->
         <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
           <q-chip
@@ -730,10 +728,12 @@
     <!-- OTP Verification Dialog -->
     <otp-verification-dialog
       v-model="showOtpVerification"
-      :identifier="otpIdentifier"
+      :email="otpIdentifier"
       :session-token="otpSessionToken"
       :purpose="'verify_email'"
+      :show-back-link="true"
       @verified="handleOtpVerified"
+      @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
 
     <q-inner-loading :showing="visibleLoading">

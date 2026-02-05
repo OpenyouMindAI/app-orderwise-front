@@ -20,7 +20,7 @@
     />
 
     <!-- Card de Verificación OTP -->
-    <OtpVerificationCard
+    <OtpVerificationForm
       v-if="currentTab === 'otp'"
       :email="form.email"
       :loading="loadingOtp"
@@ -202,7 +202,7 @@ import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
 import RegistrationForm from 'src/components/Auth/RegistrationForm.vue'
-import OtpVerificationCard from 'src/components/Auth/OtpVerificationCard.vue'
+import OtpVerificationForm from 'src/components/Auth/OtpVerificationForm.vue'
 import { useRegistration } from 'src/composables/useRegistration'
 import { usePixel } from 'src/composables/usePixel'
 

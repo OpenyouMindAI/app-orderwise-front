@@ -71,7 +71,7 @@ const handleRegisterSubmit = async ({ form, phoneNumber }) => {
         phone_number: phoneNumber,
         user_email: form.email
       })
-      closeDialog()
+      emit('update:modelValue', false) // Close without resetting form to allow back navigation
     }
   })
 }

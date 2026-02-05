@@ -1,15 +1,15 @@
 <template>
-  <div class="register-card otp-card">
+  <div class="register-card">
     <slot name="actions" />
-    <div class="header-section">
-      <span class="welcome-title">Verificación</span>
+    <div v-if="showHeader" class="header-section">
+      <span class="welcome-title">{{ title }}</span>
     </div>
 
     <q-form @submit.prevent="handleSubmit" class="otp-form">
       <div class="text-center q-mb-lg">
         <q-icon name="email" size="64px" color="primary"/>
         <p class="text-grey-7" style="font-size: 15px; margin: 0;">
-          Hemos enviado un código de verificación a tu correo
+          {{ subtitle }}
         </p>
         <p class="text-primary text-weight-bold" style="font-size: 16px; margin-top: 4px;">
           {{ email }}
@@ -62,10 +62,10 @@
         />
       </div>
 
-      <!-- Volver -->
+      <!-- Volver (Opcional) -->
       <div v-if="showBackLink" class="back-link-container">
-        <span class="back-text">¿Número incorrecto? </span>
-        <a href="#" class="back-link" @click.prevent="$emit('back')">Volver al registro</a>
+        <span class="back-text">¿Número o correo incorrecto? </span>
+        <a href="#" class="back-link" @click.prevent="$emit('back')">Volver</a>
       </div>
     </q-form>
   </div>
@@ -79,6 +79,14 @@ const props = defineProps({
     type: String,
     required: true
   },
+  title: {
+    type: String,
+    default: 'Verificación'
+  },
+  subtitle: {
+    type: String,
+    default: 'Hemos enviado un código de verificación a'
+  },
   loading: {
     type: Boolean,
     default: false
@@ -88,6 +96,10 @@ const props = defineProps({
     default: 0
   },
   showBackLink: {
+    type: Boolean,
+    default: false
+  },
+  showHeader: {
     type: Boolean,
     default: true
   }
@@ -165,6 +177,9 @@ const handleResend = () => {
  */
 const resetOtp = () => {
   otpDigits.value = ['', '', '', '', '', '']
+  if (otpInputs.value[0]) {
+    otpInputs.value[0].focus()
+  }
 }
 
 // Expose reset method for parent component
@@ -174,7 +189,6 @@ defineExpose({
 </script>
 
 <style scoped>
-/* Card principal */
 .register-card {
   position: relative;
   z-index: 10;
@@ -215,13 +229,14 @@ defineExpose({
 .welcome-title {
   font-size: 24px;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100% );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin: 0 0 6px 0;
   letter-spacing: 0.5px;
   font-family: 'Roboto', sans-serif;
+  display: block;
 }
 
 @keyframes fadeIn {
@@ -245,6 +260,10 @@ defineExpose({
   padding: 0;
   border-radius: 8px;
   background: white;
+}
+
+.otp-digit-input :deep(.q-field__control):hover {
+  border-color: #667eea !important;
 }
 
 .otp-digit-input :deep(.q-field__native) {
