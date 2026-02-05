@@ -46,6 +46,7 @@
               style="max-height: 32px"
               alt="logo"
               fit="contain"
+              @click="$router.push({ name: 'Home' })"
             >
               <q-tooltip :offset="[10, 10]" class="text-body2">
                 {{ userSession?.company_session?.name }}
@@ -65,11 +66,7 @@
             </transition>
           </div>
         </div>
-
         <q-space />
-
-        
-
         <!-- Branch Office Indicator -->
         <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
           <q-chip
@@ -1713,6 +1710,7 @@ export default {
      * @param {Object} data data
      */
     setNotification ({ data, id }) {
+      console.log(data, id)
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
@@ -1730,7 +1728,7 @@ export default {
             const notification = createNotification(this.$t(`command.${data?.error_type?.toLowerCase()}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
-            }, false)
+            }, data?.error_type === 'SUPPORT_MESSAGE')
             notification.onclick = () => {
               window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
             }
