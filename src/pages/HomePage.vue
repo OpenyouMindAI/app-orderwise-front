@@ -47,6 +47,17 @@
 
       <!-- ROW 1: Stats Ribbon (Desktop 4-cols) - Today's Financial KPIs -->
       <template v-if="isAdmin">
+        <!-- Today's Net Income -->
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
+          <div class="stat-icon-wrap bg-soft-primary">
+            <q-icon name="payments" size="28px" color="primary" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val text-primary">{{ formatCurrency(todayStats.netIncome) }}</div>
+            <div class="stat-lab">Ingresos Netos de Hoy</div>
+          </div>
+        </div>
         <!-- Today's Profit -->
         <div class="bento-item stat-hero span-small-mobile span-1-desktop profit-tile">
           <div class="stat-icon-wrap bg-soft-positive">
@@ -61,18 +72,6 @@
           </div>
         </div>
 
-        <!-- Today's Net Income -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
-          <div class="stat-icon-wrap bg-soft-primary">
-            <q-icon name="payments" size="28px" color="primary" />
-          </div>
-          <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
-            <div v-else class="stat-val text-primary">{{ formatCurrency(todayStats.netIncome) }}</div>
-            <div class="stat-lab">Ingresos Netos</div>
-          </div>
-        </div>
-
         <!-- Today's Cash Out -->
         <div class="bento-item stat-hero span-small-mobile span-1-desktop expense-tile">
           <div class="stat-icon-wrap bg-soft-negative">
@@ -81,7 +80,7 @@
           <div class="stat-data">
             <q-skeleton v-if="loadingStats" type="text" width="80px" />
             <div v-else class="stat-val text-negative">{{ formatCurrency(todayStats.cashOut) }}</div>
-            <div class="stat-lab">Salida de Dinero</div>
+            <div class="stat-lab">Salida de Dinero de Hoy</div>
           </div>
         </div>
 
@@ -93,7 +92,7 @@
           <div class="stat-data">
             <q-skeleton v-if="loadingStats" type="text" width="80px" />
             <div v-else class="stat-val text-warning">{{ formatCurrency(todayStats.receivable) }}</div>
-            <div class="stat-lab">Por Cobrar</div>
+            <div class="stat-lab">Por Cobrar de Hoy</div>
           </div>
         </div>
       </template>
@@ -226,116 +225,174 @@
     </div>
 
     <!-- Quick Access Configuration Dialog -->
-    <q-dialog v-model="showQuickAccessConfig" persistent>
-      <q-card style="min-width: 400px; max-width: 600px;">
-        <q-card-section class="row items-center bg-primary text-white">
-          <q-icon name="settings" size="24px" class="q-mr-sm" />
-          <div class="text-h6">Configurar Accesos Rápidos</div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="showQuickAccessConfig = false" />
-        </q-card-section>
-
-        <q-card-section class="q-pa-md">
-          <div class="text-subtitle2 q-mb-md text-grey-7">
-            Arrastra para reordenar o marca los módulos que deseas ver como accesos rápidos (máximo 6)
+    <q-dialog
+      v-model="showQuickAccessConfig"
+      persistent
+      :maximized="$q.screen.lt.sm"
+      transition-show="scale"
+      transition-hide="scale"
+    >
+      <q-card class="config-card flex no-wrap column" :class="{ 'config-card--dark': $q.dark.isActive }">
+        <!-- Sticky Header with Glassmorphism -->
+        <q-card-section class="config-header col-auto">
+          <div class="row items-center no-wrap">
+            <div class="header-icon-box">
+              <q-icon name="auto_awesome" size="24px" color="white" />
+            </div>
+            <div class="q-ml-md">
+              <div class="text-h6 text-weight-bolder">Personalizar Panel</div>
+              <div class="text-caption opacity-60">Elige tus 6 herramientas favoritas</div>
+            </div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup class="close-btn-modern" />
           </div>
 
-          <!-- Selected Quick Actions -->
-          <div class="q-mb-lg">
-            <div class="text-caption text-weight-bold q-mb-sm text-grey-8">
-              <q-icon name="star" size="16px" class="q-mr-xs" />
-              Accesos seleccionados ({{ selectedQuickActions.length }}/6)
+          <!-- Progress Visualization -->
+          <div class="progress-container q-mt-lg">
+            <div class="row items-center justify-between q-mb-xs">
+              <span class="text-caption text-weight-bold uppercase letter-spacing-1">Tu Selección</span>
+              <span class="text-caption text-weight-bold" :class="selectedQuickActions.length === 6 ? 'text-positive' : 'text-primary'">
+                {{ selectedQuickActions.length }} / 6
+              </span>
             </div>
-            <q-list bordered separator class="rounded-borders">
-              <q-item
+            <div class="selection-dots">
+              <div
+                v-for="i in 6"
+                :key="i"
+                class="dot"
+                :class="{
+                  'dot--active': i <= selectedQuickActions.length,
+                  'dot--pulse': i === selectedQuickActions.length + 1 && selectedQuickActions.length < 6
+                }"
+              ></div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="config-body q-pa-none col">
+          <!-- Active Selection Preview (Horizontal Scroll on Mobile, Grid on Desktop) -->
+          <div class="section-label q-px-md q-pt-md">
+            <q-icon name="touch_app" size="16px" class="q-mr-xs" />
+            Ordena tus favoritos
+          </div>
+          <div class="selected-preview-area q-px-md q-pb-md">
+            <div v-if="selectedQuickActions.length === 0" class="empty-preview flex flex-center">
+              <div class="text-center">
+                <q-icon name="add_circle_outline" size="32px" color="grey-4" />
+                <div class="text-caption text-grey-5">Toca abajo para agregar</div>
+              </div>
+            </div>
+            <transition-group name="list" tag="div" class="preview-grid">
+              <div
                 v-for="(action, index) in selectedQuickActions"
                 :key="action.name"
-                class="bg-blue-1"
+                class="preview-card"
               >
-                <q-item-section side>
-                  <div class="row q-gutter-xs">
-                    <q-btn
-                      flat
-                      round
-                      dense
-                      icon="arrow_upward"
-                      size="sm"
-                      :disable="index === 0"
-                      @click="moveQuickAction(index, -1)"
-                    />
-                    <q-btn
-                      flat
-                      round
-                      dense
-                      icon="arrow_downward"
-                      size="sm"
-                      :disable="index === selectedQuickActions.length - 1"
-                      @click="moveQuickAction(index, 1)"
-                    />
-                  </div>
-                </q-item-section>
-                <q-item-section avatar>
-                  <q-icon :name="action.icon" :color="getIconColor(action.color)" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>{{ action.label }}</q-item-label>
-                </q-item-section>
-                <q-item-section side>
+                <div class="preview-card__icon" :style="{ background: action.color }">
+                  <q-icon :name="action.icon" size="20px" color="white" />
+                  <q-btn
+                    round
+                    dense
+                    flat
+                    icon="close"
+                    size="xs"
+                    class="remove-tag"
+                    @click="removeQuickAction(action)"
+                  />
+                </div>
+                <div class="preview-card__label text-center ellipsis">{{ action.label }}</div>
+                <div class="preview-card__reorder row no-wrap justify-center">
                   <q-btn
                     flat
                     round
                     dense
-                    icon="remove_circle"
-                    color="negative"
-                    size="sm"
-                    @click="removeQuickAction(action)"
+                    icon="chevron_left"
+                    size="xs"
+                    :disable="index === 0"
+                    @click="moveQuickAction(index, -1)"
                   />
-                </q-item-section>
-              </q-item>
-              <q-item v-if="selectedQuickActions.length === 0">
-                <q-item-section class="text-center text-grey-5 q-pa-md">
-                  No hay accesos rápidos seleccionados
-                </q-item-section>
-              </q-item>
-            </q-list>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="chevron_right"
+                    size="xs"
+                    :disable="index === selectedQuickActions.length - 1"
+                    @click="moveQuickAction(index, 1)"
+                  />
+                </div>
+              </div>
+            </transition-group>
           </div>
 
-          <!-- Available Modules -->
-          <div>
-            <div class="text-caption text-weight-bold q-mb-sm text-grey-8">
-              <q-icon name="apps" size="16px" class="q-mr-xs" />
-              Módulos disponibles
-            </div>
-            <q-skeleton v-if="loadingModules" type="rect" height="200px" />
-            <q-list v-else bordered separator class="rounded-borders" style="max-height: 300px; overflow-y: auto;">
-              <q-item
-                v-for="item in flattenedModulesList.filter(i => i.type === 'module')"
-                :key="item.id"
-                clickable
-                :disable="selectedQuickActions.length >= 6 && !isModuleSelected(item)"
-                @click="toggleQuickAction(item)"
-              >
-                <q-item-section avatar>
-                  <q-icon :name="item.icon || 'link'" color="grey-7" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>{{ item.title }}</q-item-label>
-                  <q-item-label caption>{{ item.sectionName }}</q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-icon
-                    :name="isModuleSelected(item) ? 'check_circle' : 'radio_button_unchecked'"
-                    :color="isModuleSelected(item) ? 'positive' : 'grey-5'"
-                  />
-                </q-item-section>
-              </q-item>
-            </q-list>
+          <q-separator />
+
+          <!-- Available Modules in "Library" Style -->
+          <div class="section-label q-px-md q-pt-md">
+            <q-icon name="library_add" size="16px" class="q-mr-xs" />
+            Todas las Herramientas
+          </div>
+
+          <div class="modules-library q-px-md q-pb-xl">
+            <template v-if="loadingModules">
+              <div class="row q-col-gutter-sm">
+                <div v-for="n in 6" :key="n" class="col-6 col-md-4">
+                  <q-skeleton type="rect" height="80px" class="rounded-borders" />
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="row q-col-gutter-sm">
+                <div
+                  v-for="item in flattenedModulesList.filter(i => i.type === 'module')"
+                  :key="item.id"
+                  class="col-6 col-md-4"
+                >
+                  <div
+                    class="library-item clickable"
+                    :class="{
+                      'library-item--selected': isModuleSelected(item),
+                      'library-item--disabled': selectedQuickActions.length >= 6 && !isModuleSelected(item)
+                    }"
+                    @click="toggleQuickAction(item)"
+                  >
+                    <div class="library-item__icon-wrap">
+                      <q-icon :name="item.icon || 'link'" size="20px" />
+                    </div>
+                    <div class="library-item__text">
+                      <div class="title">{{ item.title }}</div>
+                      <div class="subtitle ellipsis">{{ item.sectionName }}</div>
+                    </div>
+                    <div class="library-item__check">
+                      <q-icon v-if="isModuleSelected(item)" name="check_circle" color="positive" size="18px" />
+                      <q-icon v-else name="add" color="grey-4" size="18px" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
         </q-card-section>
 
-        <q-card-actions align="right" class="bg-grey-1">
-          <q-btn flat label="Cancelar" color="grey-7" @click="cancelQuickAccessConfig" />
-          <q-btn unelevated label="Guardar" color="primary" @click="saveQuickAccessConfig" />
+        <!-- Footer Actions with Premium look -->
+        <q-card-actions align="center" class="config-footer q-pa-md col-auto">
+          <q-btn
+            flat
+            no-caps
+            label="Descartar"
+            color="grey-7"
+            class="rounded-button q-px-lg"
+            @click="cancelQuickAccessConfig"
+          />
+          <q-btn
+            unelevated
+            no-caps
+            label="Aplicar Cambios"
+            color="primary"
+            class="rounded-button q-px-xl text-weight-bolder"
+            icon="done_all"
+            @click="saveQuickAccessConfig"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -917,17 +974,6 @@ const moveQuickAction = (index, direction) => {
   }
 }
 
-/**
- * Get icon color from gradient string
- * @param {string} colorStr - Color gradient string
- * @returns {string}
- */
-const getIconColor = (colorStr) => {
-  if (!colorStr) return 'primary'
-  const match = colorStr.match(/#[A-Fa-f0-9]{6}/)
-  return match ? match[0] : 'primary'
-}
-
 // ============================================
 // RECENT ACCESS METHODS
 // ============================================
@@ -1092,8 +1138,17 @@ body.body--dark .date-chip-modern {
  */
 .bento-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr; /* Single column on mobile by default */
   gap: 12px;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 480px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (min-width: 1024px) {
@@ -1101,6 +1156,7 @@ body.body--dark .date-chip-modern {
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: auto auto;
     gap: 16px;
+    padding: 0;
   }
 }
 
@@ -1111,6 +1167,9 @@ body.body--dark .date-chip-modern {
   border: 1px solid rgba(255,255,255,0.8);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden; /* Prevent content from breaking the box */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 body.body--dark .bento-item {
@@ -1126,7 +1185,6 @@ body.body--dark .bento-item {
 
 .span-full { grid-column: 1 / -1; }
 .span-full-mobile { grid-column: 1 / -1; }
-.span-small-mobile { grid-column: span 1; }
 
 @media (min-width: 1024px) {
   .span-2-desktop { grid-column: span 2; }
@@ -1165,6 +1223,7 @@ body.body--dark .bento-item {
   border-radius: 12px;
   transition: all 0.2s;
   border: 1px solid transparent;
+  min-width: 0; /* Allow text ellipsis to work */
 }
 
 body.body--dark .action-pill {
@@ -1191,6 +1250,7 @@ body.body--dark .action-pill--add {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  flex-shrink: 0;
 }
 
 body.body--dark .action-pill__icon {
@@ -1201,6 +1261,9 @@ body.body--dark .action-pill__icon {
   font-size: 11px;
   font-weight: 700;
   color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.body--dark .action-pill__label {
@@ -1223,6 +1286,7 @@ body.body--dark .action-pill__label {
   background: #f8fafc;
   border-radius: 10px;
   transition: all 0.2s;
+  min-width: 0;
 }
 
 body.body--dark .recent-pill {
@@ -1242,6 +1306,9 @@ body.body--dark .recent-pill:hover {
   font-size: 12px;
   font-weight: 600;
   color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.body--dark .recent-pill__label {
@@ -1251,6 +1318,7 @@ body.body--dark .recent-pill__label {
 .recent-pill__time {
   font-size: 10px;
   color: #94a3b8;
+  flex-shrink: 0;
 }
 
 /**
@@ -1261,8 +1329,24 @@ body.body--dark .recent-pill__label {
   flex-direction: row;
   align-items: center;
   gap: 16px;
-  padding: 12px 16px;
+  padding: 16px;
   min-height: auto;
+}
+
+@media (max-width: 480px) {
+  .stat-hero {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .stat-icon-wrap {
+    width: 48px;
+    height: 48px;
+  }
+
+  .stat-val {
+    font-size: 18px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -1298,11 +1382,19 @@ body.body--dark .recent-pill__label {
 .bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
 .bg-soft-negative { background: rgba(var(--q-negative-rgb), 0.1); }
 
+.stat-data {
+  flex: 1;
+  min-width: 0;
+}
+
 .stat-val {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.5px;
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-lab {
@@ -1311,6 +1403,8 @@ body.body--dark .recent-pill__label {
   color: #64748b;
   margin-top: 2px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-trend {
@@ -1423,5 +1517,321 @@ body.body--dark .node-line::after {
 
 .section-fade-in {
   animation: fadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/**
+ * Premium Configuration Dialog Styles
+ */
+.config-card {
+  border-radius: 28px;
+  overflow: hidden;
+  max-width: 800px;
+  width: 95vw;
+  background: #fdfdfe;
+}
+
+body.body--dark .config-card {
+  background: #0f172a;
+}
+
+.config-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #7c3aed 100%);
+  color: white;
+  padding: 24px;
+}
+
+.header-icon-box {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.close-btn-modern {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.progress-container {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+  border-radius: 16px;
+}
+
+.selection-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.dot--active {
+  background: white;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.dot--pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.3; }
+}
+
+.config-body {
+  overflow-y: auto;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+
+/**
+ * Preview Grid
+ */
+.selected-preview-area {
+  min-height: 120px;
+  flex-shrink: 0;
+}
+
+.preview-grid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 12px 0;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.preview-grid::-webkit-scrollbar { display: none; }
+
+.preview-card {
+  flex: 0 0 85px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-card__icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
+}
+
+.remove-tag {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #f43f5e;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+
+.preview-card__label {
+  font-size: 10px;
+  font-weight: 700;
+  width: 100%;
+  color: #64748b;
+}
+
+.preview-card__reorder {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 2px;
+  width: 100%;
+}
+
+body.body--dark .preview-card__reorder {
+  background: #1e293b;
+}
+
+/**
+ * Library Items
+ */
+.modules-library {
+  padding-bottom: 32px;
+}
+
+.library-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  height: 100%;
+  transition: all 0.2s ease;
+}
+
+body.body--dark .library-item {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.library-item--selected {
+  border-color: var(--q-primary);
+  background: rgba(var(--q-primary-rgb), 0.05);
+  box-shadow: 0 4px 12px rgba(var(--q-primary-rgb), 0.1);
+}
+
+.library-item--disabled {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+  pointer-events: none;
+}
+
+.library-item__icon-wrap {
+  width: 38px;
+  height: 38px;
+  background: #f8fafc;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+body.body--dark .library-item__icon-wrap {
+  background: #0f172a;
+}
+
+.library-item--selected .library-item__icon-wrap {
+  background: var(--q-primary);
+  color: white;
+}
+
+.library-item__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.library-item__text .title {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.library-item__text .subtitle {
+  font-size: 9px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.library-item__check {
+  flex-shrink: 0;
+}
+
+.config-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.02);
+}
+
+body.body--dark .config-footer {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+/**
+ * Transitions
+ */
+.list-enter-active, .list-leave-active {
+  transition: all 0.5s ease;
+}
+.list-enter-from, .list-leave-to {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+/**
+ * Mobile Responsive Fixes
+ */
+@media (max-width: 600px) {
+  .config-card {
+    border-radius: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .config-header {
+    padding: 16px;
+    padding-top: 20px;
+  }
+
+  .header-icon-box {
+    width: 40px;
+    height: 40px;
+  }
+
+  .text-h6 {
+    font-size: 1.1rem;
+  }
+
+  .selection-dots .dot {
+    height: 4px;
+  }
+
+  .preview-card {
+    flex: 0 0 75px;
+  }
+
+  .preview-card__icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+  }
+
+  .library-item {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .library-item__icon-wrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .library-item__text .title {
+    font-size: 11px;
+  }
+
+  .modules-library {
+    max-height: none; /* Allow it to fill the available space in maximized mode */
+    padding-bottom: 120px; /* Space for fixed footer on some devices */
+  }
+
+  .preview-grid {
+    padding: 10px 0;
+  }
 }
 </style>
