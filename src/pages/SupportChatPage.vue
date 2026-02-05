@@ -1468,13 +1468,6 @@ onUnmounted(() => {
   }
 }
 
-.body--dark .chat-container {
-  background: #0f172a;
-  @media (max-width: 1023px) {
-    background: #121212;
-  }
-}
-
 .chat-sidebar {
   width: 380px;
   display: flex;
