@@ -330,7 +330,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
@@ -826,6 +826,13 @@ export default {
     }
 
     const mustSelectPlan = computed(() => store.mustSelectPlan)
+
+    watch(isAnnual, async () => {
+      const proTeamPlan = plans.value.find(p => p.slug?.toLowerCase() === 'pro_team')
+      if (proTeamPlan) {
+        await calculateProTeamPrice(proTeamPlan)
+      }
+    })
 
     onMounted(async () => {
       await loadPlans()
