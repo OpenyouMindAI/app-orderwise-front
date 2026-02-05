@@ -53,7 +53,7 @@
                   Anual
                   <span class="discount-badge">
                     <q-icon name="local_fire_department" size="10px" />
-                    -50%
+                    -40%
                   </span>
                 </button>
               </div>
