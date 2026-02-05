@@ -66,16 +66,6 @@
           </div>
         </div>
 
-        <div class="stat-card stat-modules">
-          <div class="stat-icon">
-            <q-icon name="apps" size="24px" />
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ moduleStats.total_modules }}</div>
-            <div class="stat-label">Módulos activos</div>
-          </div>
-        </div>
-
         <div class="stat-card stat-today">
           <div class="stat-icon">
             <q-icon name="today" size="24px" />
@@ -170,7 +160,11 @@
 
               <div class="session-info">
                 <div class="session-user">{{ session.user?.name || 'Usuario' }}</div>
-                <div class="session-module">
+              <div class="session-company" v-if="session.user?.company_session?.name || session.company?.name">
+                <q-icon name="business" size="12px" />
+                {{ session.user?.company_session?.name || session.company?.name }}
+              </div>
+              <div class="session-module">
                   <q-icon name="view_module" size="12px" />
                   {{ session.current_module || 'Dashboard' }}
                 </div>
@@ -271,7 +265,11 @@
 
               <div class="history-info">
                 <div class="history-user">{{ session.user?.name || 'Usuario' }}</div>
-                <div class="history-meta">
+              <div class="history-company" v-if="session.user?.company_session?.name || session.company?.name">
+                <q-icon name="business" size="11px" />
+                {{ session.user?.company_session?.name || session.company?.name }}
+              </div>
+              <div class="history-meta">
                   <span><q-icon name="login" size="12px" /> {{ formatDate(session.connected_at) }}</span>
                   <span v-if="session.disconnected_at"><q-icon name="logout" size="12px" /> {{ formatDate(session.disconnected_at) }}</span>
                 </div>
@@ -501,11 +499,16 @@
               </q-avatar>
               <div class="module-user-info">
                 <div class="module-user-name">{{ user.name }}</div>
+                <div v-if="user.company_name" class="module-user-company">
+                  <q-icon name="business" size="10px" />
+                  {{ user.company_name }}
+                </div>
                 <div class="module-user-time">{{ formatTimeAgo(user.last_visit) }}</div>
               </div>
             </div>
           </div>
         </q-card-section>
+
         <q-card-actions align="right">
           <q-btn flat label="Cerrar" v-close-popup />
         </q-card-actions>
@@ -532,7 +535,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { echo } from 'src/boot/pusher'
@@ -550,6 +553,7 @@ const mySession = ref(null)
 const onlineUsers = ref([])
 const loading = ref(false)
 const loadingHistory = ref(false)
+
 const loadingModules = ref(false)
 const loadingNavigation = ref(false)
 const isLive = ref(true)
@@ -635,6 +639,17 @@ onUnmounted(() => {
   leavePresenceChannel()
 })
 
+// Watch for tab changes to load data
+watch(activeTab, (newTab) => {
+  if (newTab === 'history' && historyList.value.length === 0) {
+    historyPagination.value.page = 1
+    fetchHistory()
+  } else if (newTab === 'modules' && modulesList.value.length === 0) {
+    fetchModules()
+  }
+})
+
+
 // Methods
 function refreshData () {
   fetchSessions()
@@ -708,8 +723,8 @@ async function fetchHistory () {
         page: historyPagination.value.page,
         per_page: 20,
         search: historyFilters.value.search,
-        date_from: historyFilters.value.dateFrom,
-        date_to: historyFilters.value.dateTo
+        from_date: historyFilters.value.dateFrom,
+        to_date: historyFilters.value.dateTo
       }
     })
     if (historyPagination.value.page === 1) {
@@ -728,10 +743,17 @@ async function fetchHistory () {
 async function fetchModules () {
   loadingModules.value = true
   try {
-    const { data } = await api.get('user-sessions/modules', {
+    const { data } = await api.get('user-sessions/module-stats', {
       params: { search: moduleFilters.value.search }
     })
-    modulesList.value = data.modules || []
+    // Transform API response to expected format
+    const modules = data.modules || []
+    modulesList.value = modules.map(m => ({
+      name: m.module_name,
+      visits: m.visits || 0,
+      unique_users: m.unique_users || 0,
+      trend: 0 // API doesn't provide trend, default to 0
+    }))
   } catch (error) {
     console.error('Error fetching modules:', error)
   } finally {
@@ -1309,6 +1331,15 @@ function formatDateTime (dateString) {
   margin-top: 2px;
 }
 
+.session-company, .history-company {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--q-grey-6);
+  margin-top: 2px;
+}
+
 .session-meta, .history-meta {
   display: flex;
   flex-wrap: wrap;
@@ -1653,10 +1684,19 @@ function formatDateTime (dateString) {
   font-size: 13px;
 }
 
+.module-user-company {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--q-grey-6);
+}
+
 .module-user-time {
   font-size: 11px;
   color: var(--q-grey-7);
 }
+
 
 // Confirm Dialog
 .confirm-dialog {
