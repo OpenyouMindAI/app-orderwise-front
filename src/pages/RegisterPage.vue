@@ -189,7 +189,6 @@
       v-model="showCompanySetup"
       :user-email="companyForm.company_email"
       @success="handleCompanySetupSuccess"
-      @back="backToOptions"
     />
   </div>
 </template>

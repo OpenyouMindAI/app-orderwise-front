@@ -3,46 +3,47 @@ import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { notify, notifyValidationErrors } from 'src/const/mixins'
 
+// ==================== ESTADO COMPARTIDO (SINGLETON) ====================
+// Se definen fuera de la función para que todos los componentes compartan el mismo estado
+const form = ref({
+  name: '',
+  last_name: '',
+  email: '',
+  phone_number: '',
+  password: '',
+  password_confirmation: ''
+})
+
+// ==================== ESTADO UI ====================
+const showPassword = ref(false)
+const showPasswordConfirm = ref(false)
+const loading = ref(false)
+const loadingGoogle = ref(false)
+
+// ==================== PAÍS Y TELÉFONO ====================
+const countryOptions = [
+  { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
+  { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
+  { label: 'México', code: '+52', mask: '## #### ####', regex: /^(\+?52)?\s?1?\s?(\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}$/, flag: '🇲🇽' },
+  { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
+  { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
+  { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
+  { label: 'Venezuela', code: '+58', mask: '### ### ####', regex: /^(\+?58)?\s?4[\d]{9}$/, flag: '🇻🇪' },
+  { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
+  { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
+]
+
+const selectedCountry = ref(countryOptions[0])
+
 /**
  * Composable para manejo de registro de usuarios
  * Soporta registro con email/password y Google (web y móvil)
- * 
+ *
  * @param {Object} options - Opciones de configuración
  * @returns {Object} Estado y métodos para registro
  */
-export function useRegistration(options = {}) {
+export function useRegistration (options = {}) {
   const $q = useQuasar()
-
-  // ==================== ESTADO DEL FORMULARIO ====================
-  const form = ref({
-    name: '',
-    last_name: '',
-    email: '',
-    phone_number: '',
-    password: '',
-    password_confirmation: ''
-  })
-
-  // ==================== ESTADO UI ====================
-  const showPassword = ref(false)
-  const showPasswordConfirm = ref(false)
-  const loading = ref(false)
-  const loadingGoogle = ref(false)
-
-  // ==================== PAÍS Y TELÉFONO ====================
-  const countryOptions = [
-    { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
-    { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
-    { label: 'México', code: '+52', mask: '## #### ####', regex: /^(\+?52)?\s?1?\s?(\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}$/, flag: '🇲🇽' },
-    { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
-    { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
-    { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
-    { label: 'Venezuela', code: '+58', mask: '### ### ####', regex: /^(\+?58)?\s?4[\d]{9}$/, flag: '🇻🇪' },
-    { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
-    { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
-  ]
-
-  const selectedCountry = ref(countryOptions[0])
 
   // Validación de teléfono según país
   const phoneRule = computed(() => {
