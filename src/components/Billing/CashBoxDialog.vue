@@ -309,7 +309,6 @@ export default {
       const branchOfficeId = this.branchOffice?.id || this.authStore.branchOffice?.id
 
       if (!branchOfficeId) {
-        console.error('Error: branchOffice.id no está disponible')
         this.availableCashBoxes = []
         return
       }

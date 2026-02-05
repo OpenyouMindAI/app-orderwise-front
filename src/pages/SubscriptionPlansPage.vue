@@ -263,6 +263,7 @@
                       />
                       <q-input filled v-model.number="form.max_users" label="Usuarios máx." type="number" class="col-4" :dark="$q.dark.isActive" />
                       <q-input filled v-model.number="form.max_branch_offices" label="Sucursales máx." type="number" class="col-4" :dark="$q.dark.isActive" />
+                      <q-input filled v-model.number="form.min_branch_offices" label="Sucursales mín." type="number" class="col-4" :dark="$q.dark.isActive" hint="Incluidas en precio base" />
                       <q-input filled v-model.number="form.max_cashboxes" label="Cajas máx." type="number" class="col-4" :dark="$q.dark.isActive" />
                       <q-input filled v-model.number="form.trial_days" label="Días de gracia" type="number" class="col-12" suffix="días gratis" :dark="$q.dark.isActive" />
                     </div>
@@ -455,6 +456,7 @@ const form = ref({
   features: [{ title: '', items: [''] }],
   max_users: null,
   max_branch_offices: null,
+  min_branch_offices: 1,
   max_cashboxes: null,
   trial_days: 0,
   has_api_access: false,
@@ -521,6 +523,7 @@ const openCreateDialog = () => {
     features: [{ title: '', items: [''] }],
     max_users: null,
     max_branch_offices: null,
+    min_branch_offices: 1,
     max_cashboxes: null,
     trial_days: 0,
     has_api_access: false,
@@ -548,6 +551,7 @@ const openEditDialog = (plan) => {
       : [{ title: 'General', items: [...plan.features] }],
     max_users: plan.max_users,
     max_branch_offices: plan.max_branch_offices,
+    min_branch_offices: plan.min_branch_offices || 1,
     max_cashboxes: plan.max_cashboxes,
     trial_days: plan.trial_days || 0,
     has_api_access: plan.has_api_access,

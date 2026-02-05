@@ -80,7 +80,7 @@
             color="primary"
             text-color="white"
           >
-            {{ branchOffice.name }}
+            {{ branchOffice?.name || 'Sin sucursal' }}
           </q-chip>
 
           <!-- Add Branch Button -->
@@ -1028,7 +1028,7 @@ export default {
      * @returns {Boolean}
      */
     isWelcomePage () {
-      return this.route?.name === 'Welcome'
+      return this.$route?.name === 'Welcome'
     },
     /**
      * Renewal button class based on days left
@@ -1928,7 +1928,7 @@ export default {
         }
         const { data } = await api.get('branch-offices', { params })
         this.branchOffices = data
-        if (!this.branchOffice) {
+        if (!this.branchOffice && data && data.length > 0) {
           this.setBranchOffice(data[0])
         }
       } catch (error) {

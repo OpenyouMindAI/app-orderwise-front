@@ -15,35 +15,46 @@
 
         <!-- Animated Background -->
         <div class="bg-gradient"></div>
+        <div class="bg-orbs">
+          <div class="orb orb-1"></div>
+          <div class="orb orb-2"></div>
+          <div class="orb orb-3"></div>
+        </div>
 
         <!-- Content Container -->
         <div class="pricing-container">
           <!-- Header -->
           <div class="pricing-header">
+            <div class="header-badge">
+              <q-icon name="auto_awesome" size="14px" />
+              <span>Planes Premium</span>
+            </div>
             <div class="header-title">
-              Elige tu plan
+              Elige tu plan ideal
             </div>
             <div class="header-subtitle">
-              Selecciona el plan que mejor se adapte a tus necesidades
+              Potencia tu negocio con las herramientas que necesitas
             </div>
 
             <!-- Billing Toggle -->
             <div class="billing-toggle-wrapper">
-              <div
-                :class="['billing-toggle', { 'dark-mode': $q.dark.isActive }]"
-              >
+              <div class="billing-toggle" :class="{ annual: isAnnual }">
+                <div class="toggle-slider" :class="{ right: isAnnual }"></div>
                 <button
                   :class="['toggle-btn', { active: !isAnnual }]"
                   @click="isAnnual = false"
                 >
-                  Monthly
+                  Mensual
                 </button>
                 <button
                   :class="['toggle-btn', { active: isAnnual }]"
                   @click="isAnnual = true"
                 >
-                  Annual
-                  <span class="discount-badge">50% OFF</span>
+                  Anual
+                  <span class="discount-badge">
+                    <q-icon name="local_fire_department" size="10px" />
+                    -50%
+                  </span>
                 </button>
               </div>
             </div>
@@ -54,14 +65,15 @@
             <!-- Skeleton Loading -->
             <template v-if="loadingPlans">
               <div v-for="n in 3" :key="'skeleton-' + n" class="plan-card plan-skeleton">
-                <q-skeleton height="24px" width="60%" class="q-mb-md" />
-                <q-skeleton height="16px" width="80%" class="q-mb-lg" />
-                <q-skeleton height="48px" width="100%" class="q-mb-lg" />
-                <q-skeleton height="16px" width="100%" class="q-mb-sm" />
-                <q-skeleton height="16px" width="100%" class="q-mb-sm" />
-                <q-skeleton height="16px" width="100%" class="q-mb-sm" />
-                <q-skeleton height="16px" width="100%" class="q-mb-lg" />
-                <q-skeleton height="40px" width="100%" />
+                <div class="plan-inner">
+                  <q-skeleton height="24px" width="60%" class="q-mb-md" animation="wave" />
+                  <q-skeleton height="16px" width="80%" class="q-mb-lg" animation="wave" />
+                  <q-skeleton height="56px" width="100%" class="q-mb-lg" animation="wave" />
+                  <q-skeleton height="16px" width="100%" class="q-mb-sm" animation="wave" />
+                  <q-skeleton height="16px" width="90%" class="q-mb-sm" animation="wave" />
+                  <q-skeleton height="16px" width="85%" class="q-mb-lg" animation="wave" />
+                  <q-skeleton height="48px" width="100%" animation="wave" />
+                </div>
               </div>
             </template>
 
@@ -72,30 +84,22 @@
               :key="plan.id"
               :class="[
                 'plan-featured plan-card',
-                {
-                  'plan-current': isCurrentPlan(plan)
-                }
+                { 'plan-current': isCurrentPlan(plan) }
               ]"
               :style="getDynamicCardStyle(plan)"
             >
               <!-- Card Header / Badge Area -->
-              <div
-                class="plan-header-badge"
-              >
-                <template v-if="plan.badge_text">
-                  {{ plan.badge_text }}
-                </template>
+              <div v-if="plan.badge_text" class="plan-header-badge">
+                <q-icon name="diamond" size="12px" class="q-mr-xs" />
+                {{ plan.badge_text }}
               </div>
 
-              <!-- Inner Content (Dark Area) -->
-              <div
-                class="plan-inner"
-                :style="{ color: plan.text_color || '#fff' }"
-              >
+              <!-- Inner Content -->
+              <div class="plan-inner" :style="{ color: plan.text_color || '#fff' }">
                 <!-- Current Badge (Inside) -->
                 <div v-if="isCurrentPlan(plan)" class="current-badge-inner">
-                  <q-icon name="check_circle" size="14px" />
-                  <span>Plan Actual</span>
+                  <q-icon name="verified" size="14px" />
+                  <span>Tu plan actual</span>
                 </div>
 
                 <!-- Plan Header -->
@@ -103,6 +107,7 @@
                   <div class="plan-name-row">
                     <div class="plan-name">{{ plan.name }}</div>
                     <div v-if="isAnnual && hasAnnualPrice(plan)" class="discount-pill-small">
+                      <q-icon name="savings" size="12px" />
                       50% OFF
                     </div>
                   </div>
@@ -113,22 +118,24 @@
                 <div class="plan-price">
                   <template v-if="plan.price === 0">
                     <div class="price-wrapper">
-                      <span class="price-amount">$0</span>
-                      <span class="price-period">/month</span>
+                      <span class="price-amount">Gratis</span>
                     </div>
                   </template>
                   <template v-else>
                     <div class="price-wrapper">
-                      <span v-if="isAnnual && hasAnnualPrice(plan)" class="old-price-strikethrough">
+                      <span v-if="isAnnual && hasAnnualPrice(plan)" class="old-price">
                         {{ getPlanCurrencySymbol(plan) }}{{ getPlanLocalPrice(plan) }}
                       </span>
-                      <span class="price-currency">{{ getPlanCurrencySymbol(plan) }}</span>
-                      <span class="price-amount">{{ getDisplayPrice(plan) }}</span>
-                      <span class="price-period">/month</span>
+                      <div class="current-price">
+                        <span class="price-currency">{{ getPlanCurrencySymbol(plan) }}</span>
+                        <span class="price-amount">{{ getDisplayPrice(plan) }}</span>
+                        <span class="price-period">/mes</span>
+                      </div>
                     </div>
 
                     <div v-if="isAnnual && hasAnnualPrice(plan)" class="billing-note">
-                      Billed ${{ getPlanAnnualPrice(plan) }} for 12 months
+                      <q-icon name="event" size="14px" class="q-mr-xs" />
+                      Facturado {{ getPlanCurrencySymbol(plan) }}{{ getPlanAnnualPrice(plan) }} anualmente
                     </div>
                   </template>
                 </div>
@@ -139,16 +146,30 @@
                   no-caps
                   :label="getActionLabel(plan)"
                   class="action-btn-new"
-                  :style="plan.btn_color ? { backgroundColor: plan.btn_color, color: '#fff' } : {}"
+                  :style="plan.btn_color ? { backgroundColor: plan.btn_color, color: '#000' } : {}"
                   @click="selectPlan(plan)"
                   :loading="loading"
                   :disable="isCurrentPlan(plan) || plan.slug?.toLowerCase() === 'free'"
-                />
+                >
+                  <template v-slot:loading>
+                    <q-spinner-dots size="20px" />
+                  </template>
+                </q-btn>
 
-                <!-- Save Badge (Green style from image) -->
+                <!-- Save Badge -->
                 <div v-if="isAnnual && hasAnnualPrice(plan)" class="save-badge-new">
-                  <q-icon name="local_offer" size="14px" class="q-mr-xs" />
-                  Ahorra ${{ getAnnualSavings(plan) }}
+                  <div class="save-icon">
+                    <q-icon name="savings" size="18px" />
+                  </div>
+                  <div class="save-text">
+                    <span class="save-label">Ahorro total</span>
+                    <span class="save-amount">{{ getPlanCurrencySymbol(plan) }}{{ getAnnualSavings(plan) }}</span>
+                  </div>
+                </div>
+
+                <!-- Features Divider -->
+                <div class="features-divider">
+                  <span>Incluye</span>
                 </div>
 
                 <!-- Features -->
@@ -156,13 +177,18 @@
                   <template v-if="plan.features && plan.features.length > 0">
                     <template v-if="typeof plan.features[0] === 'object'">
                       <div v-for="(group, gIdx) in plan.features" :key="gIdx" class="feature-group">
-                        <div class="feature-group-title">{{ group.title }}</div>
+                        <div class="feature-group-title">
+                          <q-icon name="folder_open" size="14px" />
+                          {{ group.title }}
+                        </div>
                         <div
                           v-for="(item, iIdx) in group.items"
                           :key="iIdx"
                           class="feature-item"
                         >
-                          <q-icon name="check" size="16px" class="feature-icon" />
+                          <div class="feature-check">
+                            <q-icon name="check" size="12px" />
+                          </div>
                           <span>{{ item }}</span>
                         </div>
                       </div>
@@ -173,7 +199,9 @@
                         :key="index"
                         class="feature-item"
                       >
-                        <q-icon name="check" size="16px" class="feature-icon" />
+                        <div class="feature-check">
+                          <q-icon name="check" size="12px" />
+                        </div>
                         <span>{{ feature }}</span>
                       </div>
                     </template>
@@ -181,34 +209,82 @@
                 </div>
 
                 <!-- Limits -->
-                <div v-if="plan.max_users || plan.max_branch_offices || plan.max_cashboxes" class="plan-limits">
-                  <div class="limits-divider"></div>
+                <div v-if="plan.max_users || plan.max_branch_offices" class="plan-limits">
                   <div class="limits-grid">
                     <div v-if="plan.max_users" class="limit-item">
-                      <q-icon name="people" size="16px" />
-                      <span>{{ plan.max_users }} users</span>
+                      <div class="limit-icon">
+                        <q-icon name="group" size="16px" />
+                      </div>
+                      <div class="limit-text">
+                        <span class="limit-value">{{ plan.max_users }}</span>
+                        <span class="limit-label">usuarios</span>
+                      </div>
                     </div>
                     <div v-if="plan.max_branch_offices" class="limit-item">
-                      <q-icon name="storefront" size="16px" />
-                      <span>{{ plan.max_branch_offices }} branches</span>
+                      <div class="limit-icon">
+                        <q-icon name="store" size="16px" />
+                      </div>
+                      <div class="limit-text">
+                        <span class="limit-value">{{ plan.max_branch_offices }}</span>
+                        <span class="limit-label">sucursales</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <!-- Pro Team Branch Config -->
                 <div v-if="plan.slug?.toLowerCase() === 'pro_team'" class="branch-config-compact">
-                  <div class="branch-divider"></div>
+                  <div class="branch-header">
+                    <q-icon name="business" size="18px" />
+                    <span>Configurar sucursales</span>
+                  </div>
+                  <div class="branch-info-row">
+                    <div class="info-item">
+                      <q-icon name="info_outline" size="14px" />
+                      <span>{{ plan.min_branch_offices || 1 }} {{ (plan.min_branch_offices || 1) === 1 ? 'sucursal incluida' : 'sucursales incluidas' }}</span>
+                    </div>
+                    <div v-if="plan.price_per_branch" class="info-item">
+                      <q-icon name="add_circle_outline" size="14px" />
+                      <span>{{ getPlanCurrencySymbol(plan) }}{{ getLocalPricePerBranch(plan) }} / suc. adicional</span>
+                    </div>
+                  </div>
                   <div class="branch-input-wrapper-compact">
-                    <q-btn flat dense round icon="remove" @click="decrementBranch(plan)" size="sm" />
-                    <div class="branch-count-text">{{ branchCount }} sucursales</div>
-                    <q-btn flat dense round icon="add" @click="incrementBranch(plan)" size="sm" />
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="remove"
+                      @click="decrementBranch(plan)"
+                      size="sm"
+                      class="branch-btn"
+                    />
+                    <div class="branch-count-display">
+                      <span class="branch-count-number">{{ branchCount }}</span>
+                      <span class="branch-count-label">sucursales</span>
+                    </div>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      icon="add"
+                      @click="incrementBranch(plan)"
+                      size="sm"
+                      class="branch-btn"
+                    />
                   </div>
                   <div class="branch-total-compact">
-                    Total: {{ getPlanCurrencySymbol(plan) }}{{ proTeamTotalPrice }}/mes
+                    <span class="total-label">{{ isAnnual ? 'Total anual (mensual):' : 'Total mensual:' }}</span>
+                    <span class="total-amount">{{ getPlanCurrencySymbol(plan) }}{{ proTeamTotalPrice }}</span>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Footer Note -->
+          <div class="pricing-footer">
+            <q-icon name="security" size="16px" />
+            <span>Pago seguro con Mercado Pago • Cancela cuando quieras</span>
           </div>
         </div>
       </q-card>
@@ -216,14 +292,15 @@
 
     <!-- Cancel Confirmation Dialog -->
     <q-dialog v-model="showCancelDialog">
-      <q-card style="min-width: 400px;">
-        <q-card-section>
+      <q-card class="cancel-dialog">
+        <q-card-section class="cancel-header">
+          <q-icon name="warning_amber" size="48px" color="warning" />
           <div class="text-h6">¿Cancelar Suscripción?</div>
         </q-card-section>
 
         <q-card-section>
           <p>¿Está seguro que desea cancelar su suscripción?</p>
-          <p class="text-caption text-grey-7">
+          <p class="text-caption text-grey-6">
             Su plan actual permanecerá activo hasta la fecha de vencimiento.
             Después de eso, su cuenta será cambiada al plan Free.
           </p>
@@ -233,10 +310,11 @@
             label="Motivo de cancelación (opcional)"
             outlined
             rows="3"
+            class="q-mt-md"
           />
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="No, mantener" color="primary" v-close-popup />
           <q-btn
             unelevated
@@ -356,11 +434,21 @@ export default {
       return Math.max(0, diff)
     })
 
+    /**
+     * Check if plan is the current active plan
+     * @param {Object} plan - The plan to check
+     * @return {boolean} Whether the plan is the current plan
+     */
     const isCurrentPlan = (plan) => {
       if (!currentSubscription.value) return plan.slug?.toLowerCase() === 'free'
       return currentSubscription.value.plan.id === plan.id
     }
 
+    /**
+     * Check if user can upgrade to a plan
+     * @param {Object} plan - The plan to check
+     * @return {boolean} Whether the user can upgrade to the plan
+     */
     const canUpgrade = (plan) => {
       if (plan.slug?.toLowerCase() === 'free') return false
       if (!currentSubscription.value) return true
@@ -372,11 +460,21 @@ export default {
       return targetOrder > currentOrder
     }
 
+    /**
+     * Get the action button label for a plan
+     * @param {Object} plan - The plan to get the label for
+     * @return {string} The action button label
+     */
     const getActionLabel = (plan) => {
-      if (!currentSubscription.value) return 'Seleccionar  Plan'
-      return 'Seleccionar  Plan'
+      if (isCurrentPlan(plan)) return 'Plan Actual'
+      return 'Comenzar Ahora'
     }
 
+    /**
+     * Format a date string
+     * @param {string} dateStr - The date string to format
+     * @return {string} The formatted date string
+     */
     const formatDate = (dateStr) => {
       return date.formatDate(dateStr, 'DD/MM/YYYY')
     }
@@ -400,6 +498,28 @@ export default {
     const getPlanCurrencySymbol = (plan) => {
       const pricing = getPlanPricing(plan)
       return pricing && pricing.local_currency_symbol ? pricing.local_currency_symbol : '$'
+    }
+
+    const getLocalPricePerBranch = (plan) => {
+      const pricing = getPlanPricing(plan)
+      let price = plan.price_per_branch || 0
+      
+      if (pricing && pricing.price_per_branch_local) {
+        price = pricing.price_per_branch_local
+      }
+
+      // Si es anual, aplicamos el mismo descuento del 50% (o el que sea) al precio por sucursal
+      if (isAnnual.value && hasAnnualPrice(plan)) {
+        // En el controlador asumimos 0.8 (20% off), pero aquí podemos simplificar al 50% si el badge del toggle dice 50%
+        // O mejor aún, intentamos ser consistentes con el descuento del plan base
+        const basePrice = plan.price
+        const annualMonthlyBase = plan.price_year / 12
+        const discountRatio = basePrice > 0 ? annualMonthlyBase / basePrice : 0.5
+        
+        price = price * discountRatio
+      }
+
+      return formatNumber(price)
     }
 
     const hasExchangeInfo = (plan) => {
@@ -435,6 +555,8 @@ export default {
 
     /**
      * Check if plan has annual pricing configured
+     * @param {Object} plan - The plan to check
+     * @return {boolean} Whether the plan has annual pricing
      */
     const hasAnnualPrice = (plan) => {
       return plan.price_year && plan.price_year > 0
@@ -442,6 +564,8 @@ export default {
 
     /**
      * Get monthly price for display based on billing period
+     * @param {Object} plan - The plan to get the price for
+     * @return {string} The formatted display price
      */
     const getDisplayPrice = (plan) => {
       const pricing = getPlanPricing(plan)
@@ -456,6 +580,8 @@ export default {
 
     /**
      * Get total annual price
+     * @param {Object} plan - The plan to get the price for
+     * @return {string} The formatted annual price
      */
     const getPlanAnnualPrice = (plan) => {
       return getPlanAnnualLocalPrice(plan)
@@ -463,18 +589,32 @@ export default {
 
     /**
      * Get monthly total (12 months)
+     * @param {Object} plan - The plan to get the total for
+     * @return {string} The formatted monthly total
      */
     const getPlanMonthlyTotal = (plan) => {
       return getPlanMonthlyLocalTotal(plan)
     }
 
     /**
-     * Calculate annual savings
+     * Calculate annual savings using local prices
+     * @param {Object} plan - The plan to calculate savings for
+     * @return {string} The formatted annual savings
      */
     const getAnnualSavings = (plan) => {
       if (!hasAnnualPrice(plan)) return 0
-      const monthlyTotal = plan.price * 12
-      const annualTotal = plan.price_year
+      const pricing = getPlanPricing(plan)
+      
+      let monthlyTotal, annualTotal
+      
+      if (pricing && pricing.total_price_local && pricing.total_price_year_local) {
+        monthlyTotal = pricing.total_price_local * 12
+        annualTotal = pricing.total_price_year_local
+      } else {
+        monthlyTotal = plan.price * 12
+        annualTotal = plan.price_year
+      }
+      
       return formatNumber(monthlyTotal - annualTotal)
     }
 
@@ -496,7 +636,8 @@ export default {
     }
 
     const decrementBranch = async (plan) => {
-      if (branchCount.value > currentBranchCount.value) {
+      const minBranches = plan.min_branch_offices || 1
+      if (branchCount.value > Math.max(minBranches, currentBranchCount.value)) {
         branchCount.value--
         await calculateProTeamPrice(plan)
       }
@@ -505,7 +646,6 @@ export default {
     const calculateProTeamPrice = async (plan) => {
       if (plan.slug?.toLowerCase() !== 'pro_team') return
 
-      // Recalcular todos los precios con el nuevo branch count
       const pricingData = await fetchAllPricing(branchCount.value)
 
       if (pricingData && pricingData.pricing) {
@@ -513,9 +653,17 @@ export default {
 
         if (pricingByPlan.value[plan.id]) {
           const pricing = pricingByPlan.value[plan.id]
-          proTeamTotalPrice.value = pricing.total_price_local
-            ? formatNumber(pricing.total_price_local)
-            : formatNumber(pricing.total_price_usd)
+          let price
+          
+          if (isAnnual.value && pricing.total_price_year_local) {
+            price = pricing.total_price_year_local / 12
+          } else if (pricing.total_price_local) {
+            price = pricing.total_price_local
+          } else {
+            price = isAnnual.value ? (plan.price_year / 12) : plan.price
+          }
+          
+          proTeamTotalPrice.value = formatNumber(price)
         }
       }
     }
@@ -526,13 +674,11 @@ export default {
         const { data } = await api.get('subscription-plans')
         plans.value = data
 
-        // Cargar todos los precios en una sola petición
         const pricingData = await fetchAllPricing(branchCount.value)
 
         if (pricingData && pricingData.pricing) {
           pricingByPlan.value = pricingData.pricing
 
-          // Actualizar precio total de Pro Team
           const proTeamPlan = plans.value.find(p => p.slug?.toLowerCase() === 'pro_team')
           if (proTeamPlan && pricingByPlan.value[proTeamPlan.id]) {
             const pricing = pricingByPlan.value[proTeamPlan.id]
@@ -558,7 +704,6 @@ export default {
           branchCount.value = currentBranches
           currentBranchCount.value = currentBranches
 
-          // Recalcular precios con el branch count actual
           const pricingData = await fetchAllPricing(branchCount.value)
           if (pricingData && pricingData.pricing) {
             pricingByPlan.value = pricingData.pricing
@@ -578,24 +723,22 @@ export default {
     }
 
     /**
-     * Iniciar proceso de pago con Mercado Pago Checkout Pro
+     * Start payment process with Mercado Pago Checkout Pro
+     * @param {Object} plan - The plan to subscribe to
+     * @return {void}
      */
     const selectPlan = async (plan) => {
-      // Logic for Demo Users
       if (store.isDemo) {
         localStorage.setItem('pending_plan_subscription', JSON.stringify({
           planId: plan.id,
           branchCount: plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1
         }))
         notify('Completa tu registro para suscribirte', 'info', 'person_add')
-
-        // Close dialog and open register dialog
         emit('update:modelValue', false)
         emit('open-register')
         return
       }
 
-      // Si el plan es Free, no requiere pago
       if (plan.slug?.toLowerCase() === 'free') {
         notify('El plan Free no requiere pago', 'info', 'info')
         return
@@ -604,54 +747,43 @@ export default {
       loading.value = true
 
       try {
-        // Crear link de pago con Checkout Pro
         const response = await api.post('mercadopago/create-payment', {
           subscription_plan_id: plan.id,
           branch_offices_count: plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1,
           months: isAnnual.value ? 12 : 1
         })
 
-        // Pixel Event: Initiate Checkout
         const pricing = getPlanPricing(plan)
         const value = pricing && pricing.total_price_local ? pricing.total_price_local : plan.price
         const currency = pricing && pricing.local_currency_code ? pricing.local_currency_code : 'ARS'
 
         if (fbq?.event) {
-          const checkoutData = {
+          fbq.event('InitiateCheckout', {
             content_name: plan.name,
             currency,
             value
-          }
-          fbq.event('InitiateCheckout', checkoutData)
+          })
         }
 
-        // Validar respuesta
         if (!response.data.init_point) {
           throw new Error('No se recibió URL de pago de Mercado Pago')
         }
 
-        // Usar init_point directamente
         const paymentUrl = response.data.init_point
 
-        // Guardar preference_id en localStorage para tracking
         localStorage.setItem('mp_preference_id', response.data.preference_id)
         localStorage.setItem('mp_plan_id', plan.id)
         localStorage.setItem('mp_plan_name', plan.name)
 
-        // Notificar al usuario
         notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
 
-        // Esperar un momento para que el usuario vea la notificación
         await new Promise(resolve => setTimeout(resolve, 500))
 
-        // Redirigir a Mercado Pago
         window.location.href = paymentUrl
       } catch (error) {
-        // Manejo específico de errores
         let errorMessage = 'Error al crear el link de pago'
 
         if (error.response) {
-          // Error de respuesta del servidor
           const { status, data } = error.response
 
           if (status === 400) {
@@ -664,7 +796,6 @@ export default {
             errorMessage = `Error de Mercado Pago: ${JSON.stringify(data.details)}`
           }
         } else if (error.request) {
-          // Error de red
           errorMessage = 'Error de conexión. Verifica tu internet'
         }
 
@@ -701,6 +832,12 @@ export default {
       loadCurrentSubscription()
     })
 
+    /**
+     * Darken a hex color by a percentage
+     * @param {string} hex - The hex color to darken
+     * @param {number} percent - The percentage to darken by
+     * @return {string} The darkened hex color
+     */
     const darkenColor = (hex, percent) => {
       const num = parseInt(hex.replace('#', ''), 16)
       const amt = Math.round(2.55 * percent)
@@ -710,13 +847,18 @@ export default {
       return '#' + (0x1000000 + (R < 255 ? (R < 0 ? 0 : R) : 255) * 0x10000 + (G < 255 ? (G < 0 ? 0 : G) : 255) * 0x100 + (B < 255 ? (B < 0 ? 0 : B) : 255)).toString(16).slice(1)
     }
 
+    /**
+     * Get dynamic card styles based on plan configuration
+     * @param {Object} plan - The plan to get styles for
+     * @return {Object} The dynamic styles object
+     */
     const getDynamicCardStyle = (plan) => {
-      const color = plan.card_color || '#FF1493'
+      const color = plan.card_color || '#6366F1'
       const btnColor = plan.btn_color || '#CCFF00'
       const textColor = plan.text_color || '#ffffff'
 
-      const glowColor = `${color}66`
-      const darkColor = darkenColor(color, 50)
+      const glowColor = `${color}40`
+      const darkColor = darkenColor(color, 40)
 
       return {
         '--p-color': color,
@@ -724,8 +866,8 @@ export default {
         '--p-btn': btnColor,
         '--p-text': textColor,
         '--p-glow': glowColor,
-        '--p-glow-strong': `${color}aa`,
-        background: `linear-gradient(135deg, ${color} 0%, ${darkColor} 100%)`
+        '--p-glow-strong': `${color}80`,
+        background: `linear-gradient(160deg, ${color} 0%, ${darkColor} 100%)`
       }
     }
 
@@ -752,6 +894,7 @@ export default {
       getPlanLocalPrice,
       getPlanCurrencySymbol,
       getPlanUsdPrice,
+      getLocalPricePerBranch,
       hasExchangeInfo,
       getExchangeRate,
       getLocalCurrencyCode,
@@ -776,574 +919,692 @@ export default {
 <style lang="scss" scoped>
 .modern-pricing {
   position: relative;
-  background: #0a0a0a;
+  background: #0a0a0f;
   width: 100%;
   max-width: 1200px;
   max-height: 90vh;
   overflow-y: auto;
-  border-radius: 16px;
+  overflow-x: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 
-  /* Custom Scrollbar */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 0 16px 16px 0;
-  }
-
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    transition: background 0.3s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    &:hover { background: rgba(255, 255, 255, 0.25); }
   }
-
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 body:not(.body--dark) .modern-pricing {
-  background: #ffffff;
-
-  /* Custom Scrollbar Light Mode */
-  &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.3);
-    }
-  }
-
-  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  &::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
 
 .bg-gradient {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 250px;
-  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
-  opacity: 0.08;
+  top: 0; left: 0; right: 0;
+  height: 400px;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
-  border-radius: 16px 16px 0 0;
+}
+
+.bg-orbs {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.4;
+    animation: float 20s ease-in-out infinite;
+  }
+  .orb-1 {
+    width: 300px; height: 300px;
+    background: rgba(139, 92, 246, 0.3);
+    top: -100px; right: -50px;
+  }
+  .orb-2 {
+    width: 200px; height: 200px;
+    background: rgba(6, 182, 212, 0.3);
+    bottom: 100px; left: -50px;
+    animation-delay: -5s;
+  }
+  .orb-3 {
+    width: 150px; height: 150px;
+    background: rgba(236, 72, 153, 0.3);
+    top: 50%; right: 20%;
+    animation-delay: -10s;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
 }
 
 .close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 20px; right: 20px;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
-  color: white;
-
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
   }
 }
 
 body:not(.body--dark) .close-btn {
-  background: rgba(0, 0, 0, 0.1);
-  color: #0a0a0a;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.2);
-  }
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.6);
+  &:hover { background: rgba(0, 0, 0, 0.1); color: #0a0a0a; }
 }
 
 .pricing-container {
   position: relative;
   z-index: 1;
-  width: 100%;
-  padding: 32px 24px;
+  padding: 48px 32px 32px;
 }
 
 .pricing-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 48px;
+}
+
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a78bfa;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+body:not(.body--dark) .header-badge {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+  color: #7c3aed;
 }
 
 .header-title {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 42px;
+  font-weight: 800;
   letter-spacing: -1.5px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   color: white;
+  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 body:not(.body--dark) .header-title {
-  color: #0a0a0a;
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .header-subtitle {
-  font-size: 15px;
-  opacity: 0.7;
+  font-size: 16px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 24px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 32px;
 }
 
-body:not(.body--dark) .header-subtitle {
-  color: rgba(0, 0, 0, 0.6);
-}
+body:not(.body--dark) .header-subtitle { color: rgba(0, 0, 0, 0.5); }
 
 .billing-toggle-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 24px;
 }
 
 .billing-toggle {
+  position: relative;
   display: inline-flex;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
   padding: 4px;
   gap: 4px;
-
-  &.dark-mode {
-    background: rgba(255, 255, 255, 0.08);
-  }
 }
 
 body:not(.body--dark) .billing-toggle {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 4px; left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 12px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  &.right { transform: translateX(100%); }
 }
 
 .toggle-btn {
   position: relative;
-  padding: 8px 20px;
+  z-index: 1;
+  padding: 10px 24px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 14px;
   font-weight: 600;
-  border-radius: 50px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: color 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
-
-  &.active {
-    background: var(--q-primary);
-    color: white;
-    box-shadow: 0 4px 12px rgba(var(--q-primary-rgb), 0.4);
-  }
-
-  &:hover:not(.active) {
-    color: rgba(255, 255, 255, 0.9);
-  }
+  gap: 8px;
+  &.active { color: white; }
+  &:hover:not(.active) { color: rgba(255, 255, 255, 0.8); }
 }
 
 body:not(.body--dark) .toggle-btn {
-  color: rgba(0, 0, 0, 0.6);
-
-  &:hover:not(.active) {
-    color: rgba(0, 0, 0, 0.9);
-  }
+  color: rgba(0, 0, 0, 0.5);
+  &.active { color: white; }
+  &:hover:not(.active) { color: rgba(0, 0, 0, 0.8); }
 }
 
 .discount-badge {
-  background: #CCFF00;
-  color: #000;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .plans-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
   max-width: 100%;
-  margin: 0 auto;
 }
 
 .plan-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 24px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(20px);
-  color: white;
-
-  &:hover {
-    transform: translateY(-6px);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
-  }
-}
-
-body:not(.body--dark) .plan-card {
-  background: white;
-  border: 2px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  color: #0a0a0a;
-
-  &:hover {
-    border-color: rgba(0, 0, 0, 0.12);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
-  }
-
-  &.plan-featured {
-    background: linear-gradient(135deg, #CCFF00 0%, #B8E600 100%);
-    border: none;
-    box-shadow: 0 12px 40px rgba(204, 255, 0, 0.3);
-
-    .plan-name,
-    .plan-description,
-    .price-currency,
-    .price-amount,
-    .price-period,
-    .feature-item,
-    .limit-item {
-      color: #000;
-    }
-
-    .feature-icon {
-      color: #000;
-    }
-
-    .action-btn {
-      background: #000;
-      color: #CCFF00;
-
-      &:hover {
-        background: #1a1a1a;
-      }
-    }
-
-    &:hover {
-      box-shadow: 0 16px 56px rgba(204, 255, 0, 0.4);
-    }
-  }
-}
-
-.plan-card {
-  position: relative;
-  border-radius: 30px;
+  border-radius: 24px;
   overflow: hidden;
-  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-
-  /* Shimmer effect overlay */
-  &::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-      45deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.05) 45%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0.05) 55%,
-      transparent 100%
-    );
-    transform: rotate(25deg);
-    animation: shimmer 6s infinite;
-    pointer-events: none;
-    z-index: 2;
-  }
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.3);
 
   &:hover {
-    transform: translateY(-15px) scale(1.03);
-    box-shadow: 0 40px 80px -15px var(--p-glow-strong) !important;
-    border-color: rgba(255, 255, 255, 0.3);
-
-    &::after {
-      animation-duration: 2s;
-    }
+    transform: translateY(-8px);
+    box-shadow: 0 24px 48px -12px var(--p-glow-strong);
+    border-color: rgba(255, 255, 255, 0.2);
   }
-}
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%) rotate(25deg); }
-  100% { transform: translateX(100%) rotate(25deg); }
+  &.plan-current {
+    border: 2px solid var(--p-color);
+    box-shadow: 0 0 0 4px var(--p-glow), 0 4px 24px -8px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .plan-header-badge {
-  width: 100%;
-  padding: 10px 12px;
+  padding: 10px 16px;
   text-align: center;
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--p-text);
+  color: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.9;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .plan-inner {
-  margin: 8px;
+  margin: 3px;
   margin-top: 0;
   padding: 28px;
-  background: rgba(10, 10, 10, 0.4);
-  backdrop-filter: blur(25px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 22px;
   flex: 1;
   display: flex;
   flex-direction: column;
   position: relative;
-  z-index: 3;
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
-  color: var(--p-text);
-  
-  /* Internal glow based on plan color */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at top right, var(--p-glow), transparent 70%);
-    pointer-events: none;
-    opacity: 0.5;
-    border-radius: inherit;
-  }
-}
-
-.plan-name-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.plan-name {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--p-text);
-}
-
-.discount-pill-small {
-  background: #FF1493;
-  color: white;
-  padding: 2px 10px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
+  z-index: 1;
 }
 
 .current-badge-inner {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  background: rgba(204, 255, 0, 0.1);
-  border: 1px solid rgba(204, 255, 0, 0.3);
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #CCFF00;
+  padding: 6px 12px;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4ade80;
   margin-bottom: 16px;
   align-self: flex-start;
+}
+
+.plan-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.plan-name {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.discount-pill-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .plan-description {
   font-size: 14px;
   opacity: 0.6;
-  line-height: 1.5;
-  margin-bottom: 20px;
-}
-
-.plan-price {
+  line-height: 1.6;
   margin-bottom: 24px;
 }
 
+.plan-price { margin-bottom: 24px; }
+
 .price-wrapper {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.old-price-strikethrough {
-  font-size: 20px;
-  font-weight: 700;
-  color: #FF1493;
+.old-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
   text-decoration: line-through;
-  margin-right: 12px;
-  opacity: 0.8;
+}
+
+.current-price {
+  display: flex;
+  align-items: baseline;
 }
 
 .price-currency {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   margin-right: 2px;
+  opacity: 0.9;
 }
 
 .price-amount {
-  font-size: 48px;
+  font-size: 56px;
   font-weight: 800;
-  letter-spacing: -2px;
+  letter-spacing: -3px;
   line-height: 1;
 }
 
 .price-period {
-  font-size: 14px;
+  font-size: 16px;
   opacity: 0.5;
   margin-left: 4px;
+  font-weight: 500;
 }
 
 .billing-note {
-  font-size: 12px;
-  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  opacity: 0.5;
   margin-top: 8px;
   font-weight: 500;
 }
 
 .action-btn-new {
   width: 100%;
-  height: 56px;
-  border-radius: 18px;
-  font-size: 16px;
-  font-weight: 800;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
   margin-bottom: 16px;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 
-  &:hover {
-    transform: translateY(-3px);
-    filter: brightness(1.2);
-    box-shadow: 0 12px 25px var(--p-glow);
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--p-glow);
+    filter: brightness(1.1);
   }
 
-  &:active {
-    transform: scale(0.97);
-  }
+  &:active:not(:disabled) { transform: scale(0.98); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .save-badge-new {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 12px;
-  background: rgba(204, 255, 0, 0.1);
-  border: 1px solid rgba(204, 255, 0, 0.1);
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 14px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #CCFF00;
   margin-bottom: 24px;
 }
 
-.plan-features {
-  flex: 1;
+.save-icon {
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(34, 197, 94, 0.2);
+  border-radius: 10px;
+  color: #4ade80;
 }
 
-.feature-group {
-  margin-bottom: 20px;
+.save-text {
+  display: flex;
+  flex-direction: column;
 }
+
+.save-label {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.save-amount {
+  font-size: 18px;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.features-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  opacity: 0.4;
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.3;
+  }
+}
+
+.plan-features { flex: 1; }
+
+.feature-group { margin-bottom: 20px; }
 
 .feature-group-title {
-  font-size: 11px;
-  font-weight: 800;
-  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.6;
   margin-bottom: 12px;
-  letter-spacing: 1px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .feature-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   font-size: 14px;
   font-weight: 500;
 }
 
-.feature-icon {
-  color: var(--p-text);
-  opacity: 0.7;
+.feature-check {
+  width: 20px; height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(34, 197, 94, 0.2);
+  border-radius: 6px;
+  color: #4ade80;
+  flex-shrink: 0;
 }
 
 .plan-limits {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .limits-grid {
   display: flex;
+  gap: 16px;
   flex-wrap: wrap;
-  gap: 12px;
 }
 
 .limit-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.limit-icon {
+  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--p-text);
   opacity: 0.8;
 }
 
+.limit-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.limit-value {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.limit-label {
+  font-size: 11px;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .branch-config-compact {
-  margin-top: 24px;
+  margin-top: 20px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
+}
+
+.branch-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  opacity: 0.8;
+}
+
+.branch-info-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.1);
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .branch-input-wrapper-compact {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 16px;
   margin-bottom: 12px;
 }
 
-.branch-count-text {
-  font-size: 14px;
-  font-weight: 700;
+.branch-btn {
+  background: rgba(255, 255, 255, 0.1);
+  &:hover { background: rgba(255, 255, 255, 0.2); }
+}
+
+.branch-count-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.branch-count-number {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.branch-count-label {
+  font-size: 10px;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .branch-total-compact {
-  text-align: center;
-  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(var(--q-primary-rgb), 0.1);
+  border-radius: 12px;
+}
+
+.total-label {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.total-amount {
+  font-size: 20px;
   font-weight: 800;
   color: var(--q-primary);
 }
 
-@media (max-width: 768px) {
-  .plans-grid {
-    grid-template-columns: 1fr;
-    padding: 0 16px;
-  }
+.pricing-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
-/* Skeleton override */
+body:not(.body--dark) .pricing-footer {
+  border-top-color: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.cancel-dialog {
+  min-width: 400px;
+  border-radius: 20px;
+}
+
+.cancel-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .pricing-container { padding: 32px 16px 24px; }
+  .header-title { font-size: 32px; }
+  .plans-grid { grid-template-columns: 1fr; gap: 16px; }
+  .price-amount { font-size: 44px; }
+  .cancel-dialog { min-width: 90vw; }
+}
+
 .plan-skeleton {
-  .plan-inner {
-    background: rgba(20, 20, 20, 0.8);
-  }
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  .plan-inner { background: rgba(0, 0, 0, 0.3); padding: 28px; }
 }
 </style>
