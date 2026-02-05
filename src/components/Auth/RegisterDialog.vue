@@ -41,7 +41,7 @@
           <div class="input-container">
             <q-input
               v-model="form.name"
-              placeholder="Nombre completo"
+              placeholder="Nombre"
               class="custom-input"
               borderless
               dense
@@ -50,6 +50,23 @@
             >
               <template v-slot:prepend>
                 <q-icon name="person" color="primary" size="20px"/>
+              </template>
+            </q-input>
+          </div>
+
+          <!-- Input Apellido -->
+          <div class="input-container">
+            <q-input
+              v-model="form.last_name"
+              placeholder="Apellido"
+              class="custom-input"
+              borderless
+              dense
+              hide-bottom-space
+              :rules="[val => !!val || 'El apellido es requerido']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="person_outline" color="primary" size="20px"/>
               </template>
             </q-input>
           </div>
@@ -118,7 +135,7 @@
                 <q-input
                   v-model="form.phone_number"
                   placeholder="Teléfono"
-                  class="custom-input"
+                  class="custom-input phone-field"
                   borderless
                   dense
                   hide-bottom-space
@@ -254,6 +271,7 @@ const emit = defineEmits(['update:modelValue', 'success', 'google-success'])
 // Form data
 const form = ref({
   name: '',
+  last_name: '',
   email: '',
   phone_number: '',
   password: '',
@@ -473,6 +491,7 @@ const closeDialog = () => {
   // Reset form
   form.value = {
     name: '',
+    last_name: '',
     email: '',
     phone_number: '',
     password: '',
@@ -509,26 +528,31 @@ onMounted(async () => {
 
 /* Input Container */
 .input-container {
-  margin-bottom: 12px;
+  margin-bottom: 1rem;
 }
 
-/* Custom Input */
+/* Custom Input Styles Unified */
+.custom-input :deep(.q-field__control),
+.custom-input :deep(.q-field__native) {
+  min-height: 44px !important;
+  height: 44px !important;
+  max-height: 44px !important;
+}
+
 .custom-input :deep(.q-field__control) {
-  background: #f3f4f6 !important;
-  border: none !important;
-  border-radius: 8px;
-  height: 48px;
-  min-height: 48px;
+  border-radius: 12px;
+  background: #f9fafb !important;
+  border: 1.5px solid #e5e7eb !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0 12px;
-  transition: all 0.3s ease;
-  box-shadow: none !important;
   display: flex !important;
   align-items: center !important;
 }
 
-.custom-input :deep(.q-field__control):before,
-.custom-input :deep(.q-field__control):after {
-  display: none !important;
+.custom-input :deep(.q-field__control-container) {
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 .custom-input :deep(.q-field__native) {
@@ -543,22 +567,27 @@ onMounted(async () => {
 
 .custom-input :deep(.q-field__native)::placeholder {
   color: #9ca3af;
-  opacity: 0.7;
+  opacity: 1;
 }
 
 .custom-input :deep(.q-field__control):hover {
-  background: #e5e7eb !important;
+  background: #ffffff !important;
+  border-color: #667eea !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
 }
 
 .custom-input :deep(.q-field__control):focus-within {
   background: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
+  transform: translateY(-1px);
 }
 
 .custom-input :deep(.q-field__prepend),
 .custom-input :deep(.q-field__append) {
-  height: 48px !important;
-  min-height: 48px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   display: flex;
   align-items: center;
   padding: 0 8px;
@@ -566,54 +595,56 @@ onMounted(async () => {
 
 .body--dark .custom-input :deep(.q-field__control) {
   background: #374151 !important;
-}
-
-.body--dark .custom-input :deep(.q-field__control):hover {
-  background: #4b5563 !important;
-}
-
-.body--dark .custom-input :deep(.q-field__control):focus-within {
-  background: #1f2937 !important;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3) !important;
+  border-color: #4b5563 !important;
 }
 
 .body--dark .custom-input :deep(.q-field__native) {
   color: #f3f4f6;
 }
 
-.body--dark .custom-input :deep(.q-field__native)::placeholder {
-  color: #9ca3af;
+.body--dark .custom-input :deep(.q-field__control):hover {
+  background: #1e293b !important;
+  border-color: #667eea !important;
+}
+
+.body--dark .custom-input :deep(.q-field__control):focus-within {
+  background: #1e293b !important;
+  border-color: #667eea !important;
 }
 
 /* Botón Registrarse */
 .register-btn {
   width: 100%;
-  height: 48px;
-  border-radius: 8px;
-  font-size: 16px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
   margin-bottom: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   transition: all 0.3s ease;
+  border: none !important;
+  color: white;
 }
 
 .register-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
 }
 
 /* Divider */
 .divider-container {
   display: flex;
   align-items: center;
-  margin: 10px 0;
+  margin: 12px 0;
 }
 
 .divider-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, transparent, #d1d5db, transparent);
+  background: #e5e7eb;
 }
 
 .divider-text {
@@ -623,29 +654,34 @@ onMounted(async () => {
   font-weight: 500;
 }
 
+.body--dark .divider-line {
+  background: #374151;
+}
+
 /* Botón Social */
 .social-btn {
-  width: 100%;
-  height: 48px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  background: white;
-  color: #374151;
-  font-size: 15px;
-  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
+  height: 46px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.3px;
 }
 
 .social-btn:hover:not(:disabled) {
   background: #f9fafb;
-  border-color: #d1d5db;
+  border-color: #667eea;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
 }
 
 .social-btn:disabled {
@@ -665,17 +701,18 @@ onMounted(async () => {
 }
 
 .body--dark .social-btn:hover:not(:disabled) {
-  background: #4b5563;
-  border-color: #6b7280;
+  background: #1e293b;
+  border-color: #667eea;
 }
 
 /* Phone input */
 .phone-input-container {
-  margin-bottom: 12px;
+  margin-bottom: 1rem;
 }
 
-.country-select :deep(.q-field__control) {
-  border-radius: 8px 0 0 8px !important;
+.phone-input-container .country-select :deep(.q-field__control) {
+  padding-left: 12px;
+  padding-right: 4px;
 }
 
 .country-flag {
