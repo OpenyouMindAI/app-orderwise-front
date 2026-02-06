@@ -3,19 +3,19 @@
     <!-- Header Cockpit Area -->
     <div class="header-cockpit section-fade-in">
       <div class="cockpit-glow"></div>
-      <div class="row items-center justify-between no-wrap">
-        <div class="cockpit-welcome">
-          <div class="greeting-row">
-            <span class="text-h5 text-weight-normal opacity-80">{{ greeting }},</span>
-            <span class="text-h5 text-weight-bolder q-ml-xs">{{ userName }}</span>
-          </div>
-        </div>
-
-        <div class="cockpit-meta">
-          <div class="date-chip-modern">
-            <q-icon name="event" size="14px" class="q-mr-xs" />
+      <div class="column no-wrap">
+        <div class="cockpit-meta q-mb-sm">
+          <div class="date-chip-premium">
+            <q-icon name="calendar_today" size="12px" class="q-mr-xs" />
             <span>{{ currentDate }}</span>
           </div>
+        </div>
+        <div class="cockpit-welcome">
+          <div class="greeting-text">
+            <span class="greeting-main">{{ greeting }},</span>
+            <span class="greeting-name">{{ userName }}</span>
+          </div>
+          <div class="greeting-subtitle">Aquí tienes el resumen de tu negocio para hoy</div>
         </div>
       </div>
     </div>
@@ -45,21 +45,22 @@
         </div>
       </div>
 
-      <!-- ROW 1: Stats Ribbon (Desktop 4-cols) - Today's Financial KPIs -->
+      <!-- ROW 1: Statistics (Original Order) -->
       <template v-if="isAdmin">
         <!-- Today's Net Income -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
+        <div class="bento-item stat-hero revenue-tile">
           <div class="stat-icon-wrap bg-soft-primary">
             <q-icon name="payments" size="28px" color="primary" />
           </div>
           <div class="stat-data">
             <q-skeleton v-if="loadingStats" type="text" width="80px" />
             <div v-else class="stat-val text-primary">{{ formatCurrency(todayStats.netIncome) }}</div>
-            <div class="stat-lab">Ingresos Netos de Hoy</div>
+            <div class="stat-lab">Ingresos de Hoy</div>
           </div>
         </div>
+
         <!-- Today's Profit -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop profit-tile">
+        <div class="bento-item stat-hero profit-tile">
           <div class="stat-icon-wrap bg-soft-positive">
             <q-icon name="trending_up" size="28px" color="positive" />
           </div>
@@ -68,48 +69,48 @@
             <div v-else class="stat-val" :class="todayStats.profit >= 0 ? 'text-positive' : 'text-negative'">
               {{ formatCurrency(todayStats.profit) }}
             </div>
-            <div class="stat-lab">Ganancia de Hoy</div>
+            <div class="stat-lab">Ganancias de Hoy</div>
           </div>
         </div>
 
         <!-- Today's Cash Out -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop expense-tile">
+        <div class="bento-item stat-hero expense-tile">
           <div class="stat-icon-wrap bg-soft-negative">
             <q-icon name="money_off" size="28px" color="negative" />
           </div>
           <div class="stat-data">
             <q-skeleton v-if="loadingStats" type="text" width="80px" />
             <div v-else class="stat-val text-negative">{{ formatCurrency(todayStats.cashOut) }}</div>
-            <div class="stat-lab">Salida de Dinero de Hoy</div>
+            <div class="stat-lab">Salida de Dinero</div>
           </div>
         </div>
 
         <!-- Accounts Receivable -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop receivable-tile clickable" @click="navigateTo('AccountsReceivable')">
+        <div class="bento-item stat-hero receivable-tile clickable" @click="navigateTo('AccountsReceivable')">
           <div class="stat-icon-wrap bg-soft-warning">
             <q-icon name="account_balance_wallet" size="28px" color="warning" />
           </div>
           <div class="stat-data">
             <q-skeleton v-if="loadingStats" type="text" width="80px" />
             <div v-else class="stat-val text-warning">{{ formatCurrency(todayStats.receivable) }}</div>
-            <div class="stat-lab">Por Cobrar de Hoy</div>
+            <div class="stat-lab">Por Cobrar</div>
           </div>
         </div>
 
         <!-- Total Products -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop products-tile">
+        <div class="bento-item stat-hero products-tile">
           <div class="stat-icon-wrap bg-soft-secondary">
             <q-icon name="inventory_2" size="28px" color="secondary" />
           </div>
           <div class="stat-data">
             <q-skeleton v-if="loadingStats" type="text" width="80px" />
             <div v-else class="stat-val text-secondary">{{ todayStats.productsTotal }}</div>
-            <div class="stat-lab">Productos en Catálogo</div>
+            <div class="stat-lab">Productos</div>
           </div>
         </div>
 
         <!-- Total Clients -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop clients-tile">
+        <div class="bento-item stat-hero clients-tile mobile-hide">
           <div class="stat-icon-wrap bg-soft-accent">
             <q-icon name="group" size="28px" color="accent" />
           </div>
@@ -121,7 +122,7 @@
         </div>
 
         <!-- Today's Sales Count -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop sales-tile">
+        <div class="bento-item stat-hero sales-tile">
           <div class="stat-icon-wrap bg-soft-info">
             <q-icon name="receipt" size="28px" color="info" />
           </div>
@@ -521,6 +522,20 @@ const defaultQuickActions = [
     color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
   },
   {
+    name: 'box-report',
+    label: 'Reporte de Caja',
+    icon: 'point_of_sale',
+    route: 'BoxReport',
+    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+  },
+  {
+    name: 'invoices',
+    label: 'Lista de facturas',
+    icon: 'receipt_long',
+    route: 'Invoice',
+    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+  },
+  {
     name: 'products',
     label: 'Productos',
     icon: 'inventory_2',
@@ -528,18 +543,18 @@ const defaultQuickActions = [
     color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
   },
   {
-    name: 'clients',
-    label: 'Clientes',
-    icon: 'people',
-    route: 'Client',
-    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    name: 'receivables',
+    label: 'Cuentas por Cobrar',
+    icon: 'account_balance_wallet',
+    route: 'AccountsReceivable',
+    color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
   },
   {
-    name: 'reports',
-    label: 'Reportes',
-    icon: 'analytics',
-    route: 'Dashboard',
-    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    name: 'new-purchase',
+    label: 'Nueva Compra',
+    icon: 'shopping_bag',
+    route: 'NewPurchase',
+    color: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)'
   }
 ]
 
@@ -982,48 +997,85 @@ onMounted(() => {
     padding-bottom: 48px;
   }
 }
-/**
- * Header Cockpit
- */
 .header-cockpit {
-  padding: 24px 8px;
+  padding: 1rem 0.5rem;
   margin-bottom: 8px;
   position: relative;
 }
 
 .cockpit-glow {
   position: absolute;
-  top: -20px;
-  left: 0;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.1) 0%, transparent 70%);
-  filter: blur(20px);
+  top: -40px;
+  left: -20px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.15) 0%, transparent 70%);
+  filter: blur(40px);
   pointer-events: none;
 }
 
-.welcome-subtitle {
-  margin-top: 4px;
-  font-weight: 500;
-}
-
-.date-chip-modern {
-  display: flex;
+.date-chip-premium {
+  display: inline-flex;
   align-items: center;
   background: white;
-  padding: 8px 16px;
-  border-radius: 14px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 800;
   color: #64748b;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  border: 1px solid #f1f5f9;
 }
 
-body.body--dark .date-chip-modern {
+body.body--dark .date-chip-premium {
   background: #1e293b;
   border-color: #334155;
   color: #94a3b8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.greeting-text {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.greeting-main {
+  font-size: 32px;
+  font-weight: 400;
+  color: #334155;
+  letter-spacing: -0.5px;
+}
+
+.greeting-name {
+  font-size: 32px;
+  font-weight: 800;
+  margin-left: 8px;
+  background: linear-gradient(135deg, var(--q-primary) 0%, #4facfe 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -1px;
+}
+
+.greeting-subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  letter-spacing: 0.1px;
+}
+
+body.body--dark .greeting-main {
+  color: #f1f5f9;
+}
+
+body.body--dark .greeting-subtitle {
+  color: #cbd5e1;
 }
 
 /**
@@ -1038,18 +1090,25 @@ body.body--dark .date-chip-modern {
   box-sizing: border-box;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 0) {
   .bento-grid {
     grid-template-columns: repeat(2, 1fr);
+    grid-gap: 12px;
+  }
+  .mobile-hide {
+    display: none !important;
   }
 }
 
 @media (min-width: 1024px) {
   .bento-grid {
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: auto auto;
+    grid-template-rows: auto;
     gap: 16px;
     padding: 0;
+  }
+  .mobile-hide {
+    display: flex !important;
   }
 }
 
@@ -1224,6 +1283,7 @@ body.body--dark .recent-pill__label {
   gap: 16px;
   padding: 16px;
   min-height: auto;
+  justify-content: flex-start;
 }
 
 @media (max-width: 480px) {
