@@ -28,23 +28,23 @@ export function useDemoPersuasion () {
     if (!isDemo.value) return
 
     const oldCounter = parseInt(localStorage.getItem('demo_actions_counter') || '0')
-    const increment = isImportant ? 5 : 1
+    const increment = isImportant ? 6 : 1
     let counter = oldCounter + increment
 
     // Lógica por fases
     if (oldCounter >= 0) {
-      // PRIMERA FASE: Usuario nuevo (0 a 4 puntos)
-      if (counter >= 5) {
+      // PRIMERA FASE: Usuario nuevo (0 a 5 puntos)
+      if (counter >= 6) {
         // Alcanzó el umbral: mostrar modal y pasar a segunda fase
         showDemoModal.value = true
-        counter = -5 // Marca que ya pasó la primera fase
+        counter = -6 // Marca que ya pasó la primera fase
       }
     } else {
-      // SEGUNDA FASE: Ya mostró primer modal (contador inicia en -5)
+      // SEGUNDA FASE: Ya mostró primer modal (contador inicia en -6)
       if (counter >= 0) {
         // Llegó a 0 o más: mostrar modal y reiniciar fase 2
         showDemoModal.value = true
-        counter = -5
+        counter = -6
       }
     }
 
