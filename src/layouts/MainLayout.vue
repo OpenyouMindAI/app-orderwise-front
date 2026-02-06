@@ -100,19 +100,13 @@
 
         <!-- Right: Actions -->
         <div class="navbar-right">
-          <!-- Botón Crear Mi Empresa (solo en modo demo) -->
+          <!-- Botón Crear Mi Empresa (Escritorio/Tablet) -->
           <transition
             appear
             enter-active-class="animated fadeIn"
             leave-active-class="animated fadeOut"
           >
-            <div
-              v-if="store.isDemo"
-              :class="[$q.screen.xs ? 'float-create-btn-mobile' : '']"
-            >
-              <div v-if="$q.screen.xs && showDemoMessage" class="demo-info-message">
-                Crea tu empresa y comienza gratis
-              </div>
+            <div v-if="store.isDemo && !$q.screen.xs">
               <q-btn
                 outline
                 dense
@@ -122,11 +116,11 @@
                 <q-icon
                   name="rocket_launch"
                   size="16px"
-                  :class="[$q.screen.xs ? '' : 'q-mr-xs', 'rocket-icon']"
+                  class="q-mr-xs rocket-icon"
                 />
-                <span v-if="!$q.screen.xs">Mi Empresa</span>
+                <span>Mi Empresa</span>
 
-                <q-tooltip v-if="!$q.screen.xs" class="bg-grey-9">
+                <q-tooltip class="bg-grey-9">
                   Crea tu empresa y comienza gratis
                 </q-tooltip>
               </q-btn>
@@ -736,6 +730,34 @@
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
+
+    <!-- Botón Crear Mi Empresa (Solo Mobile - Fuera del Header para evitar bugs de posicionamiento) -->
+    <transition
+      appear
+      enter-active-class="animated fadeIn"
+      leave-active-class="animated fadeOut"
+    >
+      <div
+        v-if="store.isDemo && $q.screen.xs"
+        class="float-create-btn-mobile"
+      >
+        <div v-if="showDemoMessage" class="demo-info-message">
+          Crea tu empresa y comienza gratis
+        </div>
+        <q-btn
+          outline
+          dense
+          class="create-btn-v0"
+          @click="showCreateCompanyDialog = true"
+        >
+          <q-icon
+            name="rocket_launch"
+            size="16px"
+            class="rocket-icon"
+          />
+        </q-btn>
+      </div>
+    </transition>
   </q-layout>
 </template>
 
@@ -1134,7 +1156,7 @@ export default {
       this.showDemoMessage = true
       setTimeout(() => {
         this.showDemoMessage = false
-      }, 10000)
+      }, 3000)
     }
 
     this.startDemoReminder()
