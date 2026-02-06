@@ -984,7 +984,7 @@ onMounted(() => {
   }
 }
 .header-cockpit {
-  padding: 32px 12px;
+  padding: 1rem 0.5rem;
   margin-bottom: 8px;
   position: relative;
 }
