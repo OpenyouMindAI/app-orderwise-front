@@ -1237,7 +1237,7 @@
       </div>
 
       <!-- Botón flotante Cobrar para móvil con totales -->
-      <q-page-sticky v-if="$q.screen.lt.md" position="bottom" :offset="[20, 20]">
+      <q-page-sticky v-if="$q.screen.lt.md" position="bottom" :offset="[20, 64]">
         <q-btn
           id="tour-btn-cobrar-mobile"
           class="cobrar-floating-btn"

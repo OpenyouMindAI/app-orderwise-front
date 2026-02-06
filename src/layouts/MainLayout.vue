@@ -76,10 +76,10 @@
             dense
             no-caps
             class="support-btn-header"
+            label="Suporte Admin"
             @click="changeRoute('AdminSupport', 'Suporte Admin')"
           >
             <q-icon name="support_agent" size="20px" />
-            <span>Suporte Admin</span>
             <q-tooltip>Centro de Soporte para Administradores</q-tooltip>
           </q-btn>
           <q-btn
@@ -87,11 +87,11 @@
             flat
             dense
             no-caps
+            label="Contactanos"
             class="support-btn-header"
             @click="changeRoute('Support', 'Suporte')"
           >
             <q-icon name="support_agent" size="20px" />
-            <span>Suporte</span>
             <q-tooltip>Centro de Soporte y Ayuda</q-tooltip>
           </q-btn>
         </div>

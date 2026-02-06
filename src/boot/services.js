@@ -4,13 +4,13 @@ import axios from 'axios'
  * Main API instance with optimized base configuration
  * @type {import('axios').AxiosInstance}
  */
-export const api = axios.create({ 
-  baseURL: import.meta.env.VITE_APP_API_URL 
+export const api = axios.create({
+  baseURL: import.meta.env.VITE_APP_API_URL
 })
 
 /**
  * Global Response Interceptor
- * 
+ *
  * Optimized centralizar error handling:
  * 1. Reduces JS execution overhead by removing manual async/await wrappers
  * 2. Provides consistent error data format (error?.response?.data || error)
