@@ -41,7 +41,7 @@
             v-for="(benefit, index) in benefits"
             :key="index"
             class="benefit-card"
-            :style="{ animationDelay: `${200 + index * 100}ms` }"
+            :style="{ animationDelay: `${300 + index * 100}ms` }"
           >
             <div class="benefit-icon">
               <q-icon :name="benefit.icon" size="28px" />
@@ -125,7 +125,7 @@ const benefits = [
 ]
 
 const goToRegister = () => {
-  eventBus.emit('open-create-company')
+  eventBus.emit('open-subscription-dialog')
   emit('update:modelValue', false)
 }
 </script>
@@ -143,9 +143,8 @@ const goToRegister = () => {
 }
 
 .modal-animated-card {
-  transform-origin: center;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-
+  animation: zoomInSpring 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
 }
 
 .mobile-fullscreen {
@@ -181,16 +180,20 @@ const goToRegister = () => {
 }
 
 .top-icon-container {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 20px;
+  width: fit-content;
+  min-width: 72px;
+  height: auto;
+  min-height: 72px;
+  margin: 0 auto 24px;
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(var(--primary-rgb, 25, 118, 210), 0.1), rgba(var(--primary-rgb, 25, 118, 210), 0.2));
-  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(var(--primary-rgb, 25, 118, 210), 0.08), rgba(var(--primary-rgb, 25, 118, 210), 0.15));
+  border-radius: 24px;
   position: relative;
-  animation: float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
+  border: 1px solid rgba(var(--primary-rgb, 25, 118, 210), 0.1);
 }
 
 .top-icon {
@@ -276,13 +279,13 @@ const goToRegister = () => {
   height: 50px;
   background: var(--primary) !important;
   color: white !important;
-  border-radius: 10px;
+  border-radius: 14px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: none;
-  box-shadow: 0 4px 16px rgba(var(--primary-rgb, 25, 118, 210), 0.3);
-  transition: all 0.3s ease;
-  margin-bottom: 6px;
+  box-shadow: 0 8px 20px rgba(var(--primary-rgb, 25, 118, 210), 0.35);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  margin-bottom: 0px;
 }
 
 .cta-button:hover {
@@ -323,6 +326,17 @@ const goToRegister = () => {
 }
 
 /* ========== ANIMACIONES ========== */
+@keyframes zoomInSpring {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes slideInSpring {
   0% {
     opacity: 0;

@@ -736,8 +736,6 @@
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
-
-    <DemoPersuasionModal v-model="showDemoModal" />
   </q-layout>
 </template>
 
@@ -771,7 +769,6 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
-import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
 
 export default {
@@ -787,7 +784,6 @@ export default {
     PremiumBadge,
     IntegrationDynamic,
     // BottomNav
-    DemoPersuasionModal,
     ProPlanPromoBanner
   },
   data () {
@@ -1084,11 +1080,21 @@ export default {
         }
       },
       immediate: true
+    },
+    /**
+     * Bypass DemoPersuasionModal and show SubscriptionPlansDialog directly
+     */
+    showDemoModal (val) {
+      if (val) {
+        this.showDemoModal = false
+        this.showSubscriptionDialog = true
+      }
     }
   },
   setup () {
     const router = useRouter()
     const { showDemoModal, trackDemoAction } = useDemoPersuasion()
+
     return {
       router,
       showDemoModal,
@@ -1120,6 +1126,10 @@ export default {
       this.showCreateCompanyDialog = true
     })
 
+    eventBus.on('open-subscription-dialog', () => {
+      this.showSubscriptionDialog = true
+    })
+
     if (this.store.isDemo) {
       this.showDemoMessage = true
       setTimeout(() => {
@@ -1132,13 +1142,18 @@ export default {
     if (localStorage.getItem('pending_plan_subscription')) {
       this.showSubscriptionDialog = true
     }
+
+    // Listener global de clicks con silenciador inteligente
+    document.addEventListener('click', this.handleGlobalClick)
   },
   beforeUnmount () {
     this.stopDemoReminder()
+    document.removeEventListener('click', this.handleGlobalClick)
   },
   unmounted () {
     window.removeEventListener('keydown', this.handleGlobalKeyDown)
     eventBus.off('open-create-company')
+    eventBus.off('open-subscription-dialog')
   },
   created () {
     this.loadingPage()
@@ -1146,6 +1161,37 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Smart click tracker with contextual silencing
+     */
+    handleGlobalClick (event) {
+      // 1. SILENCIO POR DIÁLOGOS ABIERTOS (Contexto de conversión)
+      if (
+        this.showSubscriptionDialog ||
+        this.showCreateCompanyDialog ||
+        this.showCompanySetup ||
+        this.showOtpVerification ||
+        this.showDemoModal
+      ) return
+
+      // 2. SILENCIO POR RUTAS CRÍTICAS
+      const silentRoutes = ['Register', 'Welcome', 'SubscriptionSuccess', 'SubscriptionFailure', 'SubscriptionPending']
+      if (silentRoutes.includes(this.$route.name)) return
+
+      // 3. SILENCIO ESTRUCTURAL (Navbar y Herramientas)
+      if (
+        event.target.closest('.modern-header') ||
+        event.target.closest('.tools-popup')
+      ) return
+
+      // 4. SILENCIO POR HEURÍSTICA DE ICONOS (Clicks en sistema)
+      const systemIcons = ['close', 'help', 'info', 'help_outline', 'arrow_back']
+      const clickedIcon = event.target.innerText?.trim().toLowerCase()
+      if (systemIcons.includes(clickedIcon)) return
+
+      // Si pasa los filtros, registramos la acción
+      this.trackDemoAction()
+    },
     /**
      * Handle global keyboard shortcuts
      * @param {KeyboardEvent} e event
@@ -2102,7 +2148,6 @@ export default {
       this.$router.push({ name: data })
       this.menuRoute = data
       this.titleApp = listName
-      this.trackDemoAction()
     },
     /**
      * Change branch office

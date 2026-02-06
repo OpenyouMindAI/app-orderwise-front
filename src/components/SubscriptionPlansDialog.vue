@@ -484,7 +484,7 @@ export default {
       set: (val) => emit('update:modelValue', val)
     })
 
-    const isMobile = computed(() => $q.screen.lt.sm)
+    const isMobile = computed(() => $q.screen.lt.md)
 
     const daysLeft = computed(() => {
       if (!currentSubscription.value) return 0
@@ -715,7 +715,7 @@ export default {
         if (pricingByPlan.value[plan.id]) {
           const pricing = pricingByPlan.value[plan.id]
           let price
-          
+
           if (isAnnual.value && pricing.total_price_year_local) {
             price = pricing.total_price_year_local / 12
           } else if (pricing.total_price_local) {
@@ -723,7 +723,7 @@ export default {
           } else {
             price = isAnnual.value ? (plan.price_year / 12) : plan.price
           }
-          
+
           proTeamTotalPrice.value = formatNumber(price)
         }
       }
@@ -1007,7 +1007,7 @@ export default {
   background: #0a0a0f;
   width: 100%;
   max-width: 1200px;
-  max-height: 90vh;
+  max-height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
   border-radius: 24px;

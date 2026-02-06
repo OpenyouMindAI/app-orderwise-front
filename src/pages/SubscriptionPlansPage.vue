@@ -700,11 +700,11 @@ body.body--dark {
     background: #1d1d1d !important;
     color: rgba(255, 255, 255, 0.9);
     border-color: rgba(255, 255, 255, 0.1);
-    
+
     :deep(.q-table th) {
       color: #bbbbbb;
     }
-    
+
     :deep(.q-table td) {
       border-color: rgba(255, 255, 255, 0.1);
     }
