@@ -1,21 +1,19 @@
 <template>
   <q-page class="home-page">
-    <!-- Header Cockpit Area -->
     <div class="header-cockpit section-fade-in">
       <div class="cockpit-glow"></div>
-      <div class="column no-wrap">
-        <div class="cockpit-meta q-mb-sm">
-          <div class="date-chip-premium">
-            <q-icon name="calendar_today" size="12px" class="q-mr-xs" />
-            <span>{{ currentDate }}</span>
-          </div>
-        </div>
+      <div class="row items-center justify-between no-wrap-desktop q-px-sm">
         <div class="cockpit-welcome">
           <div class="greeting-text">
             <span class="greeting-main">{{ greeting }},</span>
             <span class="greeting-name">{{ userName }}</span>
           </div>
-          <div class="greeting-subtitle">Aquí tienes el resumen de tu negocio para hoy</div>
+        </div>
+        <div class="cockpit-meta">
+          <div class="date-chip-premium">
+            <q-icon name="calendar_today" size="14px" class="q-mr-xs" />
+            <span>{{ currentDate }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -998,9 +996,15 @@ onMounted(() => {
   }
 }
 .header-cockpit {
-  padding: 1rem 0.5rem;
-  margin-bottom: 8px;
+  padding: 0.75rem 0.2rem;
   position: relative;
+}
+
+@media (min-width: 1024px) {
+  .header-cockpit {
+    padding: 1rem 1.5rem;
+    margin-bottom: 12px;
+  }
 }
 
 .cockpit-glow {
@@ -1020,7 +1024,7 @@ onMounted(() => {
   background: white;
   padding: 6px 14px;
   border-radius: 50px;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 800;
   color: #64748b;
   text-transform: uppercase;
@@ -1045,14 +1049,14 @@ body.body--dark .date-chip-premium {
 }
 
 .greeting-main {
-  font-size: 32px;
-  font-weight: 400;
+  font-size: clamp(18px, 4vw, 24px);
+  font-weight: 500;
   color: #334155;
   letter-spacing: -0.5px;
 }
 
 .greeting-name {
-  font-size: 32px;
+  font-size: clamp(22px, 5vw, 30px);
   font-weight: 800;
   margin-left: 8px;
   background: linear-gradient(135deg, var(--q-primary) 0%, #4facfe 100%);
@@ -1060,6 +1064,13 @@ body.body--dark .date-chip-premium {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -1px;
+}
+
+@media (max-width: 600px) {
+  .header-cockpit .row {
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 .greeting-subtitle {
@@ -1286,19 +1297,41 @@ body.body--dark .recent-pill__label {
   justify-content: flex-start;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+  .bento-item {
+    padding: 10px;
+  }
+
   .stat-hero {
-    padding: 12px;
-    gap: 12px;
+    padding: 8px;
+    gap: 6px;
   }
 
   .stat-icon-wrap {
-    width: 48px;
-    height: 48px;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+  }
+
+  .stat-icon-wrap :deep(.q-icon) {
+    font-size: 20px !important;
   }
 
   .stat-val {
-    font-size: 18px;
+    font-size: 14px !important;
+    font-weight: 700;
+  }
+
+  .stat-lab {
+    font-size: 10px !important;
+    font-weight: 500;
+    color: #94a3b8;
+  }
+}
+
+@media (max-width: 360px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
   }
 }
 
