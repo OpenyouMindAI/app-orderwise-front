@@ -68,31 +68,31 @@
         </div>
         <q-space />
         <!-- Branch Office Indicator -->
-        <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
-          <q-chip
-            dense
-            square
-            class="branch-chip"
-            icon="store"
-            color="primary"
-            text-color="white"
-          >
-            {{ branchOffice?.name || 'Sin sucursal' }}
-          </q-chip>
-
-          <!-- Add Branch Button -->
+        <!-- Support Button (Replaces Branch Office Indicator) -->
+        <div class="support-indicator">
           <q-btn
-            v-if="canAddMoreBranches"
+            v-if="userSession?.is_root"
             flat
             dense
-            round
-            size="sm"
-            icon="add"
-            color="primary"
-            class="q-ml-xs add-branch-btn"
-            @click="goToAddBranch"
+            no-caps
+            class="support-btn-header"
+            @click="changeRoute('AdminSupport', 'Suporte Admin')"
           >
-            <q-tooltip>Agregar sucursal ({{ currentBranchCount }}/{{ maxBranches }})</q-tooltip>
+            <q-icon name="support_agent" size="20px" />
+            <span>Suporte Admin</span>
+            <q-tooltip>Centro de Soporte para Administradores</q-tooltip>
+          </q-btn>
+          <q-btn
+            v-else
+            flat
+            dense
+            no-caps
+            class="support-btn-header"
+            @click="changeRoute('Support', 'Suporte')"
+          >
+            <q-icon name="support_agent" size="20px" />
+            <span>Suporte</span>
+            <q-tooltip>Centro de Soporte y Ayuda</q-tooltip>
           </q-btn>
         </div>
 
@@ -100,19 +100,13 @@
 
         <!-- Right: Actions -->
         <div class="navbar-right">
-          <!-- Botón Crear Mi Empresa (solo en modo demo) -->
+          <!-- Botón Crear Mi Empresa (Escritorio/Tablet) -->
           <transition
             appear
             enter-active-class="animated fadeIn"
             leave-active-class="animated fadeOut"
           >
-            <div
-              v-if="store.isDemo"
-              :class="[$q.screen.xs ? 'float-create-btn-mobile' : '']"
-            >
-              <div v-if="$q.screen.xs && showDemoMessage" class="demo-info-message">
-                Crea tu empresa y comienza gratis
-              </div>
+            <div v-if="store.isDemo && !$q.screen.xs">
               <q-btn
                 outline
                 dense
@@ -122,11 +116,11 @@
                 <q-icon
                   name="rocket_launch"
                   size="16px"
-                  :class="[$q.screen.xs ? '' : 'q-mr-xs', 'rocket-icon']"
+                  class="q-mr-xs rocket-icon"
                 />
-                <span v-if="!$q.screen.xs">Mi Empresa</span>
+                <span>Mi Empresa</span>
 
-                <q-tooltip v-if="!$q.screen.xs" class="bg-grey-9">
+                <q-tooltip class="bg-grey-9">
                   Crea tu empresa y comienza gratis
                 </q-tooltip>
               </q-btn>
@@ -327,24 +321,6 @@
                     </svg>
                     <span class="tool-label">Instalar App</span>
                   </a>
-                  <div
-                    class="tool-item"
-                    :class="{ 'tool-active': $route.name === 'AdminSupport' }"
-                    @click="changeRoute('AdminSupport', 'Suporte Admin')"
-                    v-if="userSession.is_root"
-                  >
-                    <q-icon name="support_agent" size="24px" />
-                    <span class="tool-label">Suporte Admin</span>
-                  </div>
-                  <div
-                    v-else
-                    class="tool-item"
-                    :class="{ 'tool-active': $route.name === 'Support' }"
-                    @click="changeRoute('Support', 'Suporte')"
-                  >
-                    <q-icon name="support_agent" size="24px" />
-                    <span class="tool-label">Suporte</span>
-                  </div>
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
@@ -736,6 +712,34 @@
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
+
+    <!-- Botón Crear Mi Empresa (Solo Mobile - Fuera del Header para evitar bugs de posicionamiento) -->
+    <transition
+      appear
+      enter-active-class="animated fadeIn"
+      leave-active-class="animated fadeOut"
+    >
+      <div
+        v-if="store.isDemo && $q.screen.xs"
+        class="float-create-btn-mobile"
+      >
+        <div v-if="showDemoMessage" class="demo-info-message">
+          Crea tu empresa y comienza gratis
+        </div>
+        <q-btn
+          outline
+          dense
+          class="create-btn-v0"
+          @click="showCreateCompanyDialog = true"
+        >
+          <q-icon
+            name="rocket_launch"
+            size="16px"
+            class="rocket-icon"
+          />
+        </q-btn>
+      </div>
+    </transition>
   </q-layout>
 </template>
 
@@ -1134,7 +1138,7 @@ export default {
       this.showDemoMessage = true
       setTimeout(() => {
         this.showDemoMessage = false
-      }, 10000)
+      }, 3000)
     }
 
     this.startDemoReminder()
@@ -2327,68 +2331,47 @@ export default {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Branch Office Indicator */
-.branch-indicator {
+/* Support Indicator (Replaces Branch Office) */
+.support-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.branch-chip {
+.support-btn-header {
+  display: flex;
+  align-items: center;
   font-size: 13px;
   font-weight: 600;
   padding: 4px 12px;
-  height: 28px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.2) !important;
+  height: 32px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.branch-chip:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.support-btn-header > * {
+  gap: 0.25rem;
 }
 
-.branch-chip :deep(.q-chip__icon) {
-  font-size: 16px;
-  margin-right: 4px;
+.support-btn-header:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
-.branch-chip :deep(.q-chip__content) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
+.support-btn-header:active {
+  transform: translateY(0) scale(0.98);
 }
 
-.add-branch-btn {
-  background: rgba(255, 255, 255, 0.15) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-}
-
-.add-branch-btn:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.add-branch-btn:active {
-  transform: scale(0.95);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .branch-chip :deep(.q-chip__content) {
-    max-width: 120px;
-  }
-
-  .add-branch-btn {
+/* Responsive adjustments for support button */
+@media (max-width: 390px) {
+  .support-btn-header span {
     display: none;
   }
 }
