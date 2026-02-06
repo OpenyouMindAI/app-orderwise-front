@@ -868,6 +868,11 @@ export default {
           return
         }
 
+        if (data?.is_root) {
+          this.$router.push({ name: 'Home' })
+          return
+        }
+
         if (data?.roles?.length === 0) {
           notify('Usuario no tiene permisos', 'negative', 'warning')
           return

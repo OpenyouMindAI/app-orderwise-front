@@ -1457,7 +1457,7 @@ onUnmounted(() => {
 
 .chat-container {
   display: flex;
-  height: calc(100vh - 150px);
+  height: calc(100vh - 120px);
   padding: 20px;
   gap: 20px;
 
