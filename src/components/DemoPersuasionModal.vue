@@ -2,10 +2,8 @@
   <q-dialog
     v-model="internalValue"
     persistent
-    transition-show="fade"
-    transition-hide="fade"
-    :maximized="isMobile"
-    style="z-index: 2147483647 !important"
+    transition-show="scale"
+    transition-hide="scale"
   >
     <q-card :class="['conversion-modal-card', 'modal-animated-card', { 'mobile-fullscreen': isMobile }]">
       <!-- Botón de cierre -->
@@ -22,16 +20,14 @@
       <div class="modal-content">
         <!-- Título principal -->
         <div class="header-section">
-          <div class="top-icon-container">
-            <q-btn
-              unelevated
-              class="cta-button"
-              @click="goToRegister"
-            >
-              <span class="cta-text">Crear mi cuenta gratis</span>
+          <q-btn
+            unelevated
+            class="cta-button"
+            @click="goToRegister"
+          >
+            <span class="cta-text">Crear mi cuenta gratis</span>
           </q-btn>
-          </div>
-          <div class="text-h6 text-weight-bold main-title">
+          <div class="text-h6 text-weight-bold main-title q-mt-md">
             Ya probaste la demo — ahora desbloqueá tu cuenta completa
           </div>
           <div class="text-body2 subtitle">
@@ -279,10 +275,9 @@ const goToRegister = () => {
 }
 
 .cta-button {
-  width: auto;
-  min-width: 200px;
-  height: 48px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark, #1565c0)) !important;
+  width: 70%;
+  height: 50px;
+  background: var(--primary) !important;
   color: white !important;
   border-radius: 14px;
   font-size: 1rem;

@@ -764,6 +764,12 @@ const register = async () => {
     companyForm.value.company_email = form.value.email
     companyForm.value.company_phone = form.value.phone_number || ''
 
+    // Si el email ya está verificado (viene de Google u otro proveedor), saltar OTP
+    if (data.user?.email_verified_at) {
+      showCompanyOptions.value = true
+      return
+    }
+
     otpDigits.value = ['', '', '', '', '', '']
 
     currentTab.value = 'otp'

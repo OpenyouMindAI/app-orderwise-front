@@ -95,9 +95,45 @@
             <div class="stat-lab">Por Cobrar de Hoy</div>
           </div>
         </div>
+
+        <!-- Total Products -->
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop products-tile">
+          <div class="stat-icon-wrap bg-soft-secondary">
+            <q-icon name="inventory_2" size="28px" color="secondary" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val text-secondary">{{ todayStats.productsTotal }}</div>
+            <div class="stat-lab">Productos en Catálogo</div>
+          </div>
+        </div>
+
+        <!-- Total Clients -->
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop clients-tile">
+          <div class="stat-icon-wrap bg-soft-accent">
+            <q-icon name="group" size="28px" color="accent" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val text-accent">{{ todayStats.clientsTotal }}</div>
+            <div class="stat-lab">Clientes</div>
+          </div>
+        </div>
+
+        <!-- Today's Sales Count -->
+        <div class="bento-item stat-hero span-small-mobile span-1-desktop sales-tile">
+          <div class="stat-icon-wrap bg-soft-info">
+            <q-icon name="receipt" size="28px" color="info" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <div v-else class="stat-val text-info">{{ todayStats.salesToday }}</div>
+            <div class="stat-lab">Ventas de Hoy</div>
+          </div>
+        </div>
       </template>
 
-      <!-- ROW 2: Quick Access and Recent Access Side-by-Side -->
+      <!-- ROW 2: Quick Access and Activity -->
       <div class="bento-item actions-bento span-full-mobile span-2-desktop">
         <div class="bento-header">
           <q-icon name="apps" class="q-mr-xs" />
@@ -141,45 +177,8 @@
         </div>
       </div>
 
-      <!-- Recent Access Section -->
-      <div class="bento-item recent-bento span-full-mobile span-2-desktop section-fade-in">
-        <div class="bento-header">
-          <q-icon name="history" class="q-mr-xs" />
-          <span>Accesos Recientes</span>
-          <q-space />
-          <q-btn
-            v-if="recentAccess.length > 0"
-            flat
-            dense
-            no-caps
-            label="Limpiar"
-            color="grey-6"
-            size="11px"
-            @click="clearRecentAccess"
-          />
-        </div>
-        <div v-if="recentAccess.length > 0" class="recent-grid">
-          <div
-            v-for="(recent, index) in recentAccess"
-            :key="index"
-            class="recent-pill clickable"
-            @click="navigateToRecent(recent)"
-          >
-            <q-icon :name="recent.icon || 'link'" size="16px" class="q-mr-sm" />
-            <span class="recent-pill__label">{{ recent.label }}</span>
-            <span class="recent-pill__time">{{ formatRecentTime(recent.timestamp) }}</span>
-          </div>
-        </div>
-        <div v-else class="empty-state flex flex-center q-pa-md">
-          <div class="text-center opacity-40">
-            <q-icon name="history" size="32px" class="q-mb-sm" />
-            <div class="text-caption">Sin accesos recientes</div>
-          </div>
-        </div>
-      </div>
-
       <!-- Activity Section (for Admin) -->
-      <div v-if="isAdmin" class="bento-item activity-bento span-full section-fade-in">
+      <div v-if="isAdmin" class="bento-item activity-bento span-full-mobile span-2-desktop section-fade-in">
         <div class="row items-center justify-between q-mb-md">
           <div class="bento-header no-margin">
             <q-icon name="receipt_long" class="q-mr-xs" />
@@ -420,15 +419,8 @@ const { userSession, branchOffice } = storeToRefs(store)
  * @type {Object}
  */
 const STORAGE_KEYS = {
-  QUICK_ACCESS: 'orderwise_quick_access',
-  RECENT_ACCESS: 'orderwise_recent_access'
+  QUICK_ACCESS: 'orderwise_quick_access'
 }
-
-/**
- * Maximum number of recent access items to store
- * @type {number}
- */
-const MAX_RECENT_ACCESS = 6
 
 // ============================================
 // ONBOARDING STATE
@@ -470,7 +462,10 @@ const todayStats = ref({
   profit: 0,
   netIncome: 0,
   cashOut: 0,
-  receivable: 0
+  receivable: 0,
+  productsTotal: 0,
+  clientsTotal: 0,
+  salesToday: 0
 })
 
 /**
@@ -549,16 +544,6 @@ const defaultQuickActions = [
 ]
 
 // ============================================
-// RECENT ACCESS STATE
-// ============================================
-
-/**
- * Recent access history
- * @type {Ref<Array>}
- */
-const recentAccess = ref([])
-
-// ============================================
 // COMPUTED PROPERTIES
 // ============================================
 
@@ -606,7 +591,7 @@ const currentDate = computed(() => {
  * @returns {Array}
  */
 const configuredQuickActions = computed(() => {
-  return selectedQuickActions.value.length > 0 ? selectedQuickActions.value : defaultQuickActions
+  return selectedQuickActions.value
 })
 
 /**
@@ -647,6 +632,16 @@ const navigateTo = (routeName) => {
 }
 
 /**
+ * Handle click on quick action
+ * @param {Object} action - Action object
+ */
+const handleQuickActionClick = (action) => {
+  if (action.route) {
+    navigateTo(action.route)
+  }
+}
+
+/**
  * Navigate to welcome page
  */
 const goToWelcome = () => {
@@ -658,42 +653,7 @@ const goToWelcome = () => {
  * @param {Object} invoice - Invoice object
  */
 const viewInvoice = (invoice) => {
-  addToRecentAccess({
-    label: `Factura #${invoice.invoice_id}`,
-    route: 'Invoice',
-    params: { id: invoice.id },
-    icon: 'receipt'
-  })
   router.push({ name: 'Invoice', params: { id: invoice.invoice_id } })
-}
-
-/**
- * Handle quick action click (navigate and track)
- * @param {Object} action - Quick action object
- */
-const handleQuickActionClick = (action) => {
-  addToRecentAccess({
-    label: action.label,
-    route: action.route || action.link,
-    icon: action.icon
-  })
-  if (action.route) {
-    router.push({ name: action.route })
-  } else if (action.link) {
-    router.push({ name: action.link })
-  }
-}
-
-/**
- * Navigate to a recent access item
- * @param {Object} recent - Recent access object
- */
-const navigateToRecent = (recent) => {
-  if (recent.params) {
-    router.push({ name: recent.route, params: recent.params })
-  } else {
-    router.push({ name: recent.route })
-  }
 }
 
 // ============================================
@@ -739,22 +699,6 @@ const formatTime = (datetime) => {
   return dateObj.toLocaleDateString('es-ES')
 }
 
-/**
- * Format recent access timestamp
- * @param {number} timestamp - Unix timestamp
- * @returns {string}
- */
-const formatRecentTime = (timestamp) => {
-  const dateObj = new Date(timestamp)
-  const now = new Date()
-  const diff = now - dateObj
-  const minutes = Math.floor(diff / 60000)
-
-  if (minutes < 60) return 'Hace poco'
-  if (minutes < 1440) return `Hace ${Math.floor(minutes / 60)}h`
-  return date.formatDate(dateObj, 'DD/MM')
-}
-
 // ============================================
 // DATA LOADING METHODS
 // ============================================
@@ -791,14 +735,17 @@ const loadTodayStats = async () => {
 
   try {
     // Load all stats in parallel
-    const [categoryData, cashflowData, receivableData] = await Promise.all([
+    const [categoryData, cashflowData, receivableData, dashboardStats, productsData, clientsData] = await Promise.all([
       api.get('reports/category-totals', { params }).catch(() => ({ data: {} })),
       api.get('reports/cashflow-totals', { params }).catch(() => ({ data: {} })),
       api.get('client-statement/kpis', {
         params: {
           branch_office_id: branchOffice.value.id
         }
-      }).catch(() => ({ data: {} }))
+      }).catch(() => ({ data: {} })),
+      api.get('dashboard/today-stats', { params }).catch(() => ({ data: { invoices: 0, products: 0, clients: 0 } })),
+      api.get('products', { params: { perPage: 1, page: 1, paginated: true } }).catch(() => ({ data: { total: 0 } })),
+      api.get('clients', { params: { perPage: 1, page: 1, paginated: true } }).catch(() => ({ data: { total: 0 } }))
     ])
 
     // Calculate profit (sales - costs)
@@ -824,7 +771,10 @@ const loadTodayStats = async () => {
       profit,
       netIncome,
       cashOut,
-      receivable
+      receivable,
+      productsTotal: productsData.data?.total || 0,
+      clientsTotal: clientsData.data?.total || 0,
+      salesToday: dashboardStats.data?.invoices || 0
     }
   } catch (error) {
     console.error('Error loading today stats:', error)
@@ -890,9 +840,13 @@ const loadQuickAccessConfig = () => {
     const stored = localStorage.getItem(STORAGE_KEYS.QUICK_ACCESS)
     if (stored) {
       selectedQuickActions.value = JSON.parse(stored)
+    } else {
+      // Initialize with defaults if no user preference exists
+      selectedQuickActions.value = [...defaultQuickActions]
     }
   } catch (error) {
     console.error('Error loading quick access config:', error)
+    selectedQuickActions.value = [...defaultQuickActions]
   }
 }
 
@@ -975,66 +929,6 @@ const moveQuickAction = (index, direction) => {
 }
 
 // ============================================
-// RECENT ACCESS METHODS
-// ============================================
-
-/**
- * Load recent access from localStorage
- */
-const loadRecentAccess = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.RECENT_ACCESS)
-    if (stored) {
-      recentAccess.value = JSON.parse(stored)
-    }
-  } catch (error) {
-    console.error('Error loading recent access:', error)
-  }
-}
-
-/**
- * Add item to recent access
- * @param {Object} item - Recent access item
- */
-const addToRecentAccess = (item) => {
-  const newItem = {
-    ...item,
-    timestamp: Date.now()
-  }
-
-  // Remove duplicate if exists
-  const existingIndex = recentAccess.value.findIndex(
-    r => r.route === item.route && JSON.stringify(r.params) === JSON.stringify(item.params)
-  )
-  if (existingIndex >= 0) {
-    recentAccess.value.splice(existingIndex, 1)
-  }
-
-  // Add to beginning
-  recentAccess.value.unshift(newItem)
-
-  // Limit to max items
-  if (recentAccess.value.length > MAX_RECENT_ACCESS) {
-    recentAccess.value = recentAccess.value.slice(0, MAX_RECENT_ACCESS)
-  }
-
-  // Save to localStorage
-  try {
-    localStorage.setItem(STORAGE_KEYS.RECENT_ACCESS, JSON.stringify(recentAccess.value))
-  } catch (error) {
-    console.error('Error saving recent access:', error)
-  }
-}
-
-/**
- * Clear all recent access history
- */
-const clearRecentAccess = () => {
-  recentAccess.value = []
-  localStorage.removeItem(STORAGE_KEYS.RECENT_ACCESS)
-}
-
-// ============================================
 // WATCHERS
 // ============================================
 
@@ -1066,7 +960,6 @@ onMounted(() => {
   loadTodayStats()
   loadRecentInvoices()
   loadQuickAccessConfig()
-  loadRecentAccess()
 })
 </script>
 
@@ -1381,6 +1274,8 @@ body.body--dark .recent-pill__label {
 .bg-soft-warning { background: rgba(var(--q-warning-rgb), 0.1); }
 .bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
 .bg-soft-negative { background: rgba(var(--q-negative-rgb), 0.1); }
+.bg-soft-secondary { background: rgba(var(--q-secondary-rgb), 0.1); }
+.bg-soft-accent { background: rgba(var(--q-accent-rgb), 0.1); }
 
 .stat-data {
   flex: 1;
