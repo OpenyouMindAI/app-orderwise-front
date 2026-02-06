@@ -618,6 +618,7 @@
               <q-item
                 v-if="
                   validateRole(list.roles) &&
+                  validateBusinessType(list) &&
                   list.name != 'home' &&
                   list.visible !== false
                 "
@@ -1066,7 +1067,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateRole(module.roles)
+              return this.validateRole(module.roles) && this.validateBusinessType(module)
             }).length > 0
           )
         })

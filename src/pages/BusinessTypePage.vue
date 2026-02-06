@@ -119,17 +119,89 @@
               </div>
             </div>
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
-              <q-toggle
-                size="xs"
-                v-model="moduleSelected"
-                :val="modul.id"
-                :label="modul.title"
+          <!-- Module Selection Section -->
+          <q-card-section class="q-pt-none">
+            <div class="row items-center q-mb-md">
+              <div class="text-subtitle1 text-weight-medium">
+                <q-icon name="apps" class="q-mr-sm" />
+                Módulos del Rubro
+              </div>
+              <q-space />
+              <q-btn
+                flat
+                dense
+                no-caps
+                :color="isAllSelected ? 'negative' : 'primary'"
+                :icon="isAllSelected ? 'remove_done' : 'done_all'"
+                :label="isAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'"
+                @click="toggleSelectAll"
                 :disable="visible"
               />
             </div>
+
+            <q-scroll-area style="height: 300px;" class="module-scroll-area">
+              <q-expansion-item
+                v-for="section in sections"
+                :key="section.id"
+                :icon="section.icon"
+                :label="section.name"
+                :caption="`${getSelectedCountBySection(section)} de ${getSectionModulesCount(section)} seleccionados`"
+                header-class="bg-grey-2 text-grey-8"
+                expand-icon-class="text-primary"
+                default-opened
+                class="q-mb-sm rounded-borders overflow-hidden"
+              >
+                <template v-slot:header>
+                  <q-item-section avatar>
+                    <q-icon :name="section.icon || 'folder'" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-medium">{{ section.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ getSelectedCountBySection(section) }} de {{ getSectionModulesCount(section) }} módulos
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      :icon="isSectionFullySelected(section) ? 'check_box' : 'check_box_outline_blank'"
+                      :color="isSectionFullySelected(section) ? 'primary' : 'grey'"
+                      @click.stop="toggleSectionSelection(section)"
+                      :disable="visible"
+                    >
+                      <q-tooltip>
+                        {{ isSectionFullySelected(section) ? 'Deseleccionar sección' : 'Seleccionar sección' }}
+                      </q-tooltip>
+                    </q-btn>
+                  </q-item-section>
+                </template>
+
+                <q-card flat class="bg-grey-1">
+                  <q-card-section class="q-py-sm">
+                    <div class="row q-col-gutter-xs">
+                      <div
+                        v-for="modul in section.modules"
+                        :key="modul.id"
+                        class="col-xs-6 col-sm-4 col-md-4"
+                      >
+                        <q-checkbox
+                          v-model="moduleSelected"
+                          :val="modul.id"
+                          :label="modul.title"
+                          :disable="visible"
+                          dense
+                          class="module-checkbox"
+                        />
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
+            </q-scroll-area>
           </q-card-section>
+
           <q-card-actions align="right" class="text-primary">
             <q-btn color="negative" label="Eliminar" @click="deleteBusinessType" :loading="visible" />
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
@@ -226,17 +298,89 @@
               </div>
             </div>
           </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xs-4 col-sm-3 col-md-3 col-lg-3" v-for="modul in modules" :key="modul.id">
-              <q-toggle
-                size="xs"
-                v-model="moduleSelected"
-                :val="modul.id"
-                :label="modul.title"
+          <!-- Module Selection Section -->
+          <q-card-section class="q-pt-none">
+            <div class="row items-center q-mb-md">
+              <div class="text-subtitle1 text-weight-medium">
+                <q-icon name="apps" class="q-mr-sm" />
+                Módulos del Rubro
+              </div>
+              <q-space />
+              <q-btn
+                flat
+                dense
+                no-caps
+                :color="isAllSelected ? 'negative' : 'primary'"
+                :icon="isAllSelected ? 'remove_done' : 'done_all'"
+                :label="isAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'"
+                @click="toggleSelectAll"
                 :disable="visible"
               />
             </div>
+
+            <q-scroll-area style="height: 300px;" class="module-scroll-area">
+              <q-expansion-item
+                v-for="section in sections"
+                :key="section.id"
+                :icon="section.icon"
+                :label="section.name"
+                :caption="`${getSelectedCountBySection(section)} de ${getSectionModulesCount(section)} seleccionados`"
+                header-class="bg-grey-2 text-grey-8"
+                expand-icon-class="text-primary"
+                default-opened
+                class="q-mb-sm rounded-borders overflow-hidden"
+              >
+                <template v-slot:header>
+                  <q-item-section avatar>
+                    <q-icon :name="section.icon || 'folder'" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-medium">{{ section.name }}</q-item-label>
+                    <q-item-label caption>
+                      {{ getSelectedCountBySection(section) }} de {{ getSectionModulesCount(section) }} módulos
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-btn
+                      flat
+                      dense
+                      round
+                      :icon="isSectionFullySelected(section) ? 'check_box' : 'check_box_outline_blank'"
+                      :color="isSectionFullySelected(section) ? 'primary' : 'grey'"
+                      @click.stop="toggleSectionSelection(section)"
+                      :disable="visible"
+                    >
+                      <q-tooltip>
+                        {{ isSectionFullySelected(section) ? 'Deseleccionar sección' : 'Seleccionar sección' }}
+                      </q-tooltip>
+                    </q-btn>
+                  </q-item-section>
+                </template>
+
+                <q-card flat class="bg-grey-1">
+                  <q-card-section class="q-py-sm">
+                    <div class="row q-col-gutter-xs">
+                      <div
+                        v-for="modul in section.modules"
+                        :key="modul.id"
+                        class="col-xs-6 col-sm-4 col-md-4"
+                      >
+                        <q-checkbox
+                          v-model="moduleSelected"
+                          :val="modul.id"
+                          :label="modul.title"
+                          :disable="visible"
+                          dense
+                          class="module-checkbox"
+                        />
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
+            </q-scroll-area>
           </q-card-section>
+
           <q-card-actions align="right" class="text-primary">
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
@@ -255,6 +399,11 @@ export default {
     return {
       businessTypes: [],
       modules: [],
+      /**
+       * Sections with modules grouped
+       * @type {Array}
+       */
+      sections: [],
       businessType: {},
       filter: '',
       moduleSelected: [],
@@ -325,7 +474,23 @@ export default {
     }
   },
   created () {
-    this.getModules()
+    this.getSections()
+  },
+  computed: {
+    /**
+     * Check if all modules are selected
+     * @returns {Boolean}
+     */
+    isAllSelected () {
+      return this.allModuleIds.length > 0 && this.allModuleIds.every(id => this.moduleSelected.includes(id))
+    },
+    /**
+     * Get all module IDs from all sections
+     * @returns {Array}
+     */
+    allModuleIds () {
+      return this.sections.flatMap(section => section.modules?.map(m => m.id) || [])
+    }
   },
   methods: {
     /**
@@ -518,15 +683,75 @@ export default {
       })
     },
     /**
-     * Get all modules
+     * Get all sections with modules
      */
-    async getModules () {
+    async getSections () {
       try {
-        const { data } = await this.$api.get('modules')
-        this.modules = data
+        const { data } = await this.$api.get('sections', {
+          params: {
+            sortBy: 'index',
+            sortOrder: 'asc'
+          }
+        })
+        this.sections = data
+        // Also flatten modules for compatibility
+        this.modules = data.flatMap(section => section.modules || [])
       } catch (err) {
-        console.error('Error loading modules:', err)
+        console.error('Error loading sections:', err)
       }
+    },
+    /**
+     * Toggle select/deselect all modules
+     */
+    toggleSelectAll () {
+      if (this.isAllSelected) {
+        this.moduleSelected = []
+      } else {
+        this.moduleSelected = [...this.allModuleIds]
+      }
+    },
+    /**
+     * Toggle select/deselect all modules in a section
+     * @param {Object} section - Section object
+     */
+    toggleSectionSelection (section) {
+      const sectionModuleIds = section.modules?.map(m => m.id) || []
+      const isFullySelected = this.isSectionFullySelected(section)
+
+      if (isFullySelected) {
+        // Deselect all modules in this section
+        this.moduleSelected = this.moduleSelected.filter(id => !sectionModuleIds.includes(id))
+      } else {
+        // Select all modules in this section
+        const newSelection = new Set([...this.moduleSelected, ...sectionModuleIds])
+        this.moduleSelected = [...newSelection]
+      }
+    },
+    /**
+     * Check if all modules in a section are selected
+     * @param {Object} section - Section object
+     * @returns {Boolean}
+     */
+    isSectionFullySelected (section) {
+      const sectionModuleIds = section.modules?.map(m => m.id) || []
+      return sectionModuleIds.length > 0 && sectionModuleIds.every(id => this.moduleSelected.includes(id))
+    },
+    /**
+     * Get count of selected modules in a section
+     * @param {Object} section - Section object
+     * @returns {Number}
+     */
+    getSelectedCountBySection (section) {
+      const sectionModuleIds = section.modules?.map(m => m.id) || []
+      return sectionModuleIds.filter(id => this.moduleSelected.includes(id)).length
+    },
+    /**
+     * Get total modules count in a section
+     * @param {Object} section - Section object
+     * @returns {Number}
+     */
+    getSectionModulesCount (section) {
+      return section.modules?.length || 0
     },
     /**
      * Handle image selection
@@ -580,3 +805,37 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.module-scroll-area {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+}
+
+.module-checkbox {
+  width: 100%;
+}
+
+.module-checkbox :deep(.q-checkbox__label) {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bg-grey-1 {
+  background-color: #fafafa;
+}
+
+.bg-grey-2 {
+  background-color: #f5f5f5;
+}
+
+:deep(.q-expansion-item__container) {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:deep(.q-expansion-item--expanded .q-expansion-item__container) {
+  border-color: var(--q-primary);
+}
+</style>
