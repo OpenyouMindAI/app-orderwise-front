@@ -607,11 +607,11 @@
 
         <q-scroll-area class="col">
           <q-expansion-item
-            v-for="category_module in filteredDataMenu"
+            v-for="(category_module, index) in filteredDataMenu"
             expand-separator
             :key="category_module.id"
             :icon="category_module.icon"
-            default-opened
+            :default-opened="index === 0"
             :label="category_module.name"
           >
             <div v-for="list in category_module.modules" :key="list.id">
@@ -657,9 +657,6 @@
     <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md && !$route.meta.hideBottomNav }">
       <router-view />
     </q-page-container>
-
-    <!-- Bottom Navigation (Mobile Only) -->
-    <!-- <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" /> -->
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
@@ -734,6 +731,8 @@
       @verified="handleOtpVerified"
     />
 
+    <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
+
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
@@ -759,7 +758,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
-// import BottomNav from 'src/components/Navigation/BottomNav.vue'
+import BottomNav from 'src/components/Navigation/BottomNav.vue'
 import { useTourStore } from 'src/stores/tourStore.js'
 
 import {
@@ -784,7 +783,7 @@ export default {
     CompanySetupModal,
     PremiumBadge,
     IntegrationDynamic,
-    // BottomNav
+    BottomNav,
     ProPlanPromoBanner
   },
   data () {
@@ -2036,11 +2035,14 @@ export default {
     },
     /**
      * Validate business type
-     * @param {Array} businessTypes
+     * @param {Object} module - Module to validate
      * @returns {Boolean}
      */
     validateBusinessType (module) {
       const businessTypeModules = this.userSession?.company_session?.business_type?.modules || []
+
+      // First check if module is hidden by plan restrictions
+      if (!this.validatePlan(module)) return false
 
       if (this.userSession?.is_root) return true
 
@@ -2049,7 +2051,47 @@ export default {
       if (businessTypeModules.length > 0 && module) {
         return businessTypeModules.some((businessModule) => businessModule.id === module.id)
       }
+
       return false
+    },
+
+    /**
+     * Validate if module is allowed based on subscription plan
+     * @param {Object} module - Module to validate
+     * @returns {Boolean} - true if module is allowed, false if should be hidden
+     */
+    validatePlan (module) {
+      // Root users can see all modules
+      if (this.userSession?.is_root) return true
+
+      // Modules restricted for free plan and demo companies
+      const premiumModules = [
+        'SalesInventoryReport',
+        'ProductKardex',
+        'TransferProduct',
+        'Promotions',
+        'BranchOffice',
+        'Integrations',
+        'Company',
+        'Cashbox',
+        'Seller',
+        'Client',
+        'DeliveryPerson'
+      ]
+
+      // Check if company is demo or plan is free
+      const isDemo = this.store.isDemo
+      const isFree = this.currentSubscription?.plan?.slug === 'free' || !this.currentSubscription?.plan?.slug
+
+      // If demo or free plan, hide premium modules
+      if (isDemo || isFree) {
+        // Check if the module link matches any restricted module
+        if (module?.link && premiumModules.includes(module.link)) {
+          return false
+        }
+      }
+
+      return true
     },
     /**
      * Logout application

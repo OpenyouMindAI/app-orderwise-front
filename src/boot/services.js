@@ -1,36 +1,33 @@
 import axios from 'axios'
 
-export const axiosCreate = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL })
+/**
+ * Main API instance with optimized base configuration
+ * @type {import('axios').AxiosInstance}
+ */
+export const api = axios.create({ 
+  baseURL: import.meta.env.VITE_APP_API_URL 
+})
 
-export const api = {
-  ...axiosCreate,
-
-  get: async (url, params) => {
-    try {
-      return await axiosCreate.get(url, params)
-    } catch (error) {
-      throw error?.response?.data || error
-    }
+/**
+ * Global Response Interceptor
+ * 
+ * Optimized centralizar error handling:
+ * 1. Reduces JS execution overhead by removing manual async/await wrappers
+ * 2. Provides consistent error data format (error?.response?.data || error)
+ * 3. Keeps native Axios functionality (interceptors, cancellations, etc.)
+ */
+api.interceptors.response.use(
+  (response) => {
+    // Return successful response as is
+    return response
   },
-  post: async (url, data, config = {}) => {
-    try {
-      return await axiosCreate.post(url, data, config)
-    } catch (error) {
-      throw error?.response?.data || error
-    }
-  },
-  put: async (url, data) => {
-    try {
-      return await axiosCreate.put(url, data)
-    } catch (error) {
-      throw error?.response?.data || error
-    }
-  },
-  delete: async (url) => {
-    try {
-      return await axiosCreate.delete(url)
-    } catch (error) {
-      throw error?.response?.data || error
-    }
+  (error) => {
+    // Centralized error normalization
+    // This replaces manual try/catch in every single call
+    const normalizedError = error?.response?.data || error
+    return Promise.reject(normalizedError)
   }
-}
+)
+
+// Export for backward compatibility if needed in old parts of the system
+export const axiosCreate = api
