@@ -1145,6 +1145,19 @@ export default {
 
     // Listener global de clicks con silenciador inteligente
     document.addEventListener('click', this.handleGlobalClick)
+
+    // CHECK POR RETORNO DE MERCADO PAGO
+    // Si el usuario vuelve de pagar (status=approved) y tiene sesión pero no empresa,
+    // mostramos el modal de configuración de empresa inmediatamente.
+    const urlParams = new URLSearchParams(window.location.search)
+    const paymentStatus = urlParams.get('status') || urlParams.get('collection_status')
+
+    if (paymentStatus === 'approved' && this.userSession) {
+      this.showCompanySetup = true
+
+      // Opcional: Limpiar la URL para que no reabra al refrescar (comentado por seguridad)
+      // window.history.replaceState({}, document.title, window.location.pathname);
+    }
   },
   beforeUnmount () {
     this.stopDemoReminder()
@@ -1165,7 +1178,6 @@ export default {
      * Smart click tracker with contextual silencing
      */
     handleGlobalClick (event) {
-      // 1. SILENCIO POR DIÁLOGOS ABIERTOS (Contexto de conversión)
       if (
         this.showSubscriptionDialog ||
         this.showCreateCompanyDialog ||
@@ -1174,22 +1186,18 @@ export default {
         this.showDemoModal
       ) return
 
-      // 2. SILENCIO POR RUTAS CRÍTICAS
       const silentRoutes = ['Register', 'Welcome', 'SubscriptionSuccess', 'SubscriptionFailure', 'SubscriptionPending']
       if (silentRoutes.includes(this.$route.name)) return
 
-      // 3. SILENCIO ESTRUCTURAL (Navbar y Herramientas)
       if (
         event.target.closest('.modern-header') ||
         event.target.closest('.tools-popup')
       ) return
 
-      // 4. SILENCIO POR HEURÍSTICA DE ICONOS (Clicks en sistema)
       const systemIcons = ['close', 'help', 'info', 'help_outline', 'arrow_back']
       const clickedIcon = event.target.innerText?.trim().toLowerCase()
       if (systemIcons.includes(clickedIcon)) return
 
-      // Si pasa los filtros, registramos la acción
       this.trackDemoAction()
     },
     /**
@@ -1313,25 +1321,19 @@ export default {
      */
     async handleGoogleRegisterSuccess (data) {
       try {
-        // Cerrar el diálogo de registro primero
         this.showCreateCompanyDialog = false
 
-        // Esperar a que el diálogo se cierre completamente
         await this.$nextTick()
 
-        // Iniciar sesión automáticamente con los datos del usuario
         await this.store.setSessionData(data.user)
 
-        // Guardar el email para el setup de la empresa
         this.companySetupEmail = data.userInfo?.email || data.user.email
 
-        // Pequeña pausa antes de mostrar el siguiente modal
         await new Promise(resolve => setTimeout(resolve, 300))
 
-        // Mostrar el modal de configuración de empresa
-        this.showCompanySetup = true
+        await this.proceedToPaymentFirst()
 
-        notify('Registro exitoso con Google. Configura tu empresa', 'positive', 'check_circle')
+        notify('Registro exitoso con Google.', 'positive', 'check_circle')
       } catch (error) {
         console.error('Error al procesar registro con Google:', error)
         notify('Error al procesar el registro', 'negative', 'warning')
@@ -1350,14 +1352,28 @@ export default {
       try {
         this.showOtpVerification = false
 
-        this.showCompanySetup = true
+        await this.proceedToPaymentFirst()
 
-        notify('Correo verificado. Ahora crea tu empresa', 'positive', 'check_circle')
+        notify('Correo verificado.', 'positive', 'check_circle')
       } catch (error) {
         console.error('Error al procesar verificación OTP:', error)
         notify('Error al procesar la verificación', 'negative', 'warning')
       }
     },
+    /**
+     * New method to handle payment flow before company setup
+     */
+    async proceedToPaymentFirst () {
+      const hasPendingPlan = localStorage.getItem('pending_plan_subscription')
+
+      if (hasPendingPlan) {
+        const redirected = await this.processPendingSubscription()
+        if (redirected) return
+      }
+
+      this.showSubscriptionDialog = true
+    },
+
     /**
      * Handle company setup success
      */
@@ -1380,10 +1396,6 @@ export default {
         }
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
-
-        // Chequear pending subscription y procesar inmediatamente
-        const handledPending = await this.processPendingSubscription()
-        if (handledPending) return
 
         // Chequear pending contact advisor
         const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
