@@ -522,6 +522,20 @@ const defaultQuickActions = [
     color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
   },
   {
+    name: 'box-report',
+    label: 'Reporte de Caja',
+    icon: 'point_of_sale',
+    route: 'BoxReport',
+    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+  },
+  {
+    name: 'invoices',
+    label: 'Lista de facturas',
+    icon: 'receipt_long',
+    route: 'Invoice',
+    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+  },
+  {
     name: 'products',
     label: 'Productos',
     icon: 'inventory_2',
@@ -529,18 +543,18 @@ const defaultQuickActions = [
     color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
   },
   {
-    name: 'clients',
-    label: 'Clientes',
-    icon: 'people',
-    route: 'Client',
-    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    name: 'receivables',
+    label: 'Cuentas por Cobrar',
+    icon: 'account_balance_wallet',
+    route: 'AccountsReceivable',
+    color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
   },
   {
-    name: 'reports',
-    label: 'Reportes',
-    icon: 'analytics',
-    route: 'Dashboard',
-    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    name: 'new-purchase',
+    label: 'Nueva Compra',
+    icon: 'shopping_bag',
+    route: 'NewPurchase',
+    color: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)'
   }
 ]
 
