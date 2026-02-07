@@ -4,8 +4,6 @@
       <div class="billing-panel-container q-pa-sm">
         <!-- LEFT PANEL -->
         <div style="min-width: 0;">
-          <!-- Purchase Number Indicator -->
-
           <div class="row q-col-gutter-sm">
             <!-- Selectores principales - Solo desktop -->
             <div v-if="$q.screen.gt.sm" class="billing-selects-desktop col-12">
@@ -95,176 +93,176 @@
               </div>
             </div>
 
-             <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
-               <div v-if="$route.query.id">
-                 <q-chip
-                   square
-                   color="primary"
-                   text-color="white"
-                   icon="receipt_long"
-                   dense
-                   class="invoice-chip"
-                 >
-                   <span>{{ purchase?.purchase_number }}</span>
-                 </q-chip>
-               </div>
-               <div>
-                 <q-btn
-                   color="secondary"
-                   icon="store"
-                   :label="provider?.name || 'Proveedor'"
-                   label-position="left"
-                   style="height: 100% !important;"
-                 >
-                   <q-popup-proxy @before-show="loadProvidersData()" v-model="providerMenuOpen">
-                     <q-card class="fab-popup-card">
-                       <q-card-section class="fab-popup-header">
-                         <div class="text-h6">Seleccionar Proveedor</div>
-                         <q-btn flat round dense icon="close" v-close-popup />
-                       </q-card-section>
-                       <q-separator />
-                       <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
-                         <q-inner-loading :showing="loadingProviders">
-                           <q-spinner-dots size="50px" color="primary" />
-                         </q-inner-loading>
-                         <q-input
-                           v-model="providerSearch"
-                           placeholder="Buscar proveedor..."
-                           dense
-                           outlined
-                           class="q-ma-sm"
-                         >
-                           <template v-slot:prepend>
-                             <q-icon name="search" />
-                           </template>
-                         </q-input>
-                         <q-list class="fab-popup-list">
-                           <q-item
-                             v-for="p in filteredProvidersForFab"
-                             :key="p.id"
-                             clickable
-                             v-ripple
-                             :active="provider?.id === p.id"
-                             @click="provider = p; providerSearch = ''"
-                             v-close-popup
-                           >
-                             <q-item-section>
-                               <q-item-label>{{ p.name }}</q-item-label>
-                               <q-item-label caption>{{ p.document_number }}</q-item-label>
-                             </q-item-section>
-                             <q-item-section side v-if="provider?.id === p.id">
-                               <q-icon name="check_circle" color="primary" />
-                             </q-item-section>
-                           </q-item>
-                         </q-list>
-                       </q-card-section>
-                       <q-separator />
-                       <q-card-actions align="right">
-                         <q-btn flat color="primary" icon="add" label="Nuevo" @click="openAddProvider = true" v-close-popup />
-                       </q-card-actions>
-                     </q-card>
-                   </q-popup-proxy>
-                 </q-btn>
-               </div>
-               <div class="flex">
-                 <q-btn
-                   color="info"
-                   icon="qr_code_scanner"
-                   style="height: 100%"
-                   @click.stop="startScanner"
-                   v-if="$q.platform.is.nativeMobile"
-                 >
-                   <q-tooltip class="text-body2" anchor="bottom middle">
-                     Escanear código
-                   </q-tooltip>
-                 </q-btn>
-               </div>
+            <div v-else class="mobile-header-section" :class="{ 'mobile-header-hidden': productsFullscreen }">
+              <div v-if="$route.query.id">
+                <q-chip
+                  square
+                  color="primary"
+                  text-color="white"
+                  icon="receipt_long"
+                  dense
+                  class="invoice-chip"
+                >
+                  <span>{{ purchase?.purchase_number }}</span>
+                </q-chip>
+              </div>
+              <div>
+                <q-btn
+                  color="secondary"
+                  icon="store"
+                  :label="provider?.name || 'Proveedor'"
+                  label-position="left"
+                  style="height: 100% !important;"
+                >
+                  <q-popup-proxy @before-show="loadProvidersData()" v-model="providerMenuOpen">
+                    <q-card class="fab-popup-card">
+                      <q-card-section class="fab-popup-header">
+                        <div class="text-h6">Seleccionar Proveedor</div>
+                        <q-btn flat round dense icon="close" v-close-popup />
+                      </q-card-section>
+                      <q-separator />
+                      <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
+                        <q-inner-loading :showing="loadingProviders">
+                          <q-spinner-dots size="50px" color="primary" />
+                        </q-inner-loading>
+                        <q-input
+                          v-model="providerSearch"
+                          placeholder="Buscar proveedor..."
+                          dense
+                          outlined
+                          class="q-ma-sm"
+                        >
+                          <template v-slot:prepend>
+                            <q-icon name="search" />
+                          </template>
+                        </q-input>
+                        <q-list class="fab-popup-list">
+                          <q-item
+                            v-for="p in filteredProvidersForFab"
+                            :key="p.id"
+                            clickable
+                            v-ripple
+                            :active="provider?.id === p.id"
+                            @click="provider = p; providerSearch = ''"
+                            v-close-popup
+                          >
+                            <q-item-section>
+                              <q-item-label>{{ p.name }}</q-item-label>
+                              <q-item-label caption>{{ p.document_number }}</q-item-label>
+                            </q-item-section>
+                            <q-item-section side v-if="provider?.id === p.id">
+                              <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card-section>
+                      <q-separator />
+                      <q-card-actions align="right">
+                        <q-btn flat color="primary" icon="add" label="Nuevo" @click="openAddProvider = true" v-close-popup />
+                      </q-card-actions>
+                    </q-card>
+                  </q-popup-proxy>
+                </q-btn>
+              </div>
+              <div class="flex">
+                <q-btn
+                  color="info"
+                  icon="qr_code_scanner"
+                  style="height: 100%"
+                  @click.stop="startScanner"
+                  v-if="$q.platform.is.nativeMobile"
+                >
+                  <q-tooltip class="text-body2" anchor="bottom middle">
+                    Escanear código
+                  </q-tooltip>
+                </q-btn>
+              </div>
 
-               <!-- FAB para configuraciones adicionales -->
-               <q-fab
-                 color="primary"
-                 icon="tune"
-                 type="button"
-                 direction="down"
-                 padding="sm"
-                 vertical-actions-align="right"
-                 v-model="centerFabOpen"
-               >
-                 <!-- FAB Tipo de Factura -->
-                 <q-fab-action
-                   color="accent"
-                   icon="receipt"
-                   :label="invoiceType?.name || 'Tipo'"
-                   label-position="left"
-                 >
-                   <q-popup-proxy @before-show="loadInvoiceTypesData()">
-                     <q-card class="fab-popup-card">
-                       <q-card-section class="fab-popup-header">
-                         <div class="text-h6">Tipo de Factura</div>
-                         <q-btn flat round dense icon="close" v-close-popup />
-                       </q-card-section>
-                       <q-separator />
-                       <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
-                         <q-inner-loading :showing="loadingInvoiceTypes">
-                           <q-spinner-dots size="50px" color="primary" />
-                         </q-inner-loading>
-                         <q-list class="fab-popup-list">
-                           <q-item
-                             v-for="type in invoiceTypes"
-                             :key="type.id"
-                             clickable
-                             v-ripple
-                             :active="invoiceType?.id === type.id"
-                             @click="invoiceType = type"
-                             v-close-popup
-                           >
-                             <q-item-section>
-                               <q-item-label>{{ type.name }}</q-item-label>
-                             </q-item-section>
-                             <q-item-section side v-if="invoiceType?.id === type.id">
-                               <q-icon name="check_circle" color="primary" />
-                             </q-item-section>
-                           </q-item>
-                         </q-list>
-                       </q-card-section>
-                     </q-card>
-                   </q-popup-proxy>
-                 </q-fab-action>
+              <!-- FAB para configuraciones adicionales -->
+              <q-fab
+                color="primary"
+                icon="tune"
+                type="button"
+                direction="down"
+                padding="sm"
+                vertical-actions-align="right"
+                v-model="centerFabOpen"
+              >
+                <!-- FAB Tipo de Factura -->
+                <q-fab-action
+                  color="accent"
+                  icon="receipt"
+                  :label="invoiceType?.name || 'Tipo'"
+                  label-position="left"
+                >
+                  <q-popup-proxy @before-show="loadInvoiceTypesData()">
+                    <q-card class="fab-popup-card">
+                      <q-card-section class="fab-popup-header">
+                        <div class="text-h6">Tipo de Factura</div>
+                        <q-btn flat round dense icon="close" v-close-popup />
+                      </q-card-section>
+                      <q-separator />
+                      <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
+                        <q-inner-loading :showing="loadingInvoiceTypes">
+                          <q-spinner-dots size="50px" color="primary" />
+                        </q-inner-loading>
+                        <q-list class="fab-popup-list">
+                          <q-item
+                            v-for="type in invoiceTypes"
+                            :key="type.id"
+                            clickable
+                            v-ripple
+                            :active="invoiceType?.id === type.id"
+                            @click="invoiceType = type"
+                            v-close-popup
+                          >
+                            <q-item-section>
+                              <q-item-label>{{ type.name }}</q-item-label>
+                            </q-item-section>
+                            <q-item-section side v-if="invoiceType?.id === type.id">
+                              <q-icon name="check_circle" color="primary" />
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card-section>
+                    </q-card>
+                  </q-popup-proxy>
+                </q-fab-action>
 
-               </q-fab>
+              </q-fab>
 
-               <!-- FAB para opciones adicionales -->
-               <q-fab
-                 square
-                 type="button"
-                 color="orange"
-                 icon="more_vert"
-                 direction="down"
-                 padding="sm"
-                 vertical-actions-align="right"
-                 v-model="rightFabOpen"
-               >
-                 <q-fab-action
-                   color="teal"
-                   icon="search"
-                   label="Buscar"
-                   label-position="right"
-                   @click="searchInvoice = true"
-                 />
+              <!-- FAB para opciones adicionales -->
+              <q-fab
+                square
+                type="button"
+                color="orange"
+                icon="more_vert"
+                direction="down"
+                padding="sm"
+                vertical-actions-align="right"
+                v-model="rightFabOpen"
+              >
+                <q-fab-action
+                  color="teal"
+                  icon="search"
+                  label="Buscar"
+                  label-position="right"
+                  @click="searchInvoice = true"
+                />
 
-                 <q-fab-action
-                   color="negative"
-                   icon="delete"
-                   label="Borrar"
-                   label-position="right"
-                   @click="clear"
-                 />
-               </q-fab>
-             </div>
+                <q-fab-action
+                  color="negative"
+                  icon="delete"
+                  label="Borrar"
+                  label-position="right"
+                  @click="clear"
+                />
+              </q-fab>
+            </div>
 
             <div class="col-12 articles-section" :class="{ 'articles-section-hidden': productsFullscreen }">
-                <!-- Desktop View -->
-               <q-table
+              <!-- Desktop View -->
+              <q-table
                 v-if="$q.screen.gt.xs"
                 row-key="name"
                 title="Artí­culos"
@@ -530,127 +528,202 @@
                   </q-card-section>
                 </q-card>
               </div>
+
+              <!-- Impuestos y Descuentos -->
+              <div class="col-12" v-if="$q.screen.gt.sm">
+                <q-card style="border-radius: 10px;" class="shadow-1">
+                  <q-card-section class="q-pa-sm">
+                    <div class="text-subtitle2 text-weight-medium q-mb-sm">Impuestos y Descuentos</div>
+
+                    <!-- Botones para agregar -->
+                    <div class="row q-col-gutter-xs q-mb-sm">
+                      <div class="col-6">
+                        <q-btn
+                          icon="add"
+                          label="Impuesto"
+                          color="orange"
+                          dense
+                          unelevated
+                          class="full-width"
+                          @click="dialogAddTax = true"
+                        >
+                          <q-badge v-if="taxes.length > 0" color="red" floating>{{ taxes.length }}</q-badge>
+                        </q-btn>
+                      </div>
+                      <div class="col-6">
+                        <q-btn
+                          icon="add"
+                          label="Descuento"
+                          color="teal"
+                          dense
+                          unelevated
+                          class="full-width"
+                          @click="dialogAddDiscount = true"
+                        >
+                          <q-badge v-if="discounts.length > 0" color="red" floating>{{ discounts.length }}</q-badge>
+                        </q-btn>
+                      </div>
+                    </div>
+
+                    <!-- Resumen -->
+                    <q-list separator bordered style="border-radius: 10px;">
+                      <q-item dense>
+                        <q-item-section>Subtotal</q-item-section>
+                        <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalBill) }}</q-item-section>
+                      </q-item>
+
+                      <q-item dense v-if="taxes.length > 0" clickable @click="dialogViewTaxes = true">
+                        <q-item-section>
+                          <q-item-label>Impuestos (+)</q-item-label>
+                          <q-item-label caption>{{ taxes.length }} impuesto(s)</q-item-label>
+                        </q-item-section>
+                        <q-item-section side class="text-orange">
+                          {{ coin?.symbol }} {{ formatNumber(totalTaxes) }}
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-icon name="chevron_right" size="xs" />
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item dense v-if="discounts.length > 0" clickable @click="dialogViewDiscounts = true">
+                        <q-item-section>
+                          <q-item-label>Descuentos (-)</q-item-label>
+                          <q-item-label caption>{{ discounts.length }} descuento(s)</q-item-label>
+                        </q-item-section>
+                        <q-item-section side class="text-teal">
+                          {{ coin?.symbol }} {{ formatNumber(totalDiscounts) }}
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-icon name="chevron_right" size="xs" />
+                        </q-item-section>
+                      </q-item>
+
+                      <q-separator v-if="taxes.length > 0 || discounts.length > 0" />
+
+                      <q-item dense v-if="taxes.length > 0 || discounts.length > 0">
+                        <q-item-section><strong>Total</strong></q-item-section>
+                        <q-item-section side v-if="coin">
+                          <strong>{{ coin.symbol }} {{ formatNumber(totalBill + totalTaxes - totalDiscounts) }}</strong>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item dense>
+                        <q-item-section>Monto pagado</q-item-section>
+                        <q-item-section class="text-positive" side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalPayment) }}</q-item-section>
+                      </q-item>
+
+                      <q-item dense>
+                        <q-item-section>Por pagar</q-item-section>
+                        <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(pendingPayment) }}</q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-card-section>
+                </q-card>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- RIGHT PANEL (Product Catalog) -->
         <div ref="productsSection" class="products-section" :class="{ 'products-section-fullscreen': productsFullscreen }">
-             <div style="flex-shrink: 0; padding-bottom: 0.5rem;" v-if="$q.screen.gt.sm">
-                <div class="flex q-gutter-sm justify-start">
-                    <q-btn
-                        label="Guardar"
-                        icon="save"
-                        color="positive"
-                        dense
-                        :disable="products.length <= 0"
-                        @click="dialogPayment = true"
-                        style="border-radius: 10px; padding: 5px 15px"
-                    />
-                    <q-btn
-                        label="Buscar"
-                        icon="search"
-                        color="primary"
-                        dense
-                        @click="searchInvoice = true"
-                         style="border-radius: 10px; padding: 5px 15px"
-                    />
-                    <q-btn
-                        label="Borrar"
-                        icon="delete"
-                        color="negative"
-                        dense
-                        @click="clear"
-                         style="border-radius: 10px; padding: 5px 15px"
-                    />
-                </div>
-             </div>
+          <div style="flex-shrink: 0; padding-bottom: 0.5rem;" v-if="$q.screen.gt.sm">
+            <div class="flex q-gutter-sm justify-start">
+              <q-btn
+                label="Guardar"
+                icon="save"
+                color="positive"
+                dense
+                :disable="products.length <= 0"
+                @click="dialogPayment = true"
+                style="border-radius: 10px; padding: 5px 15px"
+              />
+              <q-btn
+                label="Buscar"
+                icon="search"
+                color="primary"
+                dense
+                @click="searchInvoice = true"
+                style="border-radius: 10px; padding: 5px 15px"
+              />
+              <q-btn
+                label="Borrar"
+                icon="delete"
+                color="negative"
+                dense
+                @click="clear"
+                style="border-radius: 10px; padding: 5px 15px"
+              />
+            </div>
+          </div>
 
-             <div class="row q-col-gutter-xs">
-                <div class="col-6">
-                  <q-select
-                    use-input
-                    filled
-                    dense
-                    clearable
-                    label="Categorí­as"
-                    input-debounce="0"
-                    option-label="name"
-                    option-value="id"
-                    v-model="category"
-                    :options="categories"
-                    @filter="filterCategories"
+          <div class="row q-col-gutter-xs">
+            <div class="col-6">
+              <q-select
+                use-input
+                filled
+                dense
+                clearable
+                label="Categorí­as"
+                input-debounce="0"
+                option-label="name"
+                option-value="id"
+                v-model="category"
+                :options="categories"
+                @filter="filterCategories"
+              />
+            </div>
+            <div class="col-6">
+              <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
+                <template v-slot:append>
+                    <q-btn
+                    v-if="$q.screen.lt.md"
+                    :icon="productsFullscreen ? 'fullscreen_exit' : 'fullscreen'"
+                    flat dense round size="sm"
+                    @click="productsFullscreen = !productsFullscreen"
                   />
-                </div>
-                <div class="col-6">
-                  <q-input type="search" filled dense debounce="1000" v-model="filter" placeholder="Buscar" clearable>
-                    <template v-slot:append>
-                       <q-btn
-                        v-if="$q.screen.lt.md"
-                        :icon="productsFullscreen ? 'fullscreen_exit' : 'fullscreen'"
-                        flat dense round size="sm"
-                        @click="productsFullscreen = !productsFullscreen"
-                      />
-                      <q-icon v-else name="search" />
-                    </template>
-                  </q-input>
-                </div>
-              </div>
+                  <q-icon v-else name="search" />
+                </template>
+              </q-input>
+            </div>
+          </div>
 
-             <div
-                class="product-container-scroll"
-                style="flex: 1; overflow-y: auto; padding: 0.5rem;"
-                :style="$q.screen.lt.md ? 'padding-bottom: 80px !important;' : ''"
-                @scroll="handleProductsScroll"
-             >
-                <div class="row q-col-gutter-xs">
-                    <div
-                        v-for="product in allProducts"
-                        :key="product.id"
-                        class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
-                        style="padding: 1px;"
-                    >
-                         <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
-                            <q-img
-                                style="height: 150px; width: 100%; border-radius: 10px;"
-                                :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
-                                @click="validateProduct(product, true)"
-                            >
-                                <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center product-name-overlay">
-                                  {{ product.name }}
-                                </div>
-                            </q-img>
-                         </q-card>
+          <div
+            class="product-container-scroll"
+            style="flex: 1; overflow-y: auto; padding: 0.5rem;"
+            :style="$q.screen.lt.md ? 'padding-bottom: 80px !important;' : ''"
+            @scroll="handleProductsScroll"
+          >
+            <div class="row q-col-gutter-xs">
+                <div
+                    v-for="product in allProducts"
+                    :key="product.id"
+                    class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2"
+                    style="padding: 1px;"
+                >
+                      <q-card class="my-card" style="border-radius: 10px; cursor: pointer;">
+                        <q-img
+                            style="height: 150px; width: 100%; border-radius: 10px;"
+                            :src="product.images[0] ? product.images[0].url : 'images/404-image.jpg'"
+                            @click="validateProduct(product, true)"
+                        >
+                            <div class="absolute-full text-subtitle2 flex flex-center text-bold text-center product-name-overlay">
+                              {{ product.name }}
+                            </div>
+                        </q-img>
+                      </q-card>
+                </div>
+                  <template v-if="loadingProducts">
+                    <div v-for="n in 10" :key="n" class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
+                        <q-card class="my-card" style="border-radius: 10px;"><q-skeleton height="150px" width="100%" /></q-card>
                     </div>
-                     <template v-if="loadingProducts">
-                        <div v-for="n in 10" :key="n" class="col-xs-4 col-sm-4 col-md-3 col-lg-2 col-xl-2" style="padding: 1px;">
-                            <q-card class="my-card" style="border-radius: 10px;"><q-skeleton height="150px" width="100%" /></q-card>
-                        </div>
-                     </template>
-                </div>
-             </div>
-
-             <div v-if="$q.screen.gt.sm" style="flex-shrink: 0; padding: 0.5rem; border-top: 1px solid #e0e0e0;">
-                <q-list separator bordered style="border-radius: 10px;">
-                    <q-item>
-                      <q-item-section>Op Gravada</q-item-section>
-                      <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalBill) }}</q-item-section>
-                    </q-item>
-                    <q-item>
-                      <q-item-section>Monto pagado</q-item-section>
-                      <q-item-section class="text-positive" side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalPayment) }}</q-item-section>
-                    </q-item>
-                     <q-item>
-                      <q-item-section>Por pagar</q-item-section>
-                      <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(pendingPayment) }}</q-item-section>
-                    </q-item>
-                </q-list>
-             </div>
+                  </template>
+            </div>
+          </div>
         </div>
       </div>
 
       <q-page-sticky v-if="$q.screen.lt.md" position="bottom" :offset="[0, 12]">
-         <q-btn
+        <q-btn
           class="cobrar-floating-btn"
           color="positive"
           :disable="products.length <= 0"
@@ -658,12 +731,12 @@
           no-caps
           unelevated
           style="width: 90vw; border-radius: 50px;"
-         >
-            <div class="row full-width justify-between items-center q-px-md">
-                 <span>Guardar</span>
-                 <span>{{ coin?.symbol }} {{ formatNumber(totalBill) }}</span>
-            </div>
-         </q-btn>
+        >
+          <div class="row full-width justify-between items-center q-px-md">
+                <span>Guardar</span>
+                <span>{{ coin?.symbol }} {{ formatNumber(totalBill) }}</span>
+          </div>
+        </q-btn>
       </q-page-sticky>
 
     </q-form>
@@ -1221,6 +1294,150 @@
       </q-card>
     </q-dialog>
 
+    <!-- Dialog para agregar impuestos -->
+    <q-dialog v-model="dialogAddTax">
+      <q-card style="width: 500px; max-width: 80vw;">
+        <q-card-section class="row items-center q-py-sm bg-primary text-white">
+          <div class="text-h6">Agregar Impuesto</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+        <q-form @submit="addTax">
+          <q-card-section>
+            <q-input
+              filled
+              v-model="taxForm.description"
+              label="Descripción"
+              :rules="[val => !!val || 'Requerido']"
+              class="q-mb-md"
+            />
+            <q-input
+              filled
+              v-model.number="taxForm.amount"
+              label="Monto"
+              type="number"
+              step="0.01"
+              :rules="[val => val > 0 || 'Debe ser mayor a 0']"
+            />
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn label="Cancelar" color="grey" flat v-close-popup />
+            <q-btn label="Agregar" color="primary" type="submit" unelevated />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog para agregar descuentos -->
+    <q-dialog v-model="dialogAddDiscount">
+      <q-card style="width: 500px; max-width: 80vw;">
+        <q-card-section class="row items-center q-py-sm bg-primary text-white">
+          <div class="text-h6">Agregar Descuento</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+        <q-form @submit="addDiscount">
+          <q-card-section>
+            <q-input
+              filled
+              v-model="discountForm.description"
+              label="Descripción"
+              :rules="[val => !!val || 'Requerido']"
+              class="q-mb-md"
+            />
+            <q-input
+              filled
+              v-model.number="discountForm.amount"
+              label="Monto"
+              type="number"
+              step="0.01"
+              :rules="[val => val > 0 || 'Debe ser mayor a 0']"
+            />
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn label="Cancelar" color="grey" flat v-close-popup />
+            <q-btn label="Agregar" color="primary" type="submit" unelevated />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog para ver/gestionar impuestos -->
+    <q-dialog v-model="dialogViewTaxes">
+      <q-card style="width: 600px; max-width: 80vw;">
+        <q-card-section class="row items-center q-py-sm bg-primary text-white">
+          <div class="text-h6">Impuestos</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+        <q-card-section>
+          <q-list bordered separator>
+            <q-item v-for="(tax, index) in taxes" :key="index">
+              <q-item-section>
+                <q-item-label>{{ tax.description }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                {{ formatNumber(tax.amount) }}
+              </q-item-section>
+              <q-item-section side>
+                <q-btn
+                  icon="delete"
+                  flat
+                  round
+                  dense
+                  color="negative"
+                  @click="removeTax(index)"
+                />
+              </q-item-section>
+            </q-item>
+            <q-item v-if="taxes.length === 0">
+              <q-item-section class="text-grey-6 text-center">
+                No hay impuestos agregados
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog para ver/gestionar descuentos -->
+    <q-dialog v-model="dialogViewDiscounts">
+      <q-card style="width: 600px; max-width: 80vw;">
+        <q-card-section class="row items-center q-py-sm bg-primary text-white">
+          <div class="text-h6">Descuentos</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+        <q-card-section>
+          <q-list bordered separator>
+            <q-item v-for="(discount, index) in discounts" :key="index">
+              <q-item-section>
+                <q-item-label>{{ discount.description }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                {{ formatNumber(discount.amount) }}
+              </q-item-section>
+              <q-item-section side>
+                <q-btn
+                  icon="delete"
+                  flat
+                  round
+                  dense
+                  color="negative"
+                  @click="removeDiscount(index)"
+                />
+              </q-item-section>
+            </q-item>
+            <q-item v-if="discounts.length === 0">
+              <q-item-section class="text-grey-6 text-center">
+                No hay descuentos agregados
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <wait-by-payment-mp
       v-if="waitingPayment"
       v-model="waitingPayment"
@@ -1513,6 +1730,52 @@ export default {
       aliquotTypes: [],
       categoryAdd: null,
       /**
+       * Taxes list for the purchase
+       * @type {Array}
+       */
+      taxes: [],
+      /**
+       * Discounts list for the purchase
+       * @type {Array}
+       */
+      discounts: [],
+      /**
+       * Dialog for adding taxes
+       * @type {Boolean}
+       */
+      dialogAddTax: false,
+      /**
+       * Dialog for adding discounts
+       * @type {Boolean}
+       */
+      dialogAddDiscount: false,
+      /**
+       * Dialog for viewing taxes list
+       * @type {Boolean}
+       */
+      dialogViewTaxes: false,
+      /**
+       * Dialog for viewing discounts list
+       * @type {Boolean}
+       */
+      dialogViewDiscounts: false,
+      /**
+       * Tax form data
+       * @type {Object}
+       */
+      taxForm: {
+        description: 'Iva del',
+        amount: 0
+      },
+      /**
+       * Discount form data
+       * @type {Object}
+       */
+      discountForm: {
+        description: 'Descuento del',
+        amount: 0
+      },
+      /**
        * Products list
        * @type {Array}
        */
@@ -1633,7 +1896,8 @@ export default {
      * @returns {Number}
      */
     pendingPayment () {
-      return this.totalBill - this.totalPayment
+      const grandTotal = this.totalBill + this.totalTaxes - this.totalDiscounts
+      return grandTotal - this.totalPayment
     },
     /**
      * Total payment
@@ -1645,6 +1909,20 @@ export default {
         totalPayment = totalPayment + payment.amount
       })
       return totalPayment
+    },
+    /**
+     * Total taxes amount
+     * @returns {Number}
+     */
+    totalTaxes () {
+      return this.taxes.reduce((sum, tax) => sum + (parseFloat(tax.amount) || 0), 0)
+    },
+    /**
+     * Total discounts amount
+     * @returns {Number}
+     */
+    totalDiscounts () {
+      return this.discounts.reduce((sum, discount) => sum + (parseFloat(discount.amount) || 0), 0)
     },
     /**
      * Filter available UOMs based on current product category
@@ -1791,6 +2069,62 @@ export default {
     roundToFourDecimals (number) {
       const factor = Math.pow(10, 3)
       return Math.floor(number * factor) / factor
+    },
+    /**
+     * Add tax to the list
+     */
+    addTax () {
+      this.taxes.push({
+        description: this.taxForm.description,
+        amount: parseFloat(this.taxForm.amount)
+      })
+      this.taxForm = { description: '', amount: 0 }
+      this.dialogAddTax = false
+      notify('Impuesto agregado', 'positive', 'check_circle')
+    },
+    /**
+     * Remove tax from the list
+     * @param {Number} index
+     */
+    removeTax (index) {
+      this.taxes.splice(index, 1)
+      notify('Impuesto eliminado', 'positive', 'check_circle')
+    },
+    /**
+     * Add discount to the list
+     */
+    addDiscount () {
+      this.discounts.push({
+        description: this.discountForm.description,
+        amount: parseFloat(this.discountForm.amount)
+      })
+      this.discountForm = { description: '', amount: 0 }
+      this.dialogAddDiscount = false
+      notify('Descuento agregado', 'positive', 'check_circle')
+    },
+    /**
+     * Remove discount from the list
+     * @param {Number} index
+     */
+    removeDiscount (index) {
+      this.discounts.splice(index, 1)
+      notify('Descuento eliminado', 'positive', 'check_circle')
+    },
+    /**
+     * Set model invoice for payment
+     * @returns {Object}
+     */
+    setModelInvoice () {
+      return {
+        provider: this.provider,
+        products: this.products,
+        payments: this.payments,
+        taxes: this.taxes,
+        discounts: this.discounts,
+        purchase_code: this.purchaseCode,
+        delivery_date: this.deliveryDate,
+        description: this.invoiceDescription
+      }
     },
     /**
      * Set data pagination emit event
@@ -2656,7 +2990,7 @@ export default {
       if (baseCost === 0 && this.currentAmount > 0 && quantityToAdd > 0) {
         baseCost = this.roundToFourDecimals(this.currentAmount / (quantityToAdd * conversionFactor))
       }
- 
+
       if (findProduct) {
         findProduct.unit_of_measure_id = selectedUomId
         findProduct.uom_acronym = selectedUomObj ? selectedUomObj.acronym : (this.selectedUom?.acronym || findProduct.uom_acronym)
