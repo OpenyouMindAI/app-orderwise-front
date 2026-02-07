@@ -672,6 +672,7 @@
     />
 
     <subscription-expiration-banner
+      v-if="isDemo || (subscriptionPlan && subscriptionPlan?.toLowerCase() === 'free')"
       :is-demo="isDemo"
       @open-subscription-dialog="showSubscriptionDialog = true"
       @banner-dismissed="handleBannerDismissed"

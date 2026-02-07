@@ -243,7 +243,7 @@ export const authentication = defineStore('authentication', {
      * @param {Object} subscriptionData - Subscription information
      */
     setSubscriptionData (subscriptionData) {
-      this.subscriptionPlan = subscriptionData.plan?.name || 'Free'
+      this.subscriptionPlan = subscriptionData.plan?.slug || 'free'
       this.subscriptionDaysLeft = subscriptionData.days_until_expiration || null
       this.currentSubscription = subscriptionData.subscription || null
       this.maxBranches = subscriptionData.subscription?.branch_offices_count || 1
