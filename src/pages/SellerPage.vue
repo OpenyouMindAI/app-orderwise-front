@@ -159,6 +159,8 @@
                   filled
                   v-model="seller.username"
                   label="Usuario"
+                  autocomplete="off"
+                  name="edit-seller-username"
                   dense
                   hide-bottom-space
                 />
@@ -169,6 +171,8 @@
                   v-model="seller.password"
                   type="password"
                   label="Contraseña"
+                  autocomplete="new-password"
+                  name="edit-seller-password"
                   dense
                   hide-bottom-space
                 />
@@ -251,6 +255,8 @@
                   filled
                   v-model="seller.username"
                   label="Usuario"
+                  autocomplete="off"
+                  name="new-seller-username"
                   dense
                   hide-bottom-space
                 />
@@ -262,6 +268,8 @@
                   v-model="seller.password"
                   type="password"
                   label="Contraseña"
+                  autocomplete="new-password"
+                  name="new-seller-password"
                   dense
                   hide-bottom-space
                 />

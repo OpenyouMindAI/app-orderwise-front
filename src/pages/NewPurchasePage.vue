@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page class="q-pa-none">
     <q-form ref="saveBill" @submit.prevent="saveBill">
       <div class="billing-panel-container q-pa-sm">
@@ -65,25 +65,7 @@
                 />
               </div>
 
-              <div class="billing-select-item">
-                <q-select
-                  filled
-                  dense
-                  v-model="typeOfService"
-                  use-input
-                  hide-selected
-                  fill-input
-                  input-debounce="0"
-                  :hide-dropdown-icon="$q.platform.is.nativeMobile"
-                  option-label="name"
-                  option-value="id"
-                  :options="typeOfServices"
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  @filter="filterTypeOfServices"
-                  hide-bottom-space
-                  label="Tipo de servicio"
-                />
-              </div>
+              <!-- Tipo de servicio eliminado para agilidad -->
 
                <div class="billing-select-item">
                 <q-input
@@ -249,46 +231,6 @@
                    </q-popup-proxy>
                  </q-fab-action>
 
-                 <!-- FAB Tipo de Servicio -->
-                 <q-fab-action
-                   color="positive"
-                   icon="category"
-                   :label="typeOfService?.name || 'Servicio'"
-                   label-position="left"
-                 >
-                   <q-popup-proxy @before-show="loadTypeOfServicesData()">
-                     <q-card class="fab-popup-card">
-                       <q-card-section class="fab-popup-header">
-                         <div class="text-h6">Tipo de Servicio</div>
-                         <q-btn flat round dense icon="close" v-close-popup />
-                       </q-card-section>
-                       <q-separator />
-                       <q-card-section class="q-pa-none" style="position: relative; min-height: 200px;">
-                         <q-inner-loading :showing="loadingTypeOfServices">
-                           <q-spinner-dots size="50px" color="primary" />
-                         </q-inner-loading>
-                         <q-list class="fab-popup-list">
-                           <q-item
-                             v-for="service in typeOfServices"
-                             :key="service.id"
-                             clickable
-                             v-ripple
-                             :active="typeOfService?.id === service.id"
-                             @click="typeOfService = service"
-                             v-close-popup
-                           >
-                             <q-item-section>
-                               <q-item-label>{{ service.name }}</q-item-label>
-                             </q-item-section>
-                             <q-item-section side v-if="typeOfService?.id === service.id">
-                               <q-icon name="check_circle" color="primary" />
-                             </q-item-section>
-                           </q-item>
-                         </q-list>
-                       </q-card-section>
-                     </q-card>
-                   </q-popup-proxy>
-                 </q-fab-action>
                </q-fab>
 
                <!-- FAB para opciones adicionales -->
@@ -325,7 +267,7 @@
                <q-table
                 v-if="$q.screen.gt.xs"
                 row-key="name"
-                title="Artículos"
+                title="Artí­culos"
                 dense
                 hide-pagination
                 :rows="products"
@@ -356,6 +298,26 @@
                           v-model.number="scope.value"
                           autofocus
                           @keyup.enter="scope.set"
+                        />
+                      </q-popup-edit>
+                    </q-td>
+                    <q-td key="taxe" :props="props">
+                      {{ formatNumber(props.row.taxe) }}
+                      <q-popup-edit
+                        v-if="invoiceType?.acronym_serie === 'B'"
+                        v-model.number="props.row.taxe"
+                        auto-save
+                        v-slot="scope"
+                        @save="calculate(props.row)"
+                      >
+                        <q-input
+                          type="number"
+                          @focus="e => e.target.select()"
+                          v-model.number="scope.value"
+                          dense
+                          autofocus
+                          @keyup.enter="scope.set"
+                          label="Impuesto"
                         />
                       </q-popup-edit>
                     </q-td>
@@ -437,6 +399,25 @@
                                           />
                                         </q-popup-edit>
                                       </span>
+                                      <div v-if="invoiceType?.acronym_serie === 'B'" class="cart-item-price-label text-orange-9 text-weight-bold">
+                                        Impuesto: {{ coin?.symbol }} {{ formatNumber(product.taxe) }}
+                                        <q-popup-edit
+                                          v-model.number="product.taxe"
+                                          auto-save
+                                          v-slot="scope"
+                                          @save="calculate(product)"
+                                        >
+                                          <q-input
+                                            label="Impuesto"
+                                            type="number"
+                                            @focus="e => e.target.select()"
+                                            v-model.number="scope.value"
+                                            dense
+                                            autofocus
+                                            @keyup.enter="scope.set"
+                                          />
+                                        </q-popup-edit>
+                                      </div>
                                     </div>
                                 </div>
 
@@ -519,7 +500,7 @@
                         unelevated
                         @click="openFileDialog"
                       >
-                        <q-tooltip>Agregar más archivos</q-tooltip>
+                        <q-tooltip>Agregar mí¡s archivos</q-tooltip>
                       </q-btn>
                     </div>
 
@@ -535,7 +516,7 @@
                     >
                       <div class="upload-content">
                         <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
-                        <div class="upload-text">Arrastra archivos aquí</div>
+                        <div class="upload-text">Arrastra archivos aquí­</div>
                         <q-btn color="primary" label="SELECCIONAR" unelevated size="xs" class="q-mt-xs upload-btn" @click.stop="openFileDialog"/>
                       </div>
                     </div>
@@ -592,7 +573,7 @@
                     filled
                     dense
                     clearable
-                    label="Categorías"
+                    label="Categorí­as"
                     input-debounce="0"
                     option-label="name"
                     option-value="id"
@@ -698,12 +679,12 @@
           <q-card-section>
             <div class="row q-col-gutter-sm">
               <div class="row col-md-7 col-xs-12 col-sm-12">
-                <!-- Datos básicos -->
+                <!-- Datos bí¡sicos -->
                 <div class="col-12">
                   <q-card flat bordered class="q-pa-md q-mb-md">
                     <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
                       <q-icon name="info" class="q-mr-sm" />
-                      Datos básicos
+                      Datos bí¡sicos
                     </div>
                     <div class="row q-col-gutter-sm">
                       <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
@@ -733,7 +714,7 @@
                         <q-select
                           use-input
                           filled
-                          label="Categoría"
+                          label="Categorí­a"
                           input-debounce="0"
                           option-label="name"
                           option-value="id"
@@ -831,7 +812,7 @@
                         <q-input
                           filled
                           v-model="product.minimum_stock"
-                          label="Stock mínimo"
+                          label="Stock mí­nimo"
                           type="number"
                           step=".01"
                           dense
@@ -856,12 +837,12 @@
                 </div>
               </div>
 
-              <!-- Sección de imágenes -->
+              <!-- Sección de imí¡genes -->
               <div class="col-md-5 col-xs-12 col-sm-12">
                 <q-card flat bordered class="q-pa-md">
                   <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
                     <q-icon name="image" class="q-mr-sm" />
-                    Imágenes
+                    Imí¡genes
                   </div>
                   <q-card
                     flat
@@ -906,7 +887,7 @@
                       <div v-else>
                         <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
                         <div class="text-h6 text-grey-7 q-mb-sm">
-                          Arrastra las imágenes aquí
+                          Arrastra las imí¡genes aquí­
                         </div>
                         <div class="text-body2 text-grey-5 q-mb-md">
                           o haz clic para seleccionar archivos
@@ -914,7 +895,7 @@
                       </div>
                       <q-btn
                         color="primary"
-                        label="Seleccionar Imágenes"
+                        label="Seleccionar Imí¡genes"
                         @click="openFileDialog"
                         unelevated
                       />
@@ -946,7 +927,7 @@
                       <div class="col-6">
                         <q-toggle
                           v-model="product.show_catalog"
-                          label="Mostrar en catálogo"
+                          label="Mostrar en catí¡logo"
                           :true-value="1"
                           :false-value="0"
                           color="positive"
@@ -988,7 +969,7 @@
               <q-markup-table>
                 <thead>
                   <tr>
-                    <th class="text-left">Método de pago</th>
+                    <th class="text-left">Mí©todo de pago</th>
                     <th class="text-left">Referencia</th>
                     <th class="text-right">Monto</th>
                     <th class="text-center">Acciones</th>
@@ -1094,7 +1075,7 @@
                 autocomplete="search"
                 v-model="search"
                 color="primary"
-                label="Número de factura"
+                label="Níºmero de factura"
                 filled
                 clearable
                 type="search"
@@ -1145,7 +1126,7 @@
               <q-input
                 filled
                 v-model="providerAdded.document_number"
-                label="Número de documento"
+                label="Níºmero de documento"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -1160,7 +1141,7 @@
               <q-input
                 filled
                 v-model="providerAdded.phone_number"
-                label="Número de teléfono"
+                label="Níºmero de telí©fono"
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -1197,7 +1178,6 @@
                 dense
                 style="min-width: 80px"
               >
-                <q-tooltip>Cambiar unidad de compra</q-tooltip>
               </q-select>
             </div>
           </q-card-section>
@@ -1221,8 +1201,13 @@
             />
           </q-card-section>
           <q-card-section class="q-pt-xs">
-            <div class="text-subtitle1 text-center text-weight-bold">
-              Precio por unidad = {{ formatNumber(productQuantity.cost) }}
+            <div class="text-subtitle1 text-center text-weight-bold row items-center justify-center q-gutter-x-xs">
+               <span>Costo por {{ selectedUom?.acronym || 'unidad' }} = {{ formatNumber((productQuantity.cost || 0) * ((selectedUom?.ratio || 1) / (productQuantity.unit_of_measure?.ratio || 1))) }}</span>
+               <q-icon name="help_outline" size="xs" color="grey-6">
+                 <q-tooltip anchor="top middle" self="bottom middle">
+                   Basado en el costo base de {{ formatNumber(productQuantity.cost) }} por {{ productQuantity.unit_of_measure?.acronym }}
+                 </q-tooltip>
+               </q-icon>
             </div>
           </q-card-section>
           <q-card-actions align="right">
@@ -1607,7 +1592,7 @@ export default {
         {
           name: 'category',
           align: 'right',
-          label: 'Categoría',
+          label: 'Categorí­a',
           field: row => row.category?.name,
           sortable: true
         },
@@ -1634,6 +1619,7 @@ export default {
           sortable: true
         },
         { name: 'cost', align: 'right', label: 'Costo', field: 'cost', sortable: true },
+        { name: 'taxe', align: 'right', label: 'Impuesto', field: 'taxe', sortable: true },
         { name: 'quantity', align: 'right', label: 'Cantidad', field: 'quantity', sortable: true },
         { name: 'uom', align: 'left', label: 'Unidad', field: 'uom_acronym', sortable: true },
         { name: 'subtotal', align: 'right', label: 'Importe', field: 'subtotal', sortable: true },
@@ -1768,11 +1754,11 @@ export default {
   created () {
     this.getLocalStorage()
     this.getPaymentMethods()
-    // Verificar si hay un ID en la query al cargar la página
-    // Si hay un ID pero la página se está refrescando (no hay estado previo),
+    // Verificar si hay un ID en la query al cargar la pí¡gina
+    // Si hay un ID pero la pí¡gina se estí¡ refrescando (no hay estado previo),
     // limpiar la URL para resetear el estado
     if (this.$route?.query?.id) {
-      // Remover el parámetro 'id' de la URL para restablecer el estado
+      // Remover el parí¡metro 'id' de la URL para restablecer el estado
       this.$router.replace({ name: 'NewPurchase' })
     }
   },
@@ -1782,13 +1768,19 @@ export default {
      * @param {String} inputName input name
      */
     updateValues (inputName) {
-      const ratio = this.selectedUom?.ratio || 1
-      const unitCost = this.productQuantity.cost * ratio
+      let ratio = parseFloat(this.selectedUom?.ratio) || 1
+      if (isNaN(ratio)) ratio = 1
+      const unitCost = (this.productQuantity?.cost || 0) * ratio
 
       if (inputName === 'quantity') {
-        this.currentAmount = this.roundToFourDecimals(this.quantity * unitCost)
+        if (unitCost > 0) {
+          this.currentAmount = this.roundToFourDecimals(this.quantity * unitCost)
+        }
       } else if (inputName === 'currentAmount') {
-        this.quantity = this.roundToFourDecimals(this.currentAmount / unitCost)
+        if (unitCost > 0) {
+          this.quantity = this.roundToFourDecimals(this.currentAmount / unitCost)
+        }
+        // Si el costo es 0, no actualizamos la cantidad para permitir que el usuario la defina junto al importe
       }
     },
     /**
@@ -1881,7 +1873,7 @@ export default {
           const plu = parseInt(pluRaw, 10).toString()
 
           if (!/^\d+$/.test(variablePart)) {
-            notify('Formato inválido en importe/peso', 'negative', 'warning')
+            notify('Formato inví¡lido en importe/peso', 'negative', 'warning')
             this.getOneProduct(barcode)
             return
           }
@@ -1896,7 +1888,7 @@ export default {
           const importe = parseInt(variablePart, 10) / 1000
 
           if (isNaN(importe) || importe <= 0) {
-            notify('Importe inválido', 'negative', 'warning')
+            notify('Importe inví¡lido', 'negative', 'warning')
             this.getOneProduct(barcode)
             return
           }
@@ -2472,7 +2464,7 @@ export default {
     createPurchaseFormData (purchaseData) {
       const formData = new FormData()
 
-      // Agregar método PUT/PATCH si es edición
+      // Agregar mí©todo PUT/PATCH si es edición
       if (this.$route.query.id) {
         formData.append('_method', 'put')
       }
@@ -2606,26 +2598,20 @@ export default {
       })
       this.totalBill = total
     },
-    /**
-     * Calculate the total and subtotal
-     * @param {Object} data props products
-     */
     calculate (data) {
       const quantity = isNaN(data.quantity) ? 0 : data.quantity
       const cost = isNaN(data.cost) ? 0 : data.cost
+      const taxe = isNaN(data.taxe) ? 0 : data.taxe
       const factor = data.conversion_factor || 1
-      data.subtotal = parseFloat((cost * quantity * factor).toFixed(4))
+      data.subtotal = parseFloat(((cost * quantity * factor) + taxe).toFixed(4))
       this.calculateTotal()
     },
-    /**
-     * Push product
-     * @param {Object} product product
-     */
     pushProduct (product) {
       this.products.push({
         id: product.id,
         name: product.name,
         quantity: product.quantity || 1,
+        taxe: product.taxe || 0,
         subtotal: product.subtotal || parseFloat(((product.quantity || 1) * (product.cost || 0) * (product.conversion_factor || 1)).toFixed(2)),
         product_id: product.id,
         cost: product.cost,
@@ -2635,15 +2621,14 @@ export default {
         conversion_factor: product.conversion_factor || 1
       })
     },
-    /**
-     * Validate products
-     * @param {*} data product selected
-     */
     validateProduct (data, validUnitMeasurement = false) {
       const findProduct = this.products.find(product => product.id === data.id)
       const hasUom = !!data?.unit_of_measure
-      const baseCost = data?.cost || 0
-      if (validUnitMeasurement && hasUom) {
+      let baseCost = data?.cost || 0
+      const uomAcronym = data?.unit_of_measure?.acronym?.toUpperCase()
+
+      // Si es unidad (U), no abrimos el dií¡logo de cantidad/importe
+      if (validUnitMeasurement && hasUom && uomAcronym !== 'U') {
         this.quantityDialog = true
         this.currentAmount = baseCost
         this.productQuantity = data
@@ -2655,16 +2640,23 @@ export default {
       // Factor = Selected UOM Ratio / Base Product UOM Ratio
       const productUomId = data.unit_of_measure_id
       const productUom = this.unitOfMeasures.find(u => u.id === productUomId)
-      const baseRatio = productUom ? parseFloat(productUom.ratio) : 1
+      let baseRatio = productUom && productUom.ratio ? parseFloat(productUom.ratio) : 1
+      if (isNaN(baseRatio) || baseRatio === 0) baseRatio = 1
 
       const selectedUomId = this.selectedUom?.id || data.unit_of_measure_id
       const selectedUomObj = this.unitOfMeasures.find(u => u.id === selectedUomId)
-      const selectedRatio = selectedUomObj ? parseFloat(selectedUomObj.ratio) : (this.selectedUom?.ratio ? parseFloat(this.selectedUom.ratio) : 1)
+      let selectedRatio = selectedUomObj && selectedUomObj.ratio ? parseFloat(selectedUomObj.ratio) : (this.selectedUom?.ratio ? parseFloat(this.selectedUom.ratio) : 1)
+      if (isNaN(selectedRatio) || selectedRatio === 0) selectedRatio = 1
 
       const conversionFactor = selectedRatio / baseRatio
 
       const quantityToAdd = this.quantity
 
+      // Lógica para productos sin costo: calcular costo a partir del importe ingresado
+      if (baseCost === 0 && this.currentAmount > 0 && quantityToAdd > 0) {
+        baseCost = this.roundToFourDecimals(this.currentAmount / (quantityToAdd * conversionFactor))
+      }
+ 
       if (findProduct) {
         findProduct.unit_of_measure_id = selectedUomId
         findProduct.uom_acronym = selectedUomObj ? selectedUomObj.acronym : (this.selectedUom?.acronym || findProduct.uom_acronym)
@@ -2692,7 +2684,7 @@ export default {
       this.quantityDialog = false
       this.selectedUom = null
 
-      // Preguntar si desea escanear otro producto si está en modo escaneo
+      // Preguntar si desea escanear otro producto si estí¡ en modo escaneo
       if (this.scanningMode) {
         this.$q.dialog({
           title: 'Escaneo exitoso',
@@ -2703,7 +2695,7 @@ export default {
             flat: true
           },
           ok: {
-            label: 'Sí, escanear',
+            label: 'Sí­, escanear',
             color: 'primary'
           },
           persistent: true
@@ -3009,7 +3001,7 @@ export default {
 
 <style lang="scss" scoped>
 /* ===== Billing Selects Optimization ===== */
-/* Desktop - mantiene el diseño actual */
+/* Desktop - mantiene el diseí±o actual */
 .billing-selects-desktop {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -3399,7 +3391,7 @@ export default {
 }
 
 /* ===== Billing Selects Optimization ===== */
-/* Desktop - mantiene el diseño actual */
+/* Desktop - mantiene el diseí±o actual */
 .billing-selects-desktop {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -3666,7 +3658,7 @@ export default {
   background: transparent;
 }
 
-/* Thumb translúcido */
+/* Thumb translíºcido */
 .product-container-scroll::-webkit-scrollbar-thumb {
   border-radius: 4px;
 }

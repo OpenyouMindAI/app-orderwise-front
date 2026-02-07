@@ -349,7 +349,7 @@
                           <q-icon name="extension" size="32px" color="primary" />
                         </div>
                         <premium-badge
-                          :show="subscriptionPlan === 'Free'"
+                          :show="subscriptionPlan.toLocaleLowerCase() === 'free'"
                           :size="15"
                           top="0px"
                           right="4px"
@@ -672,7 +672,7 @@
     />
 
     <subscription-expiration-banner
-      :is-demo="isDemo || (subscriptionPlan && subscriptionPlan?.toLocaleLowerCase() === 'free')"
+      :is-demo="isDemo"
       @open-subscription-dialog="showSubscriptionDialog = true"
       @banner-dismissed="handleBannerDismissed"
     />
@@ -1847,7 +1847,7 @@ export default {
         // Actualizar el store con datos verificados del backend
         if (data.subscription) {
           this.store.currentSubscription = data.subscription
-          this.store.subscriptionPlan = data.subscription.plan?.name
+          this.store.subscriptionPlan = data.subscription.plan?.slug
           this.store.subscriptionDaysLeft = data.days_left
           this.store.maxBranches = data.subscription.plan?.max_branches || 1
 

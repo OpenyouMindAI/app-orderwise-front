@@ -60,8 +60,8 @@ export default defineComponent({
     let timerInterval = null
 
     const isVisible = computed(() => {
-      const currentPlan = store.subscriptionPlan || 'Free'
-      return currentPlan === 'Free' || store.isDemo
+      const currentPlan = store.subscriptionPlan || 'free'
+      return currentPlan.toLocaleLowerCase() === 'free' || store.isDemo
     })
 
     const startTimer = () => {

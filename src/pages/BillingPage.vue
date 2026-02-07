@@ -99,11 +99,11 @@
                   @update:model-value="validateInvoiceType"
                 >
                   <template v-slot:option="scope">
-                    <q-item v-bind="scope.itemProps" :disable="false" :class="{ 'bg-grey-3': (subscriptionPlan || 'Free') === 'Free' && scope.opt.acronym_serie === 'B' }">
+                    <q-item v-bind="scope.itemProps" :disable="false" :class="{ 'bg-grey-3': isFreePlan && scope.opt.acronym_serie === 'B' }">
                       <q-item-section>
                         <q-item-label>{{ scope.opt.name }}</q-item-label>
                       </q-item-section>
-                      <q-item-section side v-if="(subscriptionPlan || 'Free') === 'Free' && scope.opt.acronym_serie === 'B'">
+                      <q-item-section side v-if="isFreePlan && scope.opt.acronym_serie === 'B'">
                         <premium-badge
                           :show="true"
                           :size="15"
@@ -296,7 +296,7 @@
                             clickable
                             v-ripple
                             :active="invoiceType?.id === type.id"
-                            :class="{ 'bg-grey-3': (subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B' }"
+                            :class="{ 'bg-grey-3': isFreePlan && type.acronym_serie === 'B' }"
                             @click="selectInvoiceType(type)"
                           >
                             <q-item-section>
@@ -305,7 +305,7 @@
                             <q-item-section side v-if="invoiceType?.id === type.id">
                               <q-icon name="check_circle" color="primary" />
                             </q-item-section>
-                            <q-item-section side v-if="(subscriptionPlan || 'Free') === 'Free' && type.acronym_serie === 'B'">
+                            <q-item-section side v-if="isFreePlan && type.acronym_serie === 'B'">
                               <premium-badge
                                 :show="true"
                                 :size="15"
@@ -1538,13 +1538,13 @@
             <!-- Fila 1: Tipo de documento y Número -->
             <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12" style="position: relative;">
               <div
-                v-if="(subscriptionPlan || 'Free') === 'Free'"
+                v-if="isFreePlan"
                 class="absolute-full"
                 style="z-index: 10; cursor: pointer;"
                 @click.stop="handleRestrictedClick"
               ></div>
               <premium-badge
-                :show="(subscriptionPlan || 'Free') === 'Free'"
+                :show="isFreePlan"
                 :size="15"
                 top="0px"
                 right="4px"
@@ -1561,7 +1561,7 @@
                 v-model="clientAdded.document_type"
                 :options="documentTypes"
                 @filter="getDocumentTypes"
-                :disable="(subscriptionPlan || 'Free') === 'Free'"
+                :disable="isFreePlan"
               />
             </div>
             <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
@@ -1592,13 +1592,13 @@
             <!-- Condición de IVA -->
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12" style="position: relative;">
               <div
-                v-if="(subscriptionPlan || 'Free') === 'Free'"
+                v-if="isFreePlan"
                 class="absolute-full"
                 style="z-index: 10; cursor: pointer;"
                 @click.stop="handleRestrictedClick"
               ></div>
               <premium-badge
-                :show="(subscriptionPlan || 'Free') === 'Free'"
+                :show="isFreePlan"
                 :size="15"
                 top="0px"
                 right="4px"
@@ -1615,7 +1615,7 @@
                 v-model="clientAdded.condition_iva_receptor"
                 :options="conditionIvaReceptors"
                 @filter="getConditionIvaReceptor"
-                :disable="(subscriptionPlan || 'Free') === 'Free'"
+                :disable="isFreePlan"
               />
             </div>
 
@@ -2350,8 +2350,10 @@ export default {
   },
   computed: {
     ...mapState(authentication, ['userSession', 'branchOffice', 'subscriptionPlan', 'isDemo']),
-    ...mapState(authentication, ['userSession', 'branchOffice']),
     ...mapState(useCommandStore, ['setInvoice']),
+    isFreePlan () {
+      return (this.subscriptionPlan?.toLowerCase() || 'free') === 'free'
+    },
     tourSteps () {
       const isMobile = this.$q.screen.lt.md
 
@@ -3002,7 +3004,7 @@ export default {
      */
     async selectInvoiceType (type) {
       // Validar si es una opción premium y el plan es Free
-      if ((this.subscriptionPlan || 'Free') === 'Free' && type?.acronym_serie === 'B') {
+      if (this.isFreePlan && type?.acronym_serie === 'B') {
         this.handleRestrictedClick()
         // Revertir a tipo T si existe
         this.$nextTick(() => {
@@ -5426,7 +5428,7 @@ export default {
      * @param {Object} val Selected invoice type
      */
     validateInvoiceType (val) {
-      if ((this.subscriptionPlan || 'Free') === 'Free' && val?.acronym_serie === 'B') {
+      if (this.isFreePlan && val?.acronym_serie === 'B') {
         this.handleRestrictedClick()
         this.$nextTick(() => {
           const typeT = this.invoiceTypes.find(t => t.acronym_serie === 'T')
