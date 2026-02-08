@@ -1339,7 +1339,7 @@ async function addClientToPredefinedRoute () {
   }
 
   // Automatic partner association if a partner is selected
-  if (selectedPartner.value && (!newStop.client.partner_id || newStop.client.partner_id !== selectedPartner.value.id)) {
+  if (selectedPartner.value && (newStop.client && (!newStop.client.partner_id || newStop.client.partner_id !== selectedPartner.value.id))) {
     try {
       await api.put(`/clients/${newStop.client.id}`, {
         ...newStop.client,
@@ -1585,7 +1585,7 @@ async function createRoute () {
   // Check partner associations before saving
   if (selectedPartner.value) {
     const unassociatedClients = stops.value.filter(stop =>
-      !stop.client.partner_id || stop.client.partner_id !== selectedPartner.value.id
+      !stop.client || !stop.client.partner_id || stop.client.partner_id !== selectedPartner.value.id
     )
 
     if (unassociatedClients.length > 0) {
@@ -1661,7 +1661,7 @@ async function saveRoute () {
   // Check partner associations before saving
   if (selectedPartner.value) {
     const unassociatedClients = stops.value.filter(stop =>
-      !stop.client.partner_id || stop.client.partner_id !== selectedPartner.value.id
+      !stop.client || !stop.client.partner_id || stop.client.partner_id !== selectedPartner.value.id
     )
 
     console.log('Unassociated clients:', unassociatedClients)
@@ -1780,7 +1780,9 @@ async function associateClientsWithPartner (stopsToUpdate) {
 
     // Update local state to reflect changes
     stopsToUpdate.forEach(stop => {
-      stop.client.partner_id = selectedPartner.value.id
+      if (stop.client) {
+        stop.client.partner_id = selectedPartner.value.id
+      }
     })
 
     $q.notify({

@@ -468,6 +468,12 @@ const routes = [
     ]
   },
   {
+    path: '/subscribe',
+    name: 'QuickSubscribe',
+    meta: { requiresAuth: false },
+    component: () => import('pages/QuickSubscribePage.vue')
+  },
+  {
     path: '/subscription/success',
     name: 'SubscriptionSuccess',
     meta: { requiresAuth: true },
