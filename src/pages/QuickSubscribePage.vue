@@ -134,6 +134,13 @@
         </q-card>
       </q-dialog>
     </div>
+    <!-- Subscription Plans Dialog -->
+    <subscription-plans-dialog
+      v-model="showSubscriptionDialog"
+      must-select-plan
+      :show-contact-option="false"
+      enable-countdown
+    />
   </div>
 </template>
 
@@ -142,13 +149,18 @@ import { mapActions } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { api } from 'boot/axios'
 import { notify, qBitsLogo } from 'src/const/mixins'
+import SubscriptionPlansDialog from 'components/SubscriptionPlansDialog.vue'
 
 export default {
   name: 'QuickSubscribePage',
+  components: {
+    SubscriptionPlansDialog
+  },
   data () {
     return {
       qBitsLogo,
       showLoginDialog: false,
+      showSubscriptionDialog: false,
       showPassword: false,
       loading: false,
       processingPayment: false,
@@ -170,7 +182,7 @@ export default {
   async mounted () {
     this.loadGoogleScript()
     if (this.isAuthenticated) {
-      await this.processSubscription()
+      this.showSubscriptionDialog = true
     } else {
       this.showLoginDialog = true
     }
@@ -235,7 +247,7 @@ export default {
         if (result.data.access_token) {
           this.setSessionData(result.data)
           this.showLoginDialog = false
-          await this.processSubscription()
+          this.showSubscriptionDialog = true
         }
       } catch (error) {
         notify('Error al autenticar con Google', 'negative', 'warning')
@@ -252,7 +264,7 @@ export default {
           if (result.data.access_token) {
             this.setSessionData(result.data)
             this.showLoginDialog = false
-            await this.processSubscription()
+            this.showSubscriptionDialog = true
           }
         } catch (e) {
           notify('Error Google Login', 'negative', 'warning')
@@ -267,7 +279,7 @@ export default {
       try {
         await this.login({ username: this.loginForm.email, password: this.loginForm.password })
         this.showLoginDialog = false
-        await this.processSubscription()
+        this.showSubscriptionDialog = true
       } catch (error) {
         notify(error.response?.data?.message || 'Error login', 'negative', 'error')
       } finally {
@@ -277,31 +289,10 @@ export default {
 
     async retrySubscription () {
       this.errorMessage = ''
-      await this.processSubscription()
-    },
-
-    async processSubscription () {
-      this.processingPayment = true
-      try {
-        const { data: plans } = await api.get('subscription-plans')
-        const firstPlan = plans.find(p => p.slug?.toLowerCase() !== 'free')
-        if (!firstPlan) throw new Error('No hay planes disponibles')
-
-        const response = await api.post('mercadopago/create-payment', {
-          subscription_plan_id: firstPlan.id,
-          branch_offices_count: 1,
-          months: 1
-        })
-
-        if (!response.data.init_point) throw new Error('Error al crear link de pago')
-
-        localStorage.setItem('mp_plan_id', firstPlan.id)
-        window.location.href = response.data.init_point
-      } catch (error) {
-        this.errorMessage = error.response?.data?.message || error.message
-        this.processingPayment = false
-      }
+      this.showSubscriptionDialog = true
     }
+
+    // processSubscription removed as it is no longer used directly
   }
 }
 </script>

@@ -2,92 +2,68 @@
   <div class="success-page-fullscreen">
     <!-- Animated Background -->
     <div class="animated-bg">
-      <div class="gradient-orb orb-1"></div>
-      <div class="gradient-orb orb-2"></div>
-      <div class="gradient-orb orb-3"></div>
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
     </div>
 
-    <!-- Content Container -->
-    <div class="content-container">
-      <!-- Loading State -->
-      <transition name="fade">
-        <div v-if="loading" class="state-content">
-          <div class="loading-spinner">
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
+    <div class="content-wrapper">
+      <transition name="scale-fade" mode="out-in">
+        <div v-if="loading" class="card loading-card" key="loading">
+          <div class="spinner-container">
+            <svg class="spinner" viewBox="0 0 50 50">
+              <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+            </svg>
           </div>
-          <h2 class="state-title fade-in-up">Verificando tu pago</h2>
-          <p class="state-subtitle fade-in-up delay-1">Esto solo tomará un momento...</p>
+          <h2 class="card-title">Verificando pago</h2>
+          <p class="card-text">Un momento por favor...</p>
         </div>
-      </transition>
 
-      <!-- Success State -->
-      <transition name="fade">
-        <div v-if="!loading && paymentVerified" class="state-content">
-          <!-- Success Icon with Animation -->
-          <div class="success-icon-container">
-            <div class="success-checkmark">
-              <div class="check-icon">
-                <span class="icon-line line-tip"></span>
-                <span class="icon-line line-long"></span>
-                <div class="icon-circle"></div>
-                <div class="icon-fix"></div>
-              </div>
+        <!-- Success State -->
+        <div v-else-if="paymentVerified" class="card success-card" key="success">
+          <div class="icon-container success-icon">
+            <svg viewBox="0 0 24 24" class="check-svg">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
+          </div>
+
+          <h1 class="card-title text-gradient">¡Todo listo!</h1>
+          <p class="card-text">Tu suscripción ha sido activada correctamente.</p>
+
+          <div class="divider"></div>
+
+          <!-- Payment Details (Compact) -->
+          <div class="details-grid" v-if="paymentDetails">
+            <div class="detail-item">
+              <span class="label">Plan</span>
+              <span class="value">{{ paymentDetails.plan_name }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Monto</span>
+              <span class="value">${{ paymentDetails.amount }}</span>
             </div>
           </div>
 
-          <h1 class="success-title fade-in-up">¡Pago Exitoso!</h1>
-          <p class="success-subtitle fade-in-up delay-1">
-            Tu suscripción ha sido activada correctamente
-          </p>
-
-          <!-- Payment Details Card -->
-          <div v-if="paymentDetails" class="details-card fade-in-up delay-2">
-            <div class="detail-row">
-              <span class="detail-label">Plan</span>
-              <span class="detail-value">{{ paymentDetails.plan_name }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Monto</span>
-              <span class="detail-value">${{ paymentDetails.amount }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">ID de Pago</span>
-              <span class="detail-value detail-id">{{ paymentDetails.payment_id }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Fecha</span>
-              <span class="detail-value">{{ paymentDetails.date }}</span>
-            </div>
-          </div>
-
-          <!-- Action Button -->
-          <button @click="goHome" class="action-button fade-in-up delay-3">
+          <button @click="goHome" class="btn-primary">
             <span>Ir al Dashboard</span>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
           </button>
         </div>
-      </transition>
 
-      <!-- Error State -->
-      <transition name="fade">
-        <div v-if="!loading && !paymentVerified" class="state-content">
-          <div class="error-icon-container">
-            <div class="error-icon">⚠️</div>
+        <!-- Error State -->
+        <div v-else class="card error-card" key="error">
+          <div class="icon-container error-icon">
+            <svg viewBox="0 0 24 24" class="cross-svg">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+            </svg>
           </div>
-
-          <h2 class="error-title fade-in-up">No se pudo verificar el pago</h2>
-          <p class="error-subtitle fade-in-up delay-1">
-            Por favor, contacta con soporte si el problema persiste
-          </p>
-
-          <button @click="goHome" class="action-button secondary fade-in-up delay-2">
-            <span>Volver al inicio</span>
-          </button>
+          <h2 class="card-title">Algo salió mal</h2>
+          <p class="card-text">no pudimos verificar tu pago autom&aacute;ticamente.</p>
+          <button @click="goHome" class="btn-secondary">Volver al inicio</button>
         </div>
+
       </transition>
     </div>
   </div>
@@ -99,6 +75,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { notify } from 'src/const/mixins'
 import { api } from 'boot/axios'
 import { usePixel } from 'src/composables/usePixel'
+import confetti from 'canvas-confetti'
 
 export default {
   name: 'SubscriptionSuccessPage',
@@ -110,6 +87,42 @@ export default {
     const loading = ref(true)
     const paymentVerified = ref(false)
     const paymentDetails = ref(null)
+
+    const launchConfetti = () => {
+      const count = 200
+      const defaults = {
+        origin: { y: 0.7 }
+      }
+
+      function fire (particleRatio, opts) {
+        confetti(Object.assign({}, defaults, opts, {
+          particleCount: Math.floor(count * particleRatio)
+        }))
+      }
+
+      fire(0.25, {
+        spread: 26,
+        startVelocity: 55
+      })
+      fire(0.2, {
+        spread: 60
+      })
+      fire(0.35, {
+        spread: 100,
+        decay: 0.91,
+        scalar: 0.8
+      })
+      fire(0.1, {
+        spread: 120,
+        startVelocity: 25,
+        decay: 0.92,
+        scalar: 1.2
+      })
+      fire(0.1, {
+        spread: 120,
+        startVelocity: 45
+      })
+    }
 
     /**
      * Verificar el estado del pago con Mercado Pago
@@ -127,6 +140,7 @@ export default {
           // Asumir éxito si no hay payment_id pero hay preference_id
           if (preferenceId) {
             paymentVerified.value = true
+            launchConfetti()
             // Esperar un momento para que el webhook procese el pago
             await new Promise(resolve => setTimeout(resolve, 2000))
             // Recargar suscripción
@@ -137,7 +151,7 @@ export default {
         }
 
         // Verificar estado del pago en el backend
-        const response = await api.post('mercadopago/check-payment-status', {
+        const response = await api.post('mercadopago/check-payment', {
           payment_id: paymentId
         })
 
@@ -145,6 +159,25 @@ export default {
 
         if (response.data.status === 'approved') {
           paymentVerified.value = true
+
+          // Obtener datos del pago para crear la suscripción
+          const metadata = response.data.metadata || {}
+          let planId = metadata.plan_id || localStorage.getItem('mp_plan_id')
+          let branchCount = metadata.branch_count || 1
+          let months = metadata.months || 1
+
+          // Fallback: Decodificar external_reference
+          if (!planId && response.data.external_reference) {
+            try {
+              const ext = JSON.parse(atob(response.data.external_reference))
+              if (ext.plan_id) planId = ext.plan_id
+              if (ext.branch_count) branchCount = ext.branch_count
+              if (ext.months) months = ext.months
+            } catch (e) {
+              console.error('[Success Page] Error decoding external_reference', e)
+            }
+          }
+
           paymentDetails.value = {
             plan_name: localStorage.getItem('mp_plan_name') || 'Plan Pro',
             amount: response.data.transaction_amount,
@@ -152,16 +185,37 @@ export default {
             date: new Date(response.data.date_approved).toLocaleDateString('es-AR')
           }
 
-          // Pixel Event: Purchase
+          if (!planId) {
+            console.error('[Success Page] Error: No se pudo obtener el plan_id')
+          } else {
+            // Intentar crear/asignar la suscripción
+            try {
+              await api.post('subscriptions', {
+                subscription_plan_id: planId,
+                branch_offices_count: branchCount,
+                months,
+                payment_id: paymentId,
+                payment_method: 'mercadopago'
+              })
+              launchConfetti()
+            } catch (subError) {
+              if (subError.response && subError.response.status === 400) {
+                // Ignorar si ya existe
+              } else {
+                console.error('[Success Page] Error creando suscripción:', subError)
+              }
+            }
+          }
+
+          // Pixel Event
           if (fbq?.event) {
-            const purchaseData = {
+            fbq.event('Purchase', {
               value: response.data.transaction_amount,
-              currency: response.data.currency_id || 'ARS',
+              currency: 'ARS',
               content_name: paymentDetails.value.plan_name,
               content_type: 'product',
               transaction_id: paymentId
-            }
-            fbq.event('Purchase', purchaseData)
+            })
           }
 
           // Limpiar localStorage
@@ -169,41 +223,33 @@ export default {
           localStorage.removeItem('mp_plan_id')
           localStorage.removeItem('mp_plan_name')
 
-          // Esperar un momento para que el webhook procese el pago
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          // Esperar un momento
+          await new Promise(resolve => setTimeout(resolve, 1500))
 
           // Recargar suscripción actual
           await reloadSubscription()
         } else {
-          console.warn('[Success Page] Pago no aprobado:', response.data.status)
           paymentVerified.value = false
         }
       } catch (error) {
         console.error('[Success Page] Error verificando pago:', error)
-        // En caso de error, asumir éxito si llegamos desde MP
+        // Fallback optimista
         paymentVerified.value = true
-        // Intentar recargar suscripción de todos modos
+        launchConfetti()
         try {
           await new Promise(resolve => setTimeout(resolve, 2000))
           await reloadSubscription()
         } catch (e) {
-          console.error('[Success Page] Error recargando suscripción:', e)
+          console.error(e)
         }
       } finally {
         loading.value = false
       }
     }
 
-    /**
-     * Recargar la suscripción actual del usuario
-     */
     const reloadSubscription = async () => {
       try {
-        console.log('[Success Page] Recargando suscripción...')
         const response = await api.get('subscriptions/current')
-        console.log('[Success Page] Suscripción actualizada:', response.data)
-
-        // Emitir evento para que otros componentes se actualicen
         window.dispatchEvent(new CustomEvent('subscription-updated', {
           detail: response.data
         }))
@@ -214,7 +260,7 @@ export default {
 
     const goHome = () => {
       if (paymentVerified.value) {
-        notify('¡Suscripción activada exitosamente!', 'positive', 'check_circle')
+        notify('¡Suscripción activada!', 'positive', 'check_circle')
       }
       router.push('/')
     }
@@ -234,7 +280,7 @@ export default {
 </script>
 
 <style scoped>
-/* Fullscreen Container */
+/* Main Container */
 .success-page-fullscreen {
   position: fixed;
   top: 0;
@@ -242,494 +288,241 @@ export default {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f8fafc;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/* Animated Background */
+/* Background Blobs */
 .animated-bg {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  z-index: 0;
   overflow: hidden;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
 }
 
-.gradient-orb {
+.blob {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
   opacity: 0.6;
-  animation: float 20s ease-in-out infinite;
 }
 
-.orb-1 {
-  width: 500px;
-  height: 500px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  top: -250px;
-  left: -250px;
-  animation-delay: 0s;
-}
-
-.orb-2 {
+.blob-1 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  bottom: -200px;
-  right: -200px;
-  animation-delay: 7s;
+  background: #c7d2fe; /* indigo-200 */
+  top: -100px;
+  right: -100px;
+  animation: float 10s ease-in-out infinite;
 }
 
-.orb-3 {
-  width: 350px;
-  height: 350px;
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: 14s;
+.blob-2 {
+  width: 300px;
+  height: 300px;
+  background: #bae6fd; /* sky-200 */
+  bottom: -50px;
+  left: -50px;
+  animation: float 12s ease-in-out infinite reverse;
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -30px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, 30px); }
 }
 
-/* Content Container */
-.content-container {
+/* Content Wrapper */
+.content-wrapper {
   position: relative;
   z-index: 10;
   display: flex;
-  align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  padding: 40px 20px;
+  align-items: center;
+  width: 100%;
+  padding: 20px;
 }
 
-.state-content {
+/* Card Styles */
+.card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
   text-align: center;
-  max-width: 600px;
-  width: 100%;
-}
-
-/* Loading Spinner */
-.loading-spinner {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 40px;
-}
-
-.spinner-ring {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 4px solid transparent;
-  border-top-color: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-}
-
-.spinner-ring:nth-child(2) {
-  width: 80%;
-  height: 80%;
-  top: 10%;
-  left: 10%;
-  border-top-color: rgba(255, 255, 255, 0.6);
-  animation-delay: 0.2s;
-}
-
-.spinner-ring:nth-child(3) {
-  width: 60%;
-  height: 60%;
-  top: 20%;
-  left: 20%;
-  border-top-color: rgba(255, 255, 255, 0.4);
-  animation-delay: 0.4s;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Success Checkmark Animation */
-.success-icon-container {
-  margin: 0 auto 40px;
-}
-
-.success-checkmark {
-  width: 120px;
-  height: 120px;
-  margin: 0 auto;
-}
-
-.check-icon {
-  width: 120px;
-  height: 120px;
-  position: relative;
-  border-radius: 50%;
-  box-sizing: content-box;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-}
-
-.icon-line {
-  height: 5px;
-  background-color: white;
-  display: block;
-  border-radius: 2px;
-  position: absolute;
-  z-index: 10;
-}
-
-.line-tip {
-  top: 56px;
-  left: 25px;
-  width: 25px;
-  transform: rotate(45deg);
-  animation: icon-line-tip 0.75s;
-}
-
-.line-long {
-  top: 48px;
-  right: 18px;
-  width: 47px;
-  transform: rotate(-45deg);
-  animation: icon-line-long 0.75s;
-}
-
-.icon-circle {
-  top: -4px;
-  left: -4px;
-  z-index: 10;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  position: absolute;
-  box-sizing: content-box;
-  border: 4px solid rgba(255, 255, 255, 0.5);
-  animation: icon-circle 1s ease-in-out;
-}
-
-.icon-fix {
-  top: 12px;
-  width: 10px;
-  left: 32px;
-  z-index: 1;
-  height: 95px;
-  position: absolute;
-  transform: rotate(-45deg);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-@keyframes icon-line-tip {
-  0% {
-    width: 0;
-    left: 1px;
-    top: 19px;
-  }
-  54% {
-    width: 0;
-    left: 1px;
-    top: 19px;
-  }
-  70% {
-    width: 50px;
-    left: -8px;
-    top: 37px;
-  }
-  84% {
-    width: 17px;
-    left: 21px;
-    top: 48px;
-  }
-  100% {
-    width: 25px;
-    left: 25px;
-    top: 56px;
-  }
-}
-
-@keyframes icon-line-long {
-  0% {
-    width: 0;
-    right: 46px;
-    top: 54px;
-  }
-  65% {
-    width: 0;
-    right: 46px;
-    top: 54px;
-  }
-  84% {
-    width: 55px;
-    right: 0;
-    top: 35px;
-  }
-  100% {
-    width: 47px;
-    right: 18px;
-    top: 48px;
-  }
-}
-
-@keyframes icon-circle {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* Typography */
-.state-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: white;
-  margin: 0 0 16px;
-  letter-spacing: -0.5px;
-}
-
-.state-subtitle {
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0 0 40px;
-  font-weight: 400;
-}
-
-.success-title {
-  font-size: 48px;
-  font-weight: 800;
-  color: white;
-  margin: 0 0 16px;
-  letter-spacing: -1px;
-}
-
-.success-subtitle {
-  font-size: 20px;
-  color: rgba(255, 255, 255, 0.95);
-  margin: 0 0 40px;
-  font-weight: 400;
-  line-height: 1.5;
-}
-
-.error-title {
-  font-size: 36px;
-  font-weight: 700;
-  color: white;
-  margin: 0 0 16px;
-  letter-spacing: -0.5px;
-}
-
-.error-subtitle {
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0 0 40px;
-  font-weight: 400;
-  line-height: 1.6;
-}
-
-/* Details Card */
-.details-card {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  padding: 32px;
-  margin: 0 auto 40px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.detail-row {
+  box-shadow:
+    0 10px 40px -10px rgba(0,0,0,0.08),
+    0 0 0 1px rgba(255,255,255,0.8) inset;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-label {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 500;
-}
-
-.detail-value {
-  font-size: 16px;
-  color: white;
-  font-weight: 600;
-}
-
-.detail-id {
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-/* Action Button */
-.action-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 40px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #667eea;
-  background: white;
-  border: none;
-  border-radius: 50px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  letter-spacing: 0.3px;
-}
-
-.action-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-}
-
-.action-button:active {
-  transform: translateY(0);
-}
-
-.action-button.secondary {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  backdrop-filter: blur(10px);
-}
-
-.action-button svg {
   transition: transform 0.3s ease;
 }
 
-.action-button:hover svg {
-  transform: translateX(4px);
+.card:hover {
+  transform: translateY(-5px);
 }
 
-/* Error Icon */
-.error-icon-container {
-  margin: 0 auto 40px;
+/* Typography */
+.card-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e293b; /* slate-800 */
+  margin: 16px 0 8px;
+  letter-spacing: -0.5px;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card-text {
+  font-size: 16px;
+  color: #64748b; /* slate-500 */
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+/* Divider */
+.divider {
+  width: 100%;
+  height: 1px;
+  background: #e2e8f0; /* slate-200 */
+  margin: 8px 0 24px;
+}
+
+/* Icons */
+.icon-container {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.success-icon {
+  background: #dcfce7; /* green-100 */
+  color: #16a34a; /* green-600 */
 }
 
 .error-icon {
-  font-size: 100px;
-  animation: shake 0.5s ease-in-out;
+  background: #fee2e2; /* red-100 */
+  color: #dc2626; /* red-600 */
 }
 
-@keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-10px);
-  }
-  75% {
-    transform: translateX(10px);
-  }
+.check-svg, .cross-svg {
+  width: 40px;
+  height: 40px;
+  fill: currentColor;
 }
 
-/* Fade Transitions */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.5s ease;
+/* Spinner */
+.spinner {
+  animation: rotate 2s linear infinite;
+  width: 50px;
+  height: 50px;
+}
+.spinner .path {
+  stroke: #4f46e5;
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
 }
 
-.fade-enter-from,
-.fade-leave-to {
+@keyframes rotate {
+  100% { transform: rotate(360deg); }
+}
+@keyframes dash {
+  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+/* Details Grid */
+.details-grid {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+}
+
+.detail-item .label {
+  color: #64748b;
+}
+
+.detail-item .value {
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
+
+.btn-primary:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  color: #334155;
+}
+
+/* Transitions */
+.scale-fade-enter-active,
+.scale-fade-leave-active {
+  transition: all 0.4s ease;
+}
+.scale-fade-enter-from,
+.scale-fade-leave-to {
   opacity: 0;
-}
-
-/* Fade In Up Animation */
-.fade-in-up {
-  animation: fadeInUp 0.6s ease-out forwards;
-  opacity: 0;
-}
-
-.delay-1 {
-  animation-delay: 0.2s;
-}
-
-.delay-2 {
-  animation-delay: 0.4s;
-}
-
-.delay-3 {
-  animation-delay: 0.6s;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .success-title {
-    font-size: 36px;
-  }
-
-  .success-subtitle,
-  .state-subtitle {
-    font-size: 16px;
-  }
-
-  .details-card {
-    padding: 24px;
-  }
-
-  .action-button {
-    padding: 16px 32px;
-    font-size: 15px;
-  }
-
-  .gradient-orb {
-    filter: blur(60px);
-  }
-
-  .orb-1 {
-    width: 300px;
-    height: 300px;
-  }
-
-  .orb-2 {
-    width: 250px;
-    height: 250px;
-  }
-
-  .orb-3 {
-    width: 200px;
-    height: 200px;
-  }
+  transform: scale(0.95);
 }
 </style>
