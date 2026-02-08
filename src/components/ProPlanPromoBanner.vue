@@ -33,10 +33,14 @@
             dense
             no-caps
             class="action-btn"
-            @click="handleUpgrade"
+            @click.stop="handleUpgrade"
           >
-            <span class="btn-text">Ver Planes Premium</span>
-            <q-icon name="arrow_forward" size="14px" class="q-ml-xs" />
+            <span class="btn-text-desktop">Ver Planes Premium</span>
+            <span class="btn-text-mobile">
+              <q-icon name="workspace_premium" size="16px" />
+              <span>Pro</span>
+            </span>
+            <q-icon name="arrow_forward" size="14px" class="btn-arrow q-ml-xs" />
           </q-btn>
         </div>
       </div>
@@ -280,8 +284,14 @@ export default defineComponent({
   }
 }
 
-.btn-text {
+.btn-text-desktop {
   display: inline;
+}
+
+.btn-text-mobile {
+  display: none;
+  align-items: center;
+  gap: 4px;
 }
 
 .close-btn {
@@ -308,10 +318,6 @@ export default defineComponent({
 }
 
 @media (max-width: 1023px) {
-  .action-btn {
-    display: none;
-  }
-
   .pro-promo-banner {
     cursor: pointer;
     padding: 14px 20px;
@@ -319,6 +325,24 @@ export default defineComponent({
 
   .text-content-wrapper {
     justify-content: flex-start;
+  }
+
+  .action-btn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    border-radius: 20px;
+  }
+
+  .btn-text-desktop {
+    display: none;
+  }
+
+  .btn-text-mobile {
+    display: flex;
+  }
+
+  .btn-arrow {
+    display: none;
   }
 }
 

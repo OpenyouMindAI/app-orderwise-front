@@ -1147,6 +1147,13 @@ export default {
       this.showSubscriptionDialog = true
     }
 
+    // Check for plans query parameter to show subscription dialog
+    if (this.$route.query.plans === 'true') {
+      this.showSubscriptionDialog = true
+      // Clean the URL by removing the query parameter
+      this.$router.replace({ query: { ...this.$route.query, plans: undefined } })
+    }
+
     // Listener global de clicks con silenciador inteligente
     document.addEventListener('click', this.handleGlobalClick)
   },
