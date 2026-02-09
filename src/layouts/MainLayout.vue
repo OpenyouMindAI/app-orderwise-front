@@ -681,6 +681,7 @@
     <subscription-plans-dialog
       v-if="showSubscriptionDialog"
       v-model="showSubscriptionDialog"
+      :show-contact-option="false"
       @subscription-updated="onSubscriptionUpdated"
       @open-register="showCreateCompanyDialog = true"
     />
