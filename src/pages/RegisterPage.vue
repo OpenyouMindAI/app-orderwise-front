@@ -393,8 +393,10 @@ const getBusinessIcon = (name) => {
  * Maneja el submit del formulario de registro
  */
 const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
+  console.log('📝 handleRegisterSubmit llamado', { formData, phoneNumber })
   await registerUser({
     onSuccess: async (data) => {
+      console.log('✅ onSuccess callback ejecutado', data)
       // Guardar token en localStorage INMEDIATAMENTE
       localStorage.setItem('access_token', data.access_token)
       api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`
@@ -442,7 +444,8 @@ const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
       companyForm.value.company_phone = phoneNumber || ''
 
       // Si el email ya está verificado (viene de Google u otro proveedor), saltar OTP
-      if (data.user?.email_verified_at) {
+      // IMPORTANTE: Solo saltar OTP si es registro con Google Y tiene email verificado
+      if (isGoogleRegister.value && data.user?.email_verified_at) {
         showCompanyOptions.value = true
         return
       }
@@ -458,6 +461,14 @@ const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
       startResendTimer()
 
       notify('Código de verificación enviado a tu correo', 'positive', 'chat')
+    },
+    onError: (error) => {
+      console.error('❌ Error en registro:', error)
+      console.error('Error message:', error.message)
+
+      // Mostrar notificación de error al usuario
+      const errorMessage = error.message || 'Error al registrar usuario'
+      notify(errorMessage, 'negative', 'warning')
     }
   })
 }
@@ -799,6 +810,11 @@ const restoreOtpSession = async (otpDataJson) => {
  * @async
  */
 onMounted(async () => {
+  // Inicializar Google Auth para plataformas móviles
+  if ($q.platform.is.nativeMobile && window.Capacitor) {
+    await initializeGoogleAuthMobile()
+  }
+
   // Primero intentar restaurar la sesión de registro completa
   const sessionRestored = restoreRegisterSession()
 
@@ -922,15 +938,6 @@ const handleGoogleRegister = async () => {
     }
   })
 }
-
-/**
- * On mounted - Inicializar Google Auth
- */
-onMounted(async () => {
-  if ($q.platform.is.nativeMobile && window.Capacitor) {
-    await initializeGoogleAuthMobile()
-  }
-})
 
 </script>
 
