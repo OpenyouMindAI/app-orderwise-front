@@ -53,7 +53,7 @@
                   Anual
                   <span class="discount-badge">
                     <q-icon name="local_fire_department" size="10px" />
-                    -50%
+                    -40%
                   </span>
                 </button>
               </div>
@@ -64,7 +64,7 @@
           <div class="plans-grid">
             <!-- Skeleton Loading -->
             <template v-if="loadingPlans">
-              <div v-for="n in 3" :key="'skeleton-' + n" class="plan-card plan-skeleton">
+              <div v-for="n in 1" :key="'skeleton-' + n" class="plan-card plan-skeleton">
                 <div class="plan-inner">
                   <q-skeleton height="24px" width="60%" class="q-mb-md" animation="wave" />
                   <q-skeleton height="16px" width="80%" class="q-mb-lg" animation="wave" />
@@ -108,7 +108,7 @@
                     <div class="plan-name">{{ plan.name }}</div>
                     <div v-if="isAnnual && hasAnnualPrice(plan)" class="discount-pill-small">
                       <q-icon name="savings" size="12px" />
-                      50% OFF
+                      40% OFF
                     </div>
                   </div>
                   <div class="plan-description">{{ plan.description }}</div>
@@ -279,6 +279,66 @@
                 </div>
               </div>
             </div>
+            <!-- Contact Advisor Card -->
+            <div class="plan-card contact-advisor-card">
+              <div class="plan-inner advisor-inner">
+                <!-- Advisor Header -->
+                <div class="advisor-header">
+                  <div class="advisor-badge">
+                    <q-icon name="support_agent" size="14px" />
+                    Asesoría Personalizada
+                  </div>
+                  <div class="advisor-title">Hablar con un asesor</div>
+                  <div class="advisor-description">
+                    Soluciones a medida para empresas con grandes volúmenes o requerimientos especiales de integración.
+                  </div>
+                </div>
+
+                <!-- Price Placeholder -->
+                <div class="plan-price advisor-price">
+                  <div class="price-wrapper">
+                    <span class="price-amount" style="font-size: 32px;">A medida</span>
+                    <span class="price-period">Cotización personalizada</span>
+                  </div>
+                </div>
+
+                <!-- Select Button -->
+                <q-btn
+                  unelevated
+                  no-caps
+                  label="Hablar con un asesor"
+                  class="action-btn-new advisor-btn"
+                  @click="contactAdvisor"
+                >
+                  <q-icon name="arrow_forward" size="18px" class="q-ml-sm" />
+                </q-btn>
+
+                <!-- Features Divider -->
+                <div class="features-divider">
+                  <span>Lo que obtienes</span>
+                </div>
+
+                <!-- Advisor Features -->
+                <div class="plan-features advisor-features">
+                  <div class="feature-item">
+                    <div class="feature-check"><q-icon name="check" size="12px" /></div>
+                    <span>Soporte prioritario 24/7</span>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-check"><q-icon name="check" size="12px" /></div>
+                    <span>SLA de disponibilidad garantizado</span>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-check"><q-icon name="check" size="12px" /></div>
+                    <span>Capacitación in-company</span>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-check"><q-icon name="check" size="12px" /></div>
+                    <span>Desarrollos personalizados</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Footer Note -->
@@ -330,7 +390,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
@@ -424,7 +484,7 @@ export default {
       set: (val) => emit('update:modelValue', val)
     })
 
-    const isMobile = computed(() => $q.screen.lt.sm)
+    const isMobile = computed(() => $q.screen.lt.md)
 
     const daysLeft = computed(() => {
       if (!currentSubscription.value) return 0
@@ -503,7 +563,7 @@ export default {
     const getLocalPricePerBranch = (plan) => {
       const pricing = getPlanPricing(plan)
       let price = plan.price_per_branch || 0
-      
+
       if (pricing && pricing.price_per_branch_local) {
         price = pricing.price_per_branch_local
       }
@@ -515,7 +575,7 @@ export default {
         const basePrice = plan.price
         const annualMonthlyBase = plan.price_year / 12
         const discountRatio = basePrice > 0 ? annualMonthlyBase / basePrice : 0.5
-        
+
         price = price * discountRatio
       }
 
@@ -604,9 +664,9 @@ export default {
     const getAnnualSavings = (plan) => {
       if (!hasAnnualPrice(plan)) return 0
       const pricing = getPlanPricing(plan)
-      
+
       let monthlyTotal, annualTotal
-      
+
       if (pricing && pricing.total_price_local && pricing.total_price_year_local) {
         monthlyTotal = pricing.total_price_local * 12
         annualTotal = pricing.total_price_year_local
@@ -614,7 +674,7 @@ export default {
         monthlyTotal = plan.price * 12
         annualTotal = plan.price_year
       }
-      
+
       return formatNumber(monthlyTotal - annualTotal)
     }
 
@@ -649,12 +709,13 @@ export default {
       const pricingData = await fetchAllPricing(branchCount.value)
 
       if (pricingData && pricingData.pricing) {
-        pricingByPlan.value = pricingData.pricing
+        // Asignar el nuevo objeto para asegurar reactividad
+        pricingByPlan.value = { ...pricingData.pricing }
 
         if (pricingByPlan.value[plan.id]) {
           const pricing = pricingByPlan.value[plan.id]
           let price
-          
+
           if (isAnnual.value && pricing.total_price_year_local) {
             price = pricing.total_price_year_local / 12
           } else if (pricing.total_price_local) {
@@ -662,7 +723,7 @@ export default {
           } else {
             price = isAnnual.value ? (plan.price_year / 12) : plan.price
           }
-          
+
           proTeamTotalPrice.value = formatNumber(price)
         }
       }
@@ -805,6 +866,22 @@ export default {
       }
     }
 
+    /**
+     * Handle contact advisor click
+     * @return {void}
+     */
+    const contactAdvisor = () => {
+      if (store.isDemo) {
+        localStorage.setItem('pending_contact_advisor', 'true')
+        notify('Completa tu registro para hablar con un asesor', 'info', 'person_add')
+        emit('update:modelValue', false)
+        emit('open-register')
+        return
+      }
+      router.push({ name: 'Support' })
+      showDialog.value = false
+    }
+
     const cancelSubscription = async () => {
       loading.value = true
       try {
@@ -826,6 +903,13 @@ export default {
     }
 
     const mustSelectPlan = computed(() => store.mustSelectPlan)
+
+    watch(isAnnual, async () => {
+      const proTeamPlan = plans.value.find(p => p.slug?.toLowerCase() === 'pro_team')
+      if (proTeamPlan) {
+        await calculateProTeamPrice(proTeamPlan)
+      }
+    })
 
     onMounted(async () => {
       await loadPlans()
@@ -899,6 +983,7 @@ export default {
       getExchangeRate,
       getLocalCurrencyCode,
       selectPlan,
+      contactAdvisor,
       cancelSubscription,
       mustSelectPlan,
       isAnnual,
@@ -922,7 +1007,7 @@ export default {
   background: #0a0a0f;
   width: 100%;
   max-width: 1200px;
-  max-height: 90vh;
+  max-height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
   border-radius: 24px;
@@ -1448,7 +1533,7 @@ body:not(.body--dark) .toggle-btn {
   justify-content: center;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  color: var(--p-text);
+  color: white;
   opacity: 0.8;
 }
 
@@ -1577,7 +1662,7 @@ body:not(.body--dark) .toggle-btn {
 
 body:not(.body--dark) .pricing-footer {
   border-top-color: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.4);
+  color: white;
 }
 
 .cancel-dialog {
@@ -1600,6 +1685,87 @@ body:not(.body--dark) .pricing-footer {
   .plans-grid { grid-template-columns: 1fr; gap: 16px; }
   .price-amount { font-size: 44px; }
   .cancel-dialog { min-width: 90vw; }
+}
+
+/* Contact Advisor Styles - Premium Enterprise Blue */
+.contact-advisor-card {
+  --p-color: #3b82f6;
+  --p-color-dark: #1e3a8a;
+  --p-btn: #60a5fa;
+  --p-text: #ffffff;
+  --p-glow: rgba(59, 130, 246, 0.4);
+  --p-glow-strong: rgba(59, 130, 246, 0.7);
+  background: linear-gradient(165deg, #2563eb 0%, #1e3a8a 100%) !important;
+  border-color: rgba(96, 165, 250, 0.3) !important;
+}
+
+.contact-advisor-card .advisor-inner {
+  background: rgba(15, 23, 42, 0.7) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.advisor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(96, 165, 250, 0.2);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #93c5fd;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+}
+
+.advisor-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: white;
+  letter-spacing: -0.5px;
+}
+
+.advisor-description {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.advisor-price {
+  margin-bottom: 32px;
+}
+
+.advisor-price .price-amount {
+  color: #60a5fa;
+  text-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+}
+
+.advisor-price .price-period {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.advisor-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+  height: 54px;
+  font-size: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.advisor-features .feature-item {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.advisor-features .feature-check {
+  background: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
 }
 
 .plan-skeleton {

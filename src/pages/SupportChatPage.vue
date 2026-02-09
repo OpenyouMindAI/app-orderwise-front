@@ -5,9 +5,9 @@
       <div class="chat-sidebar" :class="{ 'mobile-hidden': selectedChat && $q.screen.lt.md }">
         <div class="sidebar-header">
           <div class="header-content">
-            <q-icon name="support_agent" size="32px" color="white" />
+            <q-icon name="forum" size="32px" color="white" />
             <div class="header-text">
-              <div class="header-title">Soporte Técnico</div>
+              <div class="header-title">Centro de Atención</div>
               <div class="header-subtitle">¿En qué podemos ayudarte?</div>
             </div>
           </div>
@@ -52,13 +52,19 @@
               >
                 <div class="chat-item-content">
                   <div class="chat-avatar">
-                    <q-avatar size="49px" :color="getStatusColor(chat.status)" text-color="white">
-                      <q-icon :name="getStatusIcon(chat.status)" size="24px" />
+                    <q-avatar size="49px" :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : getStatusColor(chat.status))" text-color="white">
+                      <q-icon :name="chat.type === 'info' ? 'info' : (chat.type === 'sales' ? 'point_of_sale' : getStatusIcon(chat.status))" size="24px" />
                     </q-avatar>
                   </div>
                   <div class="chat-info">
                     <div class="chat-header-row">
                       <div class="chat-title">{{ chat.subject || 'Sin asunto' }}</div>
+                      <q-badge
+                        :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : 'primary')"
+                        :label="chat.type === 'info' ? 'Información' : (chat.type === 'sales' ? 'Ventas' : 'Soporte')"
+                        class="q-ml-sm"
+                        outline
+                      />
                       <q-badge
                         v-if="chat.unread_count > 0"
                         color="negative"
@@ -92,19 +98,23 @@
       <div class="chat-main" :class="{ 'mobile-hidden': !selectedChat && $q.screen.lt.md }">
         <!-- Sin chat seleccionado -->
         <div v-if="!selectedChat" class="chat-empty">
-          <q-icon name="support_agent" size="120px" color="grey-4" />
-          <div class="empty-title">Centro de Soporte</div>
+          <div class="empty-animation-wrapper">
+            <q-icon name="support_agent" size="80px" color="primary" class="icon-support" />
+            <q-icon name="point_of_sale" size="80px" color="orange" class="icon-sales" />
+            <q-icon name="info" size="80px" color="secondary" class="icon-info" />
+          </div>
+          <div class="empty-title">Centro de Clientes</div>
           <div class="empty-subtitle">
-            ¿Tienes algún problema o duda? Crea un ticket y nuestro equipo te ayudará lo antes posible.
+            Estamos aquí para ayudarte. Ya sea soporte técnico, información de planes o asesoría de ventas, inicia una conversación con nuestro equipo.
           </div>
           <q-btn
             unelevated
             color="primary"
-            label="Crear nuevo ticket"
-            icon="add_comment"
+            label="Iniciar conversación"
+            icon="chat"
             size="lg"
             @click="openNewTicketDialog"
-            class="q-mt-md"
+            class="q-mt-xl start-btn"
           />
         </div>
 
@@ -121,8 +131,8 @@
               @click="selectedChat = null"
               class="q-mr-sm"
             />
-            <q-avatar :color="getStatusColor(selectedChat.status)" text-color="white" size="40px">
-              <q-icon name="support_agent" />
+            <q-avatar :color="selectedChat.type === 'info' ? 'secondary' : (selectedChat.type === 'sales' ? 'orange' : getStatusColor(selectedChat.status))" text-color="white" size="40px">
+              <q-icon :name="selectedChat.type === 'info' ? 'info' : (selectedChat.type === 'sales' ? 'point_of_sale' : 'support_agent')" />
             </q-avatar>
             <div class="header-info">
               <div class="chat-name">{{ selectedChat.subject }}</div>
@@ -273,60 +283,58 @@
               <q-btn flat round dense icon="close" @click="clearSelectedFile" color="negative" />
             </div>
 
-            <div class="input-wrapper">
-              <div class="input-field">
-                <q-input
-                  v-model="newMessage"
-                  placeholder="Escribe tu mensaje..."
-                  filled
-                  autogrow
-                  :disable="sending"
-                  @keyup.enter.exact="sendMessage"
-                >
-                  <template v-slot:prepend>
-                    <q-btn-dropdown flat round dense icon="attach_file" color="grey">
-                      <q-list>
-                        <q-item clickable v-close-popup @click="openFilePicker">
-                          <q-item-section avatar>
-                            <q-icon name="photo_library" color="primary" />
-                          </q-item-section>
-                          <q-item-section>Galería</q-item-section>
-                        </q-item>
-                        <q-item clickable v-close-popup @click="openCamera">
-                          <q-item-section avatar>
-                            <q-icon name="photo_camera" color="secondary" />
-                          </q-item-section>
-                          <q-item-section>Tomar Foto</q-item-section>
-                        </q-item>
-                        <q-item clickable v-close-popup @click="openVideoPicker">
-                          <q-item-section avatar>
-                            <q-icon name="videocam" color="negative" />
-                          </q-item-section>
-                          <q-item-section>Video</q-item-section>
-                        </q-item>
-                        <q-item clickable v-close-popup @click="openDocumentPicker">
-                          <q-item-section avatar>
-                            <q-icon name="description" color="warning" />
-                          </q-item-section>
-                          <q-item-section>Documento</q-item-section>
-                        </q-item>
-                      </q-list>
-                    </q-btn-dropdown>
-                  </template>
-                  <template v-slot:append>
-                    <q-btn
-                      round
-                      icon="send"
-                      size="md"
-                      style="border-radius: 100px;"
-                      color="primary"
-                      @click="sendMessage"
-                      :disable="(!newMessage.trim() && !selectedFile) || sending"
-                      :loading="sending"
-                    />
-                  </template>
-                </q-input>
-              </div>
+            <div class="input-field">
+              <q-input
+                v-model="newMessage"
+                placeholder="Escribe tu mensaje..."
+                filled
+                autogrow
+                :disable="sending"
+                @keyup.enter.exact="sendMessage"
+              >
+                <template v-slot:prepend>
+                  <q-btn-dropdown flat round dense icon="attach_file" color="grey">
+                    <q-list>
+                      <q-item clickable v-close-popup @click="openFilePicker">
+                        <q-item-section avatar>
+                          <q-icon name="photo_library" color="primary" />
+                        </q-item-section>
+                        <q-item-section>Galería</q-item-section>
+                      </q-item>
+                      <q-item clickable v-close-popup @click="openCamera">
+                        <q-item-section avatar>
+                          <q-icon name="photo_camera" color="secondary" />
+                        </q-item-section>
+                        <q-item-section>Tomar Foto</q-item-section>
+                      </q-item>
+                      <q-item clickable v-close-popup @click="openVideoPicker">
+                        <q-item-section avatar>
+                          <q-icon name="videocam" color="negative" />
+                        </q-item-section>
+                        <q-item-section>Video</q-item-section>
+                      </q-item>
+                      <q-item clickable v-close-popup @click="openDocumentPicker">
+                        <q-item-section avatar>
+                          <q-icon name="description" color="warning" />
+                        </q-item-section>
+                        <q-item-section>Documento</q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-btn-dropdown>
+                </template>
+                <template v-slot:append>
+                  <q-btn
+                    round
+                    icon="send"
+                    size="md"
+                    style="border-radius: 100px;"
+                    color="primary"
+                    @click="sendMessage"
+                    :disable="(!newMessage.trim() && !selectedFile) || sending"
+                    :loading="sending"
+                  />
+                </template>
+              </q-input>
             </div>
 
             <!-- Hidden file inputs -->
@@ -379,8 +387,12 @@
       <q-card style="min-width: 400px; max-width: 500px;">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">
-            <q-icon name="support_agent" class="q-mr-sm" color="primary" />
-            Nuevo Ticket de Soporte
+            <q-icon
+              :name="newTicket.type === 'info' ? 'info' : (newTicket.type === 'sales' ? 'point_of_sale' : 'support_agent')"
+              class="q-mr-sm"
+              :color="newTicket.type === 'info' ? 'secondary' : (newTicket.type === 'sales' ? 'orange' : 'primary')"
+            />
+            {{ newTicket.type === 'info' ? 'Nueva Consulta de Información' : (newTicket.type === 'sales' ? 'Asistente de Ventas' : 'Nuevo Ticket de Soporte') }}
           </div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
@@ -388,31 +400,32 @@
 
         <q-card-section>
           <q-form @submit.prevent="createTicket" class="q-gutter-md">
-            <q-input
-              v-model="newTicket.subject"
+            <q-select
+              v-model="newTicket.category"
+              :options="categoryOptions"
               label="Asunto *"
               filled
               :rules="[val => !!val || 'El asunto es requerido']"
-              hint="Describe brevemente tu problema"
-            />
-
-            <q-select
-              v-model="newTicket.priority"
-              :options="priorityOptions"
-              label="Prioridad"
-              filled
-              emit-value
-              map-options
+              @update:model-value="onCategoryChange"
             />
 
             <q-input
+              v-model="newTicket.subject"
+              label="Título del Chat"
+              filled
+              readonly
+              hint="El título se asigna automáticamente según el asunto"
+            />
+
+
+            <q-input
               v-model="newTicket.message"
-              label="Descripción del problema *"
+              :label="newTicket.type === 'support' ? 'Descripción del problema *' : (newTicket.type === 'sales' ? '¿En qué te puede ayudar nuestro equipo de ventas? *' : '¿Qué quieres saber? *')"
               type="textarea"
               filled
               autogrow
-              :rules="[val => !!val || 'La descripción es requerida']"
-              hint="Explica con detalle qué problema tienes o qué duda necesitas resolver"
+              :rules="[val => !!val || (newTicket.type === 'support' ? 'La descripción es requerida' : 'El campo es requerido')]"
+              :hint="newTicket.type === 'support' ? 'Explica con detalle qué problema tienes o qué duda necesitas resolver' : (newTicket.type === 'sales' ? 'Cuéntanos qué necesitas para potenciar tu negocio' : 'Escribe aquí tus dudas sobre los planes o precios')"
             />
           </q-form>
         </q-card-section>
@@ -684,20 +697,21 @@ const selectedFilePreview = ref(null)
  * @type {import('vue').Ref<object>}
  */
 const newTicket = ref({
+  category: null,
   subject: '',
   message: '',
-  priority: 'medium'
+  priority: 'medium',
+  type: 'support'
 })
 
 /**
- * Opciones de prioridad
- * @type {Array}
+ * Opciones de asunto/categoría
+ * @type {Array} description var
  */
-const priorityOptions = [
-  { label: 'Baja', value: 'low' },
-  { label: 'Media', value: 'medium' },
-  { label: 'Alta', value: 'high' },
-  { label: 'Urgente', value: 'urgent' }
+const categoryOptions = [
+  { label: 'Soporte Técnico', value: 'support', title: 'Soporte' },
+  { label: 'Información', value: 'info', title: 'Informacion' },
+  { label: 'Asistente de ventas', value: 'sales', title: 'Asistente de Ventas' }
 ]
 
 /**
@@ -768,11 +782,25 @@ const selectChat = async (chat) => {
  */
 const openNewTicketDialog = () => {
   newTicket.value = {
-    subject: '',
+    category: categoryOptions[0],
+    subject: categoryOptions[0].title,
     message: '',
-    priority: 'medium'
+    priority: 'medium',
+    type: categoryOptions[0].value
   }
   showNewTicketDialog.value = true
+}
+
+/**
+ * Maneja el cambio de categoría en el nuevo ticket
+ * @params {object} val El objeto de categoría seleccionado
+ * @return {void}
+ */
+const onCategoryChange = (val) => {
+  if (val) {
+    newTicket.value.subject = val.title
+    newTicket.value.type = val.value
+  }
 }
 
 /**
@@ -790,7 +818,13 @@ const createTicket = async () => {
 
   creating.value = true
   try {
-    const { data } = await api.post('support-chats', newTicket.value)
+    const payload = {
+      subject: newTicket.value.subject,
+      message: newTicket.value.message,
+      priority: null, // Nullable, support team will assign it later
+      type: newTicket.value.type
+    }
+    const { data } = await api.post('support-chats', payload)
 
     chats.value.unshift(data.chat)
     selectedChat.value = data.chat
@@ -1169,6 +1203,7 @@ const getStatusLabel = (status) => {
  * @returns {string}
  */
 const getPriorityColor = (priority) => {
+  if (!priority) return 'grey-7'
   const colors = {
     low: 'grey',
     medium: 'primary',
@@ -1184,6 +1219,7 @@ const getPriorityColor = (priority) => {
  * @returns {string}
  */
 const getPriorityLabel = (priority) => {
+  if (!priority) return 'Sin asignar'
   const labels = {
     low: 'Baja',
     medium: 'Media',
@@ -1214,9 +1250,7 @@ const formatTime = (date) => {
 }
 
 /**
- * Trunca el mensaje para mostrar en la lista
- * @param {string} message - Mensaje a truncar
- * @returns {string}
+ * Arreglar lógica dañada: restaurar truncateMessage
  */
 const truncateMessage = (message) => {
   if (!message) return ''
@@ -1416,27 +1450,34 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .support-chat-page {
-  height: calc(100vh - 60px);
+  height: calc(100vh - 120px);
+  padding: 0;
   overflow: hidden;
 }
 
 .chat-container {
   display: flex;
-  height: 100%;
-  background: var(--q-page);
+  height: calc(100vh - 120px);
+  padding: 20px;
+  gap: 20px;
+
+  @media (max-width: 1023px) {
+    padding: 0;
+    gap: 0;
+    background: white;
+  }
 }
 
-// Sidebar
 .chat-sidebar {
   width: 380px;
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  background: white;
+  gap: 16px;
+  background: transparent;
 
   @media (max-width: 1023px) {
     width: 100%;
-    border-right: none;
+    gap: 0;
 
     &.mobile-hidden {
       display: none;
@@ -1444,14 +1485,25 @@ onUnmounted(() => {
   }
 }
 
+.body--dark .chat-sidebar {
+  background: transparent;
+}
+
 .sidebar-header {
-  padding: 16px;
-  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  padding: 20px;
+  background: linear-gradient(135deg, #1e1e2d 0%, #161621 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 70px;
+  min-height: 80px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 1023px) {
+    border-radius: 0;
+    box-shadow: none;
+  }
 }
 
 .header-content {
@@ -1488,11 +1540,13 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   background: white;
-}
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 
-.body--dark .chat-sidebar {
-  background: #1e1e1e;
-  border-right-color: rgba(255, 255, 255, 0.12);
+  @media (max-width: 1023px) {
+    border-radius: 0;
+    box-shadow: none;
+  }
 }
 
 .body--dark .chat-list {
@@ -1511,69 +1565,82 @@ onUnmounted(() => {
 .empty-text {
   margin-top: 16px;
   font-size: 16px;
-  color: var(--q-secondary);
+  color: #616161;
   margin-bottom: 16px;
 }
 
-.chats-list-wrapper {
-  padding: 0;
-}
-
 .chat-item-wrapper {
+  padding: 12px 16px;
   cursor: pointer;
-  transition: background 0.15s ease;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  background: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: #f0f4f8;
   }
 
   &.active {
-    background: rgba(25, 118, 210, 0.08);
+    background: #e3f2fd;
+    border-left: 4px solid #1976d2;
+    padding-left: 12px;
   }
 }
 
 .body--dark .chat-item-wrapper {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: #1e1e1e;
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: #2d2d2d;
   }
 
   &.active {
-    background: rgba(25, 118, 210, 0.15);
+    background: #1a237e;
+    border-left-color: #3f51b5;
   }
 }
 
 .chat-item-content {
   display: flex;
-  align-items: center;
-  padding: 12px 4px;
-}
-
-.chat-avatar {
-  flex-shrink: 0;
+  gap: 14px;
 }
 
 .chat-info {
   flex: 1;
   min-width: 0;
-  display: flex;
-  margin-left: 7px;
-  flex-direction: column;
 }
 
 .chat-header-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 4px;
 }
 
 .chat-title {
-  font-weight: 500;
+  font-weight: 600;
   font-size: 15px;
+  color: #2c3e50;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.body--dark .chat-title {
+  color: #ecf0f1;
+}
+
+.chat-preview {
+  font-size: 13px;
+  color: #607d8b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.body--dark .chat-preview {
+  color: #b0bec5;
 }
 
 .chat-meta {
@@ -1581,21 +1648,11 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-  flex-shrink: 0;
 }
 
 .chat-time {
   font-size: 11px;
-  opacity: 0.6;
-  white-space: nowrap;
-}
-
-.chat-preview {
-  opacity: 0.7;
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #90a4ae;
 }
 
 // Main chat area
@@ -1603,10 +1660,15 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 
   @media (max-width: 1023px) {
     width: 100%;
+    border-radius: 0;
+    box-shadow: none;
 
     &.mobile-hidden {
       display: none;
@@ -1615,7 +1677,8 @@ onUnmounted(() => {
 }
 
 .body--dark .chat-main {
-  background: #121212;
+  background: #1a1a1b;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
 .chat-empty {
@@ -1628,19 +1691,52 @@ onUnmounted(() => {
   text-align: center;
 }
 
+.empty-animation-wrapper {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.icon-support, .icon-sales, .icon-info {
+  animation: float 3s infinite ease-in-out;
+}
+
+.icon-sales { animation-delay: 0.5s; }
+.icon-info { animation-delay: 1s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
 .empty-title {
-  font-size: 28px;
-  font-weight: 500;
-  margin-top: 24px;
-  color: var(--q-primary);
+  font-size: 32px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 16px;
+}
+
+.body--dark .empty-title {
+  color: #ecf0f1;
 }
 
 .empty-subtitle {
   font-size: 16px;
-  opacity: 0.7;
-  margin-top: 12px;
+  color: #607d8b;
   max-width: 500px;
   line-height: 1.6;
+}
+
+.body--dark .empty-subtitle {
+  color: #b0bec5;
+}
+
+.start-btn {
+  border-radius: 12px;
+  padding: 0 40px;
+  font-weight: 600;
+  text-transform: none;
+  box-shadow: 0 10px 30px rgba(25, 118, 210, 0.3);
 }
 
 .chat-content {
@@ -1650,54 +1746,55 @@ onUnmounted(() => {
 }
 
 .chat-header {
-  padding: 12px 16px;
+  padding: 16px 24px;
+  background: white;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: white;
   min-height: 70px;
 }
 
 .body--dark .chat-header {
   background: #1e1e1e;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .header-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+  margin-left: 16px;
 }
 
 .chat-name {
+  font-size: 18px;
   font-weight: 600;
-  font-size: 16px;
+  color: #2c3e50;
+}
+
+.body--dark .chat-name {
+  color: #ecf0f1;
 }
 
 .chat-status {
   display: flex;
   align-items: center;
-  gap: 8px;
   margin-top: 4px;
 }
 
 .messages-container {
   flex: 1;
-  overflow: hidden;
-  background: #e8e8e8;
   position: relative;
+  background: #f5f7f9;
+  overflow: hidden;
 }
 
 .body--dark .messages-container {
-  background: #0a0a0a;
+  background: #121212;
 }
 
 .messages-list {
-  padding: 16px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .message-wrapper {
@@ -1708,9 +1805,10 @@ onUnmounted(() => {
     align-self: flex-end;
 
     .message-bubble {
-      background: #1976d2;
+      background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
       color: white;
-      border-radius: 18px 18px 4px 18px;
+      border-radius: 20px 20px 4px 20px;
+      box-shadow: 0 4px 15px rgba(25, 118, 210, 0.2);
     }
   }
 
@@ -1720,30 +1818,24 @@ onUnmounted(() => {
     .message-bubble {
       background: white;
       color: #333;
-      border-radius: 18px 18px 18px 4px;
+      border-radius: 20px 20px 20px 4px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     }
   }
 }
 
-.body--dark .message-wrapper.assistant-message .message-bubble {
-  background: #2d2d2d;
+.body--dark .assistant-message .message-bubble {
+  background: #2c2c2c;
   color: #e0e0e0;
 }
 
 .message-bubble {
-  padding: 10px 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.message-sender {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1976d2;
-  margin-bottom: 4px;
+  padding: 12px 20px;
+  position: relative;
+  font-size: 15px;
 }
 
 .message-content {
-  font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1762,16 +1854,7 @@ onUnmounted(() => {
   opacity: 0.7;
 }
 
-.input-wrapper {
-  background: white;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.body--dark .input-wrapper {
-  background: #2d2d2d;
-}
+.body--dark .input-wrapper { background: #242526; }
 
 .input-field {
   width: 100%;
@@ -2143,4 +2226,5 @@ onUnmounted(() => {
     background: #f5f5f5;
   }
 }
+
 </style>

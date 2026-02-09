@@ -211,6 +211,17 @@
                         hint="Suele ser menor a 12x mensual"
                         :dark="$q.dark.isActive"
                       />
+                      <q-input
+                        filled
+                        v-model.number="form.price_per_branch"
+                        label="Precio por Sucursal Adicional"
+                        prefix="$"
+                        type="number"
+                        step="0.01"
+                        class="col-12"
+                        hint="Monto extra por cada sucursal fuera del mínimo"
+                        :dark="$q.dark.isActive"
+                      />
                       <div class="row q-col-gutter-sm items-center">
                         <div class="col-8">
                           <q-input
@@ -689,11 +700,11 @@ body.body--dark {
     background: #1d1d1d !important;
     color: rgba(255, 255, 255, 0.9);
     border-color: rgba(255, 255, 255, 0.1);
-    
+
     :deep(.q-table th) {
       color: #bbbbbb;
     }
-    
+
     :deep(.q-table td) {
       border-color: rgba(255, 255, 255, 0.1);
     }

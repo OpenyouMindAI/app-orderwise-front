@@ -46,6 +46,7 @@
               style="max-height: 32px"
               alt="logo"
               fit="contain"
+              @click="$router.push({ name: 'Home' })"
             >
               <q-tooltip :offset="[10, 10]" class="text-body2">
                 {{ userSession?.company_session?.name }}
@@ -65,35 +66,34 @@
             </transition>
           </div>
         </div>
-
         <q-space />
 
         <!-- Branch Office Indicator -->
-        <div v-if="branchOffices && branchOffices.length > 1" class="branch-indicator">
-          <q-chip
-            dense
-            square
-            class="branch-chip"
-            icon="store"
-            color="primary"
-            text-color="white"
-          >
-            {{ branchOffice?.name || 'Sin sucursal' }}
-          </q-chip>
-
-          <!-- Add Branch Button -->
+        <!-- Support Button (Replaces Branch Office Indicator) -->
+        <div class="support-indicator">
           <q-btn
-            v-if="canAddMoreBranches"
+            v-if="userSession?.is_root"
             flat
             dense
-            round
-            size="sm"
-            icon="add"
-            color="primary"
-            class="q-ml-xs add-branch-btn"
-            @click="goToAddBranch"
+            no-caps
+            class="support-btn-header"
+            label="Suporte Admin"
+            @click="changeRoute('AdminSupport', 'Suporte Admin')"
           >
-            <q-tooltip>Agregar sucursal ({{ currentBranchCount }}/{{ maxBranches }})</q-tooltip>
+            <q-icon name="support_agent" size="20px" />
+            <q-tooltip>Centro de Soporte para Administradores</q-tooltip>
+          </q-btn>
+          <q-btn
+            v-else
+            flat
+            dense
+            no-caps
+            label="Contactanos"
+            class="support-btn-header"
+            @click="changeRoute('Support', 'Suporte')"
+          >
+            <q-icon name="support_agent" size="20px" />
+            <q-tooltip>Centro de Soporte y Ayuda</q-tooltip>
           </q-btn>
         </div>
 
@@ -101,19 +101,13 @@
 
         <!-- Right: Actions -->
         <div class="navbar-right">
-          <!-- Botón Crear Mi Empresa (solo en modo demo) -->
+          <!-- Botón Crear Mi Empresa (Escritorio/Tablet) -->
           <transition
             appear
             enter-active-class="animated fadeIn"
             leave-active-class="animated fadeOut"
           >
-            <div
-              v-if="store.isDemo"
-              :class="[$q.screen.xs ? 'float-create-btn-mobile' : '']"
-            >
-              <div v-if="$q.screen.xs && showDemoMessage" class="demo-info-message">
-                Crea tu empresa y comienza gratis
-              </div>
+            <div v-if="store.isDemo && !$q.screen.xs">
               <q-btn
                 outline
                 dense
@@ -123,11 +117,11 @@
                 <q-icon
                   name="rocket_launch"
                   size="16px"
-                  :class="[$q.screen.xs ? '' : 'q-mr-xs', 'rocket-icon']"
+                  class="q-mr-xs rocket-icon"
                 />
-                <span v-if="!$q.screen.xs">Mi Empresa</span>
+                <span>Mi Empresa</span>
 
-                <q-tooltip v-if="!$q.screen.xs" class="bg-grey-9">
+                <q-tooltip class="bg-grey-9">
                   Crea tu empresa y comienza gratis
                 </q-tooltip>
               </q-btn>
@@ -328,24 +322,6 @@
                     </svg>
                     <span class="tool-label">Instalar App</span>
                   </a>
-                  <div
-                    class="tool-item"
-                    :class="{ 'tool-active': $route.name === 'AdminSupport' }"
-                    @click="changeRoute('AdminSupport', 'Suporte Admin')"
-                    v-if="userSession.is_root"
-                  >
-                    <q-icon name="support_agent" size="24px" />
-                    <span class="tool-label">Suporte Admin</span>
-                  </div>
-                  <div
-                    v-else
-                    class="tool-item"
-                    :class="{ 'tool-active': $route.name === 'Support' }"
-                    @click="changeRoute('Support', 'Suporte')"
-                  >
-                    <q-icon name="support_agent" size="24px" />
-                    <span class="tool-label">Suporte</span>
-                  </div>
                 </div>
                 <div class="tools-section">
                   <div class="integrations-grid">
@@ -374,7 +350,7 @@
                           <q-icon name="extension" size="32px" color="primary" />
                         </div>
                         <premium-badge
-                          :show="subscriptionPlan === 'Free'"
+                          :show="subscriptionPlan.toLocaleLowerCase() === 'free'"
                           :size="15"
                           top="0px"
                           right="4px"
@@ -608,17 +584,18 @@
 
         <q-scroll-area class="col">
           <q-expansion-item
-            v-for="category_module in filteredDataMenu"
+            v-for="(category_module, index) in filteredDataMenu"
             expand-separator
             :key="category_module.id"
             :icon="category_module.icon"
-            default-opened
+            :default-opened="index === 0"
             :label="category_module.name"
           >
             <div v-for="list in category_module.modules" :key="list.id">
               <q-item
                 v-if="
                   validateRole(list.roles) &&
+                  validateBusinessType(list) &&
                   list.name != 'home' &&
                   list.visible !== false
                 "
@@ -657,9 +634,6 @@
     <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md && !$route.meta.hideBottomNav }">
       <router-view />
     </q-page-container>
-
-    <!-- Bottom Navigation (Mobile Only) -->
-    <!-- <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" /> -->
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
@@ -736,11 +710,39 @@
       @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
 
+    <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
+
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
     </q-inner-loading>
 
-    <DemoPersuasionModal v-model="showDemoModal" />
+    <!-- Botón Crear Mi Empresa (Solo Mobile - Fuera del Header para evitar bugs de posicionamiento) -->
+    <transition
+      appear
+      enter-active-class="animated fadeIn"
+      leave-active-class="animated fadeOut"
+    >
+      <div
+        v-if="store.isDemo && $q.screen.xs"
+        class="float-create-btn-mobile"
+      >
+        <div v-if="showDemoMessage" class="demo-info-message">
+          Crea tu empresa y comienza gratis
+        </div>
+        <q-btn
+          outline
+          dense
+          class="create-btn-v0"
+          @click="showCreateCompanyDialog = true"
+        >
+          <q-icon
+            name="rocket_launch"
+            size="16px"
+            class="rocket-icon"
+          />
+        </q-btn>
+      </div>
+    </transition>
   </q-layout>
 </template>
 
@@ -763,7 +765,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
-// import BottomNav from 'src/components/Navigation/BottomNav.vue'
+import BottomNav from 'src/components/Navigation/BottomNav.vue'
 import { useTourStore } from 'src/stores/tourStore.js'
 
 import {
@@ -774,7 +776,6 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
-import DemoPersuasionModal from 'src/components/DemoPersuasionModal.vue'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
 
 export default {
@@ -789,8 +790,7 @@ export default {
     CompanySetupModal,
     PremiumBadge,
     IntegrationDynamic,
-    // BottomNav
-    DemoPersuasionModal,
+    BottomNav,
     ProPlanPromoBanner
   },
   data () {
@@ -1069,7 +1069,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateRole(module.roles)
+              return this.validateRole(module.roles) && this.validateBusinessType(module)
             }).length > 0
           )
         })
@@ -1087,11 +1087,21 @@ export default {
         }
       },
       immediate: true
+    },
+    /**
+     * Bypass DemoPersuasionModal and show SubscriptionPlansDialog directly
+     */
+    showDemoModal (val) {
+      if (val) {
+        this.showDemoModal = false
+        this.showSubscriptionDialog = true
+      }
     }
   },
   setup () {
     const router = useRouter()
     const { showDemoModal, trackDemoAction } = useDemoPersuasion()
+
     return {
       router,
       showDemoModal,
@@ -1106,6 +1116,11 @@ export default {
         this.setNotification(notification)
       })
 
+    this.$echo.private(`support.user.${this.userSession.id}`)
+      .listen('.message.sent', (data) => {
+        this.handleGlobalSupportMessage(data)
+      })
+
     // Listen for subscription updates
     window.addEventListener('subscription-updated', () => {
       this.loadSubscriptionInfo()
@@ -1118,11 +1133,15 @@ export default {
       this.showCreateCompanyDialog = true
     })
 
+    eventBus.on('open-subscription-dialog', () => {
+      this.showSubscriptionDialog = true
+    })
+
     if (this.store.isDemo) {
       this.showDemoMessage = true
       setTimeout(() => {
         this.showDemoMessage = false
-      }, 10000)
+      }, 3000)
     }
 
     this.startDemoReminder()
@@ -1130,13 +1149,25 @@ export default {
     if (localStorage.getItem('pending_plan_subscription')) {
       this.showSubscriptionDialog = true
     }
+
+    // Check for plans query parameter to show subscription dialog
+    if (this.$route.query.plans === 'true') {
+      this.showSubscriptionDialog = true
+      // Clean the URL by removing the query parameter
+      this.$router.replace({ query: { ...this.$route.query, plans: undefined } })
+    }
+
+    // Listener global de clicks con silenciador inteligente
+    document.addEventListener('click', this.handleGlobalClick)
   },
   beforeUnmount () {
     this.stopDemoReminder()
+    document.removeEventListener('click', this.handleGlobalClick)
   },
   unmounted () {
     window.removeEventListener('keydown', this.handleGlobalKeyDown)
     eventBus.off('open-create-company')
+    eventBus.off('open-subscription-dialog')
   },
   created () {
     this.loadingPage()
@@ -1144,6 +1175,37 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Smart click tracker with contextual silencing
+     */
+    handleGlobalClick (event) {
+      // 1. SILENCIO POR DIÁLOGOS ABIERTOS (Contexto de conversión)
+      if (
+        this.showSubscriptionDialog ||
+        this.showCreateCompanyDialog ||
+        this.showCompanySetup ||
+        this.showOtpVerification ||
+        this.showDemoModal
+      ) return
+
+      // 2. SILENCIO POR RUTAS CRÍTICAS
+      const silentRoutes = ['Register', 'Welcome', 'SubscriptionSuccess', 'SubscriptionFailure', 'SubscriptionPending']
+      if (silentRoutes.includes(this.$route.name)) return
+
+      // 3. SILENCIO ESTRUCTURAL (Navbar y Herramientas)
+      if (
+        event.target.closest('.modern-header') ||
+        event.target.closest('.tools-popup')
+      ) return
+
+      // 4. SILENCIO POR HEURÍSTICA DE ICONOS (Clicks en sistema)
+      const systemIcons = ['close', 'help', 'info', 'help_outline', 'arrow_back']
+      const clickedIcon = event.target.innerText?.trim().toLowerCase()
+      if (systemIcons.includes(clickedIcon)) return
+
+      // Si pasa los filtros, registramos la acción
+      this.trackDemoAction()
+    },
     /**
      * Handle global keyboard shortcuts
      * @param {KeyboardEvent} e event
@@ -1337,6 +1399,14 @@ export default {
         const handledPending = await this.processPendingSubscription()
         if (handledPending) return
 
+        // Chequear pending contact advisor
+        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
+        if (pendingAdvisor) {
+          localStorage.removeItem('pending_contact_advisor')
+          this.$router.push({ name: 'Support' })
+          return
+        }
+
         this.$router.push({ name: 'Welcome' })
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
@@ -1419,6 +1489,14 @@ export default {
         // Chequear pending subscription y procesar inmediatamente
         const handledPending = await this.processPendingSubscription()
         if (handledPending) return
+
+        // Chequear pending contact advisor
+        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
+        if (pendingAdvisor) {
+          localStorage.removeItem('pending_contact_advisor')
+          this.$router.push({ name: 'Support' })
+          return
+        }
 
         // Marcar que necesita tour de facturación
         localStorage.setItem('needs_billing_tour', 'true')
@@ -1697,6 +1775,7 @@ export default {
      * @param {Object} data data
      */
     setNotification ({ data, id }) {
+      console.log(data, id)
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           this.getDataNotification()
@@ -1714,7 +1793,7 @@ export default {
             const notification = createNotification(this.$t(`command.${data?.error_type?.toLowerCase()}`), {
               body: data.description,
               icon: '/icons/icon-128x128.png'
-            }, false)
+            }, data?.error_type === 'SUPPORT_MESSAGE')
             notification.onclick = () => {
               window.open(`${window.location.origin}/notifications/?id=${id}`, '_blank')
             }
@@ -1728,6 +1807,26 @@ export default {
             return new Notification(title, options)
           }
         }
+      })
+    },
+    /**
+     * Maneja un mensaje de soporte entrante globalmente
+     * @param {Object} data data del evento
+     */
+    handleGlobalSupportMessage (data) {
+      // Si el mensaje es mío, no notificar
+      if (data.message.sender_id === this.userSession.id) return
+
+      // Actualizar la campanita
+      this.getDataNotification()
+
+      this.setNotification({
+        data: {
+          error_type: 'SUPPORT_MESSAGE',
+          description: `${data.message.sender_name}: ${data.message.content}`,
+          name: 'SUPPORT_MESSAGE'
+        },
+        id: data.chat_id
       })
     },
     async getDataNotification () {
@@ -1758,7 +1857,7 @@ export default {
         // Actualizar el store con datos verificados del backend
         if (data.subscription) {
           this.store.currentSubscription = data.subscription
-          this.store.subscriptionPlan = data.subscription.plan?.name
+          this.store.subscriptionPlan = data.subscription.plan?.slug
           this.store.subscriptionDaysLeft = data.days_left
           this.store.maxBranches = data.subscription.plan?.max_branches || 1
 
@@ -1950,11 +2049,14 @@ export default {
     },
     /**
      * Validate business type
-     * @param {Array} businessTypes
+     * @param {Object} module - Module to validate
      * @returns {Boolean}
      */
     validateBusinessType (module) {
       const businessTypeModules = this.userSession?.company_session?.business_type?.modules || []
+
+      // First check if module is hidden by plan restrictions
+      if (!this.validatePlan(module)) return false
 
       if (this.userSession?.is_root) return true
 
@@ -1963,7 +2065,47 @@ export default {
       if (businessTypeModules.length > 0 && module) {
         return businessTypeModules.some((businessModule) => businessModule.id === module.id)
       }
+
       return false
+    },
+
+    /**
+     * Validate if module is allowed based on subscription plan
+     * @param {Object} module - Module to validate
+     * @returns {Boolean} - true if module is allowed, false if should be hidden
+     */
+    validatePlan (module) {
+      // Root users can see all modules
+      if (this.userSession?.is_root) return true
+
+      // Modules restricted for free plan and demo companies
+      const premiumModules = [
+        'SalesInventoryReport',
+        'ProductKardex',
+        'TransferProduct',
+        'Promotions',
+        'BranchOffice',
+        'Integrations',
+        'Company',
+        'Cashbox',
+        'Seller',
+        'Client',
+        'DeliveryPerson'
+      ]
+
+      // Check if company is demo or plan is free
+      const isDemo = this.store.isDemo
+      const isFree = this.currentSubscription?.plan?.slug === 'free' || !this.currentSubscription?.plan?.slug
+
+      // If demo or free plan, hide premium modules
+      if (isDemo || isFree) {
+        // Check if the module link matches any restricted module
+        if (module?.link && premiumModules.includes(module.link)) {
+          return false
+        }
+      }
+
+      return true
     },
     /**
      * Logout application
@@ -2063,7 +2205,6 @@ export default {
       this.$router.push({ name: data })
       this.menuRoute = data
       this.titleApp = listName
-      this.trackDemoAction()
     },
     /**
      * Change branch office
@@ -2231,68 +2372,47 @@ export default {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Branch Office Indicator */
-.branch-indicator {
+/* Support Indicator (Replaces Branch Office) */
+.support-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.branch-chip {
+.support-btn-header {
+  display: flex;
+  align-items: center;
   font-size: 13px;
   font-weight: 600;
   padding: 4px 12px;
-  height: 28px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.2) !important;
+  height: 32px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.branch-chip:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.support-btn-header > * {
+  gap: 0.25rem;
 }
 
-.branch-chip :deep(.q-chip__icon) {
-  font-size: 16px;
-  margin-right: 4px;
+.support-btn-header:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
-.branch-chip :deep(.q-chip__content) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
+.support-btn-header:active {
+  transform: translateY(0) scale(0.98);
 }
 
-.add-branch-btn {
-  background: rgba(255, 255, 255, 0.15) !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-}
-
-.add-branch-btn:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.add-branch-btn:active {
-  transform: scale(0.95);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .branch-chip :deep(.q-chip__content) {
-    max-width: 120px;
-  }
-
-  .add-branch-btn {
+/* Responsive adjustments for support button */
+@media (max-width: 390px) {
+  .support-btn-header span {
     display: none;
   }
 }

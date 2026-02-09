@@ -1,22 +1,75 @@
 import { boot } from 'quasar/wrappers'
 import { Notify } from 'quasar'
-import { api } from 'src/boot/axios'
+import axios from 'axios'
 import { echo } from 'src/boot/pusher'
 import { authentication } from 'src/stores/module-authentication'
 
-// Session tracking state
+/**
+ * Session tracking state
+ * @type {string|null}
+ */
 let sessionUuid = null
-let isConnected = false
-let heartbeatInterval = null
-let idleTimeout = null
-let currentStatus = 'offline'
-let presenceChannel = null
-let routerInstance = null
-let lastStatusUpdate = 0 // Timestamp of last status update
 
+/**
+ * Connection status
+ * @type {boolean}
+ */
+let isConnected = false
+
+/**
+ * Heartbeat interval reference
+ * @type {number|null}
+ */
+let heartbeatInterval = null
+
+/**
+ * Idle timeout reference
+ * @type {number|null}
+ */
+let idleTimeout = null
+
+/**
+ * Current user status
+ * @type {string}
+ */
+let currentStatus = 'offline'
+
+/**
+ * Presence channel reference
+ * @type {object|null}
+ */
+let presenceChannel = null
+
+/**
+ * Router instance reference
+ * @type {object|null}
+ */
+let routerInstance = null
+
+/**
+ * Last status update timestamp
+ * @type {number}
+ */
+let lastStatusUpdate = 0
+
+/**
+ * Activity tracking queue
+ * @type {Array}
+ */
+let activityQueue = []
+
+/**
+ * Queue flush timeout reference
+ * @type {number|null}
+ */
+let queueFlushTimeout = null
+
+// Configuration constants
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
-const HEARTBEAT_INTERVAL_MS = 60 * 1000 // 60 seconds (was 30s - reduced API calls)
-const STATUS_UPDATE_THROTTLE_MS = 10 * 1000 // 10 seconds minimum between status updates (was 5s)
+const HEARTBEAT_INTERVAL_MS = 60 * 1000 // 60 seconds
+const STATUS_UPDATE_THROTTLE_MS = 10 * 1000 // 10 seconds minimum between status updates
+const QUEUE_FLUSH_DELAY_MS = 2000 // Batch activities every 2 seconds
+const TRACKING_REQUEST_TIMEOUT_MS = 5000 // 5 second timeout for tracking requests
 
 // Public routes that should NOT trigger tracking
 const PUBLIC_ROUTES = [
@@ -32,7 +85,55 @@ const PUBLIC_ROUTES = [
 ]
 
 /**
+ * Create a separate axios instance for tracking requests
+ * This prevents tracking requests from blocking main API calls
+ * @type {AxiosInstance}
+ */
+const trackingApi = axios.create({
+  baseURL: import.meta.env.VITE_APP_API_URL,
+  timeout: TRACKING_REQUEST_TIMEOUT_MS,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+/**
+ * Update tracking API authorization header
+ * @param {string} tokenType - Token type (Bearer)
+ * @param {string} accessToken - Access token
+ */
+function updateTrackingAuth (tokenType, accessToken) {
+  if (tokenType && accessToken) {
+    trackingApi.defaults.headers.common.authorization = `${tokenType} ${accessToken}`
+  }
+}
+
+/**
+ * Execute tracking request in background without blocking
+ * Uses requestIdleCallback when available for non-critical requests
+ * @param {Function} requestFn - Function that returns a promise
+ * @param {boolean} priority - If true, execute immediately; if false, use idle callback
+ */
+function executeInBackground (requestFn, priority = false) {
+  const execute = () => {
+    // Fire and forget - don't await
+    requestFn().catch(() => {
+      // Silent fail for all tracking requests
+    })
+  }
+
+  if (priority || typeof requestIdleCallback === 'undefined') {
+    // Execute immediately but don't block
+    setTimeout(execute, 0)
+  } else {
+    // Use requestIdleCallback for low-priority tracking
+    requestIdleCallback(execute, { timeout: 5000 })
+  }
+}
+
+/**
  * Generate a unique fingerprint for the device/browser
+ * @returns {string} - Device fingerprint hash
  */
 function generateFingerprint () {
   try {
@@ -67,15 +168,19 @@ function generateFingerprint () {
 
 /**
  * Connect to session tracking
+ * @param {Object} store - Authentication store
  */
 async function connectSession (store) {
   if (isConnected || !store.access_token) return
+
+  // Update auth header for tracking API
+  updateTrackingAuth(store.token_type, store.access_token)
 
   try {
     const fingerprint = generateFingerprint()
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-    const { data } = await api.post('user-sessions/connect', {
+    const { data } = await trackingApi.post('user-sessions/connect', {
       fingerprint,
       timezone
     })
@@ -95,15 +200,30 @@ async function connectSession (store) {
 
 /**
  * Disconnect session
+ * @param {string} reason - Disconnect reason
  */
 async function disconnectSession (reason = 'logout') {
   if (!isConnected || !sessionUuid) return
 
+  // Use sendBeacon for immediate disconnect (doesn't block)
+  const url = `${import.meta.env.VITE_APP_API_URL}user-sessions/disconnect`
+  const data = JSON.stringify({
+    session_uuid: sessionUuid,
+    reason
+  })
+
   try {
-    await api.post('user-sessions/disconnect', {
-      session_uuid: sessionUuid,
-      reason
-    })
+    if (navigator.sendBeacon) {
+      const blob = new Blob([data], { type: 'application/json' })
+      navigator.sendBeacon(url, blob)
+    } else {
+      // Fallback to regular request but don't await
+      executeInBackground(() =>
+        trackingApi.post('user-sessions/disconnect', {
+          session_uuid: sessionUuid,
+          reason
+        }), true)
+    }
   } catch (error) {
     console.error('[SessionTracking] Disconnect error:', error)
   } finally {
@@ -112,69 +232,94 @@ async function disconnectSession (reason = 'logout') {
 }
 
 /**
- * Track module/page change
+ * Flush activity queue - send batched activities
  */
-async function trackModule (moduleName, url) {
-  if (!isConnected || !sessionUuid) return
+function flushActivityQueue () {
+  if (activityQueue.length === 0 || !isConnected || !sessionUuid) return
 
-  try {
-    await api.post('user-sessions/track-activity', {
+  const activities = [...activityQueue]
+  activityQueue = []
+
+  // Send only the last activity (most recent page)
+  const lastActivity = activities[activities.length - 1]
+
+  executeInBackground(() =>
+    trackingApi.post('user-sessions/track-activity', {
       session_uuid: sessionUuid,
-      module: moduleName,
-      url
-    })
-  } catch (error) {
-    // Silent fail for tracking
-  }
+      module: lastActivity.module,
+      url: lastActivity.url
+    }), false)
 }
 
 /**
- * Update session status (throttled to prevent excessive calls)
+ * Track module/page change (queued and batched)
+ * @param {string} moduleName - Module name
+ * @param {string} url - Page URL
  */
-async function updateStatus (status) {
+function trackModule (moduleName, url) {
+  if (!isConnected || !sessionUuid) return
+
+  // Add to queue
+  activityQueue.push({ module: moduleName, url, timestamp: Date.now() })
+
+  // Debounce queue flush
+  if (queueFlushTimeout) {
+    clearTimeout(queueFlushTimeout)
+  }
+
+  queueFlushTimeout = setTimeout(flushActivityQueue, QUEUE_FLUSH_DELAY_MS)
+}
+
+/**
+ * Update session status (throttled and non-blocking)
+ * @param {string} status - New status
+ */
+function updateStatus (status) {
   if (!isConnected || !sessionUuid || currentStatus === status) return
 
-  // Throttle: only allow status updates every 5 seconds
+  // Throttle: only allow status updates every N seconds
   const now = Date.now()
   if (now - lastStatusUpdate < STATUS_UPDATE_THROTTLE_MS) {
     return
   }
 
-  try {
-    lastStatusUpdate = now
-    await api.post('user-sessions/update-status', {
+  lastStatusUpdate = now
+  const previousStatus = currentStatus
+  currentStatus = status
+
+  // Fire and forget - don't block
+  executeInBackground(() =>
+    trackingApi.post('user-sessions/update-status', {
       session_uuid: sessionUuid,
       status
-    })
-    currentStatus = status
-  } catch (error) {
-    // Silent fail
-  }
+    }).catch(() => {
+      // Revert status on error
+      currentStatus = previousStatus
+    }), false)
 }
 
 /**
- * Send heartbeat
+ * Send heartbeat (non-blocking)
  */
-async function sendHeartbeat () {
+function sendHeartbeat () {
   const store = authentication()
 
-  // Validar que haya sesión activa antes de enviar heartbeat
+  // Validate active session before sending heartbeat
   if (!isConnected || !sessionUuid || !store.access_token) {
-    // Si no hay sesión activa, detener el heartbeat
     stopHeartbeat()
     return
   }
 
-  try {
-    await api.post('user-sessions/heartbeat', {
+  // Fire and forget - don't block
+  executeInBackground(() =>
+    trackingApi.post('user-sessions/heartbeat', {
       session_uuid: sessionUuid
-    })
-  } catch (error) {
-    // Si hay error 401, detener heartbeat
-    if (error.response?.status === 401) {
-      stopHeartbeat()
-    }
-  }
+    }).catch((error) => {
+      // If 401 error, stop heartbeat
+      if (error.response?.status === 401) {
+        stopHeartbeat()
+      }
+    }), false)
 }
 
 /**
@@ -183,7 +328,7 @@ async function sendHeartbeat () {
 function startHeartbeat () {
   const store = authentication()
 
-  // Solo iniciar heartbeat si hay sesión activa
+  // Only start heartbeat if there's an active session
   if (!isConnected || !sessionUuid || !store.access_token) {
     return
   }
@@ -203,9 +348,14 @@ function stopHeartbeat () {
 }
 
 /**
- * Setup idle detection
+ * Activity debounce timeout reference
+ * @type {number|null}
  */
 let activityDebounceTimeout = null
+
+/**
+ * Setup idle detection with optimized event handling
+ */
 function setupIdleDetection () {
   // Reduced events - mousemove removed to prevent excessive triggers
   const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
@@ -252,7 +402,7 @@ function setupIdleDetection () {
     }
   })
 
-  // Handle before unload
+  // Handle before unload - use sendBeacon for reliability
   window.addEventListener('beforeunload', () => {
     if (sessionUuid) {
       const url = `${import.meta.env.VITE_APP_API_URL}user-sessions/disconnect`
@@ -260,7 +410,7 @@ function setupIdleDetection () {
         session_uuid: sessionUuid,
         reason: 'timeout'
       })
-      // Try sendBeacon first
+      // Use sendBeacon - it's designed for this use case
       if (navigator.sendBeacon) {
         const blob = new Blob([data], { type: 'application/json' })
         navigator.sendBeacon(url, blob)
@@ -282,6 +432,19 @@ function cleanup () {
     idleTimeout = null
   }
 
+  if (queueFlushTimeout) {
+    clearTimeout(queueFlushTimeout)
+    queueFlushTimeout = null
+  }
+
+  if (activityDebounceTimeout) {
+    clearTimeout(activityDebounceTimeout)
+    activityDebounceTimeout = null
+  }
+
+  // Clear activity queue
+  activityQueue = []
+
   // Leave presence channel
   if (presenceChannel) {
     echo?.leave('sessions')
@@ -294,10 +457,16 @@ function cleanup () {
 }
 
 /**
- * Handle force disconnect from admin or timeout
+ * Flag to prevent multiple force disconnect handlers
+ * @type {boolean}
  */
 let isHandlingForceDisconnect = false
 
+/**
+ * Handle force disconnect from admin or timeout
+ * @param {Object} store - Authentication store
+ * @param {string} action - Disconnect action type
+ */
 function handleForceDisconnect (store, action = 'force_disconnected') {
   // Prevent multiple calls
   if (isHandlingForceDisconnect) return
@@ -319,7 +488,7 @@ function handleForceDisconnect (store, action = 'force_disconnected') {
   // Cleanup session tracking
   cleanup()
 
-  // Clear store and localStorage - use forceLogout to avoid backend call (token already revoked)
+  // Clear store and localStorage - use forceLogout to avoid backend call
   store.forceLogout()
 
   // Redirect to login
@@ -335,6 +504,7 @@ function handleForceDisconnect (store, action = 'force_disconnected') {
 
 /**
  * Join presence channel and listen for force disconnect
+ * @param {Object} store - Authentication store
  */
 function joinPresenceChannel (store) {
   if (!echo || presenceChannel) return
@@ -350,6 +520,8 @@ function joinPresenceChannel (store) {
 
 /**
  * Check if route is public (no tracking needed)
+ * @param {string} routeName - Route name
+ * @returns {boolean}
  */
 function isPublicRoute (routeName) {
   if (!routeName) return true
@@ -360,8 +532,12 @@ export default boot(async ({ app, router }) => {
   const store = authentication()
   routerInstance = router
 
+  // Update tracking auth when store changes
+  updateTrackingAuth(store.token_type, store.access_token)
+
   if (store.access_token && store.userSession) {
-    await connectSession(store)
+    // Connect in background - don't block app initialization
+    executeInBackground(() => connectSession(store), true)
     joinPresenceChannel(store)
   }
 
@@ -372,6 +548,7 @@ export default boot(async ({ app, router }) => {
     if (!store.access_token) return
 
     const moduleName = to.meta?.title || to.name || 'Unknown'
+    // This is already non-blocking due to queue
     trackModule(moduleName, to.fullPath)
   })
 
@@ -381,7 +558,8 @@ export default boot(async ({ app, router }) => {
 
   app.config.globalProperties.$sessionTracking = {
     connect: () => {
-      connectSession(store)
+      updateTrackingAuth(store.token_type, store.access_token)
+      executeInBackground(() => connectSession(store), true)
       joinPresenceChannel(store)
     },
     disconnect: disconnectSession,

@@ -255,6 +255,70 @@
                   </q-card>
                 </q-expansion-item>
               </div>
+              <div class="col-12" v-if="purchase.taxes && purchase.taxes.length > 0">
+                <q-expansion-item
+                  icon="receipt"
+                  label="Impuestos"
+                  :caption="`Total: ${formatNumber(purchase.total_taxes)}`"
+                  style="border-radius: 10px"
+                  class="shadow-1 overflow-hidden"
+                >
+                  <q-card>
+                    <q-card-section class="q-pa-xs">
+                      <q-markup-table dense>
+                        <thead>
+                          <tr>
+                            <th class="text-left">Descripción</th>
+                            <th class="text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(tax, index) in purchase.taxes" :key="index">
+                            <td class="text-left">
+                              {{ tax.description }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(tax.amount) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </q-markup-table>
+                    </q-card-section>
+                  </q-card>
+                </q-expansion-item>
+              </div>
+              <div class="col-12" v-if="purchase.discounts && purchase.discounts.length > 0">
+                <q-expansion-item
+                  icon="discount"
+                  label="Descuentos"
+                  :caption="`Total: ${formatNumber(purchase.total_discounts)}`"
+                  style="border-radius: 10px"
+                  class="shadow-1 overflow-hidden"
+                >
+                  <q-card>
+                    <q-card-section class="q-pa-xs">
+                      <q-markup-table dense>
+                        <thead>
+                          <tr>
+                            <th class="text-left">Descripción</th>
+                            <th class="text-right">Monto</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(discount, index) in purchase.discounts" :key="index">
+                            <td class="text-left">
+                              {{ discount.description }}
+                            </td>
+                            <td class="text-right">
+                              {{ formatNumber(discount.amount) }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </q-markup-table>
+                    </q-card-section>
+                  </q-card>
+                </q-expansion-item>
+              </div>
             </div>
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
             <div class="col-12" v-if="purchase.images && purchase.images.length > 0">

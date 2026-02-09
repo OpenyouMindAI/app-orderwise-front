@@ -149,7 +149,7 @@
                         v-if="!props.row.billing && props.row?.electronic_invoice?.fields?.error"
                         @click.stop="alertBeforeSend(props.row)"
                       >
-                         <q-tooltip>Error: {{ props.row?.electronic_invoice?.fields?.message }}</q-tooltip>
+                         <q-tooltip>Error: {{ parseElectronicInvoiceError(props.row?.electronic_invoice?.fields?.error) }}</q-tooltip>
                       </q-btn>
                       <q-btn
                         round
@@ -838,6 +838,26 @@
       :loop="true"
       :show-thumbnails="true"
     />
+    <q-dialog v-model="errorDialog" persistent>
+      <q-card style="width: 500px; max-width: 90vw;">
+        <q-card-section class="row items-center bg-negative text-white">
+          <div class="text-h6">{{ errorTitle }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="q-pt-md">
+          <div class="text-body1 text-weight-medium q-mb-sm">Resumen del error:</div>
+          <div class="bg-grey-2 q-pa-md rounded-borders text-body2 text-grey-9" style="white-space: pre-wrap; word-break: break-word; border-left: 4px solid var(--q-negative)">
+            {{ errorMessage }}
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Entendido" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -902,6 +922,9 @@ export default {
        * @type {Function}
        */
       formatNumber,
+      errorDialog: false,
+      errorMessage: '',
+      errorTitle: 'Error al generar factura electrónica',
       printers: [],
       /**
        * Taxe translate
@@ -1615,6 +1638,57 @@ export default {
         })
     },
     /**
+     * Parse electronic invoice error from response string
+     * @param {String} errorString
+     * @returns {String}
+     */
+    parseElectronicInvoiceError (error) {
+      if (!error) return ''
+
+      // If it's the full fields object
+      if (typeof error === 'object') {
+        if (error.errors) {
+          const msgs = Object.values(error.errors).flat()
+            .map(m => String(m).replace(/^\(\d+\)\s*/, '').trim())
+          return msgs.join('\n• ')
+        }
+        if (error.message) return String(error.message).replace(/^\(\d+\)\s*/, '').trim()
+        if (error.error && typeof error.error === 'string') return this.parseElectronicInvoiceError(error.error)
+        return ''
+      }
+
+      // If it's a string, clean technical prefixes
+      const cleaned = String(error).replace(/HTTP request returned status code \d+:\s*/gi, '').trim()
+
+      // Specifically extract what's after "message":
+      const messageRegex = /"message"\s*:\s*"([^"]+)"/i
+      const match = cleaned.match(messageRegex)
+      if (match && match[1]) {
+        return match[1]
+          .replace(/\\u([0-9a-fA-F]{4})/g, (m, g) => String.fromCharCode(parseInt(g, 16)))
+          .replace(/\\n/g, '\n')
+          .replace(/\\"/g, '"')
+          .replace(/^\(\d+\)\s*/, '') // Remove codes like (10013)
+          .trim()
+      }
+
+      // If no "message" pattern, try to find "errors" in JSON
+      try {
+        const jsonStart = cleaned.indexOf('{')
+        const jsonEnd = cleaned.lastIndexOf('}')
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          const parsed = JSON.parse(cleaned.substring(jsonStart, jsonEnd + 1))
+          if (parsed.errors) {
+            return Object.values(parsed.errors).flat()
+              .map(m => String(m).replace(/^\(\d+\)\s*/, '').trim())
+              .join('\n• ')
+          }
+        }
+      } catch (e) {}
+
+      return cleaned.replace(/^\(\d+\)\s*/, '').trim()
+    },
+    /**
      * Set invoice electronic
      * @param {Object} invoice invoice
      */
@@ -1623,7 +1697,8 @@ export default {
         loading(true)
         const { data } = await this.$api.post(`invoices/${invoice.id}/electronic`)
         if (data.electronic_invoice?.fields?.error) {
-          notify(`Hubo un error al generar la factura: ${data.electronic_invoice.fields.message}`, 'negative', 'warning')
+          this.errorMessage = this.parseElectronicInvoiceError(data.electronic_invoice.fields.error)
+          this.errorDialog = true
         } else {
           this.invoice = data
           notify('Factura electrónica generada exitosamente', 'positive', 'check_circle')

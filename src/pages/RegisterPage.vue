@@ -288,6 +288,9 @@ const handleCompanySetupSuccess = (data) => {
   // Check for pending plan subscription
   if (localStorage.getItem('pending_plan_subscription')) {
     router.push('/') // Redirect to home so MainLayout triggers the subscription dialog
+  } else if (localStorage.getItem('pending_contact_advisor')) {
+    localStorage.removeItem('pending_contact_advisor')
+    router.push({ name: 'Support' })
   } else {
     router.push({ name: 'CompanyConfig' })
   }
@@ -437,6 +440,12 @@ const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
 
       companyForm.value.company_email = formData.email
       companyForm.value.company_phone = phoneNumber || ''
+
+      // Si el email ya está verificado (viene de Google u otro proveedor), saltar OTP
+      if (data.user?.email_verified_at) {
+        showCompanyOptions.value = true
+        return
+      }
 
       currentTab.value = 'otp'
 

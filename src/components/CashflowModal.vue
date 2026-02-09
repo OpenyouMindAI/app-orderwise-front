@@ -471,7 +471,7 @@ export default {
        * Date cashflow
        * @type {String}
        */
-      date: null,
+      date: formatDate(new Date(), 'YYYY/MM/DD'),
       /**
        * Panel
        * @type {String}
@@ -585,7 +585,7 @@ export default {
     },
     createdAt: {
       handler (newCreatedAt) {
-        this.date = formatDate(newCreatedAt, 'YYYY-MM-DD')
+        this.date = formatDate(newCreatedAt || new Date(), 'YYYY-MM-DD')
       },
       immediate: true
     },

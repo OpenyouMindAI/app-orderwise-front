@@ -1,20 +1,21 @@
 <template>
   <q-page class="home-page">
-    <!-- Header Cockpit Area -->
     <div class="header-cockpit section-fade-in">
       <div class="cockpit-glow"></div>
-      <div class="row items-center justify-between no-wrap">
-        <div class="cockpit-welcome">
-          <div class="greeting-row">
-            <span class="text-h5 text-weight-normal opacity-80">{{ greeting }},</span>
-            <span class="text-h5 text-weight-bolder q-ml-xs">{{ userName }}</span>
+      <div class="row items-center no-wrap q-px-sm">
+        <div class="col-6">
+          <div class="greeting-block">
+            <div class="greeting-main text-uppercase">{{ greeting }}</div>
+            <div class="greeting-name text-weight-bold text-primary">{{ userName }}</div>
           </div>
         </div>
-
-        <div class="cockpit-meta">
-          <div class="date-chip-modern">
-            <q-icon name="event" size="14px" class="q-mr-xs" />
-            <span>{{ currentDate }}</span>
+        <div class="col-6 text-right">
+          <div class="date-chip-premium">
+            <q-icon name="calendar_today" size="13px" class="q-mr-xs mobile-hide" />
+            <div class="date-stack">
+              <span class="date-day text-capitalize">{{ currentDate.split(',')[0] }}</span>
+              <span class="date-full">{{ currentDate.split(',')[1] }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -45,77 +46,144 @@
         </div>
       </div>
 
-      <!-- ROW 1: Stats Ribbon (Desktop 4-cols) -->
+      <!-- ROW 1: Statistics (Progressive Loading) -->
       <template v-if="isAdmin">
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop sale-tile">
+        <!-- Today's Net Income -->
+        <div class="bento-item stat-hero revenue-tile">
           <div class="stat-icon-wrap bg-soft-primary">
-            <q-icon name="receipt_long" size="28px" color="primary" />
+            <q-icon name="payments" size="28px" color="primary" />
           </div>
           <div class="stat-data">
-            <div class="stat-val">{{ todayStats.invoices }}</div>
-            <div class="stat-lab">Ventas de Hoy</div>
-            <div class="stat-trend grow">
-              <q-icon name="trending_up" size="10px" /> 12%
-            </div>
+            <q-skeleton v-if="loadingStats.income" type="text" width="80px" />
+            <div v-else class="stat-val text-primary">{{ formatCurrency(todayStats.netIncome) }}</div>
+            <div class="stat-lab">Ingresos de Hoy</div>
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
+        <!-- Today's Profit -->
+        <div class="bento-item stat-hero profit-tile">
           <div class="stat-icon-wrap bg-soft-positive">
-            <q-icon name="payments" size="28px" color="positive" />
+            <q-icon name="trending_up" size="28px" color="positive" />
           </div>
           <div class="stat-data">
-            <div class="stat-val text-positive">{{ formatCurrency(todayStats.revenue) }}</div>
-            <div class="stat-lab">Ingresos Netos</div>
+            <q-skeleton v-if="loadingStats.profit" type="text" width="80px" />
+            <div v-else class="stat-val" :class="todayStats.profit >= 0 ? 'text-positive' : 'text-negative'">
+              {{ formatCurrency(todayStats.profit) }}
+            </div>
+            <div class="stat-lab">Ganancias de Hoy</div>
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop product-tile">
-          <div class="stat-icon-wrap bg-soft-warning">
-            <q-icon name="inventory_2" size="28px" color="warning" />
+        <!-- Today's Cash Out -->
+        <div class="bento-item stat-hero expense-tile">
+          <div class="stat-icon-wrap bg-soft-negative">
+            <q-icon name="money_off" size="28px" color="negative" />
           </div>
           <div class="stat-data">
-            <div class="stat-val">{{ todayStats.products }}</div>
+            <q-skeleton v-if="loadingStats.cashOut" type="text" width="80px" />
+            <div v-else class="stat-val text-negative">{{ formatCurrency(todayStats.cashOut) }}</div>
+            <div class="stat-lab">Salida de Dinero</div>
+          </div>
+        </div>
+
+        <!-- Accounts Receivable -->
+        <div class="bento-item stat-hero receivable-tile clickable" @click="navigateTo('AccountsReceivable')">
+          <div class="stat-icon-wrap bg-soft-warning">
+            <q-icon name="account_balance_wallet" size="28px" color="warning" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats.receivable" type="text" width="80px" />
+            <div v-else class="stat-val text-warning">{{ formatCurrency(todayStats.receivable) }}</div>
+            <div class="stat-lab">Por Cobrar</div>
+          </div>
+        </div>
+
+        <!-- Total Products -->
+        <div class="bento-item stat-hero products-tile">
+          <div class="stat-icon-wrap bg-soft-secondary">
+            <q-icon name="inventory_2" size="28px" color="secondary" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats.products" type="text" width="80px" />
+            <div v-else class="stat-val text-secondary">{{ todayStats.productsTotal }}</div>
             <div class="stat-lab">Productos</div>
           </div>
         </div>
 
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop client-tile">
-          <div class="stat-icon-wrap bg-soft-info">
-            <q-icon name="people" size="28px" color="info" />
+        <!-- Total Clients -->
+        <div class="bento-item stat-hero clients-tile mobile-hide">
+          <div class="stat-icon-wrap bg-soft-accent">
+            <q-icon name="group" size="28px" color="accent" />
           </div>
           <div class="stat-data">
-            <div class="stat-val text-info">{{ todayStats.clients }}</div>
-            <div class="stat-lab">Clientes Hoy</div>
+            <q-skeleton v-if="loadingStats.clients" type="text" width="80px" />
+            <div v-else class="stat-val text-accent">{{ todayStats.clientsTotal }}</div>
+            <div class="stat-lab">Clientes</div>
+          </div>
+        </div>
+
+        <!-- Today's Sales Count -->
+        <div class="bento-item stat-hero sales-tile">
+          <div class="stat-icon-wrap bg-soft-info">
+            <q-icon name="receipt" size="28px" color="info" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats.sales" type="text" width="80px" />
+            <div v-else class="stat-val text-info">{{ todayStats.salesToday }}</div>
+            <div class="stat-lab">Ventas de Hoy</div>
           </div>
         </div>
       </template>
 
-      <!-- ROW 2: Actions and Activity Side-by-Side -->
+      <!-- ROW 2: Quick Access and Activity -->
       <div class="bento-item actions-bento span-full-mobile span-2-desktop">
         <div class="bento-header">
           <q-icon name="apps" class="q-mr-xs" />
           <span>Accesos Rápidos</span>
+          <q-space />
+          <q-btn
+            flat
+            dense
+            round
+            icon="settings"
+            size="sm"
+            color="grey-6"
+            @click="showQuickAccessConfig = true"
+          >
+            <q-tooltip>Configurar accesos rápidos</q-tooltip>
+          </q-btn>
         </div>
         <div class="actions-grid-modern">
           <div
-            v-for="action in quickActions"
+            v-for="action in configuredQuickActions"
             :key="action.name"
             class="action-pill clickable"
-            @click="navigateTo(action.route)"
+            @click="handleQuickActionClick(action)"
           >
-            <div class="action-pill__icon" :style="{ color: action.color.match(/#[A-Fa-f0-9]{6}/)?.[0] || 'var(--q-primary)' }">
+            <div class="action-pill__icon" :style="{ color: action.color?.match(/#[A-Fa-f0-9]{6}/)?.[0] || 'var(--q-primary)' }">
               <q-icon :name="action.icon" size="18px" />
             </div>
             <div class="action-pill__label">{{ action.label }}</div>
           </div>
+          <!-- Add shortcut button -->
+          <div
+            v-if="configuredQuickActions.length < 6"
+            class="action-pill action-pill--add clickable"
+            @click="showQuickAccessConfig = true"
+          >
+            <div class="action-pill__icon" style="color: var(--q-grey-5)">
+              <q-icon name="add" size="18px" />
+            </div>
+            <div class="action-pill__label text-grey-5">Agregar</div>
+          </div>
         </div>
       </div>
 
+      <!-- Activity Section (for Admin) -->
       <div v-if="isAdmin" class="bento-item activity-bento span-full-mobile span-2-desktop section-fade-in">
         <div class="row items-center justify-between q-mb-md">
           <div class="bento-header no-margin">
-            <q-icon name="history" class="q-mr-xs" />
+            <q-icon name="receipt_long" class="q-mr-xs" />
             <span>Actividad Reciente</span>
           </div>
           <q-btn
@@ -156,55 +224,357 @@
         </div>
       </div>
     </div>
+
+    <!-- Quick Access Configuration Dialog -->
+    <q-dialog
+      v-model="showQuickAccessConfig"
+      persistent
+      :maximized="$q.screen.lt.sm"
+      transition-show="scale"
+      transition-hide="scale"
+    >
+      <q-card class="config-card flex no-wrap column" :class="{ 'config-card--dark': $q.dark.isActive }">
+        <!-- Sticky Header with Glassmorphism -->
+        <q-card-section class="config-header col-auto">
+          <div class="row items-center no-wrap">
+            <div class="header-icon-box">
+              <q-icon name="auto_awesome" size="24px" color="white" />
+            </div>
+            <div class="q-ml-md">
+              <div class="text-h6 text-weight-bolder">Personalizar Panel</div>
+              <div class="text-caption opacity-60">Elige tus 6 herramientas favoritas</div>
+            </div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup class="close-btn-modern" />
+          </div>
+
+          <!-- Progress Visualization -->
+          <div class="progress-container q-mt-lg">
+            <div class="row items-center justify-between q-mb-xs">
+              <span class="text-caption text-weight-bold uppercase letter-spacing-1">Tu Selección</span>
+              <span class="text-caption text-weight-bold" :class="selectedQuickActions.length === 6 ? 'text-positive' : 'text-primary'">
+                {{ selectedQuickActions.length }} / 6
+              </span>
+            </div>
+            <div class="selection-dots">
+              <div
+                v-for="i in 6"
+                :key="i"
+                class="dot"
+                :class="{
+                  'dot--active': i <= selectedQuickActions.length,
+                  'dot--pulse': i === selectedQuickActions.length + 1 && selectedQuickActions.length < 6
+                }"
+              ></div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="config-body q-pa-none col">
+          <!-- Active Selection Preview (Horizontal Scroll on Mobile, Grid on Desktop) -->
+          <div class="section-label q-px-md q-pt-md">
+            <q-icon name="touch_app" size="16px" class="q-mr-xs" />
+            Ordena tus favoritos
+          </div>
+          <div class="selected-preview-area q-px-md q-pb-md">
+            <div v-if="selectedQuickActions.length === 0" class="empty-preview flex flex-center">
+              <div class="text-center">
+                <q-icon name="add_circle_outline" size="32px" color="grey-4" />
+                <div class="text-caption text-grey-5">Toca abajo para agregar</div>
+              </div>
+            </div>
+            <transition-group name="list" tag="div" class="preview-grid">
+              <div
+                v-for="(action, index) in selectedQuickActions"
+                :key="action.name"
+                class="preview-card"
+              >
+                <div class="preview-card__icon" :style="{ background: action.color }">
+                  <q-icon :name="action.icon" size="20px" color="white" />
+                  <q-btn
+                    round
+                    dense
+                    flat
+                    icon="close"
+                    size="xs"
+                    class="remove-tag"
+                    @click="removeQuickAction(action)"
+                  />
+                </div>
+                <div class="preview-card__label text-center ellipsis">{{ action.label }}</div>
+                <div class="preview-card__reorder row no-wrap justify-center">
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="chevron_left"
+                    size="xs"
+                    :disable="index === 0"
+                    @click="moveQuickAction(index, -1)"
+                  />
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="chevron_right"
+                    size="xs"
+                    :disable="index === selectedQuickActions.length - 1"
+                    @click="moveQuickAction(index, 1)"
+                  />
+                </div>
+              </div>
+            </transition-group>
+          </div>
+
+          <q-separator />
+
+          <!-- Available Modules in "Library" Style -->
+          <div class="section-label q-px-md q-pt-md">
+            <q-icon name="library_add" size="16px" class="q-mr-xs" />
+            Todas las Herramientas
+          </div>
+
+          <div class="modules-library q-px-md q-pb-xl">
+            <template v-if="loadingModules">
+              <div class="row q-col-gutter-sm">
+                <div v-for="n in 6" :key="n" class="col-6 col-md-4">
+                  <q-skeleton type="rect" height="80px" class="rounded-borders" />
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="row q-col-gutter-sm">
+                <div
+                  v-for="item in flattenedModulesList.filter(i => i.type === 'module')"
+                  :key="item.id"
+                  class="col-6 col-md-4"
+                >
+                  <div
+                    class="library-item clickable"
+                    :class="{
+                      'library-item--selected': isModuleSelected(item),
+                      'library-item--disabled': selectedQuickActions.length >= 6 && !isModuleSelected(item)
+                    }"
+                    @click="toggleQuickAction(item)"
+                  >
+                    <div class="library-item__icon-wrap">
+                      <q-icon :name="item.icon || 'link'" size="20px" />
+                    </div>
+                    <div class="library-item__text">
+                      <div class="title">{{ item.title }}</div>
+                      <div class="subtitle ellipsis">{{ item.sectionName }}</div>
+                    </div>
+                    <div class="library-item__check">
+                      <q-icon v-if="isModuleSelected(item)" name="check_circle" color="positive" size="18px" />
+                      <q-icon v-else name="add" color="grey-4" size="18px" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </q-card-section>
+
+        <!-- Footer Actions with Premium look -->
+        <q-card-actions align="center" class="config-footer q-pa-md col-auto">
+          <q-btn
+            flat
+            no-caps
+            label="Descartar"
+            color="grey-7"
+            class="rounded-button q-px-lg"
+            @click="cancelQuickAccessConfig"
+          />
+          <q-btn
+            unelevated
+            no-caps
+            label="Aplicar Cambios"
+            color="primary"
+            class="rounded-button q-px-xl text-weight-bolder"
+            icon="done_all"
+            @click="saveQuickAccessConfig"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from 'boot/axios'
 import { authentication } from 'src/stores/module-authentication'
 import { storeToRefs } from 'pinia'
+import { date } from 'quasar'
 
 const router = useRouter()
 const store = authentication()
-const { userSession } = storeToRefs(store)
+const { userSession, branchOffice } = storeToRefs(store)
+
+// ============================================
+// CONSTANTS
+// ============================================
 
 /**
- * Onboarding progress
- * @type {number}
+ * LocalStorage keys for persisting user preferences
+ * @type {Object}
+ */
+const STORAGE_KEYS = {
+  QUICK_ACCESS: 'orderwise_quick_access'
+}
+
+// ============================================
+// ONBOARDING STATE
+// ============================================
+
+/**
+ * Onboarding progress percentage
+ * @type {Ref<number>}
  */
 const onboardingProgress = ref(0)
 
 /**
- * Completed tasks count
- * @type {number}
+ * Number of completed onboarding tasks
+ * @type {Ref<number>}
  */
 const completedTasks = ref(0)
 
 /**
- * Total tasks count
- * @type {number}
+ * Total number of onboarding tasks
+ * @type {Ref<number>}
  */
 const totalTasks = ref(5)
 
+// ============================================
+// STATISTICS STATE
+// ============================================
+
 /**
- * Today's statistics
- * @type {object}
+ * Granular loading states for each statistic card
+ * @type {Ref<Object>}
  */
-const todayStats = ref({
-  invoices: 0,
-  revenue: 0,
-  products: 0,
-  clients: 0
+const loadingStats = ref({
+  income: true,
+  profit: true,
+  cashOut: true,
+  receivable: true,
+  products: true,
+  clients: true,
+  sales: true
 })
 
 /**
- * Recent invoices
- * @type {Array}
+ * Today's financial statistics
+ * @type {Ref<Object>}
+ */
+const todayStats = ref({
+  profit: 0,
+  netIncome: 0,
+  cashOut: 0,
+  receivable: 0,
+  productsTotal: 0,
+  clientsTotal: 0,
+  salesToday: 0
+})
+
+/**
+ * Recent invoices list
+ * @type {Ref<Array>}
  */
 const recentInvoices = ref([])
 
+// ============================================
+// QUICK ACCESS STATE
+// ============================================
+
+/**
+ * Controls quick access configuration dialog visibility
+ * @type {Ref<boolean>}
+ */
+const showQuickAccessConfig = ref(false)
+
+/**
+ * Loading state for modules
+ * @type {Ref<boolean>}
+ */
+const loadingModules = ref(false)
+
+/**
+ * Available sections with modules from API
+ * @type {Ref<Array>}
+ */
+const availableSections = ref([])
+
+/**
+ * Quick actions selected by user (stored configuration)
+ * @type {Ref<Array>}
+ */
+const selectedQuickActions = ref([])
+
+/**
+ * Backup of quick actions for cancel operation
+ * @type {Ref<Array>}
+ */
+const quickActionsBackup = ref([])
+
+/**
+ * Default quick actions configuration
+ * @type {Array}
+ */
+const defaultQuickActions = [
+  {
+    name: 'new-sale',
+    label: 'Nueva Venta',
+    icon: 'add_shopping_cart',
+    route: 'Billing',
+    color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  },
+  {
+    name: 'box-report',
+    label: 'Reporte de Caja',
+    icon: 'point_of_sale',
+    route: 'BoxReport',
+    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+  },
+  {
+    name: 'invoices',
+    label: 'Lista de facturas',
+    icon: 'receipt_long',
+    route: 'Invoice',
+    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+  },
+  {
+    name: 'products',
+    label: 'Productos',
+    icon: 'inventory_2',
+    route: 'Product',
+    color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+  },
+  {
+    name: 'receivables',
+    label: 'Cuentas por Cobrar',
+    icon: 'account_balance_wallet',
+    route: 'AccountsReceivable',
+    color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
+  },
+  {
+    name: 'new-purchase',
+    label: 'Nueva Compra',
+    icon: 'shopping_bag',
+    route: 'NewPurchase',
+    color: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)'
+  }
+]
+
+// ============================================
+// COMPUTED PROPERTIES
+// ============================================
+
+/**
+ * Get user's first name
+ * @returns {string}
+ */
 const userName = computed(() => {
   if (!userSession.value) return 'Usuario'
   const name = userSession.value.name || ''
@@ -213,7 +583,7 @@ const userName = computed(() => {
 
 /**
  * Check if user is admin or root
- * @type {ComputedRef<boolean>}
+ * @returns {boolean}
  */
 const isAdmin = computed(() => {
   if (!userSession.value) return false
@@ -221,8 +591,8 @@ const isAdmin = computed(() => {
 })
 
 /**
- * Get greeting based on time
- * @return {string}
+ * Get greeting based on time of day
+ * @returns {string}
  */
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -233,7 +603,7 @@ const greeting = computed(() => {
 
 /**
  * Get current date formatted
- * @return {string}
+ * @returns {string}
  */
 const currentDate = computed(() => {
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
@@ -241,56 +611,44 @@ const currentDate = computed(() => {
 })
 
 /**
- * Quick actions configuration
- * @type {Array}
+ * Get configured quick actions (from localStorage or defaults)
+ * @returns {Array}
  */
-const quickActions = ref([
-  {
-    name: 'new-sale',
-    label: 'Nueva Venta',
-    icon: 'add_shopping_cart',
-    route: 'Billing',
-    color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-  },
-  {
-    name: 'products',
-    label: 'Productos',
-    icon: 'inventory_2',
-    route: 'Product',
-    color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-  },
-  {
-    name: 'clients',
-    label: 'Clientes',
-    icon: 'people',
-    route: 'Client',
-    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-  },
-  {
-    name: 'reports',
-    label: 'Reportes',
-    icon: 'analytics',
-    route: 'Dashboard',
-    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-  },
-  {
-    name: 'cashbox',
-    label: 'Caja',
-    icon: 'account_balance_wallet',
-    route: 'Cashbox',
-    color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-  },
-  {
-    name: 'settings',
-    label: 'Configuración',
-    icon: 'settings',
-    route: 'CompanyConfig',
-    color: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
-  }
-])
+const configuredQuickActions = computed(() => {
+  return selectedQuickActions.value
+})
 
 /**
- * Navigate to route
+ * Flattened list of sections and modules for rendering
+ * @returns {Array}
+ */
+const flattenedModulesList = computed(() => {
+  const items = []
+  availableSections.value.forEach(section => {
+    items.push({
+      type: 'header',
+      id: `header-${section.id}`,
+      name: section.name,
+      icon: section.icon
+    })
+    section.modules.forEach(module => {
+      items.push({
+        type: 'module',
+        id: `module-${module.id}`,
+        sectionName: section.name,
+        ...module
+      })
+    })
+  })
+  return items
+})
+
+// ============================================
+// NAVIGATION METHODS
+// ============================================
+
+/**
+ * Navigate to a named route
  * @param {string} routeName - Route name
  */
 const navigateTo = (routeName) => {
@@ -298,7 +656,17 @@ const navigateTo = (routeName) => {
 }
 
 /**
- * Go to welcome page
+ * Handle click on quick action
+ * @param {Object} action - Action object
+ */
+const handleQuickActionClick = (action) => {
+  if (action.route) {
+    navigateTo(action.route)
+  }
+}
+
+/**
+ * Navigate to welcome page
  */
 const goToWelcome = () => {
   router.push({ name: 'Welcome' })
@@ -306,44 +674,61 @@ const goToWelcome = () => {
 
 /**
  * View invoice details
- * @param {object} invoice - Invoice object
+ * @param {Object} invoice - Invoice object
  */
 const viewInvoice = (invoice) => {
-  // Navigate to invoice details or open modal
-  router.push({ name: 'Invoice', params: { id: invoice.id } })
+  router.push({ name: 'Invoice', params: { id: invoice.invoice_id } })
 }
 
+// ============================================
+// FORMATTING METHODS
+// ============================================
+
 /**
- * Format currency
+ * Get the currency symbol configured in the system
+ * @returns {string}
+ */
+const coinSymbol = computed(() => {
+  return userSession.value?.company_session?.company_config?.coin?.symbol || '$'
+})
+
+/**
+ * Format currency amount with system coin symbol
  * @param {number} amount - Amount to format
- * @return {string} Formatted currency
+ * @returns {string}
  */
 const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: userSession.value?.company_session?.coin?.symbol || 'USD'
-  }).format(amount || 0)
+  const num = Number(amount) || 0
+  const formatted = new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num)
+  return `${coinSymbol.value} ${formatted}`
 }
 
 /**
- * Format time relative
+ * Format relative time
  * @param {string} datetime - Datetime string
- * @return {string} Formatted time
+ * @returns {string}
  */
 const formatTime = (datetime) => {
-  const date = new Date(datetime)
+  const dateObj = new Date(datetime)
   const now = new Date()
-  const diff = now - date
+  const diff = now - dateObj
   const minutes = Math.floor(diff / 60000)
 
   if (minutes < 1) return 'Ahora'
   if (minutes < 60) return `Hace ${minutes}m`
   if (minutes < 1440) return `Hace ${Math.floor(minutes / 60)}h`
-  return date.toLocaleDateString('es-ES')
+  return dateObj.toLocaleDateString('es-ES')
 }
 
+// ============================================
+// DATA LOADING METHODS
+// ============================================
+
 /**
- * Load onboarding status
+ * Load onboarding status from API
  */
 const loadOnboardingStatus = async () => {
   try {
@@ -359,23 +744,101 @@ const loadOnboardingStatus = async () => {
 }
 
 /**
- * Load today's statistics
+ * Load today's financial statistics with progressive/staggered updates
  */
 const loadTodayStats = async () => {
-  try {
-    // You'll need to create these endpoints or adjust based on your API
-    const { data } = await api.get('dashboard/today-stats')
-    todayStats.value = data
-  } catch (error) {
-    console.error('Error loading today stats:', error)
-    // Set mock data for now
-    todayStats.value = {
-      invoices: 12,
-      revenue: 4500.50,
-      products: 156,
-      clients: 45
-    }
+  if (!branchOffice.value?.id) return
+
+  // Reset all loading states
+  Object.keys(loadingStats.value).forEach(key => {
+    loadingStats.value[key] = true
+  })
+
+  const today = date.formatDate(new Date(), 'YYYY-MM-DD')
+  const params = {
+    day: today,
+    branch_office_id: [branchOffice.value.id]
   }
+
+  // Group 1: Immediate - Financial critical stats
+  const loadFinancials = () => {
+    api.get('reports/category-totals', { params })
+      .then(({ data }) => {
+        const sales = data?.category_total || 0
+        const costs = data?.cost_total || 0
+        todayStats.value.netIncome = sales
+        todayStats.value.profit = sales - costs
+      })
+      .catch(err => console.error('Error loading profit stats:', err))
+      .finally(() => {
+        loadingStats.value.income = false
+        loadingStats.value.profit = false
+      })
+
+    api.get('reports/cashflow-totals', { params })
+      .then(({ data }) => {
+        let cashOut = 0
+        if (data?.cashflow_total) {
+          cashOut = data.cashflow_total
+            .filter(cf => cf.type_cashflow === 'credit' || cf.type_cashflow === 'expense')
+            .reduce((sum, cf) => sum + (cf.totals || 0), 0)
+        }
+        todayStats.value.cashOut = cashOut
+      })
+      .catch(err => console.error('Error loading cashflow stats:', err))
+      .finally(() => {
+        loadingStats.value.cashOut = false
+      })
+  }
+
+  // Group 2: Slightly delayed - KPI and Sales count
+  const loadSecondaryStats = () => {
+    api.get('client-statement/kpis', {
+      params: { branch_office_id: branchOffice.value.id }
+    })
+      .then(({ data }) => {
+        todayStats.value.receivable = data?.balance || 0
+      })
+      .catch(err => console.error('Error loading receivable stats:', err))
+      .finally(() => {
+        loadingStats.value.receivable = false
+      })
+
+    api.get('dashboard/today-stats', { params })
+      .then(({ data }) => {
+        todayStats.value.salesToday = data?.invoices || 0
+      })
+      .catch(err => console.error('Error loading sales count:', err))
+      .finally(() => {
+        loadingStats.value.sales = false
+      })
+  }
+
+  // Group 3: More delayed - Inventory and totals
+  const loadInventoryStats = () => {
+    api.get('products', { params: { perPage: 1, page: 1, paginated: true } })
+      .then(({ data }) => {
+        todayStats.value.productsTotal = data?.total || 0
+      })
+      .catch(err => console.error('Error loading products count:', err))
+      .finally(() => {
+        loadingStats.value.products = false
+      })
+
+    api.get('clients', { params: { perPage: 1, page: 1, paginated: true } })
+      .then(({ data }) => {
+        todayStats.value.clientsTotal = data?.total || 0
+      })
+      .catch(err => console.error('Error loading clients count:', err))
+      .finally(() => {
+        loadingStats.value.clients = false
+      })
+  }
+
+  // Execute in sequence with small delays for visual flow
+  loadFinancials()
+  setTimeout(loadSecondaryStats, 150)
+  setTimeout(loadInventoryStats, 300)
 }
 
 /**
@@ -398,10 +861,174 @@ const loadRecentInvoices = async () => {
   }
 }
 
-onMounted(() => {
-  loadOnboardingStatus()
+/**
+ * Load available modules from sections API
+ */
+const loadAvailableModules = async () => {
+  loadingModules.value = true
+  try {
+    const { data } = await api.get('sections')
+    const sections = Array.isArray(data) ? data : (data.data || [])
+
+    availableSections.value = sections
+      .filter(section => !section.deleted_at && section.modules?.length > 0)
+      .map(section => ({
+        ...section,
+        modules: section.modules
+          .filter(module => !module.deleted_at)
+          .sort((a, b) => a.position - b.position)
+      }))
+      .sort((a, b) => a.index - b.index)
+  } catch (error) {
+    console.error('Error loading modules:', error)
+  } finally {
+    loadingModules.value = false
+  }
+}
+
+// ============================================
+// QUICK ACCESS CONFIGURATION METHODS
+// ============================================
+
+/**
+ * Load quick access configuration from localStorage
+ */
+const loadQuickAccessConfig = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.QUICK_ACCESS)
+    if (stored) {
+      selectedQuickActions.value = JSON.parse(stored)
+    } else {
+      // Initialize with defaults if no user preference exists
+      selectedQuickActions.value = [...defaultQuickActions]
+    }
+  } catch (error) {
+    console.error('Error loading quick access config:', error)
+    selectedQuickActions.value = [...defaultQuickActions]
+  }
+}
+
+/**
+ * Save quick access configuration to localStorage
+ */
+const saveQuickAccessConfig = () => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.QUICK_ACCESS, JSON.stringify(selectedQuickActions.value))
+    showQuickAccessConfig.value = false
+  } catch (error) {
+    console.error('Error saving quick access config:', error)
+  }
+}
+
+/**
+ * Cancel quick access configuration changes
+ */
+const cancelQuickAccessConfig = () => {
+  selectedQuickActions.value = [...quickActionsBackup.value]
+  showQuickAccessConfig.value = false
+}
+
+/**
+ * Check if a module is already selected
+ * @param {Object} module - Module object
+ * @returns {boolean}
+ */
+const isModuleSelected = (module) => {
+  return selectedQuickActions.value.some(
+    a => a.name === module.link || a.route === module.link
+  )
+}
+
+/**
+ * Toggle a module in quick actions
+ * @param {Object} module - Module object
+ */
+const toggleQuickAction = (module) => {
+  const index = selectedQuickActions.value.findIndex(
+    a => a.name === module.link || a.route === module.link
+  )
+
+  if (index >= 0) {
+    selectedQuickActions.value.splice(index, 1)
+  } else if (selectedQuickActions.value.length < 6) {
+    selectedQuickActions.value.push({
+      name: module.link,
+      label: module.title,
+      icon: module.icon || 'link',
+      route: module.link,
+      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    })
+  }
+}
+
+/**
+ * Remove a quick action
+ * @param {Object} action - Action to remove
+ */
+const removeQuickAction = (action) => {
+  const index = selectedQuickActions.value.findIndex(a => a.name === action.name)
+  if (index >= 0) {
+    selectedQuickActions.value.splice(index, 1)
+  }
+}
+
+/**
+ * Move quick action up or down
+ * @param {number} index - Current index
+ * @param {number} direction - -1 for up, 1 for down
+ */
+const moveQuickAction = (index, direction) => {
+  const newIndex = index + direction
+  if (newIndex >= 0 && newIndex < selectedQuickActions.value.length) {
+    const temp = selectedQuickActions.value[index]
+    selectedQuickActions.value[index] = selectedQuickActions.value[newIndex]
+    selectedQuickActions.value[newIndex] = temp
+  }
+}
+
+// ============================================
+// WATCHERS
+// ============================================
+
+/**
+ * Watch for dialog open to backup current config
+ */
+watch(showQuickAccessConfig, (newVal) => {
+  if (newVal) {
+    quickActionsBackup.value = [...selectedQuickActions.value]
+    if (availableSections.value.length === 0) {
+      loadAvailableModules()
+    }
+  }
+})
+
+/**
+ * Watch for branch office changes to reload stats
+ */
+watch(branchOffice, () => {
   loadTodayStats()
-  loadRecentInvoices()
+})
+
+// ============================================
+// LIFECYCLE HOOKS
+// ============================================
+
+onMounted(() => {
+  // Sync config is immediate
+  loadQuickAccessConfig()
+
+  // Delay the heavy artillery so the UI feels snappy from the start
+  setTimeout(() => {
+    loadTodayStats()
+  }, 100)
+
+  setTimeout(() => {
+    loadOnboardingStatus()
+  }, 400)
+
+  setTimeout(() => {
+    loadRecentInvoices()
+  }, 600)
 })
 </script>
 
@@ -424,48 +1051,141 @@ onMounted(() => {
     padding-bottom: 48px;
   }
 }
-/**
- * Header Cockpit
- */
 .header-cockpit {
-  padding: 24px 8px;
-  margin-bottom: 8px;
+  padding: 0.75rem 0.2rem;
   position: relative;
+}
+
+@media (min-width: 1024px) {
+  .header-cockpit {
+    padding: 1rem 1.5rem;
+    margin-bottom: 12px;
+  }
 }
 
 .cockpit-glow {
   position: absolute;
-  top: -20px;
-  left: 0;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.1) 0%, transparent 70%);
-  filter: blur(20px);
+  top: -40px;
+  left: -20px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.15) 0%, transparent 70%);
+  filter: blur(40px);
   pointer-events: none;
 }
 
-.welcome-subtitle {
-  margin-top: 4px;
-  font-weight: 500;
-}
-
-.date-chip-modern {
-  display: flex;
+.date-chip-premium {
+  display: inline-flex;
   align-items: center;
   background: white;
-  padding: 8px 16px;
-  border-radius: 14px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
   color: #64748b;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  border: 1px solid #f1f5f9;
 }
 
-body.body--dark .date-chip-modern {
+.date-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.date-day {
+  font-size: 13px; /* <--- Tamaño del día de la semana (arriba) */
+  font-weight: 800;
+  color: var(--q-primary);
+  letter-spacing: 0.5px;
+}
+
+.date-full {
+  font-size: 11px; /* <--- Tamaño de la fecha numérica (abajo) */
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@media (min-width: 600px) {
+  .date-stack {
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+  }
+  .date-day::after {
+    content: ',';
+  }
+  .date-day {
+    font-size: 11px; /* <--- Tamaño del día en escritorio */
+    color: inherit;
+  }
+}
+
+body.body--dark .date-chip-premium {
   background: #1e293b;
   border-color: #334155;
   color: #94a3b8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.greeting-text {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.greeting-block {
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid var(--q-primary);
+  padding-left: 12px;
+  line-height: 1.1;
+}
+
+.greeting-main {
+  font-size: 15px; /* <--- Tamaño del "BUENAS TARDES" */
+  font-weight: 700;
+}
+
+.greeting-name {
+  font-size: clamp(18px, 5vw, 24px); /* <--- Tamaño del NOMBRE */
+  color: #334155;
+  letter-spacing: -0.3px;
+  font-family: inherit !important;
+}
+
+body.body--dark .greeting-name {
+  color: #f1f5f9;
+}
+
+@media (max-width: 600px) {
+  .greeting-block {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-cockpit .row {
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+
+.greeting-subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  letter-spacing: 0.1px;
+}
+
+body.body--dark .greeting-main {
+  color: #f1f5f9;
+}
+
+body.body--dark .greeting-subtitle {
+  color: #cbd5e1;
 }
 
 /**
@@ -473,15 +1193,32 @@ body.body--dark .date-chip-modern {
  */
 .bento-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr; /* Single column on mobile by default */
   gap: 12px;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 0) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 12px;
+  }
+  .mobile-hide {
+    display: none !important;
+  }
 }
 
 @media (min-width: 1024px) {
   .bento-grid {
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: auto auto;
+    grid-template-rows: auto;
     gap: 16px;
+    padding: 0;
+  }
+  .mobile-hide {
+    display: flex !important;
   }
 }
 
@@ -492,6 +1229,9 @@ body.body--dark .date-chip-modern {
   border: 1px solid rgba(255,255,255,0.8);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden; /* Prevent content from breaking the box */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 body.body--dark .bento-item {
@@ -507,7 +1247,6 @@ body.body--dark .bento-item {
 
 .span-full { grid-column: 1 / -1; }
 .span-full-mobile { grid-column: 1 / -1; }
-.span-small-mobile { grid-column: span 1; }
 
 @media (min-width: 1024px) {
   .span-2-desktop { grid-column: span 2; }
@@ -546,6 +1285,7 @@ body.body--dark .bento-item {
   border-radius: 12px;
   transition: all 0.2s;
   border: 1px solid transparent;
+  min-width: 0; /* Allow text ellipsis to work */
 }
 
 body.body--dark .action-pill {
@@ -553,6 +1293,15 @@ body.body--dark .action-pill {
 }
 
 .action-pill:active { transform: scale(0.96); }
+
+.action-pill--add {
+  border: 2px dashed #e2e8f0;
+  background: transparent;
+}
+
+body.body--dark .action-pill--add {
+  border-color: #334155;
+}
 
 .action-pill__icon {
   width: 32px;
@@ -563,6 +1312,7 @@ body.body--dark .action-pill {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  flex-shrink: 0;
 }
 
 body.body--dark .action-pill__icon {
@@ -573,10 +1323,64 @@ body.body--dark .action-pill__icon {
   font-size: 11px;
   font-weight: 700;
   color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 body.body--dark .action-pill__label {
   color: #f1f5f9;
+}
+
+/**
+ * Recent Access Grid
+ */
+.recent-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recent-pill {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  transition: all 0.2s;
+  min-width: 0;
+}
+
+body.body--dark .recent-pill {
+  background: #1e293b;
+}
+
+.recent-pill:hover {
+  background: #f1f5f9;
+}
+
+body.body--dark .recent-pill:hover {
+  background: #334155;
+}
+
+.recent-pill__label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.body--dark .recent-pill__label {
+  color: #f1f5f9;
+}
+
+.recent-pill__time {
+  font-size: 10px;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
 /**
@@ -587,17 +1391,56 @@ body.body--dark .action-pill__label {
   flex-direction: row;
   align-items: center;
   gap: 16px;
-  padding: 12px 16px;
+  padding: 16px;
   min-height: auto;
+  justify-content: flex-start;
+}
+
+@media (max-width: 600px) {
+  .bento-item {
+    padding: 10px;
+  }
+
+  .stat-hero {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .stat-icon-wrap {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+  }
+
+  .stat-icon-wrap :deep(.q-icon) {
+    font-size: 20px !important;
+  }
+
+  .stat-val {
+    font-size: 14px !important;
+    font-weight: 700;
+  }
+
+  .stat-lab {
+    font-size: 10px !important;
+    font-weight: 500;
+    color: #94a3b8;
+  }
+}
+
+@media (max-width: 360px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (min-width: 1024px) {
-  .actions-bento, .activity-bento {
+  .actions-bento, .activity-bento, .recent-bento {
     height: 100%;
   }
 }
 
-.actions-bento {
+.actions-bento, .recent-bento {
   display: flex;
   flex-direction: column;
 }
@@ -622,12 +1465,23 @@ body.body--dark .action-pill__label {
 .bg-soft-positive { background: rgba(var(--q-positive-rgb), 0.1); }
 .bg-soft-warning { background: rgba(var(--q-warning-rgb), 0.1); }
 .bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
+.bg-soft-negative { background: rgba(var(--q-negative-rgb), 0.1); }
+.bg-soft-secondary { background: rgba(var(--q-secondary-rgb), 0.1); }
+.bg-soft-accent { background: rgba(var(--q-accent-rgb), 0.1); }
+
+.stat-data {
+  flex: 1;
+  min-width: 0;
+}
 
 .stat-val {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.5px;
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-lab {
@@ -636,6 +1490,8 @@ body.body--dark .action-pill__label {
   color: #64748b;
   margin-top: 2px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-trend {
@@ -729,6 +1585,13 @@ body.body--dark .node-line::after {
   margin-top: 2px;
 }
 
+/**
+ * Empty States
+ */
+.empty-state {
+  min-height: 100px;
+}
+
 .rounded-button { border-radius: 8px; }
 .opacity-60 { opacity: 0.6; }
 .clickable { cursor: pointer; }
@@ -741,5 +1604,321 @@ body.body--dark .node-line::after {
 
 .section-fade-in {
   animation: fadeIn 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/**
+ * Premium Configuration Dialog Styles
+ */
+.config-card {
+  border-radius: 28px;
+  overflow: hidden;
+  max-width: 800px;
+  width: 95vw;
+  background: #fdfdfe;
+}
+
+body.body--dark .config-card {
+  background: #0f172a;
+}
+
+.config-header {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #7c3aed 100%);
+  color: white;
+  padding: 24px;
+}
+
+.header-icon-box {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.close-btn-modern {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.progress-container {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+  border-radius: 16px;
+}
+
+.selection-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.dot--active {
+  background: white;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.dot--pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.3; }
+}
+
+.config-body {
+  overflow-y: auto;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+
+/**
+ * Preview Grid
+ */
+.selected-preview-area {
+  min-height: 120px;
+  flex-shrink: 0;
+}
+
+.preview-grid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 12px 0;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.preview-grid::-webkit-scrollbar { display: none; }
+
+.preview-card {
+  flex: 0 0 85px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-card__icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
+}
+
+.remove-tag {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #f43f5e;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+
+.preview-card__label {
+  font-size: 10px;
+  font-weight: 700;
+  width: 100%;
+  color: #64748b;
+}
+
+.preview-card__reorder {
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 2px;
+  width: 100%;
+}
+
+body.body--dark .preview-card__reorder {
+  background: #1e293b;
+}
+
+/**
+ * Library Items
+ */
+.modules-library {
+  padding-bottom: 32px;
+}
+
+.library-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  height: 100%;
+  transition: all 0.2s ease;
+}
+
+body.body--dark .library-item {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.library-item--selected {
+  border-color: var(--q-primary);
+  background: rgba(var(--q-primary-rgb), 0.05);
+  box-shadow: 0 4px 12px rgba(var(--q-primary-rgb), 0.1);
+}
+
+.library-item--disabled {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+  pointer-events: none;
+}
+
+.library-item__icon-wrap {
+  width: 38px;
+  height: 38px;
+  background: #f8fafc;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+body.body--dark .library-item__icon-wrap {
+  background: #0f172a;
+}
+
+.library-item--selected .library-item__icon-wrap {
+  background: var(--q-primary);
+  color: white;
+}
+
+.library-item__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.library-item__text .title {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.library-item__text .subtitle {
+  font-size: 9px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.library-item__check {
+  flex-shrink: 0;
+}
+
+.config-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.02);
+}
+
+body.body--dark .config-footer {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+/**
+ * Transitions
+ */
+.list-enter-active, .list-leave-active {
+  transition: all 0.5s ease;
+}
+.list-enter-from, .list-leave-to {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+/**
+ * Mobile Responsive Fixes
+ */
+@media (max-width: 600px) {
+  .config-card {
+    border-radius: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .config-header {
+    padding: 16px;
+    padding-top: 20px;
+  }
+
+  .header-icon-box {
+    width: 40px;
+    height: 40px;
+  }
+
+  .text-h6 {
+    font-size: 1.1rem;
+  }
+
+  .selection-dots .dot {
+    height: 4px;
+  }
+
+  .preview-card {
+    flex: 0 0 75px;
+  }
+
+  .preview-card__icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+  }
+
+  .library-item {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .library-item__icon-wrap {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .library-item__text .title {
+    font-size: 11px;
+  }
+
+  .modules-library {
+    max-height: none; /* Allow it to fill the available space in maximized mode */
+    padding-bottom: 120px; /* Space for fixed footer on some devices */
+  }
+
+  .preview-grid {
+    padding: 10px 0;
+  }
 }
 </style>

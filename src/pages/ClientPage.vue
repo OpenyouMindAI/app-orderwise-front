@@ -280,6 +280,8 @@
                   filled
                   v-model="client.username"
                   label="Usuario"
+                  autocomplete="off"
+                  name="client-username"
                   dense
                 />
               </div>
@@ -290,6 +292,8 @@
                   v-model="client.password"
                   :type="showPassword ? 'text' : 'password'"
                   label="Contraseña"
+                  autocomplete="new-password"
+                  name="client-password"
                   dense
                 >
                   <template v-slot:append>
@@ -539,6 +543,8 @@
                   filled
                   v-model="client.username"
                   label="Usuario"
+                  autocomplete="off"
+                  name="new-client-username"
                   dense
                 />
               </div>
@@ -548,6 +554,8 @@
                   filled
                   v-model="client.password"
                   :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  name="new-client-password"
                   label="Contraseña"
                   dense
                 >
