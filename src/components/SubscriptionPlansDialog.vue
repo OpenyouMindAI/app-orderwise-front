@@ -280,7 +280,7 @@
               </div>
             </div>
             <!-- Contact Advisor Card -->
-            <div v-if="showContactOption" class="plan-card contact-advisor-card">
+            <div class="plan-card contact-advisor-card">
               <div class="plan-inner advisor-inner">
                 <!-- Advisor Header -->
                 <div class="advisor-header">
@@ -404,18 +404,6 @@ export default {
     modelValue: {
       type: Boolean,
       default: false
-    },
-    mustSelectPlan: {
-      type: Boolean,
-      default: false
-    },
-    showContactOption: {
-      type: Boolean,
-      default: true
-    },
-    enableCountdown: {
-      type: Boolean,
-      default: false
     }
   },
   emits: ['update:modelValue', 'subscription-updated'],
@@ -491,11 +479,6 @@ export default {
      */
     const isAnnual = ref(false)
 
-    // Countdown State
-    const countdown = ref(3)
-    const countdownInterval = ref(null)
-    const redirectingPlanId = ref(null)
-
     const showDialog = computed({
       get: () => props.modelValue,
       set: (val) => emit('update:modelValue', val)
@@ -543,9 +526,6 @@ export default {
      * @return {string} The action button label
      */
     const getActionLabel = (plan) => {
-      if (redirectingPlanId.value === plan.id) {
-        return `Redirigiendo en ${countdown.value}s...`
-      }
       if (isCurrentPlan(plan)) return 'Plan Actual'
       return 'Comenzar Ahora'
     }
@@ -809,9 +789,6 @@ export default {
      * @return {void}
      */
     const selectPlan = async (plan) => {
-      // Si ya está redirigiendo, ignorar
-      if (redirectingPlanId.value) return
-
       if (store.isDemo) {
         localStorage.setItem('pending_plan_subscription', JSON.stringify({
           planId: plan.id,
@@ -823,45 +800,67 @@ export default {
         return
       }
 
-      if (props.enableCountdown) {
-        redirectingPlanId.value = plan.id
-        countdown.value = 3
-        
-        countdownInterval.value = setInterval(async () => {
-          countdown.value--
-          if (countdown.value <= 0) {
-            clearInterval(countdownInterval.value)
-            await processPayment(plan)
-          }
-        }, 1000)
-      } else {
-        await processPayment(plan)
+      if (plan.slug?.toLowerCase() === 'free') {
+        notify('El plan Free no requiere pago', 'info', 'info')
+        return
       }
-    }
 
-    const processPayment = async (plan) => {
+      loading.value = true
+
       try {
-        loading.value = true
-
-        const payload = {
+        const response = await api.post('mercadopago/create-payment', {
           subscription_plan_id: plan.id,
           branch_offices_count: plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1,
-          months: isAnnual.value ? 12 : 1 // 12 meses si es anual, 1 si es mensual
+          months: isAnnual.value ? 12 : 1
+        })
+
+        const pricing = getPlanPricing(plan)
+        const value = pricing && pricing.total_price_local ? pricing.total_price_local : plan.price
+        const currency = pricing && pricing.local_currency_code ? pricing.local_currency_code : 'ARS'
+
+        if (fbq?.event) {
+          fbq.event('InitiateCheckout', {
+            content_name: plan.name,
+            currency,
+            value
+          })
         }
 
-        const { data } = await api.post('mercadopago/create-payment', payload)
-
-        if (data.init_point) {
-          localStorage.setItem('mp_plan_id', plan.id)
-          // Redirect to Mercado Pago
-          window.location.href = data.init_point
-        } else {
-          notify('Error al generar link de pago', 'negative', 'error')
-          redirectingPlanId.value = null
+        if (!response.data.init_point) {
+          throw new Error('No se recibió URL de pago de Mercado Pago')
         }
+
+        const paymentUrl = response.data.init_point
+
+        localStorage.setItem('mp_preference_id', response.data.preference_id)
+        localStorage.setItem('mp_plan_id', plan.id)
+        localStorage.setItem('mp_plan_name', plan.name)
+
+        notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        window.location.href = paymentUrl
       } catch (error) {
-        notify(error.response?.data?.message || 'Error al procesar pago', 'negative', 'error')
-        redirectingPlanId.value = null
+        let errorMessage = 'Error al crear el link de pago'
+
+        if (error.response) {
+          const { status, data } = error.response
+
+          if (status === 400) {
+            errorMessage = data.message || 'Datos de pago inválidos'
+          } else if (status === 401) {
+            errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente'
+          } else if (status === 500) {
+            errorMessage = 'Error del servidor. Por favor, intenta nuevamente'
+          } else if (data.details) {
+            errorMessage = `Error de Mercado Pago: ${JSON.stringify(data.details)}`
+          }
+        } else if (error.request) {
+          errorMessage = 'Error de conexión. Verifica tu internet'
+        }
+
+        notify(errorMessage, 'negative', 'warning')
       } finally {
         loading.value = false
       }
@@ -903,7 +902,7 @@ export default {
       }
     }
 
-    const mustSelectPlan = computed(() => props.mustSelectPlan || store.mustSelectPlan)
+    const mustSelectPlan = computed(() => store.mustSelectPlan)
 
     watch(isAnnual, async () => {
       const proTeamPlan = plans.value.find(p => p.slug?.toLowerCase() === 'pro_team')
