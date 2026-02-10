@@ -8,13 +8,14 @@
   >
     <q-card class="modern-company-setup-dialog">
       <!-- Header moderno -->
-      <q-card-section class="company-setup-header">
+      <q-card-section class="company-setup-header relative-position">
+
         <div class="header-content">
           <div class="setup-icon-wrapper">
             <q-icon name="business_center" size="28px" class="setup-icon" />
           </div>
           <div class="text-h6 text-weight-bold q-mt-xs">Configura tu Empresa</div>
-          <div class="text-caption text-grey-7">Completa la información para comenzar</div>
+          <div class="text-caption text-grey-7">Completa la información o usa tus datos personales</div>
         </div>
       </q-card-section>
       <q-card-section class="setup-body-section">
@@ -154,49 +155,6 @@
             </q-select>
           </div>
 
-          <!-- Rubro (API) -->
-          <div class="input-container">
-            <q-select
-              v-model="form.business_type"
-              :options="businessTypes"
-              option-label="name"
-              option-value="id"
-              placeholder="Rubro / Tipo de Negocio *"
-              class="custom-input"
-              use-input
-              input-debounce="300"
-              @filter="filterBusinessTypes"
-              :rules="[val => !!val || 'El rubro es requerido']"
-              hide-bottom-space
-              behavior="menu"
-              borderless
-            >
-              <template v-slot:prepend>
-                <q-icon name="category" color="primary" size="20px"/>
-              </template>
-              <template v-slot:no-option>
-                <q-item>
-                  <q-item-section class="text-grey">
-                    No hay resultados
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-          </div>
-
-          <!-- Checkbox de copiar productos -->
-          <div class="input-container">
-            <q-checkbox
-              v-model="form.copy_test_products"
-              label="Copiar productos y categorías de ejemplo"
-              color="primary"
-            >
-              <q-tooltip class="bg-grey-8">
-                Te ayudará a empezar más rápido con datos de prueba del mismo rubro
-              </q-tooltip>
-            </q-checkbox>
-          </div>
-
           <!-- Dirección con AddressComponent -->
           <div class="input-container">
             <AddressComponent
@@ -210,12 +168,27 @@
             label="Crear Empresa"
             color="primary"
             icon-right="rocket_launch"
-            @click="setupCompany"
+            type="submit"
             :loading="loading"
             unelevated
             no-caps
             class="full-width setup-submit-btn"
           />
+          <q-btn
+            flat
+            label="Omitir por ahora"
+            color="grey-7"
+            icon="skip_next"
+            class="full-width q-mt-sm skip-btn"
+            @click="skipSetup"
+            :disable="loading"
+            :loading="loadingSkip"
+            no-caps
+          >
+            <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
+              Usar mis datos personales como información empresarial
+            </q-tooltip>
+          </q-btn>
         </q-form>
       </q-card-section>
     </q-card>
@@ -228,6 +201,7 @@ import { api } from 'src/boot/axios'
 import { notify, notifyValidationErrors } from 'src/const/mixins'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { usePixel } from 'src/composables/usePixel'
+import { authentication } from 'src/stores/module-authentication'
 
 const props = defineProps({
   modelValue: {
@@ -237,16 +211,25 @@ const props = defineProps({
   userEmail: {
     type: String,
     default: ''
+  },
+  initialBusinessData: {
+    type: Object,
+    default: () => ({})
+  },
+  registrationData: {
+    type: Object,
+    default: () => ({})
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'success'])
+const emit = defineEmits(['update:modelValue', 'next', 'success'])
 const fbq = usePixel()
+const authStore = authentication()
 
 // State
 const loading = ref(false)
+const loadingSkip = ref(false)
 const countries = ref([])
-const businessTypes = ref([])
 
 // Form data
 const form = ref({
@@ -340,29 +323,16 @@ const filterCountries = async (val, update, abort) => {
     })
   } catch (error) {
     console.error('Error loading countries:', error)
-    abort()
+    if (abort) abort()
   }
 }
 
 /**
- * Filter business types from API
+ * Handle Next Step (emit data to parent for second modal)
  */
-const filterBusinessTypes = async (val, update, abort) => {
-  try {
-    const { data } = await api.get('business-types', {
-      params: { dataSearch: { name: val } }
-    })
-    update(() => {
-      businessTypes.value = data
-    })
-  } catch (error) {
-    console.error('Error loading business types:', error)
-    abort()
-  }
-}
 
 /**
- * Setup company on backend
+ * Setup company directly (only used by skipSetup)
  */
 const setupCompany = async () => {
   try {
@@ -370,7 +340,8 @@ const setupCompany = async () => {
 
     const payload = {
       ...form.value,
-      business_type_id: form.value.business_type?.id,
+      business_type_id: props.initialBusinessData?.business_type_id || null,
+      copy_test_products: props.initialBusinessData?.copy_test_products || false,
       company_phone: form.value.company_phone
         ? `${selectedCountry.value?.code || ''}${form.value.company_phone}`.trim()
         : ''
@@ -385,7 +356,7 @@ const setupCompany = async () => {
     // Pixel Event
     if (fbq?.event) {
       fbq.event('CrearEmpresa', {
-        business_type: form.value.business_type?.name,
+        business_type: props.initialBusinessData?.business_type_name,
         country: selectedCountry.value?.label,
         company_name: form.value.company_name
       })
@@ -393,7 +364,74 @@ const setupCompany = async () => {
   } catch (error) {
     notifyValidationErrors(error, 'Error al configurar empresa')
   } finally {
-    loading.value = false
+    loadingSkip.value = false
+  }
+}
+
+/**
+ * Skip setup execution with auto-filled data from registration form
+ */
+const skipSetup = async () => {
+  try {
+    loadingSkip.value = true
+
+    // Obtener datos del usuario desde el store
+    const user = authStore.userGetter || {}
+
+    // Priorizar datos del formulario de registro si están disponibles
+    const registrationData = props.registrationData || {}
+
+    // Construir nombre completo de la empresa desde datos de registro
+    const firstName = registrationData.name || user.name || ''
+    const lastName = registrationData.last_name || user.last_name || ''
+    const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
+
+    // Obtener email desde props o datos de registro
+    const email = props.userEmail || registrationData.email || user.email || ''
+
+    // Obtener teléfono completo (con código de país) desde datos de registro
+    const phoneNumber = registrationData.phone_number || user.phone_number || user.phone || null
+
+    // Construir payload con datos del formulario de registro
+    const payload = {
+      company_name: companyName,
+      company_document: null, // Dejar en null como solicitado
+      company_email: email,
+      company_phone: phoneNumber, // Ya viene con código de país del registro
+      company_address: null, // Dejar en null
+      business_type_id: props.initialBusinessData?.business_type_id || null,
+      country_id: null, // Dejar en null
+      copy_test_products: false
+    }
+
+    console.log('📤 Enviando setup con datos de registro:', payload)
+
+    // Enviar directamente al backend sin validaciones del formulario
+    const { data } = await api.post('authentication/setup-company', payload)
+
+    console.log('✅ Setup completado exitosamente:', data)
+
+    notify('Configuración completada exitosamente', 'positive', 'check_circle')
+
+    // Emitir evento de éxito y cerrar modal
+    emit('success', data)
+    emit('update:modelValue', false)
+
+    // Pixel Event
+    if (fbq?.event) {
+      fbq.event('CrearEmpresa', {
+        business_type: 'skipped',
+        country: 'not_specified',
+        company_name: payload.company_name,
+        setup_method: 'skip'
+      })
+    }
+  } catch (error) {
+    console.error('❌ Error al omitir configuración:', error)
+    const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración. Intente completarla manualmente.'
+    notify(errorMessage, 'negative', 'warning')
+  } finally {
+    loadingSkip.value = false
   }
 }
 
@@ -403,7 +441,8 @@ watch(() => props.userEmail, (newVal) => {
 })
 
 onMounted(() => {
-  // No longer pre-loading countries to avoid auth issues on registration
+  // Cargar lista de países para tener datos iniciales
+  filterCountries('', (cb) => cb())
 })
 </script>
 
@@ -563,6 +602,21 @@ onMounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+.skip-btn {
+  height: 44px;
+  font-size: 14px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.skip-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .skip-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Phone input adjustments */
