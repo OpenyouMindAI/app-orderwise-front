@@ -285,15 +285,8 @@ const handleCompanySetupSuccess = (data) => {
 
   showCompanySetup.value = false
 
-  // Check for pending plan subscription
-  if (localStorage.getItem('pending_plan_subscription')) {
-    router.push('/') // Redirect to home so MainLayout triggers the subscription dialog
-  } else if (localStorage.getItem('pending_contact_advisor')) {
-    localStorage.removeItem('pending_contact_advisor')
-    router.push({ name: 'Support' })
-  } else {
-    router.push({ name: 'CompanyConfig' })
-  }
+  // All post-setup redirections should go to root
+  router.push('/')
 }
 
 const businessTypeSearch = ref('')
@@ -897,13 +890,7 @@ const assignDemo = async () => {
 
     showDemoBusinessTypeSelection.value = false
 
-    if (data.user?.is_root) {
-      router.push({ name: 'Billing' })
-    } else if (data.user?.roles?.length === 0) {
-      notify('Usuario no tiene permisos', 'negative', 'warning')
-    } else {
-      router.push({ name: 'Billing' })
-    }
+    router.push('/')
   } catch (error) {
     console.log(error)
   } finally {
