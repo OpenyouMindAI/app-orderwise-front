@@ -1101,12 +1101,14 @@ export default {
   },
   setup () {
     const router = useRouter()
-    const { showDemoModal, trackDemoAction } = useDemoPersuasion()
+    const { showDemoModal, trackDemoAction, initDemoPersuasion, stopDemoPersuasion } = useDemoPersuasion()
 
     return {
       router,
       showDemoModal,
-      trackDemoAction
+      trackDemoAction,
+      initDemoPersuasion,
+      stopDemoPersuasion
     }
   },
 
@@ -1160,9 +1162,13 @@ export default {
 
     // Listener global de clicks con silenciador inteligente
     document.addEventListener('click', this.handleGlobalClick)
+
+    // Init demo persuasion logic (immediate trigger + timer)
+    this.initDemoPersuasion()
   },
   beforeUnmount () {
     this.stopDemoReminder()
+    this.stopDemoPersuasion()
     document.removeEventListener('click', this.handleGlobalClick)
   },
   unmounted () {

@@ -2,6 +2,12 @@ import { ref, computed } from 'vue'
 import { authentication } from 'src/stores/module-authentication'
 
 const showDemoModal = ref(false)
+const demoClickCount = ref(0)
+let demoTimer = null
+
+// Configuración
+const CLICK_THRESHOLD = 10
+const TIMER_DURATION = 2 * 60 * 1000 // 2 minutos
 
 export function useDemoPersuasion () {
   const store = authentication()
@@ -9,60 +15,80 @@ export function useDemoPersuasion () {
   const isDemo = computed(() => store.isDemoGetter)
 
   /**
-   * Registra una acción demo con lógica en dos fases:
-   *
-   * PRIMERA FASE (contador >= 0):
-   * - Acciones normales: +1 punto
-   * - Acciones importantes: +5 puntos
-   * - Al llegar a 5 puntos: muestra modal y contador pasa a -5
-   *
-   * SEGUNDA FASE (contador < 0):
-   * - El contador negativo indica que ya se mostró el primer modal
-   * - Acciones normales: +1 punto (desde -5 hacia 0)
-   * - Acciones importantes: +5 puntos
-   * - Al llegar a 0 o más: muestra modal y reinicia a -5
-   *
-   * @param {boolean} isImportant - Si es una acción importante
+   * Resets and restarts the inactivity/interval timer
+   * Reinicia el temporizador para evitar superposiciones
    */
-  const trackDemoAction = (isImportant = false) => {
+  const resetTimer = () => {
+    if (demoTimer) clearInterval(demoTimer)
     if (!isDemo.value) return
 
-    const oldCounter = parseInt(localStorage.getItem('demo_actions_counter') || '0')
-    const increment = isImportant ? 6 : 1
-    let counter = oldCounter + increment
-
-    // Lógica por fases
-    if (oldCounter >= 0) {
-      // PRIMERA FASE: Usuario nuevo (0 a 5 puntos)
-      if (counter >= 6) {
-        // Alcanzó el umbral: mostrar modal y pasar a segunda fase
-        showDemoModal.value = true
-        counter = -6 // Marca que ya pasó la primera fase
-      }
-    } else {
-      // SEGUNDA FASE: Ya mostró primer modal (contador inicia en -6)
-      if (counter >= 0) {
-        // Llegó a 0 o más: mostrar modal y reiniciar fase 2
-        showDemoModal.value = true
-        counter = -6
-      }
-    }
-
-    localStorage.setItem('demo_actions_counter', counter.toString())
+    demoTimer = setInterval(() => {
+      triggerDemoModal('timer')
+    }, TIMER_DURATION)
   }
 
   /**
-   * Reinicia el tracking (útil para testing)
+   * Triggers the demo modal and resets counters/timers
+   * Activa el modal, reinicia contador de clicks y temporizador
+   * @param {string} source - Origen del trigger (debug)
    */
-  const resetDemoTracking = () => {
-    localStorage.removeItem('demo_actions_counter')
-    showDemoModal.value = false
+  const triggerDemoModal = (source = 'unknown') => {
+    if (!isDemo.value) return
+    // console.log(`Demo modal triggered by: ${source}`)
+
+    showDemoModal.value = true
+    demoClickCount.value = 0
+    resetTimer() // Reiniciar timer para que no salte inmediatamente después
+  }
+
+  /**
+   * Tracks a user action (click).
+   * Triggers modal if threshold is reached.
+   * Incrementa contador y verifica si llegó a 10.
+   */
+  const trackDemoAction = () => {
+    if (!isDemo.value) return
+
+    // Increment click count
+    demoClickCount.value++
+
+    // Check threshold
+    if (demoClickCount.value >= CLICK_THRESHOLD) {
+      triggerDemoModal('clicks')
+    }
+  }
+
+  /**
+   * Initializes the persuasion logic.
+   * Should be called when the main layout mounts.
+   * 1. Muestra modal inmediatamente.
+   * 2. Inicia el temporizador.
+   */
+  const initDemoPersuasion = () => {
+    if (!isDemo.value) return
+
+    // 1. Immediate trigger on join
+    triggerDemoModal('init')
+
+    // 2. Start the timer (triggerDemoModal already calls resetTimer, but to be sure/explicit)
+    // resetTimer() is called inside triggerDemoModal
+  }
+
+  /**
+   * Stops the persuasion logic (e.g. on logout/unmount)
+   * Limpia el temporizador.
+   */
+  const stopDemoPersuasion = () => {
+    if (demoTimer) clearInterval(demoTimer)
+    demoTimer = null
+    demoClickCount.value = 0
   }
 
   return {
     showDemoModal,
     isDemo,
     trackDemoAction,
-    resetDemoTracking
+    initDemoPersuasion,
+    stopDemoPersuasion
   }
 }
