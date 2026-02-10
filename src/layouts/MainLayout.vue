@@ -67,6 +67,7 @@
           </div>
         </div>
         <q-space />
+
         <!-- Branch Office Indicator -->
         <!-- Support Button (Replaces Branch Office Indicator) -->
         <div class="support-indicator">
@@ -702,10 +703,12 @@
     <!-- OTP Verification Dialog -->
     <otp-verification-dialog
       v-model="showOtpVerification"
-      :identifier="otpIdentifier"
+      :email="otpIdentifier"
       :session-token="otpSessionToken"
       :purpose="'verify_email'"
+      :show-back-link="true"
       @verified="handleOtpVerified"
+      @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
 
     <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
@@ -1392,20 +1395,7 @@ export default {
         }
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
-
-        // Chequear pending subscription y procesar inmediatamente
-        const handledPending = await this.processPendingSubscription()
-        if (handledPending) return
-
-        // Chequear pending contact advisor
-        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
-        if (pendingAdvisor) {
-          localStorage.removeItem('pending_contact_advisor')
-          this.$router.push({ name: 'Support' })
-          return
-        }
-
-        this.$router.push({ name: 'Welcome' })
+        this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
         notify('Error al procesar la configuración', 'negative', 'warning')
@@ -1484,49 +1474,7 @@ export default {
         // Notificación de éxito con animación
         notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
 
-        // Chequear pending subscription y procesar inmediatamente
-        const handledPending = await this.processPendingSubscription()
-        if (handledPending) return
-
-        // Chequear pending contact advisor
-        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
-        if (pendingAdvisor) {
-          localStorage.removeItem('pending_contact_advisor')
-          this.$router.push({ name: 'Support' })
-          return
-        }
-
-        // Marcar que necesita tour de facturación
-        localStorage.setItem('needs_billing_tour', 'true')
-
-        // Mostrar diálogo de opciones
-        this.$q.dialog({
-          title: '¡Empresa creada exitosamente! 🎉',
-          message: '¿Qué te gustaría hacer ahora?',
-          options: {
-            type: 'radio',
-            model: 'billing',
-            items: [
-              { label: 'Ver tutorial de facturación (Recomendado)', value: 'billing', color: 'primary' },
-              { label: 'Configurar mi empresa', value: 'config', color: 'secondary' }
-            ]
-          },
-          cancel: false,
-          persistent: true,
-          ok: {
-            label: 'Continuar',
-            color: 'primary'
-          }
-        }).onOk(data => {
-          if (data === 'billing') {
-            // Ir a facturación con tour
-            this.$router.push({ name: 'Billing' })
-          } else {
-            // Ir a configuración de empresa con tour
-            localStorage.setItem('needs_company_config_tour', 'true')
-            this.$router.push({ name: 'CompanyConfig' })
-          }
-        })
+        this.$router.push('/')
       } catch (error) {
         const message = error.response?.data?.message || 'Error al crear empresa'
         notify(message, 'negative', 'warning')
