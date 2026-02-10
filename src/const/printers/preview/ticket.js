@@ -151,9 +151,54 @@ export const previewTicket = async (data, userSession) => {
 
 export async function previewInvoice (invoice, userSession) {
   const doc = new JsPdf()
-  const { company_session: companySession } = userSession
-  const voucherType = invoice.electronic_invoice?.fields?.voucher_type
-  doc.setFontSize(14)
+  const companySession = invoice.company
+  const voucherType = invoice.electronic_invoice?.fields?.voucher_type || {}
+
+  // -- Helper functions
+  const drawBox = (x, y, w, h) => {
+    doc.setLineWidth(0.1)
+    doc.rect(x, y, w, h)
+  }
+
+  const PAGE_WIDTH = 210
+  const MARGIN = 10
+  const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2)
+  const MID_X = PAGE_WIDTH / 2
+  let cursorY = 10
+
+  // --- HEADER SECTION ---
+  const headerHeight = 45
+  drawBox(MARGIN, cursorY, CONTENT_WIDTH, headerHeight)
+
+  // Vertical line
+  doc.line(MID_X, cursorY, MID_X, cursorY + headerHeight)
+
+  // Letter Box (Standard Factura Style)
+  const boxSize = 12
+  const boxX = MID_X - (boxSize / 2)
+  const boxY = cursorY
+
+  doc.setFillColor(255, 255, 255)
+  doc.rect(boxX, boxY, boxSize, boxSize, 'F')
+  doc.rect(boxX, boxY, boxSize, boxSize)
+
+  // Letter
+  doc.setFontSize(22) // Reduced slightly
+  doc.setFont(undefined, 'bold')
+  const letter = voucherType.Desc ? voucherType.Desc.split(' ')[1] : 'B'
+  doc.text(letter, MID_X, boxY + 7.5, { align: 'center' })
+
+  // Code below letter
+  doc.setFontSize(7)
+  doc.setFont(undefined, 'normal')
+  const code = voucherType.Id ? String(voucherType.Id).padStart(3, '0') : '006'
+  doc.text(`COD. ${code}`, MID_X, boxY + boxSize - 1.5, { align: 'center' })
+
+  // Left Header Content
+  const leftX = MARGIN + 4
+  let leftY = cursorY + 10
+
+  // Logo
   if (companySession.url) {
     try {
       const response = await fetch(companySession.url)
@@ -164,146 +209,318 @@ export async function previewInvoice (invoice, userSession) {
         reader.onerror = reject
         reader.readAsDataURL(blob)
       })
-      doc.addImage(base64, 'PNG', 25, 10, 30, 20)
-    } catch (error) {
-      console.warn('No se pudo cargar el logo. Mostrando nombre de la empresa.')
-      doc.text(companySession.name, 10, 20, { maxWidth: 60 })
+      doc.addImage(base64, 'PNG', leftX, cursorY + 2, 40, 15)
+      leftY = cursorY + 18
+    } catch (e) {
+      console.warn('Logo error', e)
+      leftY = cursorY + 8
     }
   } else {
-    doc.text(companySession.name, 10, 20, { maxWidth: 60 })
+    leftY = cursorY + 8
   }
-  doc.setFontSize(10)
-  doc.text(`Razón social: ${companySession.name}`, 10, 33, { maxWidth: 70 })
-  doc.text(`Domicilio Comercial: ${addressFormat(companySession?.address)}`, 10, 43, { maxWidth: 70 })
-  doc.text('Condición Frente al IVA: Responsable inscrito', 10, 57)
 
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const margin = 15
+  doc.setFontSize(14)
+  doc.setFont(undefined, 'bold')
+  // Use splitTextToSize to handle very long company names gracefully
+  const nameLines = doc.splitTextToSize(String(companySession.name || 'EMPRESA'), 80)
+  doc.text(nameLines, leftX, leftY)
+  leftY += (nameLines.length * 5) + 2
 
-  const boxWidth = 15
-  const boxHeight = 15
+  // Details
+  doc.setFontSize(8) // Reduced font size for details
+  doc.setFont(undefined, 'bold')
+  doc.text('Razón Social:', leftX, leftY)
+  doc.setFont(undefined, 'normal')
+  doc.text(String(companySession.name || ''), leftX + 20, leftY)
 
-  const boxX = (pageWidth - boxWidth) / 2
-  const boxY = margin
+  leftY += 4
+  doc.setFont(undefined, 'bold')
+  doc.text('Domicilio:', leftX, leftY)
+  doc.setFont(undefined, 'normal')
+  const address = addressFormat(companySession.address)
+  // Ensure address doesn't overlap the middle line
+  const addressLines = doc.splitTextToSize(String(address), 75)
+  doc.text(addressLines, leftX + 14, leftY)
 
-  doc.setLineWidth(0.5)
-  doc.rect(boxX, boxY, boxWidth, boxHeight)
+  leftY += (addressLines.length * 4) + 1
 
-  doc.setFontSize(20)
-  const split = voucherType.Desc.split(' ')
-  const text = split[1]
-  const textWidth = doc.getTextWidth(text)
-  const textX = boxX + (boxWidth - textWidth) / 2
-  const textY = boxY + boxHeight / 2 + 2
+  doc.setFont(undefined, 'bold')
+  doc.text('Condición IVA:', leftX, leftY)
+  doc.setFont(undefined, 'normal')
+  doc.text('Responsable Inscripto', leftX + 22, leftY)
 
-  doc.text(text, textX, textY)
-  doc.setFontSize(20)
-  doc.text(split[0], 140, 20)
-  doc.setFontSize(10)
-  doc.text(`Punto de Venta: ${invoice.electronic_invoice?.fields?.point_of_sale}`, 140, 30)
-  doc.text(`Comp. Nro: ${invoice.electronic_invoice?.fields?.cbte_hasta}`, 140, 36)
-  doc.text(`Fecha de Emisión: ${formatDate(invoice.created_at, 'DD/MM/YYYY')}`, 140, 42)
-  doc.text(`CUIT: ${invoice.client.document_number}`, 140, 48)
-  doc.text(`Ingresos Brutos: ${invoice?.electronic_invoice?.fields?.income_brut}`, 140, 54)
-  doc.text(`Inicio de Actividades: ${invoice?.electronic_invoice?.fields?.activity_start_date}`, 140, 60)
+  // Right Header Content
+  const rightX = MID_X + 10 // Start a bit closer to the line
+  let rightY = cursorY + 12
 
-  // Línea: Período
-  doc.line(10, 68, 200, 68)
-  doc.setFontSize(9)
-  doc.text(`Período Facturado Desde: ${formatDate(invoice.created_at, 'DD/MM/YYYY')}`, 10, 74)
-  if (invoice.delivery_date) {
-    doc.text(`Hasta: ${formatDate(invoice.delivery_date, 'DD/MM/YYYY')}`, 70, 74)
-    doc.text(`Fecha de Vto. para el pago: ${formatDate(invoice.delivery_date, 'DD/MM/YYYY')}`, 130, 74)
-  }
-  doc.line(10, 78, 200, 78)
+  doc.setFontSize(18) // Reduced headline
+  doc.setFont(undefined, 'bold')
+  doc.text('FACTURA', rightX, rightY)
 
-  doc.setFontSize(10)
-  // Cliente
-  doc.text(`CUIL/CUIT: ${invoice.client.document_number}`, 10, 84)
-  doc.text(`Apellido y Nombre / Razón social: ${invoice.client.name}`, 90, 84)
-  doc.text('Condición Frente al IVA: Consumidor final', 10, 90)
-  doc.text(`Domicilio: ${addressFormat(invoice.client.address)}`, 90, 90)
-  doc.text('Condición de venta: Efectivo', 10, 96)
+  rightY += 8
+  doc.setFontSize(8) // Reduced font size
+
+  const labelX = rightX
+  // Tighter spacing for columns
+  const valX = labelX + 24
+  const col2LabelX = valX + 15
+  const col2ValX = col2LabelX + 18
+
+  // Punto Venta / Comp Nro
+  doc.setFont(undefined, 'bold')
+  doc.text('Punto de Venta:', labelX, rightY)
+  doc.setFont(undefined, 'normal')
+  const ptoVta = String(invoice.electronic_invoice?.fields?.point_of_sale || 0).padStart(4, '0')
+  doc.text(ptoVta, valX, rightY)
+
+  doc.setFont(undefined, 'bold')
+  doc.text('Comp. Nro:', col2LabelX, rightY)
+  doc.setFont(undefined, 'normal')
+  const cbteNro = String(invoice.electronic_invoice?.fields?.cbte_hasta || 0).padStart(8, '0')
+  doc.text(cbteNro, col2ValX, rightY)
+
+  rightY += 5
+  doc.setFont(undefined, 'bold')
+  doc.text('Fecha de Emisión:', labelX, rightY)
+  doc.setFont(undefined, 'normal')
+  doc.text(String(formatDate(invoice.created_at, 'DD/MM/YYYY')), labelX + 26, rightY)
+
+  rightY += 5
+  doc.setFont(undefined, 'bold')
+  doc.text('CUIT:', labelX, rightY)
+  doc.setFont(undefined, 'normal')
+  doc.text(String(companySession.document_number || ''), labelX + 10, rightY)
+
+  rightY += 5
+  doc.setFont(undefined, 'bold')
+  doc.text('Ingresos Brutos:', labelX, rightY)
+  doc.setFont(undefined, 'normal')
+  const incomeBrut = invoice.electronic_invoice?.fields?.income_brut
+  doc.text(incomeBrut ? String(incomeBrut) : '-', labelX + 24, rightY)
+
+  rightY += 5
+  doc.setFont(undefined, 'bold')
+  doc.text('Inicio de Actividades:', labelX, rightY)
+  doc.setFont(undefined, 'normal')
+  const activityDate = formatDate(invoice.electronic_invoice?.fields?.activity_start_date, 'DD/MM/YYYY')
+  doc.text(activityDate ? String(activityDate) : '-', labelX + 29, rightY)
+
+  cursorY += headerHeight + 2
+
+  // --- CLIENT SECTION ---
+  const clientHeight = 22 // Slightly more compact
+  drawBox(MARGIN, cursorY, CONTENT_WIDTH, clientHeight)
+
+  let cy = cursorY + 5
+  const cx = MARGIN + 4
+
+  // Row 1
+  doc.setFontSize(8) // Reduced font size
+  doc.setFont(undefined, 'bold')
+  doc.text('DNI/CUIT:', cx, cy)
+  doc.setFont(undefined, 'normal')
+  doc.text(String(invoice.client.document_number || ''), cx + 16, cy)
+
+  doc.setFont(undefined, 'bold')
+  doc.text('Apellido y Nombre / Razón Social:', cx + 55, cy)
+  doc.setFont(undefined, 'normal')
+  doc.text(String(invoice.client.name || ''), cx + 105, cy, { maxWidth: 80 })
+
+  cy += 5
+  // Row 2
+  doc.setFont(undefined, 'bold')
+  doc.text('Condición IVA:', cx, cy)
+  doc.setFont(undefined, 'normal')
+  doc.text(String(invoice.client?.condition_iva_receptor?.Desc || 'Consumidor Final'), cx + 22, cy)
+
+  doc.setFont(undefined, 'bold')
+  doc.text('Domicilio:', cx + 75, cy)
+  doc.setFont(undefined, 'normal')
+  const clientAddr = addressFormat(invoice.client.address)
+  doc.text(String(clientAddr), cx + 90, cy, { maxWidth: 95 })
+
+  cy += 5
+  // Row 3 (Condicion venta)
+  const paymentMethods = invoice.invoice_payments?.map(p => p.payment_method?.name).filter(Boolean) || []
+  const uniqueMethods = [...new Set(paymentMethods)]
+  const paymentCondition = uniqueMethods.length > 0 ? uniqueMethods.join(', ') : 'Cuenta Corriente'
+
+  doc.setFont(undefined, 'bold')
+  doc.text('Condición de Venta:', cx, cy)
+  doc.setFont(undefined, 'normal')
+  doc.text(String(paymentCondition), cx + 28, cy)
+
+  cursorY += clientHeight + 4
+
+  // --- TABLE SECTION ---
   const body = []
-  const head = [
-    [
-      'Código',
-      'Producto / Servicio',
-      'Cantidad', 'Precio Unit.',
-      'Imp. Bonif.',
-      'Subtotal'
-    ]
-  ]
-  // Product details
+  const head = [['Código', 'Producto / Servicio', 'Cantidad', 'U. Medida', 'Precio Unit.', '% Bonif', 'Imp. Bonif.', 'Subtotal']]
+
   invoice.products.forEach((product) => {
+    const amount = Number(product.pivot.amount)
+    const price = Number(product.pivot.price)
+    const unit = product.unit_of_measure?.name || 'unidades'
+
     body.push([
-      product.barcode,
-      product.name,
-      product.pivot.amount,
-      formatNumber(product.pivot.price),
-      formatNumber(product.pivot.taxe),
-      formatNumber(Number(product.pivot.amount) * Number(product.pivot.price))
+      String(product.barcode || product.code || '-'),
+      String(product.name),
+      String(formatNumber(amount)),
+      String(unit),
+      String(formatNumber(price)),
+      '0.00',
+      '0.00',
+      String(formatNumber(amount * price))
     ])
   })
 
   autoTable(doc, {
-    startY: 105,
-    headStyles: { fillColor: [0, 0, 0] },
+    startY: cursorY,
     head,
     body,
-    theme: 'striped',
-    styles: { fontSize: 9 },
-    tableWidth: pageWidth - 20,
-    margin: { left: 10 }
+    theme: 'plain',
+    headStyles: {
+      fillColor: [220, 220, 220],
+      textColor: [0, 0, 0],
+      fontStyle: 'bold',
+      lineWidth: 0.1,
+      lineColor: [0, 0, 0],
+      halign: 'center',
+      fontSize: 8 // Reduced header font
+    },
+    bodyStyles: {
+      textColor: [0, 0, 0],
+      fontSize: 7, // Reduced body font for more detail
+      cellPadding: 1.5
+    },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 14, halign: 'right' },
+      3: { cellWidth: 18, halign: 'center' },
+      4: { cellWidth: 22, halign: 'right' },
+      5: { cellWidth: 14, halign: 'right' },
+      6: { cellWidth: 14, halign: 'right' },
+      7: { cellWidth: 22, halign: 'right' }
+    },
+    margin: { left: MARGIN, right: MARGIN },
+    tableWidth: CONTENT_WIDTH
+    // Optional: Draw a border around the table block if autoTable breaks pages
+    // For now the simple plain theme looks good with the header box.
   })
 
-  const finalY = doc.lastAutoTable.finalY + 5
+  let finalY = doc.lastAutoTable.finalY
 
-  // Totales
-  const labelX = pageWidth - 60
-  const valueX = pageWidth - 10
-
-  const format = (value) => {
-    if (value) {
-      return formatNumber(value).padStart(6, ' ')
-    }
-    return ''
+  // --- FOOTER SECTION ---
+  const footerHeight = 40
+  if (finalY + footerHeight + 35 > 280) {
+    doc.addPage()
+    finalY = 20
+  } else {
+    finalY += 4
   }
 
-  doc.line(10, finalY, 200, finalY)
-  doc.text('Subtotal: $', labelX, finalY + 5, { align: 'right' })
-  doc.text(format(invoice?.subtotal), valueX, finalY + 5, { align: 'right' })
-  // Otros tributos
-  doc.text('Importe Otros Tributos: $', labelX, finalY + 10, { align: 'right' })
-  doc.text(format(invoice?.taxe_total?.toFixed(2)), valueX, finalY + 10, { align: 'right' })
-  // Total
-  doc.text('Importe total: $', labelX, finalY + 15, { align: 'right' })
-  doc.text(format(invoice.total), valueX, finalY + 15, { align: 'right' })
+  // Footer Box
+  drawBox(MARGIN, finalY, CONTENT_WIDTH, footerHeight)
 
-  doc.line(10, finalY + 20, 200, finalY + 20)
+  // -- TOTALS SECTION (Top Right) --
+  // Positioned in the upper ~2/3 of the box
+  let totalsY = finalY + 8
+  const totalsLabelX = MARGIN + 120
+  const totalsValX = MARGIN + CONTENT_WIDTH - 4
+
+  doc.setFontSize(9)
+
+  // Subtotal
+  doc.setFont(undefined, 'bold')
+  doc.text('Subtotal: $', totalsLabelX, totalsY, { align: 'right' })
+  doc.setFont(undefined, 'normal')
+  doc.text(String(formatNumber(invoice.subtotal)), totalsValX, totalsY, { align: 'right' })
+
+  totalsY += 5
+  // Otros Tributos
+  doc.setFont(undefined, 'bold')
+  doc.text('Importe Otros Tributos: $', totalsLabelX, totalsY, { align: 'right' })
+  doc.setFont(undefined, 'normal')
+  const otherTaxes = invoice.taxe_total || 0
+  doc.text(String(formatNumber(0)), totalsValX, totalsY, { align: 'right' })
+
+  totalsY += 6
+  // Total
+  doc.setFontSize(11)
+  doc.setFont(undefined, 'bold')
+  doc.text('Importe Total: $', totalsLabelX, totalsY, { align: 'right' })
+  doc.text(String(formatNumber(invoice.subtotal)), totalsValX, totalsY, { align: 'right' })
+
+  // -- SEPARATOR LINE --
+  const lineY = totalsY + 4
+  doc.line(MARGIN, lineY, MARGIN + CONTENT_WIDTH, lineY)
+
+  // -- TRANSPARENCY SECTION (Bottom Left) --
+  let transpY = lineY + 5
+
+  doc.setFontSize(7)
+  doc.setFont(undefined, 'bold')
+  doc.text('Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)', MARGIN + 2, transpY)
+
+  // IVA Contenido
+  transpY += 5
+
+  doc.text('IVA Contenido: $', MARGIN + 60, transpY, { align: 'right' })
+  doc.setFont(undefined, 'normal')
+  doc.text(String(formatNumber(otherTaxes)), MARGIN + 65, transpY, { align: 'right' })
+
+  // --- CAE & QR ---
+  const caeY = finalY + footerHeight + 4
+
   // QR
   const qrBase64 = await setQrImage(invoice, invoice.electronic_invoice.fields, companySession)
-  doc.addImage(qrBase64, 'PNG', 5, finalY + 25, 50, 50)
-  doc.setFontSize(30)
-  doc.text('ARCA', 55, finalY + 45)
-  doc.setFontSize(10)
-  doc.text('Comprobante autorizado', 55, finalY + 50)
-  doc.text(`CAE Nº: ${invoice.electronic_invoice.fields.cae}`, 55, finalY + 55)
-  doc.text(`Fecha de Vto. de CAE: ${invoice.electronic_invoice.fields.caef_ch_vto}`, 55, finalY + 60)
+  if (qrBase64) {
+    doc.addImage(qrBase64, 'PNG', MARGIN, caeY, 22, 22) // Smaller QR
+  }
 
-  const pageHeight = doc.internal.pageSize.getHeight()
+  // ARCA
+  const arcaX = MARGIN + 25
+  const arcaY = caeY + 4
 
-  const logoWidth = 45
-  const logoHeight = 15
+  doc.setFontSize(12)
+  doc.setFont(undefined, 'bold')
+  doc.text('ARCA', arcaX, arcaY)
 
-  const posX = pageWidth - logoWidth - 6
-  const posY = pageHeight - logoHeight - 6
+  doc.setFontSize(6)
+  doc.setFont(undefined, 'normal')
+  doc.text('AGENCIA DE RECAUDACIÓN Y CONTROL ADUANERO', arcaX, arcaY + 3.5)
 
-  const logoBase64 = qbitsLogo
+  doc.setFontSize(8)
+  doc.setFont(undefined, 'bold')
+  doc.text('Comprobante Autorizado', arcaX, arcaY + 10)
 
-  doc.addImage(logoBase64, 'PNG', posX, posY, logoWidth, logoHeight)
-  doc.setFontSize(10)
-  doc.text('Desarrollado por', posX, posY - 2, { align: 'left' })
+  doc.setFontSize(7)
+  doc.setFont(undefined, 'italic')
+  doc.text('Esta agencia no se responsabiliza por los datos ingresados en el detalle de la operación', arcaX, arcaY + 14)
+
+  // CAE Numbers
+  const caeX = MARGIN + CONTENT_WIDTH
+  let caeTextY = caeY + 4
+
+  doc.setFontSize(9)
+  doc.setFont(undefined, 'bold')
+  doc.text(`CAE N°: ${invoice.electronic_invoice.fields.cae}`, caeX, caeTextY, { align: 'right' })
+
+  caeTextY += 5
+  doc.text(`Fecha de Vto. de CAE: ${formatDate(invoice.electronic_invoice.fields.caef_ch_vto, 'DD/MM/YYYY')}`, caeX, caeTextY, { align: 'right' })
+
+  // Brand
+  if (companySession.is_test) {
+    const logoBase64 = qbitsLogo
+    const logoW = 35
+    const logoH = 20
+    const logoX = PAGE_WIDTH - logoW - MARGIN
+    const logoY = 297 - logoH - MARGIN
+
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', logoX, logoY, logoW, logoH)
+    }
+  }
 
   return doc
 }
