@@ -1093,6 +1093,12 @@ export default {
         this.showDemoModal = false
         this.showSubscriptionDialog = true
       }
+    },
+    '$route.query': {
+      handler () {
+        this.checkPaymentReturn()
+      },
+      deep: true
     }
   },
   setup () {
@@ -1151,18 +1157,9 @@ export default {
     document.addEventListener('click', this.handleGlobalClick)
 
     // CHECK POR RETORNO DE MERCADO PAGO
-    // Si el usuario vuelve de pagar (status=approved) y tiene sesión pero no empresa,
-    // mostramos el modal de configuración de empresa inmediatamente.
-    const urlParams = new URLSearchParams(window.location.search)
-    const paymentStatus = urlParams.get('status') || urlParams.get('collection_status')
-
-    if (paymentStatus === 'approved' && this.userSession) {
-      this.showCompanySetup = true
-
-      // Opcional: Limpiar la URL para que no reabra al refrescar (comentado por seguridad)
-      // window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    this.checkPaymentReturn()
   },
+
   beforeUnmount () {
     this.stopDemoReminder()
     document.removeEventListener('click', this.handleGlobalClick)
@@ -1178,6 +1175,26 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Verifica si el usuario vuelve de un pago exitoso y necesita configurar su empresa
+     */
+    checkPaymentReturn () {
+      const urlParams = new URLSearchParams(window.location.search)
+      const paymentStatus = urlParams.get('status') || urlParams.get('collection_status') || this.$route.query.status
+
+      if (paymentStatus === 'approved' && this.userSession) {
+        // Solo mostrar el modal si NO tiene empresa configurada
+        if (!this.userSession.company_session?.id) {
+          this.showCompanySetup = true
+        } else {
+          // Si ya tiene empresa y el status es approved, podríamos redirigir al dashboard
+          // para evitar que se quede pegado el modal o la URL
+          if (this.$route.path === '/') {
+            this.$router.push('/')
+          }
+        }
+      }
+    },
     /**
      * Smart click tracker with contextual silencing
      */
@@ -1409,7 +1426,7 @@ export default {
           return
         }
 
-        this.$router.push({ name: 'Welcome' })
+        this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
         notify('Error al procesar la configuración', 'negative', 'warning')

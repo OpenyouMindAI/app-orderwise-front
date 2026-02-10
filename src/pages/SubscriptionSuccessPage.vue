@@ -64,7 +64,7 @@
 
           <!-- Action Button -->
           <button @click="goHome" class="action-button fade-in-up delay-3">
-            <span>Ir al Dashboard</span>
+            <span>{{ needsCompanySetup ? 'Configurar mi empresa' : 'Ir al Inicio' }}</span>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -94,11 +94,12 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { notify } from 'src/const/mixins'
 import { api } from 'boot/axios'
 import { usePixel } from 'src/composables/usePixel'
+import { authentication } from 'src/stores/module-authentication'
 
 export default {
   name: 'SubscriptionSuccessPage',
@@ -106,10 +107,18 @@ export default {
     const router = useRouter()
     const route = useRoute()
     const fbq = usePixel()
+    const store = authentication()
 
     const loading = ref(true)
     const paymentVerified = ref(false)
     const paymentDetails = ref(null)
+
+    /**
+     * Check if the user needs to configure their company
+     */
+    const needsCompanySetup = computed(() => {
+      return !store.userSession?.company_session?.id
+    })
 
     /**
      * Verificar el estado del pago con Mercado Pago
@@ -169,10 +178,10 @@ export default {
           localStorage.removeItem('mp_plan_id')
           localStorage.removeItem('mp_plan_name')
 
-          // Esperar un momento para que el webhook procese el pago
+          // Esperar un momento para que el webhook procese el pago (y opcionalmente vincule el usuario si el backend lo hace automático)
           await new Promise(resolve => setTimeout(resolve, 2000))
 
-          // Recargar suscripción actual
+          // Recargar suscripción actual y datos del usuario
           await reloadSubscription()
         } else {
           console.warn('[Success Page] Pago no aprobado:', response.data.status)
@@ -195,13 +204,22 @@ export default {
     }
 
     /**
-     * Recargar la suscripción actual del usuario
+     * Recargar la suscripción actual del usuario y sus datos de sesión
      */
     const reloadSubscription = async () => {
       try {
-        console.log('[Success Page] Recargando suscripción...')
+        console.log('[Success Page] Recargando suscripción y sesión...')
         const response = await api.get('subscriptions/current')
         console.log('[Success Page] Suscripción actualizada:', response.data)
+
+        // Actualizar el store de autenticación con la nueva suscripción
+        store.setSubscriptionData(response.data)
+
+        // También intentar refrescar el perfil del usuario para ver si ya tiene empresa vinculada
+        const userResponse = await api.get('authentication/user')
+        if (userResponse.data) {
+          store.userSession = userResponse.data
+        }
 
         // Emitir evento para que otros componentes se actualicen
         window.dispatchEvent(new CustomEvent('subscription-updated', {
@@ -212,11 +230,28 @@ export default {
       }
     }
 
+    /**
+     * Navegar según el estado de la empresa
+     */
     const goHome = () => {
       if (paymentVerified.value) {
         notify('¡Suscripción activada exitosamente!', 'positive', 'check_circle')
       }
-      router.push('/')
+
+      if (needsCompanySetup.value) {
+        // Redirigir a la home con los parámetros de pago para que MainLayout active el modal de setup
+        router.push({
+          path: '/',
+          query: {
+            status: 'approved',
+            payment_id: route.query.payment_id,
+            preference_id: route.query.preference_id
+          }
+        })
+      } else {
+        // Si ya tiene empresa, ir directo al inicio
+        router.push('/')
+      }
     }
 
     onMounted(() => {
@@ -227,7 +262,8 @@ export default {
       loading,
       paymentVerified,
       paymentDetails,
-      goHome
+      goHome,
+      needsCompanySetup
     }
   }
 }
