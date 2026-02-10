@@ -43,7 +43,6 @@
             </div>
           </div>
 
-<<<<<<< HEAD
           <h1 class="success-title fade-in-up">¡Pago Exitoso!</h1>
           <p class="success-subtitle fade-in-up delay-1">
             Tu suscripción ha sido activada correctamente
@@ -74,13 +73,6 @@
             <span>{{ needsCompanySetup ? 'Configurar mi empresa' : 'Ir al Inicio' }}</span>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-=======
-          <button @click="goHome" class="btn-primary">
-            <span>Ir al Dashboard</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
->>>>>>> ec634885dfa48a83083cd86ef73f28b14e312a8a
             </svg>
           </button>
         </div>
@@ -108,11 +100,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { notify } from 'src/const/mixins'
 import { api } from 'boot/axios'
 import { usePixel } from 'src/composables/usePixel'
-<<<<<<< HEAD
 import { authentication } from 'src/stores/module-authentication'
-=======
 import confetti from 'canvas-confetti'
->>>>>>> ec634885dfa48a83083cd86ef73f28b14e312a8a
 
 export default {
   name: 'SubscriptionSuccessPage',
@@ -268,13 +257,8 @@ export default {
           localStorage.removeItem('mp_plan_id')
           localStorage.removeItem('mp_plan_name')
 
-<<<<<<< HEAD
           // Esperar un momento para que el webhook procese el pago (y opcionalmente vincule el usuario si el backend lo hace automático)
           await new Promise(resolve => setTimeout(resolve, 2000))
-=======
-          // Esperar un momento
-          await new Promise(resolve => setTimeout(resolve, 1500))
->>>>>>> ec634885dfa48a83083cd86ef73f28b14e312a8a
 
           // Recargar suscripción actual y datos del usuario
           await reloadSubscription()
@@ -297,7 +281,6 @@ export default {
       }
     }
 
-<<<<<<< HEAD
     /**
      * Recargar la suscripción actual del usuario y sus datos de sesión
      */
@@ -317,11 +300,6 @@ export default {
         }
 
         // Emitir evento para que otros componentes se actualicen
-=======
-    const reloadSubscription = async () => {
-      try {
-        const response = await api.get('subscriptions/current')
->>>>>>> ec634885dfa48a83083cd86ef73f28b14e312a8a
         window.dispatchEvent(new CustomEvent('subscription-updated', {
           detail: response.data
         }))
