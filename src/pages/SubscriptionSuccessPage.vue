@@ -31,7 +31,7 @@
 
           <div class="divider"></div>
 
-          <!-- Payment Details (Compact) -->
+          <!-- Payment Details (Combined) -->
           <div class="details-grid" v-if="paymentDetails">
             <div class="detail-item">
               <span class="label">Plan</span>
@@ -41,35 +41,18 @@
               <span class="label">Monto</span>
               <span class="value">${{ paymentDetails.amount }}</span>
             </div>
-          </div>
-
-          <h1 class="success-title fade-in-up">¡Pago Exitoso!</h1>
-          <p class="success-subtitle fade-in-up delay-1">
-            Tu suscripción ha sido activada correctamente
-          </p>
-
-          <!-- Payment Details Card -->
-          <div v-if="paymentDetails" class="details-card fade-in-up delay-2">
-            <div class="detail-row">
-              <span class="detail-label">Plan</span>
-              <span class="detail-value">{{ paymentDetails.plan_name }}</span>
+            <div class="detail-item">
+              <span class="label">ID de Pago</span>
+              <span class="value">{{ paymentDetails.payment_id }}</span>
             </div>
-            <div class="detail-row">
-              <span class="detail-label">Monto</span>
-              <span class="detail-value">${{ paymentDetails.amount }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">ID de Pago</span>
-              <span class="detail-value detail-id">{{ paymentDetails.payment_id }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Fecha</span>
-              <span class="detail-value">{{ paymentDetails.date }}</span>
+            <div class="detail-item">
+              <span class="label">Fecha</span>
+              <span class="value">{{ paymentDetails.date }}</span>
             </div>
           </div>
 
           <!-- Action Button -->
-          <button @click="goHome" class="action-button fade-in-up delay-3">
+          <button @click="goHome" class="btn-primary q-mt-md">
             <span>{{ needsCompanySetup ? 'Configurar mi empresa' : 'Ir al Inicio' }}</span>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

@@ -693,10 +693,19 @@
       @google-success="handleGoogleRegisterSuccess"
     />
 
+    <!-- Business Type Modal -->
+    <business-type-modal
+      v-model="showBusinessTypeSetup"
+      @submit="handleBusinessTypeNext"
+      @back="showBusinessTypeSetup = false"
+    />
+
     <!-- Company Setup Modal -->
     <company-setup-modal
       v-model="showCompanySetup"
       :user-email="companySetupEmail"
+      :initial-business-data="tempCompanyData"
+      :registration-data="registrationFormData"
       @success="handleCompanySetupSuccess"
     />
 
@@ -756,6 +765,7 @@ import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationB
 import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
 import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import BusinessTypeModal from 'src/components/Register/BusinessTypeModal.vue'
 import PremiumBadge from 'src/components/PremiumBadge.vue'
 import IntegrationDynamic from 'src/components/Integrations/IntegrationDynamic.vue'
 import { authentication } from 'src/stores/module-authentication'
@@ -789,6 +799,7 @@ export default {
     RegisterDialog,
     OtpVerificationDialog,
     CompanySetupModal,
+    BusinessTypeModal,
     PremiumBadge,
     IntegrationDynamic,
     BottomNav,
@@ -866,6 +877,21 @@ export default {
        * @type {Boolean}
        */
       showCompanySetup: false,
+      /**
+       * Show business type setup modal
+       * @type {Boolean}
+       */
+      showBusinessTypeSetup: false,
+      /**
+       * Temporary company data from business type modal
+       * @type {Object}
+       */
+      tempCompanyData: null,
+      /**
+       * Saved registration form data
+       * @type {Object}
+       */
+      registrationFormData: null,
       /**
        * Company setup email
        * @type {String}
@@ -1196,7 +1222,12 @@ export default {
       if (paymentStatus === 'approved' && this.userSession) {
         // Solo mostrar el modal si NO tiene empresa configurada
         if (!this.userSession.company_session?.id) {
-          this.showCompanySetup = true
+          // Intentar recuperar los datos del registro previo para el Skip Setup
+          const savedRegData = localStorage.getItem('registration_form_data')
+          if (savedRegData) {
+            this.registrationFormData = JSON.parse(savedRegData)
+          }
+          this.showBusinessTypeSetup = true
         } else {
           // Si ya tiene empresa y el status es approved, podríamos redirigir al dashboard
           // para evitar que se quede pegado el modal o la URL
@@ -1338,6 +1369,17 @@ export default {
         this.otpIdentifier = data.user_email || data.user?.email
         this.otpSessionToken = data.session_token || ''
 
+        // Persistir datos para el Skip Setup
+        const regData = {
+          name: data.name || data.user?.name || '',
+          last_name: data.last_name || data.user?.last_name || '',
+          email: this.companySetupEmail,
+          phone_number: data.phone_number || data.user?.phone || '',
+          timestamp: Date.now()
+        }
+        this.registrationFormData = regData
+        localStorage.setItem('registration_form_data', JSON.stringify(regData))
+
         await new Promise(resolve => setTimeout(resolve, 300))
 
         this.showOtpVerification = true
@@ -1407,6 +1449,15 @@ export default {
     },
 
     /**
+     * Handle business type next step
+     */
+    handleBusinessTypeNext (businessData) {
+      this.tempCompanyData = businessData
+      this.showBusinessTypeSetup = false
+      this.showCompanySetup = true
+    },
+
+    /**
      * Handle company setup success
      */
     async handleCompanySetupSuccess (data) {
@@ -1428,7 +1479,6 @@ export default {
         }
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
-<<<<<<< HEAD
 
         // Chequear pending contact advisor
         const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
@@ -1438,8 +1488,6 @@ export default {
           return
         }
 
-=======
->>>>>>> ec634885dfa48a83083cd86ef73f28b14e312a8a
         this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)

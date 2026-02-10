@@ -436,13 +436,20 @@ const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
   console.log('📝 handleRegisterSubmit llamado', { formData, phoneNumber })
 
   // Guardar datos del formulario de registro para usar en el modal de setup
-  registrationFormData.value = {
+  const regData = {
     name: formData.name,
     last_name: formData.last_name,
     email: formData.email,
     phone_number: phoneNumber, // Ya viene con código de país
     country_code: phoneNumber ? phoneNumber.split(' ')[0] : '' // Extraer código de país
   }
+  registrationFormData.value = regData
+
+  // Persistir para cuando vuelva de Mercado Pago
+  localStorage.setItem('registration_form_data', JSON.stringify({
+    ...regData,
+    timestamp: Date.now()
+  }))
 
   await registerUser({
     onSuccess: async (data) => {
@@ -764,6 +771,12 @@ const restoreRegisterSession = () => {
     // Restaurar credenciales si existen
     if (credentialsData) {
       registeredCredentials.value = JSON.parse(credentialsData)
+    }
+
+    // Restaurar datos del formulario de registro (para el Skip Setup)
+    const savedRegData = localStorage.getItem('registration_form_data')
+    if (savedRegData) {
+      registrationFormData.value = JSON.parse(savedRegData)
     }
 
     // Si OTP ya fue verificado, mostrar opciones de empresa
