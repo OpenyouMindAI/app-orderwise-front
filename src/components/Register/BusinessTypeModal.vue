@@ -125,8 +125,8 @@
           </div>
 
           <!-- Botones -->
-          <div class="row q-mt-lg q-col-gutter-sm">
-            <div class="col-6">
+          <div class="row q-mt-lg q-col-gutter-sm reverse-order-mobile">
+            <div class="col-12 col-sm-6 btn-order-2">
               <q-btn
                 label="Atrás"
                 color="grey-7"
@@ -138,7 +138,7 @@
                 no-caps
               />
             </div>
-            <div class="col-6">
+            <div class="col-12 col-sm-6 btn-order-1">
               <q-btn
                 label="Crear Empresa"
                 color="primary"
@@ -168,17 +168,6 @@ import { Navigation, Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
-
-const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  }
-})
 
 const emit = defineEmits(['update:modelValue', 'submit', 'back'])
 
@@ -290,8 +279,6 @@ onMounted(() => {
 
 <style scoped>
 .modern-business-type-dialog {
-  width: 90%;
-  max-width: 600px;
   border-radius: 20px;
   overflow: hidden;
   animation: dialogEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -546,8 +533,13 @@ onMounted(() => {
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
-  .modern-business-type-dialog {
-    max-width: 95%;
+
+  .btn-order-1 {
+    order: 1;
+  }
+
+  .btn-order-2 {
+    order: 2;
   }
 
   .business-card {
