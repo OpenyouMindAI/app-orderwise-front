@@ -15,7 +15,7 @@
             <q-icon name="business_center" size="28px" class="setup-icon" />
           </div>
           <div class="text-h6 text-weight-bold q-mt-xs">Configura tu Empresa</div>
-          <div class="text-caption text-grey-7">Completa la información para comenzar</div>
+          <div class="text-caption text-grey-7">Completa la información o usa tus datos personales</div>
         </div>
       </q-card-section>
       <q-card-section class="setup-body-section">
@@ -176,14 +176,19 @@
           />
           <q-btn
             flat
-            label="Omitir"
+            label="Omitir por ahora"
             color="grey-7"
-            class="full-width q-mt-sm"
+            icon="skip_next"
+            class="full-width q-mt-sm skip-btn"
             @click="skipSetup"
             :disable="loading"
             :loading="loadingSkip"
             no-caps
-          />
+          >
+            <q-tooltip anchor="top middle" self="bottom middle" :offset="[0, 8]">
+              Usar mis datos personales como información empresarial
+            </q-tooltip>
+          </q-btn>
         </q-form>
       </q-card-section>
     </q-card>
@@ -208,6 +213,10 @@ const props = defineProps({
     default: ''
   },
   initialBusinessData: {
+    type: Object,
+    default: () => ({})
+  },
+  registrationData: {
     type: Object,
     default: () => ({})
   }
@@ -360,58 +369,67 @@ const setupCompany = async () => {
 }
 
 /**
- * Skip setup execution with auto-filled data
+ * Skip setup execution with auto-filled data from registration form
  */
 const skipSetup = async () => {
   try {
     loadingSkip.value = true
 
-    // Obtener datos del usuario
+    // Obtener datos del usuario desde el store
     const user = authStore.userGetter || {}
-    const userName = user.name ? `${user.name} ${user.last_name || ''}`.trim() : 'Mi Empresa'
 
-    // Auto-rellenar formulario
-    form.value = {
-      company_name: userName,
-      company_document: '00000000', // Valor dummy por defecto
-      company_email: props.userEmail || user.email || '',
-      company_phone: user.phone || '00000000',
-      company_address: 'Dirección no especificada',
-      business_type: null,
-      country_id: null,
-      copy_test_products: false
-    }
+    // Priorizar datos del formulario de registro si están disponibles
+    const registrationData = props.registrationData || {}
 
-    // Usar país "Otro" para evitar validaciones de regex estrictas con números dummy
-    const otherCountry = countryOptions.find(c => c.label === 'Otro')
-    if (otherCountry) {
-      selectedCountry.value = otherCountry
-    }
+    // Construir nombre completo de la empresa desde datos de registro
+    const firstName = registrationData.name || user.name || ''
+    const lastName = registrationData.last_name || user.last_name || ''
+    const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
 
-    // Ejecutar setup
+    // Obtener email desde props o datos de registro
+    const email = props.userEmail || registrationData.email || user.email || ''
+
+    // Obtener teléfono completo (con código de país) desde datos de registro
+    const phoneNumber = registrationData.phone_number || user.phone_number || user.phone || null
+
+    // Construir payload con datos del formulario de registro
     const payload = {
-      ...form.value,
-      business_type_id: null,
+      company_name: companyName,
+      company_document: null, // Dejar en null como solicitado
+      company_email: email,
+      company_phone: phoneNumber, // Ya viene con código de país del registro
+      company_address: null, // Dejar en null
+      business_type_id: props.initialBusinessData?.business_type_id || null,
+      country_id: null, // Dejar en null
       copy_test_products: false
     }
 
+    console.log('📤 Enviando setup con datos de registro:', payload)
+
+    // Enviar directamente al backend sin validaciones del formulario
     const { data } = await api.post('authentication/setup-company', payload)
 
-    notify('Empresa configurada exitosamente', 'positive', 'check_circle')
+    console.log('✅ Setup completado exitosamente:', data)
+
+    notify('Configuración completada exitosamente', 'positive', 'check_circle')
+
+    // Emitir evento de éxito y cerrar modal
     emit('success', data)
     emit('update:modelValue', false)
 
     // Pixel Event
     if (fbq?.event) {
       fbq.event('CrearEmpresa', {
-        business_type: null,
-        country: selectedCountry.value?.label,
-        company_name: form.value.company_name
+        business_type: 'skipped',
+        country: 'not_specified',
+        company_name: payload.company_name,
+        setup_method: 'skip'
       })
     }
   } catch (error) {
-    console.error('Error al omitir configuración:', error)
-    notify('No se pudo omitir la configuración. Intente completarla manualmente.', 'negative')
+    console.error('❌ Error al omitir configuración:', error)
+    const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración. Intente completarla manualmente.'
+    notify(errorMessage, 'negative', 'warning')
   } finally {
     loadingSkip.value = false
   }
@@ -584,6 +602,21 @@ onMounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+.skip-btn {
+  height: 44px;
+  font-size: 14px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.skip-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.body--dark .skip-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Phone input adjustments */

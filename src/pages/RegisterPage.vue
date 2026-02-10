@@ -196,6 +196,7 @@
       v-model="showCompanySetup"
       :user-email="companyForm.company_email"
       :initial-business-data="tempCompanyData"
+      :registration-data="registrationFormData"
       @success="handleCompanySetupSuccess"
     />
   </div>
@@ -279,6 +280,15 @@ const registeredCredentials = ref({
   password: ''
 })
 
+// Datos del formulario de registro para pasar al modal de setup
+const registrationFormData = ref({
+  name: '',
+  last_name: '',
+  email: '',
+  phone_number: '',
+  country_code: ''
+})
+
 /**
  * Handle business type next step (Step 1 -> Step 2)
  */
@@ -309,13 +319,20 @@ const handleCompanySetupSuccess = (data) => {
     })
   }
 
+  // Limpiar datos de sesión temporal
   localStorage.removeItem(REGISTER_SESSION_KEY)
   localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+  clearOtpPendingState()
 
+  // Cerrar modales
   showCompanySetup.value = false
   showBusinessTypeSetup.value = false
+  showCompanyOptions.value = false
 
-  // All post-setup redirections should go to root
+  // Notificar éxito
+  notify('¡Bienvenido a OrderWise!', 'positive', 'celebration')
+
+  // Redirigir a la página principal
   router.push('/')
 }
 
@@ -417,6 +434,16 @@ const getBusinessIcon = (name) => {
  */
 const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
   console.log('📝 handleRegisterSubmit llamado', { formData, phoneNumber })
+
+  // Guardar datos del formulario de registro para usar en el modal de setup
+  registrationFormData.value = {
+    name: formData.name,
+    last_name: formData.last_name,
+    email: formData.email,
+    phone_number: phoneNumber, // Ya viene con código de país
+    country_code: phoneNumber ? phoneNumber.split(' ')[0] : '' // Extraer código de país
+  }
+
   await registerUser({
     onSuccess: async (data) => {
       console.log('✅ onSuccess callback ejecutado', data)
@@ -934,6 +961,15 @@ const assignDemo = async () => {
 const handleGoogleRegister = async () => {
   await registerWithGoogleUser({
     onSuccess: (data, userInfo) => {
+      // Guardar datos del usuario de Google para usar en el modal de setup
+      registrationFormData.value = {
+        name: userInfo.name?.split(' ')[0] || userInfo.name || '',
+        last_name: userInfo.name?.split(' ').slice(1).join(' ') || '',
+        email: userInfo.email || '',
+        phone_number: data.user?.phone_number || data.user?.phone || null,
+        country_code: ''
+      }
+
       // Guardar sesión completa en el store
       store.setSessionData(data)
 
