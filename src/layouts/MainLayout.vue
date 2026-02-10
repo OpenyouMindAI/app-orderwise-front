@@ -67,6 +67,7 @@
           </div>
         </div>
         <q-space />
+
         <!-- Branch Office Indicator -->
         <!-- Support Button (Replaces Branch Office Indicator) -->
         <div class="support-indicator">
@@ -702,10 +703,12 @@
     <!-- OTP Verification Dialog -->
     <otp-verification-dialog
       v-model="showOtpVerification"
-      :identifier="otpIdentifier"
+      :email="otpIdentifier"
       :session-token="otpSessionToken"
       :purpose="'verify_email'"
+      :show-back-link="true"
       @verified="handleOtpVerified"
+      @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
 
     <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
