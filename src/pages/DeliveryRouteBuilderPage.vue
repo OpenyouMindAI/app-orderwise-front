@@ -3,419 +3,419 @@
     <DeliveryRouteBuilderSkeleton v-if="loadingInitial" />
     <template v-else>
       <div class="q-pa-md">
-    <!-- Header -->
-    <div class="row items-center justify-between q-mb-md">
-      <div>
-        <div class="text-h6 text-weight-bold">
-          <q-btn
-            flat
-            color="grey-7"
-            icon="arrow_back"
-            round
-            @click="$router.back()"
-        />
-          <q-icon name="route" color="primary" size="32px" class="q-mr-sm" />
-          {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
-        </div>
-      </div>
-      <div class="row q-gutter-sm">
-        <q-btn
-          unelevated
-          color="positive"
-          label="Guardar Ruta"
-          icon="save"
-          @click="saveRoute"
-          :loading="saving"
-          :disable="stops.length === 0"
-        />
-      </div>
-    </div>
-
-    <div class="row q-col-gutter-md">
-      <!-- Left Panel - Route Configuration -->
-      <div class="col-12 col-sm-4 col-md-4">
-        <q-card>
-          <q-card-section>
-            <div class="text-h6 q-mb-md">
-              <q-icon name="settings" color="primary" />
-              Configuración de Ruta
-            </div>
-
-            <!-- Route Name -->
-            <q-input
-              v-model="routeForm.name"
-              label="Nombre de la Ruta"
-              outlined
-              dense
-              class="q-mb-md"
+        <!-- Header -->
+        <div class="row items-center justify-between q-mb-md">
+          <div>
+            <div class="text-h6 text-weight-bold">
+              <q-btn
+                flat
+                color="grey-7"
+                icon="arrow_back"
+                round
+                @click="$router.back()"
             />
-
-            <!-- Partner Selection -->
-            <q-select
-              v-model="selectedPartner"
-              :options="partners"
-              option-label="name"
-              option-value="id"
-              label="Seleccionar Afiliado (Cargar Clientes)"
-              outlined
-              dense
-              clearable
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              class="q-mb-md"
-              @update:model-value="onPartnerChange"
-              @filter="filterPartners"
-            >
-              <template v-slot:prepend>
-                <q-icon name="handshake" />
-              </template>
-            </q-select>
-
-            <!-- Courier Selection -->
-            <q-select
-              v-model="routeForm.courier"
-              :options="couriers"
-              option-label="name"
-              option-value="id"
-              label="Asignar Repartidor"
-              outlined
-              dense
-              clearable
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              class="q-mb-md"
-              @update:model-value="onCourierChange"
-              @filter="filterCouriers"
-            >
-              <template v-slot:prepend>
-                <q-icon name="person" />
-              </template>
-            </q-select>
-
-            <!-- Origin Branch -->
-            <q-select
-              v-model="routeForm.origin_branch"
-              :options="branches"
-              option-label="name"
-              option-value="id"
-              label="Sucursal de Origen"
-              outlined
-              dense
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              class="q-mb-md"
-              @filter="filterBranches"
-            >
-              <template v-slot:prepend>
-                <q-icon name="store" />
-              </template>
-            </q-select>
-
-            <!-- Notes -->
-            <q-input
-              v-model="routeForm.notes"
-              label="Notas"
-              type="textarea"
-              outlined
-              dense
-              rows="3"
-            />
-          </q-card-section>
-        </q-card>
-
-        <!-- Add Client Section -->
-        <q-card class="q-mt-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">
-              <q-icon name="add_location" color="positive" />
-              Agregar Cliente
+              <q-icon name="route" color="primary" size="32px" class="q-mr-sm" />
+              {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
             </div>
-
-            <!-- Client Search -->
-            <q-select
-              v-model="selectedClient"
-              :options="clients"
-              option-label="name"
-              option-value="id"
-              label="Buscar Cliente"
-              outlined
-              dense
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              @filter="filterClients"
-              class="q-mb-md"
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-              <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section avatar>
-                    <q-icon name="person" color="primary" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.name }}</q-item-label>
-                    <q-item-label caption>
-                      {{ getClientAddress(scope.opt) }}
-                    </q-item-label>
-                    <q-item-label caption v-if="scope.opt.opening_hours">
-                      <q-icon name="schedule" size="12px" />
-                      {{ getOpeningHoursText(scope.opt.opening_hours) }}
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-
+          </div>
+          <div class="row q-gutter-sm">
             <q-btn
               unelevated
               color="positive"
-              label="Agregar Cliente"
-              icon="add"
-              class="full-width"
-              :disable="!selectedClient"
-              @click="addClientToPredefinedRoute()"
+              label="Guardar Ruta"
+              icon="save"
+              @click="saveRoute"
+              :loading="saving"
+              :disable="stops.length === 0"
             />
-          </q-card-section>
-        </q-card>
-
-        <!-- Stops List with Drag & Drop -->
-        <q-card class="q-mt-md">
-          <q-card-section>
-            <div class="row items-center q-mb-md">
-              <div class="col">
-                <div class="text-h6">
-                  <q-icon name="list" color="primary" />
-                  Orden de Paradas ({{ stops.length }})
-                </div>
-                <div v-if="totalDistance || totalDuration" class="text-caption text-grey-7 q-mt-xs">
-                  <q-icon name="route" size="14px" />
-                  {{ totalDistance }}
-                  <span v-if="totalDuration">
-                    • <q-icon name="schedule" size="14px" />
-                    {{ totalDuration }}
-                  </span>
-                </div>
-              </div>
-              <div class="col-auto">
-                <q-btn
-                  v-if="stops.length > 1"
-                  unelevated
-                  color="primary"
-                  icon="route"
-                  label="Optimizar Ruta"
-                  size="sm"
-                  @click="optimizeRoute"
-                  :loading="optimizing"
-                >
-                  <q-tooltip>Reordenar paradas para minimizar distancia y tiempo</q-tooltip>
-                </q-btn>
-              </div>
-            </div>
-
-            <div v-if="stops.length === 0" class="text-center text-grey-6 q-py-lg">
-              <q-icon name="location_off" size="48px" />
-              <div class="q-mt-sm">No hay paradas agregadas</div>
-            </div>
-
-            <draggable
-              v-model="stops"
-              item-key="id"
-              handle=".drag-handle"
-              @end="onStopReorder"
-              class="stops-list"
-            >
-              <template #item="{ element, index }">
-                <q-card
-                  flat
-                  bordered
-                  class="stop-card q-mb-sm"
-                  :class="{ 'stop-active': selectedStop?.id === element.id }"
-                  @click="selectStop(element)"
-                >
-                  <q-card-section class="q-pa-sm">
-                    <div class="row items-center no-wrap">
-                      <!-- Drag Handle -->
-                      <q-icon
-                        name="drag_indicator"
-                        class="drag-handle cursor-move q-mr-sm"
-                        color="grey-6"
-                      />
-
-                      <!-- Stop Reorder Controls -->
-                      <div class="column items-center q-mr-sm stop-controls">
-                        <q-btn
-                          flat
-                          dense
-                          round
-                          size="sm"
-                          icon="keyboard_arrow_up"
-                          color="primary"
-                          :disable="index === 0"
-                          @click.stop="moveStopUp(index)"
-                        >
-                          <q-tooltip>Mover arriba</q-tooltip>
-                        </q-btn>
-
-                        <div class="stop-position-wrapper">
-                          <input
-                            type="number"
-                            :value="index + 1"
-                            class="stop-position-input"
-                            @change="e => updateStopPosition(element, e.target.value)"
-                            @click.stop
-                          />
-                        </div>
-
-                        <q-btn
-                          flat
-                          dense
-                          round
-                          size="sm"
-                          icon="keyboard_arrow_down"
-                          color="primary"
-                          :disable="index === stops.length - 1"
-                          @click.stop="moveStopDown(index)"
-                        >
-                          <q-tooltip>Mover abajo</q-tooltip>
-                        </q-btn>
-                      </div>
-
-                      <!-- Client Info -->
-                      <div class="col">
-                        <div class="text-body2 text-weight-medium">
-                          {{ element.client?.name }}
-                        </div>
-                        <div class="text-caption text-grey-7">
-                          <span v-if="element.distance_text">
-                            <q-icon name="route" size="14px" />
-                            {{ element.distance_text }}
-                          </span>
-                          <span v-if="element.duration_text">
-                            <span v-if="element.distance_text"> • </span>
-                            <q-icon name="schedule" size="14px" />
-                            {{ element.duration_text }}
-                          </span>
-                          <span v-if="!element.distance_text && !element.duration_text && index === 0">
-                            <q-icon name="flag" size="14px" />
-                            Punto de inicio
-                          </span>
-                        </div>
-                        <div v-if="element.client?.opening_hours" class="text-caption text-primary">
-                          <q-icon name="schedule" size="14px" />
-                          {{ getOpeningHoursText(element.client.opening_hours) }}
-                        </div>
-                        <!-- Warning for clients without address -->
-                        <div v-if="!element.latitude || !element.longitude" class="text-caption text-warning q-mt-xs">
-                          <q-icon name="warning" size="14px" />
-                          Sin dirección - No se muestra en el mapa
-                        </div>
-                      </div>
-
-                      <!-- Actions -->
-                      <div class="row q-gutter-xs">
-                        <!-- Edit address button -->
-                        <q-btn
-                          v-if="!element.latitude || !element.longitude"
-                          flat
-                          dense
-                          round
-                          icon="edit_location"
-                          color="primary"
-                          size="sm"
-                          @click.stop="editStopAddress(element)"
-                        >
-                          <q-tooltip>Agregar dirección</q-tooltip>
-                        </q-btn>
-                        <q-btn
-                          flat
-                          dense
-                          round
-                          icon="delete"
-                          color="negative"
-                          size="sm"
-                          @click.stop="removeStop(element)"
-                        />
-                      </div>
-                    </div>
-                  </q-card-section>
-                  <q-inner-loading :showing="reorderingStopId === element.id">
-                    <q-spinner-dots color="primary" />
-                  </q-inner-loading>
-                </q-card>
-              </template>
-            </draggable>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Right Panel - Map -->
-      <div class="col-12 col-sm-8 col-md-8">
-        <q-card style="height: calc(100vh - 120px);">
-          <div id="route-map" ref="mapContainer" style="width: 100%; height: 100%;"></div>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Modal para agregar dirección al cliente -->
-    <q-dialog v-model="showAddressModal" persistent>
-      <q-card style="min-width: 500px; max-width: 600px;">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">
-            <q-icon name="warning" color="warning" size="24px" class="q-mr-sm" />
-            Dirección requerida
           </div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="cancelAddressModal" />
-        </q-card-section>
+        </div>
 
-        <q-card-section>
-          <!-- Client name with transition -->
-          <transition name="fade-slide" mode="out-in">
-            <div :key="clientWithoutAddress?.id" class="client-name-container q-mb-md">
-              <div class="text-h5 text-weight-bold text-primary q-mb-xs">
-                {{ clientWithoutAddress?.name }}
+        <div class="row q-col-gutter-md">
+          <!-- Left Panel - Route Configuration -->
+          <div class="col-12 col-sm-4 col-md-4">
+            <q-card>
+              <q-card-section>
+                <div class="text-h6 q-mb-md">
+                  <q-icon name="settings" color="primary" />
+                  Configuración de Ruta
+                </div>
+
+                <!-- Route Name -->
+                <q-input
+                  v-model="routeForm.name"
+                  label="Nombre de la Ruta"
+                  outlined
+                  dense
+                  class="q-mb-md"
+                />
+
+                <!-- Partner Selection -->
+                <q-select
+                  v-model="selectedPartner"
+                  :options="partners"
+                  option-label="name"
+                  option-value="id"
+                  label="Seleccionar Afiliado (Cargar Clientes)"
+                  outlined
+                  dense
+                  clearable
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  class="q-mb-md"
+                  @update:model-value="onPartnerChange"
+                  @filter="filterPartners"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="handshake" />
+                  </template>
+                </q-select>
+
+                <!-- Courier Selection -->
+                <q-select
+                  v-model="routeForm.courier"
+                  :options="couriers"
+                  option-label="name"
+                  option-value="id"
+                  label="Asignar Repartidor"
+                  outlined
+                  dense
+                  clearable
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  class="q-mb-md"
+                  @update:model-value="onCourierChange"
+                  @filter="filterCouriers"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="person" />
+                  </template>
+                </q-select>
+
+                <!-- Origin Branch -->
+                <q-select
+                  v-model="routeForm.origin_branch"
+                  :options="branches"
+                  option-label="name"
+                  option-value="id"
+                  label="Sucursal de Origen"
+                  outlined
+                  dense
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  class="q-mb-md"
+                  @filter="filterBranches"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="store" />
+                  </template>
+                </q-select>
+
+                <!-- Notes -->
+                <q-input
+                  v-model="routeForm.notes"
+                  label="Notas"
+                  type="textarea"
+                  outlined
+                  dense
+                  rows="3"
+                />
+              </q-card-section>
+            </q-card>
+
+            <!-- Add Client Section -->
+            <q-card class="q-mt-md">
+              <q-card-section>
+                <div class="text-h6 q-mb-md">
+                  <q-icon name="add_location" color="positive" />
+                  Agregar Cliente
+                </div>
+
+                <!-- Client Search -->
+                <q-select
+                  v-model="selectedClient"
+                  :options="clients"
+                  option-label="name"
+                  option-value="id"
+                  label="Buscar Cliente"
+                  outlined
+                  dense
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  @filter="filterClients"
+                  class="q-mb-md"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="search" />
+                  </template>
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section avatar>
+                        <q-icon name="person" color="primary" />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.name }}</q-item-label>
+                        <q-item-label caption>
+                          {{ getClientAddress(scope.opt) }}
+                        </q-item-label>
+                        <q-item-label caption v-if="scope.opt.opening_hours">
+                          <q-icon name="schedule" size="12px" />
+                          {{ getOpeningHoursText(scope.opt.opening_hours) }}
+                        </q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+
+                <q-btn
+                  unelevated
+                  color="positive"
+                  label="Agregar Cliente"
+                  icon="add"
+                  class="full-width"
+                  :disable="!selectedClient"
+                  @click="addClientToPredefinedRoute()"
+                />
+              </q-card-section>
+            </q-card>
+
+            <!-- Stops List with Drag & Drop -->
+            <q-card class="q-mt-md">
+              <q-card-section>
+                <div class="row items-center q-mb-md">
+                  <div class="col">
+                    <div class="text-h6">
+                      <q-icon name="list" color="primary" />
+                      Orden de Paradas ({{ stops.length }})
+                    </div>
+                    <div v-if="totalDistance || totalDuration" class="text-caption text-grey-7 q-mt-xs">
+                      <q-icon name="route" size="14px" />
+                      {{ totalDistance }}
+                      <span v-if="totalDuration">
+                        • <q-icon name="schedule" size="14px" />
+                        {{ totalDuration }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      v-if="stops.length > 1"
+                      unelevated
+                      color="primary"
+                      icon="route"
+                      label="Optimizar Ruta"
+                      size="sm"
+                      @click="optimizeRoute"
+                      :loading="optimizing"
+                    >
+                      <q-tooltip>Reordenar paradas para minimizar distancia y tiempo</q-tooltip>
+                    </q-btn>
+                  </div>
+                </div>
+
+                <div v-if="stops.length === 0" class="text-center text-grey-6 q-py-lg">
+                  <q-icon name="location_off" size="48px" />
+                  <div class="q-mt-sm">No hay paradas agregadas</div>
+                </div>
+
+                <draggable
+                  v-model="stops"
+                  item-key="id"
+                  handle=".drag-handle"
+                  @end="onStopReorder"
+                  class="stops-list"
+                >
+                  <template #item="{ element, index }">
+                    <q-card
+                      flat
+                      bordered
+                      class="stop-card q-mb-sm"
+                      :class="{ 'stop-active': selectedStop?.id === element.id }"
+                      @click="selectStop(element)"
+                    >
+                      <q-card-section class="q-pa-sm">
+                        <div class="row items-center no-wrap">
+                          <!-- Drag Handle -->
+                          <q-icon
+                            name="drag_indicator"
+                            class="drag-handle cursor-move q-mr-sm"
+                            color="grey-6"
+                          />
+
+                          <!-- Stop Reorder Controls -->
+                          <div class="column items-center q-mr-sm stop-controls">
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              size="sm"
+                              icon="keyboard_arrow_up"
+                              color="primary"
+                              :disable="index === 0"
+                              @click.stop="moveStopUp(index)"
+                            >
+                              <q-tooltip>Mover arriba</q-tooltip>
+                            </q-btn>
+
+                            <div class="stop-position-wrapper">
+                              <input
+                                type="number"
+                                :value="index + 1"
+                                class="stop-position-input"
+                                @change="e => updateStopPosition(element, e.target.value)"
+                                @click.stop
+                              />
+                            </div>
+
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              size="sm"
+                              icon="keyboard_arrow_down"
+                              color="primary"
+                              :disable="index === stops.length - 1"
+                              @click.stop="moveStopDown(index)"
+                            >
+                              <q-tooltip>Mover abajo</q-tooltip>
+                            </q-btn>
+                          </div>
+
+                          <!-- Client Info -->
+                          <div class="col">
+                            <div class="text-body2 text-weight-medium">
+                              {{ element.client?.name }}
+                            </div>
+                            <div class="text-caption text-grey-7">
+                              <span v-if="element.distance_text">
+                                <q-icon name="route" size="14px" />
+                                {{ element.distance_text }}
+                              </span>
+                              <span v-if="element.duration_text">
+                                <span v-if="element.distance_text"> • </span>
+                                <q-icon name="schedule" size="14px" />
+                                {{ element.duration_text }}
+                              </span>
+                              <span v-if="!element.distance_text && !element.duration_text && index === 0">
+                                <q-icon name="flag" size="14px" />
+                                Punto de inicio
+                              </span>
+                            </div>
+                            <div v-if="element.client?.opening_hours" class="text-caption text-primary">
+                              <q-icon name="schedule" size="14px" />
+                              {{ getOpeningHoursText(element.client.opening_hours) }}
+                            </div>
+                            <!-- Warning for clients without address -->
+                            <div v-if="!element.latitude || !element.longitude" class="text-caption text-warning q-mt-xs">
+                              <q-icon name="warning" size="14px" />
+                              Sin dirección - No se muestra en el mapa
+                            </div>
+                          </div>
+
+                          <!-- Actions -->
+                          <div class="row q-gutter-xs">
+                            <!-- Edit address button -->
+                            <q-btn
+                              v-if="!element.latitude || !element.longitude"
+                              flat
+                              dense
+                              round
+                              icon="edit_location"
+                              color="primary"
+                              size="sm"
+                              @click.stop="editStopAddress(element)"
+                            >
+                              <q-tooltip>Agregar dirección</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              icon="delete"
+                              color="negative"
+                              size="sm"
+                              @click.stop="removeStop(element)"
+                            />
+                          </div>
+                        </div>
+                      </q-card-section>
+                      <q-inner-loading :showing="reorderingStopId === element.id">
+                        <q-spinner-dots color="primary" />
+                      </q-inner-loading>
+                    </q-card>
+                  </template>
+                </draggable>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- Right Panel - Map -->
+          <div class="col-12 col-sm-8 col-md-8">
+            <q-card style="height: calc(100vh - 120px);">
+              <div id="route-map" ref="mapContainer" style="width: 100%; height: 100%;"></div>
+            </q-card>
+          </div>
+        </div>
+
+        <!-- Modal para agregar dirección al cliente -->
+        <q-dialog v-model="showAddressModal" persistent>
+          <q-card style="min-width: 500px; max-width: 600px;">
+            <q-card-section class="row items-center q-pb-none">
+              <div class="text-h6">
+                <q-icon name="warning" color="warning" size="24px" class="q-mr-sm" />
+                Dirección requerida
               </div>
-              <div class="text-body2 text-grey-7">
-                Por favor, ingresa la dirección para poder agregarlo a la ruta.
-              </div>
-            </div>
-          </transition>
+              <q-space />
+              <q-btn icon="close" flat round dense @click="cancelAddressModal" />
+            </q-card-section>
 
-          <AddressComponent
-            ref="addressComponentRef"
-            label="Dirección del cliente"
-            @address-selected="onAddressSelected"
-          />
-        </q-card-section>
+            <q-card-section>
+              <!-- Client name with transition -->
+              <transition name="fade-slide" mode="out-in">
+                <div :key="clientWithoutAddress?.id" class="client-name-container q-mb-md">
+                  <div class="text-h5 text-weight-bold text-primary q-mb-xs">
+                    {{ clientWithoutAddress?.name }}
+                  </div>
+                  <div class="text-body2 text-grey-7">
+                    Por favor, ingresa la dirección para poder agregarlo a la ruta.
+                  </div>
+                </div>
+              </transition>
 
-        <q-card-actions align="right" class="q-px-md q-pb-md">
-          <q-btn
-            flat
-            label="Omitir"
-            color="grey-7"
-            @click="skipClientAddress"
-          />
-          <q-space />
-          <q-btn
-            unelevated
-            label="Guardar y Agregar"
-            color="primary"
-            :disable="!newClientAddress"
-            :loading="savingClientAddress"
-            @click="saveClientAddressAndAdd"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+              <AddressComponent
+                ref="addressComponentRef"
+                label="Dirección del cliente"
+                @address-selected="onAddressSelected"
+              />
+            </q-card-section>
+
+            <q-card-actions align="right" class="q-px-md q-pb-md">
+              <q-btn
+                flat
+                label="Omitir"
+                color="grey-7"
+                @click="skipClientAddress"
+              />
+              <q-space />
+              <q-btn
+                unelevated
+                label="Guardar y Agregar"
+                color="primary"
+                :disable="!newClientAddress"
+                :loading="savingClientAddress"
+                @click="saveClientAddressAndAdd"
+              />
+            </q-card-actions>
+          </q-card>
+        </q-dialog>
       </div>
     </template>
   </q-page>
@@ -1719,7 +1719,7 @@ async function saveRoute () {
     console.error('Error saving route:', error)
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Error al guardar la ruta'
+      message: error.response?.data?.message || error.message || 'Error al guardar la ruta'
     })
   } finally {
     saving.value = false

@@ -61,7 +61,7 @@ onMounted(() => {
     <q-list bordered class="rounded-borders scroll" style="max-height: calc(100vh - 220px);">
       <q-item
         v-for="product in products"
-        :key="product.code"
+        :key="product.id"
         clickable
         @click="emit('select', product)"
         class="q-hoverable"

@@ -3482,7 +3482,6 @@ export default {
         }
       })
         .then(({ data }) => {
-          console.log('Respuesta de la API al obtener productos:', data)
           this.products = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
