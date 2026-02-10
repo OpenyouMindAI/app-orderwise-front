@@ -222,7 +222,7 @@ export async function previewInvoice (invoice, userSession) {
   doc.setFontSize(14)
   doc.setFont(undefined, 'bold')
   // Use splitTextToSize to handle very long company names gracefully
-  const nameLines = doc.splitTextToSize(String(companySession.name || 'EMPRESA'), 80)
+  const nameLines = doc.splitTextToSize(String(companySession.name || 'EMPRESA'), 50)
   doc.text(nameLines, leftX, leftY)
   leftY += (nameLines.length * 5) + 2
 
@@ -441,7 +441,7 @@ export async function previewInvoice (invoice, userSession) {
   doc.setFont(undefined, 'bold')
   doc.text('Importe Otros Tributos: $', totalsLabelX, totalsY, { align: 'right' })
   doc.setFont(undefined, 'normal')
-  const otherTaxes = invoice.taxe_total || 0
+  // const otherTaxes = invoice.taxe_total || 0
   doc.text(String(formatNumber(0)), totalsValX, totalsY, { align: 'right' })
 
   totalsY += 6
@@ -449,7 +449,7 @@ export async function previewInvoice (invoice, userSession) {
   doc.setFontSize(11)
   doc.setFont(undefined, 'bold')
   doc.text('Importe Total: $', totalsLabelX, totalsY, { align: 'right' })
-  doc.text(String(formatNumber(invoice.subtotal)), totalsValX, totalsY, { align: 'right' })
+  doc.text(String(formatNumber(invoice.total)), totalsValX, totalsY, { align: 'right' })
 
   // -- SEPARATOR LINE --
   const lineY = totalsY + 4
@@ -464,10 +464,12 @@ export async function previewInvoice (invoice, userSession) {
 
   // IVA Contenido
   transpY += 5
+  // Calculate IVA roughly or use tax totals if available
+  const ivaAmount = invoice.taxes?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
 
   doc.text('IVA Contenido: $', MARGIN + 60, transpY, { align: 'right' })
   doc.setFont(undefined, 'normal')
-  doc.text(String(formatNumber(otherTaxes)), MARGIN + 65, transpY, { align: 'right' })
+  doc.text(String(formatNumber(ivaAmount)), MARGIN + 85, transpY, { align: 'right' })
 
   // --- CAE & QR ---
   const caeY = finalY + footerHeight + 4

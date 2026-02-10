@@ -2041,7 +2041,7 @@ export default {
 
       // Check if company is demo or plan is free
       const isDemo = this.store.isDemo
-      const isFree = this.currentSubscription?.plan?.slug === 'free' || !this.currentSubscription?.plan?.slug
+      const isFree = this.currentSubscription?.plan && this.currentSubscription?.plan?.slug === 'free'
 
       // If demo or free plan, hide premium modules
       if (isDemo || isFree) {
