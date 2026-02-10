@@ -1,21 +1,22 @@
 <template>
   <q-page class="home-page">
-    <!-- Header Cockpit Area -->
     <div class="header-cockpit section-fade-in">
       <div class="cockpit-glow"></div>
-      <div class="column no-wrap">
-        <div class="cockpit-meta q-mb-sm">
-          <div class="date-chip-premium">
-            <q-icon name="calendar_today" size="12px" class="q-mr-xs" />
-            <span>{{ currentDate }}</span>
+      <div class="row items-center no-wrap q-px-sm">
+        <div class="col-6">
+          <div class="greeting-block">
+            <div class="greeting-main text-uppercase">{{ greeting }}</div>
+            <div class="greeting-name text-weight-bold text-primary">{{ userName }}</div>
           </div>
         </div>
-        <div class="cockpit-welcome">
-          <div class="greeting-text">
-            <span class="greeting-main">{{ greeting }},</span>
-            <span class="greeting-name">{{ userName }}</span>
+        <div class="col-6 text-right">
+          <div class="date-chip-premium">
+            <q-icon name="calendar_today" size="13px" class="q-mr-xs mobile-hide" />
+            <div class="date-stack">
+              <span class="date-day text-capitalize">{{ currentDate.split(',')[0] }}</span>
+              <span class="date-full">{{ currentDate.split(',')[1] }}</span>
+            </div>
           </div>
-          <div class="greeting-subtitle">Aquí tienes el resumen de tu negocio para hoy</div>
         </div>
       </div>
     </div>
@@ -45,7 +46,7 @@
         </div>
       </div>
 
-      <!-- ROW 1: Statistics (Original Order) -->
+      <!-- ROW 1: Statistics (Progressive Loading) -->
       <template v-if="isAdmin">
         <!-- Today's Net Income -->
         <div class="bento-item stat-hero revenue-tile">
@@ -53,7 +54,7 @@
             <q-icon name="payments" size="28px" color="primary" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.income" type="text" width="80px" />
             <div v-else class="stat-val text-primary">{{ formatCurrency(todayStats.netIncome) }}</div>
             <div class="stat-lab">Ingresos de Hoy</div>
           </div>
@@ -65,7 +66,7 @@
             <q-icon name="trending_up" size="28px" color="positive" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.profit" type="text" width="80px" />
             <div v-else class="stat-val" :class="todayStats.profit >= 0 ? 'text-positive' : 'text-negative'">
               {{ formatCurrency(todayStats.profit) }}
             </div>
@@ -79,7 +80,7 @@
             <q-icon name="money_off" size="28px" color="negative" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.cashOut" type="text" width="80px" />
             <div v-else class="stat-val text-negative">{{ formatCurrency(todayStats.cashOut) }}</div>
             <div class="stat-lab">Salida de Dinero</div>
           </div>
@@ -91,7 +92,7 @@
             <q-icon name="account_balance_wallet" size="28px" color="warning" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.receivable" type="text" width="80px" />
             <div v-else class="stat-val text-warning">{{ formatCurrency(todayStats.receivable) }}</div>
             <div class="stat-lab">Por Cobrar</div>
           </div>
@@ -103,7 +104,7 @@
             <q-icon name="inventory_2" size="28px" color="secondary" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.products" type="text" width="80px" />
             <div v-else class="stat-val text-secondary">{{ todayStats.productsTotal }}</div>
             <div class="stat-lab">Productos</div>
           </div>
@@ -115,7 +116,7 @@
             <q-icon name="group" size="28px" color="accent" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.clients" type="text" width="80px" />
             <div v-else class="stat-val text-accent">{{ todayStats.clientsTotal }}</div>
             <div class="stat-lab">Clientes</div>
           </div>
@@ -127,7 +128,7 @@
             <q-icon name="receipt" size="28px" color="info" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.sales" type="text" width="80px" />
             <div v-else class="stat-val text-info">{{ todayStats.salesToday }}</div>
             <div class="stat-lab">Ventas de Hoy</div>
           </div>
@@ -450,10 +451,18 @@ const totalTasks = ref(5)
 // ============================================
 
 /**
- * Loading state for statistics
- * @type {Ref<boolean>}
+ * Granular loading states for each statistic card
+ * @type {Ref<Object>}
  */
-const loadingStats = ref(true)
+const loadingStats = ref({
+  income: true,
+  profit: true,
+  cashOut: true,
+  receivable: true,
+  products: true,
+  clients: true,
+  sales: true
+})
 
 /**
  * Today's financial statistics
@@ -735,67 +744,101 @@ const loadOnboardingStatus = async () => {
 }
 
 /**
- * Load today's financial statistics
+ * Load today's financial statistics with progressive/staggered updates
  */
 const loadTodayStats = async () => {
   if (!branchOffice.value?.id) return
 
-  loadingStats.value = true
-  const today = date.formatDate(new Date(), 'YYYY-MM-DD')
+  // Reset all loading states
+  Object.keys(loadingStats.value).forEach(key => {
+    loadingStats.value[key] = true
+  })
 
+  const today = date.formatDate(new Date(), 'YYYY-MM-DD')
   const params = {
     day: today,
     branch_office_id: [branchOffice.value.id]
   }
 
-  try {
-    // Load all stats in parallel
-    const [categoryData, cashflowData, receivableData, dashboardStats, productsData, clientsData] = await Promise.all([
-      api.get('reports/category-totals', { params }).catch(() => ({ data: {} })),
-      api.get('reports/cashflow-totals', { params }).catch(() => ({ data: {} })),
-      api.get('client-statement/kpis', {
-        params: {
-          branch_office_id: branchOffice.value.id
+  // Group 1: Immediate - Financial critical stats
+  const loadFinancials = () => {
+    api.get('reports/category-totals', { params })
+      .then(({ data }) => {
+        const sales = data?.category_total || 0
+        const costs = data?.cost_total || 0
+        todayStats.value.netIncome = sales
+        todayStats.value.profit = sales - costs
+      })
+      .catch(err => console.error('Error loading profit stats:', err))
+      .finally(() => {
+        loadingStats.value.income = false
+        loadingStats.value.profit = false
+      })
+
+    api.get('reports/cashflow-totals', { params })
+      .then(({ data }) => {
+        let cashOut = 0
+        if (data?.cashflow_total) {
+          cashOut = data.cashflow_total
+            .filter(cf => cf.type_cashflow === 'credit' || cf.type_cashflow === 'expense')
+            .reduce((sum, cf) => sum + (cf.totals || 0), 0)
         }
-      }).catch(() => ({ data: {} })),
-      api.get('dashboard/today-stats', { params }).catch(() => ({ data: { invoices: 0, products: 0, clients: 0 } })),
-      api.get('products', { params: { perPage: 1, page: 1, paginated: true } }).catch(() => ({ data: { total: 0 } })),
-      api.get('clients', { params: { perPage: 1, page: 1, paginated: true } }).catch(() => ({ data: { total: 0 } }))
-    ])
-
-    // Calculate profit (sales - costs)
-    const sales = categoryData.data?.category_total || 0
-    const costs = categoryData.data?.cost_total || 0
-    const profit = sales - costs
-
-    // Net income from sales
-    const netIncome = sales
-
-    // Cash out (credit type cashflows = money going out)
-    let cashOut = 0
-    if (cashflowData.data?.cashflow_total) {
-      cashOut = cashflowData.data.cashflow_total
-        .filter(cf => cf.type_cashflow === 'credit' || cf.type_cashflow === 'expense')
-        .reduce((sum, cf) => sum + (cf.totals || 0), 0)
-    }
-
-    // Accounts receivable balance (global total from all clients)
-    const receivable = receivableData.data?.balance || 0
-
-    todayStats.value = {
-      profit,
-      netIncome,
-      cashOut,
-      receivable,
-      productsTotal: productsData.data?.total || 0,
-      clientsTotal: clientsData.data?.total || 0,
-      salesToday: dashboardStats.data?.invoices || 0
-    }
-  } catch (error) {
-    console.error('Error loading today stats:', error)
-  } finally {
-    loadingStats.value = false
+        todayStats.value.cashOut = cashOut
+      })
+      .catch(err => console.error('Error loading cashflow stats:', err))
+      .finally(() => {
+        loadingStats.value.cashOut = false
+      })
   }
+
+  // Group 2: Slightly delayed - KPI and Sales count
+  const loadSecondaryStats = () => {
+    api.get('client-statement/kpis', {
+      params: { branch_office_id: branchOffice.value.id }
+    })
+      .then(({ data }) => {
+        todayStats.value.receivable = data?.balance || 0
+      })
+      .catch(err => console.error('Error loading receivable stats:', err))
+      .finally(() => {
+        loadingStats.value.receivable = false
+      })
+
+    api.get('dashboard/today-stats', { params })
+      .then(({ data }) => {
+        todayStats.value.salesToday = data?.invoices || 0
+      })
+      .catch(err => console.error('Error loading sales count:', err))
+      .finally(() => {
+        loadingStats.value.sales = false
+      })
+  }
+
+  // Group 3: More delayed - Inventory and totals
+  const loadInventoryStats = () => {
+    api.get('products', { params: { perPage: 1, page: 1, paginated: true } })
+      .then(({ data }) => {
+        todayStats.value.productsTotal = data?.total || 0
+      })
+      .catch(err => console.error('Error loading products count:', err))
+      .finally(() => {
+        loadingStats.value.products = false
+      })
+
+    api.get('clients', { params: { perPage: 1, page: 1, paginated: true } })
+      .then(({ data }) => {
+        todayStats.value.clientsTotal = data?.total || 0
+      })
+      .catch(err => console.error('Error loading clients count:', err))
+      .finally(() => {
+        loadingStats.value.clients = false
+      })
+  }
+
+  // Execute in sequence with small delays for visual flow
+  loadFinancials()
+  setTimeout(loadSecondaryStats, 150)
+  setTimeout(loadInventoryStats, 300)
 }
 
 /**
@@ -971,10 +1014,21 @@ watch(branchOffice, () => {
 // ============================================
 
 onMounted(() => {
-  loadOnboardingStatus()
-  loadTodayStats()
-  loadRecentInvoices()
+  // Sync config is immediate
   loadQuickAccessConfig()
+
+  // Delay the heavy artillery so the UI feels snappy from the start
+  setTimeout(() => {
+    loadTodayStats()
+  }, 100)
+
+  setTimeout(() => {
+    loadOnboardingStatus()
+  }, 400)
+
+  setTimeout(() => {
+    loadRecentInvoices()
+  }, 600)
 })
 </script>
 
@@ -998,9 +1052,15 @@ onMounted(() => {
   }
 }
 .header-cockpit {
-  padding: 1rem 0.5rem;
-  margin-bottom: 8px;
+  padding: 0.75rem 0.2rem;
   position: relative;
+}
+
+@media (min-width: 1024px) {
+  .header-cockpit {
+    padding: 1rem 1.5rem;
+    margin-bottom: 12px;
+  }
 }
 
 .cockpit-glow {
@@ -1018,15 +1078,46 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   background: white;
-  padding: 6px 14px;
-  border-radius: 50px;
-  font-size: 11px;
-  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
   color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
   border: 1px solid #f1f5f9;
+}
+
+.date-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.date-day {
+  font-size: 13px; /* <--- Tamaño del día de la semana (arriba) */
+  font-weight: 800;
+  color: var(--q-primary);
+  letter-spacing: 0.5px;
+}
+
+.date-full {
+  font-size: 11px; /* <--- Tamaño de la fecha numérica (abajo) */
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@media (min-width: 600px) {
+  .date-stack {
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+  }
+  .date-day::after {
+    content: ',';
+  }
+  .date-day {
+    font-size: 11px; /* <--- Tamaño del día en escritorio */
+    color: inherit;
+  }
 }
 
 body.body--dark .date-chip-premium {
@@ -1044,22 +1135,41 @@ body.body--dark .date-chip-premium {
   margin-top: 4px;
 }
 
+.greeting-block {
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid var(--q-primary);
+  padding-left: 12px;
+  line-height: 1.1;
+}
+
 .greeting-main {
-  font-size: 32px;
-  font-weight: 400;
-  color: #334155;
-  letter-spacing: -0.5px;
+  font-size: 15px; /* <--- Tamaño del "BUENAS TARDES" */
+  font-weight: 700;
 }
 
 .greeting-name {
-  font-size: 32px;
-  font-weight: 800;
-  margin-left: 8px;
-  background: linear-gradient(135deg, var(--q-primary) 0%, #4facfe 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -1px;
+  font-size: clamp(18px, 5vw, 24px); /* <--- Tamaño del NOMBRE */
+  color: #334155;
+  letter-spacing: -0.3px;
+  font-family: inherit !important;
+}
+
+body.body--dark .greeting-name {
+  color: #f1f5f9;
+}
+
+@media (max-width: 600px) {
+  .greeting-block {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-cockpit .row {
+    justify-content: space-between;
+    text-align: left;
+  }
 }
 
 .greeting-subtitle {
@@ -1286,19 +1396,41 @@ body.body--dark .recent-pill__label {
   justify-content: flex-start;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+  .bento-item {
+    padding: 10px;
+  }
+
   .stat-hero {
-    padding: 12px;
-    gap: 12px;
+    padding: 8px;
+    gap: 6px;
   }
 
   .stat-icon-wrap {
-    width: 48px;
-    height: 48px;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+  }
+
+  .stat-icon-wrap :deep(.q-icon) {
+    font-size: 20px !important;
   }
 
   .stat-val {
-    font-size: 18px;
+    font-size: 14px !important;
+    font-weight: 700;
+  }
+
+  .stat-lab {
+    font-size: 10px !important;
+    font-weight: 500;
+    color: #94a3b8;
+  }
+}
+
+@media (max-width: 360px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
   }
 }
 

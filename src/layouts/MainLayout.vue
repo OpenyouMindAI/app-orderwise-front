@@ -67,6 +67,7 @@
           </div>
         </div>
         <q-space />
+
         <!-- Branch Office Indicator -->
         <!-- Support Button (Replaces Branch Office Indicator) -->
         <div class="support-indicator">
@@ -76,10 +77,10 @@
             dense
             no-caps
             class="support-btn-header"
+            label="Suporte Admin"
             @click="changeRoute('AdminSupport', 'Suporte Admin')"
           >
             <q-icon name="support_agent" size="20px" />
-            <span>Suporte Admin</span>
             <q-tooltip>Centro de Soporte para Administradores</q-tooltip>
           </q-btn>
           <q-btn
@@ -87,11 +88,11 @@
             flat
             dense
             no-caps
+            label="Contactanos"
             class="support-btn-header"
             @click="changeRoute('Support', 'Suporte')"
           >
             <q-icon name="support_agent" size="20px" />
-            <span>Suporte</span>
             <q-tooltip>Centro de Soporte y Ayuda</q-tooltip>
           </q-btn>
         </div>
@@ -349,7 +350,7 @@
                           <q-icon name="extension" size="32px" color="primary" />
                         </div>
                         <premium-badge
-                          :show="subscriptionPlan === 'Free'"
+                          :show="subscriptionPlan.toLocaleLowerCase() === 'free'"
                           :size="15"
                           top="0px"
                           right="4px"
@@ -583,17 +584,18 @@
 
         <q-scroll-area class="col">
           <q-expansion-item
-            v-for="category_module in filteredDataMenu"
+            v-for="(category_module, index) in filteredDataMenu"
             expand-separator
             :key="category_module.id"
             :icon="category_module.icon"
-            default-opened
+            :default-opened="index === 0"
             :label="category_module.name"
           >
             <div v-for="list in category_module.modules" :key="list.id">
               <q-item
                 v-if="
                   validateRole(list.roles) &&
+                  validateBusinessType(list) &&
                   list.name != 'home' &&
                   list.visible !== false
                 "
@@ -632,9 +634,6 @@
     <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md && !$route.meta.hideBottomNav }">
       <router-view />
     </q-page-container>
-
-    <!-- Bottom Navigation (Mobile Only) -->
-    <!-- <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" /> -->
 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
@@ -682,6 +681,7 @@
     <subscription-plans-dialog
       v-if="showSubscriptionDialog"
       v-model="showSubscriptionDialog"
+      :show-contact-option="false"
       @subscription-updated="onSubscriptionUpdated"
       @open-register="showCreateCompanyDialog = true"
     />
@@ -703,11 +703,15 @@
     <!-- OTP Verification Dialog -->
     <otp-verification-dialog
       v-model="showOtpVerification"
-      :identifier="otpIdentifier"
+      :email="otpIdentifier"
       :session-token="otpSessionToken"
       :purpose="'verify_email'"
+      :show-back-link="true"
       @verified="handleOtpVerified"
+      @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
+
+    <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
 
     <q-inner-loading :showing="visibleLoading">
       <q-spinner-gears size="100px" color="primary" />
@@ -762,7 +766,7 @@ import { darkModeStore } from '../stores/darkModeStore'
 import { MultiDisplayManager } from 'multi-display-manager'
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
-// import BottomNav from 'src/components/Navigation/BottomNav.vue'
+import BottomNav from 'src/components/Navigation/BottomNav.vue'
 import { useTourStore } from 'src/stores/tourStore.js'
 
 import {
@@ -787,7 +791,7 @@ export default {
     CompanySetupModal,
     PremiumBadge,
     IntegrationDynamic,
-    // BottomNav
+    BottomNav,
     ProPlanPromoBanner
   },
   data () {
@@ -1066,7 +1070,7 @@ export default {
         this.dataMenu = value.filter((element) => {
           return (
             element.modules.filter((module) => {
-              return this.validateRole(module.roles)
+              return this.validateRole(module.roles) && this.validateBusinessType(module)
             }).length > 0
           )
         })
@@ -1151,6 +1155,13 @@ export default {
 
     if (localStorage.getItem('pending_plan_subscription')) {
       this.showSubscriptionDialog = true
+    }
+
+    // Check for plans query parameter to show subscription dialog
+    if (this.$route.query.plans === 'true') {
+      this.showSubscriptionDialog = true
+      // Clean the URL by removing the query parameter
+      this.$router.replace({ query: { ...this.$route.query, plans: undefined } })
     }
 
     // Listener global de clicks con silenciador inteligente
@@ -1417,6 +1428,7 @@ export default {
         }
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+<<<<<<< HEAD
 
         // Chequear pending contact advisor
         const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
@@ -1426,6 +1438,8 @@ export default {
           return
         }
 
+=======
+>>>>>>> ec634885dfa48a83083cd86ef73f28b14e312a8a
         this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
@@ -1505,49 +1519,7 @@ export default {
         // Notificación de éxito con animación
         notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
 
-        // Chequear pending subscription y procesar inmediatamente
-        const handledPending = await this.processPendingSubscription()
-        if (handledPending) return
-
-        // Chequear pending contact advisor
-        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
-        if (pendingAdvisor) {
-          localStorage.removeItem('pending_contact_advisor')
-          this.$router.push({ name: 'Support' })
-          return
-        }
-
-        // Marcar que necesita tour de facturación
-        localStorage.setItem('needs_billing_tour', 'true')
-
-        // Mostrar diálogo de opciones
-        this.$q.dialog({
-          title: '¡Empresa creada exitosamente! 🎉',
-          message: '¿Qué te gustaría hacer ahora?',
-          options: {
-            type: 'radio',
-            model: 'billing',
-            items: [
-              { label: 'Ver tutorial de facturación (Recomendado)', value: 'billing', color: 'primary' },
-              { label: 'Configurar mi empresa', value: 'config', color: 'secondary' }
-            ]
-          },
-          cancel: false,
-          persistent: true,
-          ok: {
-            label: 'Continuar',
-            color: 'primary'
-          }
-        }).onOk(data => {
-          if (data === 'billing') {
-            // Ir a facturación con tour
-            this.$router.push({ name: 'Billing' })
-          } else {
-            // Ir a configuración de empresa con tour
-            localStorage.setItem('needs_company_config_tour', 'true')
-            this.$router.push({ name: 'CompanyConfig' })
-          }
-        })
+        this.$router.push('/')
       } catch (error) {
         const message = error.response?.data?.message || 'Error al crear empresa'
         notify(message, 'negative', 'warning')
@@ -1876,7 +1848,7 @@ export default {
         // Actualizar el store con datos verificados del backend
         if (data.subscription) {
           this.store.currentSubscription = data.subscription
-          this.store.subscriptionPlan = data.subscription.plan?.name
+          this.store.subscriptionPlan = data.subscription.plan?.slug
           this.store.subscriptionDaysLeft = data.days_left
           this.store.maxBranches = data.subscription.plan?.max_branches || 1
 
@@ -2068,11 +2040,14 @@ export default {
     },
     /**
      * Validate business type
-     * @param {Array} businessTypes
+     * @param {Object} module - Module to validate
      * @returns {Boolean}
      */
     validateBusinessType (module) {
       const businessTypeModules = this.userSession?.company_session?.business_type?.modules || []
+
+      // First check if module is hidden by plan restrictions
+      if (!this.validatePlan(module)) return false
 
       if (this.userSession?.is_root) return true
 
@@ -2081,7 +2056,47 @@ export default {
       if (businessTypeModules.length > 0 && module) {
         return businessTypeModules.some((businessModule) => businessModule.id === module.id)
       }
+
       return false
+    },
+
+    /**
+     * Validate if module is allowed based on subscription plan
+     * @param {Object} module - Module to validate
+     * @returns {Boolean} - true if module is allowed, false if should be hidden
+     */
+    validatePlan (module) {
+      // Root users can see all modules
+      if (this.userSession?.is_root) return true
+
+      // Modules restricted for free plan and demo companies
+      const premiumModules = [
+        'SalesInventoryReport',
+        'ProductKardex',
+        'TransferProduct',
+        'Promotions',
+        'BranchOffice',
+        'Integrations',
+        'Company',
+        'Cashbox',
+        'Seller',
+        'Client',
+        'DeliveryPerson'
+      ]
+
+      // Check if company is demo or plan is free
+      const isDemo = this.store.isDemo
+      const isFree = this.currentSubscription?.plan && this.currentSubscription?.plan?.slug === 'free'
+
+      // If demo or free plan, hide premium modules
+      if (isDemo || isFree) {
+        // Check if the module link matches any restricted module
+        if (module?.link && premiumModules.includes(module.link)) {
+          return false
+        }
+      }
+
+      return true
     },
     /**
      * Logout application

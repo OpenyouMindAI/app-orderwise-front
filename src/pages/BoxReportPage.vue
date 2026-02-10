@@ -1,88 +1,93 @@
 <template>
   <q-page padding>
     <!-- Header with Branch and Filter -->
-    <div class="row items-center justify-between q-mb-lg">
-      <div class="text-h5 text-weight-bold text-primary">
-        📊 Reporte Diario - {{ reportTitle }}
-      </div>
-      <div class="column">
-        <div>
+    <div class="report-header q-mb-md">
+      <div class="row items-center justify-between no-wrap q-gutter-x-sm">
+        <div class="text-subtitle1 text-weight-bold col-grow ellipsis">
+          Reporte de Caja - {{ reportTitle }}
+        </div>
+        <div class="header-actions">
           <q-btn
-            icon="tune"
-            label="Filtros"
+            icon="filter_alt"
             color="primary"
-            rounded
+            round
+            label="Filtros"
+            size="sm"
             @click="dialogFilter = true"
-            class="text-weight-bold"
+            class="text-weight-bold filter-btn q-px-md"
+            no-caps
           />
         </div>
       </div>
     </div>
 
-    <!-- Quick Date Buttons -->
-    <div class="row q-mb-lg q-mt-lg full-width justify-between items-center">
-      <div class="row q-gutter-sm">
-        <!-- Filtros de fecha -->
-        <q-btn
-          :color="panel === 'day' && isToday ? 'primary' : 'grey-5'"
-          :text-color="panel === 'day' && isToday ? 'white' : 'grey-8'"
-          label="Hoy"
-          rounded
-          size="sm"
-          @click="selectQuickDate('today')"
-        />
-        <q-btn
-          :color="panel === 'day' && isYesterday ? 'primary' : 'grey-5'"
-          :text-color="panel === 'day' && isYesterday ? 'white' : 'grey-8'"
-          label="Ayer"
-          rounded
-          size="sm"
-          @click="selectQuickDate('yesterday')"
-        />
-        <q-btn
-          :color="panel === 'between' ? 'primary' : 'grey-5'"
-          :text-color="panel === 'between' ? 'white' : 'grey-8'"
-          label="Este mes"
-          rounded
-          size="sm"
-          @click="selectQuickDate('month')"
-        />
+    <!-- Quick Date and Shift Buttons (Scrollable on Mobile) -->
+    <div class="filters-container q-mb-sm">
+      <div class="scroll-area-wrapper">
+        <div class="row no-wrap items-center q-gutter-x-sm scroll-container q-pb-xs">
+          <!-- Filtros de fecha -->
+          <q-btn
+            :color="panel === 'day' && isToday ? 'primary' : 'grey-5'"
+            :text-color="panel === 'day' && isToday ? 'white' : 'grey-8'"
+            label="Hoy"
+            rounded
+            unelevated
+            size="sm"
+            @click="selectQuickDate('today')"
+            class="filter-pill"
+          />
+          <q-btn
+            :color="panel === 'day' && isYesterday ? 'primary' : 'grey-5'"
+            :text-color="panel === 'day' && isYesterday ? 'white' : 'grey-8'"
+            label="Ayer"
+            rounded
+            unelevated
+            size="sm"
+            @click="selectQuickDate('yesterday')"
+            class="filter-pill"
+          />
+          <q-btn
+            :color="panel === 'between' ? 'primary' : 'grey-5'"
+            :text-color="panel === 'between' ? 'white' : 'grey-8'"
+            label="Este mes"
+            rounded
+            unelevated
+            size="sm"
+            @click="selectQuickDate('month')"
+            class="filter-pill"
+          />
 
-        <q-separator vertical inset class="q-mx-sm"/>
+          <q-separator vertical inset class="q-mx-xs"/>
 
-        <!-- Filtros de turno -->
-        <q-btn
-          :color="cashBoxUser && isToday ? 'green' : 'grey-5'"
-          :text-color="cashBoxUser && isToday ? 'white' : 'grey-8'"
-          icon="schedule"
-          label="Turno en curso"
-          rounded
-          size="sm"
-          @click="loadCurrentShift"
-        />
-        <q-btn
-          color="grey-5"
-          text-color="grey-8"
-          icon="clear"
-          label="Todos los turnos"
-          rounded
-          size="sm"
-          @click="clearShift"
-        />
-      </div>
-      <q-chip v-if="from && to" color="secondary" text-color="white">
-        <div class="flex q-gutter-x-md justify-between items-center">
-          <q-icon name="event" size="sm"/>
-          <span>
-            {{ formatDate(`${from} 00:00:00`, 'DD/MM/YYYY') }} - {{ formatDate(`${to} 00:00:00`, 'DD/MM/YYYY') }}
-          </span>
-          <q-icon name="filter_alt_off" size="sm" @click="clearFilter" class="cursor-pointer"/>
+          <!-- Filtros de turno -->
+          <q-btn
+            :color="cashBoxUser && isToday ? 'positive' : 'grey-5'"
+            :text-color="cashBoxUser && isToday ? 'white' : 'grey-8'"
+            icon="schedule"
+            label="Turno"
+            rounded
+            unelevated
+            size="sm"
+            @click="loadCurrentShift"
+            class="filter-pill"
+          />
+          <q-btn
+            color="grey-5"
+            text-color="grey-8"
+            icon="clear_all"
+            label="Todos"
+            rounded
+            unelevated
+            size="sm"
+            @click="clearShift"
+            class="filter-pill"
+          />
         </div>
-      </q-chip>
+      </div>
     </div>
 
     <!-- Main Reports Grid -->
-    <div class="row q-col-gutter-md">
+    <div class="row q-col-gutter-sm">
       <!-- Compact Summary Footer -->
        <div class="col-12" v-if="validate">
          <q-expansion-item
@@ -175,7 +180,7 @@
             <div class="row items-center full-width">
               <q-icon name="payments" size="sm" class="q-mr-sm"/>
               <div class="col">
-                <div class="text-subtitle1 text-weight-bold">💳 Métodos de Pago</div>
+                <div class="text-subtitle2">Métodos de Pago</div>
               </div>
             </div>
           </template>
@@ -335,7 +340,7 @@
       <div class="col-12 col-md-6">
         <q-expansion-item
           class="report-expansion shadow-4"
-          :default-opened="expandedCards.categories"
+          :default-opened="false"
           @show="expandedCards.categories = true"
           @hide="expandedCards.categories = false"
           header-class="bg-blue-6 text-white expansion-header-compact"
@@ -345,7 +350,7 @@
             <div class="row items-center full-width">
               <q-icon name="category" size="sm" class="q-mr-sm"/>
               <div class="col">
-                <div class="text-subtitle1 text-weight-bold">🏪 Ventas por categorías</div>
+                <div class="text-subtitle2">Ventas por categorías</div>
               </div>
               <div class="col-auto flex justify-center items-center q-gutter-x-md">
                 <div class="text-body1 text-bold">Total: {{ formatNumber(categoryTotalsTotals.category_total || 0) }}</div>
@@ -404,7 +409,7 @@
       <div class="col-12 col-md-6">
         <q-expansion-item
           class="report-expansion shadow-4"
-          :default-opened="expandedCards.cashFlow"
+          :default-opened="false"
           @show="expandedCards.cashFlow = true"
           @hide="expandedCards.cashFlow = false"
           header-class="bg-purple-6 text-white expansion-header-compact"
@@ -414,7 +419,7 @@
             <div class="row items-center full-width">
               <q-icon name="account_balance_wallet" size="sm" class="q-mr-sm"/>
               <div class="col">
-                <div class="text-subtitle1 text-weight-bold">💰 Flujo de Dinero</div>
+                <div class="text-subtitle2">Flujo de Dinero</div>
               </div>
               <div class="col-auto flex justify-center items-center q-gutter-x-md">
                 <div class="text-body1 text-bold" @click.stop="cashFlowDetails">
@@ -487,7 +492,7 @@
       <div class="col-12 col-md-6">
         <q-expansion-item
           class="report-expansion shadow-4"
-          :default-opened="expandedCards.services"
+          :default-opened="false"
           @show="expandedCards.services = true"
           @hide="expandedCards.services = false"
           header-class="bg-primary text-white expansion-header-compact"
@@ -705,7 +710,7 @@
       <div class="col-12">
         <q-expansion-item
           class="report-expansion shadow-4"
-          :default-opened="expandedCards.fiscal"
+          :default-opened="false"
           @show="expandedCards.fiscal = true"
           @hide="expandedCards.fiscal = false"
           header-class="bg-indigo-6 text-white expansion-header-compact"
@@ -1349,20 +1354,15 @@ export default {
    */
   async created () {
     this.setPermissions()
-    await this.getBranchOffices()
     if (this.branchOffice) {
       this.branchOfficeSelect = [this.branchOffice]
       this.appliedBranchOfficeSelect = [this.branchOffice]
-
-      // Load current shift without applying filter yet
-      await this.loadCurrentShift(false)
-
       // Always apply the filter once to bring data (all day if no shift is active)
       this.filterDate()
-
       // Deactivate initial load flag
       this.isInitialLoad = false
     }
+    this.getBranchOffices()
   },
 
   computed: {
@@ -2178,24 +2178,10 @@ export default {
 </script>
 
 <style scoped>
-.report-expansion {
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
 
 .summary-expansion {
   border-radius: 16px;
   overflow: hidden;
-}
-
-.expansion-header-compact {
-  padding: 12px 16px;
-  min-height: 60px;
-}
-
-.dense-content {
-  padding: 8px;
 }
 
 .dense-content::-webkit-scrollbar {
@@ -2214,6 +2200,61 @@ export default {
 
 .dense-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+
+/* Header and Filters Distribution */
+.report-header {
+  position: relative;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 600px) {
+  .report-header .row {
+    flex-wrap: nowrap;
+  }
+  
+  .filter-btn {
+    font-size: 13px;
+  }
+}
+
+.scroll-area-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.scroll-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.scroll-container::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.filter-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: auto;
+  padding: 4px 12px;
+}
+
+.date-range-chip {
+  height: 32px;
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+.opacity-60 {
+  opacity: 0.6;
 }
 
 .payment-method-compact {
@@ -2334,9 +2375,21 @@ export default {
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
+.report-expansion {
+  margin-bottom: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .report-expansion:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.summary-expansion {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 12px;
 }
 
 .summary-expansion:hover {

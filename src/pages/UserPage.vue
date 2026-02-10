@@ -127,6 +127,8 @@
                   dense
                   v-model="user.username"
                   label="Usuario"
+                  autocomplete="off"
+                  name="edit-user-username"
                   hide-bottom-space
                 />
               </div>
@@ -137,6 +139,8 @@
                   v-model="user.password"
                   type="password"
                   label="Contraseña"
+                  autocomplete="new-password"
+                  name="edit-user-password"
                   hide-bottom-space
                 />
               </div>
@@ -229,6 +233,8 @@
                   dense
                   v-model="user.username"
                   label="Usuario"
+                  autocomplete="off"
+                  name="new-user-username"
                   hide-bottom-space
                 />
               </div>
@@ -240,6 +246,8 @@
                   v-model="user.password"
                   type="password"
                   label="Contraseña"
+                  autocomplete="new-password"
+                  name="new-user-password"
                   hide-bottom-space
                 />
               </div>

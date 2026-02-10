@@ -286,9 +286,8 @@
                 <q-tooltip>Ver detalles</q-tooltip>
               </q-btn>
 
-              <!-- Verificar (si llegó y es sucursal destino, o si es super admin/root) -->
               <q-btn
-                v-if="props.row.status === 'arrived' && (canVerifyTransferRow(props.row) || isSuperAdmin)"
+                v-if="canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)"
                 flat
                 round
                 dense
@@ -326,9 +325,8 @@
                 <q-tooltip>Más opciones</q-tooltip>
                 <q-menu auto-close>
                   <q-list style="min-width: 180px">
-                    <!-- Verificar (solo si llegó, es sucursal destino y no está verificada, o si es super admin/root) -->
                     <q-item
-                      v-if="props.row.status === 'arrived' && (canVerifyTransferRow(props.row) || isSuperAdmin) && !isTransferDelivered(props.row)"
+                      v-if="canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)"
                       clickable
                       @click="openVerificationView(props.row)"
                     >
@@ -338,7 +336,7 @@
                       <q-item-section>Verificar recepción</q-item-section>
                     </q-item>
 
-                    <q-separator v-if="props.row.status === 'arrived' && canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)" />
+                    <q-separator v-if="canVerifyTransferRow(props.row) && !isTransferDelivered(props.row)" />
 
                     <!-- Crear Devolución (si tiene productos faltantes y no tiene devolución) -->
                     <q-item
@@ -1321,7 +1319,7 @@
           color="primary"
           icon-right="check_circle"
           @click="confirmVerification"
-          :disable="!canConfirmVerification || !canVerifyTransfer"
+          :disable="!canVerifyTransfer"
           class="full-width"
           unelevated
           size="lg"
@@ -1365,9 +1363,8 @@
               </q-item-section>
             </q-item>
 
-            <!-- Verificar (solo si llegó y es sucursal destino, o si es super admin/root) -->
             <q-item
-              v-if="currentTransfer.status === 'arrived' && (canVerifyTransfer || isSuperAdmin)"
+              v-if="canVerifyTransfer && !isTransferDelivered(currentTransfer)"
               clickable
               v-ripple
               @click="openVerificationView(currentTransfer)"
@@ -1909,7 +1906,7 @@
             <q-item-section>Ver detalle</q-item-section>
           </q-item>
 
-          <q-item v-if="selectedRow && selectedRow.status === 'arrived' && (canVerifyTransferRow(selectedRow) || isSuperAdmin)" clickable v-close-popup @click="openVerificationView(selectedRow)">
+          <q-item v-if="selectedRow && canVerifyTransferRow(selectedRow) && !isTransferDelivered(selectedRow)" clickable v-close-popup @click="openVerificationView(selectedRow)">
             <q-item-section avatar>
               <q-icon name="fact_check" color="positive" />
             </q-item-section>

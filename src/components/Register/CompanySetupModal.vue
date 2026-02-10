@@ -17,10 +17,7 @@
           <div class="text-caption text-grey-7">Completa la información para comenzar</div>
         </div>
       </q-card-section>
-
-      <q-separator />
-
-      <q-card-section class="q-pa-md" style="max-height: 60vh; overflow-y: auto;">
+      <q-card-section class="setup-body-section">
         <q-form @submit="setupCompany">
           <!-- Nombre de la empresa -->
           <div class="input-container">
@@ -71,6 +68,7 @@
                   popup-content-class="country-dropdown"
                   dense
                   borderless
+                  hide-dropdown-icon
                 >
                   <template v-slot:selected>
                     <div class="row items-center no-wrap">
@@ -208,34 +206,18 @@
               is-custom-styled
             />
           </div>
+          <q-btn
+            label="Crear Empresa"
+            color="primary"
+            icon-right="rocket_launch"
+            @click="setupCompany"
+            :loading="loading"
+            unelevated
+            no-caps
+            class="full-width setup-submit-btn"
+          />
         </q-form>
       </q-card-section>
-
-      <q-separator />
-
-      <!-- Footer con botones -->
-      <q-card-actions class="q-pa-md">
-        <q-btn
-          flat
-          label="Volver"
-          color="grey-7"
-          icon="arrow_back"
-          @click="$emit('back')"
-          :disable="loading"
-          no-caps
-        />
-        <q-space />
-        <q-btn
-          label="Crear Empresa"
-          color="primary"
-          icon-right="rocket_launch"
-          @click="setupCompany"
-          :loading="loading"
-          unelevated
-          no-caps
-          class="setup-submit-btn"
-        />
-      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
@@ -258,7 +240,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'success', 'back'])
+const emit = defineEmits(['update:modelValue', 'success'])
 const fbq = usePixel()
 
 // State
@@ -427,8 +409,8 @@ onMounted(() => {
 
 <style scoped>
 .modern-company-setup-dialog {
-  min-width: 600px;
-  max-width: 650px;
+  width: 90%;
+  max-width: 420px;
   border-radius: 20px;
   overflow: hidden;
   animation: dialogEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -447,7 +429,7 @@ onMounted(() => {
 
 .company-setup-header {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 24px 20px 20px;
+  padding: 20px 24px 8px;
   text-align: center;
 }
 
@@ -499,6 +481,12 @@ onMounted(() => {
 
 .setup-icon {
   color: white;
+}
+
+.setup-body-section {
+  padding: 12px 24px 16px !important;
+  max-height: 65vh;
+  overflow-y: auto;
 }
 
 .input-container {
@@ -560,17 +548,21 @@ onMounted(() => {
 }
 
 .setup-submit-btn {
-  padding: 10px 28px;
-  font-size: 14px;
+  height: 48px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.3px;
-  border-radius: 10px;
+  letter-spacing: 0.5px;
+  border-radius: 12px;
   transition: all 0.3s ease;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border: none !important;
 }
 
 .setup-submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(var(--q-primary-rgb, 16, 185, 129), 0.3);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
 }
 
 /* Phone input adjustments */
@@ -591,12 +583,12 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .modern-company-setup-dialog {
-    min-width: 95vw;
+    width: 95vw;
     max-width: 95vw;
   }
 
   .company-setup-header {
-    padding: 20px 16px 16px;
+    padding: 20px 24px 8px;
   }
 
   .setup-icon-wrapper {

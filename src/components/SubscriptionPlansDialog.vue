@@ -64,7 +64,7 @@
           <div class="plans-grid">
             <!-- Skeleton Loading -->
             <template v-if="loadingPlans">
-              <div v-for="n in 3" :key="'skeleton-' + n" class="plan-card plan-skeleton">
+              <div v-for="n in 1" :key="'skeleton-' + n" class="plan-card plan-skeleton">
                 <div class="plan-inner">
                   <q-skeleton height="24px" width="60%" class="q-mb-md" animation="wave" />
                   <q-skeleton height="16px" width="80%" class="q-mb-lg" animation="wave" />
