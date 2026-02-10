@@ -505,12 +505,6 @@ function setPagination (data) {
   getRoutes(params.value)
 }
 
-function applyFilters (dataEqualFilter) {
-  params.value.dataEqualFilter = dataEqualFilter
-  params.value.page = 1
-  getRoutes(params.value)
-}
-
 function createRoute () {
   router.push({ name: 'DeliveryRouteBuilder' })
 }

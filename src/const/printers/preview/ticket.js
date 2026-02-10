@@ -449,7 +449,7 @@ export async function previewInvoice (invoice, userSession) {
   doc.setFontSize(11)
   doc.setFont(undefined, 'bold')
   doc.text('Importe Total: $', totalsLabelX, totalsY, { align: 'right' })
-  doc.text(String(formatNumber(invoice.total)), totalsValX, totalsY, { align: 'right' })
+  doc.text(String(formatNumber(invoice.subtotal)), totalsValX, totalsY, { align: 'right' })
 
   // -- SEPARATOR LINE --
   const lineY = totalsY + 4
@@ -464,12 +464,12 @@ export async function previewInvoice (invoice, userSession) {
 
   // IVA Contenido
   transpY += 5
-  // Calculate IVA roughly or use tax totals if available
-  const ivaAmount = invoice.taxes?.reduce((sum, t) => sum + Number(t.amount || 0), 0) || 0
+
+  const lt = invoice?.taxe_total ? invoice?.taxe_total?.length : 0
 
   doc.text('IVA Contenido: $', MARGIN + 60, transpY, { align: 'right' })
   doc.setFont(undefined, 'normal')
-  doc.text(String(formatNumber(ivaAmount)), MARGIN + 85, transpY, { align: 'right' })
+  doc.text(String(formatNumber(invoice?.taxe_total)), MARGIN + 85 + lt, transpY, { align: 'right' })
 
   // --- CAE & QR ---
   const caeY = finalY + footerHeight + 4

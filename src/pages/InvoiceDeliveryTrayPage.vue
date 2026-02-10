@@ -8,7 +8,7 @@
     <!-- Content -->
     <div v-else>
       <!-- Modern Header -->
-      <div v-if="sortedInvoices.length > 0" class="premium-header-bar q-pa-md">
+      <div class="premium-header-bar q-pa-md">
         <div class="row items-center justify-between no-wrap">
           <div class="row items-center no-wrap">
             <q-checkbox
@@ -355,7 +355,6 @@ import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { loadGoogleMaps } from 'src/boot/google-maps'
 import { authentication } from 'src/stores/module-authentication'
-import eventBus from 'src/utils/eventBus'
 
 // Router and UI utilities
 const router = useRouter()
