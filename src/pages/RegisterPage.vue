@@ -185,9 +185,17 @@
       </q-card>
     </q-dialog>
 
+    <BusinessTypeModal
+      v-model="showBusinessTypeSetup"
+      :loading="loadingCompanySetup"
+      @submit="handleBusinessTypeNext"
+      @back="handleBackToRegister"
+    />
+
     <CompanySetupModal
       v-model="showCompanySetup"
       :user-email="companyForm.company_email"
+      :initial-business-data="tempCompanyData"
       @success="handleCompanySetupSuccess"
     />
   </div>
@@ -201,6 +209,7 @@ import { api } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import BusinessTypeModal from 'src/components/Register/BusinessTypeModal.vue'
 import RegistrationForm from 'src/components/Auth/RegistrationForm.vue'
 import OtpVerificationForm from 'src/components/Auth/OtpVerificationForm.vue'
 import { useRegistration } from 'src/composables/useRegistration'
@@ -223,6 +232,9 @@ const {
 
 // UI state específico de la página
 const showCompanySetup = ref(false)
+const showBusinessTypeSetup = ref(false)
+const tempCompanyData = ref(null)
+const loadingCompanySetup = ref(false)
 
 // OTP Verification
 const currentTab = ref('register')
@@ -268,7 +280,24 @@ const registeredCredentials = ref({
 })
 
 /**
- * Handle company setup success
+ * Handle business type next step (Step 1 -> Step 2)
+ */
+const handleBusinessTypeNext = (businessData) => {
+  tempCompanyData.value = businessData
+  showBusinessTypeSetup.value = false
+  showCompanySetup.value = true
+}
+
+/**
+ * Handle back from business type modal
+ */
+const handleBackToRegister = () => {
+  showBusinessTypeSetup.value = false
+  showCompanyOptions.value = true // Volver a la selección de tipo de cuenta
+}
+
+/**
+ * Handle company setup success (Common for both flows)
  */
 const handleCompanySetupSuccess = (data) => {
   if (data.user) {
@@ -284,6 +313,7 @@ const handleCompanySetupSuccess = (data) => {
   localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
 
   showCompanySetup.value = false
+  showBusinessTypeSetup.value = false
 
   // All post-setup redirections should go to root
   router.push('/')
@@ -846,7 +876,7 @@ const selectDemoOption = () => {
  */
 const selectRegisterOption = () => {
   showCompanyOptions.value = false
-  showCompanySetup.value = true
+  showBusinessTypeSetup.value = true
 }
 
 /**

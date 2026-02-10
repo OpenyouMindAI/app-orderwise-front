@@ -8,7 +8,8 @@
   >
     <q-card class="modern-company-setup-dialog">
       <!-- Header moderno -->
-      <q-card-section class="company-setup-header">
+      <q-card-section class="company-setup-header relative-position">
+
         <div class="header-content">
           <div class="setup-icon-wrapper">
             <q-icon name="business_center" size="28px" class="setup-icon" />
@@ -154,49 +155,6 @@
             </q-select>
           </div>
 
-          <!-- Rubro (API) -->
-          <div class="input-container">
-            <q-select
-              v-model="form.business_type"
-              :options="businessTypes"
-              option-label="name"
-              option-value="id"
-              placeholder="Rubro / Tipo de Negocio *"
-              class="custom-input"
-              use-input
-              input-debounce="300"
-              @filter="filterBusinessTypes"
-              :rules="[val => !!val || 'El rubro es requerido']"
-              hide-bottom-space
-              behavior="menu"
-              borderless
-            >
-              <template v-slot:prepend>
-                <q-icon name="category" color="primary" size="20px"/>
-              </template>
-              <template v-slot:no-option>
-                <q-item>
-                  <q-item-section class="text-grey">
-                    No hay resultados
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-          </div>
-
-          <!-- Checkbox de copiar productos -->
-          <div class="input-container">
-            <q-checkbox
-              v-model="form.copy_test_products"
-              label="Copiar productos y categorías de ejemplo"
-              color="primary"
-            >
-              <q-tooltip class="bg-grey-8">
-                Te ayudará a empezar más rápido con datos de prueba del mismo rubro
-              </q-tooltip>
-            </q-checkbox>
-          </div>
-
           <!-- Dirección con AddressComponent -->
           <div class="input-container">
             <AddressComponent
@@ -210,11 +168,21 @@
             label="Crear Empresa"
             color="primary"
             icon-right="rocket_launch"
-            @click="setupCompany"
+            type="submit"
             :loading="loading"
             unelevated
             no-caps
             class="full-width setup-submit-btn"
+          />
+          <q-btn
+            flat
+            label="Omitir"
+            color="grey-7"
+            class="full-width q-mt-sm"
+            @click="skipSetup"
+            :disable="loading"
+            :loading="loadingSkip"
+            no-caps
           />
         </q-form>
       </q-card-section>
@@ -228,6 +196,7 @@ import { api } from 'src/boot/axios'
 import { notify, notifyValidationErrors } from 'src/const/mixins'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { usePixel } from 'src/composables/usePixel'
+import { authentication } from 'src/stores/module-authentication'
 
 const props = defineProps({
   modelValue: {
@@ -237,16 +206,21 @@ const props = defineProps({
   userEmail: {
     type: String,
     default: ''
+  },
+  initialBusinessData: {
+    type: Object,
+    default: () => ({})
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'success'])
+const emit = defineEmits(['update:modelValue', 'next', 'success'])
 const fbq = usePixel()
+const authStore = authentication()
 
 // State
 const loading = ref(false)
+const loadingSkip = ref(false)
 const countries = ref([])
-const businessTypes = ref([])
 
 // Form data
 const form = ref({
@@ -340,29 +314,16 @@ const filterCountries = async (val, update, abort) => {
     })
   } catch (error) {
     console.error('Error loading countries:', error)
-    abort()
+    if (abort) abort()
   }
 }
 
 /**
- * Filter business types from API
+ * Handle Next Step (emit data to parent for second modal)
  */
-const filterBusinessTypes = async (val, update, abort) => {
-  try {
-    const { data } = await api.get('business-types', {
-      params: { dataSearch: { name: val } }
-    })
-    update(() => {
-      businessTypes.value = data
-    })
-  } catch (error) {
-    console.error('Error loading business types:', error)
-    abort()
-  }
-}
 
 /**
- * Setup company on backend
+ * Setup company directly (only used by skipSetup)
  */
 const setupCompany = async () => {
   try {
@@ -370,7 +331,8 @@ const setupCompany = async () => {
 
     const payload = {
       ...form.value,
-      business_type_id: form.value.business_type?.id,
+      business_type_id: props.initialBusinessData?.business_type_id || null,
+      copy_test_products: props.initialBusinessData?.copy_test_products || false,
       company_phone: form.value.company_phone
         ? `${selectedCountry.value?.code || ''}${form.value.company_phone}`.trim()
         : ''
@@ -385,7 +347,7 @@ const setupCompany = async () => {
     // Pixel Event
     if (fbq?.event) {
       fbq.event('CrearEmpresa', {
-        business_type: form.value.business_type?.name,
+        business_type: props.initialBusinessData?.business_type_name,
         country: selectedCountry.value?.label,
         company_name: form.value.company_name
       })
@@ -393,7 +355,65 @@ const setupCompany = async () => {
   } catch (error) {
     notifyValidationErrors(error, 'Error al configurar empresa')
   } finally {
-    loading.value = false
+    loadingSkip.value = false
+  }
+}
+
+/**
+ * Skip setup execution with auto-filled data
+ */
+const skipSetup = async () => {
+  try {
+    loadingSkip.value = true
+
+    // Obtener datos del usuario
+    const user = authStore.userGetter || {}
+    const userName = user.name ? `${user.name} ${user.last_name || ''}`.trim() : 'Mi Empresa'
+
+    // Auto-rellenar formulario
+    form.value = {
+      company_name: userName,
+      company_document: '00000000', // Valor dummy por defecto
+      company_email: props.userEmail || user.email || '',
+      company_phone: user.phone || '00000000',
+      company_address: 'Dirección no especificada',
+      business_type: null,
+      country_id: null,
+      copy_test_products: false
+    }
+
+    // Usar país "Otro" para evitar validaciones de regex estrictas con números dummy
+    const otherCountry = countryOptions.find(c => c.label === 'Otro')
+    if (otherCountry) {
+      selectedCountry.value = otherCountry
+    }
+
+    // Ejecutar setup
+    const payload = {
+      ...form.value,
+      business_type_id: null,
+      copy_test_products: false
+    }
+
+    const { data } = await api.post('authentication/setup-company', payload)
+
+    notify('Empresa configurada exitosamente', 'positive', 'check_circle')
+    emit('success', data)
+    emit('update:modelValue', false)
+
+    // Pixel Event
+    if (fbq?.event) {
+      fbq.event('CrearEmpresa', {
+        business_type: null,
+        country: selectedCountry.value?.label,
+        company_name: form.value.company_name
+      })
+    }
+  } catch (error) {
+    console.error('Error al omitir configuración:', error)
+    notify('No se pudo omitir la configuración. Intente completarla manualmente.', 'negative')
+  } finally {
+    loadingSkip.value = false
   }
 }
 
@@ -403,7 +423,8 @@ watch(() => props.userEmail, (newVal) => {
 })
 
 onMounted(() => {
-  // No longer pre-loading countries to avoid auth issues on registration
+  // Cargar lista de países para tener datos iniciales
+  filterCountries('', (cb) => cb())
 })
 </script>
 
