@@ -1080,16 +1080,6 @@ watch(() => routeForm.value.origin_branch, async () => {
 })
 
 /**
- * This function has been deprecated and its functionality merged into drawRoute
- * to optimize Google Maps API calls and costs.
- * @deprecated Use drawRoute instead
- * @return {Promise<void>}
- */
-async function calculateDistancesAndTimes () {
-  // Logic moved to drawRoute for optimization
-}
-
-/**
  * Draws the route on the map using a single DirectionsService call with waypoints.
  * This optimization reduces costs by grouping multiple segments into one API request
  * and also retrieves distance/duration data for each segment.

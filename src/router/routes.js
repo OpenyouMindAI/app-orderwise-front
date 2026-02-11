@@ -306,6 +306,12 @@ const routes = [
         component: () => import('pages/DeliveryRouteBuilderPage.vue')
       },
       {
+        path: 'delivery/google-maps-route',
+        name: 'GoogleMapsRoute',
+        meta: { requiresAuth: true, hideBottomNav: true, hideHeader: true },
+        component: () => import('pages/GoogleMapsRoutePage.vue')
+      },
+      {
         path: 'delivery-routes/active/:id',
         name: 'ActiveDeliveryRoute',
         meta: { requiresAuth: true, hideBottomNav: true },

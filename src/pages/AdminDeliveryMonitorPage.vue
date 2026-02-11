@@ -473,7 +473,6 @@
 
                 <!-- Invoice Description -->
 
-
                 <!-- Products Mini-list -->
                 <div class="bg-grey-1 rounded-borders-12 q-pa-sm q-mb-sm border-subtle">
                   <div v-for="product in item.invoice?.products || []" :key="product.id" class="row items-center q-py-xs q-px-sm border-bottom-subtle last-no-border">

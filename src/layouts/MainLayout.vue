@@ -10,7 +10,7 @@
       <div class="gradient-orb orb-3"></div>
     </div>
 
-    <q-header elevated class="modern-header">
+    <q-header v-if="!hideMainHeader" elevated class="modern-header">
       <q-toolbar class="modern-toolbar">
         <!-- Left: Menu + Logo -->
         <div class="navbar-left">
@@ -948,6 +948,13 @@ export default {
     }),
     ...mapState(darkModeStore, ['darkMode']),
     /**
+     * Hide header if current route has hideHeader: true in meta
+     * @returns {Boolean}
+     */
+    hideMainHeader () {
+      return !!this.$route.meta?.hideHeader
+    },
+    /**
      * Check if current page has tour available
      * @returns {Boolean}
      */
@@ -1138,6 +1145,10 @@ export default {
       this.showSubscriptionDialog = true
     })
 
+    eventBus.on('toggle-left-drawer', () => {
+      this.leftDrawerOpen = !this.leftDrawerOpen
+    })
+
     if (this.store.isDemo) {
       this.showDemoMessage = true
       setTimeout(() => {
@@ -1169,6 +1180,7 @@ export default {
     window.removeEventListener('keydown', this.handleGlobalKeyDown)
     eventBus.off('open-create-company')
     eventBus.off('open-subscription-dialog')
+    eventBus.off('toggle-left-drawer')
   },
   created () {
     this.loadingPage()
