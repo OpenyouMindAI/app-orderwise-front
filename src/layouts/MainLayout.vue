@@ -1488,6 +1488,9 @@ export default {
           return
         }
 
+        // Recargar los módulos y estados para que el menú se vea correctamente sin refrescar
+        this.loadingPage()
+
         this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
@@ -1566,6 +1569,8 @@ export default {
 
         // Notificación de éxito con animación
         notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
+
+        this.loadingPage()
 
         this.$router.push('/')
       } catch (error) {
