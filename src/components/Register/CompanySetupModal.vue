@@ -99,6 +99,8 @@
                   borderless
                   class="custom-input"
                   :rules="phoneRule"
+                  :mask="selectedCountry?.mask"
+                  unmasked-value
                   type="tel"
                   hide-bottom-space
                 >
@@ -202,6 +204,7 @@ import { notify, notifyValidationErrors } from 'src/const/mixins'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { usePixel } from 'src/composables/usePixel'
 import { authentication } from 'src/stores/module-authentication'
+import { countryOptions } from 'src/const/countries'
 
 const props = defineProps({
   modelValue: {
@@ -244,30 +247,33 @@ const form = ref({
 })
 
 // Country code selector
-const selectedCountry = ref(null)
-const countryOptions = [
-  { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
-  { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
-  { label: 'México', code: '+52', mask: '## #### ####', regex: /^(\+?52)?\s?1?\s?(\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}$/, flag: '🇲🇽' },
-  { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
-  { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
-  { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
-  { label: 'Venezuela', code: '+58', mask: '### ### ####', regex: /^(\+?58)?\s?4[\d]{9}$/, flag: '🇻🇪' },
-  { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
-  { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
-]
-
-selectedCountry.value = countryOptions[0]
+// Country code selector
+const selectedCountry = ref(countryOptions[0])
 
 // Phone validation rule
 const phoneRule = computed(() => {
   return [
+    val => !!val || 'El teléfono es requerido',
     val => {
-      if (!val) return 'El teléfono es requerido'
-      if (!selectedCountry.value || !selectedCountry.value.regex) return true
-      return selectedCountry.value.regex.test(val) || 'Formato inválido'
+      if (!val || !selectedCountry.value || !selectedCountry.value.mask) return true
+      const digitsOnly = val.replace(/\D/g, '')
+      const expectedDigits = selectedCountry.value.mask.replace(/[^#]/g, '').length
+      return digitsOnly.length >= expectedDigits || `Se requieren ${expectedDigits} dígitos`
     }
   ]
+})
+
+// Sync phone country with fiscal country
+watch(() => form.value.country_id, (newCountryId) => {
+  if (newCountryId) {
+    const fiscalCountry = countries.value.find(c => c.id === newCountryId)
+    if (fiscalCountry) {
+      const match = countryOptions.find(opt => opt.iso === fiscalCountry.code || opt.label === fiscalCountry.name)
+      if (match) {
+        selectedCountry.value = match
+      }
+    }
+  }
 })
 
 // Address data for AddressComponent
