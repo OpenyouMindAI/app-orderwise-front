@@ -203,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
@@ -895,8 +895,12 @@ onMounted(async () => {
     await checkOtpStatus()
   }
 
-  // Cargar rubros para la demo
-  searchBusinessTypes('')
+  // Cargar rubros para la demo solo cuando se necesiten
+  watch(showDemoBusinessTypeSelection, (val) => {
+    if (val && businessTypes.value.length === 0) {
+      searchBusinessTypes('')
+    }
+  })
 })
 
 onBeforeUnmount(() => {

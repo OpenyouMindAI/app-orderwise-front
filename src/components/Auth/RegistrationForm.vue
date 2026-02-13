@@ -118,6 +118,8 @@
               hide-bottom-space
               type="tel"
               :rules="phoneRule"
+              :mask="selectedCountry?.mask"
+              unmasked-value
             >
               <template v-slot:prepend>
                 <q-icon name="phone" color="primary" size="20px"/>
