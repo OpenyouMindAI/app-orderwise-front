@@ -4,6 +4,10 @@ import { api } from './axios'
 import { notifySession, notifyError, notifyValidationErrors } from 'src/const/mixins'
 
 // Configuración centralizada
+/**
+ * Centralized configuration for exclude URLs and debounce times
+ * @type {Object} Configuration object
+ */
 const CONFIG = {
   EXCLUDED_URLS: [
     'session/company',
@@ -22,9 +26,9 @@ const CONFIG = {
 }
 
 /**
- * Valida si el token de sesión es válido
- * @param {Object} store - Store de autenticación
- * @returns {Boolean} true si el token es válido
+ * Validates if the session token is valid
+ * @params {Object} store - Authentication store
+ * @return {Boolean} true if the token is valid
  */
 const hasValidToken = (store) => {
   if (!store.access_token || store.access_token === 'null') {
@@ -42,9 +46,9 @@ const hasValidToken = (store) => {
 }
 
 /**
- * Obtiene la ruta de redirección por defecto para un usuario autenticado
- * @param {Object} user - Usuario de la sesión
- * @returns {String} Nombre de la ruta
+ * Gets the default redirect route for an authenticated user
+ * @params {Object} user - User session object
+ * @return {String} Route name
  */
 const getDefaultRoute = (user) => {
   if (user?.is_root) {
@@ -60,10 +64,10 @@ const getDefaultRoute = (user) => {
 }
 
 /**
- * Valida si el usuario tiene acceso al módulo solicitado
- * @param {Object} store - Store de autenticación
- * @param {Object} to - Ruta destino
- * @returns {Object|null} Objeto de redirección o null si tiene acceso
+ * Validates if the user has access to the requested module
+ * @params {Object} store - Authentication store
+ * @params {Object} to - Destination route
+ * @return {Object|null} Redirect object or null if access is granted
  */
 const validateModuleAccess = (store, to) => {
   const user = store.userSession
@@ -98,7 +102,10 @@ const validateModuleAccess = (store, to) => {
 }
 
 /**
- * Maneja el cierre de sesión por expiración
+ * Handles session expiration by logging out and redirecting to login
+ * @params {Object} store - Authentication store
+ * @params {Object} router - Vue router instance
+ * @return {Promise<void>}
  */
 const handleSessionExpiration = async (store, router) => {
   notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
@@ -115,35 +122,41 @@ const handleSessionExpiration = async (store, router) => {
 export default boot(async ({ router, store }) => {
   let pendingSessionExpiration = null
 
-  // Interceptor de respuestas API
-  api.interceptors.response.use(null, async (error) => {
-    const $store = authentication()
-    const status = error.response?.status
+  // API Response Interceptor
+  api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const $store = authentication()
+      const status = error.response?.status
 
-    // Validar si la URL está excluida del manejo de 401
-    const isExcludedUrl = CONFIG.EXCLUDED_URLS.some(url =>
-      error.config?.url?.includes(url)
-    )
+      // Validate if the URL is excluded from 401 handling
+      const isExcludedUrl = CONFIG.EXCLUDED_URLS.some(url =>
+        error.config?.url?.includes(url)
+      )
 
-    if (status === 401 && !isExcludedUrl) {
-      // Prevenir múltiples logouts simultáneos usando debounce
-      if (!pendingSessionExpiration) {
-        pendingSessionExpiration = handleSessionExpiration($store, router)
+      if (status === 401 && !isExcludedUrl) {
+        // Prevent multiple simultaneous logouts using debounce
+        if (!pendingSessionExpiration) {
+          pendingSessionExpiration = handleSessionExpiration($store, router)
 
-        setTimeout(() => {
-          pendingSessionExpiration = null
-        }, CONFIG.DEBOUNCE_TIME)
+          setTimeout(() => {
+            pendingSessionExpiration = null
+          }, CONFIG.DEBOUNCE_TIME)
+        }
+
+        await pendingSessionExpiration
+      } else if (status === 403) {
+        notifyError('No tienes permisos para acceder a este recurso')
+      } else if (status === 422) {
+        notifyValidationErrors(error, 'Error de validación')
       }
 
-      await pendingSessionExpiration
-    } else if (status === 403) {
-      notifyError('No tienes permisos para acceder a este recurso')
-    } else if (status === 422) {
-      notifyValidationErrors(error, 'Error de validación')
+      // Centralized error normalization (moved from services.js)
+      // This ensures components receive a consistent error format
+      const normalizedError = error?.response?.data || error
+      return Promise.reject(normalizedError)
     }
-
-    return Promise.reject(error)
-  })
+  )
 
   // Guard de navegación
   router.beforeEach(async (to, from, next) => {

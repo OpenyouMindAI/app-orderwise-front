@@ -354,6 +354,7 @@ export default {
     }
 
     await this.checkAutoLogin()
+    await this.checkPasswordResetParams()
   },
   methods: {
     /**
@@ -384,23 +385,20 @@ export default {
     },
     /**
      * Check and execute auto-login if URL parameters exist
+     * @return {Promise<void>}
      */
     async checkAutoLogin () {
       try {
-        // Obtener parámetros de la URL
         const urlParams = new URLSearchParams(window.location.search)
         const username = urlParams.get('username')
         const password = urlParams.get('password')
         const redirect = urlParams.get('redirect')
 
-        // Solo ejecutar auto-login si ambos parámetros existen
         if (username && password) {
-          // Asignar valores a los campos
           this.username = username
           this.password = password
           this.redirect = redirect
 
-          // Mostrar loading
           this.$q.loading.show({
             message: 'Iniciando sesión automáticamente...'
           })
@@ -409,20 +407,48 @@ export default {
             await this.logout()
           }
 
-          // Ejecutar login
           await this.loginAt()
 
-          // Limpiar parámetros de la URL por seguridad
           const cleanUrl = window.location.origin + window.location.pathname
           window.history.replaceState({}, document.title, cleanUrl)
 
           this.$q.loading.hide()
         }
       } catch (error) {
-        console.error('Error en auto-login:', error)
+        console.error('Error in auto-login:', error)
         notify('Error al iniciar sesión automáticamente', 'negative', 'warning')
       } finally {
         this.$q.loading.hide()
+      }
+    },
+    /**
+     * Check for password reset parameters in URL and open dialog if present
+     * @return {Promise<void>}
+     */
+    async checkPasswordResetParams () {
+      try {
+        const urlParams = new URLSearchParams(window.location.search)
+        const type = urlParams.get('type')
+        const email = urlParams.get('email') || urlParams.get('correo') || urlParams.get('identifier')
+        const code = urlParams.get('code')
+        const token = urlParams.get('token')
+
+        if (type === 'reset' && email) {
+          this.resetData.identifier = email
+          this.resetData.code = code || ''
+          this.resetData.sessionToken = token || null
+
+          // Open the new password dialog directly
+          this.showNewPasswordDialog = true
+
+          // Clean URL parameters for security
+          const cleanUrl = window.location.origin + window.location.pathname
+          window.history.replaceState({}, document.title, cleanUrl)
+
+          notify('Procediendo con el restablecimiento de contraseña', 'info', 'lock_open')
+        }
+      } catch (error) {
+        console.error('Error checking reset params:', error)
       }
     },
     /**
