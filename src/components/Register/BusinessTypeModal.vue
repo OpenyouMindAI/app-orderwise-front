@@ -159,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Navigation, Pagination } from 'swiper/modules'
@@ -168,6 +168,11 @@ import { Navigation, Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/navigation'
 import 'swiper/css/pagination'
+
+const props = defineProps({
+  modelValue: Boolean,
+  loading: Boolean
+})
 
 const emit = defineEmits(['update:modelValue', 'submit', 'back'])
 
@@ -272,8 +277,16 @@ const handleSubmit = () => {
   })
 }
 
+watch(() => props.modelValue, (val) => {
+  if (val && businessTypes.value.length === 0) {
+    loadBusinessTypes()
+  }
+})
+
 onMounted(() => {
-  loadBusinessTypes()
+  if (props.modelValue) {
+    loadBusinessTypes()
+  }
 })
 </script>
 

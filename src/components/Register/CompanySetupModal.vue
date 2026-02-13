@@ -139,7 +139,7 @@
               :options="countries"
               option-label="name"
               option-value="id"
-              placeholder="Seleccione el País *"
+              :placeholder="!form.country_id ? 'Seleccione el País *' : ''"
               class="custom-input"
               use-input
               input-debounce="300"
@@ -262,20 +262,6 @@ const phoneRule = computed(() => {
     }
   ]
 })
-
-// Sync phone country with fiscal country
-watch(() => form.value.country_id, (newCountryId) => {
-  if (newCountryId) {
-    const fiscalCountry = countries.value.find(c => c.id === newCountryId)
-    if (fiscalCountry) {
-      const match = countryOptions.find(opt => opt.iso === fiscalCountry.code || opt.label === fiscalCountry.name)
-      if (match) {
-        selectedCountry.value = match
-      }
-    }
-  }
-})
-
 // Address data for AddressComponent
 const companyAddressData = ref({
   name: '',
@@ -446,9 +432,16 @@ watch(() => props.userEmail, (newVal) => {
   if (newVal) form.value.company_email = newVal
 })
 
+watch(() => props.modelValue, (val) => {
+  if (val && countries.value.length === 0) {
+    filterCountries('', (cb) => cb())
+  }
+})
+
 onMounted(() => {
-  // Cargar lista de países para tener datos iniciales
-  filterCountries('', (cb) => cb())
+  if (props.modelValue) {
+    filterCountries('', (cb) => cb())
+  }
 })
 </script>
 
