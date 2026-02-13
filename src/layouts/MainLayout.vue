@@ -634,7 +634,7 @@
     <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md && !$route.meta.hideBottomNav }">
       <router-view />
     </q-page-container>
-
+<!-- 
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
       position="bottom-right"
@@ -660,7 +660,7 @@
           {{ onboardingProgress }}%
         </q-badge>
       </q-btn>
-    </q-page-sticky>
+    </q-page-sticky> -->
 
     <!-- Dynamic Integration Dialog -->
     <integration-dynamic
@@ -685,6 +685,9 @@
       @subscription-updated="onSubscriptionUpdated"
       @open-register="showCreateCompanyDialog = true"
     />
+
+    <!-- Global Support Chat Bubble -->
+    <SupportChatBubble />
 
     <!-- Register Dialog -->
     <register-dialog
@@ -792,7 +795,8 @@ export default {
     PremiumBadge,
     IntegrationDynamic,
     BottomNav,
-    ProPlanPromoBanner
+    ProPlanPromoBanner,
+    SupportChatBubble: () => import('src/components/SupportChatBubble.vue')
   },
   data () {
     return {

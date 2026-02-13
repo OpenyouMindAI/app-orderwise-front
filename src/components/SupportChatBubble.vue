@@ -135,7 +135,7 @@
                     :src="message.attachment_url"
                     :filename="message.attachment_name"
                   />
-                  
+
                   <!-- Image Message -->
                   <q-img
                     v-else-if="message.type === 'image' && message.attachment_url"
@@ -143,10 +143,10 @@
                     class="message-image"
                     fit="cover"
                   />
-                  
+
                   <!-- Text Message -->
                   <div v-if="message.content" class="message-text">{{ message.content }}</div>
-                  
+
                   <div class="message-time">{{ formatTime(message.created_at) }}</div>
                 </div>
               </div>
@@ -456,25 +456,57 @@ const scrollToBottom = () => {
 // Listen for new messages
 let supportChannel = null
 
-onMounted(() => {
-  loadUnreadCount()
-  
-  // Subscribe to support channel
+/**
+ * Initialize Pusher subscription
+ */
+const initSubscription = () => {
+  if (supportChannel) {
+    echo?.leave(`support.user.${currentUser.value.id}`)
+  }
+
   if (echo && currentUser.value) {
     supportChannel = echo.private(`support.user.${currentUser.value.id}`)
       .listen('.message.sent', (data) => {
-        if (selectedChat.value && data.message.support_chat_id === selectedChat.value.id) {
-          messages.value.push(data.message)
-          nextTick(() => scrollToBottom())
+        // Auto-open on new message
+        if (!showMiniChat.value) {
+          showMiniChat.value = true
+          loadChats().then(() => {
+            const incomingChat = chats.value.find(c => c.id === data.message.support_chat_id)
+            if (incomingChat) selectChat(incomingChat)
+          })
+        }
+
+        // Add message if it belongs to selected chat
+        if (selectedChat.value && parseInt(data.message.support_chat_id) === parseInt(selectedChat.value.id)) {
+          // Avoid duplicates
+          const exists = messages.value.some(m => parseInt(m.id) === parseInt(data.message.id))
+          if (!exists) {
+            messages.value.push(data.message)
+            nextTick(() => scrollToBottom())
+          }
         }
         loadUnreadCount()
         loadChats()
       })
   }
+}
+
+onMounted(() => {
+  loadUnreadCount()
+  if (currentUser.value) {
+    initSubscription()
+  }
 })
 
+// Watch for user session to initialize subscription
+watch(currentUser, (newVal) => {
+  if (newVal) {
+    initSubscription()
+  }
+}, { immediate: true })
+
 onUnmounted(() => {
-  if (supportChannel) {
+  if (supportChannel && currentUser.value) {
     echo?.leave(`support.user.${currentUser.value.id}`)
   }
 })
@@ -497,7 +529,7 @@ watch(selectedChat, (newVal) => {
 
 .chat-fab {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  
+
   &:hover {
     transform: scale(1.05);
   }
@@ -552,7 +584,7 @@ watch(selectedChat, (newVal) => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  
+
   &.online {
     background: #4caf50;
   }
@@ -580,7 +612,7 @@ watch(selectedChat, (newVal) => {
   padding: 12px 16px;
   cursor: pointer;
   transition: background 0.2s;
-  
+
   &:hover {
     background: #f5f5f5;
   }
@@ -639,19 +671,19 @@ watch(selectedChat, (newVal) => {
 
 .message {
   display: flex;
-  
+
   &.own {
     justify-content: flex-end;
-    
+
     .message-bubble {
       background: #1976d2;
       color: white;
     }
   }
-  
+
   &.other {
     justify-content: flex-start;
-    
+
     .message-bubble {
       background: white;
       color: #212121;

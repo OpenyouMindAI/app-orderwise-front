@@ -14,11 +14,14 @@
               <q-tooltip>Mi Perfil (Admin)</q-tooltip>
             </q-avatar>
             <div class="header-text">
-              <div class="header-title">Orderwise Soporte</div>
+              <div class="header-title">QSoporte</div>
               <div class="header-subtitle">{{ currentUser?.name || 'Administrador' }}</div>
             </div>
           </div>
           <div class="header-actions row no-wrap q-gutter-xs">
+            <q-btn flat round dense icon="search" size="sm" color="white" @click="showSearch = !showSearch">
+              <q-tooltip>{{ showSearch ? 'Ocultar búsqueda' : 'Buscar' }}</q-tooltip>
+            </q-btn>
             <q-btn flat round dense icon="refresh" size="sm" color="white"
               @click="sidebarView === 'chats' ? loadChats() : fetchUsers()" :loading="loading">
               <q-tooltip>Actualizar</q-tooltip>
@@ -31,36 +34,40 @@
         </div>
 
         <!-- Search Bar Modern -->
-        <div class="sidebar-search">
-          <q-input
-            v-if="sidebarView === 'chats'"
-            v-model="filters.search"
-            dense
-            rounded
-            outlined
-            placeholder="Buscar conversaciones..."
-            class="search-input"
-            @keyup.enter="loadChats()"
-          >
-            <template v-slot:prepend>
-              <q-icon name="search" size="20px" color="grey-6" />
-            </template>
-          </q-input>
-          <q-input
-            v-else
-            v-model="userSearch"
-            dense
-            rounded
-            outlined
-            placeholder="Buscar personas..."
-            class="search-input"
-            @keyup.enter="fetchUsers()"
-          >
-            <template v-slot:prepend>
-              <q-icon name="search" size="20px" color="grey-6" />
-            </template>
-          </q-input>
-        </div>
+        <transition name="q-transition--scale">
+          <div class="sidebar-search" v-if="showSearch">
+            <q-input
+              v-if="sidebarView === 'chats'"
+              v-model="filters.search"
+              dense
+              rounded
+              outlined
+              placeholder="Buscar conversaciones..."
+              class="search-input"
+              @keyup.enter="loadChats()"
+              autofocus
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" size="20px" color="grey-6" />
+              </template>
+            </q-input>
+            <q-input
+              v-else
+              v-model="userSearch"
+              dense
+              rounded
+              outlined
+              placeholder="Buscar personas..."
+              class="search-input"
+              @keyup.enter="fetchUsers()"
+              autofocus
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" size="20px" color="grey-6" />
+              </template>
+            </q-input>
+          </div>
+        </transition>
 
         <!-- Modern Tabs -->
         <div class="sidebar-tabs">
@@ -128,7 +135,7 @@
                     </div>
                     <div class="chat-info">
                       <div class="chat-header-row">
-                        <div class="chat-title">{{ getChatPartner(chat)?.name || 'Usuario' }}</div>
+                        <div class="chat-title">{{ truncateName(getChatPartner(chat)?.name) || 'Usuario' }}</div>
                         <div class="chat-meta">
                           <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
                         </div>
@@ -188,7 +195,7 @@
                       </q-avatar>
                     </div>
                     <div class="chat-info">
-                      <div class="chat-title">{{ user.name }}</div>
+                      <div class="chat-title">{{ truncateName(user.name) }}</div>
                       <div class="chat-preview text-positive">Activo ahora</div>
                     </div>
                     <div class="contact-actions row no-wrap items-center">
@@ -220,8 +227,8 @@
                       </q-avatar>
                     </div>
                     <div class="chat-info">
-                      <div class="chat-title">{{ user.name }}</div>
-                      <div class="chat-preview text-grey-6">{{ user.company || 'Sin empresa' }}</div>
+                      <div class="chat-title">{{ truncateName(user.name) }}</div>
+                      <div class="chat-preview text-grey-6">{{ truncateName(user.company, 20) || 'Sin empresa' }}</div>
                     </div>
                     <div class="contact-actions row no-wrap items-center">
                       <q-btn flat round dense icon="chat" color="primary" size="sm" @click.stop="openChatWithUser(user)">
@@ -281,7 +288,7 @@
               </div>
             </q-avatar>
             <div class="header-info" @click="showContactInfo = !showContactInfo" style="cursor: pointer;">
-              <div class="chat-name text-weight-bold">{{ getChatPartner(selectedChat)?.name || 'Usuario' }}</div>
+              <div class="chat-name text-weight-bold">{{ truncateName(getChatPartner(selectedChat)?.name, 40) || 'Usuario' }}</div>
               <div class="chat-status-text row no-wrap items-center">
                 <template v-if="isChatClientOnline(selectedChat.client_user_id || selectedChat.client?.id)">
                   <q-badge rounded color="positive" class="q-mr-xs" size="8px" />
@@ -750,6 +757,27 @@ const showScrollButton = ref(false)
  * @type {import('vue').Ref<string>}
  */
 const sidebarView = ref('chats')
+
+/**
+ * Controla la visibilidad de la barra de búsqueda
+ * @type {import('vue').Ref<boolean>}
+ */
+const showSearch = ref(false)
+
+/**
+ * Reset search on close
+ */
+watch(showSearch, (val) => {
+  if (!val) {
+    filters.value.search = ''
+    userSearch.value = ''
+    if (sidebarView.value === 'chats') {
+      loadChats()
+    } else {
+      fetchUsers()
+    }
+  }
+})
 
 /**
  * Usuarios obtenidos del monitor de sesiones
@@ -1737,6 +1765,18 @@ const formatTime = (date) => {
 }
 
 /**
+ * Trunca el nombre de usuario
+ * @param {string} name - Nombre a truncar
+ * @param {number} maxLength - Longitud máxima
+ * @returns {string}
+ */
+const truncateName = (name, maxLength = 25) => {
+  if (!name) return ''
+  if (name.length <= maxLength) return name
+  return name.substring(0, maxLength) + '...'
+}
+
+/**
  * Trunca el mensaje para mostrar en la lista
  * @param {string} message - Mensaje a truncar
  * @returns {string}
@@ -1953,14 +1993,14 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .support-chat-page {
-  height: calc(100vh - 100px);
+  height: calc(100vh - 120px);
   padding: 0;
   overflow: hidden;
 }
 
 .chat-container {
   display: flex;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 120px);
   padding: 0;
   gap: 0;
 }
@@ -1991,7 +2031,7 @@ onUnmounted(() => {
 }
 
 .sidebar-header {
-  padding: 20px 24px;
+  padding: 0px 24px;
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   color: white;
   display: flex;
