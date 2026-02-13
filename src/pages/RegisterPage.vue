@@ -185,22 +185,32 @@
       </q-card>
     </q-dialog>
 
+    <BusinessTypeModal
+      v-model="showBusinessTypeSetup"
+      :loading="loadingCompanySetup"
+      @submit="handleBusinessTypeNext"
+      @back="handleBackToRegister"
+    />
+
     <CompanySetupModal
       v-model="showCompanySetup"
       :user-email="companyForm.company_email"
+      :initial-business-data="tempCompanyData"
+      :registration-data="registrationFormData"
       @success="handleCompanySetupSuccess"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import BusinessTypeModal from 'src/components/Register/BusinessTypeModal.vue'
 import RegistrationForm from 'src/components/Auth/RegistrationForm.vue'
 import OtpVerificationForm from 'src/components/Auth/OtpVerificationForm.vue'
 import { useRegistration } from 'src/composables/useRegistration'
@@ -223,6 +233,9 @@ const {
 
 // UI state específico de la página
 const showCompanySetup = ref(false)
+const showBusinessTypeSetup = ref(false)
+const tempCompanyData = ref(null)
+const loadingCompanySetup = ref(false)
 
 // OTP Verification
 const currentTab = ref('register')
@@ -267,8 +280,34 @@ const registeredCredentials = ref({
   password: ''
 })
 
+// Datos del formulario de registro para pasar al modal de setup
+const registrationFormData = ref({
+  name: '',
+  last_name: '',
+  email: '',
+  phone_number: '',
+  country_code: ''
+})
+
 /**
- * Handle company setup success
+ * Handle business type next step (Step 1 -> Step 2)
+ */
+const handleBusinessTypeNext = (businessData) => {
+  tempCompanyData.value = businessData
+  showBusinessTypeSetup.value = false
+  showCompanySetup.value = true
+}
+
+/**
+ * Handle back from business type modal
+ */
+const handleBackToRegister = () => {
+  showBusinessTypeSetup.value = false
+  showCompanyOptions.value = true // Volver a la selección de tipo de cuenta
+}
+
+/**
+ * Handle company setup success (Common for both flows)
  */
 const handleCompanySetupSuccess = (data) => {
   if (data.user) {
@@ -280,12 +319,20 @@ const handleCompanySetupSuccess = (data) => {
     })
   }
 
+  // Limpiar datos de sesión temporal
   localStorage.removeItem(REGISTER_SESSION_KEY)
   localStorage.removeItem(REGISTER_CREDENTIALS_KEY)
+  clearOtpPendingState()
 
+  // Cerrar modales
   showCompanySetup.value = false
+  showBusinessTypeSetup.value = false
+  showCompanyOptions.value = false
 
-  // All post-setup redirections should go to root
+  // Notificar éxito
+  notify('¡Bienvenido a OrderWise!', 'positive', 'celebration')
+
+  // Redirigir a la página principal
   router.push('/')
 }
 
@@ -387,6 +434,23 @@ const getBusinessIcon = (name) => {
  */
 const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
   console.log('📝 handleRegisterSubmit llamado', { formData, phoneNumber })
+
+  // Guardar datos del formulario de registro para usar en el modal de setup
+  const regData = {
+    name: formData.name,
+    last_name: formData.last_name,
+    email: formData.email,
+    phone_number: phoneNumber, // Ya viene con código de país
+    country_code: phoneNumber ? phoneNumber.split(' ')[0] : '' // Extraer código de país
+  }
+  registrationFormData.value = regData
+
+  // Persistir para cuando vuelva de Mercado Pago
+  localStorage.setItem('registration_form_data', JSON.stringify({
+    ...regData,
+    timestamp: Date.now()
+  }))
+
   await registerUser({
     onSuccess: async (data) => {
       console.log('✅ onSuccess callback ejecutado', data)
@@ -709,6 +773,12 @@ const restoreRegisterSession = () => {
       registeredCredentials.value = JSON.parse(credentialsData)
     }
 
+    // Restaurar datos del formulario de registro (para el Skip Setup)
+    const savedRegData = localStorage.getItem('registration_form_data')
+    if (savedRegData) {
+      registrationFormData.value = JSON.parse(savedRegData)
+    }
+
     // Si OTP ya fue verificado, mostrar opciones de empresa
     if (sessionData.otp_verified) {
       showCompanyOptions.value = true
@@ -825,8 +895,12 @@ onMounted(async () => {
     await checkOtpStatus()
   }
 
-  // Cargar rubros para la demo
-  searchBusinessTypes('')
+  // Cargar rubros para la demo solo cuando se necesiten
+  watch(showDemoBusinessTypeSelection, (val) => {
+    if (val && businessTypes.value.length === 0) {
+      searchBusinessTypes('')
+    }
+  })
 })
 
 onBeforeUnmount(() => {
@@ -846,7 +920,7 @@ const selectDemoOption = () => {
  */
 const selectRegisterOption = () => {
   showCompanyOptions.value = false
-  showCompanySetup.value = true
+  showBusinessTypeSetup.value = true
 }
 
 /**
@@ -904,6 +978,15 @@ const assignDemo = async () => {
 const handleGoogleRegister = async () => {
   await registerWithGoogleUser({
     onSuccess: (data, userInfo) => {
+      // Guardar datos del usuario de Google para usar en el modal de setup
+      registrationFormData.value = {
+        name: userInfo.name?.split(' ')[0] || userInfo.name || '',
+        last_name: userInfo.name?.split(' ').slice(1).join(' ') || '',
+        email: userInfo.email || '',
+        phone_number: data.user?.phone_number || data.user?.phone || null,
+        country_code: ''
+      }
+
       // Guardar sesión completa en el store
       store.setSessionData(data)
 

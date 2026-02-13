@@ -21,11 +21,6 @@ const CONFIG = {
   DEBOUNCE_TIME: 2000
 }
 
-/**
- * Valida si el token de sesión es válido
- * @param {Object} store - Store de autenticación
- * @returns {Boolean} true si el token es válido
- */
 const hasValidToken = (store) => {
   if (!store.access_token || store.access_token === 'null') {
     return false
@@ -35,10 +30,10 @@ const hasValidToken = (store) => {
     return false
   }
 
-  const user = store.userSession
-  const needsCompanySession = !user.is_root && !user.is_super_admin
-
-  return !needsCompanySession || Boolean(user.company_session_id)
+  // Si tiene token y sesión de usuario, está autenticado.
+  // La validación de si tiene empresa o no se maneja en el flujo de cada página/layout,
+  // no debemos expulsarlo al login solo por no tener empresa aún (ej. durante el onboarding).
+  return true
 }
 
 /**

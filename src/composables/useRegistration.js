@@ -21,17 +21,7 @@ const loading = ref(false)
 const loadingGoogle = ref(false)
 
 // ==================== PAÍS Y TELÉFONO ====================
-const countryOptions = [
-  { label: 'Argentina', code: '+54', mask: '## #### ####', regex: /^(?:(?:00)?549?)?0?[1-9]\d{9}$/, flag: '🇦🇷' },
-  { label: 'Chile', code: '+56', mask: '#########', regex: /^(\+?56)?(\s?)(0?9)(\s?)[98765432]\d{7}$/, flag: '🇨🇱' },
-  { label: 'México', code: '+52', mask: '## #### ####', regex: /^(\+?52)?\s?1?\s?(\(?\d{2,3}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}$/, flag: '🇲🇽' },
-  { label: 'Colombia', code: '+57', mask: '### ### ####', regex: /^(\+?57)?\s?3[\d]{9}$/, flag: '🇨🇴' },
-  { label: 'Perú', code: '+51', mask: '### ### ###', regex: /^(\+?51)?\s?9[\d]{8}$/, flag: '🇵🇪' },
-  { label: 'Uruguay', code: '+598', mask: '## ### ###', regex: /^(\+?598)?\s?9[\d]{7}$/, flag: '🇺🇾' },
-  { label: 'Venezuela', code: '+58', mask: '### ### ####', regex: /^(\+?58)?\s?4[\d]{9}$/, flag: '🇻🇪' },
-  { label: 'España', code: '+34', mask: '### ### ###', regex: /^(\+?34)?\s?[679]\d{8}$/, flag: '🇪🇸' },
-  { label: 'Otro', code: '', mask: '', regex: /.+/, flag: '🌍' }
-]
+import { countryOptions } from 'src/const/countries'
 
 const selectedCountry = ref(countryOptions[0])
 
@@ -50,9 +40,10 @@ export function useRegistration (options = {}) {
     return [
       val => !!val || 'El teléfono es requerido',
       val => {
-        if (!val) return true
-        if (!selectedCountry.value || !selectedCountry.value.regex) return true
-        return selectedCountry.value.regex.test(val) || 'Formato inválido'
+        if (!val || !selectedCountry.value || !selectedCountry.value.mask) return true
+        const digitsOnly = val.replace(/\D/g, '')
+        const expectedDigits = selectedCountry.value.mask.replace(/[^#]/g, '').length
+        return digitsOnly.length >= expectedDigits || `Se requieren ${expectedDigits} dígitos`
       }
     ]
   })
