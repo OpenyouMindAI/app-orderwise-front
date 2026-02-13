@@ -149,7 +149,6 @@
                   :style="plan.btn_color ? { backgroundColor: plan.btn_color, color: '#000' } : {}"
                   @click="selectPlan(plan)"
                   :loading="loading"
-                  :disable="isCurrentPlan(plan) || plan.slug?.toLowerCase() === 'free'"
                 >
                   <template v-slot:loading>
                     <q-spinner-dots size="20px" />
