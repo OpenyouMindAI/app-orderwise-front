@@ -306,6 +306,12 @@ const routes = [
         component: () => import('pages/DeliveryRouteBuilderPage.vue')
       },
       {
+        path: 'delivery/google-maps-route',
+        name: 'GoogleMapsRoute',
+        meta: { requiresAuth: true, hideBottomNav: true, hideHeader: true },
+        component: () => import('pages/GoogleMapsRoutePage.vue')
+      },
+      {
         path: 'delivery-routes/active/:id',
         name: 'ActiveDeliveryRoute',
         meta: { requiresAuth: true, hideBottomNav: true },
@@ -428,13 +434,13 @@ const routes = [
       {
         path: 'support',
         name: 'Support',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/SupportChatPage.vue')
       },
       {
         path: 'admin/support',
         name: 'AdminSupport',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/AdminSupportPage.vue')
       }
     ]
@@ -466,6 +472,12 @@ const routes = [
         component: () => import('pages/CommandPage.vue')
       }
     ]
+  },
+  {
+    path: '/subscribe',
+    name: 'QuickSubscribe',
+    meta: { requiresAuth: false },
+    component: () => import('pages/QuickSubscribePage.vue')
   },
   {
     path: '/subscription/success',

@@ -64,7 +64,7 @@
           <div class="plans-grid">
             <!-- Skeleton Loading -->
             <template v-if="loadingPlans">
-              <div v-for="n in 3" :key="'skeleton-' + n" class="plan-card plan-skeleton">
+              <div v-for="n in 1" :key="'skeleton-' + n" class="plan-card plan-skeleton">
                 <div class="plan-inner">
                   <q-skeleton height="24px" width="60%" class="q-mb-md" animation="wave" />
                   <q-skeleton height="16px" width="80%" class="q-mb-lg" animation="wave" />
@@ -390,7 +390,7 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useQuasar, date } from 'quasar'
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
@@ -408,9 +408,46 @@ export default {
   emits: ['update:modelValue', 'subscription-updated'],
   setup (props, { emit }) {
     const router = useRouter()
+    const route = useRoute()
     const store = authentication()
     const $q = useQuasar()
     const fbq = usePixel()
+
+    /**
+     * @constant {Object} RUBRO_PRICES
+     * Precios personalizados por rubro (Business Type)
+     * Formato: { 'Nombre del Rubro': { 'slug_del_plan': { monthly: X, yearly: Y } } }
+     */
+    const RUBRO_PRICES = {
+      Kiosco: {
+        pro: { monthly: 29.50, yearly: 20.65 },
+        pro_team: { monthly: 29.50, yearly: 20.65 }
+      }
+    }
+
+    /**
+     * Obtiene el precio manual configurado para un rubro
+     * @param {Object} plan
+     * @param {string} key - 'monthly' o 'yearly'
+     * @returns {number|null}
+     */
+    const getRubroPrice = (plan, key = 'monthly') => {
+      // Prioridad 1: URL Query
+      // Prioridad 2: Sesión de la empresa
+      const rubroName = route.query.business_type || store.userSession?.company_session?.business_type?.name
+
+      if (rubroName && RUBRO_PRICES[rubroName]) {
+        const slug = plan.slug?.toLowerCase()
+        const rubroConfig = RUBRO_PRICES[rubroName][slug]
+        if (rubroConfig) {
+          if (typeof rubroConfig === 'object') {
+            return rubroConfig[key] || null
+          }
+          return key === 'monthly' ? rubroConfig : null
+        }
+      }
+      return null
+    }
 
     /**
      * List of subscription plans
@@ -483,7 +520,7 @@ export default {
       set: (val) => emit('update:modelValue', val)
     })
 
-    const isMobile = computed(() => $q.screen.lt.sm)
+    const isMobile = computed(() => $q.screen.lt.md)
 
     const daysLeft = computed(() => {
       if (!currentSubscription.value) return 0
@@ -541,6 +578,13 @@ export default {
     const getPlanPricing = (plan) => pricingByPlan.value[plan.id] || null
 
     const getPlanLocalPrice = (plan) => {
+      const override = getRubroPrice(plan, 'monthly')
+      if (override !== null) {
+        const pricing = getPlanPricing(plan)
+        const exchangeRate = pricing?.exchange_rate || 1
+        return formatNumber(override * exchangeRate)
+      }
+
       const pricing = getPlanPricing(plan)
       if (pricing && pricing.total_price_local) {
         return formatNumber(pricing.total_price_local)
@@ -549,6 +593,9 @@ export default {
     }
 
     const getPlanUsdPrice = (plan) => {
+      const override = getRubroPrice(plan, 'monthly')
+      if (override !== null) return formatNumber(override)
+
       const pricing = getPlanPricing(plan)
       const value = pricing && pricing.total_price_usd ? pricing.total_price_usd : plan.price
       return formatNumber(value)
@@ -567,10 +614,7 @@ export default {
         price = pricing.price_per_branch_local
       }
 
-      // Si es anual, aplicamos el mismo descuento del 50% (o el que sea) al precio por sucursal
       if (isAnnual.value && hasAnnualPrice(plan)) {
-        // En el controlador asumimos 0.8 (20% off), pero aquí podemos simplificar al 50% si el badge del toggle dice 50%
-        // O mejor aún, intentamos ser consistentes con el descuento del plan base
         const basePrice = plan.price
         const annualMonthlyBase = plan.price_year / 12
         const discountRatio = basePrice > 0 ? annualMonthlyBase / basePrice : 0.5
@@ -598,6 +642,20 @@ export default {
 
     const getPlanAnnualLocalPrice = (plan) => {
       const pricing = getPlanPricing(plan)
+      const exchangeRate = pricing?.exchange_rate || 1
+
+      const override = getRubroPrice(plan, 'yearly')
+      if (override !== null) {
+        // Asumimos que el override 'yearly' es el monto MENSUAL del plan anual
+        return formatNumber(override * 12 * exchangeRate)
+      }
+
+      const monthlyOverride = getRubroPrice(plan, 'monthly')
+      if (monthlyOverride !== null) {
+        // Fallback: 40% de descuento si solo hay mensual
+        return formatNumber(monthlyOverride * 12 * 0.6 * exchangeRate)
+      }
+
       if (pricing && pricing.total_price_year_local) {
         return formatNumber(pricing.total_price_year_local)
       }
@@ -618,6 +676,7 @@ export default {
      * @return {boolean} Whether the plan has annual pricing
      */
     const hasAnnualPrice = (plan) => {
+      if (getRubroPrice(plan, 'yearly')) return true
       return plan.price_year && plan.price_year > 0
     }
 
@@ -628,12 +687,26 @@ export default {
      */
     const getDisplayPrice = (plan) => {
       const pricing = getPlanPricing(plan)
+      const exchangeRate = pricing?.exchange_rate || 1
+
       if (isAnnual.value && hasAnnualPrice(plan)) {
+        const yearlyOverride = getRubroPrice(plan, 'yearly')
+        if (yearlyOverride !== null) {
+          // El monto configurado (ej: 19.9) ya es el mensual del anual
+          return formatNumber(yearlyOverride * exchangeRate)
+        }
+
+        const monthlyOverride = getRubroPrice(plan, 'monthly')
+        if (monthlyOverride !== null) {
+          return formatNumber(monthlyOverride * 0.6 * exchangeRate)
+        }
+
         if (pricing && pricing.total_price_year_local) {
           return formatNumber((pricing.total_price_year_local / 12).toFixed(2))
         }
         return formatNumber((plan.price_year / 12).toFixed(2))
       }
+
       return getPlanLocalPrice(plan)
     }
 
@@ -713,16 +786,24 @@ export default {
 
         if (pricingByPlan.value[plan.id]) {
           const pricing = pricingByPlan.value[plan.id]
+          const exchangeRate = pricing?.exchange_rate || 1
           let price
-          
-          if (isAnnual.value && pricing.total_price_year_local) {
+
+          const yearlyOverride = getRubroPrice(plan, 'yearly')
+          const monthlyOverride = getRubroPrice(plan, 'monthly')
+
+          if (isAnnual.value && yearlyOverride !== null) {
+            price = yearlyOverride * exchangeRate
+          } else if (!isAnnual.value && monthlyOverride !== null) {
+            price = monthlyOverride * exchangeRate
+          } else if (isAnnual.value && pricing.total_price_year_local) {
             price = pricing.total_price_year_local / 12
           } else if (pricing.total_price_local) {
             price = pricing.total_price_local
           } else {
             price = isAnnual.value ? (plan.price_year / 12) : plan.price
           }
-          
+
           proTeamTotalPrice.value = formatNumber(price)
         }
       }
@@ -807,21 +888,41 @@ export default {
       loading.value = true
 
       try {
+        const branchOfficesCount = plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1
+        const months = isAnnual.value ? 12 : 1
+        const businessType = route.query.business_type || store.userSession?.company_session?.business_type?.name
+
         const response = await api.post('mercadopago/create-payment', {
           subscription_plan_id: plan.id,
-          branch_offices_count: plan.slug?.toLowerCase() === 'pro_team' ? branchCount.value : 1,
-          months: isAnnual.value ? 12 : 1
+          branch_offices_count: branchOfficesCount,
+          months: months,
+          business_type: businessType
         })
 
+        // Calcular valor para analíticas
         const pricing = getPlanPricing(plan)
-        const value = pricing && pricing.total_price_local ? pricing.total_price_local : plan.price
-        const currency = pricing && pricing.local_currency_code ? pricing.local_currency_code : 'ARS'
+        const exchangeRate = pricing?.exchange_rate || 1
+        let unitPrice = plan.price
+
+        const yearlyOverride = getRubroPrice(plan, 'yearly')
+        const monthlyOverride = getRubroPrice(plan, 'monthly')
+
+        if (isAnnual.value && yearlyOverride !== null) {
+          unitPrice = yearlyOverride
+        } else if (!isAnnual.value && monthlyOverride !== null) {
+          unitPrice = monthlyOverride
+        } else if (isAnnual.value && plan.price_year) {
+          unitPrice = plan.price_year / 12
+        }
+
+        const value = unitPrice * months * exchangeRate
+        const currency = pricing?.local_currency_code || 'ARS'
 
         if (fbq?.event) {
           fbq.event('InitiateCheckout', {
             content_name: plan.name,
             currency,
-            value
+            value: Number(value.toFixed(2))
           })
         }
 
@@ -1006,7 +1107,7 @@ export default {
   background: #0a0a0f;
   width: 100%;
   max-width: 1200px;
-  max-height: 90vh;
+  max-height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
   border-radius: 24px;

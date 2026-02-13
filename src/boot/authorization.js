@@ -165,7 +165,6 @@ export default boot(async ({ router, store }) => {
       if (requiresAuth) {
         if (!isAuthenticated) {
           if (storeInitFailed || !hasValidToken($store)) {
-            notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
             await $store.forceLogout()
           }
           return next('/login')

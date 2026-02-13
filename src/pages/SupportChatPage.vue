@@ -1457,7 +1457,7 @@ onUnmounted(() => {
 
 .chat-container {
   display: flex;
-  height: calc(100vh - 150px);
+  height: calc(100vh - 120px);
   padding: 20px;
   gap: 20px;
 
@@ -1465,13 +1465,6 @@ onUnmounted(() => {
     padding: 0;
     gap: 0;
     background: white;
-  }
-}
-
-.body--dark .chat-container {
-  background: #0f172a;
-  @media (max-width: 1023px) {
-    background: #121212;
   }
 }
 

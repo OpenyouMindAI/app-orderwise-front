@@ -629,15 +629,10 @@ export default {
           // Usar el mismo método que el login normal para guardar la sesión
           this.setSessionData(result.data)
 
-          notify('Inicio de sesión exitoso', 'positive', 'check_circle')
-
-          // Redirigir según el tipo de usuario
-          if (result.data.user.is_root) {
-            this.$router.push({ name: 'Billing' })
-          } else if (result.data.user?.roles?.length === 0) {
+          if (result.data.user?.roles?.length === 0) {
             notify('Usuario no tiene permisos', 'negative', 'warning')
           } else {
-            this.$router.push({ name: 'Tutorial' })
+            this.$router.push({ name: 'Home' })
           }
         }
       } catch (error) {
@@ -680,12 +675,10 @@ export default {
           notify('Inicio de sesión exitoso', 'positive', 'check_circle')
 
           // Redirigir según el tipo de usuario
-          if (result.data.user.is_root) {
-            this.$router.push({ name: 'Billing' })
-          } else if (result.data.user?.roles?.length === 0) {
+          if (result.data.user?.roles?.length === 0) {
             notify('Usuario no tiene permisos', 'negative', 'warning')
           } else {
-            this.$router.push({ name: 'Tutorial' })
+            this.$router.push({ name: 'Home' })
           }
         }
       } catch (error) {
@@ -837,12 +830,10 @@ export default {
           notify('Inicio de sesión exitoso', 'positive', 'check_circle')
 
           // Redirigir según el tipo de usuario
-          if (result.data.user.is_root) {
-            this.$router.push({ name: 'Billing' })
-          } else if (result.data.user?.roles?.length === 0) {
+          if (result.data.user?.roles?.length === 0) {
             notify('Usuario no tiene permisos', 'negative', 'warning')
           } else {
-            this.$router.push({ name: 'Tutorial' })
+            this.$router.push({ name: 'Home' })
           }
         }
       } catch (error) {
@@ -883,8 +874,8 @@ export default {
           return
         }
 
-        if (data.is_root) {
-          this.$router.push({ name: 'Billing' })
+        if (data?.is_root) {
+          this.$router.push({ name: 'Home' })
           return
         }
 
@@ -892,7 +883,9 @@ export default {
           notify('Usuario no tiene permisos', 'negative', 'warning')
           return
         }
-        this.$router.push({ name: this.redirect || 'Billing' })
+
+        this.$router.push({ name: 'Home' })
+
         this.btnDisable = false
       } catch (error) {
         Notify.create({

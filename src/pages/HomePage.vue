@@ -1,20 +1,21 @@
 <template>
   <q-page class="home-page">
-    <!-- Header Cockpit Area -->
     <div class="header-cockpit section-fade-in">
       <div class="cockpit-glow"></div>
-      <div class="row items-center justify-between no-wrap">
-        <div class="cockpit-welcome">
-          <div class="greeting-row">
-            <span class="text-h5 text-weight-normal opacity-80">{{ greeting }},</span>
-            <span class="text-h5 text-weight-bolder q-ml-xs">{{ userName }}</span>
+      <div class="row items-center no-wrap q-px-sm">
+        <div class="col-6">
+          <div class="greeting-block">
+            <div class="greeting-main text-uppercase">{{ greeting }}</div>
+            <div class="greeting-name text-weight-bold text-primary">{{ userName }}</div>
           </div>
         </div>
-
-        <div class="cockpit-meta">
-          <div class="date-chip-modern">
-            <q-icon name="event" size="14px" class="q-mr-xs" />
-            <span>{{ currentDate }}</span>
+        <div class="col-6 text-right">
+          <div class="date-chip-premium">
+            <q-icon name="calendar_today" size="13px" class="q-mr-xs mobile-hide" />
+            <div class="date-stack">
+              <span class="date-day text-capitalize">{{ currentDate.split(',')[0] }}</span>
+              <span class="date-full">{{ currentDate.split(',')[1] }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -45,59 +46,96 @@
         </div>
       </div>
 
-      <!-- ROW 1: Stats Ribbon (Desktop 4-cols) - Today's Financial KPIs -->
+      <!-- ROW 1: Statistics (Progressive Loading) -->
       <template v-if="isAdmin">
         <!-- Today's Net Income -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop revenue-tile">
+        <div class="bento-item stat-hero revenue-tile">
           <div class="stat-icon-wrap bg-soft-primary">
             <q-icon name="payments" size="28px" color="primary" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.income" type="text" width="80px" />
             <div v-else class="stat-val text-primary">{{ formatCurrency(todayStats.netIncome) }}</div>
-            <div class="stat-lab">Ingresos Netos de Hoy</div>
+            <div class="stat-lab">Ingresos de Hoy</div>
           </div>
         </div>
+
         <!-- Today's Profit -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop profit-tile">
+        <div class="bento-item stat-hero profit-tile">
           <div class="stat-icon-wrap bg-soft-positive">
             <q-icon name="trending_up" size="28px" color="positive" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.profit" type="text" width="80px" />
             <div v-else class="stat-val" :class="todayStats.profit >= 0 ? 'text-positive' : 'text-negative'">
               {{ formatCurrency(todayStats.profit) }}
             </div>
-            <div class="stat-lab">Ganancia de Hoy</div>
+            <div class="stat-lab">Ganancias de Hoy</div>
           </div>
         </div>
 
         <!-- Today's Cash Out -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop expense-tile">
+        <div class="bento-item stat-hero expense-tile">
           <div class="stat-icon-wrap bg-soft-negative">
             <q-icon name="money_off" size="28px" color="negative" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.cashOut" type="text" width="80px" />
             <div v-else class="stat-val text-negative">{{ formatCurrency(todayStats.cashOut) }}</div>
-            <div class="stat-lab">Salida de Dinero de Hoy</div>
+            <div class="stat-lab">Salida de Dinero</div>
           </div>
         </div>
 
         <!-- Accounts Receivable -->
-        <div class="bento-item stat-hero span-small-mobile span-1-desktop receivable-tile clickable" @click="navigateTo('AccountsReceivable')">
+        <div class="bento-item stat-hero receivable-tile clickable" @click="navigateTo('AccountsReceivable')">
           <div class="stat-icon-wrap bg-soft-warning">
             <q-icon name="account_balance_wallet" size="28px" color="warning" />
           </div>
           <div class="stat-data">
-            <q-skeleton v-if="loadingStats" type="text" width="80px" />
+            <q-skeleton v-if="loadingStats.receivable" type="text" width="80px" />
             <div v-else class="stat-val text-warning">{{ formatCurrency(todayStats.receivable) }}</div>
-            <div class="stat-lab">Por Cobrar de Hoy</div>
+            <div class="stat-lab">Por Cobrar</div>
+          </div>
+        </div>
+
+        <!-- Total Products -->
+        <div class="bento-item stat-hero products-tile">
+          <div class="stat-icon-wrap bg-soft-secondary">
+            <q-icon name="inventory_2" size="28px" color="secondary" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats.products" type="text" width="80px" />
+            <div v-else class="stat-val text-secondary">{{ todayStats.productsTotal }}</div>
+            <div class="stat-lab">Productos</div>
+          </div>
+        </div>
+
+        <!-- Total Clients -->
+        <div class="bento-item stat-hero clients-tile mobile-hide">
+          <div class="stat-icon-wrap bg-soft-accent">
+            <q-icon name="group" size="28px" color="accent" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats.clients" type="text" width="80px" />
+            <div v-else class="stat-val text-accent">{{ todayStats.clientsTotal }}</div>
+            <div class="stat-lab">Clientes</div>
+          </div>
+        </div>
+
+        <!-- Today's Sales Count -->
+        <div class="bento-item stat-hero sales-tile">
+          <div class="stat-icon-wrap bg-soft-info">
+            <q-icon name="receipt" size="28px" color="info" />
+          </div>
+          <div class="stat-data">
+            <q-skeleton v-if="loadingStats.sales" type="text" width="80px" />
+            <div v-else class="stat-val text-info">{{ todayStats.salesToday }}</div>
+            <div class="stat-lab">Ventas de Hoy</div>
           </div>
         </div>
       </template>
 
-      <!-- ROW 2: Quick Access and Recent Access Side-by-Side -->
+      <!-- ROW 2: Quick Access and Activity -->
       <div class="bento-item actions-bento span-full-mobile span-2-desktop">
         <div class="bento-header">
           <q-icon name="apps" class="q-mr-xs" />
@@ -141,45 +179,8 @@
         </div>
       </div>
 
-      <!-- Recent Access Section -->
-      <div class="bento-item recent-bento span-full-mobile span-2-desktop section-fade-in">
-        <div class="bento-header">
-          <q-icon name="history" class="q-mr-xs" />
-          <span>Accesos Recientes</span>
-          <q-space />
-          <q-btn
-            v-if="recentAccess.length > 0"
-            flat
-            dense
-            no-caps
-            label="Limpiar"
-            color="grey-6"
-            size="11px"
-            @click="clearRecentAccess"
-          />
-        </div>
-        <div v-if="recentAccess.length > 0" class="recent-grid">
-          <div
-            v-for="(recent, index) in recentAccess"
-            :key="index"
-            class="recent-pill clickable"
-            @click="navigateToRecent(recent)"
-          >
-            <q-icon :name="recent.icon || 'link'" size="16px" class="q-mr-sm" />
-            <span class="recent-pill__label">{{ recent.label }}</span>
-            <span class="recent-pill__time">{{ formatRecentTime(recent.timestamp) }}</span>
-          </div>
-        </div>
-        <div v-else class="empty-state flex flex-center q-pa-md">
-          <div class="text-center opacity-40">
-            <q-icon name="history" size="32px" class="q-mb-sm" />
-            <div class="text-caption">Sin accesos recientes</div>
-          </div>
-        </div>
-      </div>
-
       <!-- Activity Section (for Admin) -->
-      <div v-if="isAdmin" class="bento-item activity-bento span-full section-fade-in">
+      <div v-if="isAdmin" class="bento-item activity-bento span-full-mobile span-2-desktop section-fade-in">
         <div class="row items-center justify-between q-mb-md">
           <div class="bento-header no-margin">
             <q-icon name="receipt_long" class="q-mr-xs" />
@@ -420,15 +421,8 @@ const { userSession, branchOffice } = storeToRefs(store)
  * @type {Object}
  */
 const STORAGE_KEYS = {
-  QUICK_ACCESS: 'orderwise_quick_access',
-  RECENT_ACCESS: 'orderwise_recent_access'
+  QUICK_ACCESS: 'orderwise_quick_access'
 }
-
-/**
- * Maximum number of recent access items to store
- * @type {number}
- */
-const MAX_RECENT_ACCESS = 6
 
 // ============================================
 // ONBOARDING STATE
@@ -457,10 +451,18 @@ const totalTasks = ref(5)
 // ============================================
 
 /**
- * Loading state for statistics
- * @type {Ref<boolean>}
+ * Granular loading states for each statistic card
+ * @type {Ref<Object>}
  */
-const loadingStats = ref(true)
+const loadingStats = ref({
+  income: true,
+  profit: true,
+  cashOut: true,
+  receivable: true,
+  products: true,
+  clients: true,
+  sales: true
+})
 
 /**
  * Today's financial statistics
@@ -470,7 +472,10 @@ const todayStats = ref({
   profit: 0,
   netIncome: 0,
   cashOut: 0,
-  receivable: 0
+  receivable: 0,
+  productsTotal: 0,
+  clientsTotal: 0,
+  salesToday: 0
 })
 
 /**
@@ -526,6 +531,20 @@ const defaultQuickActions = [
     color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
   },
   {
+    name: 'box-report',
+    label: 'Reporte de Caja',
+    icon: 'point_of_sale',
+    route: 'BoxReport',
+    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+  },
+  {
+    name: 'invoices',
+    label: 'Lista de facturas',
+    icon: 'receipt_long',
+    route: 'Invoice',
+    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+  },
+  {
     name: 'products',
     label: 'Productos',
     icon: 'inventory_2',
@@ -533,30 +552,20 @@ const defaultQuickActions = [
     color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
   },
   {
-    name: 'clients',
-    label: 'Clientes',
-    icon: 'people',
-    route: 'Client',
-    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    name: 'receivables',
+    label: 'Cuentas por Cobrar',
+    icon: 'account_balance_wallet',
+    route: 'AccountsReceivable',
+    color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
   },
   {
-    name: 'reports',
-    label: 'Reportes',
-    icon: 'analytics',
-    route: 'Dashboard',
-    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    name: 'new-purchase',
+    label: 'Nueva Compra',
+    icon: 'shopping_bag',
+    route: 'NewPurchase',
+    color: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)'
   }
 ]
-
-// ============================================
-// RECENT ACCESS STATE
-// ============================================
-
-/**
- * Recent access history
- * @type {Ref<Array>}
- */
-const recentAccess = ref([])
 
 // ============================================
 // COMPUTED PROPERTIES
@@ -606,7 +615,7 @@ const currentDate = computed(() => {
  * @returns {Array}
  */
 const configuredQuickActions = computed(() => {
-  return selectedQuickActions.value.length > 0 ? selectedQuickActions.value : defaultQuickActions
+  return selectedQuickActions.value
 })
 
 /**
@@ -647,6 +656,16 @@ const navigateTo = (routeName) => {
 }
 
 /**
+ * Handle click on quick action
+ * @param {Object} action - Action object
+ */
+const handleQuickActionClick = (action) => {
+  if (action.route) {
+    navigateTo(action.route)
+  }
+}
+
+/**
  * Navigate to welcome page
  */
 const goToWelcome = () => {
@@ -658,42 +677,7 @@ const goToWelcome = () => {
  * @param {Object} invoice - Invoice object
  */
 const viewInvoice = (invoice) => {
-  addToRecentAccess({
-    label: `Factura #${invoice.invoice_id}`,
-    route: 'Invoice',
-    params: { id: invoice.id },
-    icon: 'receipt'
-  })
   router.push({ name: 'Invoice', params: { id: invoice.invoice_id } })
-}
-
-/**
- * Handle quick action click (navigate and track)
- * @param {Object} action - Quick action object
- */
-const handleQuickActionClick = (action) => {
-  addToRecentAccess({
-    label: action.label,
-    route: action.route || action.link,
-    icon: action.icon
-  })
-  if (action.route) {
-    router.push({ name: action.route })
-  } else if (action.link) {
-    router.push({ name: action.link })
-  }
-}
-
-/**
- * Navigate to a recent access item
- * @param {Object} recent - Recent access object
- */
-const navigateToRecent = (recent) => {
-  if (recent.params) {
-    router.push({ name: recent.route, params: recent.params })
-  } else {
-    router.push({ name: recent.route })
-  }
 }
 
 // ============================================
@@ -739,22 +723,6 @@ const formatTime = (datetime) => {
   return dateObj.toLocaleDateString('es-ES')
 }
 
-/**
- * Format recent access timestamp
- * @param {number} timestamp - Unix timestamp
- * @returns {string}
- */
-const formatRecentTime = (timestamp) => {
-  const dateObj = new Date(timestamp)
-  const now = new Date()
-  const diff = now - dateObj
-  const minutes = Math.floor(diff / 60000)
-
-  if (minutes < 60) return 'Hace poco'
-  if (minutes < 1440) return `Hace ${Math.floor(minutes / 60)}h`
-  return date.formatDate(dateObj, 'DD/MM')
-}
-
 // ============================================
 // DATA LOADING METHODS
 // ============================================
@@ -776,61 +744,101 @@ const loadOnboardingStatus = async () => {
 }
 
 /**
- * Load today's financial statistics
+ * Load today's financial statistics with progressive/staggered updates
  */
 const loadTodayStats = async () => {
   if (!branchOffice.value?.id) return
 
-  loadingStats.value = true
-  const today = date.formatDate(new Date(), 'YYYY-MM-DD')
+  // Reset all loading states
+  Object.keys(loadingStats.value).forEach(key => {
+    loadingStats.value[key] = true
+  })
 
+  const today = date.formatDate(new Date(), 'YYYY-MM-DD')
   const params = {
     day: today,
     branch_office_id: [branchOffice.value.id]
   }
 
-  try {
-    // Load all stats in parallel
-    const [categoryData, cashflowData, receivableData] = await Promise.all([
-      api.get('reports/category-totals', { params }).catch(() => ({ data: {} })),
-      api.get('reports/cashflow-totals', { params }).catch(() => ({ data: {} })),
-      api.get('client-statement/kpis', {
-        params: {
-          branch_office_id: branchOffice.value.id
+  // Group 1: Immediate - Financial critical stats
+  const loadFinancials = () => {
+    api.get('reports/category-totals', { params })
+      .then(({ data }) => {
+        const sales = data?.category_total || 0
+        const costs = data?.cost_total || 0
+        todayStats.value.netIncome = sales
+        todayStats.value.profit = sales - costs
+      })
+      .catch(err => console.error('Error loading profit stats:', err))
+      .finally(() => {
+        loadingStats.value.income = false
+        loadingStats.value.profit = false
+      })
+
+    api.get('reports/cashflow-totals', { params })
+      .then(({ data }) => {
+        let cashOut = 0
+        if (data?.cashflow_total) {
+          cashOut = data.cashflow_total
+            .filter(cf => cf.type_cashflow === 'credit' || cf.type_cashflow === 'expense')
+            .reduce((sum, cf) => sum + (cf.totals || 0), 0)
         }
-      }).catch(() => ({ data: {} }))
-    ])
-
-    // Calculate profit (sales - costs)
-    const sales = categoryData.data?.category_total || 0
-    const costs = categoryData.data?.cost_total || 0
-    const profit = sales - costs
-
-    // Net income from sales
-    const netIncome = sales
-
-    // Cash out (credit type cashflows = money going out)
-    let cashOut = 0
-    if (cashflowData.data?.cashflow_total) {
-      cashOut = cashflowData.data.cashflow_total
-        .filter(cf => cf.type_cashflow === 'credit' || cf.type_cashflow === 'expense')
-        .reduce((sum, cf) => sum + (cf.totals || 0), 0)
-    }
-
-    // Accounts receivable balance (global total from all clients)
-    const receivable = receivableData.data?.balance || 0
-
-    todayStats.value = {
-      profit,
-      netIncome,
-      cashOut,
-      receivable
-    }
-  } catch (error) {
-    console.error('Error loading today stats:', error)
-  } finally {
-    loadingStats.value = false
+        todayStats.value.cashOut = cashOut
+      })
+      .catch(err => console.error('Error loading cashflow stats:', err))
+      .finally(() => {
+        loadingStats.value.cashOut = false
+      })
   }
+
+  // Group 2: Slightly delayed - KPI and Sales count
+  const loadSecondaryStats = () => {
+    api.get('client-statement/kpis', {
+      params: { branch_office_id: branchOffice.value.id }
+    })
+      .then(({ data }) => {
+        todayStats.value.receivable = data?.balance || 0
+      })
+      .catch(err => console.error('Error loading receivable stats:', err))
+      .finally(() => {
+        loadingStats.value.receivable = false
+      })
+
+    api.get('dashboard/today-stats', { params })
+      .then(({ data }) => {
+        todayStats.value.salesToday = data?.invoices || 0
+      })
+      .catch(err => console.error('Error loading sales count:', err))
+      .finally(() => {
+        loadingStats.value.sales = false
+      })
+  }
+
+  // Group 3: More delayed - Inventory and totals
+  const loadInventoryStats = () => {
+    api.get('products', { params: { perPage: 1, page: 1, paginated: true } })
+      .then(({ data }) => {
+        todayStats.value.productsTotal = data?.total || 0
+      })
+      .catch(err => console.error('Error loading products count:', err))
+      .finally(() => {
+        loadingStats.value.products = false
+      })
+
+    api.get('clients', { params: { perPage: 1, page: 1, paginated: true } })
+      .then(({ data }) => {
+        todayStats.value.clientsTotal = data?.total || 0
+      })
+      .catch(err => console.error('Error loading clients count:', err))
+      .finally(() => {
+        loadingStats.value.clients = false
+      })
+  }
+
+  // Execute in sequence with small delays for visual flow
+  loadFinancials()
+  setTimeout(loadSecondaryStats, 150)
+  setTimeout(loadInventoryStats, 300)
 }
 
 /**
@@ -890,9 +898,13 @@ const loadQuickAccessConfig = () => {
     const stored = localStorage.getItem(STORAGE_KEYS.QUICK_ACCESS)
     if (stored) {
       selectedQuickActions.value = JSON.parse(stored)
+    } else {
+      // Initialize with defaults if no user preference exists
+      selectedQuickActions.value = [...defaultQuickActions]
     }
   } catch (error) {
     console.error('Error loading quick access config:', error)
+    selectedQuickActions.value = [...defaultQuickActions]
   }
 }
 
@@ -975,66 +987,6 @@ const moveQuickAction = (index, direction) => {
 }
 
 // ============================================
-// RECENT ACCESS METHODS
-// ============================================
-
-/**
- * Load recent access from localStorage
- */
-const loadRecentAccess = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.RECENT_ACCESS)
-    if (stored) {
-      recentAccess.value = JSON.parse(stored)
-    }
-  } catch (error) {
-    console.error('Error loading recent access:', error)
-  }
-}
-
-/**
- * Add item to recent access
- * @param {Object} item - Recent access item
- */
-const addToRecentAccess = (item) => {
-  const newItem = {
-    ...item,
-    timestamp: Date.now()
-  }
-
-  // Remove duplicate if exists
-  const existingIndex = recentAccess.value.findIndex(
-    r => r.route === item.route && JSON.stringify(r.params) === JSON.stringify(item.params)
-  )
-  if (existingIndex >= 0) {
-    recentAccess.value.splice(existingIndex, 1)
-  }
-
-  // Add to beginning
-  recentAccess.value.unshift(newItem)
-
-  // Limit to max items
-  if (recentAccess.value.length > MAX_RECENT_ACCESS) {
-    recentAccess.value = recentAccess.value.slice(0, MAX_RECENT_ACCESS)
-  }
-
-  // Save to localStorage
-  try {
-    localStorage.setItem(STORAGE_KEYS.RECENT_ACCESS, JSON.stringify(recentAccess.value))
-  } catch (error) {
-    console.error('Error saving recent access:', error)
-  }
-}
-
-/**
- * Clear all recent access history
- */
-const clearRecentAccess = () => {
-  recentAccess.value = []
-  localStorage.removeItem(STORAGE_KEYS.RECENT_ACCESS)
-}
-
-// ============================================
 // WATCHERS
 // ============================================
 
@@ -1062,11 +1014,21 @@ watch(branchOffice, () => {
 // ============================================
 
 onMounted(() => {
-  loadOnboardingStatus()
-  loadTodayStats()
-  loadRecentInvoices()
+  // Sync config is immediate
   loadQuickAccessConfig()
-  loadRecentAccess()
+
+  // Delay the heavy artillery so the UI feels snappy from the start
+  setTimeout(() => {
+    loadTodayStats()
+  }, 100)
+
+  setTimeout(() => {
+    loadOnboardingStatus()
+  }, 400)
+
+  setTimeout(() => {
+    loadRecentInvoices()
+  }, 600)
 })
 </script>
 
@@ -1089,48 +1051,141 @@ onMounted(() => {
     padding-bottom: 48px;
   }
 }
-/**
- * Header Cockpit
- */
 .header-cockpit {
-  padding: 24px 8px;
-  margin-bottom: 8px;
+  padding: 0.75rem 0.2rem;
   position: relative;
+}
+
+@media (min-width: 1024px) {
+  .header-cockpit {
+    padding: 1rem 1.5rem;
+    margin-bottom: 12px;
+  }
 }
 
 .cockpit-glow {
   position: absolute;
-  top: -20px;
-  left: 0;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.1) 0%, transparent 70%);
-  filter: blur(20px);
+  top: -40px;
+  left: -20px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(var(--q-primary-rgb), 0.15) 0%, transparent 70%);
+  filter: blur(40px);
   pointer-events: none;
 }
 
-.welcome-subtitle {
-  margin-top: 4px;
-  font-weight: 500;
-}
-
-.date-chip-modern {
-  display: flex;
+.date-chip-premium {
+  display: inline-flex;
   align-items: center;
   background: white;
-  padding: 8px 16px;
-  border-radius: 14px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
   color: #64748b;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  border: 1px solid #f1f5f9;
 }
 
-body.body--dark .date-chip-modern {
+.date-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.date-day {
+  font-size: 13px; /* <--- Tamaño del día de la semana (arriba) */
+  font-weight: 800;
+  color: var(--q-primary);
+  letter-spacing: 0.5px;
+}
+
+.date-full {
+  font-size: 11px; /* <--- Tamaño de la fecha numérica (abajo) */
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@media (min-width: 600px) {
+  .date-stack {
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+  }
+  .date-day::after {
+    content: ',';
+  }
+  .date-day {
+    font-size: 11px; /* <--- Tamaño del día en escritorio */
+    color: inherit;
+  }
+}
+
+body.body--dark .date-chip-premium {
   background: #1e293b;
   border-color: #334155;
   color: #94a3b8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.greeting-text {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.greeting-block {
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid var(--q-primary);
+  padding-left: 12px;
+  line-height: 1.1;
+}
+
+.greeting-main {
+  font-size: 15px; /* <--- Tamaño del "BUENAS TARDES" */
+  font-weight: 700;
+}
+
+.greeting-name {
+  font-size: clamp(18px, 5vw, 24px); /* <--- Tamaño del NOMBRE */
+  color: #334155;
+  letter-spacing: -0.3px;
+  font-family: inherit !important;
+}
+
+body.body--dark .greeting-name {
+  color: #f1f5f9;
+}
+
+@media (max-width: 600px) {
+  .greeting-block {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-cockpit .row {
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+
+.greeting-subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  letter-spacing: 0.1px;
+}
+
+body.body--dark .greeting-main {
+  color: #f1f5f9;
+}
+
+body.body--dark .greeting-subtitle {
+  color: #cbd5e1;
 }
 
 /**
@@ -1145,18 +1200,25 @@ body.body--dark .date-chip-modern {
   box-sizing: border-box;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 0) {
   .bento-grid {
     grid-template-columns: repeat(2, 1fr);
+    grid-gap: 12px;
+  }
+  .mobile-hide {
+    display: none !important;
   }
 }
 
 @media (min-width: 1024px) {
   .bento-grid {
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: auto auto;
+    grid-template-rows: auto;
     gap: 16px;
     padding: 0;
+  }
+  .mobile-hide {
+    display: flex !important;
   }
 }
 
@@ -1331,21 +1393,44 @@ body.body--dark .recent-pill__label {
   gap: 16px;
   padding: 16px;
   min-height: auto;
+  justify-content: flex-start;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+  .bento-item {
+    padding: 10px;
+  }
+
   .stat-hero {
-    padding: 12px;
-    gap: 12px;
+    padding: 8px;
+    gap: 6px;
   }
 
   .stat-icon-wrap {
-    width: 48px;
-    height: 48px;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+  }
+
+  .stat-icon-wrap :deep(.q-icon) {
+    font-size: 20px !important;
   }
 
   .stat-val {
-    font-size: 18px;
+    font-size: 14px !important;
+    font-weight: 700;
+  }
+
+  .stat-lab {
+    font-size: 10px !important;
+    font-weight: 500;
+    color: #94a3b8;
+  }
+}
+
+@media (max-width: 360px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1381,6 +1466,8 @@ body.body--dark .recent-pill__label {
 .bg-soft-warning { background: rgba(var(--q-warning-rgb), 0.1); }
 .bg-soft-info { background: rgba(var(--q-info-rgb), 0.1); }
 .bg-soft-negative { background: rgba(var(--q-negative-rgb), 0.1); }
+.bg-soft-secondary { background: rgba(var(--q-secondary-rgb), 0.1); }
+.bg-soft-accent { background: rgba(var(--q-accent-rgb), 0.1); }
 
 .stat-data {
   flex: 1;

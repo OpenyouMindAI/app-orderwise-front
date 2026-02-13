@@ -89,24 +89,17 @@ const allTabs = [
     badge: 0
   },
   {
+    name: 'BoxReport',
+    label: 'Reporte de caja',
+    icon: 'analytics',
+    moduleName: 'box_report',
+    badge: 0
+  },
+  {
     name: 'Product',
     label: 'Inventario',
     icon: 'inventory_2',
     moduleName: 'product',
-    badge: 0
-  },
-  {
-    name: 'Dashboard',
-    label: 'Reportes',
-    icon: 'analytics',
-    moduleName: 'dashboard',
-    badge: 0
-  },
-  {
-    name: 'More',
-    label: 'Más',
-    icon: 'more_horiz',
-    moduleName: 'profile', // Profile/Settings usually allowed
     badge: 0
   }
 ]

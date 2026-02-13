@@ -117,18 +117,26 @@ export const authentication = defineStore('authentication', {
           }
         }
 
+        // Limpiar estado de Pinia
         this.access_token = null
         this.token_type = null
         this.expires_In = null
         this.refresh_token = null
         this.userSession = null
         this.branchOffice = null
+        this.setTimeOut = 0
+        this.isDemo = false
+
+        // Limpiar headers de Axios para evitar que se use un token viejo
+        delete api.defaults.headers.common.authorization
+        delete api.defaults.headers.common.Authorization
 
         this.clearSubscriptionData()
 
         const savedTheme = localStorage.getItem('app-theme')
         const showThemeSelector = localStorage.getItem('show-theme-selector')
         const hasSeenBillingTour = localStorage.getItem('has_seen_billing_tour')
+        const orderwiseQuickAccess = localStorage.getItem('orderwise_quick_access')
 
         localStorage.clear()
 
@@ -144,6 +152,10 @@ export const authentication = defineStore('authentication', {
           localStorage.setItem('has_seen_billing_tour', hasSeenBillingTour)
         }
 
+        if (orderwiseQuickAccess) {
+          localStorage.setItem('orderwise_quick_access', orderwiseQuickAccess)
+        }
+
         return true
       } catch (error) {
         throw error.response?.data || error
@@ -151,6 +163,7 @@ export const authentication = defineStore('authentication', {
         this._isLoggingOut = false
       }
     },
+
     /**
      * Force logout - Solo limpia datos locales sin llamar al backend
      * Usado cuando el admin fuerza desconexión o el token ya fue revocado
@@ -230,7 +243,7 @@ export const authentication = defineStore('authentication', {
      * @param {Object} subscriptionData - Subscription information
      */
     setSubscriptionData (subscriptionData) {
-      this.subscriptionPlan = subscriptionData.plan?.name || 'Free'
+      this.subscriptionPlan = subscriptionData.plan?.slug || 'free'
       this.subscriptionDaysLeft = subscriptionData.days_until_expiration || null
       this.currentSubscription = subscriptionData.subscription || null
       this.maxBranches = subscriptionData.subscription?.branch_offices_count || 1
