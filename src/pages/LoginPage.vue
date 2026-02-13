@@ -337,7 +337,12 @@ export default {
      * Dark mode
      * @returns {Boolean}
      */
-    ...mapState(darkModeStore, ['darkMode'])
+    ...mapState(darkModeStore, ['darkMode']),
+    /**
+     * Access token
+     * @returns {String|null}
+     */
+    ...mapState(authentication, ['access_token'])
   },
   async mounted () {
     this.$q.dark.set(this.darkMode)
@@ -390,8 +395,6 @@ export default {
 
         // Solo ejecutar auto-login si ambos parámetros existen
         if (username && password) {
-          console.log('Auto-login detectado con parámetros de URL')
-
           // Asignar valores a los campos
           this.username = username
           this.password = password
@@ -402,8 +405,9 @@ export default {
             message: 'Iniciando sesión automáticamente...'
           })
 
-          // Esperar un momento para que se vea el loading
-          await new Promise(resolve => setTimeout(resolve, 500))
+          if (this.access_token) {
+            await this.logout()
+          }
 
           // Ejecutar login
           await this.loginAt()
@@ -411,6 +415,8 @@ export default {
           // Limpiar parámetros de la URL por seguridad
           const cleanUrl = window.location.origin + window.location.pathname
           window.history.replaceState({}, document.title, cleanUrl)
+
+          this.$q.loading.hide()
         }
       } catch (error) {
         console.error('Error en auto-login:', error)
