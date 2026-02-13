@@ -3,419 +3,419 @@
     <DeliveryRouteBuilderSkeleton v-if="loadingInitial" />
     <template v-else>
       <div class="q-pa-md">
-    <!-- Header -->
-    <div class="row items-center justify-between q-mb-md">
-      <div>
-        <div class="text-h6 text-weight-bold">
-          <q-btn
-            flat
-            color="grey-7"
-            icon="arrow_back"
-            round
-            @click="$router.back()"
-        />
-          <q-icon name="route" color="primary" size="32px" class="q-mr-sm" />
-          {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
-        </div>
-      </div>
-      <div class="row q-gutter-sm">
-        <q-btn
-          unelevated
-          color="positive"
-          label="Guardar Ruta"
-          icon="save"
-          @click="saveRoute"
-          :loading="saving"
-          :disable="stops.length === 0"
-        />
-      </div>
-    </div>
-
-    <div class="row q-col-gutter-md">
-      <!-- Left Panel - Route Configuration -->
-      <div class="col-12 col-sm-4 col-md-4">
-        <q-card>
-          <q-card-section>
-            <div class="text-h6 q-mb-md">
-              <q-icon name="settings" color="primary" />
-              Configuración de Ruta
-            </div>
-
-            <!-- Route Name -->
-            <q-input
-              v-model="routeForm.name"
-              label="Nombre de la Ruta"
-              outlined
-              dense
-              class="q-mb-md"
+        <!-- Header -->
+        <div class="row items-center justify-between q-mb-md">
+          <div>
+            <div class="text-h6 text-weight-bold">
+              <q-btn
+                flat
+                color="grey-7"
+                icon="arrow_back"
+                round
+                @click="$router.back()"
             />
-
-            <!-- Partner Selection -->
-            <q-select
-              v-model="selectedPartner"
-              :options="partners"
-              option-label="name"
-              option-value="id"
-              label="Seleccionar Afiliado (Cargar Clientes)"
-              outlined
-              dense
-              clearable
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              class="q-mb-md"
-              @update:model-value="onPartnerChange"
-              @filter="filterPartners"
-            >
-              <template v-slot:prepend>
-                <q-icon name="handshake" />
-              </template>
-            </q-select>
-
-            <!-- Courier Selection -->
-            <q-select
-              v-model="routeForm.courier"
-              :options="couriers"
-              option-label="name"
-              option-value="id"
-              label="Asignar Repartidor"
-              outlined
-              dense
-              clearable
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              class="q-mb-md"
-              @update:model-value="onCourierChange"
-              @filter="filterCouriers"
-            >
-              <template v-slot:prepend>
-                <q-icon name="person" />
-              </template>
-            </q-select>
-
-            <!-- Origin Branch -->
-            <q-select
-              v-model="routeForm.origin_branch"
-              :options="branches"
-              option-label="name"
-              option-value="id"
-              label="Sucursal de Origen"
-              outlined
-              dense
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              class="q-mb-md"
-              @filter="filterBranches"
-            >
-              <template v-slot:prepend>
-                <q-icon name="store" />
-              </template>
-            </q-select>
-
-            <!-- Notes -->
-            <q-input
-              v-model="routeForm.notes"
-              label="Notas"
-              type="textarea"
-              outlined
-              dense
-              rows="3"
-            />
-          </q-card-section>
-        </q-card>
-
-        <!-- Add Client Section -->
-        <q-card class="q-mt-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">
-              <q-icon name="add_location" color="positive" />
-              Agregar Cliente
+              <q-icon name="route" color="primary" size="32px" class="q-mr-sm" />
+              {{ deliveryRoute?.route_number || 'Nueva Ruta' }}
             </div>
-
-            <!-- Client Search -->
-            <q-select
-              v-model="selectedClient"
-              :options="clients"
-              option-label="name"
-              option-value="id"
-              label="Buscar Cliente"
-              outlined
-              dense
-              use-input
-              hide-selected
-              fill-input
-              input-debounce="0"
-              @filter="filterClients"
-              class="q-mb-md"
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-              <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section avatar>
-                    <q-icon name="person" color="primary" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.name }}</q-item-label>
-                    <q-item-label caption>
-                      {{ getClientAddress(scope.opt) }}
-                    </q-item-label>
-                    <q-item-label caption v-if="scope.opt.opening_hours">
-                      <q-icon name="schedule" size="12px" />
-                      {{ getOpeningHoursText(scope.opt.opening_hours) }}
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-
+          </div>
+          <div class="row q-gutter-sm">
             <q-btn
               unelevated
               color="positive"
-              label="Agregar Cliente"
-              icon="add"
-              class="full-width"
-              :disable="!selectedClient"
-              @click="addClientToPredefinedRoute()"
+              label="Guardar Ruta"
+              icon="save"
+              @click="saveRoute"
+              :loading="saving"
+              :disable="stops.length === 0"
             />
-          </q-card-section>
-        </q-card>
-
-        <!-- Stops List with Drag & Drop -->
-        <q-card class="q-mt-md">
-          <q-card-section>
-            <div class="row items-center q-mb-md">
-              <div class="col">
-                <div class="text-h6">
-                  <q-icon name="list" color="primary" />
-                  Orden de Paradas ({{ stops.length }})
-                </div>
-                <div v-if="totalDistance || totalDuration" class="text-caption text-grey-7 q-mt-xs">
-                  <q-icon name="route" size="14px" />
-                  {{ totalDistance }}
-                  <span v-if="totalDuration">
-                    • <q-icon name="schedule" size="14px" />
-                    {{ totalDuration }}
-                  </span>
-                </div>
-              </div>
-              <div class="col-auto">
-                <q-btn
-                  v-if="stops.length > 1"
-                  unelevated
-                  color="primary"
-                  icon="route"
-                  label="Optimizar Ruta"
-                  size="sm"
-                  @click="optimizeRoute"
-                  :loading="optimizing"
-                >
-                  <q-tooltip>Reordenar paradas para minimizar distancia y tiempo</q-tooltip>
-                </q-btn>
-              </div>
-            </div>
-
-            <div v-if="stops.length === 0" class="text-center text-grey-6 q-py-lg">
-              <q-icon name="location_off" size="48px" />
-              <div class="q-mt-sm">No hay paradas agregadas</div>
-            </div>
-
-            <draggable
-              v-model="stops"
-              item-key="id"
-              handle=".drag-handle"
-              @end="onStopReorder"
-              class="stops-list"
-            >
-              <template #item="{ element, index }">
-                <q-card
-                  flat
-                  bordered
-                  class="stop-card q-mb-sm"
-                  :class="{ 'stop-active': selectedStop?.id === element.id }"
-                  @click="selectStop(element)"
-                >
-                  <q-card-section class="q-pa-sm">
-                    <div class="row items-center no-wrap">
-                      <!-- Drag Handle -->
-                      <q-icon
-                        name="drag_indicator"
-                        class="drag-handle cursor-move q-mr-sm"
-                        color="grey-6"
-                      />
-
-                      <!-- Stop Reorder Controls -->
-                      <div class="column items-center q-mr-sm stop-controls">
-                        <q-btn
-                          flat
-                          dense
-                          round
-                          size="sm"
-                          icon="keyboard_arrow_up"
-                          color="primary"
-                          :disable="index === 0"
-                          @click.stop="moveStopUp(index)"
-                        >
-                          <q-tooltip>Mover arriba</q-tooltip>
-                        </q-btn>
-
-                        <div class="stop-position-wrapper">
-                          <input
-                            type="number"
-                            :value="index + 1"
-                            class="stop-position-input"
-                            @change="e => updateStopPosition(element, e.target.value)"
-                            @click.stop
-                          />
-                        </div>
-
-                        <q-btn
-                          flat
-                          dense
-                          round
-                          size="sm"
-                          icon="keyboard_arrow_down"
-                          color="primary"
-                          :disable="index === stops.length - 1"
-                          @click.stop="moveStopDown(index)"
-                        >
-                          <q-tooltip>Mover abajo</q-tooltip>
-                        </q-btn>
-                      </div>
-
-                      <!-- Client Info -->
-                      <div class="col">
-                        <div class="text-body2 text-weight-medium">
-                          {{ element.client?.name }}
-                        </div>
-                        <div class="text-caption text-grey-7">
-                          <span v-if="element.distance_text">
-                            <q-icon name="route" size="14px" />
-                            {{ element.distance_text }}
-                          </span>
-                          <span v-if="element.duration_text">
-                            <span v-if="element.distance_text"> • </span>
-                            <q-icon name="schedule" size="14px" />
-                            {{ element.duration_text }}
-                          </span>
-                          <span v-if="!element.distance_text && !element.duration_text && index === 0">
-                            <q-icon name="flag" size="14px" />
-                            Punto de inicio
-                          </span>
-                        </div>
-                        <div v-if="element.client?.opening_hours" class="text-caption text-primary">
-                          <q-icon name="schedule" size="14px" />
-                          {{ getOpeningHoursText(element.client.opening_hours) }}
-                        </div>
-                        <!-- Warning for clients without address -->
-                        <div v-if="!element.latitude || !element.longitude" class="text-caption text-warning q-mt-xs">
-                          <q-icon name="warning" size="14px" />
-                          Sin dirección - No se muestra en el mapa
-                        </div>
-                      </div>
-
-                      <!-- Actions -->
-                      <div class="row q-gutter-xs">
-                        <!-- Edit address button -->
-                        <q-btn
-                          v-if="!element.latitude || !element.longitude"
-                          flat
-                          dense
-                          round
-                          icon="edit_location"
-                          color="primary"
-                          size="sm"
-                          @click.stop="editStopAddress(element)"
-                        >
-                          <q-tooltip>Agregar dirección</q-tooltip>
-                        </q-btn>
-                        <q-btn
-                          flat
-                          dense
-                          round
-                          icon="delete"
-                          color="negative"
-                          size="sm"
-                          @click.stop="removeStop(element)"
-                        />
-                      </div>
-                    </div>
-                  </q-card-section>
-                  <q-inner-loading :showing="reorderingStopId === element.id">
-                    <q-spinner-dots color="primary" />
-                  </q-inner-loading>
-                </q-card>
-              </template>
-            </draggable>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Right Panel - Map -->
-      <div class="col-12 col-sm-8 col-md-8">
-        <q-card style="height: calc(100vh - 120px);">
-          <div id="route-map" ref="mapContainer" style="width: 100%; height: 100%;"></div>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Modal para agregar dirección al cliente -->
-    <q-dialog v-model="showAddressModal" persistent>
-      <q-card style="min-width: 500px; max-width: 600px;">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">
-            <q-icon name="warning" color="warning" size="24px" class="q-mr-sm" />
-            Dirección requerida
           </div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="cancelAddressModal" />
-        </q-card-section>
+        </div>
 
-        <q-card-section>
-          <!-- Client name with transition -->
-          <transition name="fade-slide" mode="out-in">
-            <div :key="clientWithoutAddress?.id" class="client-name-container q-mb-md">
-              <div class="text-h5 text-weight-bold text-primary q-mb-xs">
-                {{ clientWithoutAddress?.name }}
+        <div class="row q-col-gutter-md">
+          <!-- Left Panel - Route Configuration -->
+          <div class="col-12 col-sm-4 col-md-4">
+            <q-card>
+              <q-card-section>
+                <div class="text-h6 q-mb-md">
+                  <q-icon name="settings" color="primary" />
+                  Configuración de Ruta
+                </div>
+
+                <!-- Route Name -->
+                <q-input
+                  v-model="routeForm.name"
+                  label="Nombre de la Ruta"
+                  outlined
+                  dense
+                  class="q-mb-md"
+                />
+
+                <!-- Partner Selection -->
+                <q-select
+                  v-model="selectedPartner"
+                  :options="partners"
+                  option-label="name"
+                  option-value="id"
+                  label="Seleccionar Afiliado (Cargar Clientes)"
+                  outlined
+                  dense
+                  clearable
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  class="q-mb-md"
+                  @update:model-value="onPartnerChange"
+                  @filter="filterPartners"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="handshake" />
+                  </template>
+                </q-select>
+
+                <!-- Courier Selection -->
+                <q-select
+                  v-model="routeForm.courier"
+                  :options="couriers"
+                  option-label="name"
+                  option-value="id"
+                  label="Asignar Repartidor"
+                  outlined
+                  dense
+                  clearable
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  class="q-mb-md"
+                  @update:model-value="onCourierChange"
+                  @filter="filterCouriers"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="person" />
+                  </template>
+                </q-select>
+
+                <!-- Origin Branch -->
+                <q-select
+                  v-model="routeForm.origin_branch"
+                  :options="branches"
+                  option-label="name"
+                  option-value="id"
+                  label="Sucursal de Origen"
+                  outlined
+                  dense
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  class="q-mb-md"
+                  @filter="filterBranches"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="store" />
+                  </template>
+                </q-select>
+
+                <!-- Notes -->
+                <q-input
+                  v-model="routeForm.notes"
+                  label="Notas"
+                  type="textarea"
+                  outlined
+                  dense
+                  rows="3"
+                />
+              </q-card-section>
+            </q-card>
+
+            <!-- Add Client Section -->
+            <q-card class="q-mt-md">
+              <q-card-section>
+                <div class="text-h6 q-mb-md">
+                  <q-icon name="add_location" color="positive" />
+                  Agregar Cliente
+                </div>
+
+                <!-- Client Search -->
+                <q-select
+                  v-model="selectedClient"
+                  :options="clients"
+                  option-label="name"
+                  option-value="id"
+                  label="Buscar Cliente"
+                  outlined
+                  dense
+                  use-input
+                  hide-selected
+                  fill-input
+                  input-debounce="0"
+                  @filter="filterClients"
+                  class="q-mb-md"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="search" />
+                  </template>
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section avatar>
+                        <q-icon name="person" color="primary" />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.name }}</q-item-label>
+                        <q-item-label caption>
+                          {{ getClientAddress(scope.opt) }}
+                        </q-item-label>
+                        <q-item-label caption v-if="scope.opt.opening_hours">
+                          <q-icon name="schedule" size="12px" />
+                          {{ getOpeningHoursText(scope.opt.opening_hours) }}
+                        </q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+
+                <q-btn
+                  unelevated
+                  color="positive"
+                  label="Agregar Cliente"
+                  icon="add"
+                  class="full-width"
+                  :disable="!selectedClient"
+                  @click="addClientToPredefinedRoute()"
+                />
+              </q-card-section>
+            </q-card>
+
+            <!-- Stops List with Drag & Drop -->
+            <q-card class="q-mt-md">
+              <q-card-section>
+                <div class="row items-center q-mb-md">
+                  <div class="col">
+                    <div class="text-h6">
+                      <q-icon name="list" color="primary" />
+                      Orden de Paradas ({{ stops.length }})
+                    </div>
+                    <div v-if="totalDistance || totalDuration" class="text-caption text-grey-7 q-mt-xs">
+                      <q-icon name="route" size="14px" />
+                      {{ totalDistance }}
+                      <span v-if="totalDuration">
+                        • <q-icon name="schedule" size="14px" />
+                        {{ totalDuration }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <q-btn
+                      v-if="stops.length > 1"
+                      unelevated
+                      color="primary"
+                      icon="route"
+                      label="Optimizar Ruta"
+                      size="sm"
+                      @click="optimizeRoute"
+                      :loading="optimizing"
+                    >
+                      <q-tooltip>Reordenar paradas para minimizar distancia y tiempo</q-tooltip>
+                    </q-btn>
+                  </div>
+                </div>
+
+                <div v-if="stops.length === 0" class="text-center text-grey-6 q-py-lg">
+                  <q-icon name="location_off" size="48px" />
+                  <div class="q-mt-sm">No hay paradas agregadas</div>
+                </div>
+
+                <draggable
+                  v-model="stops"
+                  item-key="id"
+                  handle=".drag-handle"
+                  @end="onStopReorder"
+                  class="stops-list"
+                >
+                  <template #item="{ element, index }">
+                    <q-card
+                      flat
+                      bordered
+                      class="stop-card q-mb-sm"
+                      :class="{ 'stop-active': selectedStop?.id === element.id }"
+                      @click="selectStop(element)"
+                    >
+                      <q-card-section class="q-pa-sm">
+                        <div class="row items-center no-wrap">
+                          <!-- Drag Handle -->
+                          <q-icon
+                            name="drag_indicator"
+                            class="drag-handle cursor-move q-mr-sm"
+                            color="grey-6"
+                          />
+
+                          <!-- Stop Reorder Controls -->
+                          <div class="column items-center q-mr-sm stop-controls">
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              size="sm"
+                              icon="keyboard_arrow_up"
+                              color="primary"
+                              :disable="index === 0"
+                              @click.stop="moveStopUp(index)"
+                            >
+                              <q-tooltip>Mover arriba</q-tooltip>
+                            </q-btn>
+
+                            <div class="stop-position-wrapper">
+                              <input
+                                type="number"
+                                :value="index + 1"
+                                class="stop-position-input"
+                                @change="e => updateStopPosition(element, e.target.value)"
+                                @click.stop
+                              />
+                            </div>
+
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              size="sm"
+                              icon="keyboard_arrow_down"
+                              color="primary"
+                              :disable="index === stops.length - 1"
+                              @click.stop="moveStopDown(index)"
+                            >
+                              <q-tooltip>Mover abajo</q-tooltip>
+                            </q-btn>
+                          </div>
+
+                          <!-- Client Info -->
+                          <div class="col">
+                            <div class="text-body2 text-weight-medium">
+                              {{ element.client?.name }}
+                            </div>
+                            <div class="text-caption text-grey-7">
+                              <span v-if="element.distance_text">
+                                <q-icon name="route" size="14px" />
+                                {{ element.distance_text }}
+                              </span>
+                              <span v-if="element.duration_text">
+                                <span v-if="element.distance_text"> • </span>
+                                <q-icon name="schedule" size="14px" />
+                                {{ element.duration_text }}
+                              </span>
+                              <span v-if="!element.distance_text && !element.duration_text && index === 0">
+                                <q-icon name="flag" size="14px" />
+                                Punto de inicio
+                              </span>
+                            </div>
+                            <div v-if="element.client?.opening_hours" class="text-caption text-primary">
+                              <q-icon name="schedule" size="14px" />
+                              {{ getOpeningHoursText(element.client.opening_hours) }}
+                            </div>
+                            <!-- Warning for clients without address -->
+                            <div v-if="!element.latitude || !element.longitude" class="text-caption text-warning q-mt-xs">
+                              <q-icon name="warning" size="14px" />
+                              Sin dirección - No se muestra en el mapa
+                            </div>
+                          </div>
+
+                          <!-- Actions -->
+                          <div class="row q-gutter-xs">
+                            <!-- Edit address button -->
+                            <q-btn
+                              v-if="!element.latitude || !element.longitude"
+                              flat
+                              dense
+                              round
+                              icon="edit_location"
+                              color="primary"
+                              size="sm"
+                              @click.stop="editStopAddress(element)"
+                            >
+                              <q-tooltip>Agregar dirección</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              icon="delete"
+                              color="negative"
+                              size="sm"
+                              @click.stop="removeStop(element)"
+                            />
+                          </div>
+                        </div>
+                      </q-card-section>
+                      <q-inner-loading :showing="reorderingStopId === element.id">
+                        <q-spinner-dots color="primary" />
+                      </q-inner-loading>
+                    </q-card>
+                  </template>
+                </draggable>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- Right Panel - Map -->
+          <div class="col-12 col-sm-8 col-md-8">
+            <q-card style="height: calc(100vh - 120px);">
+              <div id="route-map" ref="mapContainer" style="width: 100%; height: 100%;"></div>
+            </q-card>
+          </div>
+        </div>
+
+        <!-- Modal para agregar dirección al cliente -->
+        <q-dialog v-model="showAddressModal" persistent>
+          <q-card style="min-width: 500px; max-width: 600px;">
+            <q-card-section class="row items-center q-pb-none">
+              <div class="text-h6">
+                <q-icon name="warning" color="warning" size="24px" class="q-mr-sm" />
+                Dirección requerida
               </div>
-              <div class="text-body2 text-grey-7">
-                Por favor, ingresa la dirección para poder agregarlo a la ruta.
-              </div>
-            </div>
-          </transition>
+              <q-space />
+              <q-btn icon="close" flat round dense @click="cancelAddressModal" />
+            </q-card-section>
 
-          <AddressComponent
-            ref="addressComponentRef"
-            label="Dirección del cliente"
-            @address-selected="onAddressSelected"
-          />
-        </q-card-section>
+            <q-card-section>
+              <!-- Client name with transition -->
+              <transition name="fade-slide" mode="out-in">
+                <div :key="clientWithoutAddress?.id" class="client-name-container q-mb-md">
+                  <div class="text-h5 text-weight-bold text-primary q-mb-xs">
+                    {{ clientWithoutAddress?.name }}
+                  </div>
+                  <div class="text-body2 text-grey-7">
+                    Por favor, ingresa la dirección para poder agregarlo a la ruta.
+                  </div>
+                </div>
+              </transition>
 
-        <q-card-actions align="right" class="q-px-md q-pb-md">
-          <q-btn
-            flat
-            label="Omitir"
-            color="grey-7"
-            @click="skipClientAddress"
-          />
-          <q-space />
-          <q-btn
-            unelevated
-            label="Guardar y Agregar"
-            color="primary"
-            :disable="!newClientAddress"
-            :loading="savingClientAddress"
-            @click="saveClientAddressAndAdd"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+              <AddressComponent
+                ref="addressComponentRef"
+                label="Dirección del cliente"
+                @address-selected="onAddressSelected"
+              />
+            </q-card-section>
+
+            <q-card-actions align="right" class="q-px-md q-pb-md">
+              <q-btn
+                flat
+                label="Omitir"
+                color="grey-7"
+                @click="skipClientAddress"
+              />
+              <q-space />
+              <q-btn
+                unelevated
+                label="Guardar y Agregar"
+                color="primary"
+                :disable="!newClientAddress"
+                :loading="savingClientAddress"
+                @click="saveClientAddressAndAdd"
+              />
+            </q-card-actions>
+          </q-card>
+        </q-dialog>
       </div>
     </template>
   </q-page>
@@ -425,7 +425,7 @@
 /* global google */
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useQuasar } from 'quasar'
+import { useQuasar, debounce } from 'quasar'
 import { api } from 'src/boot/axios'
 import { echo } from 'src/boot/pusher'
 import { loadGoogleMaps, darkMapStyles } from 'src/config/maps'
@@ -595,11 +595,20 @@ onUnmounted(() => {
   stopListening()
 })
 
-// Watch stops for real-time map updates
-watch(stops, async () => {
-  await nextTick()
-  updateMapRoute()
-}, { deep: true })
+/**
+ * Debounced version of updateMapRoute to prevent excessive API calls
+ * @type {function}
+ */
+const updateMapRouteDebounced = debounce(updateMapRoute, 1000)
+
+// Watch stops for real-time map updates - only trigger if essential data changes
+watch(
+  () => stops.value.map(s => `${s.id}-${s.latitude}-${s.longitude}`).join(','),
+  async () => {
+    await nextTick()
+    updateMapRouteDebounced()
+  }
+)
 
 async function loadInitialData () {
   // No cargar nada al inicio - se cargará bajo demanda
@@ -1060,9 +1069,8 @@ async function updateMapRoute () {
     map.value.fitBounds(bounds)
   }
 
-  // Draw route and calculate distances
+  // Draw route (this now also handles distance and time calculations in a single call)
   await drawRoute()
-  await calculateDistancesAndTimes()
 }
 
 // Watch origin branch for map updates
@@ -1071,139 +1079,109 @@ watch(() => routeForm.value.origin_branch, async () => {
   updateMapRoute()
 })
 
+/**
+ * This function has been deprecated and its functionality merged into drawRoute
+ * to optimize Google Maps API calls and costs.
+ * @deprecated Use drawRoute instead
+ * @return {Promise<void>}
+ */
 async function calculateDistancesAndTimes () {
-  if (!map.value || !routeForm.value.origin_branch || stops.value.length === 0) {
-    return
-  }
-
-  const distanceMatrixService = new google.maps.DistanceMatrixService()
-
-  // Get origin coordinates
-  const origin = routeForm.value.origin_branch
-  let originLat = null
-  let originLng = null
-
-  // Extract coordinates from origin branch
-  if (origin.address) {
-    const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
-    originLat = addr.latitude
-    originLng = addr.longitude
-  }
-
-  // Fallback to direct properties
-  originLat = originLat || origin.latitude
-  originLng = originLng || origin.longitude
-
-  if (!originLat || !originLng) return
-
-  // Calculate distance and time for each stop
-  for (let i = 0; i < stops.value.length; i++) {
-    const stop = stops.value[i]
-    const stopLat = stop.latitude
-    const stopLng = stop.longitude
-
-    if (!stopLat || !stopLng) continue
-
-    // Determine origin for this stop (previous stop or branch)
-    let fromLat, fromLng
-    if (i === 0) {
-      fromLat = originLat
-      fromLng = originLng
-    } else {
-      const prevStop = stops.value[i - 1]
-      fromLat = prevStop.latitude
-      fromLng = prevStop.longitude
-    }
-
-    if (!fromLat || !fromLng) continue
-
-    try {
-      const result = await new Promise((resolve, reject) => {
-        distanceMatrixService.getDistanceMatrix(
-          {
-            origins: [{ lat: parseFloat(fromLat), lng: parseFloat(fromLng) }],
-            destinations: [{ lat: parseFloat(stopLat), lng: parseFloat(stopLng) }],
-            travelMode: google.maps.TravelMode.DRIVING,
-            unitSystem: google.maps.UnitSystem.METRIC
-          },
-          (response, status) => {
-            if (status === 'OK') {
-              resolve(response)
-            } else {
-              reject(status)
-            }
-          }
-        )
-      })
-
-      if (result.rows[0]?.elements[0]?.status === 'OK') {
-        const element = result.rows[0].elements[0]
-        stop.distance_text = element.distance.text
-        stop.duration_text = element.duration.text
-        stop.distance_value = element.distance.value // meters
-        stop.duration_value = element.duration.value // seconds
-      }
-    } catch (error) {
-      console.error('Error calculating distance:', error)
-    }
-  }
+  // Logic moved to drawRoute for optimization
 }
 
+/**
+ * Draws the route on the map using a single DirectionsService call with waypoints.
+ * This optimization reduces costs by grouping multiple segments into one API request
+ * and also retrieves distance/duration data for each segment.
+ * @return {Promise<void>}
+ */
 async function drawRoute () {
   if (!map.value || !routeForm.value.origin_branch || stops.value.length === 0) {
     console.warn('drawRoute: Missing map, origin_branch or stops')
     return
   }
 
-  console.log('drawRoute: Starting route drawing...')
+  // Filter stops that have valid coordinates
+  const validStops = stops.value.filter(s => s.latitude && s.longitude)
+  if (validStops.length === 0) {
+    console.warn('drawRoute: No stops with valid coordinates')
+    return
+  }
+
   const directionsService = new google.maps.DirectionsService()
 
-  // Build waypoints
+  // Get origin coordinates
   const origin = routeForm.value.origin_branch
   let originLat = null
   let originLng = null
 
-  // Extract coordinates from origin branch
   if (origin.address) {
     const addr = typeof origin.address === 'string' ? JSON.parse(origin.address) : origin.address
     originLat = addr.latitude
     originLng = addr.longitude
   }
 
-  // Fallback to direct properties if any
   originLat = originLat || origin.latitude
   originLng = originLng || origin.longitude
-
-  console.log('drawRoute: Origin:', { originLat, originLng })
 
   if (!originLat || !originLng) {
     console.warn('drawRoute: Origin missing coordinates')
     return
   }
 
-  // Draw route segments
-  let prevLat = originLat
-  let prevLng = originLng
+  // Build waypoints and destination
+  // We take the last stop as the destination and others in between as waypoints
+  const destinationStop = validStops[validStops.length - 1]
+  const waypointsStops = validStops.slice(0, -1)
 
-  for (let i = 0; i < stops.value.length; i++) {
-    const stop = stops.value[i]
-    const stopLat = stop.latitude
-    const stopLng = stop.longitude
+  const waypoints = waypointsStops.map(stop => ({
+    location: {
+      lat: parseFloat(stop.latitude),
+      lng: parseFloat(stop.longitude)
+    },
+    stopover: true
+  }))
 
-    console.log(`drawRoute: Processing segment to stop ${i + 1}:`, { stopLat, stopLng })
+  try {
+    const result = await new Promise((resolve, reject) => {
+      directionsService.route(
+        {
+          origin: { lat: parseFloat(originLat), lng: parseFloat(originLng) },
+          destination: {
+            lat: parseFloat(destinationStop.latitude),
+            lng: parseFloat(destinationStop.longitude)
+          },
+          waypoints,
+          travelMode: google.maps.TravelMode.DRIVING,
+          optimizeWaypoints: false // Keep the user's/manual order
+        },
+        (response, status) => {
+          if (status === 'OK') {
+            resolve(response)
+          } else {
+            console.error('Directions request failed due to ' + status)
+            reject(status)
+          }
+        }
+      )
+    })
 
-    if (!stopLat || !stopLng) {
-      console.warn(`drawRoute: Stop ${i + 1} missing coordinates, skipping path`)
-      continue
-    }
-
-    try {
-      const result = await directionsService.route({
-        origin: { lat: parseFloat(prevLat), lng: parseFloat(prevLng) },
-        destination: { lat: parseFloat(stopLat), lng: parseFloat(stopLng) },
-        travelMode: google.maps.TravelMode.DRIVING
+    // Process result and update distances/durations for each stop
+    if (result.routes && result.routes[0]) {
+      const legs = result.routes[0].legs
+      // Each leg corresponds to a segment: Branch->Stop1, Stop1->Stop2, etc.
+      legs.forEach((leg, index) => {
+        // Note: validStops[index] is the destination of leg[index]
+        const stop = validStops[index]
+        if (stop) {
+          stop.distance_text = leg.distance.text
+          stop.duration_text = leg.duration.text
+          stop.distance_value = leg.distance.value
+          stop.duration_value = leg.duration.value
+        }
       })
 
+      // Create a single renderer for the entire route
       const renderer = new google.maps.DirectionsRenderer({
         map: map.value,
         suppressMarkers: true,
@@ -1217,11 +1195,14 @@ async function drawRoute () {
 
       renderer.setDirections(result)
       routePaths.value.push(renderer)
-
-      prevLat = stopLat
-      prevLng = stopLng
-    } catch (error) {
-      console.error('Error drawing route segment:', error)
+    }
+  } catch (error) {
+    console.error('Error drawing route:', error)
+    if (error === 'MAX_WAYPOINTS_EXCEEDED') {
+      $q.notify({
+        type: 'warning',
+        message: 'La ruta es demasiado larga para mostrarse completa. Google Maps permite hasta 25 paradas.'
+      })
     }
   }
 }
@@ -1719,7 +1700,7 @@ async function saveRoute () {
     console.error('Error saving route:', error)
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Error al guardar la ruta'
+      message: error.response?.data?.message || error.message || 'Error al guardar la ruta'
     })
   } finally {
     saving.value = false

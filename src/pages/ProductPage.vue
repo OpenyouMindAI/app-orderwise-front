@@ -18,6 +18,18 @@
           </q-btn>
 
           <q-btn
+            id="tour-btn-agregar-receta"
+            color="secondary"
+            @click="openAddRecipeDialog"
+            icon="restaurant"
+            round
+            size="md"
+            class="shadow-2"
+          >
+            <q-tooltip>Crear Receta</q-tooltip>
+          </q-btn>
+
+          <q-btn
             id="tour-btn-filtrar"
             color="primary"
             @click="dialogFilter = true"
@@ -187,6 +199,16 @@
             @click="openAddProductDialog"
             icon="add_circle"
             label="Agregar Producto"
+            unelevated
+            class="shadow-2"
+          />
+
+          <q-btn
+            id="tour-btn-agregar-receta-desktop"
+            color="secondary"
+            @click="openAddRecipeDialog"
+            icon="restaurant"
+            label="Crear Receta"
             unelevated
             class="shadow-2"
           />
@@ -974,10 +996,27 @@
           ref="formAddProduct"
           :class="$q.screen.lt.sm ? 'col column' : ''"
         >
-            <q-card-section
-            :class="$q.screen.lt.sm ? 'col scroll' : 'scroll'"
-            :style="$q.screen.lt.sm ? '' : 'height: calc(100vh - 200px);'"
-          >
+        <q-tabs
+          v-model="tab"
+          class="text-grey col-auto"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
+          narrow-indicator
+        >
+          <q-tab name="basicData" label="Datos básicos" />
+          <q-tab name="recipe" label="Receta (Ingredientes)" v-if="isRecipeType && !isProduct"/>
+        </q-tabs>
+
+        <q-separator />
+
+        <q-tab-panels
+          v-model="tab"
+          animated
+          :class="$q.screen.lt.sm ? 'col scroll' : 'scroll'"
+          :style="$q.screen.lt.sm ? '' : 'height: calc(100vh - 240px);'"
+        >
+          <q-tab-panel name="basicData">
             <div class="row q-col-gutter-md">
               <div class="row col-md-7 col-xs-12 col-sm-12">
                 <!-- Datos básicos -->
@@ -1046,13 +1085,13 @@
                               :rules="[val => !!val || 'Requerido']"
                             >
                                <template v-slot:option="scope">
-                                <q-item v-bind="scope.itemProps">
-                                  <q-item-section>
-                                    <q-item-label>{{ scope.opt.label }}</q-item-label>
-                                    <q-item-label caption>{{ scope.opt.description }}</q-item-label>
-                                  </q-item-section>
-                                </q-item>
-                              </template>
+                                 <q-item v-bind="scope.itemProps">
+                                   <q-item-section>
+                                     <q-item-label>{{ scope.opt.label }}</q-item-label>
+                                     <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                                   </q-item-section>
+                                 </q-item>
+                               </template>
                             </q-select>
                         </div>
                         <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
@@ -1390,7 +1429,13 @@
                 </q-card>
               </div>
             </div>
-          </q-card-section>
+          </q-tab-panel>
+
+          <q-tab-panel name="recipe" v-if="isRecipeType && !isProduct">
+            <recipe-product :product="product" @update:ingredients="handleRecipeIngredientsUpdate"/>
+          </q-tab-panel>
+        </q-tab-panels>
+
           <q-card-actions align="right" class="q-pa-md col-auto">
             <q-btn color="secondary" label="Cancelar" @click="closeModal" />
             <q-btn color="primary" label="Guardar" type="submit" :loading="visible" unelevated />
@@ -2318,6 +2363,7 @@ export default {
         product_type: 'PRODUCT',
         base_quantity: 1
       },
+      tempRecipeIngredients: [],
       productTypeOptions: [
         { label: 'Producto', value: 'PRODUCT', description: 'Producto para venta' },
         { label: 'Materia Prima', value: 'RAW_MATERIAL', description: 'Insumo básico para recetas' },
@@ -2843,7 +2889,7 @@ export default {
       // Extraer solo dígitos
       const digits = val.replace(/\D/g, '')
       priceList.profitPercentageValue = digits ? parseInt(digits) : 0
-      
+
       this.formatPriceListMargin(priceList)
     },
 
@@ -3427,6 +3473,7 @@ export default {
       this.openEditProduct = false
       this.originalProduct = null
       this.priceLists = []
+      this.tempRecipeIngredients = []
       this.product = {
         images: [],
         is_bundle: 0,
@@ -3482,7 +3529,6 @@ export default {
         }
       })
         .then(({ data }) => {
-          console.log('Respuesta de la API al obtener productos:', data)
           this.products = data.data
           this.visible = false
           this.paginationConfig.rowsNumber = data.total
@@ -3544,10 +3590,15 @@ export default {
           this.closeModal()
 
           Notify.create({
-            message: 'Producto creado exitosamente',
+            message: this.product.product_type === 'FINISHED_GOOD' ? 'Receta creada exitosamente' : 'Producto creado exitosamente',
             icon: 'check_circle',
             color: 'positive'
           })
+
+          // Si es una receta y tiene ingredientes temporales, guardarlos ahora
+          if (this.tempRecipeIngredients && this.tempRecipeIngredients.length > 0) {
+            this.saveRecipeIngredients(data.id)
+          }
 
           this.trackDemoAction(true)
 
@@ -3985,6 +4036,52 @@ export default {
      */
     openAddProductDialog () {
       this.openAddProduct = true
+    },
+    /**
+     * Open add recipe dialog
+     */
+    openAddRecipeDialog () {
+      this.product = {
+        is_bundle: 0,
+        show_catalog: 1,
+        is_addons: 0,
+        skip_stock: 0,
+        profit_percentage: 0,
+        images: [],
+        product_type: 'FINISHED_GOOD',
+        base_quantity: 1
+      }
+      this.tempRecipeIngredients = []
+      this.tab = 'recipe'
+      this.openAddProduct = true
+    },
+    /**
+     * Handle update of recipe ingredients from the child component
+     */
+    handleRecipeIngredientsUpdate (ingredients) {
+      this.tempRecipeIngredients = ingredients
+    },
+    /**
+     * Save recipe ingredients for a newly created product
+     * @param {Number} productId
+     */
+    async saveRecipeIngredients (productId) {
+      try {
+        for (const ingredient of this.tempRecipeIngredients) {
+          await this.$api.post(`products/${productId}/recipe`, {
+            product_id: productId,
+            ingredient_id: ingredient.ingredient_id,
+            quantity: ingredient.quantity,
+            unit_of_measure_id: ingredient.unit_of_measure_id,
+            waste_percentage: ingredient.waste_percentage
+          })
+        }
+        // Recargar productos para asegurar costos actualizados
+        this.getProducts()
+      } catch (error) {
+        console.error('Error saving recipe ingredients:', error)
+        notify('Error al guardar algunos ingredientes de la receta', 'warning')
+      }
     },
     /**
      * Check and start tour on first visit

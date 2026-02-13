@@ -31,7 +31,7 @@
 
           <div class="divider"></div>
 
-          <!-- Payment Details (Compact) -->
+          <!-- Payment Details (Combined) -->
           <div class="details-grid" v-if="paymentDetails">
             <div class="detail-item">
               <span class="label">Plan</span>
@@ -41,13 +41,21 @@
               <span class="label">Monto</span>
               <span class="value">${{ paymentDetails.amount }}</span>
             </div>
+            <div class="detail-item">
+              <span class="label">ID de Pago</span>
+              <span class="value">{{ paymentDetails.payment_id }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">Fecha</span>
+              <span class="value">{{ paymentDetails.date }}</span>
+            </div>
           </div>
 
-          <button @click="goHome" class="btn-primary">
-            <span>Ir al Dashboard</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
+          <!-- Action Button -->
+          <button @click="goHome" class="btn-primary q-mt-md">
+            <span>{{ needsCompanySetup ? 'Configurar mi empresa' : 'Ir al Inicio' }}</span>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
         </div>
@@ -70,11 +78,12 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { notify } from 'src/const/mixins'
 import { api } from 'boot/axios'
 import { usePixel } from 'src/composables/usePixel'
+import { authentication } from 'src/stores/module-authentication'
 import confetti from 'canvas-confetti'
 
 export default {
@@ -83,6 +92,7 @@ export default {
     const router = useRouter()
     const route = useRoute()
     const fbq = usePixel()
+    const store = authentication()
 
     const loading = ref(true)
     const paymentVerified = ref(false)
@@ -123,6 +133,13 @@ export default {
         startVelocity: 45
       })
     }
+
+    /**
+     * Check if the user needs to configure their company
+     */
+    const needsCompanySetup = computed(() => {
+      return !store.userSession?.company_session?.id
+    })
 
     /**
      * Verificar el estado del pago con Mercado Pago
@@ -223,10 +240,10 @@ export default {
           localStorage.removeItem('mp_plan_id')
           localStorage.removeItem('mp_plan_name')
 
-          // Esperar un momento
-          await new Promise(resolve => setTimeout(resolve, 1500))
+          // Esperar un momento para que el webhook procese el pago (y opcionalmente vincule el usuario si el backend lo hace automático)
+          await new Promise(resolve => setTimeout(resolve, 2000))
 
-          // Recargar suscripción actual
+          // Recargar suscripción actual y datos del usuario
           await reloadSubscription()
         } else {
           paymentVerified.value = false
@@ -247,9 +264,25 @@ export default {
       }
     }
 
+    /**
+     * Recargar la suscripción actual del usuario y sus datos de sesión
+     */
     const reloadSubscription = async () => {
       try {
+        console.log('[Success Page] Recargando suscripción y sesión...')
         const response = await api.get('subscriptions/current')
+        console.log('[Success Page] Suscripción actualizada:', response.data)
+
+        // Actualizar el store de autenticación con la nueva suscripción
+        store.setSubscriptionData(response.data)
+
+        // También intentar refrescar el perfil del usuario para ver si ya tiene empresa vinculada
+        const userResponse = await api.get('authentication/user')
+        if (userResponse.data) {
+          store.userSession = userResponse.data
+        }
+
+        // Emitir evento para que otros componentes se actualicen
         window.dispatchEvent(new CustomEvent('subscription-updated', {
           detail: response.data
         }))
@@ -258,11 +291,28 @@ export default {
       }
     }
 
+    /**
+     * Navegar según el estado de la empresa
+     */
     const goHome = () => {
       if (paymentVerified.value) {
         notify('¡Suscripción activada!', 'positive', 'check_circle')
       }
-      router.push('/')
+
+      if (needsCompanySetup.value) {
+        // Redirigir a la home con los parámetros de pago para que MainLayout active el modal de setup
+        router.push({
+          path: '/',
+          query: {
+            status: 'approved',
+            payment_id: route.query.payment_id,
+            preference_id: route.query.preference_id
+          }
+        })
+      } else {
+        // Si ya tiene empresa, ir directo al inicio
+        router.push('/')
+      }
     }
 
     onMounted(() => {
@@ -273,7 +323,8 @@ export default {
       loading,
       paymentVerified,
       paymentDetails,
-      goHome
+      goHome,
+      needsCompanySetup
     }
   }
 }

@@ -693,10 +693,19 @@
       @google-success="handleGoogleRegisterSuccess"
     />
 
+    <!-- Business Type Modal -->
+    <business-type-modal
+      v-model="showBusinessTypeSetup"
+      @submit="handleBusinessTypeNext"
+      @back="showBusinessTypeSetup = false"
+    />
+
     <!-- Company Setup Modal -->
     <company-setup-modal
       v-model="showCompanySetup"
       :user-email="companySetupEmail"
+      :initial-business-data="tempCompanyData"
+      :registration-data="registrationFormData"
       @success="handleCompanySetupSuccess"
     />
 
@@ -756,6 +765,7 @@ import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationB
 import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
 import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import BusinessTypeModal from 'src/components/Register/BusinessTypeModal.vue'
 import PremiumBadge from 'src/components/PremiumBadge.vue'
 import IntegrationDynamic from 'src/components/Integrations/IntegrationDynamic.vue'
 import { authentication } from 'src/stores/module-authentication'
@@ -789,6 +799,7 @@ export default {
     RegisterDialog,
     OtpVerificationDialog,
     CompanySetupModal,
+    BusinessTypeModal,
     PremiumBadge,
     IntegrationDynamic,
     BottomNav,
@@ -866,6 +877,21 @@ export default {
        * @type {Boolean}
        */
       showCompanySetup: false,
+      /**
+       * Show business type setup modal
+       * @type {Boolean}
+       */
+      showBusinessTypeSetup: false,
+      /**
+       * Temporary company data from business type modal
+       * @type {Object}
+       */
+      tempCompanyData: null,
+      /**
+       * Saved registration form data
+       * @type {Object}
+       */
+      registrationFormData: null,
       /**
        * Company setup email
        * @type {String}
@@ -1097,6 +1123,12 @@ export default {
         this.showDemoModal = false
         this.showSubscriptionDialog = true
       }
+    },
+    '$route.query': {
+      handler () {
+        this.checkPaymentReturn()
+      },
+      deep: true
     }
   },
   setup () {
@@ -1163,9 +1195,13 @@ export default {
     // Listener global de clicks con silenciador inteligente
     document.addEventListener('click', this.handleGlobalClick)
 
+    // CHECK POR RETORNO DE MERCADO PAGO
+    this.checkPaymentReturn()
+
     // Init demo persuasion logic (immediate trigger + timer)
     this.initDemoPersuasion()
   },
+
   beforeUnmount () {
     this.stopDemoReminder()
     this.stopDemoPersuasion()
@@ -1183,10 +1219,34 @@ export default {
   },
   methods: {
     /**
+     * Verifica si el usuario vuelve de un pago exitoso y necesita configurar su empresa
+     */
+    checkPaymentReturn () {
+      const urlParams = new URLSearchParams(window.location.search)
+      const paymentStatus = urlParams.get('status') || urlParams.get('collection_status') || this.$route.query.status
+
+      if (paymentStatus === 'approved' && this.userSession) {
+        // Solo mostrar el modal si NO tiene empresa configurada
+        if (!this.userSession.company_session?.id) {
+          // Intentar recuperar los datos del registro previo para el Skip Setup
+          const savedRegData = localStorage.getItem('registration_form_data')
+          if (savedRegData) {
+            this.registrationFormData = JSON.parse(savedRegData)
+          }
+          this.showBusinessTypeSetup = true
+        } else {
+          // Si ya tiene empresa y el status es approved, podríamos redirigir al dashboard
+          // para evitar que se quede pegado el modal o la URL
+          if (this.$route.path === '/') {
+            this.$router.push('/')
+          }
+        }
+      }
+    },
+    /**
      * Smart click tracker with contextual silencing
      */
     handleGlobalClick (event) {
-      // 1. SILENCIO POR DIÁLOGOS ABIERTOS (Contexto de conversión)
       if (
         this.showSubscriptionDialog ||
         this.showCreateCompanyDialog ||
@@ -1195,22 +1255,18 @@ export default {
         this.showDemoModal
       ) return
 
-      // 2. SILENCIO POR RUTAS CRÍTICAS
       const silentRoutes = ['Register', 'Welcome', 'SubscriptionSuccess', 'SubscriptionFailure', 'SubscriptionPending']
       if (silentRoutes.includes(this.$route.name)) return
 
-      // 3. SILENCIO ESTRUCTURAL (Navbar y Herramientas)
       if (
         event.target.closest('.modern-header') ||
         event.target.closest('.tools-popup')
       ) return
 
-      // 4. SILENCIO POR HEURÍSTICA DE ICONOS (Clicks en sistema)
       const systemIcons = ['close', 'help', 'info', 'help_outline', 'arrow_back']
       const clickedIcon = event.target.innerText?.trim().toLowerCase()
       if (systemIcons.includes(clickedIcon)) return
 
-      // Si pasa los filtros, registramos la acción
       this.trackDemoAction()
     },
     /**
@@ -1319,6 +1375,17 @@ export default {
         this.otpIdentifier = data.user_email || data.user?.email
         this.otpSessionToken = data.session_token || ''
 
+        // Persistir datos para el Skip Setup
+        const regData = {
+          name: data.name || data.user?.name || '',
+          last_name: data.last_name || data.user?.last_name || '',
+          email: this.companySetupEmail,
+          phone_number: data.phone_number || data.user?.phone || '',
+          timestamp: Date.now()
+        }
+        this.registrationFormData = regData
+        localStorage.setItem('registration_form_data', JSON.stringify(regData))
+
         await new Promise(resolve => setTimeout(resolve, 300))
 
         this.showOtpVerification = true
@@ -1334,25 +1401,19 @@ export default {
      */
     async handleGoogleRegisterSuccess (data) {
       try {
-        // Cerrar el diálogo de registro primero
         this.showCreateCompanyDialog = false
 
-        // Esperar a que el diálogo se cierre completamente
         await this.$nextTick()
 
-        // Iniciar sesión automáticamente con los datos del usuario
         await this.store.setSessionData(data.user)
 
-        // Guardar el email para el setup de la empresa
         this.companySetupEmail = data.userInfo?.email || data.user.email
 
-        // Pequeña pausa antes de mostrar el siguiente modal
         await new Promise(resolve => setTimeout(resolve, 300))
 
-        // Mostrar el modal de configuración de empresa
-        this.showCompanySetup = true
+        await this.proceedToPaymentFirst()
 
-        notify('Registro exitoso con Google. Configura tu empresa', 'positive', 'check_circle')
+        notify('Registro exitoso con Google.', 'positive', 'check_circle')
       } catch (error) {
         console.error('Error al procesar registro con Google:', error)
         notify('Error al procesar el registro', 'negative', 'warning')
@@ -1371,14 +1432,37 @@ export default {
       try {
         this.showOtpVerification = false
 
-        this.showCompanySetup = true
+        await this.proceedToPaymentFirst()
 
-        notify('Correo verificado. Ahora crea tu empresa', 'positive', 'check_circle')
+        notify('Correo verificado.', 'positive', 'check_circle')
       } catch (error) {
         console.error('Error al procesar verificación OTP:', error)
         notify('Error al procesar la verificación', 'negative', 'warning')
       }
     },
+    /**
+     * New method to handle payment flow before company setup
+     */
+    async proceedToPaymentFirst () {
+      const hasPendingPlan = localStorage.getItem('pending_plan_subscription')
+
+      if (hasPendingPlan) {
+        const redirected = await this.processPendingSubscription()
+        if (redirected) return
+      }
+
+      this.showSubscriptionDialog = true
+    },
+
+    /**
+     * Handle business type next step
+     */
+    handleBusinessTypeNext (businessData) {
+      this.tempCompanyData = businessData
+      this.showBusinessTypeSetup = false
+      this.showCompanySetup = true
+    },
+
     /**
      * Handle company setup success
      */
@@ -1401,6 +1485,18 @@ export default {
         }
 
         notify('¡Empresa configurada exitosamente! 🎉', 'positive', 'check_circle')
+
+        // Chequear pending contact advisor
+        const pendingAdvisor = localStorage.getItem('pending_contact_advisor')
+        if (pendingAdvisor) {
+          localStorage.removeItem('pending_contact_advisor')
+          this.$router.push({ name: 'Support' })
+          return
+        }
+
+        // Recargar los módulos y estados para que el menú se vea correctamente sin refrescar
+        this.loadingPage()
+
         this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
@@ -1479,6 +1575,8 @@ export default {
 
         // Notificación de éxito con animación
         notify('¡Empresa creada exitosamente! 🎉', 'positive', 'check_circle')
+
+        this.loadingPage()
 
         this.$router.push('/')
       } catch (error) {
@@ -2047,7 +2145,7 @@ export default {
 
       // Check if company is demo or plan is free
       const isDemo = this.store.isDemo
-      const isFree = this.currentSubscription?.plan?.slug === 'free' || !this.currentSubscription?.plan?.slug
+      const isFree = this.currentSubscription?.plan && this.currentSubscription?.plan?.slug === 'free'
 
       // If demo or free plan, hide premium modules
       if (isDemo || isFree) {

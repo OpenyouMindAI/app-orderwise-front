@@ -93,7 +93,7 @@ export const authentication = defineStore('authentication', {
      */
     initStore () {
       return (
-        this.user === null ||
+        this.userSession === null ||
         this.access_token === 'null' ||
         this.access_token === null ||
         this.token_type === null
