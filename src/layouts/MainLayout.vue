@@ -1133,12 +1133,14 @@ export default {
   },
   setup () {
     const router = useRouter()
-    const { showDemoModal, trackDemoAction } = useDemoPersuasion()
+    const { showDemoModal, trackDemoAction, initDemoPersuasion, stopDemoPersuasion } = useDemoPersuasion()
 
     return {
       router,
       showDemoModal,
-      trackDemoAction
+      trackDemoAction,
+      initDemoPersuasion,
+      stopDemoPersuasion
     }
   },
 
@@ -1195,10 +1197,14 @@ export default {
 
     // CHECK POR RETORNO DE MERCADO PAGO
     this.checkPaymentReturn()
+
+    // Init demo persuasion logic (immediate trigger + timer)
+    this.initDemoPersuasion()
   },
 
   beforeUnmount () {
     this.stopDemoReminder()
+    this.stopDemoPersuasion()
     document.removeEventListener('click', this.handleGlobalClick)
   },
   unmounted () {
