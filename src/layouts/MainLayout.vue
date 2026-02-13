@@ -634,7 +634,7 @@
     <q-page-container :class="{ 'with-bottom-nav': $q.screen.lt.md && !$route.meta.hideBottomNav }">
       <router-view />
     </q-page-container>
-<!-- 
+<!--
     <q-page-sticky
       v-if="showOnboardingFab && onboardingProgress < 100 && !isWelcomePage"
       position="bottom-right"
@@ -700,7 +700,7 @@
     <business-type-modal
       v-model="showBusinessTypeSetup"
       @submit="handleBusinessTypeNext"
-      @back="showBusinessTypeSetup = false"
+      @back="showBusinessTypeSetup = false; showSubscriptionDialog = true"
     />
 
     <!-- Company Setup Modal -->
@@ -1133,6 +1133,15 @@ export default {
       if (val) {
         this.showDemoModal = false
         this.showSubscriptionDialog = true
+      }
+    },
+    showSubscriptionDialog (newVal, oldVal) {
+      if (oldVal === true && newVal === false) {
+        // Si el usuario cierra el modal de planes y no tiene empresa configurada,
+        // lo llevamos al siguiente paso del flujo (Setup de empresa)
+        if (this.userSession && !this.userSession.company_session?.id && !this.store.isDemo) {
+          this.showBusinessTypeSetup = true
+        }
       }
     },
     '$route.query': {

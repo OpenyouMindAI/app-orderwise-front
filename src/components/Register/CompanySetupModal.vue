@@ -241,7 +241,6 @@ const form = ref({
   company_email: props.userEmail || '',
   company_phone: '',
   company_address: '',
-  business_type: null,
   country_id: null,
   copy_test_products: false
 })
@@ -333,7 +332,6 @@ const setupCompany = async () => {
     const payload = {
       ...form.value,
       business_type_id: props.initialBusinessData?.business_type_id || null,
-      copy_test_products: props.initialBusinessData?.copy_test_products || false,
       company_phone: form.value.company_phone
         ? `${selectedCountry.value?.code || ''}${form.value.company_phone}`.trim()
         : ''
@@ -356,7 +354,7 @@ const setupCompany = async () => {
   } catch (error) {
     notifyValidationErrors(error, 'Error al configurar empresa')
   } finally {
-    loadingSkip.value = false
+    loading.value = false
   }
 }
 
