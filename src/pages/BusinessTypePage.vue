@@ -401,6 +401,22 @@ export default {
           sortable: true
         },
         {
+          name: 'modules',
+          align: 'left',
+          label: 'Modulos Habilitados',
+          field: 'modules',
+          format: (val) => val.length,
+          sortable: true
+        },
+        {
+          name: 'pixel',
+          align: 'left',
+          label: 'Pixel de Meta',
+          field: 'pixel',
+          format: (val) => val || 'No configurado',
+          sortable: true
+        },
+        {
           name: 'description',
           align: 'left',
           label: 'Descripción',

@@ -14,8 +14,33 @@
         <div class="loading-spinner">
           <q-spinner-dots size="80px" color="white" />
         </div>
-        <h2>Preparando tu suscripción...</h2>
-        <p>Redirigiendo a Mercado Pago</p>
+        <div class="column">
+          <span class="text-white text-h4">Preparando tu suscripción...</span>
+          <span class="text-white text-h6">Redirigiendo a Mercado Pago</span>
+        </div>
+      </div>
+
+      <!-- New: Plans Selection Integrated -->
+      <div v-if="isAuthenticated && !processingPayment && !errorMessage" class="plans-selection-view">
+        <div class="selection-header text-center q-mb-xl">
+          <div class="selection-badge q-mb-sm">
+            <q-icon name="auto_awesome" size="14px" />
+            <span>Oferta Exclusiva</span>
+          </div>
+          <h2 class="selection-title">Elige tu Plan Premium</h2>
+          <p class="selection-subtitle">Desbloquea todas las funciones y potencia tu negocio hoy mismo</p>
+        </div>
+
+        <q-btn
+          unelevated
+          no-caps
+          label="Ver planes disponibles"
+          color="white"
+          text-color="primary"
+          size="lg"
+          class="show-plans-btn"
+          @click="showPlansDialog = true"
+        />
       </div>
 
       <!-- Error State -->
@@ -133,6 +158,9 @@
           </div>
         </q-card>
       </q-dialog>
+
+      <!-- Componente de Planes -->
+      <SubscriptionPlansDialog v-model="showPlansDialog" />
     </div>
   </div>
 </template>
@@ -142,13 +170,18 @@ import { mapActions } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { api } from 'boot/axios'
 import { notify, qBitsLogo } from 'src/const/mixins'
+import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 
 export default {
   name: 'QuickSubscribePage',
+  components: {
+    SubscriptionPlansDialog
+  },
   data () {
     return {
       qBitsLogo,
       showLoginDialog: false,
+      showPlansDialog: false,
       showPassword: false,
       loading: false,
       processingPayment: false,
@@ -170,7 +203,7 @@ export default {
   async mounted () {
     this.loadGoogleScript()
     if (this.isAuthenticated) {
-      await this.processSubscription()
+      this.showPlansDialog = true
     } else {
       this.showLoginDialog = true
     }
@@ -267,7 +300,7 @@ export default {
       try {
         await this.login({ username: this.loginForm.email, password: this.loginForm.password })
         this.showLoginDialog = false
-        await this.processSubscription()
+        this.showPlansDialog = true
       } catch (error) {
         notify(error.response?.data?.message || 'Error login', 'negative', 'error')
       } finally {
@@ -277,30 +310,13 @@ export default {
 
     async retrySubscription () {
       this.errorMessage = ''
-      await this.processSubscription()
+      this.showPlansDialog = true
     },
 
     async processSubscription () {
-      this.processingPayment = true
-      try {
-        const { data: plans } = await api.get('subscription-plans')
-        const firstPlan = plans.find(p => p.slug?.toLowerCase() !== 'free')
-        if (!firstPlan) throw new Error('No hay planes disponibles')
-
-        const response = await api.post('mercadopago/create-payment', {
-          subscription_plan_id: firstPlan.id,
-          branch_offices_count: 1,
-          months: 1
-        })
-
-        if (!response.data.init_point) throw new Error('Error al crear link de pago')
-
-        localStorage.setItem('mp_plan_id', firstPlan.id)
-        window.location.href = response.data.init_point
-      } catch (error) {
-        this.errorMessage = error.response?.data?.message || error.message
-        this.processingPayment = false
-      }
+      // Esta función ya no se usa directamente al cargar,
+      // ahora se abre el diálogo para elegir el plan
+      this.showPlansDialog = true
     }
   }
 }
@@ -351,9 +367,67 @@ export default {
   justify-content: center;
 }
 
-.loading-state, .error-state {
+.loading-state, .error-state, .plans-selection-view {
   color: white;
   h2 { margin: 0 0 10px; font-weight: 700; }
+}
+
+/* PLANS SELECTION VIEW */
+.plans-selection-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 600px;
+  width: 90%;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: cardEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.selection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.selection-title {
+  font-size: 42px;
+  font-weight: 800;
+  margin: 10px 0;
+  line-height: 1.1;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.selection-subtitle {
+  font-size: 18px;
+  opacity: 0.9;
+  font-weight: 500;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.show-plans-btn {
+  height: 60px;
+  padding: 0 40px;
+  border-radius: 18px;
+  font-weight: 800;
+  font-size: 17px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+  }
 }
 
 /* MODAL DESIGN CLON DE LOGINPAGE + BORDES REDONDOS */

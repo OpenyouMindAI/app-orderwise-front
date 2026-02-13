@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="row items-center q-mb-md">
         <div class="col">
-          <div class="text-h4 text-weight-bolder text-primary flex items-center">
+          <div class="text-h6 text-weight-bolder text-primary flex items-center">
             <q-icon name="workspace_premium" size="md" class="q-mr-sm" />
             Gestión de Planes
           </div>
@@ -645,16 +645,8 @@ onMounted(loadPlans)
 
 <style lang="scss" scoped>
 .subscription-plans-page {
-  background: var(--q-dark-page, #f8f9fa);
   min-height: 100vh;
 }
-
-.glass-container {
-  background: rgba(var(--q-primary), 0.03);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(var(--q-primary), 0.1);
-}
-
 .premium-table {
   background: white !important;
   border-radius: 12px;
