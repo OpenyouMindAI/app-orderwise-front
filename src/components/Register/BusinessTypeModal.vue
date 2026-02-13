@@ -293,7 +293,6 @@ onMounted(() => {
 <style scoped>
 .modern-business-type-dialog {
   border-radius: 20px;
-  overflow: hidden;
   animation: dialogEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
