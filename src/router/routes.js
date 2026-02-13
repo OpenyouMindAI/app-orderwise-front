@@ -434,13 +434,13 @@ const routes = [
       {
         path: 'support',
         name: 'Support',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/SupportChatPage.vue')
       },
       {
         path: 'admin/support',
         name: 'AdminSupport',
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideBottomNav: true },
         component: () => import('pages/AdminSupportPage.vue')
       }
     ]

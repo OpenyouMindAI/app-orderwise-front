@@ -1,134 +1,250 @@
 <template>
   <q-page class="support-chat-page">
     <div class="chat-container">
-      <!-- Sidebar con lista de tickets -->
+      <!-- Sidebar estilo WhatsApp -->
       <div class="chat-sidebar" :class="{ 'mobile-hidden': selectedChat && $q.screen.lt.md }">
+        <!-- Modern Header -->
         <div class="sidebar-header">
-          <div class="header-content">
-            <q-icon name="headset_mic" size="32px" color="white" />
+          <div class="header-left">
+            <q-avatar size="45px" class="header-avatar shadow-2">
+              <img v-if="currentUser?.avatar" :src="currentUser.avatar" />
+              <div v-else class="avatar-fallback bg-white text-primary">
+                {{ getInitials(currentUser?.name) }}
+              </div>
+              <q-tooltip>Mi Perfil (Admin)</q-tooltip>
+            </q-avatar>
             <div class="header-text">
-              <div class="header-title">Panel de Soporte</div>
-              <div class="header-subtitle">{{ unreadCount }} tickets pendientes</div>
+              <div class="header-title">Orderwise Soporte</div>
+              <div class="header-subtitle">{{ currentUser?.name || 'Administrador' }}</div>
             </div>
           </div>
-          <q-btn
-            flat
-            round
-            dense
-            icon="refresh"
-            color="white"
-            @click="loadChats"
-            :loading="loading"
-            class="new-chat-btn"
-          >
-            <q-tooltip>Actualizar</q-tooltip>
-          </q-btn>
+          <div class="header-actions row no-wrap q-gutter-xs">
+            <q-btn flat round dense icon="refresh" size="sm" color="white"
+              @click="sidebarView === 'chats' ? loadChats() : fetchUsers()" :loading="loading">
+              <q-tooltip>Actualizar</q-tooltip>
+            </q-btn>
+            <q-btn flat round dense icon="chat" size="sm" color="white"
+              @click="sidebarView = sidebarView === 'users' ? 'chats' : 'users'; sidebarView === 'users' ? fetchUsers() : loadChats()">
+              <q-tooltip>{{ sidebarView === 'users' ? 'Ver chats' : 'Nuevo chat' }}</q-tooltip>
+            </q-btn>
+          </div>
         </div>
 
-        <div class="chat-list">
-          <!-- Filtros dentro de la card de la lista para mantener el diseño limpio -->
-          <div class="filter-section q-pa-md">
-            <div class="row q-col-gutter-sm">
-              <div class="col-12 col-sm-6">
-                <q-select
-                  v-model="filters.status"
-                  :options="statusOptions"
-                  label="Estado"
-                  dense
-                  filled
-                  emit-value
-                  map-options
-                  clearable
-                  @update:model-value="loadChats"
-                />
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="filters.search"
-                  placeholder="Buscar..."
-                  dense
-                  filled
-                  clearable
-                  @keyup.enter="loadChats"
-                >
-                  <template v-slot:append>
-                    <q-icon name="search" class="cursor-pointer" @click="loadChats" />
-                  </template>
-                </q-input>
-              </div>
-            </div>
+        <!-- Search Bar Modern -->
+        <div class="sidebar-search">
+          <q-input
+            v-if="sidebarView === 'chats'"
+            v-model="filters.search"
+            dense
+            rounded
+            outlined
+            placeholder="Buscar conversaciones..."
+            class="search-input"
+            @keyup.enter="loadChats()"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" size="20px" color="grey-6" />
+            </template>
+          </q-input>
+          <q-input
+            v-else
+            v-model="userSearch"
+            dense
+            rounded
+            outlined
+            placeholder="Buscar personas..."
+            class="search-input"
+            @keyup.enter="fetchUsers()"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" size="20px" color="grey-6" />
+            </template>
+          </q-input>
+        </div>
+
+        <!-- Modern Tabs -->
+        <div class="sidebar-tabs">
+          <div
+            class="tab-item"
+            :class="{ active: sidebarView === 'chats' }"
+            @click="sidebarView = 'chats'; loadChats()"
+          >
+            <span>Chats</span>
+            <q-badge v-if="unreadCount > 0" color="negative" floating>{{ unreadCount }}</q-badge>
           </div>
+          <div
+            class="tab-item"
+            :class="{ active: sidebarView === 'users' }"
+            @click="sidebarView = 'users'; fetchUsers()"
+          >
+            <span>Personas</span>
+          </div>
+        </div>
 
-          <q-scroll-area style="height: calc(100% - 130px);">
-            <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
-              <q-spinner color="primary" size="40px" />
-            </div>
+        <!-- Sidebar Content -->
+        <div class="chat-list">
+          <transition name="fade" mode="out-in">
+            <!-- ===== LISTA DE CHATS ===== -->
+            <q-scroll-area v-if="sidebarView === 'chats'" key="chats-view" class="fit">
+              <!-- Filtros de estado -->
+              <div class="status-filters">
+                <q-chip
+                  v-for="status in statusOptions"
+                  :key="status.value"
+                  clickable
+                  @click="filters.status = status.value; loadChats()"
+                  :class="['status-chip', { active: filters.status === status.value }]"
+                  size="sm"
+                >
+                  {{ status.label }}
+                </q-chip>
+              </div>
 
-            <div v-else-if="chats.length === 0" class="empty-state">
-              <q-icon name="inbox" size="64px" color="grey-5" />
-              <div class="empty-text">No hay tickets de soporte</div>
-            </div>
+              <div v-if="loading && chats.length === 0" class="text-center q-pa-lg">
+                <q-spinner-dots color="primary" size="40px" />
+              </div>
 
-            <div v-else class="chats-list-wrapper">
-              <div
-                v-for="chat in chats"
-                :key="chat.id"
-                class="chat-item-wrapper"
-                :class="{ 'active': selectedChat?.id === chat.id }"
-                @click="selectChat(chat)"
-              >
-                <div class="chat-item-content">
-                  <div class="chat-avatar">
-                    <q-avatar size="49px" :color="getPriorityColor(chat.priority)" text-color="white">
-                      {{ getInitials(chat.client?.name) }}
-                    </q-avatar>
-                  </div>
-                  <div class="chat-info">
-                    <div class="chat-header-row">
-                      <div class="chat-title">{{ chat.subject || 'Sin asunto' }}</div>
-                      <q-badge
-                        v-if="chat.unread_count > 0"
-                        color="negative"
-                        :label="chat.unread_count"
-                        class="q-ml-sm"
-                      />
+              <div v-else-if="chats.length === 0" class="empty-state">
+                <q-icon name="chat_bubble_outline" size="56px" color="grey-4" />
+                <div class="empty-text">No hay conversaciones</div>
+              </div>
+
+              <div v-else class="chats-list-wrapper">
+                <div
+                  v-for="chat in chats"
+                  :key="chat.id"
+                  class="chat-item-wrapper"
+                  :class="{ active: selectedChat?.id === chat.id }"
+                  @click="selectChat(chat)"
+                >
+                  <div class="chat-item-content">
+                    <div class="chat-avatar">
+                      <q-avatar size="50px">
+                        <img v-if="getChatPartner(chat)?.avatar" :src="getChatPartner(chat).avatar" />
+                        <div v-else class="avatar-fallback bg-teal-7 text-white">
+                          {{ getInitials(getChatPartner(chat)?.name) }}
+                        </div>
+                      </q-avatar>
                     </div>
-                    <div class="chat-client text-caption text-grey-7">
-                      <q-icon name="person" size="14px" class="q-mr-xs" />
-                      {{ chat.client?.name || 'Usuario' }}
+                    <div class="chat-info">
+                      <div class="chat-header-row">
+                        <div class="chat-title">{{ getChatPartner(chat)?.name || 'Usuario' }}</div>
+                        <div class="chat-meta">
+                          <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
+                        </div>
+                      </div>
+                      <div class="chat-preview" :class="{ 'text-weight-bold': chat.unread_count > 0 }">
+                        <q-icon
+                          v-if="chat.last_message?.sender_id === currentUser?.id"
+                          :name="chat.last_message?.is_read ? 'done_all' : 'done'"
+                          :color="chat.last_message?.is_read ? 'light-blue-5' : 'grey-5'"
+                          size="16px"
+                          class="q-mr-xs"
+                        />
+                         {{ truncateMessage(chat.last_message?.content) || (chat.type === 'chat' ? 'Empezar conversación' : chat.subject) || 'Sin mensajes' }}
+                      </div>
                     </div>
-                    <div class="chat-preview">
-                      {{ truncateMessage(chat.last_message?.content) || 'Sin mensajes' }}
-                    </div>
-                  </div>
-                  <div class="chat-meta">
-                    <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
-                    <q-chip
-                      :color="getStatusColor(chat.status)"
-                      text-color="white"
-                      size="sm"
-                      dense
-                    >
-                      {{ getStatusLabel(chat.status) }}
-                    </q-chip>
+                    <q-badge
+                      v-if="chat.unread_count > 0"
+                      color="negative"
+                      rounded
+                      :label="chat.unread_count"
+                    />
                   </div>
                 </div>
               </div>
-            </div>
-          </q-scroll-area>
 
-          <!-- Paginación en el footer de la card -->
-          <div v-if="pagination.lastPage > 1" class="pagination-section q-pa-sm border-top text-center">
-            <q-pagination
-              v-model="pagination.page"
-              :max="pagination.lastPage"
-              :max-pages="3"
-              direction-links
-              flat
-              dense
-              @update:model-value="loadChats"
-            />
-          </div>
+              <!-- Paginación -->
+              <div v-if="pagination.lastPage > 1" class="text-center q-pa-sm">
+                <q-pagination
+                  v-model="pagination.page"
+                  :max="pagination.lastPage"
+                  :max-pages="3"
+                  direction-links
+                  flat
+                  dense
+                  size="sm"
+                  @update:model-value="loadChats"
+                />
+              </div>
+            </q-scroll-area>
+
+            <!-- ===== VISTA DE USUARIOS ===== -->
+            <q-scroll-area v-else key="users-view" class="fit">
+              <!-- Usuarios Online primero -->
+              <div v-if="onlineUsersFiltered.length > 0" class="users-section">
+                <div class="section-label">En línea — {{ onlineUsersFiltered.length }}</div>
+                <div
+                  v-for="user in onlineUsersFiltered"
+                  :key="'on-' + user.id"
+                  class="chat-item-wrapper"
+                >
+                  <div class="chat-item-content" @click="openChatWithUser(user)">
+                    <div class="chat-avatar">
+                      <q-avatar size="48px">
+                        <img v-if="user.avatar" :src="user.avatar" />
+                        <div v-else class="avatar-fallback bg-primary text-white">{{ getInitials(user.name) }}</div>
+                        <div class="chat-status-dot active"></div>
+                      </q-avatar>
+                    </div>
+                    <div class="chat-info">
+                      <div class="chat-title">{{ user.name }}</div>
+                      <div class="chat-preview text-positive">Activo ahora</div>
+                    </div>
+                    <div class="contact-actions row no-wrap items-center">
+                      <q-btn flat round dense icon="chat" color="primary" size="sm" @click.stop="openChatWithUser(user)">
+                        <q-tooltip>Conversación</q-tooltip>
+                      </q-btn>
+                      <q-btn flat round dense icon="support_agent" color="secondary" size="sm" @click.stop="createSupportTicket(user)">
+                        <q-tooltip>Nuevo Ticket de Soporte</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Usuarios Offline -->
+              <div v-if="offlineUsersFiltered.length > 0" class="users-section">
+                <div class="section-label">Otros usuarios — {{ offlineUsersFiltered.length }}</div>
+                <div
+                  v-for="user in offlineUsersFiltered"
+                  :key="'off-' + user.id"
+                  class="chat-item-wrapper"
+                >
+                  <div class="chat-item-content" @click="openChatWithUser(user)">
+                    <div class="chat-avatar">
+                      <q-avatar size="48px">
+                        <img v-if="user.avatar" :src="user.avatar" />
+                        <div v-else class="avatar-fallback bg-grey-5 text-white">{{ getInitials(user.name) }}</div>
+                        <div class="chat-status-dot inactive"></div>
+                      </q-avatar>
+                    </div>
+                    <div class="chat-info">
+                      <div class="chat-title">{{ user.name }}</div>
+                      <div class="chat-preview text-grey-6">{{ user.company || 'Sin empresa' }}</div>
+                    </div>
+                    <div class="contact-actions row no-wrap items-center">
+                      <q-btn flat round dense icon="chat" color="primary" size="sm" @click.stop="openChatWithUser(user)">
+                        <q-tooltip>Conversación</q-tooltip>
+                      </q-btn>
+                      <q-btn flat round dense icon="support_agent" color="secondary" size="sm" @click.stop="createSupportTicket(user)">
+                        <q-tooltip>Nuevo Ticket de Soporte</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="loading && uniqueUsers.length === 0" class="text-center q-pa-lg">
+                <q-spinner-dots color="primary" size="40px" />
+              </div>
+
+              <div v-if="uniqueUsers.length === 0 && !loading" class="empty-state">
+                <q-icon name="person_search" size="56px" color="grey-4" />
+                <div class="empty-text">No se encontraron usuarios</div>
+              </div>
+            </q-scroll-area>
+          </transition>
         </div>
       </div>
 
@@ -136,20 +252,17 @@
       <div class="chat-main" :class="{ 'mobile-hidden': !selectedChat && $q.screen.lt.md }">
         <!-- Sin chat seleccionado -->
         <div v-if="!selectedChat" class="chat-empty">
-          <div class="empty-animation-wrapper">
-            <q-icon name="headset_mic" size="80px" color="primary" class="icon-support" />
-            <q-icon name="manage_accounts" size="80px" color="orange" class="icon-sales" />
-            <q-icon name="analytics" size="80px" color="secondary" class="icon-info" />
-          </div>
-          <div class="empty-title">Panel de Soporte</div>
-          <div class="empty-subtitle">
-            Selecciona un ticket de la lista para gestionar la incidencia y responder al cliente de manera profesional.
-          </div>
+           <q-icon name="support_agent" size="100px" color="primary" class="q-mb-lg" />
+           <div class="empty-title">Centro de Control de Soporte</div>
+           <p class="empty-subtitle text-grey-7 q-mt-md">
+             Selecciona una conversación a la izquierda para empezar a gestionar las solicitudes.
+             Puedes filtrar por estado o buscar usuarios específicos.
+           </p>
         </div>
 
         <!-- Chat seleccionado -->
         <div v-else class="chat-content">
-          <!-- Header del chat -->
+          <!-- Header Moderno -->
           <div class="chat-header">
             <q-btn
               v-if="$q.screen.lt.md"
@@ -159,140 +272,195 @@
               icon="arrow_back"
               @click="selectedChat = null"
               class="q-mr-sm"
+              color="primary"
             />
-            <q-avatar :color="getPriorityColor(selectedChat.priority)" text-color="white" size="45px">
-              {{ getInitials(selectedChat.client?.name) }}
-            </q-avatar>
-            <div class="header-info">
-              <div class="chat-name">{{ selectedChat.subject }}</div>
-              <div class="chat-client-info text-caption text-grey">
-                <q-icon name="person" size="14px" class="q-mr-xs" />
-                {{ selectedChat.client?.name }} - {{ selectedChat.client?.email }}
+            <q-avatar size="45px" class="q-mr-md shadow-1">
+              <img v-if="selectedChat.client?.avatar" :src="selectedChat.client.avatar" />
+              <div v-else class="avatar-fallback bg-primary text-white">
+                {{ getInitials(selectedChat.client?.name) }}
               </div>
-              <div class="chat-status">
-                <q-chip
-                  :color="getStatusColor(selectedChat.status)"
-                  text-color="white"
-                  size="sm"
-                  dense
-                >
-                  {{ getStatusLabel(selectedChat.status) }}
-                </q-chip>
-                <q-chip
-                  :color="getPriorityColor(selectedChat.priority)"
-                  text-color="white"
-                  size="sm"
-                  icon="priority_high"
-                  class="q-ml-xs"
-                >
-                  {{ getPriorityLabel(selectedChat.priority) }}
-                </q-chip>
+            </q-avatar>
+            <div class="header-info" @click="showContactInfo = !showContactInfo" style="cursor: pointer;">
+              <div class="chat-name text-weight-bold">{{ getChatPartner(selectedChat)?.name || 'Usuario' }}</div>
+              <div class="chat-status-text row no-wrap items-center">
+                <template v-if="isChatClientOnline(selectedChat.client_user_id || selectedChat.client?.id)">
+                  <q-badge rounded color="positive" class="q-mr-xs" size="8px" />
+                  <span class="text-positive text-caption">en línea ahora</span>
+                </template>
+                <template v-else>
+                  <span class="text-grey-6 text-caption">{{ selectedChat.type === 'chat' ? 'Conversación Social' : selectedChat.subject }}</span>
+                </template>
               </div>
             </div>
             <q-space />
-            <!-- Acciones del admin -->
-            <div class="admin-actions">
-              <q-btn
-                v-if="selectedChat.status !== 'closed'"
-                flat
-                round
-                icon="check_circle"
-                color="positive"
-                @click="closeChat"
+            <div class="header-actions row no-wrap q-gutter-x-sm">
+              <q-chip
+                v-if="selectedChat.type === 'support'"
+                :color="getStatusColor(selectedChat.status)"
+                text-color="white"
+                size="sm"
+                icon="label"
               >
-                <q-tooltip>Cerrar ticket</q-tooltip>
-              </q-btn>
-              <q-btn
-                v-else
-                flat
-                round
-                icon="refresh"
-                color="warning"
-                @click="reopenChat"
-              >
-                <q-tooltip>Reabrir ticket</q-tooltip>
+                {{ getStatusLabel(selectedChat.status) }}
+              </q-chip>
+              <q-btn flat round dense icon="more_vert" color="grey-7">
+                <q-menu>
+                  <q-list style="min-width: 150px">
+                    <q-item clickable v-close-popup @click="createSupportTicket(selectedChat.client)">
+                      <q-item-section>Crear Ticket</q-item-section>
+                    </q-item>
+                    <q-separator inset />
+                    <q-item v-if="selectedChat.status !== 'closed'" clickable v-close-popup @click="closeChat">
+                      <q-item-section class="text-negative">Cerrar Conversación</q-item-section>
+                    </q-item>
+                    <q-item v-else clickable v-close-popup @click="reopenChat">
+                      <q-item-section>Reabrir Conversación</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
               </q-btn>
             </div>
           </div>
 
-          <!-- Mensajes -->
+          <!-- Mensajes Estilo Moderno -->
           <div class="messages-container" ref="messagesContainer">
             <q-scroll-area class="fit" ref="scrollArea">
               <div class="messages-list">
                 <div
                   v-for="message in messages"
                   :key="message.id"
-                  :class="['message-wrapper', isOwnMessage(message) ? 'user-message' : 'assistant-message']"
+                  :class="[
+                    'message-wrapper',
+                    message.sender_id === currentUser?.id ? 'user-message' : 'assistant-message',
+                    {
+                      'is-image': message.type === 'image',
+                      'is-audio': message.type === 'audio',
+                      'has-content': message.content && message.content.trim() !== ''
+                    }
+                  ]"
                 >
-                  <div class="message-bubble">
-                    <div class="message-sender" v-if="!isOwnMessage(message)">
-                      <q-avatar size="20px" color="grey" text-color="white" class="q-mr-xs">
-                        {{ getInitials(message.sender?.name) }}
+                  <!-- Audio Message Bubble -->
+                  <div
+                    v-if="message.type === 'audio'"
+                    class="message-bubble audio-bubble"
+                  >
+                    <div class="audio-inner-layout">
+                      <q-avatar size="45px" class="audio-avatar">
+                        <img v-if="message.sender?.avatar" :src="getFullUrl(message.sender.avatar)" />
+                        <div v-else class="avatar-fallback bg-grey-8 text-white">
+                          {{ getInitials(message.sender?.name || 'S') }}
+                        </div>
+                        <q-icon name="mic" size="16px" class="mic-icon-overlay" color="primary" />
                       </q-avatar>
-                      {{ message.sender?.name || 'Cliente' }}
-                    </div>
-                    <!-- Attachment: Image -->
-                    <div v-if="message.type === 'image' && message.attachment_url" class="message-attachment image-attachment">
-                      <div class="image-container" @click="openImagePreview(message, getMessageImages(message))">
-                        <q-img
-                          :src="message.attachment_url"
-                          :alt="message.attachment_name"
-                          class="attachment-image"
-                          fit="cover"
-                          :ratio="4/3"
-                        >
-                          <template v-slot:loading>
-                            <div class="image-loading">
-                              <q-spinner color="white" size="32px" />
-                            </div>
-                          </template>
-                        </q-img>
-                        <div class="image-overlay">
-                          <q-icon name="zoom_in" size="28px" color="white" />
+                      <div class="audio-controls-wrapper">
+                        <AudioPlayer
+                          v-if="message.attachment_url"
+                          :src="getFullUrl(message.attachment_url)"
+                          :filename="message.attachment_name"
+                        />
+                        <div v-else class="text-caption italic opacity-50">Audio no disponible</div>
+                        <div class="message-footer">
+                          <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                          <q-icon
+                            v-if="isOwnMessage(message)"
+                            :name="message.is_read ? 'done_all' : 'done'"
+                            :color="message.is_read ? 'light-blue-4' : 'grey-5'"
+                            size="14px"
+                          />
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    <!-- Attachment: Video -->
-                    <div v-if="message.type === 'video' && message.attachment_url" class="message-attachment video-attachment">
-                      <video
-                        :src="message.attachment_url"
-                        controls
-                        class="attachment-video"
-                        preload="metadata"
-                        playsinline
-                      ></video>
+                  <!-- Image Message Bubble -->
+                  <div
+                    v-else-if="message.type === 'image'"
+                    class="message-bubble image-bubble"
+                  >
+                    <div class="image-content-wrapper" @click="openImagePreview(message, getMessageImages(message))">
+                       <q-img
+                        v-if="message.attachment_url"
+                        :src="getFullUrl(message.attachment_url)"
+                        class="whatsapp-image"
+                        fit="cover"
+                        loading="lazy"
+                        min-height="150px"
+                       >
+                         <template v-slot:loading>
+                           <q-spinner color="white" size="24px" />
+                         </template>
+                       </q-img>
+                       <div v-else class="q-pa-md text-center bg-grey-2 rounded-borders">
+                         <q-icon name="image_not_supported" size="32px" color="grey-5" />
+                         <div class="text-caption grey-7">Imagen no disponible</div>
+                       </div>
+
+                       <div class="image-footer-overlay" v-if="!message.content">
+                         <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                         <q-icon
+                            v-if="isOwnMessage(message)"
+                            :name="message.is_read ? 'done_all' : 'done'"
+                            :color="message.is_read ? 'light-blue-4' : 'grey-5'"
+                            size="14px"
+                          />
+                       </div>
+                    </div>
+                    <div v-if="message.content" class="message-content q-pa-sm">
+                       {{ message.content }}
+                       <div class="message-footer text-right">
+                          <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                          <q-icon
+                            v-if="isOwnMessage(message)"
+                            :name="message.is_read ? 'done_all' : 'done'"
+                            :color="message.is_read ? 'light-blue-4' : 'grey-5'"
+                            size="14px"
+                          />
+                       </div>
+                    </div>
+                  </div>
+
+                  <!-- Standard Text/File Message Bubble -->
+                  <div
+                    v-else
+                    class="message-bubble text-bubble"
+                  >
+                    <div
+                      v-if="message.sender_id !== currentUser?.id"
+                      class="message-sender client-sender"
+                    >
+                      {{ message.sender?.name || selectedChat.client?.name }}
                     </div>
 
-                    <!-- Attachment: File -->
-                    <div v-if="message.type === 'file' && message.attachment_url" class="message-attachment file-attachment">
-                      <a :href="message.attachment_url" target="_blank" class="file-link">
-                        <div class="file-icon-wrapper">
-                          <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="28px" />
-                        </div>
-                        <div class="file-info">
-                          <div class="file-name">{{ message.attachment_name }}</div>
-                          <div class="file-size">{{ formatFileSize(message.attachment_size) }}</div>
-                        </div>
-                        <q-btn flat round dense icon="download" color="primary" />
+                    <div v-if="message.type === 'file' && message.attachment_url" class="message-attachment file-link-wrapper">
+                      <a :href="getFullUrl(message.attachment_url)" target="_blank" class="file-link">
+                         <div class="file-icon-box">
+                           <q-icon name="description" size="24px" color="white" />
+                         </div>
+                         <div class="file-details">
+                           <span class="file-name">{{ message.attachment_name }}</span>
+                           <span class="file-size text-caption opacity-70">{{ message.attachment_size ? (message.attachment_size / 1024).toFixed(1) + ' KB' : 'Archivo' }}</span>
+                         </div>
                       </a>
                     </div>
 
-                    <div v-if="message.content" class="message-content">{{ message.content }}</div>
+                    <div class="message-content" v-if="message.content">{{ message.content }}</div>
+                    <div class="message-content italic opacity-50" v-else-if="message.type !== 'text' && !message.attachment_url">
+                      Mensaje sin contenido accesible
+                    </div>
+
                     <div class="message-footer">
                       <span class="message-time">{{ formatTime(message.created_at) }}</span>
                       <q-icon
                         v-if="isOwnMessage(message)"
                         :name="message.is_read ? 'done_all' : 'done'"
-                        :color="message.is_read ? 'primary' : 'grey'"
-                        size="16px"
-                        class="q-ml-xs"
+                        :color="message.is_read ? 'light-blue-4' : 'grey-5'"
+                        size="14px"
                       />
                     </div>
                   </div>
                 </div>
 
-                <!-- Typing indicator -->
+                <!-- Indicador de escritura Moderno -->
                 <div v-if="isTyping" class="message-wrapper assistant-message">
                   <div class="message-bubble typing-indicator">
                     <span></span>
@@ -302,110 +470,94 @@
                 </div>
               </div>
             </q-scroll-area>
-            <!-- New Messages Alert -->
+
+            <!-- Alerta de nuevos mensajes -->
             <transition name="fade">
-              <div v-if="showScrollButton" class="scroll-bottom-alert cursor-pointer" @click="scrollToBottom">
-                <q-chip
-                  v-if="unreadMessagesBelow > 0"
-                  color="positive"
-                  text-color="white"
-                  size="sm"
-                  class="q-mr-xs"
-                >
-                  {{ unreadMessagesBelow }}
-                </q-chip>
-                <span class="text-caption q-mr-sm">Nuevos mensajes</span>
+              <div v-if="showScrollButton" class="scroll-bottom-alert cursor-pointer shadow-10" @click="scrollToBottom">
+                <q-chip v-if="unreadMessagesBelow > 0" color="negative" size="xs" :label="unreadMessagesBelow" />
+                <span class="text-caption">Nuevos mensajes</span>
                 <q-icon name="arrow_downward" />
               </div>
             </transition>
           </div>
 
-          <!-- Input de mensaje -->
-          <div class="q-pa-md" v-if="selectedChat.status !== 'closed'">
+          <!-- Input de mensaje Moderno -->
+          <div class="q-pa-md border-top custom-input-area" v-if="selectedChat.status !== 'closed'">
             <!-- Preview del archivo seleccionado -->
-            <div v-if="selectedFile" class="attachment-preview q-mb-sm">
-              <div class="preview-content">
-                <q-img
-                  v-if="selectedFilePreview && isImageFile(selectedFile)"
-                  :src="selectedFilePreview"
-                  class="preview-image"
-                  fit="contain"
-                />
-                <div v-else class="preview-file">
-                  <q-icon :name="getFileIcon(selectedFile)" size="32px" color="primary" />
-                  <span>{{ selectedFile.name }}</span>
+            <q-slide-transition>
+              <div v-if="selectedFile" class="attachment-preview q-mb-sm shadow-1">
+                <div class="preview-content">
+                  <q-img
+                    v-if="selectedFilePreview && isImageFile(selectedFile)"
+                    :src="selectedFilePreview"
+                    class="preview-mini"
+                  />
+                  <div v-else class="preview-file-icon">
+                    <q-icon :name="getFileIcon(selectedFile)" size="24px" color="primary" />
+                    <span class="text-caption text-weight-medium text-primary">{{ selectedFile.name }}</span>
+                  </div>
                 </div>
+                <q-btn flat round dense icon="close" size="xs" @click="clearSelectedFile" color="negative" />
               </div>
-              <q-btn flat round dense icon="close" @click="clearSelectedFile" color="negative" />
-            </div>
+            </q-slide-transition>
 
-            <div class="input-field">
+            <div class="row no-wrap items-center q-gutter-x-sm">
+              <q-btn flat round dense icon="add_circle" color="primary" size="lg">
+                <q-menu anchor="top start" self="bottom start" class="modern-menu shadow-5">
+                  <q-list style="min-width: 200px">
+                    <q-item clickable v-close-popup @click="openFilePicker">
+                      <q-item-section avatar><q-icon name="description" color="indigo" /></q-item-section>
+                      <q-item-section>Documento</q-item-section>
+                    </q-item>
+                    <q-item clickable v-close-popup @click="openCamera">
+                      <q-item-section avatar><q-icon name="photo_camera" color="pink" /></q-item-section>
+                      <q-item-section>Cámara</q-item-section>
+                    </q-item>
+                    <q-separator />
+                    <q-item-label header>Respuestas Rápidas</q-item-label>
+                    <q-item clickable v-close-popup @click="insertQuickResponse('greeting')">
+                      <q-item-section>👋 Saludo Estándar</q-item-section>
+                    </q-item>
+                    <q-item clickable v-close-popup @click="insertQuickResponse('resolved')">
+                      <q-item-section>✅ Caso Resuelto</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
+
               <q-input
                 v-model="newMessage"
-                placeholder="Escribe tu respuesta..."
+                placeholder="Escribe un mensaje aquí..."
+                rounded
                 filled
+                dense
                 autogrow
+                class="col"
                 :disable="sending"
                 @keyup.enter.exact="sendMessage"
               >
-                <template v-slot:prepend>
-                  <q-btn-dropdown flat round dense icon="add" color="grey">
-                    <q-list>
-                      <q-item clickable v-close-popup @click="insertQuickResponse('greeting')">
-                        <q-item-section avatar>
-                          <q-icon name="waving_hand" />
-                        </q-item-section>
-                        <q-item-section>Saludo</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="insertQuickResponse('thanks')">
-                        <q-item-section avatar>
-                          <q-icon name="thumb_up" />
-                        </q-item-section>
-                        <q-item-section>Agradecimiento</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="insertQuickResponse('working')">
-                        <q-item-section avatar>
-                          <q-icon name="engineering" />
-                        </q-item-section>
-                        <q-item-section>Trabajando en ello</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="insertQuickResponse('resolved')">
-                        <q-item-section avatar>
-                          <q-icon name="check_circle" />
-                        </q-item-section>
-                        <q-item-section>Problema resuelto</q-item-section>
-                      </q-item>
-                      <q-separator />
-                      <q-item clickable v-close-popup @click="openFilePicker">
-                        <q-item-section avatar>
-                          <q-icon name="attach_file" color="primary" />
-                        </q-item-section>
-                        <q-item-section>Adjuntar archivo</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="openCamera">
-                        <q-item-section avatar>
-                          <q-icon name="photo_camera" color="secondary" />
-                        </q-item-section>
-                        <q-item-section>Tomar foto</q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-btn-dropdown>
-                </template>
                 <template v-slot:append>
-                  <q-btn
-                    round
-                    icon="send"
-                    size="md"
-                    style="border-radius: 100px;"
-                    color="primary"
-                    @click="sendMessage"
-                    :disable="(!newMessage.trim() && !selectedFile) || sending"
-                    :loading="sending"
-                  />
+                  <q-btn flat round dense icon="sentiment_satisfied_alt" color="grey-7" size="sm" />
                 </template>
               </q-input>
-            </div>
 
+              <template v-if="newMessage.trim() || selectedFile">
+                <q-btn
+                  unelevated
+                  round
+                  icon="send"
+                  color="primary"
+                  size="md"
+                  class="send-btn-modern shadow-2"
+                  @click="sendMessage"
+                  :disable="sending"
+                  :loading="sending"
+                />
+              </template>
+              <template v-else>
+                <AudioRecorder @send="sendAudioMessage" />
+              </template>
+            </div>
             <!-- Hidden file inputs -->
             <input
               type="file"
@@ -510,11 +662,12 @@
             :class="{ active: index === currentPreviewIndex }"
             @click="goToImage(index)"
           >
-            <q-img :src="img" :ratio="1" fit="cover" />
+            <q-img :src="getFullUrl(img)" :ratio="1" fit="cover" />
           </div>
         </div>
       </div>
     </transition>
+
   </q-page>
 </template>
 
@@ -527,6 +680,9 @@ import { authentication } from 'src/stores/module-authentication'
 import { useQuasar } from 'quasar'
 import { format, formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+
+import AudioRecorder from 'src/components/AudioRecorder.vue'
+import AudioPlayer from 'src/components/AudioPlayer.vue'
 
 /**
  * Quasar instance
@@ -590,6 +746,24 @@ const route = useRoute()
 const showScrollButton = ref(false)
 
 /**
+ * Vista actual del sidebar (chats o users)
+ * @type {import('vue').Ref<string>}
+ */
+const sidebarView = ref('chats')
+
+/**
+ * Usuarios obtenidos del monitor de sesiones
+ * @type {import('vue').Ref<Array>}
+ */
+const sessionUsers = ref([])
+
+/**
+ * Estado de búsqueda de usuarios
+ * @type {import('vue').Ref<string>}
+ */
+const userSearch = ref('')
+
+/**
  * Cantidad de mensajes nuevos abajo
  * @type {import('vue').Ref<number>}
  */
@@ -600,6 +774,12 @@ const unreadMessagesBelow = ref(0)
  * @type {import('vue').Ref<boolean>}
  */
 const isUserScrolledUp = ref(false)
+
+/**
+ * Controls contact info panel visibility
+ * @type {import('vue').Ref<boolean>}
+ */
+const showContactInfo = ref(false)
 
 /**
  * Contador de tickets no leídos
@@ -665,7 +845,7 @@ const slideDirection = ref('slide-left')
  * Imagen actual del preview
  * @type {import('vue').ComputedRef<string>}
  */
-const currentPreviewImage = computed(() => previewImages.value[currentPreviewIndex.value] || '')
+const currentPreviewImage = computed(() => getFullUrl(previewImages.value[currentPreviewIndex.value] || ''))
 
 /**
  * Filtros de búsqueda
@@ -716,9 +896,215 @@ const quickResponses = {
 const currentUser = computed(() => authStore.userSession)
 
 /**
- * Carga la lista de chats de soporte
+ * Carga usuarios desde el endpoint de sesiones y los deduplica
  * @returns {Promise<void>}
  */
+const fetchUsers = async () => {
+  loading.value = true
+  try {
+    const { data } = await api.get('user-sessions', {
+      params: {
+        status: 'all',
+        search: userSearch.value,
+        per_page: 100
+      }
+    })
+    sessionUsers.value = data.data || []
+  } catch (error) {
+    console.error('Error fetching users:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * Usuarios únicos (deduplicados por user_id). Solo conserva la sesión más reciente.
+ * @type {import('vue').ComputedRef<Array>}
+ */
+const uniqueUsers = computed(() => {
+  const map = new Map()
+  sessionUsers.value.forEach(session => {
+    const userId = session.user_id || session.user?.id
+    if (!userId) return
+    const existing = map.get(userId)
+    if (!existing || session.status === 'online') {
+      map.set(userId, {
+        id: userId,
+        name: session.user?.name || 'Usuario',
+        email: session.user?.email || '',
+        avatar: session.user?.avatar || null,
+        company: session.company?.name || '',
+        status: session.status,
+        lastActivity: session.last_activity_at
+      })
+    }
+  })
+  return Array.from(map.values())
+})
+
+/**
+ * Usuarios online filtrados
+ * @type {import('vue').ComputedRef<Array>}
+ */
+const onlineUsersFiltered = computed(() => {
+  return uniqueUsers.value.filter(u => u.status === 'online')
+})
+
+/**
+ * Usuarios offline filtrados
+ * @type {import('vue').ComputedRef<Array>}
+ */
+const offlineUsersFiltered = computed(() => {
+  return uniqueUsers.value.filter(u => u.status !== 'online')
+})
+
+/**
+ * Checks if a specific user is currently online
+ * @param {number} userId - User ID to check
+ * @returns {boolean} Whether the user is online
+ */
+const isChatClientOnline = (userId) => {
+  if (!userId) return false
+  return onlineUsersFiltered.value.some(u => u.id === parseInt(userId))
+}
+
+/**
+ * Obtiene el label legible del estado
+ * @param {string} status - Estado en crudo
+ * @returns {string}
+ */
+const getStatusLabel = (status) => {
+  const options = {
+    open: 'Abierto',
+    in_progress: 'En progreso',
+    closed: 'Cerrado',
+    reopened: 'Reabierto'
+  }
+  return options[status] || status
+}
+
+/**
+ * Obtiene el color del chip de estado
+ * @param {string} status - Estado en crudo
+ * @returns {string}
+ */
+const getStatusColor = (status) => {
+  const colors = {
+    open: 'positive',
+    in_progress: 'warning',
+    closed: 'negative',
+    reopened: 'info'
+  }
+  return colors[status] || 'grey'
+}
+
+/**
+ * Abre o selecciona una conversación con un usuario.
+ * No crea el chat en la DB hasta que se envíe el primer mensaje.
+ * @param {object} user - El usuario con el que se desea conversar
+ * @returns {void}
+ */
+const openChatWithUser = (user) => {
+  // 1. Buscar en los chats cargados si ya existe una conversación con este cliente
+  // Buscamos cualquier chat, incluso si está cerrado, para mantener el historial "de por vida"
+  const existingChat = chats.value.find(
+    c => (c.client_user_id === user.id || c.client?.id === user.id)
+  )
+
+  if (existingChat) {
+    selectChat(existingChat)
+    sidebarView.value = 'chats'
+    return
+  }
+
+  // 2. Si no existe, creamos un objeto de chat "pendiente" local
+  // Esto permite abrir la vista derecha sin tocar la API todavía
+  selectedChat.value = {
+    id: null, // Indicar que es nuevo
+    is_pending: true,
+    type: 'chat', // Importante: Tipo red social
+    subject: `Conversación con ${user.name}`,
+    client_user_id: user.id,
+    client: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      company: user.company
+    },
+    status: 'open',
+    priority: 'medium',
+    messages: []
+  }
+
+  messages.value = []
+  sidebarView.value = 'chats' // Cambiar a la pestaña de chats para ver el contexto
+}
+
+/**
+ * Crea un nuevo ticket de soporte técnico explícito.
+ * A diferencia de las conversaciones de personas, esto siempre genera un nuevo chat.
+ * @param {object} user - El usuario para el que se crea el ticket
+ */
+const createSupportTicket = (user) => {
+  $q.dialog({
+    title: 'Nuevo Ticket de Soporte',
+    message: '¿Cuál es el asunto del soporte técnico?',
+    prompt: {
+      model: '',
+      type: 'text'
+    },
+    cancel: true,
+    persistent: true
+  }).onOk(async (subject) => {
+    loading.value = true
+    try {
+      const { data } = await api.post('support-chats', {
+        client_id: user.id,
+        subject: subject || 'Soporte Técnico',
+        message: 'Nuevo ticket de soporte iniciado.',
+        type: 'support',
+        priority: 'high'
+      })
+
+      await loadChats()
+      const newChat = chats.value.find(c => c.id === data.data?.id || c.id === data.id)
+      if (newChat) selectChat(newChat)
+      $q.notify({ type: 'positive', message: 'Ticket de soporte creado' })
+    } catch (error) {
+      console.error('Error:', error)
+      $q.notify({ type: 'negative', message: 'Error al crear ticket' })
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+/**
+ * Obtiene la información del "otro" participante del chat (el que no es el admin actual)
+ * @param {object} chat - El objeto de chat
+ * @returns {object} Datos del partner (id, name, avatar)
+ */
+const getChatPartner = (chat) => {
+  if (!chat) return null
+
+  // Si el chat es pendiente (creado localmente en 'Personas'), el partner es el client
+  if (chat.is_pending) return chat.client
+
+  // Si somos el admin del chat, el partner es el client
+  if (parseInt(chat.admin_user_id) === parseInt(currentUser.value?.id)) {
+    return chat.client || { name: 'Usuario' }
+  }
+
+  // Si somos el client del chat, el partner es el admin
+  if (parseInt(chat.client_user_id) === parseInt(currentUser.value?.id)) {
+    return chat.admin || { name: 'Soporte' }
+  }
+
+  // Por defecto, en la vista de admin, nos interesa ver al cliente
+  return chat.client || chat.admin || { name: 'Usuario' }
+}
+
 const loadChats = async () => {
   loading.value = true
   try {
@@ -808,6 +1194,11 @@ const selectChat = async (chat) => {
  * Envía un mensaje al chat seleccionado
  * @returns {Promise<void>}
  */
+/**
+ * Envía un mensaje al chat seleccionado.
+ * Si el chat es nuevo (is_pending), lo crea en el servidor primero.
+ * @returns {Promise<void>}
+ */
 const sendMessage = async () => {
   if ((!newMessage.value.trim() && !selectedFile.value) || sending.value || !selectedChat.value) return
 
@@ -817,11 +1208,12 @@ const sendMessage = async () => {
   clearSelectedFile()
   sending.value = true
 
-  // Agregar mensaje temporalmente
+  // Agregar mensaje temporalmente para UX inmediata
   const tempMessage = {
     id: Date.now(),
     content: messageText,
     type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
+    attachment_url: fileToSend && isImageFile(fileToSend) ? selectedFilePreview.value : null,
     sender_id: currentUser.value?.id,
     sender: { name: currentUser.value?.name },
     is_read: false,
@@ -833,43 +1225,169 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    const formData = new FormData()
-    if (messageText) {
-      formData.append('message', messageText)
-    }
-    if (fileToSend) {
-      formData.append('attachment', fileToSend)
+    let chatId = selectedChat.value.id
+
+    // Si el chat es pendiente, lo creamos primero
+    if (selectedChat.value.is_pending) {
+      const detectedType = fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text'
+      const { data } = await api.post('support-chats', {
+        client_id: selectedChat.value.client?.id,
+        subject: selectedChat.value.subject,
+        message: messageText || (fileToSend ? (isImageFile(fileToSend) ? '📷 Imagen' : '📁 Archivo') : '¡Hola!'),
+        message_type: detectedType,
+        type: selectedChat.value.type || 'support',
+        priority: 'medium'
+      })
+
+      const newChat = data.data || data
+      chatId = newChat.id
+      selectedChat.value = newChat
+      
+      // Si no hay archivo, el mensaje ya se creó con el chat. 
+      // Si hay archivo, el mensaje creado en 'store' es solo el texto, necesitamos subir el archivo.
+      if (!fileToSend) {
+        messages.value = newChat.messages || []
+        await loadChats()
+        subscribeToChat(chatId)
+        return // Terminamos aquí si no hay archivo
+      }
+      
+      // Si hay archivo, continuamos al flujo normal de sendMessage con el nuevo chatId
+      await loadChats()
+      subscribeToChat(chatId)
     }
 
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+    // Flujo normal: enviar mensaje (o archivo) a chat existente
+    const formData = new FormData()
+    if (messageText) formData.append('message', messageText)
+    if (fileToSend) {
+      formData.append('attachment', fileToSend)
+      const detectedType = isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file'
+      formData.append('type', detectedType)
+    }
+
+    const { data } = await api.post(`support-chats/${chatId}/messages`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
 
     // Reemplazar mensaje temporal con el real
     const tempIndex = messages.value.findIndex(m => m.id === tempMessage.id)
     if (tempIndex !== -1) {
-      if (messages.value.find(m => m.id === data.data.id)) {
+      // Si el mensaje real ya llegó por Pusher, borrar el temporal. Si no, reemplazarlo.
+      if (messages.value.find(m => m.id === data.data.id && m.id !== tempMessage.id)) {
         messages.value.splice(tempIndex, 1)
       } else {
         messages.value[tempIndex] = data.data
       }
     }
 
-    // Actualizar último mensaje en la lista
-    const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
-    if (chatIndex !== -1) {
-      chats.value[chatIndex].last_message = data.data
-      chats.value[chatIndex].last_message_at = data.data.created_at
-    }
+      // Actualizar último mensaje en la lista lateral
+      const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
+      if (chatIndex !== -1) {
+        chats.value[chatIndex].last_message = data.data
+        chats.value[chatIndex].last_message_at = data.data.created_at
+      }
   } catch (error) {
     console.error('Error sending message:', error)
     $q.notify({
       type: 'negative',
       message: 'Error al enviar el mensaje'
     })
-    // Remover mensaje temporal en caso de error
+    messages.value = messages.value.filter(m => m.id !== tempMessage.id)
+  } finally {
+    sending.value = false
+  }
+}
+
+/**
+ * Send audio message
+ * @param {Blob} audioBlob - Audio blob to send
+ * @returns {Promise<void>}
+ */
+const sendAudioMessage = async (audioBlob) => {
+  if (!audioBlob || sending.value || !selectedChat.value) return
+
+  sending.value = true
+
+  // Add temporary message
+  const tempMessage = {
+    id: Date.now(),
+    content: '',
+    type: 'audio',
+    attachment_url: URL.createObjectURL(audioBlob),
+    sender_id: currentUser.value?.id,
+    sender: { name: currentUser.value?.name },
+    is_read: false,
+    created_at: new Date().toISOString()
+  }
+  messages.value.push(tempMessage)
+
+  await nextTick()
+  scrollToBottom()
+
+  try {
+    // Si el chat es pendiente, creamos el chat primero
+    if (selectedChat.value.is_pending) {
+      const { data: chatData } = await api.post('support-chats', {
+        client_id: selectedChat.value.client?.id,
+        subject: selectedChat.value.subject,
+        message: 'Nota de voz 🎤',
+        message_type: 'audio',
+        type: selectedChat.value.type || 'chat',
+        priority: 'medium'
+      })
+
+      const newChat = chatData.data || chatData
+      selectedChat.value = newChat
+      messages.value = newChat.messages || []
+
+      await loadChats()
+      subscribeToChat(newChat.id)
+
+      // El primer mensaje ya se creó como 'Nota de voz'.
+      // Enviamos el audio real como segundo mensaje para inicializar el objeto multimedia.
+      const formData = new FormData()
+      formData.append('attachment', audioBlob, 'audio.webm')
+      formData.append('type', 'audio')
+      const { data: audioData } = await api.post(`support-chats/${newChat.id}/messages`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      // Actualizar mensajes finales
+      const { data: finalData } = await api.get(`support-chats/${newChat.id}`)
+      messages.value = finalData.messages || []
+    } else {
+      const formData = new FormData()
+      formData.append('attachment', audioBlob, 'audio.webm')
+      formData.append('type', 'audio')
+
+      const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      // Replace temporary message with real one
+      const tempIndex = messages.value.findIndex(m => m.id === tempMessage.id)
+      if (tempIndex !== -1) {
+        if (messages.value.find(m => m.id === data.data.id)) {
+          messages.value.splice(tempIndex, 1)
+        } else {
+          messages.value[tempIndex] = data.data
+        }
+      }
+
+      // Update last message in list
+      const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
+      if (chatIndex !== -1) {
+        chats.value[chatIndex].last_message = data.data
+        chats.value[chatIndex].last_message_at = data.data.created_at
+      }
+    }
+  } catch (error) {
+    console.error('Error sending audio:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al enviar el audio'
+    })
     messages.value = messages.value.filter(m => m.id !== tempMessage.id)
   } finally {
     sending.value = false
@@ -939,6 +1457,19 @@ const handleFileSelect = (event) => {
 }
 
 /**
+ * Obtiene la URL completa para un recurso
+ * @param {string} url - URL relativa o absoluta
+ * @returns {string}
+ */
+const getFullUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http') || url.startsWith('data:')) return url
+  // Quitar /api del final de la URL si existe
+  const baseUrl = import.meta.env.VITE_APP_API_URL?.replace(/\/api\/?$/, '') || ''
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+/**
  * Limpia el archivo seleccionado
  * @returns {void}
  */
@@ -949,11 +1480,13 @@ const clearSelectedFile = () => {
 
 /**
  * Verifica si el archivo es una imagen
- * @param {File} file - Archivo a verificar
+ * @param {File|string} file - Archivo o tipo MIME a verificar
  * @returns {boolean}
  */
 const isImageFile = (file) => {
-  return file.type.startsWith('image/')
+  if (!file) return false
+  const type = typeof file === 'string' ? file : file.type
+  return type?.startsWith('image/')
 }
 
 /**
@@ -999,7 +1532,7 @@ const formatFileSize = (bytes) => {
  */
 const openImagePreview = (message, images) => {
   previewImages.value = images
-  currentPreviewIndex.value = images.indexOf(message.attachment_url)
+  currentPreviewIndex.value = images.indexOf(getFullUrl(message.attachment_url))
   if (currentPreviewIndex.value === -1) currentPreviewIndex.value = 0
   showImagePreview.value = true
   document.body.style.overflow = 'hidden'
@@ -1022,7 +1555,7 @@ const closeImagePreview = () => {
 const getMessageImages = (currentMessage) => {
   return messages.value
     .filter(m => m.type === 'image' && m.attachment_url)
-    .map(m => m.attachment_url)
+    .map(m => getFullUrl(m.attachment_url))
 }
 
 /**
@@ -1171,66 +1704,6 @@ const isOwnMessage = (message) => {
 const getInitials = (name) => {
   if (!name) return '?'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
-}
-
-/**
- * Obtiene el color del estado
- * @param {string} status - Estado del chat
- * @returns {string}
- */
-const getStatusColor = (status) => {
-  const colors = {
-    open: 'primary',
-    in_progress: 'warning',
-    closed: 'positive',
-    reopened: 'orange'
-  }
-  return colors[status] || 'grey'
-}
-
-/**
- * Obtiene la etiqueta del estado
- * @param {string} status - Estado del chat
- * @returns {string}
- */
-const getStatusLabel = (status) => {
-  const labels = {
-    open: 'Abierto',
-    in_progress: 'En progreso',
-    closed: 'Cerrado',
-    reopened: 'Reabierto'
-  }
-  return labels[status] || status
-}
-
-/**
- * Obtiene el color de la prioridad
- * @param {string} priority - Prioridad del ticket
- * @returns {string}
- */
-const getPriorityColor = (priority) => {
-  const colors = {
-    low: 'grey',
-    medium: 'primary',
-    high: 'warning',
-    urgent: 'negative'
-  }
-  return colors[priority] || 'grey'
-}
-
-/**
- * Obtiene la etiqueta de la prioridad
- * @param {string} priority - Prioridad del ticket
- * @returns {string}
- */
-const getPriorityLabel = (priority) => {
-  const labels = {
-    low: 'Baja',
-    medium: 'Media',
-    high: 'Alta',
-    urgent: 'Urgente'
-  }
-  return labels[priority] || priority
 }
 
 /**
@@ -1466,7 +1939,7 @@ watch(() => route.query.id, () => {
 
 const checkRouteParam = () => {
   if (route.query.id) {
-    const chatToOpen = chats.value.find(c => c.id == route.query.id)
+    const chatToOpen = chats.value.find(c => c.id === route.query.id)
     if (chatToOpen) {
       selectChat(chatToOpen)
     }
@@ -1480,41 +1953,31 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .support-chat-page {
-  height: calc(100vh - 120px);
+  height: calc(100vh - 100px);
   padding: 0;
   overflow: hidden;
 }
 
 .chat-container {
   display: flex;
-  height: calc(100vh - 150px);
-  padding: 20px;
-  gap: 20px;
-
-  @media (max-width: 1023px) {
-    padding: 0;
-    gap: 0;
-    background: white;
-  }
-}
-
-.body--dark .chat-container {
-  background: #0f172a;
-  @media (max-width: 1023px) {
-    background: #121212;
-  }
+  height: calc(100vh - 60px);
+  padding: 0;
+  gap: 0;
 }
 
 .chat-sidebar {
-  width: 380px;
+  width: 400px;
+  min-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  background: transparent;
+  background: white;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 
   @media (max-width: 1023px) {
     width: 100%;
-    gap: 0;
+    min-width: unset;
+    border-right: none;
 
     &.mobile-hidden {
       display: none;
@@ -1523,27 +1986,25 @@ onUnmounted(() => {
 }
 
 .body--dark .chat-sidebar {
-  background: transparent;
+  background: #1e1e1e;
+  border-right-color: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-header {
-  padding: 20px;
-  background: linear-gradient(135deg, #1e1e2d 0%, #161621 100%);
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-height: 80px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-
-  @media (max-width: 1023px) {
-    border-radius: 0;
-    box-shadow: none;
-  }
 }
 
-.header-content {
+.body--dark .sidebar-header {
+  background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+}
+
+.header-left {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1556,115 +2017,120 @@ onUnmounted(() => {
 
 .header-title {
   font-size: 18px;
-  font-weight: 600;
-  color: white;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .header-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  opacity: 0.8;
 }
 
-.new-chat-btn {
-  background: rgba(255, 255, 255, 0.15);
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border-radius: 50%;
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.25);
+.sidebar-search {
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  .search-input {
+    :deep(.q-field__control) {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+  }
+}
+
+.body--dark .sidebar-search {
+  background: #252525;
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+
+  .search-input :deep(.q-field__control) {
+    background: #2c2c2c;
+  }
+}
+
+.sidebar-tabs {
+  display: flex;
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  .tab-item {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    color: #607d8b;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+
+    &:hover { background: #f5f7f9; }
+
+    &.active {
+      color: #1976d2;
+      border-bottom-color: #1976d2;
+    }
+  }
+}
+
+.body--dark .sidebar-tabs {
+  background: #1e1e1e;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+
+  .tab-item {
+    color: #b0bec5;
+    &.active { color: #90caf9; border-bottom-color: #90caf9; }
   }
 }
 
 .chat-list {
   flex: 1;
   overflow: hidden;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-
-  @media (max-width: 1023px) {
-    border-radius: 0;
-    box-shadow: none;
-  }
-}
-
-.body--dark .chat-list {
-  background: #1e1e1e;
-}
-
-.filter-section {
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  flex-shrink: 0;
-}
-
-.body--dark .filter-section {
-  background: #1e1e1e;
-  border-bottom-color: rgba(255, 255, 255, 0.05);
-}
-
-.pagination-section {
-  background: white;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  flex-shrink: 0;
-}
-
-.body--dark .pagination-section {
-  background: #1e1e1e;
-  border-top-color: rgba(255, 255, 255, 0.05);
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
-}
-
-.empty-text {
-  margin-top: 16px;
-  font-size: 16px;
-  color: #616161;
-  margin-bottom: 16px;
 }
 
 .chat-item-wrapper {
-  padding: 12px 16px;
+  padding: 16px 20px;
   cursor: pointer;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  background: white;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 
-  &:hover {
-    background: #f0f4f8;
-  }
+  &:hover { background: #f0f4f8; }
 
   &.active {
     background: #e3f2fd;
     border-left: 4px solid #1976d2;
-    padding-left: 12px;
+    padding-left: 16px;
   }
+
+  .chat-item-content {
+    display: flex;
+    gap: 14px;
+  }
+
+  .contact-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  &:hover .contact-actions { opacity: 1; }
 }
 
 .body--dark .chat-item-wrapper {
-  background: #1e1e1e;
   border-bottom-color: rgba(255, 255, 255, 0.05);
-
-  &:hover {
-    background: #2d2d2d;
-  }
-
-  &.active {
-    background: #1a237e;
-    border-left-color: #3f51b5;
-  }
-}
-
-.chat-item-content {
-  display: flex;
-  gap: 14px;
+  &:hover { background: #2d2d2d; }
+  &.active { background: #1a237e; border-left-color: #3f51b5; }
 }
 
 .chat-info {
@@ -1688,9 +2154,7 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
-.body--dark .chat-title {
-  color: #ecf0f1;
-}
+.body--dark .chat-title { color: #ecf0f1; }
 
 .chat-preview {
   font-size: 13px;
@@ -1700,9 +2164,7 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
-.body--dark .chat-preview {
-  color: #b0bec5;
-}
+.body--dark .chat-preview { color: #b0bec5; }
 
 .chat-meta {
   display: flex;
@@ -1711,36 +2173,25 @@ onUnmounted(() => {
   gap: 6px;
 }
 
-.chat-time {
-  font-size: 11px;
-  color: #90a4ae;
+.chat-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid white;
+
+  &.active { background: #4caf50; }
+  &.inactive { background: #bdbdbd; }
 }
 
-// Main chat area
 .chat-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  background: white;
   overflow: hidden;
-
-  @media (max-width: 1023px) {
-    width: 100%;
-    border-radius: 0;
-    box-shadow: none;
-
-    &.mobile-hidden {
-      display: none;
-    }
-  }
 }
 
-.body--dark .chat-main {
-  background: #1a1a1b;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-}
+.body--dark .chat-main { background: #121212; }
 
 .chat-empty {
   display: flex;
@@ -1752,50 +2203,21 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.empty-animation-wrapper {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 40px;
-}
-
-.icon-support, .icon-sales, .icon-info {
-  animation: float 3s infinite ease-in-out;
-}
-
-.icon-sales { animation-delay: 0.5s; }
-.icon-info { animation-delay: 1s; }
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
-}
-
 .empty-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #2c3e50;
-  margin-bottom: 16px;
+  margin-top: 24px;
 }
 
-.body--dark .empty-title {
-  color: #ecf0f1;
-}
-
-.empty-subtitle {
-  font-size: 16px;
-  color: #607d8b;
-  max-width: 500px;
-  line-height: 1.6;
-}
-
-.body--dark .empty-subtitle {
-  color: #b0bec5;
-}
+.body--dark .empty-title { color: #ecf0f1; }
 
 .chat-content {
   display: flex;
   flex-direction: column;
   height: 100%;
+  flex: 1;
+  overflow: hidden;
 }
 
 .chat-header {
@@ -1812,227 +2234,224 @@ onUnmounted(() => {
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
-.header-info {
-  margin-left: 16px;
-}
-
-.chat-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.body--dark .chat-name {
-  color: #ecf0f1;
-}
-
-.chat-status {
-  display: flex;
-  align-items: center;
-  margin-top: 4px;
-}
-
 .messages-container {
   flex: 1;
   position: relative;
-  background: #f5f7f9;
+  background-color: #0b141a;
+  background-image: linear-gradient(rgba(11, 20, 26, 0.95), rgba(11, 20, 26, 0.95)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+  background-repeat: repeat;
   overflow: hidden;
 }
 
 .body--dark .messages-container {
-  background: #121212;
+  background-color: #0b141a;
 }
 
 .messages-list {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .message-wrapper {
   display: flex;
-  max-width: 75%;
+  flex-direction: column;
+  max-width: 85%;
+  margin-bottom: 2px;
 
   &.user-message {
     align-self: flex-end;
-
     .message-bubble {
-      background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-      color: white;
-      border-radius: 20px 20px 4px 20px;
-      box-shadow: 0 4px 15px rgba(25, 118, 210, 0.2);
+      background: #005c4b;
+      color: #e9edef;
+      border-radius: 8px 0 8px 8px;
+    }
+
+    &.is-image .message-bubble {
+      background: #005c4b;
+      padding: 3px;
+    }
+
+    &.is-audio .message-bubble {
+      background: #005c4b;
+      min-width: 280px;
     }
   }
 
   &.assistant-message {
     align-self: flex-start;
-
     .message-bubble {
-      background: white;
-      color: #333;
-      border-radius: 20px 20px 20px 4px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      background: #202c33;
+      color: #e9edef;
+      border-radius: 0 8px 8px 8px;
+    }
+
+    &.is-image .message-bubble {
+      background: #202c33;
+      padding: 3px;
+    }
+
+    &.is-audio .message-bubble {
+      background: #202c33;
+      min-width: 280px;
     }
   }
 }
 
-.body--dark .assistant-message .message-bubble {
-  background: #2c2c2c;
-  color: #e0e0e0;
-}
-
 .message-bubble {
-  padding: 12px 20px;
   position: relative;
-  font-size: 15px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+  font-size: 14.5px;
+  line-height: 1.4;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 0;
+    height: 0;
+    border: 8px solid transparent;
+  }
 }
 
-.message-sender {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1976d2;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
+.user-message .message-bubble::before {
+  right: -8px;
+  border-left-color: #005c4b;
+  border-top-color: #005c4b;
 }
 
-.message-content {
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
+.assistant-message .message-bubble::before {
+  left: -8px;
+  border-right-color: #202c33;
+  border-top-color: #202c33;
 }
 
-.message-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 4px;
-  gap: 4px;
+// Ocultar cola en medios puros (sin texto)
+.is-image:not(.has-content) .message-bubble::before,
+.is-audio .message-bubble::before {
+  display: none;
 }
 
-.message-time {
-  font-size: 11px;
-  opacity: 0.7;
+.is-image:not(.has-content) .message-bubble,
+.is-audio .message-bubble {
+  border-radius: 8px !important;
 }
 
-.input-field {
-  width: 100%;
+.whatsapp-image {
+  max-height: 400px;
+  max-width: 100%;
+  border-radius: 6px;
+  display: block;
 }
-
 .typing-indicator {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 12px 16px !important;
+  background: #202c33 !important;
+  border-radius: 0 15px 15px 15px !important;
 
   span {
-    width: 8px;
-    height: 8px;
-    background: #90caf9;
+    width: 6px;
+    height: 6px;
+    background: #8696a0;
     border-radius: 50%;
     animation: typing 1.4s infinite ease-in-out both;
 
     &:nth-child(1) { animation-delay: -0.32s; }
     &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: -0.1s; }
   }
 }
 
-@keyframes typing {
-  0%, 80%, 100% {
-    transform: scale(0.6);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
+// Audio Message styling
+.audio-bubble {
+  padding: 8px !important;
+}
+
+.audio-inner-layout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+}
+
+.audio-avatar {
+  flex-shrink: 0;
+  position: relative;
+  border: 1.5px solid rgba(255,255,255,0.1);
+
+  .mic-icon-overlay {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: #005c4b;
+    border-radius: 50%;
+    padding: 2px;
+    border: 1px solid #202c33;
   }
 }
 
-.chat-closed-banner {
-  background: #f5f5f5;
-}
+.audio-controls-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 
-.body--dark .chat-closed-banner {
-  background: #1e1e1e;
+  :deep(.audio-player) {
+    background: transparent !important;
+    padding: 0 !important;
+    gap: 4px !important;
 
-  .q-banner {
-    background: #2d2d2d !important;
-    color: #e0e0e0 !important;
+    .q-btn { color: #8696a0 !important; }
+    .progress-bar {
+      height: 3px !important;
+      background: rgba(134, 150, 160, 0.2) !important;
+    }
+    .audio-time { color: #8696a0 !important; font-size: 11px; }
   }
 }
 
-// Attachment Styles
-.message-attachment {
-  margin-bottom: 8px;
-  border-radius: 12px;
+// Image Message styling
+.image-bubble {
+  overflow: hidden;
+  max-width: 330px;
+}
+
+.image-content-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
   overflow: hidden;
 }
 
-.image-attachment {
-  .image-container {
-    position: relative;
-    cursor: pointer;
-    border-radius: 12px;
-    overflow: hidden;
-    max-width: 320px;
-
-    &:hover {
-      .image-overlay {
-        opacity: 1;
-      }
-    }
-  }
+.whatsapp-image {
+  max-height: 400px;
+  width: 100%;
+  display: block;
 }
 
-.attachment-image {
-  max-width: 320px;
-  min-width: 200px;
-  border-radius: 12px;
-  transition: transform 0.3s ease;
-}
-
-.image-overlay {
+.image-footer-overlay {
   position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  bottom: 4px;
+  right: 6px;
+  background: rgba(0,0,0,0.4);
+  padding: 2px 6px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  border-radius: 12px;
+  gap: 4px;
+  color: white;
+  font-size: 10px;
 }
 
-.image-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.video-attachment {
-  max-width: 350px;
-}
-
-.attachment-video {
-  width: 100%;
-  max-height: 250px;
-  border-radius: 12px;
-  background: #000;
-}
-
-.file-attachment {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  padding: 12px 16px;
-  max-width: 280px;
-}
-
-.body--dark .file-attachment {
-  background: rgba(255, 255, 255, 0.1);
+// File styling
+.file-link-wrapper {
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  padding: 8px;
 }
 
 .file-link {
@@ -2040,80 +2459,107 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  color: inherit;
+  color: #e9edef;
+}
 
-  &:hover {
-    .file-icon-wrapper {
-      transform: scale(1.05);
+.file-icon-box {
+  width: 40px;
+  height: 40px;
+  background: #00a884;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-details {
+  flex: 1;
+  overflow: hidden;
+  .file-name {
+    display: block;
+    font-weight: 500;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.message-sender {
+  font-size: 13px;
+  font-weight: 600;
+  color: #53bdeb;
+  margin-bottom: 4px;
+}
+
+.message-content {
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.message-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 11px;
+  color: #8696a0;
+  margin-top: 2px;
+}
+
+// Global Message Overrides
+.user-message .message-footer {
+  color: rgba(255,255,255,0.6);
+}
+
+.attachment-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #202c33;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+
+  .preview-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .preview-mini {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .preview-file-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 }
 
-.file-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1976d2, #42a5f5);
+.status-filters {
+  padding: 12px 16px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  transition: transform 0.2s ease;
+  gap: 10px;
+  overflow-x: auto;
+  background: #111b21;
 }
 
-.file-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-name {
-  font-weight: 600;
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 2px;
-}
-
-.file-size {
-  font-size: 11px;
-  opacity: 0.6;
-}
-
-// Attachment Preview (input)
-.attachment-preview {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  background: rgba(25, 118, 210, 0.1);
-  border-radius: 12px;
-  border: 1px solid rgba(25, 118, 210, 0.2);
-}
-
-.preview-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.preview-image {
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.preview-file {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-// Image Preview Overlay
+// Reuse other animations and overlays from WhatsApp style but modernized
 .image-preview-overlay {
   position: fixed;
   inset: 0;
@@ -2124,34 +2570,6 @@ onUnmounted(() => {
 }
 
 .preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  color: white;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
-}
-
-.preview-title {
-  display: flex;
-  align-items: center;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.preview-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.preview-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 0 80px;
-  min-height: 0;
 }
 
 .preview-image-container {

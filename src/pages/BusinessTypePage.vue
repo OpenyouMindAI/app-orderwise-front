@@ -31,359 +31,398 @@
         </q-table>
       </div>
     </div>
-    <q-dialog v-model="openEditBusinessType" persistent>
-      <q-card style="width: 600px; max-width: 80vw;">
+    <!-- Edit Business Type Dialog -->
+    <q-dialog v-model="openEditBusinessType" persistent transition-show="scale" transition-hide="scale">
+      <q-card class="modern-business-dialog shadow-12">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Modificar Rubro</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="businessType.name"
-                autofocus
-                label="Nombre del Rubro"
-                hint="Ej: Restaurante, Farmacia, Supermercado"
-              />
-            </div>
-            <div class="col-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="businessType.description"
-                type="textarea"
-                label="Descripción"
-                hint="Descripción detallada del tipo de negocio"
-                rows="3"
-              />
-            </div>
-            <div class="col-12">
-              <q-file
-                filled
-                v-model="imageFile"
-                label="Imagen del Rubro"
-                hint="Selecciona una imagen para el rubro"
-                accept="image/*"
-                @update:model-value="onImageSelected"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="image" />
-                </template>
-                <template v-slot:append v-if="imageFile || businessType.image">
-                  <q-btn
-                    round
-                    dense
-                    flat
-                    icon="close"
-                    @click.stop="clearImage"
-                  />
-                </template>
-              </q-file>
-              <div v-if="imagePreview || businessType.image" class="q-mt-sm">
-                <q-img
-                  :src="imagePreview || getImageUrl(businessType.image)"
-                  style="max-width: 200px; max-height: 200px; border-radius: 8px;"
-                  fit="contain"
-                />
+          <!-- Header Moderno -->
+          <q-card-section class="modern-dialog-header">
+            <div class="row items-center no-wrap">
+              <div class="header-icon-container bg-primary-gradient text-white q-mr-md">
+                <q-icon name="edit" size="24px" />
               </div>
-            </div>
-            <div class="col-12">
-              <q-file
-                filled
-                v-model="videoFile"
-                label="Video del Rubro"
-                hint="Selecciona un video para el rubro"
-                accept="video/*"
-                @update:model-value="onVideoSelected"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="videocam" />
-                </template>
-                <template v-slot:append v-if="videoFile || businessType.video">
-                  <q-btn
-                    round
-                    dense
-                    flat
-                    icon="close"
-                    @click.stop="clearVideo"
-                  />
-                </template>
-              </q-file>
-              <div v-if="businessType.video" class="q-mt-sm text-caption text-grey-7">
-                <q-icon name="check_circle" color="positive" size="sm" />
-                Video actual cargado
-              </div>
-            </div>
-          </q-card-section>
-          <!-- Module Selection Section -->
-          <q-card-section class="q-pt-none">
-            <div class="row items-center q-mb-md">
-              <div class="text-subtitle1 text-weight-medium">
-                <q-icon name="apps" class="q-mr-sm" />
-                Módulos del Rubro
+              <div>
+                <div class="text-subtitle1 text-weight-bold">Modificar Rubro</div>
+                <div class="text-caption text-grey-7">Actualiza la información y módulos</div>
               </div>
               <q-space />
-              <q-btn
-                flat
-                dense
-                no-caps
-                :color="isAllSelected ? 'negative' : 'primary'"
-                :icon="isAllSelected ? 'remove_done' : 'done_all'"
-                :label="isAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'"
-                @click="toggleSelectAll"
-                :disable="visible"
-              />
+              <q-btn icon="close" flat round dense v-close-popup class="text-grey-6" />
             </div>
+          </q-card-section>
 
-            <q-scroll-area style="height: 300px;" class="module-scroll-area">
-              <q-expansion-item
-                v-for="section in sections"
-                :key="section.id"
-                :icon="section.icon"
-                :label="section.name"
-                :caption="`${getSelectedCountBySection(section)} de ${getSectionModulesCount(section)} seleccionados`"
-                header-class="bg-grey-2 text-grey-8"
-                expand-icon-class="text-primary"
-                default-opened
-                class="q-mb-sm rounded-borders overflow-hidden"
-              >
-                <template v-slot:header>
-                  <q-item-section avatar>
-                    <q-icon :name="section.icon || 'folder'" color="primary" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-medium">{{ section.name }}</q-item-label>
-                    <q-item-label caption>
-                      {{ getSelectedCountBySection(section) }} de {{ getSectionModulesCount(section) }} módulos
-                    </q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      :icon="isSectionFullySelected(section) ? 'check_box' : 'check_box_outline_blank'"
-                      :color="isSectionFullySelected(section) ? 'primary' : 'grey'"
-                      @click.stop="toggleSectionSelection(section)"
-                      :disable="visible"
-                    >
-                      <q-tooltip>
-                        {{ isSectionFullySelected(section) ? 'Deseleccionar sección' : 'Seleccionar sección' }}
-                      </q-tooltip>
-                    </q-btn>
-                  </q-item-section>
-                </template>
+          <q-card-section class="q-pt-xs">
+            <div class="row q-col-gutter-y-md">
+              <div class="col-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  outlined
+                  v-model="businessType.name"
+                  autofocus
+                  label="Nombre del Rubro"
+                  placeholder="Ej: Restaurante, Farmacia"
+                  class="modern-input"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="storefront" color="primary" />
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  outlined
+                  v-model="businessType.description"
+                  type="textarea"
+                  label="Descripción"
+                  placeholder="Añade una descripción clara..."
+                  rows="2"
+                  class="modern-input"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="description" color="primary" />
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12">
+                <q-input
+                  outlined
+                  v-model="businessType.pixel"
+                  type="textarea"
+                  label="Facebook Pixel"
+                  placeholder="Pega el código del pixel aquí..."
+                  rows="2"
+                  class="modern-input"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="code" color="primary" />
+                  </template>
+                </q-input>
+              </div>
 
-                <q-card flat class="bg-grey-1">
-                  <q-card-section class="q-py-sm">
-                    <div class="row q-col-gutter-xs">
-                      <div
-                        v-for="modul in section.modules"
-                        :key="modul.id"
-                        class="col-xs-6 col-sm-4 col-md-4"
+              <!-- Dropfile Inputs -->
+              <div class="col-12 row q-col-gutter-x-md">
+                <div class="col-6">
+                  <div
+                    class="dropzone-container"
+                    @dragover.prevent="dragOverImage = true"
+                    @dragleave.prevent="dragOverImage = false"
+                    @drop.prevent="onDropImage"
+                    @click="$refs.imageInputEdit.click()"
+                    :class="{ 'dragging': dragOverImage }"
+                  >
+                    <input type="file" ref="imageInputEdit" style="display: none" accept="image/*" @change="onImageInput" />
+                    <div v-if="!imagePreview && !businessType.image" class="dropzone-content">
+                      <q-icon name="add_photo_alternate" size="28px" color="primary" />
+                      <div class="text-caption text-weight-medium">Imagen</div>
+                    </div>
+                    <div v-else class="dropzone-preview">
+                      <q-img
+                        :src="imagePreview || getImageUrl(businessType.image)"
+                        class="full-height rounded-borders"
+                        fit="cover"
                       >
+                        <div class="absolute-bottom-right q-pa-xs">
+                          <q-btn round dense color="negative" icon="close" size="xs" @click.stop="clearImage" />
+                        </div>
+                      </q-img>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div
+                    class="dropzone-container"
+                    @dragover.prevent="dragOverVideo = true"
+                    @dragleave.prevent="dragOverVideo = false"
+                    @drop.prevent="onDropVideo"
+                    @click="$refs.videoInputEdit.click()"
+                    :class="{ 'dragging': dragOverVideo }"
+                  >
+                    <input type="file" ref="videoInputEdit" style="display: none" accept="video/*" @change="onVideoInput" />
+                    <div v-if="!videoFile && !businessType.video" class="dropzone-content">
+                      <q-icon name="video_library" size="28px" color="primary" />
+                      <div class="text-caption text-weight-medium">Video</div>
+                    </div>
+                    <div v-else class="dropzone-preview video-preview">
+                      <div class="column items-center justify-center full-height bg-grey-2 rounded-borders">
+                        <q-icon name="check_circle" color="positive" size="24px" />
+                        <span class="text-caption text-positive">Video Listo</span>
+                        <q-btn round dense color="negative" icon="close" size="xs" class="absolute-top-right q-ma-xs" @click.stop="clearVideo" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <!-- Module Selection Section -->
+          <q-card-section class="q-py-md">
+            <div class="module-section-box">
+              <div class="row items-center q-mb-md">
+                <div class="text-subtitle2 text-weight-bold">
+                  <q-icon name="widgets" class="q-mr-xs" color="primary" /> Módulos asignados
+                </div>
+                <q-space />
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  :color="isAllSelected ? 'negative' : 'primary'"
+                  :label="isAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'"
+                  @click="toggleSelectAll"
+                  class="rounded-borders"
+                />
+              </div>
+
+              <q-scroll-area style="height: 200px;" class="modern-scroll">
+                <q-expansion-item
+                  v-for="section in sections"
+                  :key="section.id"
+                  dense
+                  header-class="section-header"
+                  default-opened
+                >
+                  <template v-slot:header>
+                    <q-item-section avatar min-width="30px">
+                      <q-checkbox
+                        dense
+                        size="sm"
+                        :model-value="isSectionFullySelected(section)"
+                        @click.stop="toggleSectionSelection(section)"
+                        color="primary"
+                      />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-weight-medium">{{ section.name }}</q-item-label>
+                      <q-item-label caption>{{ getSelectedCountBySection(section) }}/{{ getSectionModulesCount(section) }} seleccionados</q-item-label>
+                    </q-item-section>
+                  </template>
+
+                  <div class="row q-col-gutter-xs q-pa-sm bg-grey-1">
+                    <div
+                      v-for="modul in section.modules"
+                      :key="modul.id"
+                      class="col-xs-6 col-sm-4"
+                    >
+                      <div class="module-check-card" :class="{ 'active': moduleSelected.includes(modul.id) }">
                         <q-checkbox
                           v-model="moduleSelected"
                           :val="modul.id"
                           :label="modul.title"
-                          :disable="visible"
                           dense
-                          class="module-checkbox"
+                          size="sm"
+                          class="full-width"
                         />
                       </div>
                     </div>
-                  </q-card-section>
-                </q-card>
-              </q-expansion-item>
-            </q-scroll-area>
+                  </div>
+                </q-expansion-item>
+              </q-scroll-area>
+            </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="negative" label="Eliminar" @click="deleteBusinessType" :loading="visible" />
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn flat color="negative" label="Eliminar Rubro" @click="deleteBusinessType" :loading="visible" size="sm" class="q-mr-auto no-caps" />
+            <q-btn flat color="grey-7" label="Cancelar" @click="closeModal" size="sm" class="no-caps" />
+            <q-btn unelevated color="primary" label="Guardar Cambios" type="submit" :loading="visible" class="btn-premium q-px-md" />
           </q-card-actions>
         </q-form>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="openAddBusinessType" persistent>
-      <q-card style="width: 600px; max-width: 80vw;">
+
+    <!-- Add Business Type Dialog -->
+    <q-dialog v-model="openAddBusinessType" persistent transition-show="scale" transition-hide="scale">
+      <q-card class="modern-business-dialog shadow-12">
         <q-form @submit="saveBusinessType">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Agregar Rubro</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="businessType.name"
-                autofocus
-                label="Nombre del Rubro"
-                hint="Ej: Restaurante, Farmacia, Supermercado"
-              />
-            </div>
-            <div class="col-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="businessType.description"
-                type="textarea"
-                label="Descripción"
-                hint="Descripción detallada del tipo de negocio"
-                rows="3"
-              />
-            </div>
-            <div class="col-12">
-              <q-file
-                filled
-                v-model="imageFile"
-                label="Imagen del Rubro"
-                hint="Selecciona una imagen para el rubro"
-                accept="image/*"
-                @update:model-value="onImageSelected"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="image" />
-                </template>
-                <template v-slot:append v-if="imageFile || businessType.image">
-                  <q-btn
-                    round
-                    dense
-                    flat
-                    icon="close"
-                    @click.stop="clearImage"
-                  />
-                </template>
-              </q-file>
-              <div v-if="imagePreview || businessType.image" class="q-mt-sm">
-                <q-img
-                  :src="imagePreview || getImageUrl(businessType.image)"
-                  style="max-width: 200px; max-height: 200px; border-radius: 8px;"
-                  fit="contain"
-                />
+          <q-card-section class="modern-dialog-header">
+            <div class="row items-center no-wrap">
+              <div class="header-icon-container bg-primary-gradient text-white q-mr-md">
+                <q-icon name="add" size="24px" />
               </div>
-            </div>
-            <div class="col-12">
-              <q-file
-                filled
-                v-model="videoFile"
-                label="Video del Rubro"
-                hint="Selecciona un video para el rubro"
-                accept="video/*"
-                @update:model-value="onVideoSelected"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="videocam" />
-                </template>
-                <template v-slot:append v-if="videoFile || businessType.video">
-                  <q-btn
-                    round
-                    dense
-                    flat
-                    icon="close"
-                    @click.stop="clearVideo"
-                  />
-                </template>
-              </q-file>
-              <div v-if="businessType.video" class="q-mt-sm text-caption text-grey-7">
-                <q-icon name="check_circle" color="positive" size="sm" />
-                Video actual cargado
-              </div>
-            </div>
-          </q-card-section>
-          <!-- Module Selection Section -->
-          <q-card-section class="q-pt-none">
-            <div class="row items-center q-mb-md">
-              <div class="text-subtitle1 text-weight-medium">
-                <q-icon name="apps" class="q-mr-sm" />
-                Módulos del Rubro
+              <div>
+                <div class="text-subtitle1 text-weight-bold">Nuevo Rubro</div>
+                <div class="text-caption text-grey-7">Configura un nuevo tipo de negocio</div>
               </div>
               <q-space />
-              <q-btn
-                flat
-                dense
-                no-caps
-                :color="isAllSelected ? 'negative' : 'primary'"
-                :icon="isAllSelected ? 'remove_done' : 'done_all'"
-                :label="isAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'"
-                @click="toggleSelectAll"
-                :disable="visible"
-              />
+              <q-btn icon="close" flat round dense v-close-popup class="text-grey-6" />
             </div>
+          </q-card-section>
 
-            <q-scroll-area style="height: 300px;" class="module-scroll-area">
-              <q-expansion-item
-                v-for="section in sections"
-                :key="section.id"
-                :icon="section.icon"
-                :label="section.name"
-                :caption="`${getSelectedCountBySection(section)} de ${getSectionModulesCount(section)} seleccionados`"
-                header-class="bg-grey-2 text-grey-8"
-                expand-icon-class="text-primary"
-                default-opened
-                class="q-mb-sm rounded-borders overflow-hidden"
-              >
-                <template v-slot:header>
-                  <q-item-section avatar>
-                    <q-icon :name="section.icon || 'folder'" color="primary" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-medium">{{ section.name }}</q-item-label>
-                    <q-item-label caption>
-                      {{ getSelectedCountBySection(section) }} de {{ getSectionModulesCount(section) }} módulos
-                    </q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-btn
-                      flat
-                      dense
-                      round
-                      :icon="isSectionFullySelected(section) ? 'check_box' : 'check_box_outline_blank'"
-                      :color="isSectionFullySelected(section) ? 'primary' : 'grey'"
-                      @click.stop="toggleSectionSelection(section)"
-                      :disable="visible"
-                    >
-                      <q-tooltip>
-                        {{ isSectionFullySelected(section) ? 'Deseleccionar sección' : 'Seleccionar sección' }}
-                      </q-tooltip>
-                    </q-btn>
-                  </q-item-section>
-                </template>
+          <q-card-section class="q-pt-xs">
+            <div class="row q-col-gutter-y-md">
+              <div class="col-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  outlined
+                  v-model="businessType.name"
+                  autofocus
+                  label="Nombre del Rubro"
+                  placeholder="Ej: Restaurante, Farmacia"
+                  class="modern-input"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="storefront" color="primary" />
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12">
+                <q-input
+                  :rules="[val => !!val || 'El campo es requerido.']"
+                  outlined
+                  v-model="businessType.description"
+                  type="textarea"
+                  label="Descripción"
+                  placeholder="Añade una descripción clara..."
+                  rows="2"
+                  class="modern-input"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="description" color="primary" />
+                  </template>
+                </q-input>
+              </div>
+              <div class="col-12">
+                <q-input
+                  outlined
+                  v-model="businessType.pixel"
+                  type="textarea"
+                  label="Facebook Pixel"
+                  placeholder="Pega el código del pixel aquí..."
+                  rows="2"
+                  class="modern-input"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="code" color="primary" />
+                  </template>
+                </q-input>
+              </div>
 
-                <q-card flat class="bg-grey-1">
-                  <q-card-section class="q-py-sm">
-                    <div class="row q-col-gutter-xs">
-                      <div
-                        v-for="modul in section.modules"
-                        :key="modul.id"
-                        class="col-xs-6 col-sm-4 col-md-4"
+              <!-- Dropfile Inputs -->
+              <div class="col-12 row q-col-gutter-x-md">
+                <div class="col-6">
+                  <div
+                    class="dropzone-container"
+                    @dragover.prevent="dragOverImage = true"
+                    @dragleave.prevent="dragOverImage = false"
+                    @drop.prevent="onDropImage"
+                    @click="$refs.imageInputAdd.click()"
+                    :class="{ 'dragging': dragOverImage }"
+                  >
+                    <input type="file" ref="imageInputAdd" style="display: none" accept="image/*" @change="onImageInput" />
+                    <div v-if="!imagePreview" class="dropzone-content">
+                      <q-icon name="add_photo_alternate" size="28px" color="primary" />
+                      <div class="text-caption text-weight-medium">Imagen</div>
+                    </div>
+                    <div v-else class="dropzone-preview">
+                      <q-img
+                        :src="imagePreview"
+                        class="full-height rounded-borders"
+                        fit="cover"
                       >
+                        <div class="absolute-bottom-right q-pa-xs">
+                          <q-btn round dense color="negative" icon="close" size="xs" @click.stop="clearImage" />
+                        </div>
+                      </q-img>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div
+                    class="dropzone-container"
+                    @dragover.prevent="dragOverVideo = true"
+                    @dragleave.prevent="dragOverVideo = false"
+                    @drop.prevent="onDropVideo"
+                    @click="$refs.videoInputAdd.click()"
+                    :class="{ 'dragging': dragOverVideo }"
+                  >
+                    <input type="file" ref="videoInputAdd" style="display: none" accept="video/*" @change="onVideoInput" />
+                    <div v-if="!videoFile" class="dropzone-content">
+                      <q-icon name="video_library" size="28px" color="primary" />
+                      <div class="text-caption text-weight-medium">Video</div>
+                    </div>
+                    <div v-else class="dropzone-preview video-preview">
+                      <div class="column items-center justify-center full-height bg-grey-2 rounded-borders">
+                        <q-icon name="check_circle" color="positive" size="24px" />
+                        <span class="text-caption text-positive">Video Listo</span>
+                        <q-btn round dense color="negative" icon="close" size="xs" class="absolute-top-right q-ma-xs" @click.stop="clearVideo" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-py-md">
+            <div class="module-section-box">
+              <div class="row items-center q-mb-md">
+                <div class="text-subtitle2 text-weight-bold">
+                  <q-icon name="widgets" class="q-mr-xs" color="primary" /> Módulos habilitados
+                </div>
+                <q-space />
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  :color="isAllSelected ? 'negative' : 'primary'"
+                  :label="isAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'"
+                  @click="toggleSelectAll"
+                  class="rounded-borders"
+                />
+              </div>
+
+              <q-scroll-area style="height: 200px;" class="modern-scroll">
+                <q-expansion-item
+                  v-for="section in sections"
+                  :key="section.id"
+                  dense
+                  header-class="section-header"
+                  default-opened
+                >
+                  <template v-slot:header>
+                    <q-item-section avatar min-width="30px">
+                      <q-checkbox
+                        dense
+                        size="sm"
+                        :model-value="isSectionFullySelected(section)"
+                        @click.stop="toggleSectionSelection(section)"
+                        color="primary"
+                      />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-weight-medium">{{ section.name }}</q-item-label>
+                      <q-item-label caption>{{ getSelectedCountBySection(section) }}/{{ getSectionModulesCount(section) }} seleccionados</q-item-label>
+                    </q-item-section>
+                  </template>
+
+                  <div class="row q-col-gutter-xs q-pa-sm bg-grey-1">
+                    <div
+                      v-for="modul in section.modules"
+                      :key="modul.id"
+                      class="col-xs-6 col-sm-4"
+                    >
+                      <div class="module-check-card" :class="{ 'active': moduleSelected.includes(modul.id) }">
                         <q-checkbox
                           v-model="moduleSelected"
                           :val="modul.id"
                           :label="modul.title"
-                          :disable="visible"
                           dense
-                          class="module-checkbox"
+                          size="sm"
+                          class="full-width"
                         />
                       </div>
                     </div>
-                  </q-card-section>
-                </q-card>
-              </q-expansion-item>
-            </q-scroll-area>
+                  </div>
+                </q-expansion-item>
+              </q-scroll-area>
+            </div>
           </q-card-section>
 
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn flat color="grey-7" label="Cancelar" @click="closeModal" size="sm" class="no-caps" />
+            <q-btn unelevated color="primary" label="Crear Rubro" type="submit" :loading="visible" class="btn-premium q-px-md" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -428,6 +467,8 @@ export default {
       visible: false,
       openAddBusinessType: false,
       openEditBusinessType: false,
+      dragOverImage: false,
+      dragOverVideo: false,
       columns: [
         {
           name: 'id',
@@ -556,6 +597,9 @@ export default {
       const formData = new FormData()
       formData.append('name', this.businessType.name)
       formData.append('description', this.businessType.description)
+      if (this.businessType.pixel) {
+        formData.append('pixel', this.businessType.pixel)
+      }
       if (this.imageFile) {
         formData.append('image', this.imageFile)
       }
@@ -611,6 +655,9 @@ export default {
       const formData = new FormData()
       formData.append('name', this.businessType.name)
       formData.append('description', this.businessType.description)
+      if (this.businessType.pixel) {
+        formData.append('pixel', this.businessType.pixel)
+      }
       if (this.imageFile) {
         formData.append('image', this.imageFile)
       }
@@ -754,6 +801,48 @@ export default {
       return section.modules?.length || 0
     },
     /**
+     * Handle image input from file picker
+     */
+    onImageInput (e) {
+      const file = e.target.files[0]
+      if (file) {
+        this.imageFile = file
+        this.onImageSelected(file)
+      }
+    },
+    /**
+     * Handle video input from file picker
+     */
+    onVideoInput (e) {
+      const file = e.target.files[0]
+      if (file) {
+        this.videoFile = file
+        this.onVideoSelected(file)
+      }
+    },
+    /**
+     * Handle drop image
+     */
+    onDropImage (e) {
+      this.dragOverImage = false
+      const files = e.dataTransfer.files
+      if (files && files.length > 0) {
+        this.imageFile = files[0]
+        this.onImageSelected(this.imageFile)
+      }
+    },
+    /**
+     * Handle drop video
+     */
+    onDropVideo (e) {
+      this.dragOverVideo = false
+      const files = e.dataTransfer.files
+      if (files && files.length > 0) {
+        this.videoFile = files[0]
+        this.onVideoSelected(this.videoFile)
+      }
+    },
+    /**
      * Handle image selection
      */
     onImageSelected (file) {
@@ -788,7 +877,6 @@ export default {
      * Handle video selection
      */
     onVideoSelected (file) {
-      // Solo necesitamos el archivo, no preview para video
       if (!file) {
         this.videoFile = null
       }
@@ -807,35 +895,132 @@ export default {
 </script>
 
 <style scoped>
-.module-scroll-area {
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 8px;
+.modern-business-dialog {
+  width: 500px;
+  max-width: 95vw;
+  border-radius: 20px;
+  overflow: hidden;
+  background: white;
 }
 
-.module-checkbox {
+.modern-dialog-header {
+  padding: 20px 24px;
+}
+
+.header-icon-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(var(--q-primary-rgb), 0.3);
+}
+
+.bg-primary-gradient {
+  background: linear-gradient(135deg, var(--q-primary) 0%, #3a7bd5 100%);
+}
+
+.modern-input :deep(.q-field__control) {
+  border-radius: 12px;
+  background: #fcfcfc;
+}
+
+/* Dropzone Styles */
+.dropzone-container {
+  height: 100px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.dropzone-container:hover {
+  border-color: var(--q-primary);
+  background: #f1f5f9;
+}
+
+.dropzone-container.dragging {
+  border-color: var(--q-primary);
+  background: rgba(var(--q-primary-rgb), 0.05);
+  transform: scale(1.02);
+}
+
+.dropzone-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.dropzone-preview {
+  height: 100%;
   width: 100%;
 }
 
-.module-checkbox :deep(.q-checkbox__label) {
-  font-size: 0.85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.video-preview {
+  position: relative;
 }
 
-.bg-grey-1 {
-  background-color: #fafafa;
+/* Module Section */
+.module-section-box {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #edf2f7;
 }
 
-.bg-grey-2 {
-  background-color: #f5f5f5;
+.modern-scroll {
+  border-radius: 8px;
 }
 
-:deep(.q-expansion-item__container) {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+.section-header {
+  border-radius: 10px;
+  margin-bottom: 4px;
+  transition: all 0.2s;
 }
 
-:deep(.q-expansion-item--expanded .q-expansion-item__container) {
-  border-color: var(--q-primary);
+.section-header:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.module-check-card {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  background: white;
+}
+
+.module-check-card:hover {
+  background: #f1f5f9;
+}
+
+.module-check-card.active {
+  background: white;
+  border-color: rgba(var(--q-primary-rgb), 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.btn-premium {
+  border-radius: 12px;
+  font-weight: 600;
+  padding: 10px 24px;
+  box-shadow: 0 4px 12px rgba(var(--q-primary-rgb), 0.2);
+  transition: all 0.3s;
+}
+
+.btn-premium:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(var(--q-primary-rgb), 0.3);
+}
+
+.no-caps {
+  text-transform: none;
 }
 </style>
