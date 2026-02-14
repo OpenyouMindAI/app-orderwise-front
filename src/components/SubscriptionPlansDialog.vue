@@ -80,7 +80,7 @@
             <!-- Plans Cards -->
             <div
               v-else
-              v-for="plan in plans.filter(p => p.slug?.toLowerCase() !== 'free')"
+              v-for="plan in filterPlans(plans)"
               :key="plan.id"
               :class="[
                 'plan-featured plan-card',
@@ -720,6 +720,28 @@ export default {
     }
 
     /**
+     * Filter the list of plans based on business type and slug
+     * @params {Array} plans - The list of plans to filter
+     * @return {Array} The filtered list of plans
+     */
+    const filterPlans = (plans) => {
+      const businessType = store.userSession?.company_session?.business_type?.name
+      return plans.filter(p => {
+        // No mostrar planes que sean 'free'
+        if (p.slug?.toLowerCase() === 'free') {
+          return false
+        }
+
+        // Si el slug es 'plan_prop_promotion', solo mostrar si el rubro es Kiosco
+        if (p.slug === 'plan_prop_promotion') {
+          return businessType === 'Kiosco'
+        }
+
+        return true
+      })
+    }
+
+    /**
      * Get monthly total (12 months)
      * @param {Object} plan - The plan to get the total for
      * @return {string} The formatted monthly total
@@ -1089,6 +1111,7 @@ export default {
       isAnnual,
       hasAnnualPrice,
       getDisplayPrice,
+      filterPlans,
       getPlanAnnualPrice,
       getPlanMonthlyTotal,
       getAnnualSavings,

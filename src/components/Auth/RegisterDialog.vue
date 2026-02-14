@@ -69,7 +69,9 @@ const handleRegisterSubmit = async ({ form, phoneNumber }) => {
       emit('success', {
         ...data,
         phone_number: phoneNumber,
-        user_email: form.email
+        user_email: form.email,
+        name: form.name,
+        last_name: form.last_name
       })
       emit('update:modelValue', false) // Close without resetting form to allow back navigation
     }

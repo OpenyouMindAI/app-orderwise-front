@@ -3,7 +3,6 @@ import { authentication } from 'src/stores/module-authentication'
 import { api } from './axios'
 import { notifySession, notifyError, notifyValidationErrors } from 'src/const/mixins'
 
-// Configuración centralizada
 /**
  * Centralized configuration for exclude URLs and debounce times
  * @type {Object} Configuration object
@@ -39,10 +38,10 @@ const hasValidToken = (store) => {
     return false
   }
 
-  const user = store.userSession
-  const needsCompanySession = !user.is_root && !user.is_super_admin
-
-  return !needsCompanySession || Boolean(user.company_session_id)
+  // Si tiene token y sesión de usuario, está autenticado.
+  // La validación de si tiene empresa o no se maneja en el flujo de cada página/layout,
+  // no debemos expulsarlo al login solo por no tener empresa aún (ej. durante el onboarding).
+  return true
 }
 
 /**

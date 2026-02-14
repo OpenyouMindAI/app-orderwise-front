@@ -330,7 +330,7 @@
 <script setup>
 import { api } from 'src/boot/axios'
 import { formatNumber, notify } from 'src/const/mixins'
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 
 /**
  * Component props
@@ -342,6 +342,19 @@ const props = defineProps({
     required: true
   }
 })
+
+const emit = defineEmits(['update:ingredients'])
+
+/**
+ * List of recipe ingredients
+ * @type {Ref<Array>}
+ */
+const recipeItems = ref([])
+
+// Watch for changes in recipeItems and emit to parent
+watch(recipeItems, (newVal) => {
+  emit('update:ingredients', newVal)
+}, { deep: true })
 
 /**
  * Table columns configuration
@@ -355,12 +368,6 @@ const columns = [
   { name: 'cost_impact', align: 'right', label: 'Costo Impacto', field: row => `$${formatNumber(row.cost_impact || 0)}` },
   { name: 'actions', align: 'center', label: 'Acciones' }
 ]
-
-/**
- * List of recipe ingredients
- * @type {Ref<Array>}
- */
-const recipeItems = ref([])
 
 /**
  * Loading state for the table
@@ -585,25 +592,51 @@ const saveIngredient = async () => {
       ingredient_id: ingredientForm.value.ingredient.id,
       quantity: ingredientForm.value.quantity,
       unit_of_measure_id: ingredientForm.value.unit_of_measure_id,
-      waste_percentage: ingredientForm.value.waste_percentage
+      waste_percentage: ingredientForm.value.waste_percentage,
+      ingredient: ingredientForm.value.ingredient, // Include ingredient object for local UI
+      unit_of_measure: unitOfMeasures.value.find(u => u.id === ingredientForm.value.unit_of_measure_id),
+      cost_impact: parseFloat(estimatedCost.value)
     }
 
-    if (editingIngredient.value) {
-      await api.put(`products/${productSelected.value.id}/recipe/${editingIngredient.value.id}`, payload)
-      notify('Ingrediente actualizado', 'positive')
+    if (!productSelected.value.id) {
+      // Memory Mode: Working with a new recipe not yet saved
+      if (editingIngredient.value) {
+        const index = recipeItems.value.findIndex(item => item === editingIngredient.value)
+        if (index !== -1) {
+          recipeItems.value[index] = payload
+        }
+      } else {
+        recipeItems.value.push(payload)
+      }
+      recalculateLocalTotal()
+      notify('Ingrediente guardado localmente', 'info')
     } else {
-      await api.post(`products/${productSelected.value.id}/recipe`, payload)
-      notify('Ingrediente agregado', 'positive')
+      // Backend Mode: Working with an existing product
+      if (editingIngredient.value) {
+        await api.put(`products/${productSelected.value.id}/recipe/${editingIngredient.value.id}`, payload)
+        notify('Ingrediente actualizado', 'positive')
+      } else {
+        await api.post(`products/${productSelected.value.id}/recipe`, payload)
+        notify('Ingrediente agregado', 'positive')
+      }
+      await loadRecipeItems()
+      await calculateCost()
     }
-    await loadRecipeItems()
+
     closeIngredientModal()
-    // Optionally trigger cost recalculation
-    await calculateCost()
   } catch (error) {
     notify(error.response?.data?.message || 'Error al guardar', 'negative')
   } finally {
     loadingForm.value = false
   }
+}
+
+/**
+ * Recalculate the total recipe cost locally based on the item list
+ */
+const recalculateLocalTotal = () => {
+  totalRecipeCost.value = recipeItems.value.reduce((acc, item) => acc + (parseFloat(item.cost_impact) || 0), 0)
+  calculateCostByUnitOfMeasure()
 }
 
 /**
@@ -629,10 +662,20 @@ const editIngredient = (row) => {
  */
 const deleteIngredient = async (row) => {
   try {
-    await api.delete(`products/${productSelected.value.id}/recipe/${row.id}`)
-    notify('Ingrediente eliminado', 'positive')
-    await loadRecipeItems()
-    await calculateCost()
+    if (!productSelected.value.id) {
+      // Local deletion
+      const index = recipeItems.value.indexOf(row)
+      if (index > -1) {
+        recipeItems.value.splice(index, 1)
+      }
+      recalculateLocalTotal()
+      notify('Ingrediente removido', 'info')
+    } else {
+      await api.delete(`products/${productSelected.value.id}/recipe/${row.id}`)
+      notify('Ingrediente eliminado', 'positive')
+      await loadRecipeItems()
+      await calculateCost()
+    }
   } catch (error) {
     notify('Error al eliminar', 'negative')
   }
