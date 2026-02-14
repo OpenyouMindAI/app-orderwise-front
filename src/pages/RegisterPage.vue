@@ -24,6 +24,7 @@
       v-if="currentTab === 'otp'"
       :email="form.email"
       :loading="loadingOtp"
+      :loadingResend="loadingResendOtp"
       :resendTimer="resendTimer"
       :showBackLink="true"
       @submit="verifyOtp"
@@ -127,7 +128,11 @@
 
         <!-- Grid de Cards -->
         <q-card-section class="q-pa-md" style="max-height: 50vh; overflow-y: auto;">
-          <div class="row q-col-gutter-sm">
+          <div v-if="loadingBusinessTypesSelect" class="flex flex-center q-pa-xl">
+            <q-spinner-cube color="primary" size="64px" />
+          </div>
+
+          <div v-else class="row q-col-gutter-sm">
             <div
               v-for="(type, index) in filteredBusinessTypes"
               :key="type.id"
@@ -151,7 +156,7 @@
           </div>
 
           <!-- No results -->
-          <div v-if="filteredBusinessTypes.length === 0" class="text-center q-pa-lg">
+          <div v-if="!loadingBusinessTypesSelect && filteredBusinessTypes.length === 0" class="text-center q-pa-lg">
             <q-icon name="search_off" size="64px" color="grey-5" />
             <div class="text-h6 text-grey-6 q-mt-md">No se encontraron rubros</div>
             <div class="text-caption text-grey-5">Intenta con otra búsqueda</div>
@@ -240,6 +245,8 @@ const loadingCompanySetup = ref(false)
 // OTP Verification
 const currentTab = ref('register')
 const loadingOtp = ref(false)
+const loadingResendOtp = ref(false)
+const loadingBusinessTypesSelect = ref(false)
 
 // OTP Session
 const otpSessionToken = ref('')
@@ -292,10 +299,11 @@ const registrationFormData = ref({
 /**
  * Handle business type next step (Step 1 -> Step 2)
  */
-const handleBusinessTypeNext = (businessData) => {
+const handleBusinessTypeNext = async (businessData) => {
   tempCompanyData.value = businessData
+  // En lugar de abrir el modal manual, hacemos el auto-setup con los datos del registro
+  await autoSetupCompany()
   showBusinessTypeSetup.value = false
-  showCompanySetup.value = true
 }
 
 /**
@@ -330,7 +338,7 @@ const handleCompanySetupSuccess = (data) => {
   showCompanyOptions.value = false
 
   // Notificar éxito
-  notify('¡Bienvenido a OrderWise!', 'positive', 'celebration')
+  notify('¡Bienvenido a Qbits!', 'positive', 'celebration')
 
   // Redirigir a la página principal
   router.push('/')
@@ -358,12 +366,16 @@ const filteredBusinessTypes = computed(() => {
  */
 const searchBusinessTypes = async (value) => {
   try {
+    loadingBusinessTypesSelect.value = true
     const { data } = await api.get('business-types', {
       params: { dataSearch: { name: value } }
     })
     businessTypes.value = data.data || data
   } catch (error) {
     console.error('Error loading business types:', error)
+    notify('No se pudieron cargar los rubros del negocio.', 'negative', 'warning')
+  } finally {
+    loadingBusinessTypesSelect.value = false
   }
 }
 
@@ -422,6 +434,65 @@ const getBusinessIcon = (name) => {
 
   // Icono por defecto
   return 'store'
+}
+
+/**
+ * Crea la empresa automáticamente con los datos del registro (Skip Setup)
+ */
+const autoSetupCompany = async () => {
+  try {
+    loadingCompanySetup.value = true
+
+    // Obtener datos del usuario desde el store
+    const user = store.userGetter || {}
+
+    // Priorizar datos del formulario de registro si están disponibles
+    const registrationData = registrationFormData.value || {}
+
+    // Construir nombre completo de la empresa desde datos de registro
+    const firstName = registrationData.name || user.name || ''
+    const lastName = registrationData.last_name || user.last_name || ''
+    const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
+
+    // Obtener email desde datos de registro o store
+    const email = registrationData.email || user.email || ''
+
+    // Obtener teléfono completo (con código de país) desde datos de registro
+    const phoneNumber = registrationData.phone_number || user.phone_number || user.phone || null
+
+    // Construir payload con datos del formulario de registro
+    const payload = {
+      company_name: companyName,
+      company_document: null,
+      company_email: email,
+      company_phone: phoneNumber,
+      company_address: null,
+      business_type_id: tempCompanyData.value?.business_type_id || null,
+      country_id: null,
+      copy_test_products: false
+    }
+
+    const { data } = await api.post('authentication/setup-company', payload)
+
+    handleCompanySetupSuccess(data)
+
+    if (fbq?.event) {
+      fbq.event('CrearEmpresa', {
+        business_type: 'auto-skipped',
+        country: 'not_specified',
+        company_name: payload.company_name,
+        setup_method: 'auto'
+      })
+    }
+  } catch (error) {
+    console.error('❌ Error en auto-setup:', error)
+    // Si falla el auto-setup, mostramos las opciones para que lo haga manual
+    showCompanyOptions.value = true
+    const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración automática.'
+    notify(errorMessage, 'negative', 'warning')
+  } finally {
+    loadingCompanySetup.value = false
+  }
 }
 
 /**
@@ -501,7 +572,6 @@ const handleRegisterSubmit = async ({ form: formData, phoneNumber }) => {
       companyForm.value.company_phone = phoneNumber || ''
 
       // Si el email ya está verificado (viene de Google u otro proveedor), saltar OTP
-      // IMPORTANTE: Solo saltar OTP si es registro con Google Y tiene email verificado
       if (isGoogleRegister.value && data.user?.email_verified_at) {
         showCompanyOptions.value = true
         return
@@ -567,7 +637,7 @@ const verifyOtp = async (code) => {
       localStorage.setItem(REGISTER_SESSION_KEY, JSON.stringify(sessionData))
     }
 
-    // Continuar al flujo de setup de empresa
+    // Continuar al flujo de selección de rubro/opciones
     showCompanyOptions.value = true
   } catch (error) {
     // Manejar errores específicos
@@ -624,6 +694,7 @@ const startResendTimer = () => {
  */
 const resendOtp = async () => {
   try {
+    loadingResendOtp.value = true
     const { data } = await api.post('otp/resend', {
       identifier: form.value.email,
       channel: 'email',
@@ -658,6 +729,8 @@ const resendOtp = async () => {
         'warning'
       )
     }
+  } finally {
+    loadingResendOtp.value = false
   }
 }
 
@@ -779,7 +852,7 @@ const restoreRegisterSession = () => {
       registrationFormData.value = JSON.parse(savedRegData)
     }
 
-    // Si OTP ya fue verificado, mostrar opciones de empresa
+    // Si OTP ya fue verificado, mostrar opciones de empresa para que elija rubro
     if (sessionData.otp_verified) {
       showCompanyOptions.value = true
     }
@@ -966,7 +1039,9 @@ const assignDemo = async () => {
 
     router.push('/')
   } catch (error) {
-    console.log(error)
+    console.error('❌ Error al asignar demo:', error)
+    const errorMessage = error.response?.data?.message || 'No se pudo activar la demo del sistema.'
+    notify(errorMessage, 'negative', 'warning')
   } finally {
     loadingDemo.value = false
   }
@@ -997,7 +1072,7 @@ const handleGoogleRegister = async () => {
         fbq.event('CompleteRegistration')
       }
 
-      // Mostrar modal de setup de empresa
+      // Mostrar opciones para elegir el rubro de la empresa
       if (data.needs_company_setup) {
         isGoogleRegister.value = true
         companyForm.value.company_email = userInfo.email

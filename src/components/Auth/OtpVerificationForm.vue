@@ -56,10 +56,12 @@
           dense
           no-caps
           color="primary"
-          :disable="!canResend"
+          :disable="!canResend || loadingResend"
           @click="handleResend"
-          :label="canResend ? 'Reenviar código' : `Reenviar en ${resendTimer}s`"
-        />
+          :label="canResend ? (loadingResend ? '' : 'Reenviar código') : `Reenviar en ${resendTimer}s`"
+        >
+          <q-spinner-dots v-if="loadingResend && canResend" size="sm" />
+        </q-btn>
       </div>
 
       <!-- Volver (Opcional) -->
@@ -96,6 +98,10 @@ const props = defineProps({
     default: 0
   },
   showBackLink: {
+    type: Boolean,
+    default: false
+  },
+  loadingResend: {
     type: Boolean,
     default: false
   },

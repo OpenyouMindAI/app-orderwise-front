@@ -45,8 +45,12 @@
           </div>
 
           <!-- Carrusel de Rubros -->
-          <div class="carousel-container">
-            <div v-if="filteredBusinessTypes.length === 0" class="text-center q-py-xl text-grey-6">
+          <div class="carousel-container min-height-200">
+            <div v-if="loadingTypes" class="flex flex-center q-py-xl">
+              <q-spinner-dots color="primary" size="48px" />
+            </div>
+
+            <div v-else-if="filteredBusinessTypes.length === 0" class="text-center q-py-xl text-grey-6">
               <q-icon name="search_off" size="48px" class="q-mb-md"/>
               <div>No se encontraron rubros</div>
             </div>
@@ -57,7 +61,7 @@
               :slides-per-view="1"
               :space-between="16"
               :navigation="true"
-              :loop="true"
+              :loop="filteredBusinessTypes.length > 3"
               :breakpoints="{
                 640: {
                   slidesPerView: 2,
@@ -184,6 +188,7 @@ const businessTypes = ref([])
 const businessType = ref(null)
 const copyTestProducts = ref(false)
 const searchQuery = ref('')
+const loadingTypes = ref(false)
 
 // Computed
 const filteredBusinessTypes = computed(() => {
@@ -200,12 +205,15 @@ const filteredBusinessTypes = computed(() => {
  */
 const loadBusinessTypes = async (search = '') => {
   try {
+    loadingTypes.value = true
     const { data } = await api.get('business-types', {
       params: search ? { dataSearch: { name: search } } : {}
     })
     businessTypes.value = data
   } catch (error) {
     console.error('Error loading business types:', error)
+  } finally {
+    loadingTypes.value = false
   }
 }
 
@@ -392,10 +400,10 @@ onMounted(() => {
   background: #1f2937;
 }
 
-/* Carousel Container
-.carousel-container {
+/* Carousel Container */
+.min-height-200 {
+  min-height: 200px;
 }
-*/
 
 /* Swiper Styles */
 .business-swiper {
