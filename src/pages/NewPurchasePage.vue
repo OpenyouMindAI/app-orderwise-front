@@ -360,112 +360,112 @@
                         :key="rowIndex"
                         class="cart-item"
                       >
-                            <div class="cart-item-row">
-                                <!-- Botón eliminar -->
-                                <q-btn
-                                  icon="close"
-                                  flat
-                                  dense
-                                  round
-                                  size="xs"
-                                  color="grey-6"
-                                  class="cart-delete-btn"
-                                  @click="deleteProduct({ rowIndex })"
-                                />
+                        <div class="cart-item-row">
+                          <!-- Botón eliminar -->
+                          <q-btn
+                            icon="close"
+                            flat
+                            dense
+                            round
+                            size="xs"
+                            color="grey-6"
+                            class="cart-delete-btn"
+                            @click="deleteProduct({ rowIndex })"
+                          />
 
-                                <!-- Información del producto -->
-                                <div class="cart-item-info">
-                                    <span class="cart-item-name">{{ product.name }}</span>
-                                    <div class="cart-item-prices">
-                                      <span class="cart-item-price-label">
-                                        Costo: {{ coin?.symbol }} {{ formatNumber(product.cost) }}
-                                        <q-popup-edit
-                                          v-if="userSession?.is_root || userSession?.is_super_admin"
-                                          v-model.number="product.cost"
-                                          auto-save
-                                          v-slot="scope"
-                                          @update:model-value="calculate(product)"
-                                        >
-                                          <q-input
-                                            label="Costo"
-                                            type="number"
-                                            @focus="e => e.target.select()"
-                                            v-model.number="scope.value"
-                                            dense
-                                            autofocus
-                                            @keyup.enter="scope.set"
-                                          />
-                                        </q-popup-edit>
-                                      </span>
-                                      <div v-if="invoiceType?.acronym_serie === 'B'" class="cart-item-price-label text-orange-9 text-weight-bold">
-                                        Impuesto: {{ coin?.symbol }} {{ formatNumber(product.taxe) }}
-                                        <q-popup-edit
-                                          v-model.number="product.taxe"
-                                          auto-save
-                                          v-slot="scope"
-                                          @save="calculate(product)"
-                                        >
-                                          <q-input
-                                            label="Impuesto"
-                                            type="number"
-                                            @focus="e => e.target.select()"
-                                            v-model.number="scope.value"
-                                            dense
-                                            autofocus
-                                            @keyup.enter="scope.set"
-                                          />
-                                        </q-popup-edit>
-                                      </div>
-                                    </div>
-                                </div>
-
-                                <!-- Controles de cantidad -->
-                                <div class="quantity-controls">
-                                  <q-btn
-                                    icon="remove"
-                                    unelevated
+                          <!-- Información del producto -->
+                          <div class="cart-item-info">
+                            <span class="cart-item-name">{{ product.name }}</span>
+                            <div class="cart-item-prices">
+                              <span class="cart-item-price-label">
+                                Costo: {{ coin?.symbol }} {{ formatNumber(product.cost) }}
+                                <q-popup-edit
+                                  v-if="userSession?.is_root || userSession?.is_super_admin"
+                                  v-model.number="product.cost"
+                                  auto-save
+                                  v-slot="scope"
+                                  @update:model-value="calculate(product)"
+                                >
+                                  <q-input
+                                    label="Costo"
+                                    type="number"
+                                    @focus="e => e.target.select()"
+                                    v-model.number="scope.value"
                                     dense
-                                    round
-                                    size="xs"
-                                    color="grey-3"
-                                    text-color="dark"
-                                    @click="product.quantity > 1 ? (product.quantity--, calculate(product)) : deleteProduct({ rowIndex })"
+                                    autofocus
+                                    @keyup.enter="scope.set"
                                   />
-                                  <span class="quantity-value" @click.stop>
-                                    {{ formatNumber(product.quantity) }}
-                                    <q-popup-edit
-                                      v-model.number="product.quantity"
-                                      auto-save
-                                      v-slot="scope"
-                                      @update:model-value="calculate(product)"
-                                    >
-                                      <q-input
-                                        label="Cantidad"
-                                        type="number"
-                                        @focus="e => e.target.select()"
-                                        v-model.number="scope.value"
-                                        dense
-                                        autofocus
-                                        @keyup.enter="scope.set"
-                                      />
-                                    </q-popup-edit>
-                                  </span>
-                                  <q-btn
-                                    icon="add"
-                                    unelevated
+                                </q-popup-edit>
+                              </span>
+                              <div v-if="invoiceType?.acronym_serie === 'B'" class="cart-item-price-label text-orange-9 text-weight-bold">
+                                Impuesto: {{ coin?.symbol }} {{ formatNumber(product.taxe) }}
+                                <q-popup-edit
+                                  v-model.number="product.taxe"
+                                  auto-save
+                                  v-slot="scope"
+                                  @save="calculate(product)"
+                                >
+                                  <q-input
+                                    label="Impuesto"
+                                    type="number"
+                                    @focus="e => e.target.select()"
+                                    v-model.number="scope.value"
                                     dense
-                                    round
-                                    size="xs"
-                                    color="primary"
-                                    @click="product.quantity++; calculate(product)"
+                                    autofocus
+                                    @keyup.enter="scope.set"
                                   />
-                                </div>
-
-                                <!-- Subtotal -->
-                                <div class="cart-item-subtotal">
-                                     {{ formatNumber(product.subtotal) }}
-                                </div>
+                                </q-popup-edit>
+                              </div>
                             </div>
+                          </div>
+
+                          <!-- Controles de cantidad -->
+                          <div class="quantity-controls">
+                            <q-btn
+                              icon="remove"
+                              unelevated
+                              dense
+                              round
+                              size="xs"
+                              color="grey-3"
+                              text-color="dark"
+                              @click="product.quantity > 1 ? (product.quantity--, calculate(product)) : deleteProduct({ rowIndex })"
+                            />
+                            <span class="quantity-value" @click.stop>
+                              {{ formatNumber(product.quantity) }}
+                              <q-popup-edit
+                                v-model.number="product.quantity"
+                                auto-save
+                                v-slot="scope"
+                                @update:model-value="calculate(product)"
+                              >
+                                <q-input
+                                  label="Cantidad"
+                                  type="number"
+                                  @focus="e => e.target.select()"
+                                  v-model.number="scope.value"
+                                  dense
+                                  autofocus
+                                  @keyup.enter="scope.set"
+                                />
+                              </q-popup-edit>
+                            </span>
+                            <q-btn
+                              icon="add"
+                              unelevated
+                              dense
+                              round
+                              size="xs"
+                              color="primary"
+                              @click="product.quantity++; calculate(product)"
+                            />
+                          </div>
+
+                          <!-- Subtotal -->
+                          <div class="cart-item-subtotal">
+                            {{ formatNumber(product.subtotal) }}
+                          </div>
+                        </div>
                       </div>
                  </div>
               </div>
@@ -1438,10 +1438,105 @@
       </q-card>
     </q-dialog>
 
+    <!-- Dialog para visualización de análisis IA -->
+    <q-dialog v-model="showAnalysisModal" persistent maximize transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-grey-1">
+        <q-toolbar class="bg-primary text-white">
+          <q-btn flat round dense icon="close" @click="clearAnalysis" />
+          <q-toolbar-title>Análisis de Factura IA</q-toolbar-title>
+          <q-btn flat label="Confirmar Datos" icon-right="check" @click="applyAnalysisData" />
+        </q-toolbar>
+
+        <q-card-section class="q-pa-md">
+          <div class="row q-col-gutter-md">
+            <!-- Resumen -->
+            <div class="col-12 col-md-4">
+              <q-card flat bordered class="q-pa-md full-height">
+                <div class="text-h6 q-mb-md flex items-center">
+                  <q-icon name="receipt_long" class="q-mr-sm" color="primary"/>
+                  Datos Generales
+                </div>
+                
+                <q-list separator>
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label caption>Proveedor Detectado</q-item-label>
+                      <q-item-label class="text-weight-bold">{{ analysisData?.provider_name || 'No detectado' }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label caption>Número de Factura</q-item-label>
+                      <q-item-label class="text-weight-bold">{{ analysisData?.invoice_number || 'No detectado' }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label caption>Fecha</q-item-label>
+                      <q-item-label class="text-weight-bold">{{ analysisData?.date || 'No detectada' }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item>
+                    <q-item-section>
+                      <q-item-label caption>Total detectado</q-item-label>
+                      <q-item-label class="text-weight-bold text-positive text-h6">
+                        {{ analysisData?.currency }} {{ formatNumber(analysisData?.total_amount || 0) }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card>
+            </div>
+
+            <!-- Items detectados -->
+            <div class="col-12 col-md-8">
+              <q-card flat bordered class="q-pa-md full-height">
+                <div class="text-h6 q-mb-md flex items-center">
+                  <q-icon name="list" class="q-mr-sm" color="primary"/>
+                  Items Detectados
+                </div>
+
+                <div v-if="analysisData?.items && analysisData.items.length > 0">
+                  <q-markup-table flat bordered dense>
+                    <thead>
+                      <tr>
+                        <th class="text-left">Descripción</th>
+                        <th class="text-right">Cant.</th>
+                        <th class="text-right">Precio Unit.</th>
+                        <th class="text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(item, i) in analysisData.items" :key="i">
+                        <td>{{ item.description }}</td>
+                        <td class="text-right">{{ formatNumber(item.quantity) }}</td>
+                        <td class="text-right">{{ formatNumber(item.unit_price) }}</td>
+                        <td class="text-right">{{ formatNumber(item.total) }}</td>
+                      </tr>
+                    </tbody>
+                  </q-markup-table>
+                  <div class="q-mt-sm text-caption text-grey-7">
+                    <q-icon name="info" /> Estos items son informativos. Deberás agregarlos al inventario manualmente si no existen.
+                  </div>
+                </div>
+                <div v-else class="text-center q-pa-lg text-grey">
+                  <q-icon name="sentiment_dissatisfied" size="40px" />
+                  <div class="q-mt-sm">No se detectaron items individuales</div>
+                </div>
+              </q-card>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <wait-by-payment-mp
       v-if="waitingPayment"
       v-model="waitingPayment"
-      :purchase="setModelInvoice()"
+      :purchase="getInvoiceObject()"
       @paymentSuccess="paymentSuccess"
     />
   </q-page>
@@ -1647,6 +1742,21 @@ export default {
        * @type {String}
        */
       barcode: null,
+      /**
+       * Is analyzing invoice
+       * @type {Boolean}
+       */
+      analyzingInvoice: false,
+      /**
+       * Show analysis modal
+       * @type {Boolean}
+       */
+      showAnalysisModal: false,
+      /**
+       * Analysis data from AI
+       * @type {Object}
+       */
+      analysisData: null,
       /**
        * Balance code
        * @type {String}
@@ -2114,7 +2224,7 @@ export default {
      * Set model invoice for payment
      * @returns {Object}
      */
-    setModelInvoice () {
+    getInvoiceObject () {
       return {
         provider: this.provider,
         products: this.products,
@@ -2768,7 +2878,7 @@ export default {
      * Set purchase model with FormData
      * @returns {FormData}
      */
-    setModelInvoice () {
+    getInvoiceFormData () {
       const purchaseData = {
         ...this.purchase,
         purchase_code: this.purchaseCode,
@@ -2837,7 +2947,7 @@ export default {
      * Set params bill
      */
     setParamsBill () {
-      if (this.invoiceType?.acronym_serie === 'CC') { return this.setModelInvoice() }
+      if (this.invoiceType?.acronym_serie === 'CC') { return this.getInvoiceFormData() }
 
       if (!this.withoutPayment.includes(this.invoiceType?.acronym_serie) && this.pendingPayment > 0) {
         notify('La factura no puede ser generada sin pagar el monto total', 'negative', 'warning')
@@ -2856,7 +2966,7 @@ export default {
         return false
       }
 
-      return this.setModelInvoice()
+      return this.getInvoiceFormData()
     },
 
     /**
@@ -3269,6 +3379,28 @@ export default {
 
         this.purchaseFiles.push(fileObj)
       })
+
+      // Prompt for AI Analysis for the first image
+      const imageFile = files.find(f => f.type.startsWith('image/'))
+      if (imageFile) {
+        this.$q.dialog({
+          title: 'Analizar Factura con IA',
+          message: '¿Deseas analizar esta imagen para extraer los datos automáticamente?',
+          ok: {
+            label: 'Analizar',
+            color: 'primary',
+            icon: 'auto_awesome'
+          },
+          cancel: {
+            label: 'Solo adjuntar',
+            color: 'grey',
+            flat: true
+          },
+          persistent: true
+        }).onOk(() => {
+          this.uploadAndAnalyzeInvoice(imageFile)
+        })
+      }
     },
     /**
      * Handle delete purchase files
@@ -3305,6 +3437,88 @@ export default {
       })
       this.purchaseFiles = []
       this.deletedPurchaseFiles = []
+    },
+    async uploadAndAnalyzeInvoice (file) {
+      if (this.analyzingInvoice) return
+      
+      this.analyzingInvoice = true
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // Show loading
+      this.$q.loading.show({
+        message: 'Analizando factura con IA...',
+        backgroundColor: 'primary',
+        spinnerColor: 'white'
+      })
+
+      try {
+        const { data } = await this.$api.post('purchases/analyze-image', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+
+        if (data.success && data.data) {
+          this.analysisData = data.data
+          this.showAnalysisModal = true
+          notify('Datos extraídos exitosamente. Por favor confirma.', 'positive', 'auto_awesome')
+        } else {
+          notify('No se pudieron extraer datos de la imagen', 'warning', 'warning')
+        }
+      } catch (error) {
+        console.error('Error analyzing invoice:', error)
+        const msg = error.response?.data?.error || 'Error al analizar la factura'
+        notify(msg, 'negative', 'error')
+      } finally {
+        this.analyzingInvoice = false
+        this.$q.loading.hide()
+      }
+    },
+    applyAnalysisData () {
+      if (!this.analysisData) return
+
+      const data = this.analysisData
+      
+      // 1. Set Invoice Number
+      if (data.invoice_number) {
+        this.purchaseCode = data.invoice_number
+      }
+
+      // 2. Set Date
+      if (data.date) {
+        // Ensure format YYYY-MM-DDTHH:mm
+        let date = data.date
+        if (date.length === 10) date += 'T00:00' // If YYYY-MM-DD
+        this.deliveryDate = date
+      }
+
+      // 3. Set Provider (Search by name similarity)
+      if (data.provider_name) {
+        const search = data.provider_name.toLowerCase()
+        const match = this.providers.find(p => p.name.toLowerCase().includes(search) || search.includes(p.name.toLowerCase()))
+        if (match) {
+          this.provider = match
+          notify(`Proveedor detectado: ${match.name}`, 'positive', 'check')
+        } else {
+          notify(`Proveedor en factura: ${data.provider_name} (No encontrado)`, 'info', 'info')
+        }
+      }
+
+      // 4. Set Description
+      if (data.invoice_number && data.provider_name) {
+         // Append to description if not empty
+         const info = `Factura ${data.invoice_number} de ${data.provider_name}`
+         this.invoiceDescription = this.invoiceDescription ? `${this.invoiceDescription}\n${info}` : info
+      }
+      
+      this.showAnalysisModal = false
+      this.analysisData = null
+      notify('Datos aplicados al formulario.', 'positive', 'check')
+    },
+    clearAnalysis () {
+      this.analysisData = null
+      this.showAnalysisModal = false
     },
     /**
      * Filter products for addons
