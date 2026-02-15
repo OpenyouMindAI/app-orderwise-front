@@ -3293,7 +3293,7 @@ export default {
 /* Floating Create Button Mobile */
 .float-create-btn-mobile {
   position: fixed;
-  bottom: 80px;
+  bottom: 130px;
   right: 24px;
   z-index: 2000;
   display: flex;
