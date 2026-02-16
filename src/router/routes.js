@@ -450,16 +450,16 @@ const routes = [
     component: () => import('layouts/MobileLayout.vue'),
     children: [
       {
-        path: 'catalog/:company_id/:branch_office_id',
-        name: 'Catalog',
-        component: () => import('pages/CatalogPage.vue')
-      },
-      {
         path: 'menu',
         name: 'Menu',
         component: () => import('pages/MenuPage.vue')
       }
     ]
+  },
+  {
+    path: '/catalog/:company_id/:branch_office_id',
+    name: 'Catalog',
+    component: () => import('pages/CatalogPage.vue')
   },
   {
     path: '/command',
