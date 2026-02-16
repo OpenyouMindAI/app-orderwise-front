@@ -1440,11 +1440,10 @@
 
     <!-- Dialog para visualización de análisis IA -->
     <q-dialog v-model="showAnalysisModal" persistent maximize transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="bg-grey-1">
+      <q-card style="width: 900px; max-width: 95vw;">
         <q-toolbar class="bg-primary text-white">
-          <q-btn flat round dense icon="close" @click="clearAnalysis" />
           <q-toolbar-title>Análisis de Factura IA</q-toolbar-title>
-          <q-btn flat label="Confirmar Datos" icon-right="check" @click="applyAnalysisData" />
+          <q-btn flat round dense icon="close" v-close-popup @click="clearAnalysis" />
         </q-toolbar>
 
         <q-card-section class="q-pa-md">
@@ -1456,12 +1455,33 @@
                   <q-icon name="receipt_long" class="q-mr-sm" color="primary"/>
                   Datos Generales
                 </div>
-                
+
                 <q-list separator>
-                  <q-item>
+                  <q-item class="q-px-none">
                     <q-item-section>
-                      <q-item-label caption>Proveedor Detectado</q-item-label>
-                      <q-item-label class="text-weight-bold">{{ analysisData?.provider_name || 'No detectado' }}</q-item-label>
+                      <q-select
+                        filled
+                        dense
+                        use-input
+                        v-model="analysisData.selectedProvider"
+                        :options="providers"
+                        option-label="name"
+                        option-value="id"
+                        label="Proveedor"
+                        @filter="filterProviders"
+                        hide-bottom-space
+                      >
+                         <template v-slot:no-option>
+                          <q-item>
+                            <q-item-section class="text-grey">
+                              No encontrado
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                       <div class="text-caption text-grey-7 q-mt-xs" v-if="analysisData.provider_name && !analysisData.selectedProvider">
+                        Nota: En la factura se detectó "{{ analysisData.provider_name }}"
+                      </div>
                     </q-item-section>
                   </q-item>
 
@@ -1500,26 +1520,154 @@
                 </div>
 
                 <div v-if="analysisData?.items && analysisData.items.length > 0">
-                  <q-markup-table flat bordered dense>
-                    <thead>
-                      <tr>
-                        <th class="text-left">Descripción</th>
-                        <th class="text-right">Cant.</th>
-                        <th class="text-right">Precio Unit.</th>
-                        <th class="text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(item, i) in analysisData.items" :key="i">
-                        <td>{{ item.description }}</td>
-                        <td class="text-right">{{ formatNumber(item.quantity) }}</td>
-                        <td class="text-right">{{ formatNumber(item.unit_price) }}</td>
-                        <td class="text-right">{{ formatNumber(item.total) }}</td>
-                      </tr>
-                    </tbody>
-                  </q-markup-table>
+                  <q-table
+                    :rows="analysisData.items"
+                    :columns="analysisColumns"
+                    row-key="description"
+                    flat
+                    bordered
+                    dense
+                    hide-bottom
+                    :pagination="{ rowsPerPage: 0 }"
+                  >
+                    <template v-slot:body="props">
+                      <q-tr :props="props">
+                        <!-- Estado -->
+                        <q-td auto-width>
+                          <q-icon
+                            :name="props.row.is_new ? 'add_circle' : 'check_circle'"
+                            :color="props.row.is_new ? 'positive' : 'blue'"
+                            size="sm"
+                          >
+                            <q-tooltip>{{ props.row.is_new ? 'Nuevo Producto' : 'Producto Existente' }}</q-tooltip>
+                          </q-icon>
+                        </q-td>
+
+                        <!-- Producto / Descripción -->
+                        <q-td style="min-width: 250px;">
+                          <q-select
+                            filled
+                            dense
+                            use-input
+                            hide-selected
+                            fill-input
+                            input-debounce="300"
+                            v-model="props.row.selectedProduct"
+                            :options="props.row.productOptions"
+                            option-label="name"
+                            option-value="id"
+                            label="Buscar producto"
+                            @filter="(val, update) => filterProductsRow(val, update, props.row)"
+                            @update:model-value="(val) => onProductSelect(val, props.row)"
+                            clearable
+                            @clear="onProductClear(props.row)"
+                          >
+                            <template v-slot:no-option>
+                              <q-item>
+                                <q-item-section class="text-grey">
+                                  No encontrado. Se creará como nuevo: "{{ props.row.description }}"
+                                </q-item-section>
+                              </q-item>
+                            </template>
+                            <template v-slot:option="scope">
+                              <q-item v-bind="scope.itemProps">
+                                <q-item-section>
+                                  <q-item-label>{{ scope.opt.name }}</q-item-label>
+                                  <q-item-label caption>Code: {{ scope.opt.barcode }}</q-item-label>
+                                </q-item-section>
+                              </q-item>
+                            </template>
+                          </q-select>
+                          <q-input
+                            v-if="props.row.is_new"
+                            v-model="props.row.description"
+                            dense
+                            filled
+                            class="q-mt-xs"
+                            label="Nombre del nuevo producto"
+                          />
+                        </q-td>
+
+                        <!-- Categoría (Solo si es nuevo) -->
+                        <q-td style="min-width: 150px;">
+                          <q-select
+                            v-if="props.row.is_new"
+                            filled
+                            dense
+                            v-model="props.row.category"
+                            :options="categories"
+                            option-label="name"
+                            option-value="id"
+                            label="Categoría"
+                            @filter="filterCategories"
+                            use-input
+                          />
+                          <div v-else class="text-caption text-grey">
+                            {{ props.row.selectedProduct?.category?.name || '-' }}
+                          </div>
+                        </q-td>
+
+                        <!-- Unidad (Solo si es nuevo) -->
+                        <q-td style="min-width: 120px;">
+                          <q-select
+                            v-if="props.row.is_new"
+                            filled
+                            dense
+                            v-model="props.row.uom"
+                            :options="unitOfMeasures"
+                            option-label="name"
+                            option-value="id"
+                            label="Unidad"
+                          />
+                          <div v-else class="text-caption text-grey">
+                            {{ props.row.selectedProduct?.unit_of_measure?.name || '-' }}
+                          </div>
+                        </q-td>
+
+                         <!-- Mostrar en Catálogo -->
+                        <q-td auto-width class="text-center">
+                           <q-toggle
+                            v-if="props.row.is_new"
+                            v-model="props.row.show_catalog"
+                            color="primary"
+                            dense
+                          >
+                            <q-tooltip>Mostrar en Catálogo</q-tooltip>
+                          </q-toggle>
+                        </q-td>
+
+                        <!-- Cantidad -->
+                        <q-td style="width: 80px;">
+                          <q-input
+                            v-model.number="props.row.quantity"
+                            type="number"
+                            dense
+                            filled
+                            input-class="text-right"
+                          />
+                        </q-td>
+
+                        <!-- Costo -->
+                         <q-td style="width: 100px;">
+                          <q-input
+                            v-model.number="props.row.unit_price"
+                            type="number"
+                            dense
+                            filled
+                            prefix="$"
+                            input-class="text-right"
+                          />
+                        </q-td>
+
+                        <!-- Total -->
+                        <q-td class="text-right">
+                          {{ formatNumber(props.row.quantity * props.row.unit_price) }}
+                        </q-td>
+                      </q-tr>
+                    </template>
+                  </q-table>
                   <div class="q-mt-sm text-caption text-grey-7">
-                    <q-icon name="info" /> Estos items son informativos. Deberás agregarlos al inventario manualmente si no existen.
+                    <q-icon name="info" /> Verifica los productos detectados. Si seleccionas uno existente, se actualizará su stock/costo. Si no, se creará uno nuevo.
                   </div>
                 </div>
                 <div v-else class="text-center q-pa-lg text-grey">
@@ -1530,13 +1678,18 @@
             </div>
           </div>
         </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancelar" color="grey" v-close-popup @click="clearAnalysis" />
+          <q-btn label="Confirmar Datos" color="primary" icon-right="check" @click="applyAnalysisData" />
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
     <wait-by-payment-mp
       v-if="waitingPayment"
       v-model="waitingPayment"
-      :purchase="getInvoiceObject()"
+      :invoice="getInvoiceObject()"
       @paymentSuccess="paymentSuccess"
     />
   </q-page>
@@ -1997,6 +2150,16 @@ export default {
         { name: 'uom', align: 'left', label: 'Unidad', field: 'uom_acronym', sortable: true },
         { name: 'subtotal', align: 'right', label: 'Importe', field: 'subtotal', sortable: true },
         { name: 'actions', align: 'right', label: 'Acciones', field: 'actions' }
+      ],
+      analysisColumns: [
+        { name: 'status', label: '', align: 'center' },
+        { name: 'description', label: 'Producto / Descripción', align: 'left' },
+        { name: 'category', label: 'Categoría', align: 'left' },
+        { name: 'uom', label: 'UOM', align: 'left' },
+        { name: 'catalog', label: 'Catálogo', align: 'center' },
+        { name: 'quantity', label: 'Cant.', align: 'right' },
+        { name: 'unit_price', label: 'Costo', align: 'right' },
+        { name: 'total', label: 'Total', align: 'right' }
       ]
     }
   },
@@ -2041,6 +2204,18 @@ export default {
       if (!this.productQuantity?.unit_of_measure?.uom_category_id) return []
       return this.unitOfMeasures.filter(uom =>
         uom.uom_category_id === this.productQuantity.unit_of_measure.uom_category_id
+      )
+    },
+    /**
+     * Filtered providers for FAB
+     * @returns {Array}
+     */
+    filteredProvidersForFab () {
+      if (!this.providerSearch) return this.providers
+      const term = this.providerSearch.toLowerCase()
+      return this.providers.filter(v =>
+        (v.name && v.name.toLowerCase().includes(term)) ||
+        (v.document_number && v.document_number.includes(term))
       )
     },
     ...mapState(authentication, ['userSession', 'branchOffice'])
@@ -2582,6 +2757,9 @@ export default {
         params: {
           sortBy: 'id',
           sortOrder: 'desc',
+          paginate: true,
+          page: 1,
+          perPage: 50,
           dataSearch: {
             name: value,
             document_number: value
@@ -2590,7 +2768,7 @@ export default {
       })
         .then(({ data }) => {
           update(() => {
-            this.providers = data
+            this.providers = data.data
           })
         })
         .catch(err => {
@@ -2605,17 +2783,18 @@ export default {
      * Load providers data when modal opens
      */
     async loadProvidersData () {
-      if (this.providers.length > 0) return // Ya hay datos cargados
-
       this.loadingProviders = true
       try {
         const { data } = await this.$api.get('providers', {
           params: {
             sortBy: 'id',
-            sortOrder: 'desc'
+            sortOrder: 'desc',
+            paginate: true,
+            page: 1,
+            perPage: 50
           }
         })
-        this.providers = data
+        this.providers = data.data
       } catch (err) {
         Notify.create({
           message: err.message,
@@ -3342,6 +3521,7 @@ export default {
      * @param {Array} files
      */
     processPurchaseFiles (files) {
+      const validFiles = []
       files.forEach(file => {
         // Validate file type
         const isValidImage = file.type.startsWith('image/')
@@ -3349,7 +3529,7 @@ export default {
 
         if (!isValidImage && !isValidPDF) {
           this.$q.notify({
-            message: this.$t('newPurchasePage.invalidFileType'),
+            message: 'Tipo de archivo no válido (solo imágenes y PDF)',
             icon: 'warning',
             color: 'negative'
           })
@@ -3359,7 +3539,7 @@ export default {
         // Validate file size (max 10MB)
         if (file.size > 10 * 1024 * 1024) {
           this.$q.notify({
-            message: this.$t('newPurchasePage.fileTooLarge'),
+            message: 'El archivo es demasiado grande (max 10MB)',
             icon: 'warning',
             color: 'negative'
           })
@@ -3378,10 +3558,11 @@ export default {
         }
 
         this.purchaseFiles.push(fileObj)
+        validFiles.push(file)
       })
 
       // Prompt for AI Analysis for the first image
-      const imageFile = files.find(f => f.type.startsWith('image/'))
+      const imageFile = validFiles.find(f => f.type.startsWith('image/'))
       if (imageFile) {
         this.$q.dialog({
           title: 'Analizar Factura con IA',
@@ -3440,7 +3621,7 @@ export default {
     },
     async uploadAndAnalyzeInvoice (file) {
       if (this.analyzingInvoice) return
-      
+
       this.analyzingInvoice = true
       const formData = new FormData()
       formData.append('file', file)
@@ -3460,9 +3641,38 @@ export default {
         })
 
         if (data.success && data.data) {
+          // Initialize items with UI state
+          data.data.items = data.data.items.map(item => ({
+            ...item,
+            selectedProduct: null,
+            productOptions: [],
+            is_new: true,
+            category: null,
+            uom: null,
+            show_catalog: false,
+            // Try to find a default match if description is clear?
+            // For now leaving it empty for user to decide
+          }))
+
+          // Data is already enriched by backend
+          // We just need to map it correctly if needed or trust the backend structure
+          // The backend returns items with selectedProduct, productOptions, etc.
+          // We might need to ensure the UI structure is perfect.
+
+          data.data.items = data.data.items.map(item => ({
+            ...item,
+            // Ensure UI fields exist if not set by backend
+            selectedProduct: item.selectedProduct || null,
+            productOptions: item.productOptions || [],
+            is_new: item.is_new ?? true, // Default to true if not set
+            category: null, // Still need to be set for new products
+            uom: null,      // Still need to be set for new products
+            show_catalog: false,
+          }))
+
           this.analysisData = data.data
           this.showAnalysisModal = true
-          notify('Datos extraídos exitosamente. Por favor confirma.', 'positive', 'auto_awesome')
+          notify('Datos extraídos exitosamente. Por favor verifica los productos.', 'positive', 'auto_awesome')
         } else {
           notify('No se pudieron extraer datos de la imagen', 'warning', 'warning')
         }
@@ -3475,46 +3685,178 @@ export default {
         this.$q.loading.hide()
       }
     },
-    applyAnalysisData () {
+    async applyAnalysisData () {
       if (!this.analysisData) return
 
       const data = this.analysisData
-      
-      // 1. Set Invoice Number
-      if (data.invoice_number) {
-        this.purchaseCode = data.invoice_number
-      }
+      const items = data.items || []
 
-      // 2. Set Date
-      if (data.date) {
-        // Ensure format YYYY-MM-DDTHH:mm
-        let date = data.date
-        if (date.length === 10) date += 'T00:00' // If YYYY-MM-DD
-        this.deliveryDate = date
-      }
-
-      // 3. Set Provider (Search by name similarity)
-      if (data.provider_name) {
-        const search = data.provider_name.toLowerCase()
-        const match = this.providers.find(p => p.name.toLowerCase().includes(search) || search.includes(p.name.toLowerCase()))
-        if (match) {
-          this.provider = match
-          notify(`Proveedor detectado: ${match.name}`, 'positive', 'check')
-        } else {
-          notify(`Proveedor en factura: ${data.provider_name} (No encontrado)`, 'info', 'info')
+      // Validate items
+      for (const item of items) {
+        if (item.is_new) {
+          if (!item.category) {
+            notify(`Falta categoría para el producto nuevo: ${item.description}`, 'negative', 'warning')
+            return
+          }
+          if (!item.uom) {
+            notify(`Falta unidad de medida para el producto nuevo: ${item.description}`, 'negative', 'warning')
+            return
+          }
         }
       }
 
-      // 4. Set Description
-      if (data.invoice_number && data.provider_name) {
-         // Append to description if not empty
-         const info = `Factura ${data.invoice_number} de ${data.provider_name}`
-         this.invoiceDescription = this.invoiceDescription ? `${this.invoiceDescription}\n${info}` : info
+      this.$q.loading.show({ message: 'Procesando productos...' })
+
+      try {
+        // Process Items
+        for (const item of items) {
+          let productId = null
+          let productData = null
+
+          if (item.is_new) {
+            // New Product - DO NOT CREATE IN DB YET (Per user request)
+            // Just add to grid marked as such.
+            // We need a temporary ID for the grid key
+            productId = 'TEMP-' + Date.now() + Math.random().toString().slice(2, 5)
+            productData = {
+              id: productId,
+              name: item.description,
+              barcode: 'GEN-' + Date.now() + Math.random().toString().slice(2, 5),
+              cost: parseFloat(item.unit_price),
+              price: parseFloat(item.unit_price) * 1.5,
+              stock: 0,
+              category: item.category, // store object for display/later use
+              unit_of_measure: item.uom, // store object
+              is_new_pending: true, // Flag to indicate it needs creation later?
+              product_type: 'PRODUCT', // Default
+              show_catalog: item.show_catalog ? 1 : 0
+            }
+             // NOTE: If the Purchase Save API expects valid product IDs, this will fail later unless handled there.
+             // But for now, we follow instructions to NOT create it here.
+             notify(`Producto agregado a la lista (Nuevo): ${item.description}`, 'positive', 'add_circle')
+
+          } else {
+            // Existing Product
+            productId = item.selectedProduct.id
+            productData = item.selectedProduct
+          }
+
+          // Add to Purchase Grid
+          // Check if already in grid?
+          // We push to this.products
+          this.addProductToGrid({
+            ...productData,
+            quantity: parseFloat(item.quantity),
+            cost: parseFloat(item.unit_price), // Update cost with invoice cost
+            subtotal: parseFloat(item.quantity) * parseFloat(item.unit_price)
+          })
+        }
+
+        // 1. Set Invoice Number
+        if (data.invoice_number) {
+          this.purchaseCode = data.invoice_number
+        }
+
+        // 2. Set Date
+        if (data.date) {
+          let date = data.date
+          if (date.length === 10) date += 'T00:00'
+          this.deliveryDate = date
+        }
+
+        // 3. Set Provider
+        if (data.selectedProvider) {
+          this.provider = data.selectedProvider
+        } else if (data.provider_name) {
+          // Create new provider if not selected but name exists
+          try {
+            const { data: newProvider } = await this.$api.post('providers', {
+              name: data.provider_name,
+              document_number: 'GEN-' + Date.now().toString().slice(-8), // Temp doc number
+              address: 'Dirección de la factura',
+              phone: null,
+              email: null
+            })
+            this.provider = newProvider
+            notify(`Proveedor creado y asignado: ${newProvider.name}`, 'positive', 'check')
+          } catch (provErr) {
+            console.error('Error creating provider', provErr)
+            notify(`No se pudo crear el proveedor: ${data.provider_name}`, 'warning', 'warning')
+          }
+        }
+
+        // 4. Description
+        if (data.invoice_number && data.provider_name) {
+          const info = `Factura ${data.invoice_number} de ${data.provider_name}`
+          this.invoiceDescription = this.invoiceDescription ? `${this.invoiceDescription}\n${info}` : info
+        }
+
+        this.showAnalysisModal = false
+        this.analysisData = null
+        notify('Datos y productos aplicados exitosamente.', 'positive', 'check_circle')
+
+      } catch (error) {
+        console.error('Error applying analysis:', error)
+        notify('Error al procesar los productos: ' + error.message, 'negative', 'error')
+      } finally {
+        this.$q.loading.hide()
       }
-      
-      this.showAnalysisModal = false
-      this.analysisData = null
-      notify('Datos aplicados al formulario.', 'positive', 'check')
+    },
+    addProductToGrid (product) {
+       // Logic similar to addProduct but direct
+       const newProduct = {
+        product_id: product.id,
+        name: product.name,
+        barcode: product.barcode,
+        cost: product.cost,
+        taxe: product.taxe || 0, // Assuming 0 or from product
+        quantity: product.quantity,
+        subtotal: product.quantity * product.cost,
+        stock: product.stock,
+        uom_acronym: product.unit_of_measure?.acronym || 'UN',
+        category: { name: product.category?.name },
+        unit_of_measure: product.unit_of_measure
+       }
+       this.products.push(newProduct)
+       this.calculate(newProduct)
+    },
+    filterProductsRow (val, update, row) {
+      if (val === '') {
+        update(() => {
+          row.productOptions = []
+        })
+        return
+      }
+
+      this.$api.get('products', {
+        params: {
+          dataSearch: {
+            name: val,
+            barcode: val
+          },
+          perPage: 20
+        }
+      }).then(({ data }) => {
+        update(() => {
+          row.productOptions = data.data // API returns paginated data structure
+        })
+      })
+    },
+    onProductSelect (product, row) {
+      if (product) {
+        row.is_new = false
+        row.description = product.name // Update desc to match product
+        row.unit_price = product.cost // Suggest updating cost to current product cost? Or keep invoice cost?
+        // Usually we want to keep invoice cost. But maybe show product cost as reference.
+        // Let's keep one field. The user can edit it.
+        // We do typically update row.unit_price if it was 0, but invoice usually has price.
+      } else {
+        row.is_new = true
+      }
+    },
+    onProductClear (row) {
+      row.is_new = true
+      row.selectedProduct = null
     },
     clearAnalysis () {
       this.analysisData = null
