@@ -84,49 +84,59 @@
               <SkeletonCard class="full-width"/>
             </div>
           </div>
-          <q-table
-            row-key="name"
-            dense
-            grid
-            :rows="allProducts"
-            :loading="loadingPage"
-            :filter="filter"
-            :pagination="pagination"
-            v-else
-          >
-            <template v-slot:item="props">
-              <div class="col-xs-6 col-sm-4 col-md-4 col-lg-4" style="padding: 5px;">
-                <q-card
-                  :class="findProduct(command.products, props.row) && 'shadow-20'"
-                  :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
-                  @click="openProductDetails(props.row)"
-                >
-                  <q-img
-                    fit="fill"
-                    no-native-menu
-                    :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                    spinner-color="primary"
-                    style="height: 180px;"
-                  >
-                  <div class="absolute-full column items-center justify-center text-center">
-                    <div class="text-bold text-body1">
-                        {{ props.row.name.slice(0, 20) }}
-                      </div>
-                      <span class="text-caption">
-                        {{ formatNumber(props.row.price) }} $
-                      </span>
-                      <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 7px; right: 7px;">
-                        Sin stock
-                      </q-badge>
-                    </div>
-                  </q-img>
-                </q-card>
+          <div v-else>
+            <div
+              v-for="cat in groupedProducts"
+              :key="cat.id"
+              class="q-mb-lg"
+            >
+              <div class="category-title q-pa-sm q-mb-sm">
+                {{ cat.name }}
               </div>
-            </template>
-            <template v-slot:loading>
-              <q-inner-loading showing color="secondary"/>
-            </template>
-          </q-table>
+              <div class="row q-col-gutter-y-md">
+                <div
+                  class="col-12"
+                  v-for="row in cat.products"
+                  :key="row.id"
+                >
+                  <q-card
+                    flat
+                    bordered
+                    class="product-horizontal-card shadow-1"
+                    :class="findProduct(command.products, row) && 'shadow-20'"
+                    :style="`${findProduct(command.products, row) && 'border: solid 2px green;'}`"
+                    @click="openProductDetails(row)"
+                  >
+                    <q-card-section horizontal class="items-center">
+                      <q-card-section class="q-pa-md col">
+                        <div class="product-title">{{ row.name }}</div>
+                        <div v-if="row.description" class="text-content q-mt-xs ellipsis-2-lines" v-html="row.description">
+                        </div>
+                        <div class="text-h6 text-bold q-mt-sm price-text">
+                          $ {{ formatNumber(row.price) }}
+                        </div>
+                      </q-card-section>
+
+                      <q-card-section class="col-auto q-pa-md">
+                        <q-img
+                          :src="row.images[0] ? row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                          class="product-image"
+                        >
+                          <q-badge v-if="!validStockProduct(row, 1)" color="negative" floating style="top: 7px; right: 7px;">
+                            Sin stock
+                          </q-badge>
+                        </q-img>
+                      </q-card-section>
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </div>
+            </div>
+            <div v-if="groupedProducts.length === 0 && !loadingPage" class="text-center q-pa-xl">
+              <q-icon name="info" size="50px" color="grey-5" />
+              <div class="text-subtitle1 text-grey-6 q-mt-md">No se encontraron productos</div>
+            </div>
+          </div>
         </div>
       </div>
       <div v-else-if="tab === 'command'" class="q-mt-sm">
@@ -888,6 +898,23 @@ export default {
       const store = useCommandStore()
       return store?.command
     },
+    groupedProducts () {
+      let filtered = this.allProducts || []
+      if (this.filter) {
+        const query = this.filter.toLowerCase()
+        filtered = filtered.filter(p =>
+          p.name.toLowerCase().includes(query) ||
+          (p.description && p.description.toLowerCase().includes(query))
+        )
+      }
+
+      return this.categories
+        .map(cat => ({
+          ...cat,
+          products: filtered.filter(p => p.category_id === cat.id)
+        }))
+        .filter(cat => cat.products.length > 0)
+    },
     ...mapState(authentication, ['userSession', 'branchOffice'])
   },
   methods: {
@@ -1347,5 +1374,48 @@ export default {
   100% {
     box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
   }
+}
+.category-title {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--text);
+}
+
+.product-horizontal-card {
+  border-radius: var(--border-radius-lg);
+  transition: var(--transition-transform), var(--transition-shadow);
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.product-horizontal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.product-title {
+  font-weight: 700;
+  line-height: 1.2;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.text-content {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-light);
+}
+
+.price-text {
+  color: var(--primary); /* Using primary variable for theme consistency */
+}
+
+.product-image {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--border-radius-md);
+  object-fit: cover;
 }
 </style>
