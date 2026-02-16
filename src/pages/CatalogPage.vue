@@ -55,9 +55,11 @@
           </q-input>
           <q-tabs
             v-model="category"
-            class="text-teal overflow-hidden catalog-tabs"
+            class="text-teal catalog-tabs"
             dense
             v-if="categories.length"
+            no-caps
+            align="left"
           >
             <q-tab
               :name="cat.id"
@@ -65,6 +67,7 @@
               :key="cat.id"
               v-for="cat in categories"
               class="q-pa-md"
+              @click="scrollToCategory(cat.id)"
             />
           </q-tabs>
           <q-skeleton type="text" height="60px" v-else/>
@@ -717,6 +720,7 @@ import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import { status } from 'src/const/invoice'
 import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
+import { useCatalogStore } from 'src/stores/catalog'
 export default {
   name: 'CatalogPage',
   components: {
@@ -729,7 +733,6 @@ export default {
     return {
       observation: null,
       status,
-      company: null,
       formatDate,
       tabPayment: 'paymentMethod',
       client: {},
@@ -741,7 +744,6 @@ export default {
       dialogPayment: false,
       isCurrentlyOpen: false,
       openLoginDialog: false,
-      paymentMethods: [],
       temporalProducts: [],
       file: null,
       /**
@@ -798,7 +800,6 @@ export default {
        * Categories
        * @type {Array}
        */
-      categories: [],
       /**
        * Total bill
        * @type {Number}
@@ -818,7 +819,6 @@ export default {
        * All products
        * @type {Array}
        */
-      allProducts: [],
       /**
        * Table selected
        * @type {Array}
@@ -841,6 +841,7 @@ export default {
     }
   },
   created () {
+    console.log('CatalogPage: created')
     this.getCompany()
     this.getCategories()
     this.getPaymentMethods()
@@ -849,6 +850,7 @@ export default {
     this.getAllProducts()
   },
   mounted () {
+    console.log('CatalogPage: mounted')
     if (this.userSession) {
       this.setPagination({ pagination: this.invoicePagination })
     }
@@ -861,6 +863,7 @@ export default {
   },
   watch: {
     category (data) {
+      console.log('CatalogPage: category watcher triggered', data)
       this.$router.push({
         path: this.$route.path,
         query: {
@@ -921,7 +924,13 @@ export default {
         }))
         .filter(cat => cat.products.length > 0)
     },
-    ...mapState(authentication, ['userSession', 'branchOffice'])
+    ...mapState(authentication, ['userSession', 'branchOffice']),
+    ...mapState(useCatalogStore, {
+      company: 'company',
+      categories: 'categories',
+      allProducts: 'products',
+      paymentMethods: 'paymentMethods'
+    })
   },
   methods: {
     /**
@@ -989,12 +998,8 @@ export default {
      * Get company
      */
     async getCompany () {
-      try {
-        const { data } = await this.$api.get(`public/company/${this.$route?.params?.company_id}`)
-        this.company = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
+      const store = useCatalogStore()
+      await store.fetchCompany(this.$route?.params?.company_id)
     },
     /**
      * Set file
@@ -1248,22 +1253,11 @@ export default {
      * Get all products
      */
     async getAllProducts () {
+      console.log('CatalogPage: getAllProducts called')
       try {
         this.loadingPage = true
-        const { data } = await this.$api.get(`public/products/${this.$route.params.company_id}`, {
-          params: {
-            stock: true,
-            withStock: true,
-            sortOrder: 'desc',
-            sortBy: 'sold',
-            branch_office_id: this.$route.params.branch_office_id,
-            dataEqualFilter: {
-              show_catalog: 1,
-              'category.show_catalog': 1
-            }
-          }
-        })
-        this.allProducts = data
+        const store = useCatalogStore()
+        await store.fetchProducts(this.$route.params.company_id, this.$route.params.branch_office_id)
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {
@@ -1274,29 +1268,15 @@ export default {
      * Get categories
      */
     async getCategories () {
-      try {
-        const { data } = await this.$api.get(`public/categories/${this.$route.params.company_id}`, {
-          params: {
-            dataFilter: {
-              show_catalog: 1
-            }
-          }
-        })
-        this.categories = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
+      const store = useCatalogStore()
+      await store.fetchCategories(this.$route.params.company_id)
     },
     /**
      * Get categories
      */
     async getPaymentMethods () {
-      try {
-        const { data } = await this.$api.get(`public/payment-methods/${this.$route.params.company_id}`)
-        this.paymentMethods = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
+      const store = useCatalogStore()
+      await store.fetchPaymentMethods(this.$route.params.company_id)
     },
     /**
      * Get categories
@@ -1441,12 +1421,28 @@ export default {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: white;
+  background: #f8f8f8;
   padding-top: 10px;
   padding-bottom: 5px;
 }
 
 .catalog-tabs {
   border-bottom: 1px solid var(--border);
+}
+
+/* Hide scrollbar and arrows for a clean invisible scroll experience */
+.catalog-tabs :deep(.q-tabs__content) {
+  overflow-x: auto !important;
+  flex-wrap: nowrap !important;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.catalog-tabs :deep(.q-tabs__content)::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.catalog-tabs :deep(.q-tabs__arrow) {
+  display: none !important;
 }
 </style>

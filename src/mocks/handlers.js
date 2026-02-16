@@ -33,7 +33,7 @@ const allProducts = generateProducts(50) // Generating 50 products
 
 export const handlers = [
   // Intercepting Products
-  http.get('*/public/products/:company_id', ({ params, request }) => {
+  http.get('**/public/products/:company_id', ({ params, request }) => {
     const url = new URL(request.url)
     const categoryId = url.searchParams.get('dataEqualFilter[category_id]')
 
@@ -46,18 +46,20 @@ export const handlers = [
   }),
 
   // Intercepting Categories
-  http.get('*/public/categories/:company_id', () => {
+  http.get('**/public/categories/:company_id', () => {
     return HttpResponse.json([
       { id: 1, name: 'Hamburguesas', show_catalog: 1 },
       { id: 2, name: 'Pizzas', show_catalog: 1 },
       { id: 3, name: 'Bebidas', show_catalog: 1 },
       { id: 4, name: 'Postres', show_catalog: 1 },
-      { id: 5, name: 'Entradas', show_catalog: 1 }
+      { id: 5, name: 'Entradas', show_catalog: 1 },
+      { id: 6, name: 'Pastas', show_catalog: 1 },
+      { id: 7, name: 'Pasticho', show_catalog: 1 }
     ])
   }),
 
   // Intercepting Company Info
-  http.get('*/public/company/:company_id', () => {
+  http.get('**/public/company/:company_id', () => {
     return HttpResponse.json({
       id: 1,
       name: 'OrderWise Mock Demo',
@@ -72,6 +74,64 @@ export const handlers = [
           }
         }
       }
+    })
+  }),
+
+  // Intercepting Payment Methods
+  http.get('**/public/payment-methods/:company_id', () => {
+    return HttpResponse.json([
+      { id: 1, name: 'Efectivo', attributes: [] },
+      { id: 2, name: 'Transferencia Bancaria', attributes: [{ id: 1, attribute_name: 'Banco: Qbits Bank' }, { id: 2, attribute_name: 'Cuenta: 123456789' }] },
+      { id: 3, name: 'Pago Móvil', attributes: [{ id: 3, attribute_name: 'Teléfono: 0412-1234567' }] }
+    ])
+  }),
+
+  // Intercepting Invoices (Orders)
+  http.get('**/public/invoices', () => {
+    return HttpResponse.json({
+      data: [
+        {
+          id: 1001,
+          code: 'ORD-001',
+          total: 150,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          client: { name: 'Cliente de Prueba' },
+          invoice_payments: []
+        }
+      ]
+    })
+  }),
+
+  // Session Tracking Mocks
+  http.post('**/user-sessions/connect', () => {
+    return HttpResponse.json({
+      success: true,
+      session_uuid: 'mock-session-uuid-12345'
+    })
+  }),
+
+  http.post('**/user-sessions/disconnect', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.post('**/user-sessions/track-activity', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.post('**/user-sessions/update-status', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.post('**/user-sessions/heartbeat', () => {
+    return HttpResponse.json({ success: true })
+  }),
+
+  // Broadcasting Auth Mock
+  http.post('**/broadcasting/auth', () => {
+    return HttpResponse.json({
+      auth: 'mock-auth-string',
+      channel_data: JSON.stringify({ user_id: 1, user_info: { name: 'Mock User' } })
     })
   })
 ]
