@@ -2,708 +2,712 @@
   <q-layout view="lHh lpr lFf">
     <q-page-container>
       <q-page :class="$q.screen.lt.sm ? 'q-pb-xl q-mb-lg' : 'items-center column'">
-    <div class="header-container full-width">
-      <div
-        class="header-banner relative-position shadow-2"
-        :style="{ backgroundImage: `url(${company?.company_config.other?.menu?.banner_url || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&q=80&w=800'})` }"
-      >
-        <div class="banner-overlay"></div>
-        <div class="header-content column items-center full-width q-pa-md">
-          <q-avatar size="100px" class="profile-avatar shadow-5">
-            <q-img :src="company?.url || 'https://cdn.quasar.dev/img/avatar.png'" />
-          </q-avatar>
-          <div class="text-h4 text-white text-bold q-mt-md text-uppercase company-name">
-            {{ company?.name }}
-          </div>
+        <div class="header-container full-width">
           <div
-            v-if="company?.company_config.other?.menu?.description"
-            class="text-subtitle2 text-white text-weight-light q-mt-xs description-text text-center"
-            v-html="company?.company_config.other?.menu?.description"
-          />
-        </div>
-      </div>
-    </div>
-
-    <div class="column full-width" style="max-width: 600px;">
-      <div class="full-width text-subtitle1 flex justify-between items-center" v-if="tab === 'orders'">
-        <span class="text-h6">Ordenes</span>
-        <div>
-          <q-btn
-            color="primary"
-            icon="refresh"
-            round
-            size="sm"
-            @click="setPagination({ pagination: invoicePagination })"
-          />
-        </div>
-      </div>
-      <div class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
-        <div class="col-12 sticky-filter-container">
-          <q-input
-            outlined
-            rounded
-            label="Buscar"
-            dense
-            type="search"
-            debounce="500"
-            class="full-width q-mb-xs"
-            v-model="filter"
+            class="header-banner relative-position shadow-2"
+            :style="{ backgroundImage: `url(${company?.company_config.other?.menu?.banner_url || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&q=80&w=800'})` }"
           >
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
-          <q-tabs
-            v-model="category"
-            class="text-teal catalog-tabs"
-            dense
-            v-if="categories.length"
-            no-caps
-            align="left"
-          >
-            <q-tab
-              :name="cat.id"
-              :label="cat.name"
-              :key="cat.id"
-              v-for="cat in categories"
-              class="q-pa-md"
-              @click="scrollToCategory(cat.id)"
-            />
-          </q-tabs>
-          <q-skeleton type="text" height="60px" v-else/>
-        </div>
-        <div class="col-12">
-          <div v-if="loadingPage" class="row q-col-gutter-sm">
-            <div
-              class="col-xs-6 col-sm-4 col-md-3"
-              v-for="i in 20" :key="i"
-            >
-              <SkeletonCard class="full-width"/>
+            <div class="banner-overlay"></div>
+            <div class="header-content column items-center full-width q-pa-md">
+              <q-avatar size="80px" class="profile-avatar shadow-5">
+                <q-img :src="company?.url || 'https://cdn.quasar.dev/img/avatar.png'" />
+              </q-avatar>
+              <div class="text-h5 text-white text-bold q-mt-md text-uppercase company-name">
+                {{ company?.name }}
+              </div>
+              <div
+                v-if="company?.company_config.other?.menu?.description"
+                class="text-subtitle2 text-white text-weight-light q-mt-xs description-text text-center"
+                v-html="company?.company_config.other?.menu?.description"
+              />
             </div>
           </div>
-          <div v-else>
-            <div
-              v-for="cat in groupedProducts"
-              :key="cat.id"
-              :id="'category-' + cat.id"
-              class="q-mb-lg category-section"
-            >
-              <div class="category-title q-pa-sm q-mb-sm">
-                {{ cat.name }}
-              </div>
-              <div class="row q-col-gutter-y-md">
-                <div
-                  class="col-12"
-                  v-for="row in cat.products"
-                  :key="row.id"
-                >
-                  <q-card
-                    flat
-                    bordered
-                    class="product-horizontal-card shadow-1"
-                    :class="findProduct(command.products, row) && 'shadow-20'"
-                    :style="`${findProduct(command.products, row) && 'border: solid 2px green;'}`"
-                    @click="openProductDetails(row)"
-                  >
-                    <q-card-section horizontal class="items-center">
-                      <q-card-section class="q-pa-md col">
-                        <div class="product-title">{{ row.name }}</div>
-                        <div v-if="row.description" class="text-content q-mt-xs ellipsis-2-lines" v-html="row.description">
-                        </div>
-                        <div class="text-h6 text-bold q-mt-sm price-text">
-                          $ {{ formatNumber(row.price) }}
-                        </div>
-                      </q-card-section>
+        </div>
 
-                      <q-card-section class="col-auto q-pa-md">
+        <div class="sticky-filter-container column fu items-center" v-if="tab === 'menu'">
+          <div class="full-width q-mx-auto" style="max-width: 600px;">
+            <q-input
+              outlined
+              rounded
+              label="Buscar"
+              dense
+              type="search"
+              debounce="500"
+              class="full-width q-pa-sm"
+              v-model="filter"
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+            <q-tabs
+              v-model="category"
+              class="text-teal catalog-tabs"
+              dense
+              v-if="categories.length"
+              no-caps
+              align="left"
+            >
+              <q-tab
+                :name="cat.id"
+                :label="cat.name"
+                :key="cat.id"
+                v-for="cat in categories"
+                class="q-pa-md"
+                @click="scrollToCategory(cat.id)"
+              />
+            </q-tabs>
+            <q-skeleton type="text" height="60px" v-else/>
+          </div>
+        </div>
+
+        <div class="full-width q-pa-sm" style="max-width: 600px;">
+          <div class="full-width text-subtitle1 flex justify-between items-center" v-if="tab === 'orders'">
+            <span class="text-h6">Ordenes</span>
+            <div>
+              <q-btn
+                color="primary"
+                icon="refresh"
+                round
+                size="sm"
+                @click="setPagination({ pagination: invoicePagination })"
+              />
+            </div>
+          </div>
+          <div class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
+
+            <div class="col-12">
+              <div v-if="loadingPage" class="row q-col-gutter-sm">
+                <div
+                  class="col-xs-6 col-sm-4 col-md-3"
+                  v-for="i in 20" :key="i"
+                >
+                  <SkeletonCard class="full-width"/>
+                </div>
+              </div>
+              <div v-else>
+                <div
+                  v-for="cat in groupedProducts"
+                  :key="cat.id"
+                  :id="'category-' + cat.id"
+                  class="q-mb-lg category-section"
+                >
+                  <div class="category-title q-pa-sm q-mb-sm">
+                    {{ cat.name }}
+                  </div>
+                  <div class="row q-col-gutter-y-md">
+                    <div
+                      class="col-12"
+                      v-for="row in cat.products"
+                      :key="row.id"
+                    >
+                      <q-card
+                        flat
+                        bordered
+                        class="product-horizontal-card shadow-1"
+                        :class="findProduct(command.products, row) && 'shadow-20'"
+                        :style="`${findProduct(command.products, row) && 'border: solid 2px green;'}`"
+                        @click="openProductDetails(row)"
+                      >
+                        <q-card-section horizontal class="items-center">
+                          <q-card-section class="q-pa-md col">
+                            <div class="product-title">{{ row.name }}</div>
+                            <div v-if="row.description" class="text-content q-mt-xs ellipsis-2-lines" v-html="row.description">
+                            </div>
+                            <div class="text-h6 text-bold q-mt-sm price-text">
+                              $ {{ formatNumber(row.price) }}
+                            </div>
+                          </q-card-section>
+
+                          <q-card-section class="col-auto q-pa-md">
+                            <q-img
+                              :src="row.images[0] ? row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
+                              class="product-image"
+                            >
+                              <q-badge v-if="!validStockProduct(row, 1)" color="negative" floating style="top: 7px; right: 7px;">
+                                Sin stock
+                              </q-badge>
+                            </q-img>
+                          </q-card-section>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="groupedProducts.length === 0 && !loadingPage" class="text-center q-pa-xl">
+                  <q-icon name="info" size="50px" color="grey-5" />
+                  <div class="text-subtitle1 text-grey-6 q-mt-md">No se encontraron productos</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="tab === 'command'" class="q-mt-sm">
+            <q-table
+              row-key="name"
+              dense
+              grid
+              :rows="command.products"
+              hide-pagination
+              v-model:pagination="pagination"
+            >
+              <template v-slot:item="props">
+                <div class="column items-center q-pa-xs col-xs-12 col-sm-12 col-md-12">
+                  <q-card
+                    class="my-card q-mt-sm"
+                    style="max-width: 90vw; width: 500px; border-radius: 20px;"
+                  >
+                    <q-card-section horizontal class="full-height">
                         <q-img
-                          :src="row.images[0] ? row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                          class="product-image"
-                        >
-                          <q-badge v-if="!validStockProduct(row, 1)" color="negative" floating style="top: 7px; right: 7px;">
-                            Sin stock
-                          </q-badge>
-                        </q-img>
+                          class="col-4"
+                          style="max-height: 132px;"
+                          :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
+                        />
+                        <q-card-section class="q-pa-sm column col-8">
+                          <q-card-section class="q-pa-sm col">
+                            <span class="text-body2 text-uppercase text-bold">
+                              {{ props.row.name.slice(0, 20) }}
+                              <q-badge
+                                floating
+                                rounded
+                                color="secondary"
+                              >
+                                <q-icon
+                                  :name="props.row.observation ? 'edit' : 'add'"
+                                  size="sm"
+                                />
+                                <q-popup-proxy>
+                                  <q-card class="bg-white" style="width: 400px; max-width: 80vw;">
+                                    <q-card-section class="q-py-sm text-h6 bg-primary text-white">
+                                      Observación
+                                    </q-card-section>
+                                    <q-card-section class="text-body2">
+                                      <q-input
+                                        filled
+                                        autofocus
+                                        type="textarea"
+                                        v-model="props.row.observation"
+                                      />
+                                    </q-card-section>
+                                    <q-card-actions align="right">
+                                      <q-btn
+                                        color="primary"
+                                        icon="check_circle"
+                                        v-close-popup
+                                      />
+                                    </q-card-actions>
+                                  </q-card>
+                                </q-popup-proxy>
+                              </q-badge>
+                            </span>
+                            <p class="text-subtitle2 text-grey">
+                              $ {{ formatNumber(props.row.price) }}
+                            </p>
+                          </q-card-section>
+                          <q-card-actions class="q-pa-none">
+                            <div class="flex justify-between items-center full-width">
+                              <div style="width: 10%;">
+                                <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
+                              </div>
+                              <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
+                                <div>
+                                  <q-btn icon="remove" round size="sm" color="primary" @click="() => {
+                                      props.row.amount -= 1
+                                      calculate(props.row)
+                                    }"
+                                  />
+                                </div>
+                                <q-input
+                                  rounded
+                                  outlined
+                                  dense
+                                  label="Cantidad"
+                                  type="number"
+                                  style="width: 50%;"
+                                  v-model.number="props.row.amount"
+                                  @update:model-value="calculate(props.row)"
+                                />
+                                <div>
+                                    <q-btn icon="add" round size="sm" color="primary" @click="() => {
+                                        props.row.amount += 1
+                                        calculate(props.row)
+                                    }"/>
+                                </div>
+                              </div>
+                            </div>
+                          </q-card-actions>
+                        </q-card-section>
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </template>
+              <template v-slot:no-data>
+                <div class="full-width column flex-center justify-center">
+                  <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
+                  <span class="text-subtitle2 text-center">
+                    No hay productos en la orden
+                  </span>
+                </div>
+              </template>
+            </q-table>
+          </div>
+          <div v-else>
+            <q-table
+              row-key="id"
+              dense
+              grid
+              :rows="invoices"
+              binary-state-sort
+              no-data-label="Registro no encontrado"
+              v-model:pagination="invoicePagination"
+              @request="setPagination"
+            >
+              <template v-slot:item="props">
+                <div class="q-pa-xs col-xs-12 col-sm-12 col-md-12 column items-center">
+                  <q-card
+                    class="my-card q-mt-sm"
+                    style="width: 100%; border-radius: 20px;"
+                    @click="openDetails(props.row)"
+                  >
+                    <q-card-section horizontal class="full-height">
+                      <q-icon
+                        name="receipt"
+                        class="col-2"
+                        size="md"
+                        style="max-height: 200px;"
+                      />
+                      <q-card-section class="q-py-sm col-10">
+                        <div class="flex justify-between full-width">
+                          <div class="flex justify-between items-center full-width">
+                            <span class="text-subtitle2 text-bold">
+                              Nro {{ props.row.code }}
+                            </span>
+                            <span class="text-subtitle2 text-semibold">
+                              $ {{ formatNumber(props.row.total) }}
+                            </span>
+                          </div>
+                          <div class="flex justify-between items-center full-width">
+                            <span>
+                              {{ props.row?.client?.name }}
+                            </span>
+                            <q-badge
+                              :color="status[props.row.status].color"
+                              :label="status[props.row.status].label"
+                              rounded
+                            />
+                          </div>
+                          <div class="flex justify-between items-center full-width">
+                            <span>
+                              {{ formatDate(props.row.created_at, 'DD-MM-YYYY') }}
+                            </span>
+                            <span>
+                              {{ formatDate(props.row.created_at, 'HH:mm:ss') }}
+                            </span>
+                          </div>
+                        </div>
                       </q-card-section>
                     </q-card-section>
                   </q-card>
                 </div>
-              </div>
-            </div>
-            <div v-if="groupedProducts.length === 0 && !loadingPage" class="text-center q-pa-xl">
-              <q-icon name="info" size="50px" color="grey-5" />
-              <div class="text-subtitle1 text-grey-6 q-mt-md">No se encontraron productos</div>
-            </div>
+              </template>
+            </q-table>
           </div>
-        </div>
-      </div>
-      <div v-else-if="tab === 'command'" class="q-mt-sm">
-        <q-table
-          row-key="name"
-          dense
-          grid
-          :rows="command.products"
-          hide-pagination
-          v-model:pagination="pagination"
-        >
-          <template v-slot:item="props">
-            <div class="column items-center q-pa-xs col-xs-12 col-sm-12 col-md-12">
-              <q-card
-                class="my-card q-mt-sm"
-                style="max-width: 90vw; width: 500px; border-radius: 20px;"
-              >
-                <q-card-section horizontal class="full-height">
-                    <q-img
-                      class="col-4"
-                      style="max-height: 132px;"
-                      :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
+          <q-page-sticky position="bottom-right" :offset="[15, 10]">
+            <div class="flex q-gutter-sm">
+              <q-btn
+                v-if="isCurrentlyOpen && totalBill > 0"
+                rounded
+                stack
+                color="primary"
+                class="button-baseline"
+                :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
+                :label="formatNumber(totalBill)"
+                :loading="billLoading"
+                @click="saveBill"
+              />
+              <schedule-status
+                :schedule="company?.company_config.other?.menu?.schedule"
+                @update:isCurrentlyOpen="(data) => isCurrentlyOpen = data"
+              />
+            </div>
+          </q-page-sticky>
+          <q-dialog v-model="detailProduct">
+            <q-card
+              :class="$q.screen.lt.sm ? 'full-height column': ''"
+              :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
+            >
+              <SlideComponent :slides="product.images" styles="height: 200px;"/>
+              <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
+                <q-card-section class="column q-pb-none">
+                  <div class="flex justify-between full-width">
+                    <span class="text-body2 text-uppercase text-bold">
+                      {{ product?.name }}
+                    </span>
+                    <span class="text-body2 q-mt-sm">
+                      $ {{ formatNumber(product?.price) }}
+                    </span>
+                  </div>
+                  <div v-if="product.description">
+                    <q-input
+                      type="textarea"
+                      v-model="product.description"
+                      readonly
+                      autogrow
                     />
-                    <q-card-section class="q-pa-sm column col-8">
-                      <q-card-section class="q-pa-sm col">
-                        <span class="text-body2 text-uppercase text-bold">
-                          {{ props.row.name.slice(0, 20) }}
-                          <q-badge
-                            floating
-                            rounded
-                            color="secondary"
-                          >
-                            <q-icon
-                              :name="props.row.observation ? 'edit' : 'add'"
-                              size="sm"
-                            />
-                            <q-popup-proxy>
-                              <q-card class="bg-white" style="width: 400px; max-width: 80vw;">
-                                <q-card-section class="q-py-sm text-h6 bg-primary text-white">
-                                  Observación
-                                </q-card-section>
-                                <q-card-section class="text-body2">
-                                  <q-input
-                                    filled
-                                    autofocus
-                                    type="textarea"
-                                    v-model="props.row.observation"
-                                  />
-                                </q-card-section>
-                                <q-card-actions align="right">
-                                  <q-btn
-                                    color="primary"
-                                    icon="check_circle"
-                                    v-close-popup
-                                  />
-                                </q-card-actions>
-                              </q-card>
-                            </q-popup-proxy>
-                          </q-badge>
-                        </span>
-                        <p class="text-subtitle2 text-grey">
-                          $ {{ formatNumber(props.row.price) }}
-                        </p>
-                      </q-card-section>
-                      <q-card-actions class="q-pa-none">
-                        <div class="flex justify-between items-center full-width">
-                          <div style="width: 10%;">
-                            <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
-                          </div>
-                          <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
-                            <div>
-                              <q-btn icon="remove" round size="sm" color="primary" @click="() => {
-                                  props.row.amount -= 1
-                                  calculate(props.row)
-                                }"
-                              />
-                            </div>
-                            <q-input
-                              rounded
-                              outlined
-                              dense
-                              label="Cantidad"
-                              type="number"
-                              style="width: 50%;"
-                              v-model.number="props.row.amount"
-                              @update:model-value="calculate(props.row)"
-                            />
-                            <div>
-                                <q-btn icon="add" round size="sm" color="primary" @click="() => {
-                                    props.row.amount += 1
-                                    calculate(props.row)
-                                }"/>
-                            </div>
-                          </div>
-                        </div>
-                      </q-card-actions>
-                    </q-card-section>
+                  </div>
+                  <div class="flex justify-between items-center q-mt-sm">
+                    <q-btn
+                      icon="remove"
+                      color="primary"
+                      round
+                      flat
+                      size="lg"
+                      @click="addTemporalProducts(product, product.amount -= 1)"
+                    />
+                    <q-input
+                      borderless
+                      dense
+                      type="number"
+                      style="width: 40px;"
+                      input-class="text-center"
+                      v-model.number="product.amount"
+                      @update:model-value="(value) => addTemporalProducts(product, value)"
+                    />
+                    <q-btn
+                      icon="add"
+                      color="primary"
+                      round
+                      flat
+                      size="lg"
+                      @click="addTemporalProducts(product, product.amount += 1)"
+                    />
+                  </div>
                 </q-card-section>
-              </q-card>
-            </div>
-          </template>
-          <template v-slot:no-data>
-            <div class="full-width column flex-center justify-center">
-              <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
-              <span class="text-subtitle2 text-center">
-                No hay productos en la orden
-              </span>
-            </div>
-          </template>
-        </q-table>
-      </div>
-      <div v-else>
-        <q-table
-          row-key="id"
-          dense
-          grid
-          :rows="invoices"
-          binary-state-sort
-          no-data-label="Registro no encontrado"
-          v-model:pagination="invoicePagination"
-          @request="setPagination"
-        >
-          <template v-slot:item="props">
-            <div class="q-pa-xs col-xs-12 col-sm-12 col-md-12 column items-center">
-              <q-card
-                class="my-card q-mt-sm"
-                style="width: 100%; border-radius: 20px;"
-                @click="openDetails(props.row)"
-              >
-                <q-card-section horizontal class="full-height">
-                  <q-icon
-                    name="receipt"
-                    class="col-2"
-                    size="md"
-                    style="max-height: 200px;"
+                <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
+                  <div class="col-12 bg-grey-2 q-pa-sm text-dark">
+                    <span class="text-subtitle2">+ Adicionales</span>
+                  </div>
+                </q-card-section>
+                <q-card-section class="q-pt-none">
+                  <div
+                    class="flex justify-between full-width items-center"
+                    v-for="addon in product.product_addons" :key="addon.id"
+                  >
+                    <div class="column">
+                      <span class="text-body2 text-uppercase text-bold">
+                        {{ addon.name }}
+                      </span>
+                      <span class="text-subtitle2 text-grey">
+                        {{ formatNumber(addon.price) }}$
+                      </span>
+                    </div>
+                    <div class="flex justify-between items-center q-gutter-xs">
+                      <q-btn
+                        icon="remove"
+                        color="primary"
+                        round
+                        flat
+                        size="sm"
+                        @click="addTemporalProducts(addon, addon.amount -= 1)"
+                      />
+                      <q-input
+                        borderless
+                        dense
+                        type="number"
+                        style="width: 30px;"
+                        input-class="text-center"
+                        v-model.number="addon.amount"
+                        @update:model-value="(value) => addTemporalProducts(product, value)"
+                      />
+                      <q-btn
+                        icon="add"
+                        color="primary"
+                        round
+                        flat
+                        size="sm"
+                        @click="addTemporalProducts(addon, addon.amount += 1)"
+                      />
+                    </div>
+                  </div>
+                  <q-separator class="q-mt-md"/>
+                </q-card-section>
+                <q-card-section class="q-pt-none">
+                  <q-input
+                    type="textarea"
+                    label="Observación"
+                    filled
+                    v-model="observation"
                   />
-                  <q-card-section class="q-py-sm col-10">
-                    <div class="flex justify-between full-width">
-                      <div class="flex justify-between items-center full-width">
-                        <span class="text-subtitle2 text-bold">
-                          Nro {{ props.row.code }}
-                        </span>
-                        <span class="text-subtitle2 text-semibold">
-                          $ {{ formatNumber(props.row.total) }}
-                        </span>
-                      </div>
-                      <div class="flex justify-between items-center full-width">
-                        <span>
-                          {{ props.row?.client?.name }}
-                        </span>
-                        <q-badge
-                          :color="status[props.row.status].color"
-                          :label="status[props.row.status].label"
-                          rounded
-                        />
-                      </div>
-                      <div class="flex justify-between items-center full-width">
-                        <span>
-                          {{ formatDate(props.row.created_at, 'DD-MM-YYYY') }}
-                        </span>
-                        <span>
-                          {{ formatDate(props.row.created_at, 'HH:mm:ss') }}
-                        </span>
-                      </div>
+                </q-card-section>
+              </q-card-section>
+              <q-card-actions align="right">
+                <q-btn
+                  color="negative"
+                  label="Cerrar"
+                  icon="close"
+                  @click="() => {
+                    detailProduct = false
+                    product = null
+                  }"
+                />
+                <q-btn
+                  color="primary"
+                  label="Agregar"
+                  icon="add_shopping_cart"
+                  @click="addCar"
+                />
+              </q-card-actions>
+            </q-card>
+          </q-dialog>
+          <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.sm">
+            <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
+              <q-form @submit="saveClient" class="column full-height">
+                <q-card-section class="flex q-gutter-x-sm text-white bg-primary">
+                  <q-btn icon="arrow_back_ios" flat round dense @click="openAddClient = false"/>
+                  <span class="text-h6">Registrarse</span>
+                </q-card-section>
+                <q-card-section class="col">
+                  <div class="row q-gutter-y-sm">
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                      <q-input
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        filled
+                        v-model="client.name"
+                        label="Nombre"
+                      />
+                    </div>
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                      <q-input
+                        filled
+                        v-model="client.phone_number"
+                        label="Número de teléfono"
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                      />
+                    </div>
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                      <q-input
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        filled
+                        v-model="client.username"
+                        label="Nombre de usuario"
+                      />
+                    </div>
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                      <q-input
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        filled
+                        v-model="client.password"
+                        label="Contraseña"
+                        type="password"
+                      />
+                    </div>
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                      <q-input
+                        filled
+                        v-model="client.address"
+                        label="Dirección"
+                        type="textarea"
+                      />
+                    </div>
+                  </div>
+                </q-card-section>
+                <q-card-actions align="right" class="text-primary">
+                  <q-btn icon="save" color="primary" label="Guardar" type="submit"/>
+                </q-card-actions>
+              </q-form>
+            </q-card>
+          </q-dialog>
+          <q-dialog v-model="openLoginDialog" persistent>
+            <q-card :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'">
+              <q-form @submit="loginAt" class="column full-height">
+                <q-card-section class="flex justify-between q-gutter-x-sm text-white bg-primary">
+                  <span class="text-h6">Iniciar sesión</span>
+                  <q-btn icon="close" flat round dense @click="openLoginDialog = false"/>
+                </q-card-section>
+                <q-card-section class="col">
+                  <div class="row q-gutter-y-sm">
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                      <q-input
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        filled
+                        v-model="user.username"
+                        label="Nombre de usuario"
+                      />
+                    </div>
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                      <q-input
+                        :rules="[val => !!val || 'El campo es requerido.']"
+                        filled
+                        v-model="user.password"
+                        label="Contraseña"
+                        type="password"
+                      />
+                    </div>
+                    <div class="col-12 text-right">
+                      <q-btn flat color="secondary" label="No tengo una cuenta" @click="openAddClient = true" />
+                    </div>
+                  </div>
+                </q-card-section>
+                <q-card-actions align="right" class="text-primary">
+                  <q-btn color="primary" label="Iniciar sesión" type="submit" />
+                </q-card-actions>
+              </q-form>
+            </q-card>
+          </q-dialog>
+          <q-dialog v-model="dialogPayment" position="bottom">
+            <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'paymentMethod'">
+              <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
+                <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="dialogPayment = false"/>
+                <span class="text-subtitle1 text-uppercase text-bold">
+                  Método de pago
+                </span>
+              </q-card-section>
+              <q-card-section class="q-pt-sm q-pb-none">
+                <p>
+                  Seleccione el método de pago que desea utilizar para pagar la factura.
+                  <br />
+                  Cuando seleccione el método de pago y confirme el pago,
+                  debe ingresar el comprobante de pago.
+                </p>
+              </q-card-section>
+              <q-card-section class="q-gutter-sm q-pt-none scroll" style="max-height: calc(100vh - 320px);">
+                <q-card v-for="payment in paymentMethods" :key="payment.id">
+                  <q-card-section class="q-py-sm">
+                    <q-radio v-model="paymentMethod" :val="payment.id" :label="payment.name" />
+                  </q-card-section>
+                  <q-card-section class="q-py-sm" v-if="payment.attributes && payment.attributes.length > 0">
+                    <div class="column q-gutter-sm">
+                      <span class="text-subtitle1">Datos del pago</span>
+                      <span class="text-subtitle2" v-for="attribute in payment.attributes" :key="attribute.id">
+                        {{ attribute.attribute_name }}
+                      </span>
                     </div>
                   </q-card-section>
-                </q-card-section>
-              </q-card>
-            </div>
-          </template>
-        </q-table>
-      </div>
-      <q-page-sticky position="bottom-right" :offset="[15, 10]">
-        <div class="flex q-gutter-sm">
-          <q-btn
-            v-if="isCurrentlyOpen && totalBill > 0"
-            rounded
-            stack
-            color="primary"
-            class="button-baseline"
-            :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
-            :label="formatNumber(totalBill)"
-            :loading="billLoading"
-            @click="saveBill"
-          />
-          <schedule-status
-            :schedule="company?.company_config.other?.menu?.schedule"
-            @update:isCurrentlyOpen="(data) => isCurrentlyOpen = data"
-          />
-        </div>
-      </q-page-sticky>
-      <q-dialog v-model="detailProduct">
-        <q-card
-          :class="$q.screen.lt.sm ? 'full-height column': ''"
-          :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
-        >
-          <SlideComponent :slides="product.images" styles="height: 200px;"/>
-          <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
-            <q-card-section class="column q-pb-none">
-              <div class="flex justify-between full-width">
-                <span class="text-body2 text-uppercase text-bold">
-                  {{ product?.name }}
-                </span>
-                <span class="text-body2 q-mt-sm">
-                  $ {{ formatNumber(product?.price) }}
-                </span>
-              </div>
-              <div v-if="product.description">
-                <q-input
-                  type="textarea"
-                  v-model="product.description"
-                  readonly
-                  autogrow
-                />
-              </div>
-              <div class="flex justify-between items-center q-mt-sm">
-                <q-btn
-                  icon="remove"
-                  color="primary"
-                  round
-                  flat
-                  size="lg"
-                  @click="addTemporalProducts(product, product.amount -= 1)"
-                />
-                <q-input
-                  borderless
-                  dense
-                  type="number"
-                  style="width: 40px;"
-                  input-class="text-center"
-                  v-model.number="product.amount"
-                  @update:model-value="(value) => addTemporalProducts(product, value)"
-                />
-                <q-btn
-                  icon="add"
-                  color="primary"
-                  round
-                  flat
-                  size="lg"
-                  @click="addTemporalProducts(product, product.amount += 1)"
-                />
-              </div>
-            </q-card-section>
-            <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
-              <div class="col-12 bg-grey-2 q-pa-sm text-dark">
-                <span class="text-subtitle2">+ Adicionales</span>
-              </div>
-            </q-card-section>
-            <q-card-section class="q-pt-none">
-              <div
-                class="flex justify-between full-width items-center"
-                v-for="addon in product.product_addons" :key="addon.id"
-              >
-                <div class="column">
-                  <span class="text-body2 text-uppercase text-bold">
-                    {{ addon.name }}
-                  </span>
-                  <span class="text-subtitle2 text-grey">
-                    {{ formatNumber(addon.price) }}$
-                  </span>
-                </div>
-                <div class="flex justify-between items-center q-gutter-xs">
-                  <q-btn
-                    icon="remove"
-                    color="primary"
-                    round
-                    flat
-                    size="sm"
-                    @click="addTemporalProducts(addon, addon.amount -= 1)"
-                  />
-                  <q-input
-                    borderless
-                    dense
-                    type="number"
-                    style="width: 30px;"
-                    input-class="text-center"
-                    v-model.number="addon.amount"
-                    @update:model-value="(value) => addTemporalProducts(product, value)"
-                  />
-                  <q-btn
-                    icon="add"
-                    color="primary"
-                    round
-                    flat
-                    size="sm"
-                    @click="addTemporalProducts(addon, addon.amount += 1)"
-                  />
-                </div>
-              </div>
-              <q-separator class="q-mt-md"/>
-            </q-card-section>
-            <q-card-section class="q-pt-none">
-              <q-input
-                type="textarea"
-                label="Observación"
-                filled
-                v-model="observation"
-              />
-            </q-card-section>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn
-              color="negative"
-              label="Cerrar"
-              icon="close"
-              @click="() => {
-                detailProduct = false
-                product = null
-              }"
-            />
-            <q-btn
-              color="primary"
-              label="Agregar"
-              icon="add_shopping_cart"
-              @click="addCar"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-      <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.sm">
-        <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
-          <q-form @submit="saveClient" class="column full-height">
-            <q-card-section class="flex q-gutter-x-sm text-white bg-primary">
-              <q-btn icon="arrow_back_ios" flat round dense @click="openAddClient = false"/>
-              <span class="text-h6">Registrarse</span>
-            </q-card-section>
-            <q-card-section class="col">
-              <div class="row q-gutter-y-sm">
-                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                  <q-input
-                    :rules="[val => !!val || 'El campo es requerido.']"
-                    filled
-                    v-model="client.name"
-                    label="Nombre"
-                  />
-                </div>
-                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                  <q-input
-                    filled
-                    v-model="client.phone_number"
-                    label="Número de teléfono"
-                    :rules="[val => !!val || 'El campo es requerido.']"
-                  />
-                </div>
-                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                  <q-input
-                    :rules="[val => !!val || 'El campo es requerido.']"
-                    filled
-                    v-model="client.username"
-                    label="Nombre de usuario"
-                  />
-                </div>
-                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                  <q-input
-                    :rules="[val => !!val || 'El campo es requerido.']"
-                    filled
-                    v-model="client.password"
-                    label="Contraseña"
-                    type="password"
-                  />
-                </div>
-                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                  <q-input
-                    filled
-                    v-model="client.address"
-                    label="Dirección"
-                    type="textarea"
-                  />
-                </div>
-              </div>
-            </q-card-section>
-            <q-card-actions align="right" class="text-primary">
-              <q-btn icon="save" color="primary" label="Guardar" type="submit"/>
-            </q-card-actions>
-          </q-form>
-        </q-card>
-      </q-dialog>
-      <q-dialog v-model="openLoginDialog" persistent>
-        <q-card :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'">
-          <q-form @submit="loginAt" class="column full-height">
-            <q-card-section class="flex justify-between q-gutter-x-sm text-white bg-primary">
-              <span class="text-h6">Iniciar sesión</span>
-              <q-btn icon="close" flat round dense @click="openLoginDialog = false"/>
-            </q-card-section>
-            <q-card-section class="col">
-              <div class="row q-gutter-y-sm">
-                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                  <q-input
-                    :rules="[val => !!val || 'El campo es requerido.']"
-                    filled
-                    v-model="user.username"
-                    label="Nombre de usuario"
-                  />
-                </div>
-                <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                  <q-input
-                    :rules="[val => !!val || 'El campo es requerido.']"
-                    filled
-                    v-model="user.password"
-                    label="Contraseña"
-                    type="password"
-                  />
-                </div>
-                <div class="col-12 text-right">
-                  <q-btn flat color="secondary" label="No tengo una cuenta" @click="openAddClient = true" />
-                </div>
-              </div>
-            </q-card-section>
-            <q-card-actions align="right" class="text-primary">
-              <q-btn color="primary" label="Iniciar sesión" type="submit" />
-            </q-card-actions>
-          </q-form>
-        </q-card>
-      </q-dialog>
-      <q-dialog v-model="dialogPayment" position="bottom">
-        <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'paymentMethod'">
-          <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
-            <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="dialogPayment = false"/>
-            <span class="text-subtitle1 text-uppercase text-bold">
-              Método de pago
-            </span>
-          </q-card-section>
-          <q-card-section class="q-pt-sm q-pb-none">
-            <p>
-              Seleccione el método de pago que desea utilizar para pagar la factura.
-              <br />
-              Cuando seleccione el método de pago y confirme el pago,
-              debe ingresar el comprobante de pago.
-            </p>
-          </q-card-section>
-          <q-card-section class="q-gutter-sm q-pt-none scroll" style="max-height: calc(100vh - 320px);">
-            <q-card v-for="payment in paymentMethods" :key="payment.id">
-              <q-card-section class="q-py-sm">
-                <q-radio v-model="paymentMethod" :val="payment.id" :label="payment.name" />
+                </q-card>
               </q-card-section>
-              <q-card-section class="q-py-sm" v-if="payment.attributes && payment.attributes.length > 0">
-                <div class="column q-gutter-sm">
-                  <span class="text-subtitle1">Datos del pago</span>
-                  <span class="text-subtitle2" v-for="attribute in payment.attributes" :key="attribute.id">
-                    {{ attribute.attribute_name }}
-                  </span>
+              <q-card-actions align="center" v-if="paymentMethod">
+                <q-btn class="full-width" color="primary" label="Confirmar" @click="tabPayment = 'voucher'" />
+              </q-card-actions>
+            </q-card>
+            <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'voucher'">
+              <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
+                <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="tabPayment = 'paymentMethod'"/>
+                <span class="text-subtitle1 text-uppercase text-bold">
+                Comprobante de pago
+                </span>
+              </q-card-section>
+              <q-card-section class="q-pt-sm q-pb-none">
+                <p>
+                  Si no sube el comprobante de pago,
+                  se contactaran con usted via whatsapp o teléfono.
+                  para la confirmación del pago.
+                </p>
+              </q-card-section>
+              <q-card-section class="q-pb-xs q-pt-sm flex justify-start items-center q-gutter-x-sm scroll" style="max-height: calc(100vh - 320px);">
+                <FileButtonComponent ref="fileButton" @upload="setFile" v-if="!file">
+                  <template v-slot:button>
+                    <div
+                      @click="$refs.fileButton.onClick()"
+                      class="flex flex-center column"
+                      style="height: 100px; min-width: 100%; border: 1px dashed #e0e0e0; border-radius: 5px; padding: 10px;">
+                      <q-icon name="image" color="primary" size="50px" />
+                      <span>
+                        Seleccionar comprobante
+                      </span>
+                    </div>
+                  </template>
+                </FileButtonComponent>
+                <q-img v-else :src="file.url" style="border-radius: 10px;">
+                  <q-btn
+                    class="absolute all-pointer-events"
+                    size="sm"
+                    icon="close"
+                    color="negative"
+                    style="top: 1px; right: 1px"
+                    push
+                    dense
+                    round
+                    @click="file = null"
+                  >
+                    <q-tooltip>
+                      Eliminar Imagen
+                    </q-tooltip>
+                  </q-btn>
+                </q-img>
+              </q-card-section>
+              <q-card-actions align="center" v-if="paymentMethod">
+                <q-btn class="full-width" color="primary" label="Confirmar" @click="tabPayment = 'address'" />
+              </q-card-actions>
+            </q-card>
+            <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'address'">
+              <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
+                <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="tabPayment = 'voucher'"/>
+                <span class="text-subtitle1 text-uppercase text-bold">
+                Confirmar dirección
+                </span>
+              </q-card-section>
+              <q-card-section class="q-pt-sm q-pb-none">
+                <p>
+                  Confirme su dirección para recibir el pedido.
+                </p>
+              </q-card-section>
+              <q-card-section class="q-pt-sm">
+                <q-input type="textarea" v-model="address" filled label="Dirección" class="full-width" />
+              </q-card-section>
+              <q-card-actions align="center" v-if="address">
+                <q-btn class="full-width" color="primary" label="Confirmar" @click="saveOrder" />
+              </q-card-actions>
+            </q-card>
+          </q-dialog>
+          <q-dialog v-model="detailsDialog" persistent maximized>
+            <q-card>
+              <q-card-section class="flex justify-between items-center bg-primary text-white">
+                <span class="text-h6">Detalles de la orden</span>
+                <q-btn icon="close" flat round dense @click="detailsDialog = false" />
+              </q-card-section>
+              <q-card-section class="scroll" style="height: 82vh">
+                <div class="row q-col-gutter-sm">
+                  <div class="col-12">
+                    <q-input label="Código" filled v-model="invoice.code" readonly dense />
+                  </div>
+                  <div class="col-6">
+                    <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
+                  </div>
+                  <div class="col-6">
+                    <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
+                  </div>
+                  <div class="col-12">
+                    <q-input
+                      type="textarea"
+                      autogrow label="Dirección"
+                      filled
+                      v-model="invoice.address"
+                      readonly
+                      dense
+                    />
+                  </div>
+                  <div class="col-12">
+                    <q-input
+                      type="textarea"
+                      filled
+                      v-model="invoice.description"
+                      readonly
+                      label="Descripción"
+                    />
+                  </div>
+                  <div class="col-12">
+                    <span class="text-h6">Pagos</span>
+                  </div>
+                  <div class="col-12 q-mt-md column" v-for="payment in invoice.invoice_payments" :key="payment.id">
+                    <span class="text-subtitle1 text-uppercase">
+                      {{ payment.payment_method.name }}
+                    </span>
+                    <img v-for="file in payment.files" alt="pago" :key="file.id" :src="file.url" style="max-height: 300px; max-width: 400px;" />
+                  </div>
                 </div>
               </q-card-section>
             </q-card>
-          </q-card-section>
-          <q-card-actions align="center" v-if="paymentMethod">
-            <q-btn class="full-width" color="primary" label="Confirmar" @click="tabPayment = 'voucher'" />
-          </q-card-actions>
-        </q-card>
-        <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'voucher'">
-          <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
-            <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="tabPayment = 'paymentMethod'"/>
-            <span class="text-subtitle1 text-uppercase text-bold">
-            Comprobante de pago
-            </span>
-          </q-card-section>
-          <q-card-section class="q-pt-sm q-pb-none">
-            <p>
-              Si no sube el comprobante de pago,
-              se contactaran con usted via whatsapp o teléfono.
-              para la confirmación del pago.
-            </p>
-          </q-card-section>
-          <q-card-section class="q-pb-xs q-pt-sm flex justify-start items-center q-gutter-x-sm scroll" style="max-height: calc(100vh - 320px);">
-            <FileButtonComponent ref="fileButton" @upload="setFile" v-if="!file">
-              <template v-slot:button>
-                <div
-                  @click="$refs.fileButton.onClick()"
-                  class="flex flex-center column"
-                  style="height: 100px; min-width: 100%; border: 1px dashed #e0e0e0; border-radius: 5px; padding: 10px;">
-                  <q-icon name="image" color="primary" size="50px" />
-                  <span>
-                    Seleccionar comprobante
-                  </span>
-                </div>
-              </template>
-            </FileButtonComponent>
-            <q-img v-else :src="file.url" style="border-radius: 10px;">
-              <q-btn
-                class="absolute all-pointer-events"
-                size="sm"
-                icon="close"
-                color="negative"
-                style="top: 1px; right: 1px"
-                push
-                dense
-                round
-                @click="file = null"
-              >
-                <q-tooltip>
-                  Eliminar Imagen
-                </q-tooltip>
-              </q-btn>
-            </q-img>
-          </q-card-section>
-          <q-card-actions align="center" v-if="paymentMethod">
-            <q-btn class="full-width" color="primary" label="Confirmar" @click="tabPayment = 'address'" />
-          </q-card-actions>
-        </q-card>
-        <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'address'">
-          <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
-            <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="tabPayment = 'voucher'"/>
-            <span class="text-subtitle1 text-uppercase text-bold">
-            Confirmar dirección
-            </span>
-          </q-card-section>
-          <q-card-section class="q-pt-sm q-pb-none">
-            <p>
-              Confirme su dirección para recibir el pedido.
-            </p>
-          </q-card-section>
-          <q-card-section class="q-pt-sm">
-            <q-input type="textarea" v-model="address" filled label="Dirección" class="full-width" />
-          </q-card-section>
-          <q-card-actions align="center" v-if="address">
-            <q-btn class="full-width" color="primary" label="Confirmar" @click="saveOrder" />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-      <q-dialog v-model="detailsDialog" persistent maximized>
-        <q-card>
-          <q-card-section class="flex justify-between items-center bg-primary text-white">
-            <span class="text-h6">Detalles de la orden</span>
-            <q-btn icon="close" flat round dense @click="detailsDialog = false" />
-          </q-card-section>
-          <q-card-section class="scroll" style="height: 82vh">
-            <div class="row q-col-gutter-sm">
-              <div class="col-12">
-                <q-input label="Código" filled v-model="invoice.code" readonly dense />
-              </div>
-              <div class="col-6">
-                <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
-              </div>
-              <div class="col-6">
-                <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
-              </div>
-              <div class="col-12">
-                <q-input
-                  type="textarea"
-                  autogrow label="Dirección"
-                  filled
-                  v-model="invoice.address"
-                  readonly
-                  dense
-                />
-              </div>
-              <div class="col-12">
-                <q-input
-                  type="textarea"
-                  filled
-                  v-model="invoice.description"
-                  readonly
-                  label="Descripción"
-                />
-              </div>
-              <div class="col-12">
-                <span class="text-h6">Pagos</span>
-              </div>
-              <div class="col-12 q-mt-md column" v-for="payment in invoice.invoice_payments" :key="payment.id">
-                <span class="text-subtitle1 text-uppercase">
-                  {{ payment.payment_method.name }}
-                </span>
-                <img v-for="file in payment.files" alt="pago" :key="file.id" :src="file.url" style="max-height: 300px; max-width: 400px;" />
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </q-dialog>
-    </div>
+          </q-dialog>
+        </div>
       </q-page>
     </q-page-container>
   </q-layout>
@@ -1422,8 +1426,7 @@ export default {
   top: 0;
   z-index: 1000;
   background: #f8f8f8;
-  padding-top: 10px;
-  padding-bottom: 5px;
+  padding: 1rem 0;
 }
 
 .catalog-tabs {
