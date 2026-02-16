@@ -38,7 +38,7 @@
         </div>
       </div>
       <div class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
-        <div class="col-12">
+        <div class="col-12 sticky-filter-container">
           <q-input
             outlined
             rounded
@@ -46,25 +46,19 @@
             dense
             type="search"
             debounce="500"
-            class="full-width"
+            class="full-width q-mb-xs"
             v-model="filter"
           >
             <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>
-        </div>
-        <div class="col-12">
           <q-tabs
             v-model="category"
-            class="text-teal overflow-hidden"
+            class="text-teal overflow-hidden catalog-tabs"
             dense
             v-if="categories.length"
           >
-            <q-tab
-              name="all"
-              label="Todos"
-            />
             <q-tab
               :name="cat.id"
               :label="cat.name"
@@ -88,7 +82,8 @@
             <div
               v-for="cat in groupedProducts"
               :key="cat.id"
-              class="q-mb-lg"
+              :id="'category-' + cat.id"
+              class="q-mb-lg category-section"
             >
               <div class="category-title q-pa-sm q-mb-sm">
                 {{ cat.name }}
@@ -711,7 +706,8 @@
   </q-layout>
 </template>
 <script>
-import { Notify } from 'quasar'
+import { Notify, scroll } from 'quasar'
+const { getScrollTarget, setVerticalScrollPosition } = scroll
 import { formatDate, formatNumber, loading, notify, setFiles } from '../const/mixins'
 import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
@@ -844,19 +840,24 @@ export default {
       }
     }
   },
-  mounted () {
-    if (this.userSession) {
-      this.setPagination({ pagination: this.invoicePagination })
-    }
-  },
   created () {
     this.getCompany()
     this.getCategories()
     this.getPaymentMethods()
     this.category = this.$route.query.category || 'all'
-    this.products = this.command.products || []
-    this.calculateTotal()
     this.address = this.userSession?.address
+    this.getAllProducts()
+  },
+  mounted () {
+    if (this.userSession) {
+      this.setPagination({ pagination: this.invoicePagination })
+    }
+    // Deep link scroll
+    if (this.category && this.category !== 'all') {
+      setTimeout(() => {
+        this.scrollToCategory(this.category)
+      }, 1000) // Wait for products to load
+    }
   },
   watch: {
     category (data) {
@@ -867,7 +868,12 @@ export default {
           category: data || 'all'
         }
       })
-      this.getAllProducts()
+      if (data && data !== 'all') {
+        this.scrollToCategory(data)
+      } else if (data === 'all') {
+        const target = getScrollTarget(document.querySelector('.header-container'))
+        setVerticalScrollPosition(target, 0, 500)
+      }
     },
     observation (data) {
       if (typeof data === 'string') {
@@ -1252,7 +1258,6 @@ export default {
             sortBy: 'sold',
             branch_office_id: this.$route.params.branch_office_id,
             dataEqualFilter: {
-              category_id: this.category === 'all' ? null : this.category,
               show_catalog: 1,
               'category.show_catalog': 1
             }
@@ -1305,6 +1310,19 @@ export default {
         notify(error.message, 'negative', 'warning')
       } finally {
         loading(false)
+      }
+    },
+    /**
+     * Scroll to category
+     * @param {String} categoryId
+     */
+    scrollToCategory (categoryId) {
+      const el = document.getElementById(`category-${categoryId}`)
+      if (el) {
+        const target = getScrollTarget(el)
+        const offset = el.offsetTop - 140 // Increased offset to prevent titles from being covered
+        const duration = 500
+        setVerticalScrollPosition(target, offset, duration)
       }
     },
     ...mapActions(authentication, ['setSessionData', 'login'])
@@ -1417,5 +1435,18 @@ export default {
   height: 100px;
   border-radius: var(--border-radius-md);
   object-fit: cover;
+}
+
+.sticky-filter-container {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: white;
+  padding-top: 10px;
+  padding-bottom: 5px;
+}
+
+.catalog-tabs {
+  border-bottom: 1px solid var(--border);
 }
 </style>
