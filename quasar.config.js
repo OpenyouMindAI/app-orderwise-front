@@ -35,7 +35,8 @@ export default configure(function (/* ctx */) {
       'pusher',
       'payment-notifier',
       'statusbar',
-      'pixel'
+      'pixel',
+      'msw'
     ],
 
     css: [
